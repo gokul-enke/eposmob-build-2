@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -10,6 +11,7 @@ class PriceTextField extends StatefulWidget {
   final dynamic localProductProvider;
   final int editRequestId;
   final String? editRequestKey;
+  final VoidCallback? onEditingComplete;
 
   const PriceTextField({
     Key? key,
@@ -17,6 +19,7 @@ class PriceTextField extends StatefulWidget {
     required this.localProductProvider,
     this.editRequestId = 0,
     this.editRequestKey,
+    this.onEditingComplete,
   }) : super(key: key);
 
   @override
@@ -33,6 +36,14 @@ class _PriceTextFieldState extends State<PriceTextField> {
 
   double _toBasePrice(double displayPrice) {
     return (widget.item.toBaseAmount(displayPrice) ?? displayPrice) as double;
+  }
+
+  String _formatPrice(double value) {
+    final roundedValue = value.roundToDouble();
+    if ((value - roundedValue).abs() < 0.0001) {
+      return roundedValue.toInt().toString();
+    }
+    return value.toString();
   }
 
   // Listener to sync controller changes (including on-screen keyboard input) with provider
@@ -53,7 +64,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
   void initState() {
     super.initState();
     controller = TextEditingController(text: _displayPrice().toString());
-    focusNode = FocusNode();
+    focusNode = FocusNode(onKeyEvent: (node, event) => _handleFieldKey(event));
 
     // Listen for any text changes from either physical or virtual keyboards
     controller.addListener(_handleTextChanged);
@@ -75,6 +86,59 @@ class _PriceTextFieldState extends State<PriceTextField> {
       controller,
       replaceOnFirstInput: true,
     );
+  }
+
+  void _stepPrice(int delta) {
+    final currentPrice = double.tryParse(controller.text) ?? _displayPrice();
+    final nextPrice = (currentPrice + delta).clamp(0.0, double.infinity);
+    final text = _formatPrice(nextPrice);
+
+    controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection(baseOffset: 0, extentOffset: text.length),
+    );
+  }
+
+  void _commitAndEndEditing() {
+    final parsedPrice = double.tryParse(controller.text);
+    if (parsedPrice != null && parsedPrice >= 0) {
+      widget.localProductProvider.updateItemPrice(
+        widget.item.product.productId!,
+        widget.item.selectedStock,
+        _toBasePrice(parsedPrice),
+        stockGroupIds: widget.item.stockGroupIds,
+        saleUnitId: widget.item.saleUnitId,
+      );
+    } else {
+      controller.text = _displayPrice().toString();
+    }
+
+    Provider.of<KeyboardProvider>(context, listen: false).hide();
+    focusNode.unfocus();
+    widget.onEditingComplete?.call();
+  }
+
+  KeyEventResult _handleFieldKey(KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.tab) {
+      _commitAndEndEditing();
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      _stepPrice(1);
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      _stepPrice(-1);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   String _cartIdentityKey(dynamic item) {
@@ -182,20 +246,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
             }
           },
           onSubmitted: (newPrice) {
-            // Validate and update on submit
-            final parsedPrice = double.tryParse(newPrice);
-            if (parsedPrice != null && parsedPrice >= 0) {
-              widget.localProductProvider.updateItemPrice(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                _toBasePrice(parsedPrice),
-                stockGroupIds: widget.item.stockGroupIds,
-                saleUnitId: widget.item.saleUnitId,
-              );
-            } else {
-              // Revert to original price if invalid
-              controller.text = _displayPrice().toString();
-            }
+            _commitAndEndEditing();
           },
         );
       },

@@ -21,6 +21,10 @@ class CompactQuantityControlLocal extends StatefulWidget {
   final LocalCartItem cartItem;
   final int editRequestId;
   final String? editRequestKey;
+  final VoidCallback? onEditingComplete;
+  final int refreshRequestId;
+  final String? refreshRequestKey;
+  final num? refreshQuantity;
 
   const CompactQuantityControlLocal({
     Key? key,
@@ -36,6 +40,10 @@ class CompactQuantityControlLocal extends StatefulWidget {
     this.selectedStock,
     this.editRequestId = 0,
     this.editRequestKey,
+    this.onEditingComplete,
+    this.refreshRequestId = 0,
+    this.refreshRequestKey,
+    this.refreshQuantity,
   }) : super(key: key);
 
   @override
@@ -50,6 +58,7 @@ class _CompactQuantityControlLocalState
   late num _currentQuantity;
   Timer? _debounceTimer;
   bool _isUpdating = false;
+  bool _isEditingQuantityText = false;
 
   // Queue to store pending quantity updates
   num? _pendingQuantity;
@@ -68,7 +77,7 @@ class _CompactQuantityControlLocalState
     _currentQuantity = _displayQuantityForBase(widget.quantity);
     _controller =
         TextEditingController(text: _formatQuantity(_currentQuantity));
-    _focusNode = FocusNode();
+    _focusNode = FocusNode(onKeyEvent: (node, event) => _handleFieldKey(event));
 
     // Listen to controller changes so virtual-keyboard input is captured
     _controller.addListener(_onControllerChanged);
@@ -76,15 +85,19 @@ class _CompactQuantityControlLocalState
     // Add listener to focus node to handle quantity changes when focus is lost
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
-        num? newQuantity = num.tryParse(_controller.text);
-        if (newQuantity != null) {
-          _handleQuantityChange(newQuantity);
+        if (_isEditingQuantityText) {
+          num? newQuantity = num.tryParse(_controller.text);
+          _isEditingQuantityText = false;
+          if (newQuantity != null) {
+            _handleQuantityChange(newQuantity, updateControllerText: true);
+          }
         }
       }
     });
   }
 
   void _beginEditing() {
+    _isEditingQuantityText = true;
     _focusNode.requestFocus();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -102,10 +115,52 @@ class _CompactQuantityControlLocalState
     );
   }
 
+  void _commitAndEndEditing() {
+    final newQuantity = num.tryParse(_controller.text);
+    if (newQuantity != null) {
+      _handleQuantityChange(newQuantity, updateControllerText: true);
+    }
+
+    _isEditingQuantityText = false;
+    Provider.of<KeyboardProvider>(context, listen: false).hide();
+    _focusNode.unfocus();
+    widget.onEditingComplete?.call();
+  }
+
+  KeyEventResult _handleFieldKey(KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.tab) {
+      _commitAndEndEditing();
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      _handleQuantityChange(_currentQuantity + 1, updateControllerText: true);
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      _handleQuantityChange(_currentQuantity - 1, updateControllerText: true);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
   bool _shouldHandleEditRequest(CompactQuantityControlLocal oldWidget) {
     return widget.editRequestId != oldWidget.editRequestId &&
         widget.editRequestKey != null &&
         widget.editRequestKey == _cartIdentityKey(widget.cartItem);
+  }
+
+  bool _shouldHandleRefreshRequest(CompactQuantityControlLocal oldWidget) {
+    return widget.refreshRequestId != oldWidget.refreshRequestId &&
+        widget.refreshRequestKey != null &&
+        widget.refreshRequestKey == _cartIdentityKey(widget.cartItem) &&
+        widget.refreshQuantity != null;
   }
 
   @override
@@ -119,6 +174,7 @@ class _CompactQuantityControlLocalState
       _debounceTimer?.cancel();
       _pendingQuantity = null;
       _isUpdating = false;
+      _isEditingQuantityText = false;
       _currentQuantity = _displayQuantityForBase(widget.quantity);
       _controller.text = _formatQuantity(_currentQuantity);
 
@@ -143,23 +199,33 @@ class _CompactQuantityControlLocalState
       });
     }
 
+    if (_shouldHandleRefreshRequest(oldWidget)) {
+      debugPrint(
+        '🧮 [CompactQuantityControlLocal] explicit refresh '
+        'productId=${widget.productId}, quantity=${widget.refreshQuantity}',
+      );
+      _isEditingQuantityText = false;
+      _applyQuantityValue(widget.refreshQuantity!, forceControllerText: true);
+      return;
+    }
+
     // Check if the quantity prop has changed
-    if (widget.quantity != oldWidget.quantity &&
-        widget.quantity != _currentQuantity) {
+    final displayQuantity = _displayQuantityForBase(widget.quantity);
+    if (displayQuantity != _currentQuantity) {
       final keyboardProvider =
           Provider.of<KeyboardProvider>(context, listen: false);
-      final bool isEditing = _focusNode.hasFocus ||
+      final bool isEditing = _isEditingQuantityText ||
           (keyboardProvider.showKeyboard &&
               identical(keyboardProvider.controller, _controller));
 
       if (!isEditing) {
         setState(() {
-          _currentQuantity = _displayQuantityForBase(widget.quantity);
+          _currentQuantity = displayQuantity;
           _controller.text = _formatQuantity(_currentQuantity);
         });
       } else {
         // Just update the internal current value to stay in sync without touching text
-        _currentQuantity = _displayQuantityForBase(widget.quantity);
+        _currentQuantity = displayQuantity;
       }
     }
   }
@@ -174,7 +240,10 @@ class _CompactQuantityControlLocalState
   }
 
   // Update UI immediately but debounce API calls
-  void _handleQuantityChange(num newQuantity) {
+  void _handleQuantityChange(
+    num newQuantity, {
+    bool updateControllerText = false,
+  }) {
     if (newQuantity < 0) return;
 
     // Update UI immediately
@@ -185,7 +254,7 @@ class _CompactQuantityControlLocalState
       // edited by the user. This prevents the current selection from being
       // reset on every key-stroke (which caused the previously typed digit to
       // be replaced). It now behaves the same way as PriceTextField.
-      if (!_focusNode.hasFocus) {
+      if (updateControllerText || !_isEditingQuantityText) {
         _controller.text = _formatQuantity(_currentQuantity);
       }
     });
@@ -228,14 +297,17 @@ class _CompactQuantityControlLocalState
     }
   }
 
-  void _applyQuantityValue(num quantity) {
+  void _applyQuantityValue(
+    num quantity, {
+    bool forceControllerText = false,
+  }) {
     if (!mounted) {
       return;
     }
 
     setState(() {
       _currentQuantity = _displayQuantityForBase(quantity);
-      if (!_focusNode.hasFocus) {
+      if (forceControllerText || !_isEditingQuantityText) {
         _controller.text = _formatQuantity(_currentQuantity);
       }
     });
@@ -265,13 +337,56 @@ class _CompactQuantityControlLocalState
     return value.toString();
   }
 
+  void _syncControllerTextAfterBuild({
+    required num displayQuantity,
+    required String reason,
+  }) {
+    if (_isEditingQuantityText) {
+      return;
+    }
+
+    final displayText = _formatQuantity(displayQuantity);
+    if (_currentQuantity == displayQuantity &&
+        _controller.text == displayText) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isEditingQuantityText) {
+        return;
+      }
+
+      debugPrint(
+        '🧮 [CompactQuantityControlLocal] sync text ($reason) '
+        'productId=${widget.productId}, '
+        'widgetQuantity=${widget.quantity}, '
+        'displayQuantity=$displayQuantity, '
+        'currentQuantity=$_currentQuantity, '
+        'controllerText="${_controller.text}" -> "$displayText"',
+      );
+
+      setState(() {
+        _currentQuantity = displayQuantity;
+        _controller.text = displayText;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    _syncControllerTextAfterBuild(
+      displayQuantity: _displayQuantityForBase(widget.quantity),
+      reason: 'build',
+    );
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         InkWell(
-          onTap: () => _handleQuantityChange(_currentQuantity - 1),
+          onTap: () => _handleQuantityChange(
+            _currentQuantity - 1,
+            updateControllerText: true,
+          ),
           child: Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -309,15 +424,15 @@ class _CompactQuantityControlLocalState
               _beginEditing();
             },
             onSubmitted: (value) {
-              num? newQuantity = num.tryParse(value);
-              if (newQuantity != null) {
-                _handleQuantityChange(newQuantity);
-              }
+              _commitAndEndEditing();
             },
           ),
         ),
         InkWell(
-          onTap: () => _handleQuantityChange(_currentQuantity + 1),
+          onTap: () => _handleQuantityChange(
+            _currentQuantity + 1,
+            updateControllerText: true,
+          ),
           child: Container(
             decoration: const BoxDecoration(
               shape: BoxShape.circle,

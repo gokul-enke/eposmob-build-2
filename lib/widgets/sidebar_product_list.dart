@@ -279,6 +279,12 @@ class _SideBarProductListState extends State<SideBarProductList> {
                         width: double.infinity, // Take full width
                         margin: const EdgeInsets.symmetric(
                             horizontal: 8), // Minimal margin
+                        onTap: () {
+                          if (_productGridFocusNode.hasFocus) {
+                            _productGridFocusNode.unfocus();
+                          }
+                          _categoryFocusNode.requestFocus();
+                        },
                         onchanged: (query) {
                           final categoryProvider =
                               Provider.of<CategoryProvider>(context,
@@ -622,6 +628,12 @@ class _SideBarProductListState extends State<SideBarProductList> {
                             width: double.infinity, // Take full width
                             margin: const EdgeInsets.symmetric(
                                 horizontal: 8), // Minimal margin
+                            onTap: () {
+                              if (_productGridFocusNode.hasFocus) {
+                                _productGridFocusNode.unfocus();
+                              }
+                              _productFocusNode.requestFocus();
+                            },
                             onchanged: (query) {
                               Provider.of<LocalProductProvider>(context,
                                       listen: false)

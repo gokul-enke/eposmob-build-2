@@ -215,8 +215,11 @@ class BillingPageState extends State<BillingPage>
   int? _cartTableFocusedCellIndex;
   int _cartQuantityEditRequestId = 0;
   int _cartPriceEditRequestId = 0;
+  int _cartQuantityRefreshRequestId = 0;
   String? _cartQuantityEditRequestKey;
   String? _cartPriceEditRequestKey;
+  String? _cartQuantityRefreshRequestKey;
+  num? _cartQuantityRefreshQuantity;
 
   StreamSubscription<String>? _barcodeSubscription;
 
@@ -1485,17 +1488,14 @@ class BillingPageState extends State<BillingPage>
                           ),
                         ),
                         _buildSidebarResizeHandle(usableWidth),
-                        ExcludeFocus(
-                          excluding: !_isSidebarKeyboardActive,
-                          child: SizedBox(
-                            width: sidebarWidth,
-                            child: _buildSidebar(
-                              margin: const EdgeInsets.only(
-                                left: 4,
-                                top: 10,
-                                bottom: 10,
-                                right: 10,
-                              ),
+                        SizedBox(
+                          width: sidebarWidth,
+                          child: _buildSidebar(
+                            margin: const EdgeInsets.only(
+                              left: 4,
+                              top: 10,
+                              bottom: 10,
+                              right: 10,
                             ),
                           ),
                         ),
@@ -1697,6 +1697,8 @@ class BillingPageState extends State<BillingPage>
         context.watch<KeyboardFocusHighlightProvider>().enabled;
     return Focus(
       focusNode: _sidebarFocusNode,
+      canRequestFocus: _isSidebarKeyboardActive,
+      skipTraversal: !_isSidebarKeyboardActive,
       child: BuildBoxShadowContainer(
         circleRadius: 10,
         margin: margin,
@@ -2792,10 +2794,9 @@ class BillingPageState extends State<BillingPage>
               width: constraints.maxWidth,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color:
-                      showCartContainerFocusRing
-                          ? Colors.orange
-                          : Colors.transparent,
+                  color: showCartContainerFocusRing
+                      ? Colors.orange
+                      : Colors.transparent,
                   width: showCartContainerFocusRing ? 3 : 1,
                 ),
                 borderRadius: BorderRadius.circular(6),
@@ -3049,6 +3050,16 @@ class BillingPageState extends State<BillingPage>
                                                       _cartQuantityEditRequestId,
                                                   editRequestKey:
                                                       _cartQuantityEditRequestKey,
+                                                  onEditingComplete: () {
+                                                    _cartTableFocusNode
+                                                        .requestFocus();
+                                                  },
+                                                  refreshRequestId:
+                                                      _cartQuantityRefreshRequestId,
+                                                  refreshRequestKey:
+                                                      _cartQuantityRefreshRequestKey,
+                                                  refreshQuantity:
+                                                      _cartQuantityRefreshQuantity,
                                                 ),
                                               ),
                                             ),
@@ -3122,6 +3133,10 @@ class BillingPageState extends State<BillingPage>
                                                       _cartPriceEditRequestId,
                                                   editRequestKey:
                                                       _cartPriceEditRequestKey,
+                                                  onEditingComplete: () {
+                                                    _cartTableFocusNode
+                                                        .requestFocus();
+                                                  },
                                                 ),
                                               ),
                                             ),
@@ -3459,13 +3474,27 @@ class BillingPageState extends State<BillingPage>
     if (productId == null) return;
 
     final nextQuantity = item.quantity + delta;
-    await CartQuantityStockHelper.syncCartItemQuantity(
+    debugPrint(
+      '🧮 [BillingPage] keyboard quantity adjust '
+      'productId=$productId, current=${item.quantity}, '
+      'delta=$delta, next=$nextQuantity',
+    );
+    final result = await CartQuantityStockHelper.syncCartItemQuantity(
       context: context,
       cartItem: item,
       newQuantity: nextQuantity,
     );
+    debugPrint(
+      '🧮 [BillingPage] keyboard quantity applied '
+      'productId=$productId, applied=${result.appliedQuantity}, '
+      'changed=${result.changed}, itemNow=${item.quantity}',
+    );
     if (!mounted) return;
-    setState(() {});
+    setState(() {
+      _cartQuantityRefreshRequestKey = _cartIdentityKey(item);
+      _cartQuantityRefreshQuantity = result.appliedQuantity;
+      _cartQuantityRefreshRequestId++;
+    });
   }
 
   Widget _buildHeaderCell(String text,
