@@ -2159,6 +2159,9 @@ class BillingPageState extends State<BillingPage>
         currentOrder?.customerName ??
         currentOrder?.customerPhone;
     final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
+    final bool showHeaderCustomerBalance = selectedHeaderCustomer != null &&
+        !customerSelectionProvider.isDefaultCustomer &&
+        !_isDefaultCustomerPhone(selectedHeaderCustomer.phone);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2190,6 +2193,7 @@ class BillingPageState extends State<BillingPage>
                 _buildHeaderCustomerDetails(
                   name: fallbackCustomerName,
                   balance: selectedHeaderCustomer?.balance,
+                  showBalance: showHeaderCustomerBalance,
                   customerType: showCustomerType
                       ? selectedHeaderCustomer?.customerType
                       : null,
@@ -2301,6 +2305,7 @@ class BillingPageState extends State<BillingPage>
   Widget _buildHeaderCustomerDetails({
     required String? name,
     required double? balance,
+    required bool showBalance,
     required String? customerType,
   }) {
     const int maxCustomerNameChars = 30;
@@ -2367,21 +2372,23 @@ class BillingPageState extends State<BillingPage>
                   ),
                 ),
               ),
-              Container(
-                height: 14,
-                width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 7),
-                color: Colors.grey.shade300,
-              ),
-              Text(
-                'Bal $displayBalance',
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s11,
-                  0.16,
-                  balanceColor,
+              if (showBalance) ...[
+                Container(
+                  height: 14,
+                  width: 1,
+                  margin: const EdgeInsets.symmetric(horizontal: 7),
+                  color: Colors.grey.shade300,
                 ),
-              ),
+                Text(
+                  'Bal $displayBalance',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.16,
+                    balanceColor,
+                  ),
+                ),
+              ],
               if (displayCustomerType != null) ...[
                 const SizedBox(width: 6),
                 Container(
