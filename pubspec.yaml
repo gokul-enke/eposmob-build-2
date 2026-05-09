@@ -102,10 +102,10 @@ dependencies:
 
 msix_config:
   display_name: CLOUDPOS - Billing App
-  publisher_display_name: ENKE
+  publisher_display_name: enkeconsulting
   publisher: CN=DBDFAF94-3386-4A19-8AC8-1B8336E3BBFC
   identity_name: enkeconsulting.CLOUDPOS-BillingApp
-  msix_version: 1.0.5.1
+  msix_version: 1.0.5.0
   logo_path: windows/runner/resources/app_icon.ico
   capabilities: internetClient, bluetooth
   output_name: cloudpos
