@@ -60,7 +60,7 @@ class _CustomerPurchaseHistoryModalState
         padding: const EdgeInsets.all(20),
         constraints: BoxConstraints(
           maxWidth: 600,
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -75,7 +75,7 @@ class _CustomerPurchaseHistoryModalState
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
@@ -236,8 +236,7 @@ class _CustomerPurchaseHistoryModalState
             const SizedBox(height: 8),
             
             // Purchase history items
-            Container(
-              constraints: const BoxConstraints(maxHeight: 300),
+            Expanded(
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: widget.purchaseHistory.length,
@@ -246,10 +245,15 @@ class _CustomerPurchaseHistoryModalState
                   final item = widget.purchaseHistory[index];
                   final isEven = index % 2 == 0;
                   
-                  return Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                    color: isEven ? Colors.grey.shade50 : Colors.white,
-                    child: Row(
+                  return FocusTraversalOrder(
+                    order: NumericFocusOrder(20 + (index * 2).toDouble()),
+                    child: Focus(
+                      canRequestFocus: true,
+                      skipTraversal: false,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                        color: isEven ? Colors.grey.shade50 : Colors.white,
+                        child: Row(
                       children: [
                         Expanded(
                           flex: 2,
@@ -305,7 +309,7 @@ class _CustomerPurchaseHistoryModalState
                           flex: 2,
                           child: Center(
                             child: FocusTraversalOrder(
-                              order: NumericFocusOrder(10 + index.toDouble()),
+                              order: NumericFocusOrder(21 + (index * 2).toDouble()),
                               child: Focus(
                                 onFocusChange: (v) {
                                   if (v) {
@@ -357,6 +361,8 @@ class _CustomerPurchaseHistoryModalState
                           ),
                         ),
                       ],
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -366,10 +372,14 @@ class _CustomerPurchaseHistoryModalState
             const SizedBox(height: 20),
             
             // Action buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FocusTraversalOrder(
+            Align(
+              alignment: Alignment.centerRight,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FocusTraversalOrder(
                   order: NumericFocusOrder(1000 + widget.purchaseHistory.length.toDouble()),
                   child: Focus(
                     onFocusChange: (v) => setState(() => _useCurrentFocused = v),
@@ -401,10 +411,8 @@ class _CustomerPurchaseHistoryModalState
                     ),
                   ),
                 ),
-                
-                const SizedBox(width: 12),
-                
-                FocusTraversalOrder(
+                    const SizedBox(width: 12),
+                    FocusTraversalOrder(
                   order: NumericFocusOrder(1001 + widget.purchaseHistory.length.toDouble()),
                   child: Focus(
                     onFocusChange: (v) => setState(() => _cancelFocused = v),
@@ -438,7 +446,9 @@ class _CustomerPurchaseHistoryModalState
                     ),
                   ),
                 ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ],
           ),

@@ -918,18 +918,20 @@ class BillingPageState extends State<BillingPage>
         key == LogicalKeyboardKey.f10 ||
         key == LogicalKeyboardKey.f11 ||
         key == LogicalKeyboardKey.f12 ||
+        key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.insert ||
         key == LogicalKeyboardKey.escape;
   }
 
   /// Returns true when the current key event is one of the Ctrl-modified
-  /// shortcuts handled by this page (Ctrl+H/A/K/D/S/Q/P).
+  /// shortcuts handled by this page (Ctrl+H/A/K/D/S/Q/P/U).
   bool _isBillingControlShortcut(LogicalKeyboardKey key) {
     if (!HardwareKeyboard.instance.isControlPressed) return false;
     return key == LogicalKeyboardKey.keyH ||
         key == LogicalKeyboardKey.keyA ||
         key == LogicalKeyboardKey.keyK ||
         key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.keyU ||
         key == LogicalKeyboardKey.keyQ ||
         key == LogicalKeyboardKey.keyP ||
         key == LogicalKeyboardKey.keyS;
@@ -950,8 +952,9 @@ class BillingPageState extends State<BillingPage>
     // cart.
     if (!mounted) return;
     setState(() {
-      if (_cartTableFocusNode.hasFocus && _cartTableFocusedRowIndex == null) {
-        _cartTableFocusedRowIndex = 0;
+      if (_cartTableFocusNode.hasFocus) {
+        _cartTableFocusedRowIndex ??= 0;
+        _cartTableFocusedCellIndex ??= 0;
       }
       if (!_cartTableFocusNode.hasFocus) {
         _cartTableFocusedCellIndex = null;
@@ -1056,8 +1059,9 @@ class BillingPageState extends State<BillingPage>
           return;
         }
         if (event.logicalKey == LogicalKeyboardKey.keyD) {
-          debugPrint("⌨️ [BillingPage] Handling Ctrl+D -> open cash drawer");
-          unawaited(_openCashDrawerFromShortcut());
+          debugPrint(
+              "⌨️ [BillingPage] Handling Ctrl+D -> focus cart table (item name)");
+          _focusCartTable();
           return;
         }
         if (event.logicalKey == LogicalKeyboardKey.keyQ) {
@@ -1065,11 +1069,23 @@ class BillingPageState extends State<BillingPage>
           _requestCartFieldEditFromShortcut(isQuantity: true);
           return;
         }
+        if (event.logicalKey == LogicalKeyboardKey.keyU) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+U -> focus cart unit");
+          _requestCartFieldEditFromShortcut(isQuantity: null);
+          return;
+        }
         if (event.logicalKey == LogicalKeyboardKey.keyP) {
           debugPrint("⌨️ [BillingPage] Handling Ctrl+P -> edit cart price");
           _requestCartFieldEditFromShortcut(isQuantity: false);
           return;
         }
+      }
+
+      if (!HardwareKeyboard.instance.isControlPressed &&
+          event.logicalKey == LogicalKeyboardKey.keyD) {
+        debugPrint("⌨️ [BillingPage] Handling D -> open cash drawer");
+        unawaited(_openCashDrawerFromShortcut());
+        return;
       }
 
       if (event.logicalKey == LogicalKeyboardKey.f1) {
@@ -3176,19 +3192,24 @@ class BillingPageState extends State<BillingPage>
 
                                         // Unit
                                         _buildContentCell(
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 2),
-                                            child: _buildCartUnitSelector(
-                                              item: item,
-                                              localProductProvider:
-                                                  localProductProvider,
-                                              textStyle: buildCustomStyle(
-                                                FontWeightManager.regular,
-                                                fontProvider
-                                                    .billingTableItemSize,
-                                                0.21,
-                                                ColorManager.textColor,
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 1,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: _buildCartUnitSelector(
+                                                item: item,
+                                                localProductProvider:
+                                                    localProductProvider,
+                                                textStyle: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  fontProvider
+                                                      .billingTableItemSize,
+                                                  0.21,
+                                                  ColorManager.textColor,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -3199,7 +3220,7 @@ class BillingPageState extends State<BillingPage>
                                         _buildContentCell(
                                           _buildCartKeyboardCell(
                                             rowIndex: index,
-                                            cellIndex: 1,
+                                            cellIndex: 2,
                                             child: Center(
                                               child: Padding(
                                                 padding:
@@ -3291,7 +3312,7 @@ class BillingPageState extends State<BillingPage>
                                         _buildContentCell(
                                           _buildCartKeyboardCell(
                                             rowIndex: index,
-                                            cellIndex: 2,
+                                            cellIndex: 3,
                                             child: Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -3388,7 +3409,7 @@ class BillingPageState extends State<BillingPage>
                                         _buildContentCell(
                                           _buildCartKeyboardCell(
                                             rowIndex: index,
-                                            cellIndex: 3,
+                                            cellIndex: 4,
                                             child: Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -3448,7 +3469,7 @@ class BillingPageState extends State<BillingPage>
     _cartTableFocusNode.requestFocus();
   }
 
-  void _requestCartFieldEditFromShortcut({required bool isQuantity}) {
+  void _requestCartFieldEditFromShortcut({required bool? isQuantity}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = localProductProvider.getCartItems();
@@ -3460,14 +3481,16 @@ class BillingPageState extends State<BillingPage>
 
     setState(() {
       _cartTableFocusedRowIndex = focusedIndex;
-      if (isQuantity) {
-        _cartTableFocusedCellIndex = 1;
+      if (isQuantity == true) {
+        _cartTableFocusedCellIndex = 2;
         _cartQuantityEditRequestKey = _cartIdentityKey(item);
         _cartQuantityEditRequestId++;
-      } else {
-        _cartTableFocusedCellIndex = 2;
+      } else if (isQuantity == false) {
+        _cartTableFocusedCellIndex = 3;
         _cartPriceEditRequestKey = _cartIdentityKey(item);
         _cartPriceEditRequestId++;
+      } else {
+        _cartTableFocusedCellIndex = 1;
       }
     });
   }
@@ -3510,7 +3533,7 @@ class BillingPageState extends State<BillingPage>
     if (key == LogicalKeyboardKey.arrowRight) {
       setState(() {
         _cartTableFocusedCellIndex =
-            ((_cartTableFocusedCellIndex ?? -1) + 1).clamp(0, 3).toInt();
+            ((_cartTableFocusedCellIndex ?? -1) + 1).clamp(0, 4).toInt();
       });
       return KeyEventResult.handled;
     }
@@ -3518,7 +3541,7 @@ class BillingPageState extends State<BillingPage>
     if (key == LogicalKeyboardKey.arrowLeft) {
       setState(() {
         _cartTableFocusedCellIndex =
-            ((_cartTableFocusedCellIndex ?? 0) - 1).clamp(0, 3).toInt();
+            ((_cartTableFocusedCellIndex ?? 0) - 1).clamp(0, 4).toInt();
       });
       return KeyEventResult.handled;
     }
@@ -3530,17 +3553,17 @@ class BillingPageState extends State<BillingPage>
     if (key == LogicalKeyboardKey.enter) {
       if (_cartTableFocusedCellIndex == 0) {
         _showProductDetailsDialog(item);
-      } else if (_cartTableFocusedCellIndex == 1) {
+      } else if (_cartTableFocusedCellIndex == 2) {
         setState(() {
           _cartQuantityEditRequestKey = _cartIdentityKey(item);
           _cartQuantityEditRequestId++;
         });
-      } else if (_cartTableFocusedCellIndex == 2) {
+      } else if (_cartTableFocusedCellIndex == 3) {
         setState(() {
           _cartPriceEditRequestKey = _cartIdentityKey(item);
           _cartPriceEditRequestId++;
         });
-      } else if (_cartTableFocusedCellIndex == 3) {
+      } else if (_cartTableFocusedCellIndex == 4) {
         _removeCartItemFromKeyboard(
             item, localProductProvider, cartItems.length);
       }
@@ -3559,6 +3582,8 @@ class BillingPageState extends State<BillingPage>
     final isDecreaseKey = character == '-' ||
         key == LogicalKeyboardKey.minus ||
         key == LogicalKeyboardKey.numpadSubtract;
+    final isHistoryKey = !HardwareKeyboard.instance.isControlPressed &&
+        (key == LogicalKeyboardKey.keyH || character?.toLowerCase() == 'h');
 
     if (isIncreaseKey) {
       unawaited(_adjustCartItemQuantityFromKeyboard(item, 1));
@@ -3570,11 +3595,16 @@ class BillingPageState extends State<BillingPage>
       return KeyEventResult.handled;
     }
 
+    if (isHistoryKey) {
+      unawaited(_showCustomerPurchaseHistoryForCartItem(item));
+      return KeyEventResult.handled;
+    }
+
     return KeyEventResult.ignored;
   }
 
   KeyEventResult _handleCartTableTabKey(int cartLength) {
-    const int lastCellIndex = 3;
+    const int lastCellIndex = 4;
     final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
     final rowIndex = (_cartTableFocusedRowIndex ?? 0).clamp(0, cartLength - 1);
     final cellIndex = _cartTableFocusedCellIndex;

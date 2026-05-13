@@ -42,6 +42,11 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
     _ShortcutItem(
       keyLabel: 'Ctrl + D',
+      action: 'Focus Cart Table',
+      description: 'Focus cart on first row Item Name cell',
+    ),
+    _ShortcutItem(
+      keyLabel: 'D',
       action: 'Open Cash Drawer',
       description: 'Trigger printer to open the cash drawer',
     ),
@@ -54,6 +59,11 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       keyLabel: 'Ctrl + S',
       action: 'Focus Search Product field',
       description: 'Jump cursor to product search for fast item entry',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + U',
+      action: 'Focus Cart Unit',
+      description: 'Focus Unit selector for the selected cart row',
     ),
   ];
 
@@ -117,6 +127,11 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       keyLabel: 'Arrow Keys',
       action: 'Navigate lists',
       description: 'Move up/down in cart, customer, or product lists',
+    ),
+    _ShortcutItem(
+      keyLabel: 'H',
+      action: 'Purchase History (cart row)',
+      description: 'Open customer purchase history for selected cart row',
     ),
     _ShortcutItem(
       keyLabel: 'Esc',

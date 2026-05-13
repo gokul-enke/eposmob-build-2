@@ -319,7 +319,8 @@ class _CompactQuantityControlLocalState
   }
 
   num _displayQuantityForBase(num baseQuantity) {
-    return widget.cartItem.toDisplayQuantity(baseQuantity);
+    return _roundDisplayQuantity(
+        widget.cartItem.toDisplayQuantity(baseQuantity));
   }
 
   num _toBaseQuantity(num displayQuantity) {
@@ -334,7 +335,20 @@ class _CompactQuantityControlLocalState
     if ((value.toDouble() - roundedValue).abs() < 0.0001) {
       return roundedValue.toInt().toString();
     }
-    return value.toString();
+    return value.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  num _roundDisplayQuantity(num value) {
+    if (value is int) {
+      return value;
+    }
+
+    final roundedValue = value.roundToDouble();
+    if ((value.toDouble() - roundedValue).abs() < 0.0001) {
+      return roundedValue.toInt();
+    }
+
+    return double.parse(value.toStringAsFixed(3));
   }
 
   void _syncControllerTextAfterBuild({
