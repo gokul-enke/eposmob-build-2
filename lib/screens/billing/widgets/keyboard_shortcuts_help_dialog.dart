@@ -18,13 +18,33 @@ class _ShortcutItem {
   });
 }
 
-class KeyboardShortcutsHelpDialog extends StatelessWidget {
-  const KeyboardShortcutsHelpDialog({super.key});
+class _ShortcutSection {
+  final String title;
+  final List<_ShortcutItem> items;
 
-  static void show(BuildContext context) {
+  const _ShortcutSection({
+    required this.title,
+    required this.items,
+  });
+}
+
+enum KeyboardShortcutsHelpMode { standard, restaurant }
+
+class KeyboardShortcutsHelpDialog extends StatelessWidget {
+  const KeyboardShortcutsHelpDialog({
+    super.key,
+    this.mode = KeyboardShortcutsHelpMode.standard,
+  });
+
+  final KeyboardShortcutsHelpMode mode;
+
+  static void show(
+    BuildContext context, {
+    KeyboardShortcutsHelpMode mode = KeyboardShortcutsHelpMode.standard,
+  }) {
     showDialog(
       context: context,
-      builder: (_) => const KeyboardShortcutsHelpDialog(),
+      builder: (_) => KeyboardShortcutsHelpDialog(mode: mode),
     );
   }
 
@@ -42,13 +62,19 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
     _ShortcutItem(
       keyLabel: 'Ctrl + D',
+      action: 'Focus Cart Table',
+      description: 'Focus cart on first row Item Name cell',
+    ),
+    _ShortcutItem(
+      keyLabel: 'D',
       action: 'Open Cash Drawer',
       description: 'Trigger printer to open the cash drawer',
     ),
     _ShortcutItem(
       keyLabel: 'Ctrl + A',
-      action: 'Focus Barcode field',
-      description: 'Jump cursor to barcode input when barcode sales is enabled',
+      action: 'Focus Category / Barcode',
+      description:
+          'Restaurant: first category. Billing: barcode input when enabled',
     ),
     _ShortcutItem(
       keyLabel: 'Ctrl + S',
@@ -57,7 +83,7 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
   ];
 
-  static const List<_ShortcutItem> _billingShortcuts = [
+  static const List<_ShortcutItem> _standardBillingShortcuts = [
     _ShortcutItem(
       keyLabel: 'F1',
       action: 'Clear Cart',
@@ -89,34 +115,146 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       description: 'Starts a fresh order',
     ),
     _ShortcutItem(
-      keyLabel: 'Enter',
-      action: 'Add Item',
-      description: 'Adds product to cart',
+      keyLabel: 'F12',
+      action: 'Activate sidebar keyboard mode',
+      description: 'Switch focus to right panel (Tab to cycle, Esc to exit)',
+    ),
+  ];
+
+  static const List<_ShortcutItem> _standardCartShortcuts = [
+    _ShortcutItem(
+      keyLabel: 'Delete',
+      action: 'Remove Cart Item',
+      description: 'Remove focused cart item',
+    ),
+    _ShortcutItem(
+      keyLabel: '+ / -',
+      action: 'Adjust Cart Qty',
+      description: 'Increase or decrease quantity of focused cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + U',
+      action: 'Focus Cart Unit',
+      description: 'Focus Unit selector for the selected cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + Q',
+      action: 'Focus Cart Qty',
+      description: 'Focus quantity edit for the selected cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + P',
+      action: 'Focus Cart Price',
+      description: 'Focus price edit for the selected cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'H',
+      action: 'Purchase History (cart row)',
+      description: 'Open customer purchase history for selected cart row',
+    ),
+  ];
+
+  static const List<_ShortcutItem> _restaurantBillingShortcuts = [
+    _ShortcutItem(
+      keyLabel: 'F1',
+      action: 'Clear Cart',
+      description: 'Empties current order',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F8',
+      action: 'Save Order',
+      description: 'Saves without printing',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F9',
+      action: 'Save Order and Print',
+      description: 'Saves and prints receipt',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F6',
+      action: 'Confirm and Print',
+      description: 'Confirms order + prints',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F2',
+      action: 'Confirm Order',
+      description: 'Confirms without printing',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F7',
+      action: 'Create New Order',
+      description: 'Starts a fresh order',
     ),
     _ShortcutItem(
       keyLabel: 'F12',
       action: 'Activate sidebar keyboard mode',
       description: 'Switch focus to right panel (Tab to cycle, Esc to exit)',
     ),
+  ];
+
+  static const List<_ShortcutItem> _restaurantCartShortcuts = [
+    _ShortcutItem(
+      keyLabel: 'Enter / Q',
+      action: 'Edit Cart Qty',
+      description: 'Open quantity dialog for the focused cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: '+ / -',
+      action: 'Adjust Cart Qty',
+      description: 'Increase or decrease quantity of focused cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'P',
+      action: 'Edit Cart Price',
+      description: 'Open unit price edit for focused cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'M',
+      action: 'Edit Cart MRP',
+      description: 'Open MRP edit for focused cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'T',
+      action: 'Edit Cart Tax',
+      description: 'Open tax-rate edit for focused cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'I',
+      action: 'Cart Item Info',
+      description: 'Open product details for focused cart row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Delete',
+      action: 'Remove Cart Item',
+      description: 'Remove focused cart row from cart',
+    ),
+  ];
+
+  static const List<_ShortcutItem> _sharedShortcuts = [
     _ShortcutItem(
       keyLabel: 'Tab',
       action: 'Navigate fields',
-      description: 'Move focus forward through input fields and buttons',
+      description: 'Move focus forward through active sections',
     ),
     _ShortcutItem(
       keyLabel: 'Shift + Tab',
-      action: 'Navigate fields (reverse)',
-      description: 'Move focus backward through input fields and buttons',
+      action: 'Navigate reverse',
+      description: 'Move focus backward through active sections',
     ),
     _ShortcutItem(
       keyLabel: 'Arrow Keys',
-      action: 'Navigate lists',
-      description: 'Move up/down in cart, customer, or product lists',
+      action: 'Navigate lists/grids',
+      description: 'Move in category row, product grid, cart, and modal lists',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Enter / Space',
+      action: 'Activate selected item',
+      description: 'Add product, select tile, or press focused action',
     ),
     _ShortcutItem(
       keyLabel: 'Esc',
-      action: 'Return to product entry',
-      description: 'Exit sidebar mode or refocus Search Product field',
+      action: 'Close / return focus',
+      description: 'Close modal or return focus to product entry',
     ),
   ];
 
@@ -161,21 +299,6 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       action: 'Save and Print',
       description: 'Save + print from modal',
     ),
-    _ShortcutItem(
-      keyLabel: 'Arrow Keys',
-      action: 'Navigate customer / delivery tiles',
-      description: 'Move focus across customer grid or delivery methods',
-    ),
-    _ShortcutItem(
-      keyLabel: 'Enter / Space',
-      action: 'Select highlighted item',
-      description: 'Pick a customer, delivery method, or toggle payment',
-    ),
-    _ShortcutItem(
-      keyLabel: 'Esc',
-      action: 'Close modal',
-      description: 'Dismiss finalize dialog',
-    ),
   ];
 
   static const List<_ShortcutItem> _addProductModalShortcuts = [
@@ -198,6 +321,12 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final billingShortcuts = mode == KeyboardShortcutsHelpMode.restaurant
+        ? _restaurantBillingShortcuts
+        : _standardBillingShortcuts;
+    final cartShortcuts = mode == KeyboardShortcutsHelpMode.restaurant
+        ? _restaurantCartShortcuts
+        : _standardCartShortcuts;
     // Wrap in Focus to capture Esc and dismiss the dialog. autofocus ensures
     // the listener is active immediately after the help opens (e.g. via
     // Ctrl+H on the billing page or the toolbar icon).
@@ -212,114 +341,119 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
         return KeyEventResult.ignored;
       },
       child: Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(24),
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 780, maxHeight: 580),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 24,
-              spreadRadius: 4,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF5F7FA),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(24),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 700),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 20,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8F9FB),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.help_outline,
-                    color: ColorManager.kPrimaryColor,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Keyboard Shortcuts',
-                    style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s18,
-                      0.30,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.close,
-                        size: 18,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Body
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    _buildSectionTitle('GLOBAL ACTIONS'),
-                    const SizedBox(height: 8),
-                    _buildFocusHighlightSetting(context),
-                    const SizedBox(height: 12),
-                    _buildShortcutsGrid(_globalShortcuts),
-                    const SizedBox(height: 16),
-                    _buildSectionTitle('BILLING PAGE (MAIN ORDER SCREEN)'),
-                    const SizedBox(height: 8),
-                    _buildShortcutsGrid(_billingShortcuts),
-                    const SizedBox(height: 16),
-                    _buildSectionTitle('FINALIZE ORDER MODAL'),
-                    const SizedBox(height: 8),
-                    _buildShortcutsGrid(_finalizeModalShortcuts),
-                    const SizedBox(height: 16),
-                    _buildSectionTitle('ADD PRODUCT MODAL'),
-                    const SizedBox(height: 8),
-                    _buildShortcutsGrid(_addProductModalShortcuts),
-                    const SizedBox(height: 4),
+                    const Icon(
+                      Icons.help_outline,
+                      color: ColorManager.kPrimaryColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Keyboard Shortcuts',
+                      style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        FontSize.s18,
+                        0.30,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 18,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ],
+              // Body
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFocusHighlightSetting(context),
+                      const SizedBox(height: 14),
+                      _buildSectionsSheet(
+                        [
+                          const _ShortcutSection(
+                            title: 'Global',
+                            items: _globalShortcuts,
+                          ),
+                          _ShortcutSection(
+                            title: mode == KeyboardShortcutsHelpMode.restaurant
+                                ? 'Billing (Restaurant)'
+                                : 'Billing (Standard)',
+                            items: billingShortcuts,
+                          ),
+                          _ShortcutSection(
+                            title: mode == KeyboardShortcutsHelpMode.restaurant
+                                ? 'Cart (Restaurant)'
+                                : 'Cart (Standard)',
+                            items: cartShortcuts,
+                          ),
+                          const _ShortcutSection(
+                            title: 'Shared',
+                            items: _sharedShortcuts,
+                          ),
+                          const _ShortcutSection(
+                            title: 'Checkout Modal',
+                            items: _finalizeModalShortcuts,
+                          ),
+                          const _ShortcutSection(
+                            title: 'Add Product Modal',
+                            items: _addProductModalShortcuts,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: Colors.grey.shade600,
-        letterSpacing: 0.5,
       ),
     );
   }
@@ -337,8 +471,8 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFF8F9FB),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
@@ -350,26 +484,13 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Keyboard focus outline',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: ColorManager.textColor,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Show blue outline on focused fields, buttons, and cart table',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
+            child: Text(
+              'Keyboard focus outline',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: ColorManager.textColor,
+              ),
             ),
           ),
           Switch(
@@ -382,93 +503,169 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildShortcutsGrid(List<_ShortcutItem> items) {
+  Widget _buildSectionsSheet(List<_ShortcutSection> sections) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Always show 3 columns on desktop widths; 2 on smaller; 1 on very small
-        int crossAxisCount;
-        if (constraints.maxWidth > 640) {
-          crossAxisCount = 3;
-        } else if (constraints.maxWidth > 420) {
-          crossAxisCount = 2;
-        } else {
-          crossAxisCount = 1;
+        const double gap = 14;
+        final bool threeCols = constraints.maxWidth > 980;
+        final bool twoCols = constraints.maxWidth > 640;
+
+        if (!twoCols) {
+          return Column(
+            children: sections
+                .map((section) => Padding(
+                      padding: const EdgeInsets.only(bottom: gap),
+                      child: _buildShortcutSection(section),
+                    ))
+                .toList(),
+          );
         }
 
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 4.2,
-          ),
-          itemCount: items.length,
-          itemBuilder: (context, index) {
-            return _buildShortcutCard(items[index]);
-          },
+        if (threeCols && sections.length >= 6) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildShortcutSection(sections[0]),
+                    const SizedBox(height: gap),
+                    _buildShortcutSection(sections[5]),
+                  ],
+                ),
+              ),
+              const SizedBox(width: gap),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildShortcutSection(sections[1]),
+                    const SizedBox(height: gap),
+                    _buildShortcutSection(sections[3]),
+                  ],
+                ),
+              ),
+              const SizedBox(width: gap),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildShortcutSection(sections[2]),
+                    const SizedBox(height: gap),
+                    _buildShortcutSection(sections[4]),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        // Two-column fallback: split sections evenly.
+        final List<_ShortcutSection> left = [];
+        final List<_ShortcutSection> right = [];
+        for (int i = 0; i < sections.length; i++) {
+          (i.isEven ? left : right).add(sections[i]);
+        }
+
+        Widget buildCol(List<_ShortcutSection> col) {
+          return Column(
+            children: col
+                .map((section) => Padding(
+                      padding: const EdgeInsets.only(bottom: gap),
+                      child: _buildShortcutSection(section),
+                    ))
+                .toList(),
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: buildCol(left)),
+            const SizedBox(width: gap),
+            Expanded(child: buildCol(right)),
+          ],
         );
       },
     );
   }
 
-  Widget _buildShortcutCard(_ShortcutItem item) {
+  Widget _buildShortcutSection(_ShortcutSection section) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: const Color(0xFFFCFCFD),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: Colors.grey.shade300),
+          Text(
+            section.title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade800,
             ),
-            child: Text(
-              item.keyLabel,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: ColorManager.textColor,
+          ),
+          const SizedBox(height: 8),
+          ...section.items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildKeyChip(item.keyLabel),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.action,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: ColorManager.textColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  item.action,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: ColorManager.textColor,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  item.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildKeyChip(String keyLabel) {
+    return SizedBox(
+      width: 96,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: ColorManager.kPrimaryColor,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: ColorManager.kPrimaryColor.withValues(alpha: 0.9),
+          ),
+        ),
+        child: Text(
+          keyLabel,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }

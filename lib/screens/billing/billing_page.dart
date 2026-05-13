@@ -19,6 +19,7 @@ import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -28,6 +29,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -56,6 +58,7 @@ import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
+import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:provider/provider.dart';
@@ -74,6 +77,16 @@ import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
 
 enum CheckoutActionMode { confirm, save }
+
+class _CartUnitMenuOption {
+  final String value;
+  final String label;
+
+  const _CartUnitMenuOption({
+    required this.value,
+    required this.label,
+  });
+}
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
@@ -215,8 +228,18 @@ class BillingPageState extends State<BillingPage>
   int? _cartTableFocusedCellIndex;
   int _cartQuantityEditRequestId = 0;
   int _cartPriceEditRequestId = 0;
+  int _cartQuantityRefreshRequestId = 0;
   String? _cartQuantityEditRequestKey;
   String? _cartPriceEditRequestKey;
+  String? _cartQuantityRefreshRequestKey;
+  String? _cartUnitMenuOpenRequestKey;
+  num? _cartQuantityRefreshQuantity;
+  bool _isCartUnitMenuOpen = false;
+  final Map<String, LayerLink> _cartUnitMenuLayerLinks = <String, LayerLink>{};
+  OverlayEntry? _cartUnitMenuOverlayEntry;
+  List<_CartUnitMenuOption> _cartUnitMenuOptions =
+      const <_CartUnitMenuOption>[];
+  int _cartUnitMenuHighlightedIndex = 0;
 
   StreamSubscription<String>? _barcodeSubscription;
 
@@ -415,6 +438,7 @@ class BillingPageState extends State<BillingPage>
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onBillingHardwareKey);
     debugPrint("⌨️ [BillingPage] HardwareKeyboard handler removed in dispose");
+    _cartUnitMenuOverlayEntry?.remove();
     _barcodeSubscription?.cancel();
     barcodeController.dispose();
     mobileNumberTextController.dispose();
@@ -912,18 +936,20 @@ class BillingPageState extends State<BillingPage>
         key == LogicalKeyboardKey.f10 ||
         key == LogicalKeyboardKey.f11 ||
         key == LogicalKeyboardKey.f12 ||
+        key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.insert ||
         key == LogicalKeyboardKey.escape;
   }
 
   /// Returns true when the current key event is one of the Ctrl-modified
-  /// shortcuts handled by this page (Ctrl+H/A/K/D/S/Q/P).
+  /// shortcuts handled by this page (Ctrl+H/A/K/D/S/Q/P/U).
   bool _isBillingControlShortcut(LogicalKeyboardKey key) {
     if (!HardwareKeyboard.instance.isControlPressed) return false;
     return key == LogicalKeyboardKey.keyH ||
         key == LogicalKeyboardKey.keyA ||
         key == LogicalKeyboardKey.keyK ||
         key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.keyU ||
         key == LogicalKeyboardKey.keyQ ||
         key == LogicalKeyboardKey.keyP ||
         key == LogicalKeyboardKey.keyS;
@@ -943,9 +969,13 @@ class BillingPageState extends State<BillingPage>
     // (when row index was null), leaving a stale ring after Tab left the
     // cart.
     if (!mounted) return;
+    if (!_cartTableFocusNode.hasFocus) {
+      _closeCartUnitMenu(refocusCart: false);
+    }
     setState(() {
-      if (_cartTableFocusNode.hasFocus && _cartTableFocusedRowIndex == null) {
-        _cartTableFocusedRowIndex = 0;
+      if (_cartTableFocusNode.hasFocus) {
+        _cartTableFocusedRowIndex ??= 0;
+        _cartTableFocusedCellIndex ??= 0;
       }
       if (!_cartTableFocusNode.hasFocus) {
         _cartTableFocusedCellIndex = null;
@@ -1050,8 +1080,9 @@ class BillingPageState extends State<BillingPage>
           return;
         }
         if (event.logicalKey == LogicalKeyboardKey.keyD) {
-          debugPrint("⌨️ [BillingPage] Handling Ctrl+D -> open cash drawer");
-          unawaited(_openCashDrawerFromShortcut());
+          debugPrint(
+              "⌨️ [BillingPage] Handling Ctrl+D -> focus cart table (item name)");
+          _focusCartTable();
           return;
         }
         if (event.logicalKey == LogicalKeyboardKey.keyQ) {
@@ -1059,11 +1090,23 @@ class BillingPageState extends State<BillingPage>
           _requestCartFieldEditFromShortcut(isQuantity: true);
           return;
         }
+        if (event.logicalKey == LogicalKeyboardKey.keyU) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+U -> focus cart unit");
+          _requestCartFieldEditFromShortcut(isQuantity: null);
+          return;
+        }
         if (event.logicalKey == LogicalKeyboardKey.keyP) {
           debugPrint("⌨️ [BillingPage] Handling Ctrl+P -> edit cart price");
           _requestCartFieldEditFromShortcut(isQuantity: false);
           return;
         }
+      }
+
+      if (!HardwareKeyboard.instance.isControlPressed &&
+          event.logicalKey == LogicalKeyboardKey.keyD) {
+        debugPrint("⌨️ [BillingPage] Handling D -> open cash drawer");
+        unawaited(_openCashDrawerFromShortcut());
+        return;
       }
 
       if (event.logicalKey == LogicalKeyboardKey.f1) {
@@ -1485,17 +1528,14 @@ class BillingPageState extends State<BillingPage>
                           ),
                         ),
                         _buildSidebarResizeHandle(usableWidth),
-                        ExcludeFocus(
-                          excluding: !_isSidebarKeyboardActive,
-                          child: SizedBox(
-                            width: sidebarWidth,
-                            child: _buildSidebar(
-                              margin: const EdgeInsets.only(
-                                left: 4,
-                                top: 10,
-                                bottom: 10,
-                                right: 10,
-                              ),
+                        SizedBox(
+                          width: sidebarWidth,
+                          child: _buildSidebar(
+                            margin: const EdgeInsets.only(
+                              left: 4,
+                              top: 10,
+                              bottom: 10,
+                              right: 10,
                             ),
                           ),
                         ),
@@ -1697,6 +1737,8 @@ class BillingPageState extends State<BillingPage>
         context.watch<KeyboardFocusHighlightProvider>().enabled;
     return Focus(
       focusNode: _sidebarFocusNode,
+      canRequestFocus: _isSidebarKeyboardActive,
+      skipTraversal: !_isSidebarKeyboardActive,
       child: BuildBoxShadowContainer(
         circleRadius: 10,
         margin: margin,
@@ -1899,6 +1941,7 @@ class BillingPageState extends State<BillingPage>
           return SideBarProductList(
             autofocus: _isSidebarKeyboardActive && _selectedSidebarTab == 0,
             focusRequestId: _sidebarFocusRequestId,
+            categorySectionInitiallyExpanded: false,
           );
         }
 
@@ -2153,6 +2196,9 @@ class BillingPageState extends State<BillingPage>
         currentOrder?.customerName ??
         currentOrder?.customerPhone;
     final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
+    final bool showHeaderCustomerBalance = selectedHeaderCustomer != null &&
+        !customerSelectionProvider.isDefaultCustomer &&
+        !_isDefaultCustomerPhone(selectedHeaderCustomer.phone);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2184,6 +2230,7 @@ class BillingPageState extends State<BillingPage>
                 _buildHeaderCustomerDetails(
                   name: fallbackCustomerName,
                   balance: selectedHeaderCustomer?.balance,
+                  showBalance: showHeaderCustomerBalance,
                   customerType: showCustomerType
                       ? selectedHeaderCustomer?.customerType
                       : null,
@@ -2295,6 +2342,7 @@ class BillingPageState extends State<BillingPage>
   Widget _buildHeaderCustomerDetails({
     required String? name,
     required double? balance,
+    required bool showBalance,
     required String? customerType,
   }) {
     const int maxCustomerNameChars = 30;
@@ -2361,21 +2409,23 @@ class BillingPageState extends State<BillingPage>
                   ),
                 ),
               ),
-              Container(
-                height: 14,
-                width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 7),
-                color: Colors.grey.shade300,
-              ),
-              Text(
-                'Bal $displayBalance',
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s11,
-                  0.16,
-                  balanceColor,
+              if (showBalance) ...[
+                Container(
+                  height: 14,
+                  width: 1,
+                  margin: const EdgeInsets.symmetric(horizontal: 7),
+                  color: Colors.grey.shade300,
                 ),
-              ),
+                Text(
+                  'Bal $displayBalance',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.16,
+                    balanceColor,
+                  ),
+                ),
+              ],
               if (displayCustomerType != null) ...[
                 const SizedBox(width: 6),
                 Container(
@@ -2768,6 +2818,296 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
+  double? _parseSaleUnitRate(SaleUnit saleUnit) {
+    final rate = double.tryParse(saleUnit.conversionRate?.trim() ?? '');
+    if (rate == null || rate <= 0) {
+      return null;
+    }
+    return rate;
+  }
+
+  List<SaleUnit> _validSaleUnitsForCartItem(LocalCartItem item) {
+    final uniqueSaleUnits = <int, SaleUnit>{};
+    for (final saleUnit in item.product.saleUnits ?? const <SaleUnit>[]) {
+      final id = saleUnit.id;
+      if (id == null || _parseSaleUnitRate(saleUnit) == null) {
+        continue;
+      }
+      uniqueSaleUnits[id] = saleUnit;
+    }
+    return uniqueSaleUnits.values.toList();
+  }
+
+  List<_CartUnitMenuOption> _cartUnitOptionsForItem(LocalCartItem item) {
+    final saleUnits = _validSaleUnitsForCartItem(item);
+    final baseUnit = item.product.unit?.trim();
+    final baseLabel = baseUnit == null || baseUnit.isEmpty ? '-' : baseUnit;
+    final options = <_CartUnitMenuOption>[
+      _CartUnitMenuOption(value: 'base', label: baseLabel),
+    ];
+    final normalizedBaseLabel = baseLabel.trim().toLowerCase();
+
+    for (final saleUnit in saleUnits) {
+      final saleUnitId = saleUnit.id;
+      final saleUnitLabel = saleUnit.unitName?.trim().isNotEmpty == true
+          ? saleUnit.unitName!.trim()
+          : saleUnitId?.toString();
+      if (saleUnitId == null || saleUnitLabel == null) {
+        continue;
+      }
+      final isDuplicateBaseUnit =
+          saleUnitLabel.trim().toLowerCase() == normalizedBaseLabel;
+      if (isDuplicateBaseUnit && item.saleUnitId != saleUnitId) {
+        continue;
+      }
+      options.add(
+        _CartUnitMenuOption(
+          value: saleUnitId.toString(),
+          label: saleUnitLabel,
+        ),
+      );
+    }
+    return options;
+  }
+
+  String _selectedCartUnitValue(LocalCartItem item) {
+    return item.saleUnitId == null ? 'base' : item.saleUnitId.toString();
+  }
+
+  void _closeCartUnitMenu({bool refocusCart = true}) {
+    _cartUnitMenuOverlayEntry?.remove();
+    _cartUnitMenuOverlayEntry = null;
+    _cartUnitMenuOptions = const <_CartUnitMenuOption>[];
+    _cartUnitMenuHighlightedIndex = 0;
+    _isCartUnitMenuOpen = false;
+    if (refocusCart && mounted) {
+      _cartTableFocusNode.requestFocus();
+    }
+  }
+
+  void _selectCartUnitOption({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required String value,
+  }) {
+    _closeCartUnitMenu();
+    if (item.product.productId == null) {
+      return;
+    }
+
+    if (value == 'base') {
+      if (item.saleUnitId == null) {
+        return;
+      }
+      localProductProvider.changeCartItemSaleUnit(
+        item.product.productId!,
+        item.selectedStock,
+        stockGroupIds: item.stockGroupIds,
+        currentSaleUnitId: item.saleUnitId,
+      );
+      return;
+    }
+
+    if (value == item.saleUnitId?.toString()) {
+      return;
+    }
+
+    final saleUnits = _validSaleUnitsForCartItem(item);
+    SaleUnit? selectedSaleUnit;
+    for (final saleUnit in saleUnits) {
+      if (saleUnit.id?.toString() == value) {
+        selectedSaleUnit = saleUnit;
+        break;
+      }
+    }
+    final selectedRate =
+        selectedSaleUnit == null ? null : _parseSaleUnitRate(selectedSaleUnit);
+    if (selectedSaleUnit == null || selectedRate == null) {
+      return;
+    }
+
+    localProductProvider.changeCartItemSaleUnit(
+      item.product.productId!,
+      item.selectedStock,
+      stockGroupIds: item.stockGroupIds,
+      currentSaleUnitId: item.saleUnitId,
+      newSaleUnitId: selectedSaleUnit.id,
+      newSaleUnitName: selectedSaleUnit.unitName,
+      newSaleUnitConversionRate: selectedRate,
+    );
+  }
+
+  void _openCartUnitMenu({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required LayerLink layerLink,
+  }) {
+    final options = _cartUnitOptionsForItem(item);
+    if (options.length <= 1 && item.saleUnitId == null) {
+      return;
+    }
+
+    final selectedValue = _selectedCartUnitValue(item);
+    final selectedIndex = options.indexWhere((option) {
+      return option.value == selectedValue;
+    });
+
+    _closeCartUnitMenu(refocusCart: false);
+    _cartUnitMenuOptions = options;
+    _cartUnitMenuHighlightedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    _isCartUnitMenuOpen = true;
+
+    _cartUnitMenuOverlayEntry = OverlayEntry(
+      builder: (context) {
+        return Positioned.fill(
+          child: Stack(
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => _closeCartUnitMenu(),
+              ),
+              CompositedTransformFollower(
+                link: layerLink,
+                showWhenUnlinked: false,
+                offset: const Offset(0, 28),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 84,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.14),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (int index = 0; index < options.length; index++)
+                          InkWell(
+                            onTap: () => _selectCartUnitOption(
+                              item: item,
+                              localProductProvider: localProductProvider,
+                              value: options[index].value,
+                            ),
+                            child: Container(
+                              height: 32,
+                              width: double.infinity,
+                              alignment: Alignment.centerLeft,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: index == _cartUnitMenuHighlightedIndex
+                                    ? ColorManager.kPrimaryColor
+                                        .withOpacity(0.12)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.vertical(
+                                  top: index == 0
+                                      ? const Radius.circular(8)
+                                      : Radius.zero,
+                                  bottom: index == options.length - 1
+                                      ? const Radius.circular(8)
+                                      : Radius.zero,
+                                ),
+                              ),
+                              child: Text(
+                                options[index].label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s12,
+                                  0.15,
+                                  ColorManager.textColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_cartUnitMenuOverlayEntry!);
+    _cartTableFocusNode.requestFocus();
+  }
+
+  Widget _buildCartUnitSelector({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required TextStyle textStyle,
+    required bool shouldAutoOpenFromShortcut,
+  }) {
+    final options = _cartUnitOptionsForItem(item);
+    final canChangeUnit = options.length > 1 || item.saleUnitId != null;
+    if (!canChangeUnit) {
+      return Text(
+        item.displayUnitName,
+        style: textStyle,
+        textAlign: TextAlign.left,
+      );
+    }
+
+    final identityKey = _cartIdentityKey(item);
+    final layerLink =
+        _cartUnitMenuLayerLinks.putIfAbsent(identityKey, LayerLink.new);
+    if (shouldAutoOpenFromShortcut) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _cartUnitMenuOpenRequestKey = null;
+        _openCartUnitMenu(
+          item: item,
+          localProductProvider: localProductProvider,
+          layerLink: layerLink,
+        );
+      });
+    }
+
+    return CompositedTransformTarget(
+      link: layerLink,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          _openCartUnitMenu(
+            item: item,
+            localProductProvider: localProductProvider,
+            layerLink: layerLink,
+          );
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                item.displayUnitName,
+                style: textStyle,
+                textAlign: TextAlign.left,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              size: 14,
+              color: ColorManager.kPrimaryColor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCartItemsTable(Size size) {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
@@ -2775,6 +3115,12 @@ class BillingPageState extends State<BillingPage>
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: true);
         final appSettings = appSettingsProvider.appSettings;
+        final customerSelectionProvider =
+            Provider.of<CustomerSelectionProvider>(context, listen: true);
+        final bool canShowPurchaseHistoryAction =
+            appSettings?.showCustomerLastBuyedPriceList == true &&
+                customerSelectionProvider.hasSelectedCustomer &&
+                !customerSelectionProvider.isDefaultCustomer;
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
 
@@ -2791,10 +3137,9 @@ class BillingPageState extends State<BillingPage>
               width: constraints.maxWidth,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color:
-                      showCartContainerFocusRing
-                          ? Colors.orange
-                          : Colors.transparent,
+                  color: showCartContainerFocusRing
+                      ? Colors.orange
+                      : Colors.transparent,
                   width: showCartContainerFocusRing ? 3 : 1,
                 ),
                 borderRadius: BorderRadius.circular(6),
@@ -2964,6 +3309,31 @@ class BillingPageState extends State<BillingPage>
                                                       ),
                                                     ),
                                                   ),
+                                                  if (canShowPurchaseHistoryAction) ...[
+                                                    const SizedBox(width: 6),
+                                                    Tooltip(
+                                                      message:
+                                                          'Customer purchase history',
+                                                      waitDuration:
+                                                          const Duration(
+                                                              milliseconds:
+                                                                  400),
+                                                      child: InkWell(
+                                                        onTap: () =>
+                                                            _showCustomerPurchaseHistoryForCartItem(
+                                                                item),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(16),
+                                                        child: const Icon(
+                                                          Icons.history,
+                                                          size: 16,
+                                                          color: ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ),
@@ -2999,19 +3369,28 @@ class BillingPageState extends State<BillingPage>
 
                                         // Unit
                                         _buildContentCell(
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 2),
-                                            child: Text(
-                                              item.displayUnitName,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.regular,
-                                                fontProvider
-                                                    .billingTableItemSize,
-                                                0.21,
-                                                ColorManager.textColor,
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 1,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: _buildCartUnitSelector(
+                                                item: item,
+                                                localProductProvider:
+                                                    localProductProvider,
+                                                textStyle: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  fontProvider
+                                                      .billingTableItemSize,
+                                                  0.21,
+                                                  ColorManager.textColor,
+                                                ),
+                                                shouldAutoOpenFromShortcut:
+                                                    _cartUnitMenuOpenRequestKey ==
+                                                        _cartIdentityKey(item),
                                               ),
-                                              textAlign: TextAlign.left,
                                             ),
                                           ),
                                           flex: 1,
@@ -3021,7 +3400,7 @@ class BillingPageState extends State<BillingPage>
                                         _buildContentCell(
                                           _buildCartKeyboardCell(
                                             rowIndex: index,
-                                            cellIndex: 1,
+                                            cellIndex: 2,
                                             child: Center(
                                               child: Padding(
                                                 padding:
@@ -3048,6 +3427,16 @@ class BillingPageState extends State<BillingPage>
                                                       _cartQuantityEditRequestId,
                                                   editRequestKey:
                                                       _cartQuantityEditRequestKey,
+                                                  onEditingComplete: () {
+                                                    _cartTableFocusNode
+                                                        .requestFocus();
+                                                  },
+                                                  refreshRequestId:
+                                                      _cartQuantityRefreshRequestId,
+                                                  refreshRequestKey:
+                                                      _cartQuantityRefreshRequestKey,
+                                                  refreshQuantity:
+                                                      _cartQuantityRefreshQuantity,
                                                 ),
                                               ),
                                             ),
@@ -3103,7 +3492,7 @@ class BillingPageState extends State<BillingPage>
                                         _buildContentCell(
                                           _buildCartKeyboardCell(
                                             rowIndex: index,
-                                            cellIndex: 2,
+                                            cellIndex: 3,
                                             child: Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -3121,6 +3510,10 @@ class BillingPageState extends State<BillingPage>
                                                       _cartPriceEditRequestId,
                                                   editRequestKey:
                                                       _cartPriceEditRequestKey,
+                                                  onEditingComplete: () {
+                                                    _cartTableFocusNode
+                                                        .requestFocus();
+                                                  },
                                                 ),
                                               ),
                                             ),
@@ -3196,7 +3589,7 @@ class BillingPageState extends State<BillingPage>
                                         _buildContentCell(
                                           _buildCartKeyboardCell(
                                             rowIndex: index,
-                                            cellIndex: 3,
+                                            cellIndex: 4,
                                             child: Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -3249,6 +3642,7 @@ class BillingPageState extends State<BillingPage>
 
   void _focusCartTable() {
     debugPrint("⌨️ [BillingPage] Focusing cart table");
+    _closeCartUnitMenu(refocusCart: false);
     setState(() {
       _cartTableFocusedRowIndex = 0;
       _cartTableFocusedCellIndex = 0;
@@ -3256,7 +3650,7 @@ class BillingPageState extends State<BillingPage>
     _cartTableFocusNode.requestFocus();
   }
 
-  void _requestCartFieldEditFromShortcut({required bool isQuantity}) {
+  void _requestCartFieldEditFromShortcut({required bool? isQuantity}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final cartItems = localProductProvider.getCartItems();
@@ -3268,16 +3662,69 @@ class BillingPageState extends State<BillingPage>
 
     setState(() {
       _cartTableFocusedRowIndex = focusedIndex;
-      if (isQuantity) {
-        _cartTableFocusedCellIndex = 1;
+      if (isQuantity == true) {
+        _cartTableFocusedCellIndex = 2;
         _cartQuantityEditRequestKey = _cartIdentityKey(item);
         _cartQuantityEditRequestId++;
-      } else {
-        _cartTableFocusedCellIndex = 2;
+      } else if (isQuantity == false) {
+        _cartTableFocusedCellIndex = 3;
         _cartPriceEditRequestKey = _cartIdentityKey(item);
         _cartPriceEditRequestId++;
+      } else {
+        _cartTableFocusedCellIndex = 1;
+        _cartUnitMenuOpenRequestKey = _cartIdentityKey(item);
       }
     });
+  }
+
+  KeyEventResult _handleOpenCartUnitMenuKey({
+    required KeyEvent event,
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required int cartLength,
+  }) {
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowUp) {
+      final optionCount = _cartUnitMenuOptions.length;
+      if (optionCount == 0) {
+        _closeCartUnitMenu();
+        return KeyEventResult.handled;
+      }
+      final delta = key == LogicalKeyboardKey.arrowDown ? 1 : -1;
+      _cartUnitMenuHighlightedIndex =
+          (_cartUnitMenuHighlightedIndex + delta + optionCount) % optionCount;
+      _cartUnitMenuOverlayEntry?.markNeedsBuild();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      if (_cartUnitMenuOptions.isEmpty) {
+        _closeCartUnitMenu();
+        return KeyEventResult.handled;
+      }
+      final selectedIndex = _cartUnitMenuHighlightedIndex
+          .clamp(0, _cartUnitMenuOptions.length - 1)
+          .toInt();
+      _selectCartUnitOption(
+        item: item,
+        localProductProvider: localProductProvider,
+        value: _cartUnitMenuOptions[selectedIndex].value,
+      );
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.escape) {
+      _closeCartUnitMenu();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.tab) {
+      _closeCartUnitMenu();
+      return _handleCartTableTabKey(cartLength);
+    }
+
+    return KeyEventResult.handled;
   }
 
   KeyEventResult _handleCartTableKey(
@@ -3286,6 +3733,19 @@ class BillingPageState extends State<BillingPage>
       LocalProductProvider localProductProvider) {
     if (event is! KeyDownEvent || cartItems.isEmpty) {
       return KeyEventResult.ignored;
+    }
+
+    final focusedIndex =
+        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
+    final item = cartItems[focusedIndex];
+
+    if (_isCartUnitMenuOpen) {
+      return _handleOpenCartUnitMenuKey(
+        event: event,
+        item: item,
+        localProductProvider: localProductProvider,
+        cartLength: cartItems.length,
+      );
     }
 
     final key = event.logicalKey;
@@ -3318,7 +3778,7 @@ class BillingPageState extends State<BillingPage>
     if (key == LogicalKeyboardKey.arrowRight) {
       setState(() {
         _cartTableFocusedCellIndex =
-            ((_cartTableFocusedCellIndex ?? -1) + 1).clamp(0, 3).toInt();
+            ((_cartTableFocusedCellIndex ?? -1) + 1).clamp(0, 4).toInt();
       });
       return KeyEventResult.handled;
     }
@@ -3326,29 +3786,35 @@ class BillingPageState extends State<BillingPage>
     if (key == LogicalKeyboardKey.arrowLeft) {
       setState(() {
         _cartTableFocusedCellIndex =
-            ((_cartTableFocusedCellIndex ?? 0) - 1).clamp(0, 3).toInt();
+            ((_cartTableFocusedCellIndex ?? 0) - 1).clamp(0, 4).toInt();
       });
       return KeyEventResult.handled;
     }
 
-    final focusedIndex =
-        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
-    final item = cartItems[focusedIndex];
-
-    if (key == LogicalKeyboardKey.enter) {
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
       if (_cartTableFocusedCellIndex == 0) {
         _showProductDetailsDialog(item);
       } else if (_cartTableFocusedCellIndex == 1) {
+        final identityKey = _cartIdentityKey(item);
+        final layerLink = _cartUnitMenuLayerLinks[identityKey];
+        if (layerLink != null) {
+          _openCartUnitMenu(
+            item: item,
+            localProductProvider: localProductProvider,
+            layerLink: layerLink,
+          );
+        }
+      } else if (_cartTableFocusedCellIndex == 2) {
         setState(() {
           _cartQuantityEditRequestKey = _cartIdentityKey(item);
           _cartQuantityEditRequestId++;
         });
-      } else if (_cartTableFocusedCellIndex == 2) {
+      } else if (_cartTableFocusedCellIndex == 3) {
         setState(() {
           _cartPriceEditRequestKey = _cartIdentityKey(item);
           _cartPriceEditRequestId++;
         });
-      } else if (_cartTableFocusedCellIndex == 3) {
+      } else if (_cartTableFocusedCellIndex == 4) {
         _removeCartItemFromKeyboard(
             item, localProductProvider, cartItems.length);
       }
@@ -3367,6 +3833,8 @@ class BillingPageState extends State<BillingPage>
     final isDecreaseKey = character == '-' ||
         key == LogicalKeyboardKey.minus ||
         key == LogicalKeyboardKey.numpadSubtract;
+    final isHistoryKey = !HardwareKeyboard.instance.isControlPressed &&
+        (key == LogicalKeyboardKey.keyH || character?.toLowerCase() == 'h');
 
     if (isIncreaseKey) {
       unawaited(_adjustCartItemQuantityFromKeyboard(item, 1));
@@ -3378,11 +3846,16 @@ class BillingPageState extends State<BillingPage>
       return KeyEventResult.handled;
     }
 
+    if (isHistoryKey) {
+      unawaited(_showCustomerPurchaseHistoryForCartItem(item));
+      return KeyEventResult.handled;
+    }
+
     return KeyEventResult.ignored;
   }
 
   KeyEventResult _handleCartTableTabKey(int cartLength) {
-    const int lastCellIndex = 3;
+    const int lastCellIndex = 4;
     final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
     final rowIndex = (_cartTableFocusedRowIndex ?? 0).clamp(0, cartLength - 1);
     final cellIndex = _cartTableFocusedCellIndex;
@@ -3458,13 +3931,27 @@ class BillingPageState extends State<BillingPage>
     if (productId == null) return;
 
     final nextQuantity = item.quantity + delta;
-    await CartQuantityStockHelper.syncCartItemQuantity(
+    debugPrint(
+      '🧮 [BillingPage] keyboard quantity adjust '
+      'productId=$productId, current=${item.quantity}, '
+      'delta=$delta, next=$nextQuantity',
+    );
+    final result = await CartQuantityStockHelper.syncCartItemQuantity(
       context: context,
       cartItem: item,
       newQuantity: nextQuantity,
     );
+    debugPrint(
+      '🧮 [BillingPage] keyboard quantity applied '
+      'productId=$productId, applied=${result.appliedQuantity}, '
+      'changed=${result.changed}, itemNow=${item.quantity}',
+    );
     if (!mounted) return;
-    setState(() {});
+    setState(() {
+      _cartQuantityRefreshRequestKey = _cartIdentityKey(item);
+      _cartQuantityRefreshQuantity = result.appliedQuantity;
+      _cartQuantityRefreshRequestId++;
+    });
   }
 
   Widget _buildHeaderCell(String text,
@@ -3554,6 +4041,112 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+  }
+
+  Future<void> _showCustomerPurchaseHistoryForCartItem(
+      LocalCartItem item) async {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    if (appSettingsProvider.appSettings?.showCustomerLastBuyedPriceList !=
+        true) {
+      showScaffoldError(
+        context: context,
+        message: 'Customer purchase history is disabled',
+      );
+      return;
+    }
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    if (customerSelectionProvider.isDefaultCustomer) {
+      showScaffoldError(
+        context: context,
+        message: 'Purchase history is not shown for the default customer',
+      );
+      return;
+    }
+
+    final int? customerId =
+        customerSelectionProvider.selectedCustomerID ?? selectedCustomerID;
+    final String? customerName =
+        customerSelectionProvider.selectedCustomerName ??
+            selectedCustomer?.name;
+    final int? productId = item.product.productId;
+
+    if (customerId == null || productId == null || customerName == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Select a customer to view purchase history',
+      );
+      return;
+    }
+
+    final String? token = Provider.of<AuthModel>(context, listen: false).token;
+    if (token == null || token.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Unable to load purchase history',
+      );
+      return;
+    }
+
+    try {
+      final CustomerPurchaseHistory? purchaseHistory =
+          await CustomerPurchaseProvider().getCustomerLastPurchases(
+        accessToken: token,
+        customerId: customerId,
+        productId: productId,
+      );
+
+      if (!mounted) return;
+
+      if (purchaseHistory == null ||
+          !purchaseHistory.success ||
+          purchaseHistory.data.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'No purchase history found for this product',
+        );
+        return;
+      }
+
+      final result = await showDialog<Map<String, dynamic>?>(
+        context: context,
+        builder: (context) => CustomerPurchaseHistoryModal(
+          product: item.product,
+          purchaseHistory: purchaseHistory.data.take(5).toList(),
+          customerName: customerName,
+        ),
+      );
+
+      if (!mounted || result == null || result['useCurrentPrice'] == true) {
+        return;
+      }
+
+      final rawPrice = result['price'];
+      final double? selectedPrice = rawPrice is num
+          ? rawPrice.toDouble()
+          : double.tryParse(rawPrice?.toString() ?? '');
+      if (selectedPrice == null) {
+        return;
+      }
+
+      Provider.of<LocalProductProvider>(context, listen: false).updateItemPrice(
+        productId,
+        item.selectedStock,
+        selectedPrice,
+        stockGroupIds: item.stockGroupIds,
+        saleUnitId: item.saleUnitId,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load customer purchase history: $error');
+      debugPrint('$stackTrace');
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Unable to load purchase history',
+      );
+    }
   }
 
   Widget _buildPaymentSummary({bool compact = false}) {

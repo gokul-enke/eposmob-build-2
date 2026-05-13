@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 
 class PaymentMethodModal extends StatefulWidget {
   final bool initialIsCashSelected;
@@ -416,7 +417,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     };
     final methodIndex = digitMap[event.logicalKey];
     if (methodIndex != null) {
-      _focusPaymentFieldByIndex(methodIndex);
+      _toggleOrFocusPaymentByIndex(methodIndex);
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.digit6 ||
@@ -518,6 +519,38 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       entry.key,
       replaceOnFirstInput: true,
     );
+  }
+
+  void _toggleOrFocusPaymentByIndex(int index) {
+    final orderedTypes = <String>[];
+    if (_cashPaymentMethodId != null) orderedTypes.add('cash');
+    if (_cardPaymentMethodId != null) orderedTypes.add('card');
+    if (_upiPaymentMethodId != null) orderedTypes.add('upi');
+    if (_codPaymentMethodId != null) orderedTypes.add('cod');
+    if (orderedTypes.isEmpty) return;
+
+    final target = orderedTypes[index.clamp(1, orderedTypes.length) - 1];
+    if (_isPaymentTypeSelected(target)) {
+      _focusPaymentFieldByIndex(index);
+      return;
+    }
+
+    _togglePaymentMethod(target);
+  }
+
+  bool _isPaymentTypeSelected(String paymentType) {
+    switch (paymentType) {
+      case 'cash':
+        return isCashSelected;
+      case 'card':
+        return isCardSelected;
+      case 'upi':
+        return isUpiSelected;
+      case 'cod':
+        return isCodSelected;
+      default:
+        return false;
+    }
   }
 
   String? _shortcutForPaymentType(String type) {
@@ -840,29 +873,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         return;
     }
 
-    if (targetController.text.isNotEmpty) {
-      return;
-    }
-
-    final cashAmount = paymentType == 'cash'
-        ? 0.0
-        : (double.tryParse(cashAmountController.text) ?? 0.0);
-    final cardAmount = paymentType == 'card'
-        ? 0.0
-        : (double.tryParse(cardAmountController.text) ?? 0.0);
-    final upiAmount = paymentType == 'upi'
-        ? 0.0
-        : (double.tryParse(upiAmountController.text) ?? 0.0);
-    final codAmount = paymentType == 'cod'
-        ? 0.0
-        : (double.tryParse(codAmountController.text) ?? 0.0);
-
-    final totalOtherCollected = cashAmount + cardAmount + upiAmount + codAmount;
-    final remainingAmount = widget.cartTotal - totalOtherCollected;
-
-    if (remainingAmount > 0) {
-      targetController.text = remainingAmount.toStringAsFixed(2);
-    }
+    targetController.text = PaymentAutoFillHelper.autoFillSingleMethod(
+      paymentType: paymentType,
+      currentTargetAmount: targetController.text,
+      cashAmount: cashAmountController.text,
+      cardAmount: cardAmountController.text,
+      upiAmount: upiAmountController.text,
+      codAmount: codAmountController.text,
+      cartTotal: widget.cartTotal,
+    );
   }
 
   void _syncCreditAmountWithRemaining() {

@@ -28,7 +28,6 @@
 /// easy to diagnose from `flutter test --reporter expanded`.
 library;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -149,7 +148,7 @@ CustomerGridKeyResult handleCustomerGridKey({
 /// Mirrors the entry-row + cart + action-button structure from
 /// `billing_page.dart` so the tab order can be exercised end-to-end.
 class _BillingTabOrderHarness extends StatelessWidget {
-  _BillingTabOrderHarness({
+  const _BillingTabOrderHarness({
     required this.headerHelpFn,
     required this.headerKeyboardFn,
     required this.headerDrawerFn,
@@ -381,8 +380,7 @@ class _CustomerGridHarnessState extends State<_CustomerGridHarness> {
           ),
           itemCount: widget.itemCount,
           itemBuilder: (context, index) {
-            final isFocused =
-                _gridFn.hasFocus && index == _focusedIndex;
+            final isFocused = _gridFn.hasFocus && index == _focusedIndex;
             return Container(
               key: ValueKey('customer-$index'),
               decoration: BoxDecoration(
@@ -414,8 +412,7 @@ class _DeliveryShortcutsHarness extends StatelessWidget {
       policy: OrderedTraversalPolicy(),
       child: Shortcuts(
         shortcuts: const <ShortcutActivator, Intent>{
-          SingleActivator(LogicalKeyboardKey.arrowLeft):
-              PreviousFocusIntent(),
+          SingleActivator(LogicalKeyboardKey.arrowLeft): PreviousFocusIntent(),
           SingleActivator(LogicalKeyboardKey.arrowRight): NextFocusIntent(),
           SingleActivator(LogicalKeyboardKey.arrowUp): PreviousFocusIntent(),
           SingleActivator(LogicalKeyboardKey.arrowDown): NextFocusIntent(),
@@ -460,24 +457,24 @@ void main() {
           lessThan(BillingFocusOrders.searchProduct));
       expect(BillingFocusOrders.searchProduct,
           lessThan(BillingFocusOrders.quantity));
-      expect(BillingFocusOrders.quantity,
-          lessThan(BillingFocusOrders.unitPrice));
+      expect(
+          BillingFocusOrders.quantity, lessThan(BillingFocusOrders.unitPrice));
       expect(
           BillingFocusOrders.unitPrice, lessThan(BillingFocusOrders.addItem));
-      expect(BillingFocusOrders.addItem,
-          lessThan(BillingFocusOrders.clearEntry));
+      expect(
+          BillingFocusOrders.addItem, lessThan(BillingFocusOrders.clearEntry));
     });
 
     test('entry row → cart table → action buttons (band ordering)', () {
       expect(BillingFocusOrders.clearEntry,
           lessThan(BillingFocusOrders.cartTable));
-      expect(BillingFocusOrders.cartTable,
-          lessThan(BillingFocusOrders.clearCart));
+      expect(
+          BillingFocusOrders.cartTable, lessThan(BillingFocusOrders.clearCart));
     });
 
     test('action-button band is monotonically increasing', () {
-      expect(BillingFocusOrders.clearCart,
-          lessThan(BillingFocusOrders.saveOrder));
+      expect(
+          BillingFocusOrders.clearCart, lessThan(BillingFocusOrders.saveOrder));
       expect(BillingFocusOrders.saveOrder,
           lessThan(BillingFocusOrders.confirmAndPrint));
       expect(BillingFocusOrders.confirmAndPrint,
@@ -513,8 +510,7 @@ void main() {
 
     test('CheckoutDeliveryOrders.methodTilesBase reserves 90 tile slots', () {
       // tile[i] = methodTilesBase + i; first non-tile field is `carNumber`.
-      expect(
-          CheckoutDeliveryOrders.methodTilesBase + 89,
+      expect(CheckoutDeliveryOrders.methodTilesBase + 89,
           lessThan(CheckoutDeliveryOrders.carNumber));
     });
 
@@ -650,8 +646,7 @@ void main() {
       }
     });
 
-    testWidgets(
-        'Shift+Tab reverses the same path SaveAndPrint → … → Search',
+    testWidgets('Shift+Tab reverses the same path SaveAndPrint → … → Search',
         (tester) async {
       final searchFn = FocusNode(debugLabel: 'search');
       final qtyFn = FocusNode(debugLabel: 'qty');
@@ -886,8 +881,7 @@ void main() {
 
   // ==========================================================================
   group('Cart table — descendantsAreTraversable: false', () {
-    testWidgets(
-        'Tab visits the cart table once and skips every inner cell',
+    testWidgets('Tab visits the cart table once and skips every inner cell',
         (tester) async {
       final beforeFn = FocusNode(debugLabel: 'before');
       final cartFn = FocusNode(debugLabel: 'cart');
@@ -1121,8 +1115,8 @@ void main() {
         ),
       );
 
-      final state = tester.state<_CustomerGridHarnessState>(
-          find.byType(_CustomerGridHarness));
+      final state = tester
+          .state<_CustomerGridHarnessState>(find.byType(_CustomerGridHarness));
       state._gridFn.requestFocus();
       await tester.pump();
       expect(state._gridFn.hasFocus, isTrue);
@@ -1155,11 +1149,9 @@ void main() {
 
   // ==========================================================================
   group('Delivery tiles — Shortcuts arrow nav', () {
-    testWidgets(
-        '→ ↓ advance focus, ← ↑ retreat focus across InkWell tiles',
+    testWidgets('→ ↓ advance focus, ← ↑ retreat focus across InkWell tiles',
         (tester) async {
-      final fns = List.generate(
-          4, (i) => FocusNode(debugLabel: 'tile-$i'));
+      final fns = List.generate(4, (i) => FocusNode(debugLabel: 'tile-$i'));
       addTearDown(() {
         for (final fn in fns) {
           fn.dispose();
@@ -1170,8 +1162,7 @@ void main() {
         tester,
         _DeliveryShortcutsHarness(
           tiles: [
-            for (var i = 0; i < fns.length; i++)
-              (fn: fns[i], label: 'M$i'),
+            for (var i = 0; i < fns.length; i++) (fn: fns[i], label: 'M$i'),
           ],
         ),
       );
@@ -1210,8 +1201,7 @@ void main() {
         tester,
         _DeliveryShortcutsHarness(
           tiles: [
-            for (var i = 0; i < fns.length; i++)
-              (fn: fns[i], label: 'M$i'),
+            for (var i = 0; i < fns.length; i++) (fn: fns[i], label: 'M$i'),
           ],
         ),
       );
@@ -1385,7 +1375,7 @@ void main() {
       await openDialog(tester);
 
       // Spot-check a representative subset; full coverage would be brittle.
-      for (final label in const ['F1', 'F2', 'F6', 'F7', 'F8', 'F9', 'F11']) {
+      for (final label in const ['F1', 'F2', 'F6', 'F7', 'F8', 'F9']) {
         expect(find.text(label), findsWidgets,
             reason: 'legacy shortcut $label must remain documented');
       }
@@ -1433,16 +1423,16 @@ void main() {
                 ),
               ),
               FocusTraversalOrder(
-                order:
-                    const NumericFocusOrder(CheckoutCustomerOrders.selectedCard),
+                order: const NumericFocusOrder(
+                    CheckoutCustomerOrders.selectedCard),
                 child: SizedBox(
                   width: 120,
                   child: TextField(focusNode: selectedFn),
                 ),
               ),
               FocusTraversalOrder(
-                order:
-                    const NumericFocusOrder(CheckoutCustomerOrders.customerList),
+                order: const NumericFocusOrder(
+                    CheckoutCustomerOrders.customerList),
                 child: SizedBox(
                   width: 120,
                   child: TextField(focusNode: listFn),
@@ -1499,4 +1489,287 @@ void main() {
           reason: 'after the inputs, focus must land inside the footer Row');
     });
   });
+
+  // ==========================================================================
+  group('Restaurant billing keyboard flow', () {
+    testWidgets(
+        'Ctrl+A -> category, Tab -> search, Tab -> products, Tab -> cart',
+        (tester) async {
+      await pumpHarness(tester, const _RestaurantKeyboardFlowHarness());
+
+      final state = tester.state<_RestaurantKeyboardFlowHarnessState>(
+          find.byType(_RestaurantKeyboardFlowHarness));
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyA);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+
+      expect(state.categoryFn.hasFocus, isTrue);
+      expect(state.focusedCategoryIndex, 0);
+
+      await pressKey(tester, LogicalKeyboardKey.arrowRight);
+      expect(state.focusedCategoryIndex, 1);
+
+      await pressTab(tester);
+      expect(state.searchFn.hasFocus, isTrue);
+
+      await tester.enterText(
+        find.byKey(_RestaurantKeyboardFlowHarness.searchKey),
+        'beef',
+      );
+      await tester.pump();
+      expect(state.searchText, 'beef');
+
+      await pressTab(tester);
+      expect(state.productGridFn.hasFocus, isTrue);
+      expect(state.focusedProductIndex, 0);
+
+      await pressKey(tester, LogicalKeyboardKey.arrowRight);
+      expect(state.focusedProductIndex, 1);
+
+      await pressKey(tester, LogicalKeyboardKey.enter);
+      expect(state.addedProducts, <String>['Beef Burger']);
+
+      await pressTab(tester);
+      expect(state.cartFn.hasFocus, isTrue);
+      expect(state.focusedCartIndex, 0);
+    });
+  });
+}
+
+class _RestaurantKeyboardFlowHarness extends StatefulWidget {
+  const _RestaurantKeyboardFlowHarness();
+
+  static const searchKey = ValueKey('restaurant-search');
+
+  @override
+  State<_RestaurantKeyboardFlowHarness> createState() =>
+      _RestaurantKeyboardFlowHarnessState();
+}
+
+class _RestaurantKeyboardFlowHarnessState
+    extends State<_RestaurantKeyboardFlowHarness> {
+  final rootFn = FocusNode(debugLabel: 'restaurant-root');
+  final categoryFn = FocusNode(debugLabel: 'restaurant-category-row');
+  final searchFn = FocusNode(debugLabel: 'restaurant-search');
+  final productGridFn = FocusNode(debugLabel: 'restaurant-product-grid');
+  final cartFn = FocusNode(debugLabel: 'restaurant-cart');
+
+  int focusedCategoryIndex = 0;
+  int focusedProductIndex = 0;
+  int? focusedCartIndex;
+  String searchText = '';
+  final addedProducts = <String>[];
+
+  final categories = const ['ALL', 'BEEF CUISINE', 'BIRIYANI'];
+  final products = const ['Apple', 'Beef Burger', 'Beef Burger Egg'];
+  final cartItems = const ['Carrot Shake', 'Chatti Choru'];
+
+  @override
+  void initState() {
+    super.initState();
+    searchFn.onKeyEvent = (node, event) => _handleSearchKey(event);
+  }
+
+  @override
+  void dispose() {
+    rootFn.dispose();
+    categoryFn.dispose();
+    searchFn.dispose();
+    productGridFn.dispose();
+    cartFn.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _handleRootKey(KeyEvent event) {
+    if (event is KeyDownEvent &&
+        HardwareKeyboard.instance.isControlPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyA) {
+      setState(() => focusedCategoryIndex = 0);
+      categoryFn.requestFocus();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleCategoryKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.tab &&
+        !HardwareKeyboard.instance.isShiftPressed) {
+      searchFn.requestFocus();
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      setState(() {
+        focusedCategoryIndex =
+            (focusedCategoryIndex + 1).clamp(0, categories.length - 1);
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      setState(() {
+        focusedCategoryIndex =
+            (focusedCategoryIndex - 1).clamp(0, categories.length - 1);
+      });
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleSearchKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.tab) {
+      if (HardwareKeyboard.instance.isShiftPressed) {
+        categoryFn.requestFocus();
+      } else {
+        setState(() => focusedProductIndex = 0);
+        productGridFn.requestFocus();
+      }
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleProductGridKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.tab &&
+        !HardwareKeyboard.instance.isShiftPressed) {
+      setState(() => focusedCartIndex = cartItems.isEmpty ? null : 0);
+      cartFn.requestFocus();
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      setState(() {
+        focusedProductIndex =
+            (focusedProductIndex + 1).clamp(0, products.length - 1);
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      setState(() {
+        focusedProductIndex =
+            (focusedProductIndex - 1).clamp(0, products.length - 1);
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      addedProducts.add(products[focusedProductIndex]);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      focusNode: rootFn,
+      autofocus: true,
+      onKeyEvent: (node, event) => _handleRootKey(event),
+      child: FocusTraversalGroup(
+        policy: OrderedTraversalPolicy(),
+        child: Column(
+          children: [
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(10),
+              child: Focus(
+                focusNode: categoryFn,
+                onKeyEvent: (node, event) => _handleCategoryKey(event),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < categories.length; i++)
+                      Container(
+                        margin: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color:
+                                categoryFn.hasFocus && focusedCategoryIndex == i
+                                    ? Colors.orange
+                                    : Colors.grey,
+                          ),
+                        ),
+                        child: Text(categories[i]),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(20),
+              child: SizedBox(
+                width: 240,
+                child: TextField(
+                  key: _RestaurantKeyboardFlowHarness.searchKey,
+                  focusNode: searchFn,
+                  onChanged: (value) => setState(() => searchText = value),
+                ),
+              ),
+            ),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(30),
+              child: Focus(
+                focusNode: productGridFn,
+                onKeyEvent: (node, event) => _handleProductGridKey(event),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < products.length; i++)
+                      Container(
+                        margin: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: productGridFn.hasFocus &&
+                                    focusedProductIndex == i
+                                ? Colors.orange
+                                : Colors.grey,
+                          ),
+                        ),
+                        child: Text(products[i]),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(40),
+              child: Focus(
+                focusNode: cartFn,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < cartItems.length; i++)
+                      Container(
+                        margin: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: cartFn.hasFocus && focusedCartIndex == i
+                                ? Colors.orange
+                                : Colors.grey,
+                          ),
+                        ),
+                        child: Text(cartItems[i]),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

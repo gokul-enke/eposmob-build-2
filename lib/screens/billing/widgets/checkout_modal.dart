@@ -22,6 +22,7 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart'; // Re-added for delivery modal components
 import 'package:pos_machine/resources/style_manager.dart'; // Re-added for delivery modal components
 import 'package:pos_machine/components/build_dialog_box.dart'; // For showScaffoldError
+import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 
 class CheckoutModal extends StatefulWidget {
   final double cartTotal;
@@ -2117,87 +2118,37 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         final newEffectiveTotal =
                             widget.cartTotal - newDiscountAmount;
 
-                        String nextCash = _lCashAmount;
-                        String nextCard = _lCardAmount;
-                        String nextUpi = _lUpiAmount;
-                        String nextCod = _lCodAmount;
-
-                        final bool anySelected = _lIsCashSelected ||
-                            _lIsCardSelected ||
-                            _lIsUpiSelected ||
-                            _lIsCodSelected;
-
-                        final int selectedCount = (_lIsCashSelected ? 1 : 0) +
-                            (_lIsCardSelected ? 1 : 0) +
-                            (_lIsUpiSelected ? 1 : 0) +
-                            (_lIsCodSelected ? 1 : 0);
-
-                        final double cashVal =
-                            double.tryParse(_lCashAmount) ?? 0.0;
-                        final double cardVal =
-                            double.tryParse(_lCardAmount) ?? 0.0;
-                        final double upiVal =
-                            double.tryParse(_lUpiAmount) ?? 0.0;
-                        final double codVal =
-                            double.tryParse(_lCodAmount) ?? 0.0;
-                        final double totalPaid =
-                            cashVal + cardVal + upiVal + codVal;
-
-                        // If nothing is selected, clear stale amounts so Payment tab auto-fill
-                        // always uses the freshly discounted total.
-                        if (!anySelected) {
-                          nextCash = '';
-                          nextCard = '';
-                          nextUpi = '';
-                          nextCod = '';
-                        }
-
-                        // If exactly one method is selected and it matched old effective total,
-                        // remap it to the new discounted total.
-                        if (selectedCount == 1 &&
-                            (totalPaid - oldEffectiveTotal).abs() < 0.01) {
-                          final remappedAmount =
-                              newEffectiveTotal.toStringAsFixed(2);
-                          if (_lIsCashSelected) {
-                            nextCash = remappedAmount;
-                            nextCard = '';
-                            nextUpi = '';
-                            nextCod = '';
-                          } else if (_lIsCardSelected) {
-                            nextCash = '';
-                            nextCard = remappedAmount;
-                            nextUpi = '';
-                            nextCod = '';
-                          } else if (_lIsUpiSelected) {
-                            nextCash = '';
-                            nextCard = '';
-                            nextUpi = remappedAmount;
-                            nextCod = '';
-                          } else if (_lIsCodSelected) {
-                            nextCash = '';
-                            nextCard = '';
-                            nextUpi = '';
-                            nextCod = remappedAmount;
-                          }
-                        }
+                        final remapped =
+                            PaymentAutoFillHelper.remapAmountsAfterDiscount(
+                          isCashSelected: _lIsCashSelected,
+                          isCardSelected: _lIsCardSelected,
+                          isUpiSelected: _lIsUpiSelected,
+                          isCodSelected: _lIsCodSelected,
+                          cashAmount: _lCashAmount,
+                          cardAmount: _lCardAmount,
+                          upiAmount: _lUpiAmount,
+                          codAmount: _lCodAmount,
+                          oldEffectiveTotal: oldEffectiveTotal,
+                          newEffectiveTotal: newEffectiveTotal,
+                        );
 
                         _handleDiscountUpdate(code, applied, newFlatDiscount,
                             newPercentageDiscount);
 
-                        if (nextCash != _lCashAmount ||
-                            nextCard != _lCardAmount ||
-                            nextUpi != _lUpiAmount ||
-                            nextCod != _lCodAmount) {
+                        if (remapped.cash != _lCashAmount ||
+                            remapped.card != _lCardAmount ||
+                            remapped.upi != _lUpiAmount ||
+                            remapped.cod != _lCodAmount) {
                           _handlePaymentUpdate(
                               _lIsCashSelected,
                               _lIsCardSelected,
                               _lIsUpiSelected,
                               _lIsCodSelected,
                               _lIsDebitSelected,
-                              nextCash,
-                              nextCard,
-                              nextUpi,
-                              nextCod,
+                              remapped.cash,
+                              remapped.card,
+                              remapped.upi,
+                              remapped.cod,
                               _lDebitAmount,
                               _lTransactionNumber,
                               _lToCustomerCreditEnabled,
