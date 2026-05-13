@@ -76,9 +76,18 @@ class CollapsibleSidebarState extends State<CollapsibleSidebar> {
                   ),
                 ],
               ),
-              child: KeyedSubtree(
-                key: ValueKey(_isExpanded),
-                child: widget.sidebarContent,
+              // ExcludeFocus keeps the side menu out of Tab traversal so that
+              // an accidental click on a side-menu item never traps the user
+              // inside the menu's focus tree (which previously broke the
+              // billing-page Tab order). Gestures (clicks, taps) still work
+              // normally because ExcludeFocus only blocks focus, not pointer
+              // input.
+              child: ExcludeFocus(
+                excluding: true,
+                child: KeyedSubtree(
+                  key: ValueKey(_isExpanded),
+                  child: widget.sidebarContent,
+                ),
               ),
             ),
             // Wrap child in a stateful widget to preserve its state

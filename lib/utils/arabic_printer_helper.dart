@@ -177,6 +177,7 @@ class ReceiptTableColumn {
   final int maxLines;
   final bool autoScaleToFit;
   final double minScale;
+  final TextDirection? textDirection; // null = inherit from parent context
 
   ReceiptTableColumn(this.text,
       {required this.weight,
@@ -185,13 +186,15 @@ class ReceiptTableColumn {
       this.scale = 1.0,
       this.maxLines = 1,
       this.autoScaleToFit = true,
-      this.minScale = 0.62});
+      this.minScale = 0.62,
+      this.textDirection});
 
   TextPainter createPainter(
-      double totalWidth, double fontSize, TextDirection textDirection) {
+      double totalWidth, double fontSize, TextDirection contextTextDirection) {
     final double maxWidth = totalWidth * weight;
     final double baseFontSize = fontSize * scale;
     final double minFontSize = fontSize * minScale;
+    final effectiveTextDirection = textDirection ?? contextTextDirection;
 
     TextPainter buildPainter(double size, {String? ellipsis}) {
       return TextPainter(
@@ -204,7 +207,7 @@ class ReceiptTableColumn {
             fontFamily: ArabicPrinterHelper.fontFamily,
           ),
         ),
-        textDirection: textDirection,
+        textDirection: effectiveTextDirection,
         textAlign: align,
         maxLines: maxLines,
         ellipsis: ellipsis,

@@ -1173,7 +1173,8 @@ class StandardReceiptLayout implements ReceiptLayout {
             ? '$slNumber. $productName'
             : productName;
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left),
+          ReceiptTableColumn(itemText,
+              weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
         ]));
       }
       // Price details row
@@ -1222,7 +1223,8 @@ class StandardReceiptLayout implements ReceiptLayout {
           // Add English name on second line
           // Left aligned, no padding needed
           rows.add(ReceiptTableRow([
-            ReceiptTableColumn(productName, weight: 1.0, align: TextAlign.left),
+            ReceiptTableColumn(productName,
+                weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
           ]));
         } else {
           // Fallback to single name (English or Arabic)
@@ -1230,7 +1232,8 @@ class StandardReceiptLayout implements ReceiptLayout {
               ? '$slNumber. $productName'
               : productName;
           rows.add(ReceiptTableRow([
-            ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.right),
+            ReceiptTableColumn(itemText,
+                weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
           ]));
         }
       }
@@ -1535,6 +1538,23 @@ class StandardReceiptLayout implements ReceiptLayout {
         rows.add(SpacingRow(_itemGap));
         rows.add(TextRow('$itemsCountText: ${params.cartItems.length}',
             scale: is58mm ? 0.75 : 0.85, isBold: true));
+      }
+    }
+
+    if (displayConfig?['showQuantityCount']?.visible == true) {
+      final quantityCountText = _getDisplayValue(
+        displayConfig?['showQuantityCount']?.value,
+        null,
+        isEnglish ? 'Total Qty' : 'إجمالي الكمية',
+      );
+
+      if (quantityCountText.isNotEmpty) {
+        final totalQuantity = params.totalQuantity;
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow(
+            '$quantityCountText: ${totalQuantity % 1 == 0 ? totalQuantity.toInt().toString() : totalQuantity.toStringAsFixed(2)}',
+            scale: is58mm ? 0.75 : 0.85,
+            isBold: true));
       }
     }
 

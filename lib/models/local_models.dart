@@ -55,6 +55,18 @@ class HiveLocalCartItem {
   @HiveField(11)
   final HiveStringValue? serializedStockReservations;
 
+  @HiveField(12)
+  final bool isManualPriceOverride;
+
+  @HiveField(13)
+  final int? saleUnitId;
+
+  @HiveField(14)
+  final String? saleUnitName;
+
+  @HiveField(15)
+  final double? saleUnitConversionRate;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -68,6 +80,10 @@ class HiveLocalCartItem {
     this.comment,
     this.serializedStockGroupIds,
     this.serializedStockReservations,
+    this.isManualPriceOverride = false,
+    this.saleUnitId,
+    this.saleUnitName,
+    this.saleUnitConversionRate,
   });
 }
 
@@ -289,6 +305,9 @@ class HiveGetProduct extends HiveObject {
   @HiveField(20)
   final List<HiveProductTax>? taxes;
 
+  @HiveField(21)
+  final String? itemCode;
+
   HiveGetProduct({
     this.productId,
     this.categoryId,
@@ -311,6 +330,7 @@ class HiveGetProduct extends HiveObject {
     this.productLocation,
     this.totalTaxRate,
     this.taxes,
+    this.itemCode,
   });
 
   // Convert from app model to Hive model
@@ -345,6 +365,7 @@ class HiveGetProduct extends HiveObject {
       taxes: product.taxes != null && product.taxes!.isNotEmpty
           ? product.taxes!.map((t) => HiveProductTax.fromProductTax(t)).toList()
           : [],
+      itemCode: product.itemCode,
     );
   }
 
@@ -371,6 +392,7 @@ class HiveGetProduct extends HiveObject {
       productLocation: productLocation,
       // Restore taxes!
       taxes: taxes?.map((t) => t.toProductTax()).toList() ?? [],
+      itemCode: itemCode,
     )..isSelected = isSelected;
   }
 }

@@ -16,8 +16,6 @@ import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
-import 'package:pos_machine/providers/shared_preferences.dart';
-import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -481,6 +479,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         Provider.of<LocalProductProvider>(context, listen: false);
     final productProvider =
         Provider.of<ProductProvider>(context, listen: false);
+    final purchaseProvider =
+        Provider.of<PurchaseProvider>(context, listen: false);
+    final categoryProvider =
+        Provider.of<CategoryProvider>(context, listen: false);
 
     final String updatedName = _nameController.text.trim();
     final String updatedSlug = _slugController.text.trim();
@@ -577,13 +579,18 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       debugPrint(
           '✅ [ProductDetailsDialog] Server edit success for id=$productId: $successMessage');
 
-      debugPrint(
-          '🔄 [ProductDetailsDialog] Refreshing local product cache via fetchProductsFromAPI()...');
-
-      await localProductProvider.fetchProductsFromAPI();
-
-      debugPrint(
-          '✅ [ProductDetailsDialog] Product cache refresh finished for id=$productId');
+      final responseData = response['data'];
+      GetProduct? serverProduct;
+      dynamic responseNames;
+      if (responseData is Map<String, dynamic>) {
+        serverProduct = GetProduct.fromJson(responseData);
+        responseNames = responseData['product_names'] ?? responseData['names'];
+      } else if (responseData is Map) {
+        final normalizedResponseData = Map<String, dynamic>.from(responseData);
+        serverProduct = GetProduct.fromJson(normalizedResponseData);
+        responseNames = normalizedResponseData['product_names'] ??
+            normalizedResponseData['names'];
+      }
 
       ProductPrice? updatedProductPrice;
       if (product.price != null) {
@@ -599,8 +606,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         updatedProductPrice = ProductPrice(price: updatedPriceString);
       }
 
-      final purchaseProvider =
-          Provider.of<PurchaseProvider>(context, listen: false);
       final unitMap = purchaseProvider.getUnitList ?? {};
 
       String resolvedUnitLabel =
@@ -624,8 +629,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       }
 
       Category? selectedCategory;
-      final categoryProvider =
-          Provider.of<CategoryProvider>(context, listen: false);
       if (_selectedCategoryId != null &&
           categoryProvider.category != null &&
           categoryProvider.category!.isNotEmpty) {
@@ -636,19 +639,20 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       }
 
       final GetProduct updatedProduct = product.copyWith(
-        categoryId: resolvedCategoryId,
-        productName: updatedName,
-        productSlug: updatedSlug,
-        barcode: updatedBarcode,
+        categoryId: serverProduct?.categoryId ?? resolvedCategoryId,
+        productName: serverProduct?.productName ?? updatedName,
+        productSlug: serverProduct?.productSlug ?? updatedSlug,
+        barcode: serverProduct?.barcode ?? updatedBarcode,
         category: selectedCategory != null
             ? ProductCategory(
                 name: selectedCategory.categoryName,
                 slug: selectedCategory.categorySlug,
               )
-            : product.category,
+            : (serverProduct?.category ?? product.category),
         unit: resolvedUnitLabel.isEmpty ? product.unit : resolvedUnitLabel,
         price: updatedProductPrice,
-        mrp: updatedMrpString.isEmpty ? product.mrp : updatedMrpString,
+        mrp: serverProduct?.mrp ??
+            (updatedMrpString.isEmpty ? product.mrp : updatedMrpString),
         taxes: [
           ProductTax(
             rate: (double.tryParse(_taxController.text) ?? 0.0).toString(),
@@ -660,15 +664,17 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         purchasePrice: updatedPurchasePrice.isEmpty
             ? product.purchasePrice
             : updatedPurchasePrice,
-        names: productNames.isNotEmpty ? productNames : product.names,
+        names: responseNames ??
+            (productNames.isNotEmpty ? productNames : product.names),
+        saleUnits: (serverProduct?.saleUnits?.isNotEmpty ?? false)
+            ? serverProduct!.saleUnits
+            : product.saleUnits,
       );
 
-      final GetProduct resolvedUpdatedProduct =
-          localProductProvider.getProductById(int.parse(productId)) ??
-              updatedProduct;
+      final GetProduct resolvedUpdatedProduct = updatedProduct;
 
       debugPrint('🧩 [ProductDetailsDialog] Using product snapshot source: '
-          '${localProductProvider.getProductById(int.parse(productId)) != null ? "provider" : "fallback_local"}');
+          '${serverProduct != null ? "api_response_local_merge" : "form_local_merge"}');
 
       localProductProvider.updateProduct(resolvedUpdatedProduct);
 
@@ -1054,10 +1060,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   }
 
   Widget _buildViewTab(GetProduct product) {
-    final currency = Provider.of<AppSettingsProvider>(context, listen: true)
-            .appSettings
-            ?.currency ??
-        'INR';
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: true);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+    final itemCodeEnabled =
+        appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
     return SelectionArea(
       child: ListView(
         shrinkWrap: true,
@@ -1074,6 +1081,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
                     _buildDetailRow(
                         'Category', product.category?.name ?? 'N/A'),
+                    if (itemCodeEnabled)
+                      _buildDetailRowWithCopy(
+                          'Item Code', product.itemCode ?? 'N/A'),
                     _buildDetailRowWithCopy(
                         'Barcode', product.barcode ?? 'N/A'),
                     _buildDetailRow('Unit', product.unit ?? 'N/A'),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -8,11 +9,17 @@ import 'package:provider/provider.dart';
 class PriceTextField extends StatefulWidget {
   final dynamic item;
   final dynamic localProductProvider;
+  final int editRequestId;
+  final String? editRequestKey;
+  final VoidCallback? onEditingComplete;
 
   const PriceTextField({
     Key? key,
     required this.item,
     required this.localProductProvider,
+    this.editRequestId = 0,
+    this.editRequestKey,
+    this.onEditingComplete,
   }) : super(key: key);
 
   @override
@@ -23,6 +30,22 @@ class _PriceTextFieldState extends State<PriceTextField> {
   late TextEditingController controller;
   late FocusNode focusNode;
 
+  double _displayPrice() {
+    return (widget.item.displayPrice ?? widget.item.price ?? 0.0) as double;
+  }
+
+  double _toBasePrice(double displayPrice) {
+    return (widget.item.toBaseAmount(displayPrice) ?? displayPrice) as double;
+  }
+
+  String _formatPrice(double value) {
+    final roundedValue = value.roundToDouble();
+    if ((value - roundedValue).abs() < 0.0001) {
+      return roundedValue.toInt().toString();
+    }
+    return value.toString();
+  }
+
   // Listener to sync controller changes (including on-screen keyboard input) with provider
   void _handleTextChanged() {
     final parsedPrice = double.tryParse(controller.text);
@@ -30,8 +53,9 @@ class _PriceTextFieldState extends State<PriceTextField> {
       widget.localProductProvider.updateItemPrice(
         widget.item.product.productId!,
         widget.item.selectedStock,
-        parsedPrice,
+        _toBasePrice(parsedPrice),
         stockGroupIds: widget.item.stockGroupIds,
+        saleUnitId: widget.item.saleUnitId,
       );
     }
   }
@@ -39,12 +63,93 @@ class _PriceTextFieldState extends State<PriceTextField> {
   @override
   void initState() {
     super.initState();
-    controller =
-        TextEditingController(text: (widget.item.price ?? 0.0).toString());
-    focusNode = FocusNode();
+    controller = TextEditingController(text: _displayPrice().toString());
+    focusNode = FocusNode(onKeyEvent: (node, event) => _handleFieldKey(event));
 
     // Listen for any text changes from either physical or virtual keyboards
     controller.addListener(_handleTextChanged);
+  }
+
+  void _beginEditing() {
+    focusNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (controller.text.isNotEmpty && focusNode.hasFocus) {
+        controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: controller.text.length,
+        );
+      }
+    });
+    Provider.of<KeyboardProvider>(context, listen: false).show(
+      'number',
+      controller,
+      replaceOnFirstInput: true,
+    );
+  }
+
+  void _stepPrice(int delta) {
+    final currentPrice = double.tryParse(controller.text) ?? _displayPrice();
+    final nextPrice = (currentPrice + delta).clamp(0.0, double.infinity);
+    final text = _formatPrice(nextPrice);
+
+    controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection(baseOffset: 0, extentOffset: text.length),
+    );
+  }
+
+  void _commitAndEndEditing() {
+    final parsedPrice = double.tryParse(controller.text);
+    if (parsedPrice != null && parsedPrice >= 0) {
+      widget.localProductProvider.updateItemPrice(
+        widget.item.product.productId!,
+        widget.item.selectedStock,
+        _toBasePrice(parsedPrice),
+        stockGroupIds: widget.item.stockGroupIds,
+        saleUnitId: widget.item.saleUnitId,
+      );
+    } else {
+      controller.text = _displayPrice().toString();
+    }
+
+    Provider.of<KeyboardProvider>(context, listen: false).hide();
+    focusNode.unfocus();
+    widget.onEditingComplete?.call();
+  }
+
+  KeyEventResult _handleFieldKey(KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.tab) {
+      _commitAndEndEditing();
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      _stepPrice(1);
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      _stepPrice(-1);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  String _cartIdentityKey(dynamic item) {
+    final groupKey = item.stockGroupIds.join('_');
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
+  }
+
+  bool _shouldHandleEditRequest(PriceTextField oldWidget) {
+    return widget.editRequestId != oldWidget.editRequestId &&
+        widget.editRequestKey != null &&
+        widget.editRequestKey == _cartIdentityKey(widget.item);
   }
 
   @override
@@ -52,7 +157,14 @@ class _PriceTextFieldState extends State<PriceTextField> {
     super.didUpdateWidget(oldWidget);
     // Only refresh controller text if the field is NOT focused
     if (!focusNode.hasFocus && oldWidget.item.price != widget.item.price) {
-      controller.text = (widget.item.price ?? 0.0).toString();
+      controller.text = _displayPrice().toString();
+    }
+    if (_shouldHandleEditRequest(oldWidget)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _beginEditing();
+        }
+      });
     }
   }
 
@@ -69,7 +181,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         // Check if the price has changed and update the controller if needed
-        final currentPrice = (widget.item.price ?? 0.0).toString();
+        final currentPrice = _displayPrice().toString();
 
         // Consider the field to be in-edit if it has focus OR a virtual keyboard is currently
         // shown for this controller. In that case we must NOT overwrite the text.
@@ -109,20 +221,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
             ),
           ),
           onTap: () {
-            // Use a post-frame callback to ensure text selection happens after the tap is processed
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (controller.text.isNotEmpty && focusNode.hasFocus) {
-                controller.selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: controller.text.length,
-                );
-              }
-            });
-            Provider.of<KeyboardProvider>(context, listen: false).show(
-              'number',
-              controller,
-              replaceOnFirstInput: true,
-            );
+            _beginEditing();
           },
           onChanged: (newPrice) {
             // Validate and update immediately on change
@@ -131,8 +230,9 @@ class _PriceTextFieldState extends State<PriceTextField> {
               widget.localProductProvider.updateItemPrice(
                 widget.item.product.productId!,
                 widget.item.selectedStock,
-                parsedPrice,
+                _toBasePrice(parsedPrice),
                 stockGroupIds: widget.item.stockGroupIds,
+                saleUnitId: widget.item.saleUnitId,
               );
             } else if (newPrice.isEmpty) {
               // Allow empty field for editing
@@ -141,23 +241,12 @@ class _PriceTextFieldState extends State<PriceTextField> {
                 widget.item.selectedStock,
                 0.0,
                 stockGroupIds: widget.item.stockGroupIds,
+                saleUnitId: widget.item.saleUnitId,
               );
             }
           },
           onSubmitted: (newPrice) {
-            // Validate and update on submit
-            final parsedPrice = double.tryParse(newPrice);
-            if (parsedPrice != null && parsedPrice >= 0) {
-              widget.localProductProvider.updateItemPrice(
-                widget.item.product.productId!,
-                widget.item.selectedStock,
-                parsedPrice,
-                stockGroupIds: widget.item.stockGroupIds,
-              );
-            } else {
-              // Revert to original price if invalid
-              controller.text = (widget.item.price ?? 0.0).toString();
-            }
+            _commitAndEndEditing();
           },
         );
       },
@@ -184,6 +273,14 @@ class _MrpTextFieldState extends State<MrpTextField> {
   late TextEditingController controller;
   late FocusNode focusNode;
 
+  double _displayMrp() {
+    return (widget.item.displayMrp ?? widget.item.mrp ?? 0.0) as double;
+  }
+
+  double _toBaseMrp(double displayMrp) {
+    return (widget.item.toBaseAmount(displayMrp) ?? displayMrp) as double;
+  }
+
   // Listener to sync controller changes (including on-screen keyboard input) with provider
   void _handleTextChanged() {
     final parsedMrp = double.tryParse(controller.text);
@@ -191,8 +288,9 @@ class _MrpTextFieldState extends State<MrpTextField> {
       widget.localProductProvider.updateItemMrp(
         widget.item.product.productId!,
         widget.item.selectedStock,
-        parsedMrp,
+        _toBaseMrp(parsedMrp),
         stockGroupIds: widget.item.stockGroupIds,
+        saleUnitId: widget.item.saleUnitId,
       );
     }
   }
@@ -200,8 +298,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
   @override
   void initState() {
     super.initState();
-    controller =
-        TextEditingController(text: (widget.item.mrp ?? 0.0).toString());
+    controller = TextEditingController(text: _displayMrp().toString());
     focusNode = FocusNode();
 
     // Listen for any text changes from either physical or virtual keyboards
@@ -213,7 +310,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
     super.didUpdateWidget(oldWidget);
     // Only refresh controller text if the field is NOT focused
     if (!focusNode.hasFocus && oldWidget.item.mrp != widget.item.mrp) {
-      controller.text = (widget.item.mrp ?? 0.0).toString();
+      controller.text = _displayMrp().toString();
     }
   }
 
@@ -230,7 +327,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
         // Check if the MRP has changed and update the controller if needed
-        final currentMrp = (widget.item.mrp ?? 0.0).toString();
+        final currentMrp = _displayMrp().toString();
 
         final keyboardProvider =
             Provider.of<KeyboardProvider>(context, listen: false);
@@ -291,8 +388,9 @@ class _MrpTextFieldState extends State<MrpTextField> {
               widget.localProductProvider.updateItemMrp(
                 widget.item.product.productId!,
                 widget.item.selectedStock,
-                parsedMrp,
+                _toBaseMrp(parsedMrp),
                 stockGroupIds: widget.item.stockGroupIds,
+                saleUnitId: widget.item.saleUnitId,
               );
             } else if (newMrp.isEmpty) {
               // Allow empty field for editing
@@ -301,6 +399,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
                 widget.item.selectedStock,
                 0.0,
                 stockGroupIds: widget.item.stockGroupIds,
+                saleUnitId: widget.item.saleUnitId,
               );
             }
           },
@@ -311,12 +410,13 @@ class _MrpTextFieldState extends State<MrpTextField> {
               widget.localProductProvider.updateItemMrp(
                 widget.item.product.productId!,
                 widget.item.selectedStock,
-                parsedMrp,
+                _toBaseMrp(parsedMrp),
                 stockGroupIds: widget.item.stockGroupIds,
+                saleUnitId: widget.item.saleUnitId,
               );
             } else {
               // Revert to original MRP if invalid
-              controller.text = (widget.item.mrp ?? 0.0).toString();
+              controller.text = _displayMrp().toString();
             }
           },
         );

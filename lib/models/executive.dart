@@ -105,22 +105,30 @@ class Store {
   final int? storeId;
   final String? storeName;
   final String? location;
+  final String? email;
+  final String? phone;
 
   Store({
     this.storeId,
     this.storeName,
     this.location,
+    this.email,
+    this.phone,
   });
 
   factory Store.fromJson(Map<String, dynamic> json) => Store(
         storeId: json["store_id"],
         storeName: json["store_name"],
         location: json["location"],
+        email: json["email"],
+        phone: json["phone"]?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
         "store_id": storeId,
         "store_name": storeName,
         "location": location,
+        "email": email,
+        "phone": phone,
       };
 }

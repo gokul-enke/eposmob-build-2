@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/models/customer_purchase_history.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
-import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
-import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
 import 'package:provider/provider.dart';
 
 class ProductCartHelper {
@@ -22,10 +17,9 @@ class ProductCartHelper {
   ///    - Single stock → Auto-select stock
   ///    - No stock/disabled → Use product base pricing
   ///
-  /// 2. CUSTOMER PURCHASE HISTORY (if customer selected):
-  ///    - Fetch customer's last purchases for this product
-  ///    - Show history modal with current price (from stock or product)
-  ///    - User can choose historical price+quantity OR current price
+  /// 2. CUSTOMER PURCHASE HISTORY:
+  ///    - Add-to-cart does not fetch or show purchase history.
+  ///    - Billing cart rows expose a manual history action for old prices.
   ///
   /// 3. ADD TO CART:
   ///    - Use final determined price, quantity, and selected stock
@@ -41,6 +35,7 @@ class ProductCartHelper {
     double? customMrp,
     int? customerId,
     String? customerName,
+    SaleUnit? selectedSaleUnit,
   }) async {
     debugPrint("=== PRODUCT CART HELPER DEBUG START ===");
     debugPrint("Product selected: ${product.productName}");
@@ -79,8 +74,6 @@ class ProductCartHelper {
         Provider.of<LocalProductProvider>(context, listen: false);
     final generalSettingsProvider =
         Provider.of<GeneralSettingsProvider>(context, listen: false);
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
     final storeSessionProvider =
         Provider.of<StoreSessionProvider>(context, listen: false);
     final activeStore = storeSessionProvider.activeStore;
@@ -99,6 +92,8 @@ class ProductCartHelper {
     double? finalPrice = customPrice;
     double? finalMrp = customMrp;
     num? finalQuantity = quantity;
+    bool hasExplicitPriceOverride = customPrice != null;
+    final requestedQuantity = finalQuantity ?? 1;
 
     // STEP 1: Handle stock selection if stock management is enabled
     if (stockEnabled && product.stock != null && product.stock!.isNotEmpty) {
@@ -147,58 +142,104 @@ class ProductCartHelper {
             unit: group.unit,
             purchasePrice: group.purchasePrice,
             hsnCode: group.hsnCode,
+            wholesalePrice: group.wholesalePrice,
+            wholesaleMinUnit: group.wholesaleMinUnit,
           );
 
           debugPrint("📦 Single pricing group - auto-selected:");
-          debugPrint("  - Stock ID: ${selectedStock!.id}");
-          debugPrint("  - Price: ${selectedStock!.price}");
-          debugPrint("  - MRP: ${selectedStock!.mrp}");
-          debugPrint("  - Combined Qty: ${selectedStock!.quantity}");
+          debugPrint("  - Stock ID: ${selectedStock.id}");
+          debugPrint("  - Price: ${selectedStock.price}");
+          debugPrint("  - MRP: ${selectedStock.mrp}");
+          debugPrint("  - Combined Qty: ${selectedStock.quantity}");
 
           finalPrice =
-              finalPrice ?? double.tryParse(selectedStock!.price ?? "0") ?? 0;
-          finalMrp =
-              finalMrp ?? double.tryParse(selectedStock!.mrp ?? "0") ?? 0;
+              finalPrice ?? double.tryParse(selectedStock.price ?? "0") ?? 0;
+          finalMrp = finalMrp ?? double.tryParse(selectedStock.mrp ?? "0") ?? 0;
         } else {
-          // Multiple pricing groups → show stock selection modal
-          debugPrint(
-              "📱 ${groups.length} pricing groups - showing stock selection modal...");
+          final preferredSaleUnitStocks = selectedSaleUnit == null
+              ? const <Stock>[]
+              : _resolvePreferredSaleUnitStocks(
+                  availableStocks,
+                  selectedSaleUnit,
+                );
+          final preferredSaleUnitGroups = preferredSaleUnitStocks.isEmpty
+              ? const <CombinedStock>[]
+              : groupStocksByPricing(preferredSaleUnitStocks);
 
-          final result = await showDialog(
-            context: context,
-            builder: (context) => StockSelectionModal(
-              product: product,
-              stockOptions: availableStocks,
-            ),
-          );
-
-          if (result != null) {
-            debugPrint("✅ User selected stock from modal");
-            selectedStock = result['stock'];
-            final originalStocks = (result['originalStocks'] as List?)
-                    ?.whereType<Stock>()
-                    .toList() ??
-                const <Stock>[];
-            selectedStockGroupIds = originalStocks
+          if (preferredSaleUnitGroups.length == 1 &&
+              preferredSaleUnitGroups.first.totalQuantity >=
+                  requestedQuantity) {
+            final preferredGroup = preferredSaleUnitGroups.first;
+            selectedStockGroupIds = preferredGroup.originalStocks
                 .map((stock) => stock.id)
                 .whereType<int>()
                 .toSet()
                 .toList()
               ..sort();
+            selectedStock = preferredGroup.firstStock.copyWith(
+              quantity: preferredGroup.totalQuantity,
+              price: preferredGroup.price,
+              mrp: preferredGroup.mrp,
+              unit: preferredGroup.unit,
+              purchasePrice: preferredGroup.purchasePrice,
+              hsnCode: preferredGroup.hsnCode,
+              wholesalePrice: preferredGroup.wholesalePrice,
+              wholesaleMinUnit: preferredGroup.wholesaleMinUnit,
+            );
 
-            debugPrint("📦 Selected stock details:");
-            debugPrint("  - Stock ID: ${selectedStock!.id}");
-            debugPrint("  - Stock Price: ${selectedStock!.price}");
-            debugPrint("  - Stock MRP: ${selectedStock!.mrp}");
-
+            debugPrint(
+                "📦 Sale-unit preferred stock group auto-selected for ${selectedSaleUnit?.unitName}");
             finalPrice =
-                finalPrice ?? double.tryParse(selectedStock!.price ?? "0") ?? 0;
+                finalPrice ?? double.tryParse(selectedStock.price ?? "0") ?? 0;
             finalMrp =
-                finalMrp ?? double.tryParse(selectedStock!.mrp ?? "0") ?? 0;
+                finalMrp ?? double.tryParse(selectedStock.mrp ?? "0") ?? 0;
           } else {
-            debugPrint("❌ User cancelled stock selection - aborting");
-            debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
-            return;
+            // Multiple pricing groups → show stock selection modal
+            debugPrint(
+                "📱 ${groups.length} pricing groups - showing stock selection modal...");
+
+            final result = await showDialog(
+              context: context,
+              builder: (context) => StockSelectionModal(
+                product: product,
+                stockOptions: availableStocks,
+              ),
+            );
+
+            if (result != null) {
+              debugPrint("✅ User selected stock from modal");
+              selectedStock = result['stock'] as Stock?;
+              if (selectedStock == null) {
+                debugPrint("❌ Stock selection modal returned no stock");
+                debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+                return;
+              }
+              final originalStocks = (result['originalStocks'] as List?)
+                      ?.whereType<Stock>()
+                      .toList() ??
+                  const <Stock>[];
+              selectedStockGroupIds = originalStocks
+                  .map((stock) => stock.id)
+                  .whereType<int>()
+                  .toSet()
+                  .toList()
+                ..sort();
+
+              debugPrint("📦 Selected stock details:");
+              debugPrint("  - Stock ID: ${selectedStock.id}");
+              debugPrint("  - Stock Price: ${selectedStock.price}");
+              debugPrint("  - Stock MRP: ${selectedStock.mrp}");
+
+              finalPrice = finalPrice ??
+                  double.tryParse(selectedStock.price ?? "0") ??
+                  0;
+              finalMrp =
+                  finalMrp ?? double.tryParse(selectedStock.mrp ?? "0") ?? 0;
+            } else {
+              debugPrint("❌ User cancelled stock selection - aborting");
+              debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+              return;
+            }
           }
         }
       }
@@ -220,146 +261,19 @@ class ProductCartHelper {
       debugPrint("  - Final MRP: $finalMrp");
     }
 
-    // STEP 2: Check for customer purchase history if customer is selected and we're adding directly to cart
-    if (addToCartDirectly &&
-        effectiveCustomerId != null &&
-        effectiveCustomerName != null &&
-        appSettingsProvider.appSettings?.showCustomerLastBuyedPriceList ==
-            true) {
-      debugPrint("🔍 STEP 2: CUSTOMER PURCHASE HISTORY CHECK STARTING...");
-      debugPrint("Conditions met for purchase history check:");
-      debugPrint("  - addToCartDirectly: $addToCartDirectly");
-      debugPrint("  - effectiveCustomerId: $effectiveCustomerId");
-      debugPrint("  - effectiveCustomerName: $effectiveCustomerName");
-      debugPrint("  - productId: ${product.productId}");
-      debugPrint("  - Current price (from stock or product): $finalPrice");
-
-      // Check if this is the default customer (first customer from list) - skip purchase history for default customer
-      final customerSelectionProvider =
-          Provider.of<CustomerSelectionProvider>(context, listen: false);
-      final bool isDefaultCustomer =
-          customerSelectionProvider.isDefaultCustomer;
-      debugPrint("  - isDefaultCustomer: $isDefaultCustomer");
-
-      if (isDefaultCustomer) {
-        debugPrint(
-            "⏭️ SKIPPING purchase history check - this is the default customer");
-        debugPrint("🔍 CUSTOMER PURCHASE HISTORY CHECK COMPLETED (SKIPPED)");
-      } else {
-        try {
-          debugPrint("Getting auth token and creating purchase provider...");
-
-          final authModel = Provider.of<AuthModel>(context, listen: false);
-          final String? token = authModel.token;
-          debugPrint(
-              "Auth token available: ${token != null && token.isNotEmpty}");
-
-          if (token == null || token.isEmpty) {
-            debugPrint(
-                "❌ No auth token available, skipping purchase history check");
-          } else {
-            final customerPurchaseProvider = CustomerPurchaseProvider();
-
-            debugPrint("📞 Calling customer purchase API...");
-            final CustomerPurchaseHistory? purchaseHistory =
-                await customerPurchaseProvider.getCustomerLastPurchases(
-              accessToken: token,
-              customerId: effectiveCustomerId!,
-              productId: product.productId!,
-            );
-
-            debugPrint("📋 Purchase History API Response:");
-            if (purchaseHistory == null) {
-              debugPrint("  - Result: null (API failed or exception occurred)");
-            } else {
-              debugPrint("  - Result: Success = ${purchaseHistory.success}");
-              debugPrint("  - Data count: ${purchaseHistory.data.length}");
-
-              if (purchaseHistory.data.isNotEmpty) {
-                debugPrint("  - Purchase records:");
-                for (int i = 0; i < purchaseHistory.data.length; i++) {
-                  final item = purchaseHistory.data[i];
-                  debugPrint(
-                      "    Record $i: Price=${item.price}, Qty=${item.quantity}, Date=${item.date}, Order=${item.orderNumber}");
-                }
-              }
-            }
-
-            if (purchaseHistory != null &&
-                purchaseHistory.success &&
-                purchaseHistory.data.isNotEmpty) {
-              debugPrint(
-                  "✅ Found ${purchaseHistory.data.length} purchase history records");
-              debugPrint("📱 Showing purchase history modal...");
-
-              // Show purchase history modal
-              final result = await showDialog(
-                context: context,
-                builder: (context) => CustomerPurchaseHistoryModal(
-                  product: product,
-                  purchaseHistory: purchaseHistory.data
-                      .take(5)
-                      .toList(), // Limit to 5 records
-                  customerName: effectiveCustomerName!,
-                ),
-              );
-
-              debugPrint("📱 Purchase history modal result:");
-              if (result == null) {
-                debugPrint("  - User cancelled the modal");
-                debugPrint(
-                    "❌ User cancelled purchase history selection - aborting cart addition");
-                debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
-                return; // User cancelled, don't proceed with adding to cart
-              } else {
-                debugPrint(
-                    "  - User made a selection: ${result.keys.toList()}");
-
-                if (result['useCurrentPrice'] == true) {
-                  debugPrint(
-                      "  - User chose to use current price: $finalPrice");
-                  debugPrint("  - Keeping current stock selection and pricing");
-                  // Continue with current finalPrice and selectedStock
-                } else if (result['price'] != null) {
-                  debugPrint(
-                      "  - User selected historical price: ${result['price']}");
-
-                  // Use the selected historical price but keep the selected stock
-                  finalPrice = result['price'];
-                  debugPrint("  - Updated finalPrice to: $finalPrice");
-                  debugPrint(
-                      "  - Quantity remains: $finalQuantity (not using historical quantity)");
-                  debugPrint(
-                      "  - Stock remains: ${selectedStock?.id} (for inventory tracking)");
-                }
-              }
-            } else {
-              debugPrint(
-                  "ℹ️ No purchase history found for this customer and product");
-              debugPrint(
-                  "  - purchaseHistory == null: ${purchaseHistory == null}");
-              if (purchaseHistory != null) {
-                debugPrint(
-                    "  - purchaseHistory.success: ${purchaseHistory.success}");
-                debugPrint(
-                    "  - purchaseHistory.data.isEmpty: ${purchaseHistory.data.isEmpty}");
-              }
-            }
-          }
-        } catch (e, stackTrace) {
-          debugPrint("❌ Error checking customer purchase history: $e");
-          debugPrint("Stack trace: $stackTrace");
-          debugPrint("⚠️ Continuing with normal flow despite error");
-          // Continue with normal flow if there's an error
-        }
-      }
-
-      debugPrint("🔍 CUSTOMER PURCHASE HISTORY CHECK COMPLETED");
-    } else {
-      debugPrint("⏭️ Skipping customer purchase history check:");
-      debugPrint("  - addToCartDirectly: $addToCartDirectly");
-      debugPrint("  - effectiveCustomerId: $effectiveCustomerId");
-      debugPrint("  - effectiveCustomerName: $effectiveCustomerName");
+    if (stockEnabled &&
+        selectedSaleUnit != null &&
+        selectedStock != null &&
+        (selectedStock.quantity ?? 0) < requestedQuantity) {
+      showScaffoldError(
+        context: context,
+        message:
+            'Insufficient stock for ${selectedSaleUnit.unitName ?? product.unit ?? "selected unit"}',
+      );
+      debugPrint(
+          "❌ Selected stock does not cover requested sale-unit quantity");
+      debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+      return;
     }
 
     // STEP 3: Handle onSelected callback if provided
@@ -378,8 +292,7 @@ class ProductCartHelper {
       // 🔧 FIX: Check if product already exists in cart with custom price
       // If explicit custom price was provided (from parameter), use that
       // Otherwise, check if product exists with custom price and preserve it
-      double? priceToUse =
-          customPrice; // Use custom price from parameter if provided
+      double? priceToUse = hasExplicitPriceOverride ? finalPrice : null;
       double? mrpToUse = customMrp; // Use custom MRP from parameter if provided
 
       if (priceToUse == null) {
@@ -388,36 +301,31 @@ class ProductCartHelper {
         final bool itemExistsInCart = localProductProvider.cartItems.any(
             (item) =>
                 item.product.productId == product.productId &&
-            ((selectedStockGroupIds.isNotEmpty &&
-                item.stockGroupIds.isNotEmpty &&
-                item.stockGroupIds.length ==
-                  selectedStockGroupIds.length &&
-                item.stockGroupIds
-                  .asMap()
-                  .entries
-                  .every((entry) =>
-                    entry.value ==
-                    selectedStockGroupIds[entry.key])) ||
-              (item.selectedStock?.id == selectedStock?.id ||
-                (item.selectedStock == null && selectedStock == null))));
+                item.saleUnitId == selectedSaleUnit?.id &&
+                ((selectedStockGroupIds.isNotEmpty &&
+                        item.stockGroupIds.isNotEmpty &&
+                        item.stockGroupIds.length ==
+                            selectedStockGroupIds.length &&
+                        item.stockGroupIds.asMap().entries.every((entry) =>
+                            entry.value == selectedStockGroupIds[entry.key])) ||
+                    (item.selectedStock?.id == selectedStock?.id ||
+                        (item.selectedStock == null &&
+                            selectedStock == null))));
 
         if (itemExistsInCart) {
           // Item exists in cart, find it and preserve its custom price
           final existingItem = localProductProvider.cartItems.firstWhere(
             (item) =>
                 item.product.productId == product.productId &&
-            ((selectedStockGroupIds.isNotEmpty &&
-                item.stockGroupIds.isNotEmpty &&
-                item.stockGroupIds.length ==
-                  selectedStockGroupIds.length &&
-                item.stockGroupIds
-                  .asMap()
-                  .entries
-                  .every((entry) =>
-                    entry.value ==
-                    selectedStockGroupIds[entry.key])) ||
-              (item.selectedStock?.id == selectedStock?.id ||
-                (item.selectedStock == null && selectedStock == null))),
+                item.saleUnitId == selectedSaleUnit?.id &&
+                ((selectedStockGroupIds.isNotEmpty &&
+                        item.stockGroupIds.isNotEmpty &&
+                        item.stockGroupIds.length ==
+                            selectedStockGroupIds.length &&
+                        item.stockGroupIds.asMap().entries.every((entry) =>
+                            entry.value == selectedStockGroupIds[entry.key])) ||
+                    (item.selectedStock?.id == selectedStock?.id ||
+                        (item.selectedStock == null && selectedStock == null))),
           );
 
           debugPrint(
@@ -448,12 +356,14 @@ class ProductCartHelper {
       localProductProvider.addToCart(
         product: product,
         quantity: cartQuantity,
-        price:
-            priceToUse, // 🔧 FIX: Pass null to preserve existing custom price, or explicit price
-        mrp:
-            mrpToUse, // � FIX: Pass null to preserve existing custom MRP, or explicit MRP
+        price: priceToUse,
+        mrp: mrpToUse,
         selectedStock: selectedStock,
         stockGroupIds: selectedStockGroupIds,
+        markPriceAsManualOverride: hasExplicitPriceOverride,
+        saleUnitId: selectedSaleUnit?.id,
+        saleUnitName: selectedSaleUnit?.unitName,
+        saleUnitConversionRate: _parseSaleUnitConversionRate(selectedSaleUnit),
       );
 
       showScaffold(
@@ -463,5 +373,37 @@ class ProductCartHelper {
     }
 
     debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+  }
+
+  static double? _parseSaleUnitConversionRate(SaleUnit? saleUnit) {
+    if (saleUnit == null) {
+      return null;
+    }
+    final parsedRate = double.tryParse(saleUnit.conversionRate?.trim() ?? '');
+    if (parsedRate == null || parsedRate <= 0) {
+      return null;
+    }
+    return parsedRate;
+  }
+
+  static List<Stock> _resolvePreferredSaleUnitStocks(
+    List<Stock> stocks,
+    SaleUnit saleUnit,
+  ) {
+    final saleUnitId = saleUnit.id?.toString().trim();
+    final unitId = saleUnit.unitId?.toString().trim();
+    final unitName = saleUnit.unitName?.trim().toLowerCase();
+
+    return stocks.where((stock) {
+      final purchaseUnitId = stock.purchaseUnitId?.trim().toLowerCase();
+      if (purchaseUnitId == null || purchaseUnitId.isEmpty) {
+        return false;
+      }
+
+      return (saleUnitId != null &&
+              purchaseUnitId == saleUnitId.toLowerCase()) ||
+          (unitId != null && purchaseUnitId == unitId.toLowerCase()) ||
+          (unitName != null && purchaseUnitId == unitName);
+    }).toList();
   }
 }

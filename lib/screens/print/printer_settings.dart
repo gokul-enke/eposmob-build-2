@@ -68,6 +68,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'supermarket', 'name': 'Supermarket'},
     {'id': 'supermarket2', 'name': 'Supermarket 2'},
     {'id': 'bilingual', 'name': 'Bilingual'},
+    {'id': 'multi_store', 'name': 'Multi Store'},
   ];
 
   // List of available receipt themes for standard PDF printing (A4/A5)
@@ -331,8 +332,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             : 'kot_printer';
 
     final paperSizeKey = selectedSettingsType == 'Billing'
-      ? 'default_paper_size'
-      : 'kot_paper_size';
+        ? 'default_paper_size'
+        : 'kot_paper_size';
     final fontStyleKey = selectedSettingsType == 'Billing'
         ? 'default_font_style'
         : 'kot_font_style';
@@ -342,14 +343,13 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
     final defaultPrinterJson = prefs.getString(printerKey);
     final defaultPaperSize = selectedSettingsType == 'Barcode'
-      ? null
-      : prefs.getString(paperSizeKey);
+        ? null
+        : prefs.getString(paperSizeKey);
     final defaultFontStyle = selectedSettingsType == 'Barcode'
         ? null
         : prefs.getString(fontStyleKey);
-    final savedTheme = selectedSettingsType == 'Barcode'
-        ? null
-        : prefs.getString(themeKey);
+    final savedTheme =
+        selectedSettingsType == 'Barcode' ? null : prefs.getString(themeKey);
 
     // Load paper size
     if (defaultPaperSize != null) {
@@ -1169,396 +1169,378 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                          flex: 2,
-                          child: Column(
+                flex: 2,
+                child: Column(
+                  children: [
+                    // Paper Size Selection
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              // Paper Size Selection
                               Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.03),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: ColorManager.kPrimaryColor
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.description_rounded,
+                                  color: ColorManager.kPrimaryColor,
+                                  size: 20,
+                                ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: ColorManager.kPrimaryColor
-                                              .withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(
-                                          Icons.description_rounded,
-                                          color: ColorManager.kPrimaryColor,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      const Text(
-                                        'Paper Size Settings',
-                                        style: TextStyle(
-                                          color: ColorManager.kPrimaryColor,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Paper Size Settings',
+                                style: TextStyle(
+                                  color: ColorManager.kPrimaryColor,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Text(
+                                  'Paper Size:',
+                                  style: TextStyle(
+                                    color: ColorManager.kTitleTextColor,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  const SizedBox(height: 24),
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16),
                                     decoration: BoxDecoration(
-                                      color: Colors.grey[50],
-                                      borderRadius: BorderRadius.circular(12),
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        const Text(
-                                          'Paper Size:',
-                                          style: TextStyle(
-                                            color: ColorManager.kTitleTextColor,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 16),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: DropdownButton<String>(
-                                              value: paperSizes.contains(selectedPaperSize)
-                                                  ? selectedPaperSize
-                                                  : '80mm',
-                                              isExpanded: true,
-                                              underline: const SizedBox(),
-                                              items: paperSizes.map((String size) {
-                                                return DropdownMenuItem<String>(
-                                                  value: size,
-                                                  child: Text(size),
-                                                );
-                                              }).toList(),
-                                              onChanged: (String? newValue) {
-                                                if (newValue != null) {
-                                                  final wasThermal =
-                                                      selectedPaperSize ==
-                                                              '112mm' ||
-                                                          selectedPaperSize ==
-                                                              '80mm' ||
-                                                          selectedPaperSize ==
-                                                              '58mm';
-                                                  final willBeThermal =
-                                                      newValue == '112mm' ||
-                                                          newValue == '80mm' ||
-                                                          newValue == '58mm';
+                                    child: DropdownButton<String>(
+                                      value:
+                                          paperSizes.contains(selectedPaperSize)
+                                              ? selectedPaperSize
+                                              : '80mm',
+                                      isExpanded: true,
+                                      underline: const SizedBox(),
+                                      items: paperSizes.map((String size) {
+                                        return DropdownMenuItem<String>(
+                                          value: size,
+                                          child: Text(size),
+                                        );
+                                      }).toList(),
+                                      onChanged: (String? newValue) {
+                                        if (newValue != null) {
+                                          final wasThermal =
+                                              selectedPaperSize == '112mm' ||
+                                                  selectedPaperSize == '80mm' ||
+                                                  selectedPaperSize == '58mm';
+                                          final willBeThermal =
+                                              newValue == '112mm' ||
+                                                  newValue == '80mm' ||
+                                                  newValue == '58mm';
 
-                                                  setState(() {
-                                                    selectedPaperSize =
-                                                        newValue;
+                                          setState(() {
+                                            selectedPaperSize = newValue;
 
-                                                    // Reset theme if crossing thermal↔standard boundary
-                                                    // and current theme doesn't exist in the new list
-                                                        if (wasThermal !=
-                                                        willBeThermal) {
-                                                      final newThemes =
-                                                          _activeThemes;
-                                                      final themeExists =
-                                                          newThemes.any((t) =>
-                                                              t['id'] ==
-                                                              selectedReceiptTheme);
-                                                      if (!themeExists) {
-                                                        selectedReceiptTheme =
-                                                            'classic';
-                                                        _saveReceiptTheme(
-                                                            'classic');
-                                                      }
-                                                    }
-                                                  });
-                                                  _saveDefaultPaperSize(
-                                                      newValue);
-                                                }
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                            // Reset theme if crossing thermal↔standard boundary
+                                            // and current theme doesn't exist in the new list
+                                            if (wasThermal != willBeThermal) {
+                                              final newThemes = _activeThemes;
+                                              final themeExists = newThemes.any(
+                                                  (t) =>
+                                                      t['id'] ==
+                                                      selectedReceiptTheme);
+                                              if (!themeExists) {
+                                                selectedReceiptTheme =
+                                                    'classic';
+                                                _saveReceiptTheme('classic');
+                                              }
+                                            }
+                                          });
+                                          _saveDefaultPaperSize(newValue);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Receipt Theme Selection (only for Billing)
+                    if (selectedSettingsType == 'Billing')
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: ColorManager.kPrimaryColor
+                                        .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.palette_outlined,
+                                    color: ColorManager.kPrimaryColor,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Receipt Theme',
+                                  style: TextStyle(
+                                    color: ColorManager.kPrimaryColor,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Text(
+                                    'Theme:',
+                                    style: TextStyle(
+                                      color: ColorManager.kTitleTextColor,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: DropdownButton<String>(
+                                        value: selectedReceiptTheme,
+                                        isExpanded: true,
+                                        underline: const SizedBox(),
+                                        items: _activeThemes
+                                            .map((Map<String, String> theme) {
+                                          return DropdownMenuItem<String>(
+                                            value: theme['id'],
+                                            child: Text(theme['name']!),
+                                          );
+                                        }).toList(),
+                                        onChanged: (String? newValue) {
+                                          if (newValue != null) {
+                                            setState(() {
+                                              selectedReceiptTheme = newValue;
+                                            });
+                                            _saveReceiptTheme(newValue);
+                                          }
+                                        },
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
-
-                            // Receipt Theme Selection (only for Billing)
-                            if (selectedSettingsType == 'Billing')
-                              Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.03),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: ColorManager.kPrimaryColor
-                                                .withValues(alpha: 0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: const Icon(
-                                            Icons.palette_outlined,
-                                            color: ColorManager.kPrimaryColor,
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        const Text(
-                                          'Receipt Theme',
-                                          style: TextStyle(
-                                            color: ColorManager.kPrimaryColor,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[50],
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Text(
-                                            'Theme:',
-                                            style: TextStyle(
-                                              color:
-                                                  ColorManager.kTitleTextColor,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 16),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: DropdownButton<String>(
-                                                value: selectedReceiptTheme,
-                                                isExpanded: true,
-                                                underline: const SizedBox(),
-                                                items: _activeThemes.map(
-                                                    (Map<String, String>
-                                                        theme) {
-                                                  return DropdownMenuItem<
-                                                      String>(
-                                                    value: theme['id'],
-                                                    child: Text(theme['name']!),
-                                                  );
-                                                }).toList(),
-                                                onChanged: (String? newValue) {
-                                                  if (newValue != null) {
-                                                    setState(() {
-                                                      selectedReceiptTheme =
-                                                          newValue;
-                                                    });
-                                                    _saveReceiptTheme(newValue);
-                                                  }
-                                                },
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      _getThemeDescription(
-                                          selectedReceiptTheme),
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _getThemeDescription(selectedReceiptTheme),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
                               ),
-                            if (selectedSettingsType == 'Billing')
-                              const SizedBox(height: 24),
-
-                            // Font Style Selection
-                            // Container(
-                            //   padding: const EdgeInsets.all(24),
-                            //   decoration: BoxDecoration(
-                            //     color: Colors.white,
-                            //     borderRadius: BorderRadius.circular(12),
-                            //     boxShadow: [
-                            //       BoxShadow(
-                            //         color: Colors.black.withOpacity(0.03),
-                            //         blurRadius: 8,
-                            //         offset: const Offset(0, 2),
-                            //       ),
-                            //     ],
-                            //   ),
-                            //   child: Column(
-                            //     crossAxisAlignment: CrossAxisAlignment.start,
-                            //     children: [
-                            //       Row(
-                            //         children: [
-                            //           Container(
-                            //             padding: const EdgeInsets.all(8),
-                            //             decoration: BoxDecoration(
-                            //               color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                            //               borderRadius: BorderRadius.circular(8),
-                            //             ),
-                            //             child: const Icon(
-                            //               Icons.font_download_rounded,
-                            //               color: ColorManager.kPrimaryColor,
-                            //               size: 20,
-                            //             ),
-                            //           ),
-                            //           const SizedBox(width: 12),
-                            //           const Text(
-                            //             'Font Style Settings',
-                            //             style: TextStyle(
-                            //               color: ColorManager.kPrimaryColor,
-                            //               fontSize: 18,
-                            //               fontWeight: FontWeight.bold,
-                            //             ),
-                            //           ),
-                            //         ],
-                            //       ),
-                            //       const SizedBox(height: 24),
-                            //       Container(
-                            //         padding: const EdgeInsets.all(16),
-                            //         decoration: BoxDecoration(
-                            //           color: Colors.grey[50],
-                            //           borderRadius: BorderRadius.circular(12),
-                            //         ),
-                            //         child: Row(
-                            //           children: [
-                            //             const Text(
-                            //               'Font Style:',
-                            //               style: TextStyle(
-                            //                 color: ColorManager.kTitleTextColor,
-                            //                 fontSize: 16,
-                            //                 fontWeight: FontWeight.w500,
-                            //               ),
-                            //             ),
-                            //             const SizedBox(width: 16),
-                            //             Expanded(
-                            //               child: Container(
-                            //                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                            //                 decoration: BoxDecoration(
-                            //                   color: Colors.white,
-                            //                   borderRadius: BorderRadius.circular(8),
-                            //                 ),
-                            //                 child: DropdownButton<String>(
-                            //                   value: selectedFontStyle,
-                            //                   isExpanded: true,
-                            //                   underline: const SizedBox(),
-                            //                   items: fontStyles.map((String style) {
-                            //                     return DropdownMenuItem<String>(
-                            //                       value: style,
-                            //                       child: Text(style),
-                            //                     );
-                            //                   }).toList(),
-                            //                   onChanged: (String? newValue) {
-                            //                     if (newValue != null) {
-                            //                       setState(() {
-                            //                         selectedFontStyle = newValue;
-                            //                       });
-                            //                       _saveDefaultFontStyle(newValue);
-                            //                     }
-                            //                   },
-                            //                 ),
-                            //               ),
-                            //             ),
-                            //           ],
-                            //         ),
-                            //       ),
-                            //       const SizedBox(height: 16),
-                            //       Container(
-                            //         padding: const EdgeInsets.all(12),
-                            //         decoration: BoxDecoration(
-                            //           color: Colors.blue[50],
-                            //           borderRadius: BorderRadius.circular(8),
-                            //         ),
-                            //         child: Row(
-                            //           children: [
-                            //             Icon(
-                            //               Icons.info_outline_rounded,
-                            //               color: Colors.blue[700],
-                            //               size: 20,
-                            //             ),
-                            //             const SizedBox(width: 12),
-                            //             Expanded(
-                            //               child: Text(
-                            //                 'Select a font style and print a sample receipt to test how it looks.',
-                            //                 style: TextStyle(
-                            //                   color: Colors.blue[700],
-                            //                   fontSize: 14,
-                            //                 ),
-                            //               ),
-                            //             ),
-                            //           ],
-                            //         ),
-                            //       ),
-                            //     ],
-                            //   ),
-                            // ),
+                            ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 24),
+                    if (selectedSettingsType == 'Billing')
+                      const SizedBox(height: 24),
 
-                      // Available Printers Section
-                      Expanded(
-                        flex: 3,
-                        child: _buildPrinterList(),
-                      ),
-                    ],
-                  ),
-                ],
+                    // Font Style Selection
+                    // Container(
+                    //   padding: const EdgeInsets.all(24),
+                    //   decoration: BoxDecoration(
+                    //     color: Colors.white,
+                    //     borderRadius: BorderRadius.circular(12),
+                    //     boxShadow: [
+                    //       BoxShadow(
+                    //         color: Colors.black.withOpacity(0.03),
+                    //         blurRadius: 8,
+                    //         offset: const Offset(0, 2),
+                    //       ),
+                    //     ],
+                    //   ),
+                    //   child: Column(
+                    //     crossAxisAlignment: CrossAxisAlignment.start,
+                    //     children: [
+                    //       Row(
+                    //         children: [
+                    //           Container(
+                    //             padding: const EdgeInsets.all(8),
+                    //             decoration: BoxDecoration(
+                    //               color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                    //               borderRadius: BorderRadius.circular(8),
+                    //             ),
+                    //             child: const Icon(
+                    //               Icons.font_download_rounded,
+                    //               color: ColorManager.kPrimaryColor,
+                    //               size: 20,
+                    //             ),
+                    //           ),
+                    //           const SizedBox(width: 12),
+                    //           const Text(
+                    //             'Font Style Settings',
+                    //             style: TextStyle(
+                    //               color: ColorManager.kPrimaryColor,
+                    //               fontSize: 18,
+                    //               fontWeight: FontWeight.bold,
+                    //             ),
+                    //           ),
+                    //         ],
+                    //       ),
+                    //       const SizedBox(height: 24),
+                    //       Container(
+                    //         padding: const EdgeInsets.all(16),
+                    //         decoration: BoxDecoration(
+                    //           color: Colors.grey[50],
+                    //           borderRadius: BorderRadius.circular(12),
+                    //         ),
+                    //         child: Row(
+                    //           children: [
+                    //             const Text(
+                    //               'Font Style:',
+                    //               style: TextStyle(
+                    //                 color: ColorManager.kTitleTextColor,
+                    //                 fontSize: 16,
+                    //                 fontWeight: FontWeight.w500,
+                    //               ),
+                    //             ),
+                    //             const SizedBox(width: 16),
+                    //             Expanded(
+                    //               child: Container(
+                    //                 padding: const EdgeInsets.symmetric(horizontal: 16),
+                    //                 decoration: BoxDecoration(
+                    //                   color: Colors.white,
+                    //                   borderRadius: BorderRadius.circular(8),
+                    //                 ),
+                    //                 child: DropdownButton<String>(
+                    //                   value: selectedFontStyle,
+                    //                   isExpanded: true,
+                    //                   underline: const SizedBox(),
+                    //                   items: fontStyles.map((String style) {
+                    //                     return DropdownMenuItem<String>(
+                    //                       value: style,
+                    //                       child: Text(style),
+                    //                     );
+                    //                   }).toList(),
+                    //                   onChanged: (String? newValue) {
+                    //                     if (newValue != null) {
+                    //                       setState(() {
+                    //                         selectedFontStyle = newValue;
+                    //                       });
+                    //                       _saveDefaultFontStyle(newValue);
+                    //                     }
+                    //                   },
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           ],
+                    //         ),
+                    //       ),
+                    //       const SizedBox(height: 16),
+                    //       Container(
+                    //         padding: const EdgeInsets.all(12),
+                    //         decoration: BoxDecoration(
+                    //           color: Colors.blue[50],
+                    //           borderRadius: BorderRadius.circular(8),
+                    //         ),
+                    //         child: Row(
+                    //           children: [
+                    //             Icon(
+                    //               Icons.info_outline_rounded,
+                    //               color: Colors.blue[700],
+                    //               size: 20,
+                    //             ),
+                    //             const SizedBox(width: 12),
+                    //             Expanded(
+                    //               child: Text(
+                    //                 'Select a font style and print a sample receipt to test how it looks.',
+                    //                 style: TextStyle(
+                    //                   color: Colors.blue[700],
+                    //                   fontSize: 14,
+                    //                 ),
+                    //               ),
+                    //             ),
+                    //           ],
+                    //         ),
+                    //       ),
+                    //     ],
+                    //   ),
+                    // ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 24),
+
+              // Available Printers Section
+              Expanded(
+                flex: 3,
+                child: _buildPrinterList(),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1901,8 +1883,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             printer.address ?? printer.typePrinter.name,
-                            style:
-                                TextStyle(color: Colors.grey[600], fontSize: 14),
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 14),
                           ),
                         ),
                         trailing: CustomRoundButton(

@@ -3,17 +3,13 @@ import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/services/print_service.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'dart:convert'; // Added for json.decode
 
 class ConfirmedOrderDetailModal extends StatelessWidget {
@@ -479,6 +475,9 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
 
   void _printOrder(BuildContext context) async {
     try {
+      await const PrintService().printSavedOrder(context, order);
+      return;
+/*
       // Convert SavedOrder items to the format expected by PrintPage
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
@@ -601,6 +600,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
           ),
         );
       }
+*/
     } catch (error) {
       debugPrint("Error printing order: ${error.toString()}");
       ScaffoldMessenger.of(context).showSnackBar(

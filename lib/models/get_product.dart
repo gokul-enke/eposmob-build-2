@@ -77,6 +77,7 @@ class GetProduct {
   final String? productName;
   final String? productSlug;
   final String? barcode;
+  final String? itemCode;
   final ProductCategory? category;
   final String? numberOfProductsAvailable;
   final String? rating;
@@ -109,6 +110,7 @@ class GetProduct {
     this.productName,
     this.productSlug,
     this.barcode,
+    this.itemCode,
     this.category,
     this.numberOfProductsAvailable,
     this.rating,
@@ -141,6 +143,7 @@ class GetProduct {
     String? productName,
     String? productSlug,
     String? barcode,
+    String? itemCode,
     ProductCategory? category,
     String? numberOfProductsAvailable,
     String? rating,
@@ -172,6 +175,7 @@ class GetProduct {
       productName: productName ?? this.productName,
       productSlug: productSlug ?? this.productSlug,
       barcode: barcode ?? this.barcode,
+      itemCode: itemCode ?? this.itemCode,
       category: category ?? this.category,
       numberOfProductsAvailable:
           numberOfProductsAvailable ?? this.numberOfProductsAvailable,
@@ -220,6 +224,7 @@ class GetProduct {
         productName: json["product_name"] ?? json["name"] ?? json["title"],
         productSlug: json["product_slug"] ?? json["slug"],
         barcode: json["barcode"],
+        itemCode: json["item_code"],
         category: json["category"] == null
             ? null
             : ProductCategory.fromJson(json["category"]),
@@ -312,6 +317,7 @@ class GetProduct {
         "product_name": productName,
         "product_slug": productSlug,
         "barcode": barcode,
+        "item_code": itemCode,
         "category": category?.toJson(),
         "number_of_products_available": numberOfProductsAvailable,
         "rating": rating,
@@ -656,6 +662,10 @@ class Stock {
   final String? pkgMfg;
   final String? rack;
   final String? hsnCode; // Added HSN code field
+  final String? purchaseUnitId;
+  final num? purchaseQty;
+  final String? wholesalePrice;
+  final int? wholesaleMinUnit;
 
   Stock({
     this.id,
@@ -675,6 +685,10 @@ class Stock {
     this.pkgMfg,
     this.rack,
     this.hsnCode, // Added HSN code field
+    this.purchaseUnitId,
+    this.purchaseQty,
+    this.wholesalePrice,
+    this.wholesaleMinUnit,
   });
 
   Stock copyWith({
@@ -695,6 +709,10 @@ class Stock {
     String? pkgMfg,
     String? rack,
     String? hsnCode,
+    String? purchaseUnitId,
+    num? purchaseQty,
+    String? wholesalePrice,
+    int? wholesaleMinUnit,
   }) {
     return Stock(
       id: id ?? this.id,
@@ -714,6 +732,10 @@ class Stock {
       pkgMfg: pkgMfg ?? this.pkgMfg,
       rack: rack ?? this.rack,
       hsnCode: hsnCode ?? this.hsnCode,
+      purchaseUnitId: purchaseUnitId ?? this.purchaseUnitId,
+      purchaseQty: purchaseQty ?? this.purchaseQty,
+      wholesalePrice: wholesalePrice ?? this.wholesalePrice,
+      wholesaleMinUnit: wholesaleMinUnit ?? this.wholesaleMinUnit,
     );
   }
 
@@ -753,6 +775,20 @@ class Stock {
         pkgMfg: json["pkg_mfg"]?.toString(),
         rack: json["rack"]?.toString(),
         hsnCode: json["hsn_code"]?.toString(), // Added HSN code field
+        purchaseUnitId: json["purchase_unit_id"]?.toString(),
+        purchaseQty: (() {
+          final value = json["purchase_qty"];
+          if (value == null) return null;
+          if (value is num) return value;
+          return num.tryParse(value.toString());
+        })(),
+        wholesalePrice: json["wholesale_price"]?.toString(),
+        wholesaleMinUnit: (() {
+          final value = json["wholesale_min_unit"];
+          if (value == null) return null;
+          if (value is int) return value;
+          return int.tryParse(value.toString());
+        })(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -773,6 +809,10 @@ class Stock {
         "pkg_mfg": pkgMfg,
         "rack": rack,
         "hsn_code": hsnCode, // Added HSN code field
+        "purchase_unit_id": purchaseUnitId,
+        "purchase_qty": purchaseQty,
+        "wholesale_price": wholesalePrice,
+        "wholesale_min_unit": wholesaleMinUnit,
       };
 }
 

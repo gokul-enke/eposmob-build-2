@@ -662,7 +662,8 @@ class ReturnBillStandardPrinter {
       }
 
       if (displayConfig?['showReturnParticulars']?.visible == true) {
-        rowData.add(returnItem.productName ?? 'Unknown');
+        // Prepend LTR mark to force LTR rendering in RTL context
+        rowData.add('\u200E${returnItem.productName ?? 'Unknown'}');
       }
 
       if (displayConfig?['showReturnMRP']?.visible == true) {

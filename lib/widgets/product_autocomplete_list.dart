@@ -31,10 +31,10 @@ class ProductAutocomplete extends StatefulWidget {
   });
 
   @override
-  State<ProductAutocomplete> createState() => _ProductAutocompleteState();
+  State<ProductAutocomplete> createState() => ProductAutocompleteState();
 }
 
-class _ProductAutocompleteState extends State<ProductAutocomplete> {
+class ProductAutocompleteState extends State<ProductAutocomplete> {
   // Track the highlighted index
   int? _highlightedOptionIndex;
   final FocusNode _textFieldFocus = FocusNode();
@@ -43,6 +43,17 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
   // Define item height for scrolling calculations - adjusted to include margins
   final double _itemHeight =
       48.0; // Increased to account for margins and padding
+
+  // Tracks previous controller text to differentiate text changes from selection changes
+  String _previousControllerText = '';
+
+  // Expose the autocomplete field's FocusNode for external focus requests
+  FocusNode? _fieldFocusNode;
+
+  void requestFieldFocus() {
+    debugPrint("⌨️ [ProductAutocomplete] requestFieldFocus called | hasFieldNode=${_fieldFocusNode != null}");
+    _fieldFocusNode?.requestFocus();
+  }
 
   @override
   void dispose() {
@@ -94,13 +105,25 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
 
     final productProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final itemCodeEnabled =
+        appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
+    final lowerQuery = query.toLowerCase();
 
     // Search through only sellable products for billing autocomplete
-    return productProvider.sellableProducts
-        .where((product) => (product.productName ?? '')
-            .toLowerCase()
-            .contains(query.toLowerCase()))
-        .toList();
+    return productProvider.sellableProducts.where((product) {
+      final nameMatch =
+          (product.productName ?? '').toLowerCase().contains(lowerQuery);
+      if (nameMatch) return true;
+      if (itemCodeEnabled) {
+        final itemCode = product.itemCode ?? '';
+        if (itemCode.isNotEmpty && itemCode.toLowerCase().contains(lowerQuery)) {
+          return true;
+        }
+      }
+      return false;
+    }).toList();
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
@@ -158,6 +181,9 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
         },
         fieldViewBuilder:
             (context, textEditingController, focusNode, onFieldSubmitted) {
+          // Capture the Autocomplete-managed focus node so parent can request focus
+          _fieldFocusNode = focusNode;
+
           final keyboardProvider =
               Provider.of<KeyboardProvider>(context, listen: false);
           final bool suppressSystemKeyboard =
@@ -172,15 +198,27 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
               focusNode.requestFocus();
             }
 
-            // After ensuring focus, place caret at end so characters append in correct order
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              textEditingController.selection = TextSelection.fromPosition(
-                TextPosition(offset: textEditingController.text.length),
-              );
-            });
+            final currentText = textEditingController.text;
+            final previousText = _previousControllerText;
+            _previousControllerText = currentText;
+
+            // Only snap cursor to end when text was actually appended (virtual
+            // keyboard typing). This preserves Ctrl+A, arrow keys, cursor
+            // placement, and other selection operations.
+            if (currentText.length > previousText.length &&
+                currentText.startsWith(previousText)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (textEditingController.text == currentText) {
+                  textEditingController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: textEditingController.text.length),
+                  );
+                }
+              });
+            }
           }
 
           // Attach the listener once; remove any existing to avoid duplicates
+          _previousControllerText = textEditingController.text;
           textEditingController.removeListener(_ensureFocus);
           textEditingController.addListener(_ensureFocus);
           // Replace the provided focusNode with our own
@@ -188,7 +226,14 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
             focusNode: _textFieldFocus,
             onKeyEvent: (KeyEvent event) {
               if (event is KeyDownEvent) {
-                if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                if (event.logicalKey == LogicalKeyboardKey.keyA &&
+                    HardwareKeyboard.instance.isControlPressed) {
+                  // Ctrl+A: select all text in the field
+                  textEditingController.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: textEditingController.text.length,
+                  );
+                } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
                   setState(() {
                     if (_highlightedOptionIndex == null) {
                       _highlightedOptionIndex = 0;
@@ -253,11 +298,11 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
         },
         optionsViewBuilder: (context, onSelected, options) {
           // Get currency from app settings
-          final currency =
-              Provider.of<AppSettingsProvider>(context, listen: false)
-                      .appSettings
-                      ?.currency ??
-                  'INR';
+          final appSettingsProvider =
+              Provider.of<AppSettingsProvider>(context, listen: false);
+          final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+          final itemCodeEnabled =
+              appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
 
           // Update current options reference for Enter key handling
           currentOptions = options;
@@ -325,6 +370,19 @@ class _ProductAutocompleteState extends State<ProductAutocomplete> {
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
+                        subtitle: (itemCodeEnabled &&
+                                (option.itemCode ?? '').isNotEmpty)
+                            ? Text(
+                                option.itemCode!,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isHighlighted
+                                      ? Colors.blue.shade600
+                                      : Colors.grey.shade600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : null,
                         trailing: Text(
                           '$currency ${option.price?.price ?? ''}',
                           style: TextStyle(

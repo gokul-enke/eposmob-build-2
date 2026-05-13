@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -16,10 +17,18 @@ import 'package:get/get.dart';
 /// A widget to display saved orders in a grid layout with new order button at top
 class HorizontalSavedOrdersView extends StatefulWidget {
   final Function(String) onOrderSelected;
+  final Future<void> Function()? onNewOrderPressed;
+  final bool isBusy;
+  final bool autofocus;
+  final int focusRequestId;
 
   const HorizontalSavedOrdersView({
     Key? key,
     required this.onOrderSelected,
+    this.onNewOrderPressed,
+    this.isBusy = false,
+    this.autofocus = false,
+    this.focusRequestId = 0,
   }) : super(key: key);
 
   @override
@@ -29,11 +38,85 @@ class HorizontalSavedOrdersView extends StatefulWidget {
 
 class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _ordersGridFocusNode = FocusNode();
+  int _focusedOrderIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ordersGridFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestGridFocusIfNeeded();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant HorizontalSavedOrdersView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.autofocus &&
+        widget.focusRequestId != oldWidget.focusRequestId) {
+      _requestGridFocusIfNeeded();
+    }
+  }
+
+  void _requestGridFocusIfNeeded() {
+    if (!widget.autofocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _ordersGridFocusNode.requestFocus();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _ordersGridFocusNode.dispose();
     super.dispose();
+  }
+
+  KeyEventResult _handleOrdersGridKey(
+      KeyEvent event, List<SavedOrder> savedOrders) {
+    if (event is! KeyDownEvent || savedOrders.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      final index = _focusedOrderIndex.clamp(0, savedOrders.length - 1).toInt();
+      if (!widget.isBusy) {
+        widget.onOrderSelected(savedOrders[index].id);
+      }
+      return KeyEventResult.handled;
+    }
+
+    int? delta;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      delta = 1;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      delta = -1;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      delta = 2;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      delta = -2;
+    }
+
+    if (delta == null) {
+      return KeyEventResult.ignored;
+    }
+
+    setState(() {
+      _focusedOrderIndex = (_focusedOrderIndex + delta!)
+          .clamp(0, savedOrders.length - 1)
+          .toInt();
+    });
+    return KeyEventResult.handled;
   }
 
   @override
@@ -57,22 +140,37 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                             PointerDeviceKind.touch,
                           },
                         ),
-                        child: GridView.builder(
-                          controller: _scrollController,
-                          physics: const BouncingScrollPhysics(),
-                          gridDelegate:
-                              const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 250, // Maximum card width
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 1.5, // Width/height ratio
+                        child: Focus(
+                          focusNode: _ordersGridFocusNode,
+                          autofocus: widget.autofocus,
+                          onKeyEvent: (node, event) =>
+                              _handleOrdersGridKey(event, provider.savedOrders),
+                          child: GridView.builder(
+                            controller: _scrollController,
+                            physics: const BouncingScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 250, // Maximum card width
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 1.45, // Width/height ratio
+                            ),
+                            itemCount: provider.savedOrders.length,
+                            itemBuilder: (context, index) {
+                              final order = provider.savedOrders[index];
+                              final focusedIndex = _focusedOrderIndex
+                                  .clamp(0, provider.savedOrders.length - 1)
+                                  .toInt();
+                              return _buildSavedOrderCard(
+                                context,
+                                provider,
+                                order,
+                                isKeyboardFocused:
+                                    _ordersGridFocusNode.hasFocus &&
+                                        index == focusedIndex,
+                              );
+                            },
                           ),
-                          itemCount: provider.savedOrders.length,
-                          itemBuilder: (context, index) {
-                            final order = provider.savedOrders[index];
-                            return _buildSavedOrderCard(
-                                context, provider, order);
-                          },
                         ),
                       ),
               ),
@@ -93,6 +191,15 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
         color: Colors.white,
         child: InkWell(
           onTap: () async {
+            if (widget.isBusy) {
+              return;
+            }
+
+            if (widget.onNewOrderPressed != null) {
+              await widget.onNewOrderPressed!();
+              return;
+            }
+
             debugPrint("===== NEW ORDER (+) BUTTON PRESSED =====");
             debugPrint("🔄 Current state:");
             debugPrint("  - Current order ID: ${provider.currentOrder?.id}");
@@ -211,14 +318,16 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
     );
   }
 
-  Widget _buildSavedOrderCard(
-      BuildContext context, LocalProductProvider provider, SavedOrder order) {
-    String date = DateHelper.formatToISODateOnlyFromISO(order.createdAt);
+  Widget _buildSavedOrderCard(BuildContext context,
+      LocalProductProvider provider, SavedOrder order,
+      {bool isKeyboardFocused = false}) {
     String time = DateHelper.formatToISOTimeOnlyFromISO(order.createdAt);
     bool isSelected = provider.currentOrder?.id == order.id;
 
-    debugPrint("SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
-    debugPrint("SavedOrder ${order.orderNumber} formatted date: $date | formatted time: $time");
+    debugPrint(
+        "SavedOrder ${order.orderNumber} raw createdAt: ${order.createdAt}");
+    debugPrint(
+        "SavedOrder ${order.orderNumber} formatted time: $time");
 
     return ConstrainedBox(
       constraints: const BoxConstraints(
@@ -228,76 +337,88 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
       child: BuildBoxShadowContainer(
         circleRadius: 8,
         color: isSelected ? Colors.white : Colors.white,
-        border: isSelected
+        border: isKeyboardFocused
+            ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+            : isSelected
             ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
             : Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
         child: InkWell(
-          onTap: () => widget.onOrderSelected(order.id),
+          onTap: widget.isBusy ? null : () => widget.onOrderSelected(order.id),
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Text(
-                  order.orderNumber,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: isSelected
-                        ? ColorManager.kPrimaryColor
-                        : Colors.black87,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      date,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                    Expanded(
+                      child: Text(
+                        order.orderNumber,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: isSelected
+                              ? ColorManager.kPrimaryColor
+                              : Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Text(
-                      time,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                    Flexible(
+                      child: Text(
+                        time,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
 
                 // Amount and items count row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Consumer<AppSettingsProvider>(
-                      builder: (context, settings, _) {
-                        final currency = settings.appSettings?.currency ?? 'INR';
-                        return Text(
-                          "$currency ${order.total.toStringAsFixed(2)}",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.green,
-                          ),
-                        );
-                      },
+                    Expanded(
+                      flex: 3,
+                      child: Consumer<AppSettingsProvider>(
+                        builder: (context, settings, _) {
+                          final currency =
+                              settings.appSettings?.currency ?? 'INR';
+                          return Text(
+                            "$currency ${order.total.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.green,
+                            ),
+                            maxLines: 1,
+                          );
+                        },
+                      ),
                     ),
-                    Text(
-                      "${order.items.length} ${'common.items'.tr}",
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                    Flexible(
+                      flex: 2,
+                      child: Text(
+                        "${order.items.length} ${'common.items'.tr}",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
 
                 // Action buttons row
                 Row(
@@ -305,7 +426,8 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
                   children: [
                     IconButton(
                       onPressed: () async {
-                        await const PrintService().printSavedOrder(context, order);
+                        await const PrintService()
+                            .printSavedOrder(context, order);
                       },
                       icon: const Icon(Icons.print, size: 20),
                       color: Colors.blue,
@@ -362,6 +484,7 @@ class _HorizontalSavedOrdersViewState extends State<HorizontalSavedOrdersView> {
       ),
     );
   }
+
   void _showDeleteConfirmationDialog(
       BuildContext context, LocalProductProvider provider, SavedOrder order) {
     DeleteConfirmationDialog.show(

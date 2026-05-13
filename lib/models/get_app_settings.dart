@@ -26,33 +26,38 @@ class AppSettings {
   final bool hideDefaultPhone;
   final bool freeDeliveryEnabled;
   final String freeDeliveryMinimumAmount;
+  final bool itemCodeEnabled;
+  final bool companyB2BEnabled;
 
-  AppSettings(
-      {required this.barcodeSales,
-      required this.customerCarePhone,
-      required this.customerCareEmail,
-      required this.printTitle,
-      required this.showCustomerLastBuyedPriceList,
-      required this.askDeliveryDate,
-      required this.priceRoundOff,
-      required this.discountAndCoupon,
-      required this.autoAssignDefaultCustomer,
-      required this.autoAssignDefaultCustomerPhone,
-      required this.currency,
-      required this.zatcaPhase1Enabled,
-      required this.zatcaPhase2Enabled,
-      required this.showTaxPos,
-      required this.showMrpPos,
-      required this.showTaxRatePos,
-      required this.showConfirmOrderButton,
-      required this.enableKOTPrint,
-      required this.defaultDeliveryMethod,
-      required this.defaultPaymentMethod,
-      required this.posPrintDoubleBill,
-      required this.skipCustomerSelection,
-      required this.hideDefaultPhone,
-      required this.freeDeliveryEnabled,
-      required this.freeDeliveryMinimumAmount});
+  AppSettings({
+    required this.barcodeSales,
+    required this.customerCarePhone,
+    required this.customerCareEmail,
+    required this.printTitle,
+    required this.showCustomerLastBuyedPriceList,
+    required this.askDeliveryDate,
+    required this.priceRoundOff,
+    required this.discountAndCoupon,
+    required this.autoAssignDefaultCustomer,
+    required this.autoAssignDefaultCustomerPhone,
+    required this.currency,
+    required this.zatcaPhase1Enabled,
+    required this.zatcaPhase2Enabled,
+    required this.showTaxPos,
+    required this.showMrpPos,
+    required this.showTaxRatePos,
+    required this.showConfirmOrderButton,
+    required this.enableKOTPrint,
+    required this.defaultDeliveryMethod,
+    required this.defaultPaymentMethod,
+    required this.posPrintDoubleBill,
+    required this.skipCustomerSelection,
+    required this.hideDefaultPhone,
+    required this.freeDeliveryEnabled,
+    required this.freeDeliveryMinimumAmount,
+    required this.itemCodeEnabled,
+    required this.companyB2BEnabled,
+  });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     var data = json['data'] as List;
@@ -132,6 +137,8 @@ class AppSettings {
           settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['status'] ?? false,
       freeDeliveryMinimumAmount:
           settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['value'] ?? "",
+      itemCodeEnabled: settingsMap['ITEM_CODE_ENABLED']?['status'] ?? false,
+      companyB2BEnabled: settingsMap['B2B']?['status'] ?? false,
     );
   }
 
@@ -275,6 +282,18 @@ class AppSettings {
           "code": "FREE_DELIVERY_MINIMUM_AMOUNT",
           "value": freeDeliveryMinimumAmount.toString(),
           "status": freeDeliveryEnabled.toString(),
+        },
+        {
+          "name": "Show Item Code",
+          "code": "ITEM_CODE_ENABLED",
+          "value": "",
+          "status": itemCodeEnabled.toString(),
+        },
+        {
+          "name": "B2B",
+          "code": "B2B",
+          "value": "",
+          "status": companyB2BEnabled.toString(),
         },
       ],
     };

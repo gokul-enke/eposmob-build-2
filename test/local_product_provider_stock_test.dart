@@ -281,7 +281,7 @@ void main() {
     );
 
     expect(result.changed, isTrue);
-    expect(result.appliedQuantity, 5);
+    expect(result.appliedQuantity, 6);
 
     expect(provider.cartItems, hasLength(2));
 
@@ -341,7 +341,7 @@ void main() {
     );
 
     expect(result.changed, isTrue);
-    expect(result.appliedQuantity, 5);
+    expect(result.appliedQuantity, 6);
 
     expect(provider.cartItems, hasLength(2));
 

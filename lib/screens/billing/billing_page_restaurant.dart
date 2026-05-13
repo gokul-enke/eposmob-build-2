@@ -19,7 +19,6 @@ import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
-import 'package:pos_machine/models/add_to_cart.dart' as cart_model;
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -45,8 +44,10 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
+import 'package:pos_machine/screens/billing/utils/billing_focus_orders.dart';
+import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/services/cash_drawer_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
-import 'package:pos_machine/widgets/billing_sidebar_footer.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
@@ -97,6 +98,8 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   GlobalKey _autocompletePhoneKey = GlobalKey();
   GlobalKey _autocompleteProductKey = GlobalKey();
+  final GlobalKey<ProductAutocompleteState> _productAutocompleteKey =
+      GlobalKey<ProductAutocompleteState>();
 
   // Flag to track if user has manually changed the paid amount
 
@@ -183,6 +186,22 @@ class BillingPageState extends State<BillingPageRestaurant>
   // Add flag to track if customer was manually selected
   bool _isCustomerManuallySelected = false;
 
+  // Compact cart sidebar keyboard navigation.
+  final FocusNode _compactCartFocusNode = FocusNode();
+  final ScrollController _compactCartScrollController = ScrollController();
+  int? _compactCartFocusedIndex;
+
+  // Restaurant main product area keyboard navigation.
+  final FocusNode _mainProductSearchFocusNode = FocusNode();
+  final FocusNode _mainCategoryFocusNode = FocusNode();
+  final FocusNode _mainProductGridFocusNode = FocusNode();
+  final ScrollController _mainCategoryScrollController = ScrollController();
+  final ScrollController _mainProductGridScrollController = ScrollController();
+  int _focusedMainCategoryIndex = 0;
+  int _focusedMainProductIndex = 0;
+  int _mainProductGridColumns = 1;
+  double _mainProductGridRowExtent = 120;
+
   StreamSubscription<String>? _barcodeSubscription;
 
   String? deliveryDate;
@@ -218,6 +237,13 @@ class BillingPageState extends State<BillingPageRestaurant>
     _focusNode.addListener(_handleFocusChange);
     _paidAmountFocusNode
         .addListener(_handlePaidAmountFocusChange); // Add this line
+    _mainCategoryFocusNode.addListener(() {
+      if (!mounted) return;
+      setState(() {});
+    });
+    _mainProductSearchFocusNode.onKeyEvent =
+        (node, event) => _handleMainProductSearchKey(event);
+    HardwareKeyboard.instance.addHandler(_onBillingHardwareKey);
 
     // Debug logging for AppSettings
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -336,6 +362,7 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onBillingHardwareKey);
     _barcodeSubscription?.cancel();
     barcodeController.dispose();
     mobileNumberTextController.dispose();
@@ -368,6 +395,13 @@ class BillingPageState extends State<BillingPageRestaurant>
     _debounceTimer?.cancel();
     _customerTextFieldFocus.dispose();
     _customerScrollController.dispose();
+    _compactCartFocusNode.dispose();
+    _compactCartScrollController.dispose();
+    _mainProductSearchFocusNode.dispose();
+    _mainCategoryFocusNode.dispose();
+    _mainProductGridFocusNode.dispose();
+    _mainCategoryScrollController.dispose();
+    _mainProductGridScrollController.dispose();
 
     // Remove sales executive listener
     try {
@@ -914,15 +948,59 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   void _focusTextField() {
-    // debugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    if (appSettingsProvider.appSettings!.barcodeSales) {
+    final barcodeSales = appSettingsProvider.appSettings?.barcodeSales ?? false;
+    if (barcodeSales) {
       FocusScope.of(context).requestFocus(_barcodeNode);
-    } else {}
+    } else {
+      _productAutocompleteKey.currentState?.requestFieldFocus();
+    }
     selectedProductNameController.clear();
     Provider.of<LocalProductProvider>(context, listen: false)
         .resetSelectedProduct();
+  }
+
+  void _focusSearchProductField() {
+    _mainProductSearchFocusNode.requestFocus();
+    _productAutocompleteKey.currentState?.requestFieldFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _mainProductSearchFocusNode.requestFocus();
+      _mainProductSearchController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _mainProductSearchController.text.length,
+      );
+      _productAutocompleteKey.currentState?.requestFieldFocus();
+    });
+    selectedProductNameController.clear();
+    Provider.of<LocalProductProvider>(context, listen: false)
+        .resetSelectedProduct();
+  }
+
+  void _focusMainCategoryRow() {
+    setState(() {
+      _selectedMainCategoryIndex = 0;
+      _focusedMainCategoryIndex = 0;
+    });
+    _mainCategoryFocusNode.requestFocus();
+    _scrollMainCategoryIntoView();
+  }
+
+  void _restoreShortcutFocus(String reason) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final barcodeSales =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+                  .appSettings
+                  ?.barcodeSales ??
+              false;
+      if (barcodeSales) {
+        FocusScope.of(context).requestFocus(_barcodeNode);
+      } else {
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   void _handleFocusChange() {
@@ -931,27 +1009,521 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _handleKeyPress(KeyEvent event) {
-    final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext != null && focusedContext.widget is EditableText) {
-      return;
+  bool _isBillingShortcutKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.f1 ||
+        key == LogicalKeyboardKey.f2 ||
+        key == LogicalKeyboardKey.f3 ||
+        key == LogicalKeyboardKey.f4 ||
+        key == LogicalKeyboardKey.f5 ||
+        key == LogicalKeyboardKey.f6 ||
+        key == LogicalKeyboardKey.f7 ||
+        key == LogicalKeyboardKey.f8 ||
+        key == LogicalKeyboardKey.f9 ||
+        key == LogicalKeyboardKey.f10 ||
+        key == LogicalKeyboardKey.f12 ||
+        key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.escape;
+  }
+
+  bool _isBillingControlShortcut(LogicalKeyboardKey key) {
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+    return key == LogicalKeyboardKey.keyH ||
+        key == LogicalKeyboardKey.keyA ||
+        key == LogicalKeyboardKey.keyK ||
+        key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.keyS;
+  }
+
+  bool _onBillingHardwareKey(KeyEvent event) {
+    if (!mounted || event is! KeyDownEvent) return false;
+
+    final route = ModalRoute.of(context);
+    final dialogIsOnTop = route != null && !route.isCurrent;
+    if (dialogIsOnTop) return false;
+
+    if (event.logicalKey == LogicalKeyboardKey.tab &&
+        !HardwareKeyboard.instance.isShiftPressed &&
+        _barcodeNode.hasFocus) {
+      _focusSearchProductField();
+      return true;
     }
 
-    if (event is KeyDownEvent) {
-      try {
-        if (event.logicalKey == LogicalKeyboardKey.f6) {
-          _clearCart();
-        } else if (event.logicalKey == LogicalKeyboardKey.f7) {
-          _saveOrder();
-        } else if (event.logicalKey == LogicalKeyboardKey.f8) {
-          _createOrderAndPrint();
-        } else if (event.logicalKey == LogicalKeyboardKey.f9) {
-          _confirmOrder();
-        }
-      } catch (e) {
-        // debugPrint("Error handling key press: $e");
-      }
+    if (!_isBillingShortcutKey(event.logicalKey) &&
+        !_isBillingControlShortcut(event.logicalKey)) {
+      return false;
     }
+
+    _handleKeyPress(event);
+    return true;
+  }
+
+  void _handleKeyPress(KeyEvent event) {
+    if (event is! KeyDownEvent) return;
+
+    try {
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        _focusSearchProductField();
+        return;
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.f12) {
+        setState(() {
+          _isSidebarVisible = true;
+          _selectedSidebarTab = _selectedSidebarTab == 0 ? 1 : 0;
+        });
+        return;
+      }
+
+      if (HardwareKeyboard.instance.isControlPressed) {
+        if (event.logicalKey == LogicalKeyboardKey.keyA) {
+          _focusMainCategoryRow();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyS) {
+          _focusSearchProductField();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyH) {
+          KeyboardShortcutsHelpDialog.show(
+            context,
+            mode: KeyboardShortcutsHelpMode.restaurant,
+          );
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyK) {
+          final keyboardProvider =
+              Provider.of<KeyboardProvider>(context, listen: false);
+          if (keyboardProvider.showKeyboardFeature) {
+            keyboardProvider.featureOff();
+            keyboardProvider.clear();
+          } else {
+            keyboardProvider.featureOn();
+          }
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyD) {
+          _focusCompactCartSidebar();
+          return;
+        }
+      }
+
+      if (!HardwareKeyboard.instance.isControlPressed &&
+          event.logicalKey == LogicalKeyboardKey.keyD) {
+        unawaited(const CashDrawerService().openDrawer(context));
+        return;
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.f1) {
+        _clearCart();
+      } else if (event.logicalKey == LogicalKeyboardKey.f2) {
+        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+      } else if (event.logicalKey == LogicalKeyboardKey.f3) {
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 0);
+      } else if (event.logicalKey == LogicalKeyboardKey.f4) {
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 1);
+      } else if (event.logicalKey == LogicalKeyboardKey.f5) {
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 3);
+      } else if (event.logicalKey == LogicalKeyboardKey.f6) {
+        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+      } else if (event.logicalKey == LogicalKeyboardKey.f7) {
+        unawaited(_createNewOrder());
+      } else if (event.logicalKey == LogicalKeyboardKey.f8) {
+        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+      } else if (event.logicalKey == LogicalKeyboardKey.f9) {
+        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+      } else if (event.logicalKey == LogicalKeyboardKey.f10) {
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 2);
+      }
+    } catch (e) {
+      debugPrint("Error handling restaurant billing key press: $e");
+    }
+  }
+
+  void _focusCompactCartSidebar() {
+    final cartItems = Provider.of<LocalProductProvider>(context, listen: false)
+        .getCartItems();
+    setState(() {
+      _isSidebarVisible = true;
+      _selectedSidebarTab = 0;
+      _compactCartFocusedIndex = cartItems.isEmpty ? null : 0;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _compactCartFocusNode.requestFocus();
+      _scrollFocusedCompactCartItemIntoView();
+    });
+  }
+
+  void _scrollFocusedCompactCartItemIntoView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_compactCartScrollController.hasClients ||
+          _compactCartFocusedIndex == null) {
+        return;
+      }
+      const estimatedItemExtent = 126.0;
+      final target = (_compactCartFocusedIndex! * estimatedItemExtent).clamp(
+        0.0,
+        _compactCartScrollController.position.maxScrollExtent,
+      );
+      _compactCartScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  KeyEventResult _handleCompactCartKey(
+    KeyEvent event,
+    List<LocalCartItem> cartItems,
+    LocalProductProvider localProductProvider,
+  ) {
+    if (event is! KeyDownEvent || cartItems.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    final currentIndex =
+        (_compactCartFocusedIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
+    final item = cartItems[currentIndex];
+
+    if (key == LogicalKeyboardKey.arrowDown) {
+      setState(() {
+        _compactCartFocusedIndex =
+            (currentIndex + 1).clamp(0, cartItems.length - 1).toInt();
+      });
+      _scrollFocusedCompactCartItemIntoView();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowUp) {
+      setState(() {
+        _compactCartFocusedIndex =
+            (currentIndex - 1).clamp(0, cartItems.length - 1).toInt();
+      });
+      _scrollFocusedCompactCartItemIntoView();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      unawaited(
+        _showEditQuantityDialog(
+          context: context,
+          item: item,
+          localProductProvider: localProductProvider,
+        ),
+      );
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.delete) {
+      localProductProvider.removeFromCart(
+        item.product.productId!,
+        item.selectedStock,
+        stockGroupIds: item.stockGroupIds,
+        saleUnitId: item.saleUnitId,
+      );
+      setState(() {
+        _compactCartFocusedIndex = cartItems.length <= 1
+            ? null
+            : currentIndex.clamp(0, cartItems.length - 2);
+      });
+      _scrollFocusedCompactCartItemIntoView();
+      return KeyEventResult.handled;
+    }
+
+    final character = event.character;
+    final isIncreaseKey = character == '+' ||
+        key == LogicalKeyboardKey.equal ||
+        key == LogicalKeyboardKey.numpadAdd;
+    final isDecreaseKey = character == '-' ||
+        key == LogicalKeyboardKey.minus ||
+        key == LogicalKeyboardKey.numpadSubtract;
+    final normalizedCharacter = character?.toLowerCase();
+
+    if (!HardwareKeyboard.instance.isControlPressed &&
+        (key == LogicalKeyboardKey.keyI || normalizedCharacter == 'i')) {
+      _showProductDetailsDialog(item);
+      return KeyEventResult.handled;
+    }
+
+    if (!HardwareKeyboard.instance.isControlPressed &&
+        (key == LogicalKeyboardKey.keyQ || normalizedCharacter == 'q')) {
+      unawaited(
+        _showEditQuantityDialog(
+          context: context,
+          item: item,
+          localProductProvider: localProductProvider,
+        ),
+      );
+      return KeyEventResult.handled;
+    }
+
+    if (!HardwareKeyboard.instance.isControlPressed &&
+        (key == LogicalKeyboardKey.keyP ||
+            key == LogicalKeyboardKey.keyM ||
+            key == LogicalKeyboardKey.keyT ||
+            normalizedCharacter == 'p' ||
+            normalizedCharacter == 'm' ||
+            normalizedCharacter == 't')) {
+      final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.currency ??
+          'INR';
+      final field = key == LogicalKeyboardKey.keyM || normalizedCharacter == 'm'
+          ? 'mrp'
+          : key == LogicalKeyboardKey.keyT || normalizedCharacter == 't'
+              ? 'tax'
+              : 'price';
+      unawaited(
+        _showEditCartItemDialog(
+          context: context,
+          item: item,
+          currency: currency,
+          localProductProvider: localProductProvider,
+          field: field,
+        ),
+      );
+      return KeyEventResult.handled;
+    }
+
+    if (isIncreaseKey) {
+      localProductProvider.addToCart(
+        product: item.product,
+        quantity: 1,
+        selectedStock: item.selectedStock,
+        isIncreamentUsingCompactQuantityControl: true,
+        stockGroupIds: item.stockGroupIds,
+        saleUnitId: item.saleUnitId,
+        saleUnitName: item.saleUnitName,
+        saleUnitConversionRate: item.saleUnitConversionRate,
+      );
+      return KeyEventResult.handled;
+    }
+
+    if (isDecreaseKey) {
+      localProductProvider.decrementCartItem(
+        item.product.productId!,
+        item.selectedStock,
+        stockGroupIds: item.stockGroupIds,
+        saleUnitId: item.saleUnitId,
+      );
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleMainCategoryKey(
+    KeyEvent event,
+    List<Category> categories,
+    LocalProductProvider productProvider,
+  ) {
+    if (event is! KeyDownEvent || categories.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    final currentIndex =
+        _focusedMainCategoryIndex.clamp(0, categories.length - 1).toInt();
+
+    if (key == LogicalKeyboardKey.tab &&
+        !HardwareKeyboard.instance.isShiftPressed) {
+      _focusSearchProductField();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowRight) {
+      setState(() {
+        _focusedMainCategoryIndex =
+            (currentIndex + 1).clamp(0, categories.length - 1).toInt();
+      });
+      _scrollMainCategoryIntoView();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      setState(() {
+        _focusedMainCategoryIndex =
+            (currentIndex - 1).clamp(0, categories.length - 1).toInt();
+      });
+      _scrollMainCategoryIntoView();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowDown) {
+      _focusSearchProductField();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      _selectMainCategory(
+        categories[currentIndex],
+        currentIndex,
+        productProvider,
+      );
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleMainProductSearchKey(KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.tab) {
+      if (HardwareKeyboard.instance.isShiftPressed) {
+        _focusMainCategoryRow();
+      } else {
+        _focusMainProductGrid();
+      }
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      _focusMainProductGrid();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleMainProductGridKey(
+    KeyEvent event,
+    List<GetProduct> products,
+  ) {
+    if (event is! KeyDownEvent || products.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final key = event.logicalKey;
+    final currentIndex =
+        _focusedMainProductIndex.clamp(0, products.length - 1).toInt();
+
+    if (key == LogicalKeyboardKey.tab) {
+      if (HardwareKeyboard.instance.isShiftPressed) {
+        _focusSearchProductField();
+      } else {
+        _focusCompactCartSidebar();
+      }
+      return KeyEventResult.handled;
+    }
+
+    int? nextIndex;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      nextIndex = currentIndex + 1;
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      nextIndex = currentIndex - 1;
+    } else if (key == LogicalKeyboardKey.arrowDown) {
+      nextIndex = currentIndex + _mainProductGridColumns;
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      nextIndex = currentIndex - _mainProductGridColumns;
+    }
+
+    if (nextIndex != null) {
+      setState(() {
+        _focusedMainProductIndex =
+            nextIndex!.clamp(0, products.length - 1).toInt();
+      });
+      _scrollFocusedMainProductIntoView();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      unawaited(_addMainGridProduct(products[currentIndex]));
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.escape) {
+      _focusSearchProductField();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  void _focusMainProductGrid() {
+    final products = Provider.of<LocalProductProvider>(context, listen: false)
+        .sellableFilteredProducts;
+    if (products.isEmpty) return;
+    setState(() {
+      _focusedMainProductIndex =
+          _focusedMainProductIndex.clamp(0, products.length - 1).toInt();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _mainProductGridFocusNode.requestFocus();
+      _scrollFocusedMainProductIntoView();
+    });
+  }
+
+  void _scrollMainCategoryIntoView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_mainCategoryScrollController.hasClients) return;
+      const itemExtent = 88.0;
+      final target = (_focusedMainCategoryIndex * itemExtent)
+          .clamp(0.0, _mainCategoryScrollController.position.maxScrollExtent);
+      _mainCategoryScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _scrollFocusedMainProductIntoView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_mainProductGridScrollController.hasClients) return;
+      final row = (_focusedMainProductIndex / _mainProductGridColumns).floor();
+      final target = (row * _mainProductGridRowExtent).clamp(
+          0.0, _mainProductGridScrollController.position.maxScrollExtent);
+      _mainProductGridScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _selectMainCategory(
+    Category category,
+    int index,
+    LocalProductProvider productProvider,
+  ) {
+    setState(() {
+      _selectedMainCategoryIndex = index;
+      _focusedMainCategoryIndex = index;
+      _focusedMainProductIndex = 0;
+    });
+    _scrollMainCategoryIntoView();
+
+    if (category.categoryId == 0) {
+      productProvider.refreshProducts();
+    } else {
+      productProvider.listAllProducts(categoryId: category.categoryId);
+    }
+  }
+
+  Future<void> _addMainGridProduct(GetProduct product) async {
+    await ProductCartHelper.handleProductSelection(
+      context: context,
+      product: product,
+      addToCartDirectly: true,
+    );
+    if (!mounted) return;
+    _mainProductGridFocusNode.requestFocus();
   }
 
   void _onCartChanged() {
@@ -1034,6 +1606,15 @@ class BillingPageState extends State<BillingPageRestaurant>
             "🔴 [BillingPageRestaurant.processBarcode] First product: ${filteredProducts.first.productName}");
         // Get the first product
         GetProduct product = filteredProducts.first;
+        SaleUnit? matchedSaleUnit;
+
+        for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+          final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+          if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == query.trim()) {
+            matchedSaleUnit = saleUnit;
+            break;
+          }
+        }
 
         num? quantity;
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
@@ -1050,6 +1631,9 @@ class BillingPageState extends State<BillingPageRestaurant>
             query.length == 14) {
           // Count-based product
           quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+        } else if (matchedSaleUnit != null) {
+          quantity =
+              num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
         }
 
         // Use centralized helper for stock handling
@@ -1071,6 +1655,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           addToCartDirectly: true,
           customerId: selectedCustomerID,
           customerName: selectedCustomer?.name,
+          selectedSaleUnit: matchedSaleUnit,
         );
 
         debugPrint(
@@ -1144,8 +1729,10 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
   }
 
-  void _showCheckoutModal(
-      {CheckoutActionMode actionMode = CheckoutActionMode.confirm}) async {
+  void _showCheckoutModal({
+    CheckoutActionMode actionMode = CheckoutActionMode.confirm,
+    int? initialStep,
+  }) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
 
     // Release global shortcut focus so modal text fields receive keyboard input reliably.
@@ -1303,6 +1890,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           printButtonTitle:
               isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
           requireCheckoutCompletion: !isSaveMode,
+          initialStep: initialStep,
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -1513,6 +2101,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           // Trigger rebuild to update payment summary with latest values
         });
       }
+      _restoreShortcutFocus('checkout modal closed');
     });
   }
 
@@ -1549,9 +2138,9 @@ class BillingPageState extends State<BillingPageRestaurant>
     Size size = MediaQuery.of(context).size;
 
     return SafeArea(
-      child: KeyboardListener(
+      child: Focus(
         focusNode: _focusNode,
-        onKeyEvent: _handleKeyPress,
+        autofocus: true,
         child: Scaffold(
           body: Stack(
             children: [
@@ -2021,6 +2610,17 @@ class BillingPageState extends State<BillingPageRestaurant>
             // Live Clock
             const LiveClock(),
             const SizedBox(width: 12),
+            IconButton(
+              icon: Icon(
+                Icons.help_outline,
+                color: Colors.grey.shade600,
+              ),
+              tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+              onPressed: () => KeyboardShortcutsHelpDialog.show(
+                context,
+                mode: KeyboardShortcutsHelpMode.restaurant,
+              ),
+            ),
             // Keyboard toggle button
             IconButton(
               icon: Icon(
@@ -2158,25 +2758,29 @@ class BillingPageState extends State<BillingPageRestaurant>
               child: Row(
                 children: [
                   appSettingsProvider.appSettings!.barcodeSales
-                      ? Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: buildColumnWidgetForTextFields(
-                              autofocus:
-                                  appSettingsProvider.appSettings!.barcodeSales,
-                              controller: barcodeController,
-                              focusNode: _barcodeNode,
-                              readOnly:
-                                  selectedProductNameController.text.isNotEmpty,
-                              onSubmitted: (query) {
-                                if (query != null && query.isNotEmpty) {
-                                  processBarcode(query);
-                                }
-                              },
-                              size: size,
-                              hintText: 'billing.barcode_hint'.tr,
+                      ? FocusTraversalOrder(
+                          order: const NumericFocusOrder(
+                              BillingFocusOrders.barcode),
+                          child: Expanded(
+                            flex: 2,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4.0),
+                              child: buildColumnWidgetForTextFields(
+                                autofocus: appSettingsProvider
+                                    .appSettings!.barcodeSales,
+                                controller: barcodeController,
+                                focusNode: _barcodeNode,
+                                readOnly: selectedProductNameController
+                                    .text.isNotEmpty,
+                                onSubmitted: (query) {
+                                  if (query != null && query.isNotEmpty) {
+                                    processBarcode(query);
+                                  }
+                                },
+                                size: size,
+                                hintText: 'billing.barcode_hint'.tr,
+                              ),
                             ),
                           ),
                         )
@@ -2197,36 +2801,42 @@ class BillingPageState extends State<BillingPageRestaurant>
                             ),
                           ),
                         )
-                      : Expanded(
-                          flex: 4,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ProductAutocomplete(
-                                autocompleteProductKey: _autocompleteProductKey,
-                                autofocus: !appSettingsProvider
-                                    .appSettings!.barcodeSales,
-                                suppressSystemKeyboardOnAndroid: true,
-                                size: size,
-                                onSelected: (GetProduct selectedProduct,
-                                    Stock? selectedStock) async {
-                                  // Product is already added to cart by ProductCartHelper
-                                  // Clear fields and reset autocomplete for next product
-                                  setState(() {
-                                    _autocompleteProductKey = GlobalKey();
-                                    quantityController.clear();
-                                    barcodeController.clear();
-                                    selectedProductIdController.clear();
-                                    unitPriceController.clear();
-                                    selectedProductNameController.clear();
-                                  });
-                                  // Focus the barcode/search field for next entry
-                                  _focusTextField();
-                                },
-                                productList: productProvider.productList!,
-                              ),
-                            ],
+                      : FocusTraversalOrder(
+                          order: const NumericFocusOrder(
+                              BillingFocusOrders.searchProduct),
+                          child: Expanded(
+                            flex: 4,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ProductAutocomplete(
+                                  key: _productAutocompleteKey,
+                                  autocompleteProductKey:
+                                      _autocompleteProductKey,
+                                  autofocus: !appSettingsProvider
+                                      .appSettings!.barcodeSales,
+                                  suppressSystemKeyboardOnAndroid: true,
+                                  size: size,
+                                  onSelected: (GetProduct selectedProduct,
+                                      Stock? selectedStock) async {
+                                    // Product is already added to cart by ProductCartHelper
+                                    // Clear fields and reset autocomplete for next product
+                                    setState(() {
+                                      _autocompleteProductKey = GlobalKey();
+                                      quantityController.clear();
+                                      barcodeController.clear();
+                                      selectedProductIdController.clear();
+                                      unitPriceController.clear();
+                                      selectedProductNameController.clear();
+                                    });
+                                    // Focus the barcode/search field for next entry
+                                    _focusTextField();
+                                  },
+                                  productList: productProvider.productList!,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                   Expanded(
@@ -2301,14 +2911,20 @@ class BillingPageState extends State<BillingPageRestaurant>
                                       localProductProvider.selectedProduct;
 
                                   if (selectedProduct != null) {
-                                    final customPrice = double.tryParse(unitPriceController.text);
-                                    final customQuantity = num.tryParse(quantityController.text);
+                                    final customPrice = double.tryParse(
+                                        unitPriceController.text);
+                                    final customQuantity =
+                                        num.tryParse(quantityController.text);
 
-                                    await ProductCartHelper.handleProductSelection(
+                                    await ProductCartHelper
+                                        .handleProductSelection(
                                       context: context,
                                       product: selectedProduct,
                                       quantity: customQuantity,
-                                      customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
+                                      customPrice:
+                                          customPrice != null && customPrice > 0
+                                              ? customPrice
+                                              : null,
                                     );
 
                                     // Clear input fields
@@ -2741,6 +3357,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                             item.product.productId!,
                                             item.selectedStock,
                                             stockGroupIds: item.stockGroupIds,
+                                            saleUnitId: item.saleUnitId,
                                           );
                                         },
                                       ),
@@ -3831,54 +4448,79 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   Widget _buildActionButtons() {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildActionButton(
-            text: 'billing.clear_cart'.tr,
-            color: ColorManager.kButtonRed,
-            onPressed: _clearCart,
-            isLoading: isLoadingClearCart,
-          ),
-          _buildActionButton(
-            text: 'billing.save_order'.tr,
-            color: ColorManager.kButtonYellow,
-            onPressed: () =>
-                _showCheckoutModal(actionMode: CheckoutActionMode.save),
-            isLoading: isLoadingSaveOrder,
-          ),
-          if (_hasInternet) ...[
-            _buildActionButton(
-              text: 'billing.confirm_and_print'.tr,
-              color: ColorManager.kButtonBlue,
-              onPressed: () =>
-                  _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
-              isLoading: isLoadingCreateOrder,
-            ),
-            if (Provider.of<AppSettingsProvider>(context, listen: false)
-                    .appSettings
-                    ?.showConfirmOrderButton ??
-                true)
-              _buildActionButton(
-                text: 'billing.confirm_order'.tr,
-                color: ColorManager.kButtonGreen,
-                onPressed: () =>
-                    _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
-                isLoading: isLoadingConfirmOrder,
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(BillingFocusOrders.clearCart),
+              child: _buildActionButton(
+                text: 'billing.clear_cart'.tr,
+                color: ColorManager.kButtonRed,
+                onPressed: _clearCart,
+                isLoading: isLoadingClearCart,
+                shortcutLabel: 'F1',
               ),
-          ],
-          if (!_hasInternet) ...[
-            _buildActionButton(
-              text: 'billing.save_and_print'.tr,
-              color: ColorManager.kButtonYellow,
-              onPressed: () =>
-                  _showCheckoutModal(actionMode: CheckoutActionMode.save),
-              isLoading: isLoadingSaveOrderAndPrint,
             ),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(BillingFocusOrders.saveOrder),
+              child: _buildActionButton(
+                text: 'billing.save_order'.tr,
+                color: ColorManager.kButtonYellow,
+                onPressed: () =>
+                    _showCheckoutModal(actionMode: CheckoutActionMode.save),
+                isLoading: isLoadingSaveOrder,
+                shortcutLabel: 'F8',
+              ),
+            ),
+            if (_hasInternet) ...[
+              FocusTraversalOrder(
+                order:
+                    const NumericFocusOrder(BillingFocusOrders.confirmAndPrint),
+                child: _buildActionButton(
+                  text: 'billing.confirm_and_print'.tr,
+                  color: ColorManager.kButtonBlue,
+                  onPressed: () => _showCheckoutModal(
+                      actionMode: CheckoutActionMode.confirm),
+                  isLoading: isLoadingCreateOrder,
+                  shortcutLabel: 'F6',
+                ),
+              ),
+              if (Provider.of<AppSettingsProvider>(context, listen: false)
+                      .appSettings
+                      ?.showConfirmOrderButton ??
+                  true)
+                FocusTraversalOrder(
+                  order:
+                      const NumericFocusOrder(BillingFocusOrders.confirmOrder),
+                  child: _buildActionButton(
+                    text: 'billing.confirm_order'.tr,
+                    color: ColorManager.kButtonGreen,
+                    onPressed: () => _showCheckoutModal(
+                        actionMode: CheckoutActionMode.confirm),
+                    isLoading: isLoadingConfirmOrder,
+                    shortcutLabel: 'F2',
+                  ),
+                ),
+            ],
+            if (!_hasInternet) ...[
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(BillingFocusOrders.saveAndPrint),
+                child: _buildActionButton(
+                  text: 'billing.save_and_print'.tr,
+                  color: ColorManager.kButtonYellow,
+                  onPressed: () =>
+                      _showCheckoutModal(actionMode: CheckoutActionMode.save),
+                  isLoading: isLoadingSaveOrderAndPrint,
+                  shortcutLabel: 'F9',
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -3888,43 +4530,185 @@ class BillingPageState extends State<BillingPageRestaurant>
     required Color color,
     required VoidCallback onPressed,
     required bool isLoading,
+    String? shortcutLabel,
   }) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: GestureDetector(
-          onTap: isLoading ? null : onPressed,
-          child: Container(
+        child: ElevatedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: color,
+            disabledBackgroundColor: color.withValues(alpha: 0.68),
+            foregroundColor: Colors.white,
+            disabledForegroundColor: Colors.white,
+            elevation: 0,
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
-              color: color,
             ),
-            child: Center(
-              child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      text,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
+          ).copyWith(
+            overlayColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.focused)) {
+                return Colors.white.withValues(alpha: 0.18);
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return Colors.white.withValues(alpha: 0.10);
+              }
+              return null;
+            }),
+            side: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.focused)) {
+                return const BorderSide(color: Colors.white, width: 2);
+              }
+              return BorderSide.none;
+            }),
+          ),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
-            ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          text,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (shortcutLabel != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            shortcutLabel,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
           ),
         ),
       ),
     );
   }
 
-  void _clearCart() {
+  SavedOrder _saveCurrentCartAsDraft(
+    LocalProductProvider localProductProvider,
+  ) {
+    final paymentData = _getPaymentMethodData();
+    final currentOrder = localProductProvider.currentOrder;
+    final customerNameToSave = selectedCustomer?.name;
+    final customerPhoneToSave = _resolveCustomerPhoneForPayload();
+    final couponIdToSave =
+        isCouponApplied ? coupenCodeTextController.text : null;
+
+    if (currentOrder != null) {
+      localProductProvider.updateSavedOrder(
+        currentOrder.id,
+        customerName: customerNameToSave,
+        customerPhone: customerPhoneToSave,
+        comment: _commentController.text,
+        deliveryMethod: deliveryMethod,
+        customerId: selectedCustomerID,
+        paymentMethod: paymentData["paymentMethod"],
+        paidAmount: paymentData["paidAmount"],
+        balanceAmount: _balanceAmount.toString(),
+        transactionId: _transactionNumberController.text,
+        couponId: couponIdToSave,
+        deliveryMethodId: deliveryMethodId,
+        carNumber: _carNumberController.text,
+        status: 'saved',
+        deliveryDate: deliveryDate,
+        deliveryTime: deliveryTime,
+        toCustomerCredit: _toCustomerCreditEnabled,
+        context: context,
+        address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
+      );
+      return localProductProvider.findOrderById(currentOrder.id) ??
+          currentOrder;
+    }
+
+    return localProductProvider.saveCurrentCartAsOrder(
+      customerName: customerNameToSave,
+      customerPhone: customerPhoneToSave,
+      comment: _commentController.text,
+      deliveryMethod: deliveryMethod,
+      customerId: selectedCustomerID,
+      paymentMethod: paymentData["paymentMethod"],
+      paidAmount: paymentData["paidAmount"],
+      balanceAmount: _balanceAmount.toString(),
+      transactionId: _transactionNumberController.text,
+      couponId: couponIdToSave,
+      deliveryMethodId: deliveryMethodId,
+      carNumber: _carNumberController.text,
+      status: 'saved',
+      deliveryDate: deliveryDate,
+      deliveryTime: deliveryTime,
+      context: context,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      address: deliveryAddress,
+      deliveryCharge: _getDeliveryChargeForOrder(),
+    );
+  }
+
+  Future<void> _createNewOrder() async {
+    debugPrint("Create New Order pressed");
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      if (localProductProvider.cartItems.isNotEmpty) {
+        _saveCurrentCartAsDraft(localProductProvider);
+      }
+
+      _clearCart(showMessage: false);
+
+      if (!mounted) return;
+      showScaffold(
+        context: context,
+        message: "common.create_new_order".tr,
+      );
+    } catch (e) {
+      debugPrint("Error creating new order: $e");
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: "billing.failed_save_order".tr,
+      );
+    } finally {
+      _restoreShortcutFocus('create new order');
+    }
+  }
+
+  void _clearCart({bool showMessage = true}) {
     debugPrint("Clear Cart pressed");
     setState(() {
       isLoadingClearCart = true; // Indicate that loading has started
@@ -3989,10 +4773,12 @@ class BillingPageState extends State<BillingPageRestaurant>
         mobileNumberTextController.clear();
         _autocompletePhoneKey = GlobalKey();
       });
-      showScaffold(
-        context: context,
-        message: "billing.cart_cleared".tr,
-      );
+      if (showMessage) {
+        showScaffold(
+          context: context,
+          message: "billing.cart_cleared".tr,
+        );
+      }
       resetAutocomplete(
           shouldFetchCustomers:
               false); // Don't reset customer selection when clearing cart
@@ -5342,57 +6128,54 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   List<Map<String, dynamic>> _getPaidMethods() {
-    List<Map<String, dynamic>> paidMethods = [];
+    final paidMethods = <Map<String, dynamic>>[];
 
     // Get payment method IDs from BillingProvider
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
+    final cashId = billingProvider.cashPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('CASH')?.toString() ??
+        "CASH";
+    final cardId = billingProvider.cardPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('CARD')?.toString() ??
+        "CARD";
+    final upiId = billingProvider.upiPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('UPI')?.toString() ??
+        "UPI";
+    final codId = billingProvider.codPaymentMethodId ??
+        masterDataProvider.getPaymentMethodId('COD')?.toString() ??
+        "COD";
 
     if (_isCashSelected &&
         (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.cashPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('CASH')?.toString();
-      // Adjust cash amount by deducting balance (change returned to customer)
-      double rawCashAmount = double.tryParse(_cashAmountController.text) ?? 0;
-      double netCashAmount = rawCashAmount - _balanceAmount;
-      // Only add if net cash is positive (skip if balance equals or exceeds cash)
-      if (netCashAmount > 0) {
-        paidMethods.add({
-          // Use payment method ID if available, otherwise fallback to string
-          "method": id ?? "CASH",
-          "amount": netCashAmount, // Net cash kept in drawer
-        });
-      }
+      paidMethods.add({
+        "method": cashId,
+        "amount": double.tryParse(_cashAmountController.text) ?? 0,
+      });
     }
 
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.cardPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('CARD')?.toString();
       paidMethods.add({
-        "method": id ?? "CARD",
+        "method": cardId,
         "amount": double.tryParse(_cardAmountController.text) ?? 0,
       });
     }
 
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.upiPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('UPI')?.toString();
       paidMethods.add({
-        "method": id ?? "UPI",
+        "method": upiId,
         "amount": double.tryParse(_upiAmountController.text) ?? 0,
       });
     }
 
     if (_isCodSelected &&
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
-      String? id = billingProvider.codPaymentMethodId ??
-          masterDataProvider.getPaymentMethodId('COD')?.toString();
       paidMethods.add({
-        "method": id ?? "COD",
+        "method": codId,
         "amount": double.tryParse(_codAmountController.text) ?? 0,
       });
     }
@@ -5404,7 +6187,12 @@ class BillingPageState extends State<BillingPageRestaurant>
     //     "amount": double.tryParse(_debitAmountController.text) ?? 0,
     //   });
     // }
-    return paidMethods;
+    return PaymentHelper.normalizePaidMethodsForApi(
+      paidMethods: paidMethods,
+      balanceAmount: _balanceAmount,
+      cashMethodId: cashId,
+      codMethodId: codId,
+    );
   }
 
   Widget _buildQuickAccessIcons() {
@@ -6802,13 +7590,13 @@ class BillingPageState extends State<BillingPageRestaurant>
   }
 
   /// Show comprehensive edit dialog for cart item fields
-  void _showEditCartItemDialog({
+  Future<void> _showEditCartItemDialog({
     required BuildContext context,
     required LocalCartItem item,
     required String currency,
     required LocalProductProvider localProductProvider,
     required String field, // 'price', 'mrp', 'tax'
-  }) {
+  }) async {
     String title;
     String currentValue;
     String labelText;
@@ -6842,168 +7630,235 @@ class BillingPageState extends State<BillingPageRestaurant>
       ..selection =
           TextSelection(baseOffset: 0, extentOffset: currentValue.length);
 
-    showDialog(
+    await showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.product.productName ?? '',
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: labelText,
-                prefixText: prefix,
-                suffixText: suffix,
-                border: const OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.grey.shade50,
+      builder: (dialogContext) {
+        final cancelFocusNode = FocusNode(debugLabel: 'modal-cancel-price-tax');
+        final saveFocusNode = FocusNode(debugLabel: 'modal-save-price-tax');
+        void submit() {
+          final newValue = double.tryParse(controller.text);
+          if (newValue == null || newValue < 0) return;
+
+          double newPrice = item.price ?? 0.0;
+          double newMrp = item.mrp ?? 0.0;
+          double newTax = item.taxRate ?? 0.0;
+
+          switch (field) {
+            case 'price':
+              newPrice = newValue;
+              break;
+            case 'mrp':
+              newMrp = newValue;
+              break;
+            case 'tax':
+              newTax = newValue;
+              break;
+          }
+
+          localProductProvider.updateProductPricingInCart(
+            item.product.productId!,
+            newPrice,
+            newMrp,
+            newTax,
+          );
+          Navigator.pop(dialogContext);
+        }
+
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.product.productName ?? '',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
               ),
-              autofocus: true,
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                onSubmitted: (_) => submit(),
+                decoration: InputDecoration(
+                  labelText: labelText,
+                  prefixText: prefix,
+                  suffixText: suffix,
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              focusNode: cancelFocusNode,
+              onPressed: () => Navigator.pop(dialogContext),
+              style: TextButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ).copyWith(
+                side: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.focused)) {
+                    return const BorderSide(color: Color(0xFFF59E0B), width: 2);
+                  }
+                  return BorderSide.none;
+                }),
+              ),
+              child: Text('common.cancel'.tr),
+            ),
+            ElevatedButton(
+              focusNode: saveFocusNode,
+              onPressed: submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ColorManager.kPrimaryColor,
+              ).copyWith(
+                side: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.focused)) {
+                    return const BorderSide(color: Color(0xFFF59E0B), width: 2);
+                  }
+                  return BorderSide.none;
+                }),
+              ),
+              child: Text('common.save'.tr,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('common.cancel'.tr),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newValue = double.tryParse(controller.text);
-              if (newValue != null && newValue >= 0) {
-                double newPrice = item.price ?? 0.0;
-                double newMrp = item.mrp ?? 0.0;
-                double newTax = item.taxRate ?? 0.0;
-
-                switch (field) {
-                  case 'price':
-                    newPrice = newValue;
-                    break;
-                  case 'mrp':
-                    newMrp = newValue;
-                    break;
-                  case 'tax':
-                    newTax = newValue;
-                    break;
-                }
-
-                localProductProvider.updateProductPricingInCart(
-                  item.product.productId!,
-                  newPrice,
-                  newMrp,
-                  newTax,
-                );
-                Navigator.pop(dialogContext);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorManager.kPrimaryColor,
-            ),
-            child: Text('common.save'.tr,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+        );
+      },
     );
+    if (mounted) {
+      _compactCartFocusNode.requestFocus();
+    }
   }
 
   /// Show quantity edit dialog
-  void _showEditQuantityDialog({
+  Future<void> _showEditQuantityDialog({
     required BuildContext context,
     required LocalCartItem item,
     required LocalProductProvider localProductProvider,
-  }) {
+  }) async {
     final currentValue = '${item.quantity}';
     final controller = TextEditingController(text: currentValue)
       ..selection =
           TextSelection(baseOffset: 0, extentOffset: currentValue.length);
 
-    showDialog(
+    await showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        title: Text(
-          'billing.table_qty'.tr,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.product.productName ?? '',
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'billing.table_qty'.tr,
-                border: const OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.grey.shade50,
+      builder: (dialogContext) {
+        final cancelFocusNode = FocusNode(debugLabel: 'modal-cancel-qty');
+        final saveFocusNode = FocusNode(debugLabel: 'modal-save-qty');
+        void submit() {
+          final newQty = num.tryParse(controller.text);
+          if (newQty == null || newQty <= 0) return;
+
+          final diff = newQty - item.quantity;
+          if (diff > 0) {
+            localProductProvider.addToCart(
+              product: item.product,
+              quantity: diff,
+              selectedStock: item.selectedStock,
+              stockGroupIds: item.stockGroupIds,
+              isIncreamentUsingCompactQuantityControl: true,
+              saleUnitId: item.saleUnitId,
+              saleUnitName: item.saleUnitName,
+              saleUnitConversionRate: item.saleUnitConversionRate,
+            );
+          } else if (diff < 0) {
+            for (int i = 0; i < diff.abs(); i++) {
+              localProductProvider.decrementCartItem(
+                item.product.productId!,
+                item.selectedStock,
+                stockGroupIds: item.stockGroupIds,
+                saleUnitId: item.saleUnitId,
+              );
+            }
+          }
+          Navigator.pop(dialogContext);
+        }
+
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          title: Text(
+            'billing.table_qty'.tr,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.product.productName ?? '',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
               ),
-              autofocus: true,
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                onSubmitted: (_) => submit(),
+                decoration: InputDecoration(
+                  labelText: 'billing.table_qty'.tr,
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              focusNode: cancelFocusNode,
+              onPressed: () => Navigator.pop(dialogContext),
+              style: TextButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ).copyWith(
+                side: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.focused)) {
+                    return const BorderSide(color: Color(0xFFF59E0B), width: 2);
+                  }
+                  return BorderSide.none;
+                }),
+              ),
+              child: Text('common.cancel'.tr),
+            ),
+            ElevatedButton(
+              focusNode: saveFocusNode,
+              onPressed: submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ColorManager.kPrimaryColor,
+              ).copyWith(
+                side: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.focused)) {
+                    return const BorderSide(color: Color(0xFFF59E0B), width: 2);
+                  }
+                  return BorderSide.none;
+                }),
+              ),
+              child: Text('common.save'.tr,
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('common.cancel'.tr),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newQty = num.tryParse(controller.text);
-              if (newQty != null && newQty > 0) {
-                // Calculate quantity difference and update
-                final diff = newQty - item.quantity;
-                if (diff > 0) {
-                  localProductProvider.addToCart(
-                    product: item.product,
-                    quantity: diff,
-                    selectedStock: item.selectedStock,
-                      stockGroupIds: item.stockGroupIds,
-                    isIncreamentUsingCompactQuantityControl: true,
-                  );
-                } else if (diff < 0) {
-                  for (int i = 0; i < diff.abs(); i++) {
-                    localProductProvider.decrementCartItem(
-                      item.product.productId!,
-                      item.selectedStock,
-                      stockGroupIds: item.stockGroupIds,
-                    );
-                  }
-                }
-                Navigator.pop(dialogContext);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorManager.kPrimaryColor,
-            ),
-            child: Text('common.save'.tr,
-                style: const TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+        );
+      },
     );
+    if (mounted) {
+      _compactCartFocusNode.requestFocus();
+    }
   }
 
   /// Show dialog to edit unit price of cart item
@@ -7095,445 +7950,487 @@ class BillingPageState extends State<BillingPageRestaurant>
         final appSettings = appSettingsProvider.appSettings;
         final currency = appSettings?.currency ?? 'INR';
 
-        return Container(
-          color: Colors.white,
-          child: Column(
-            children: [
-              // Cart header
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade200),
+        return Focus(
+          focusNode: _compactCartFocusNode,
+          onFocusChange: (focused) {
+            if (focused && cartItems.isNotEmpty) {
+              setState(() {
+                _compactCartFocusedIndex ??= 0;
+              });
+            }
+          },
+          onKeyEvent: (node, event) =>
+              _handleCompactCartKey(event, cartItems, localProductProvider),
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              children: [
+                // Cart header
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade200),
+                    ),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.shopping_cart_outlined,
-                            size: 16, color: ColorManager.kPrimaryColor),
-                        const SizedBox(width: 6),
-                        Text(
-                          'billing.cart'.tr,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.shopping_cart_outlined,
+                              size: 16, color: ColorManager.kPrimaryColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            'billing.cart'.tr,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: ColorManager.kPrimaryColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${cartItems.length}',
                           style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: ColorManager.kPrimaryColor,
                           ),
                         ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: ColorManager.kPrimaryColor,
-                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        '${cartItems.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              // Cart items list
-              Expanded(
-                child: cartItems.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.shopping_cart_outlined,
-                                size: 48, color: Colors.grey.shade300),
-                            const SizedBox(height: 8),
-                            Text(
-                              'billing.empty_cart'.tr,
-                              style: TextStyle(
-                                color: Colors.grey.shade500,
-                                fontSize: 14,
+                // Cart items list
+                Expanded(
+                  child: cartItems.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.shopping_cart_outlined,
+                                  size: 48, color: Colors.grey.shade300),
+                              const SizedBox(height: 8),
+                              Text(
+                                'billing.empty_cart'.tr,
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        itemCount: cartItems.length,
-                        itemBuilder: (context, index) {
-                          final item = cartItems[index];
-                          final itemTotal =
-                              (item.quantity * (item.price ?? 0.0)).toDouble();
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: _compactCartScrollController,
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          itemCount: cartItems.length,
+                          itemBuilder: (context, index) {
+                            final item = cartItems[index];
+                            final itemTotal =
+                                (item.quantity * (item.price ?? 0.0))
+                                    .toDouble();
+                            final isKeyboardFocused =
+                                _compactCartFocusNode.hasFocus &&
+                                    _compactCartFocusedIndex == index;
 
-                          return Container(
-                            key: ValueKey(
-                                '${item.product.productId}_${item.selectedStock?.id ?? 0}'),
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade200),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.08),
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 1),
+                            return Container(
+                              key: ValueKey(
+                                  '${item.product.productId}_${item.selectedStock?.id ?? 0}'),
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isKeyboardFocused
+                                    ? const Color(0xFFFFFBEB)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isKeyboardFocused
+                                      ? const Color(0xFFF59E0B)
+                                      : Colors.grey.shade200,
+                                  width: isKeyboardFocused ? 2 : 1,
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Row 1: Product name and remove button
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        item.product.productName ?? '',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () {
-                                        localProductProvider.removeFromCart(
-                                            item.product.productId!,
-                                            item.selectedStock);
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                        child: const Icon(
-                                          Icons.close,
-                                          size: 12,
-                                          color: Colors.red,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                // Middle section with Details and Image
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        children: [
-                                          // Row 2: Unit, Quantity, Price
-                                          Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              // Unit
-                                              Expanded(
-                                                flex: 1,
-                                                child: _buildCartItemField(
-                                                  label:
-                                                      'billing.table_unit'.tr,
-                                                  value:
-                                                      item.product.unit ?? '-',
-                                                ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              // Quantity controls (no label to save height)
-                                              Expanded(
-                                                flex: 1,
-                                                child: Container(
-                                                  height: 28,
-                                                  decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                        color: Colors
-                                                            .grey.shade300),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            4),
-                                                  ),
-                                                  child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      GestureDetector(
-                                                        onTap: () {
-                                                          localProductProvider
-                                                              .decrementCartItem(
-                                                            item.product
-                                                                .productId!,
-                                                            item.selectedStock,
-                                                            stockGroupIds:
-                                                                item.stockGroupIds,
-                                                          );
-                                                        },
-                                                        child: const Icon(
-                                                            Icons.remove,
-                                                            size: 14),
-                                                      ),
-                                                      GestureDetector(
-                                                        onTap: () =>
-                                                            _showEditQuantityDialog(
-                                                          context: context,
-                                                          item: item,
-                                                          localProductProvider:
-                                                              localProductProvider,
-                                                        ),
-                                                        child: Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  horizontal:
-                                                                      8),
-                                                          child: Text(
-                                                            '${item.quantity}',
-                                                            style:
-                                                                const TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              fontSize: 11.5,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      GestureDetector(
-                                                        onTap: () {
-                                                          localProductProvider
-                                                              .addToCart(
-                                                            product:
-                                                                item.product,
-                                                            quantity: 1,
-                                                            selectedStock: item
-                                                                .selectedStock,
-                                                            isIncreamentUsingCompactQuantityControl:
-                                                                true,
-                                                          );
-                                                        },
-                                                        child: const Icon(
-                                                            Icons.add,
-                                                            size: 14),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              // Price (Aligned Right)
-                                              Expanded(
-                                                flex: 1,
-                                                child:
-                                                    _buildCartItemFieldEditable(
-                                                  label:
-                                                      'billing.table_price'.tr,
-                                                  value:
-                                                      '$currency ${(item.price ?? 0.0).toStringAsFixed(2)}',
-                                                  onTap: () =>
-                                                      _showEditCartItemDialog(
-                                                    context: context,
-                                                    item: item,
-                                                    currency: currency,
-                                                    localProductProvider:
-                                                        localProductProvider,
-                                                    field: 'price',
-                                                  ),
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.end,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          // Row 3: MRP, Tax %, Tax Amount
-                                          if (appSettings?.showMrpPos == true ||
-                                              appSettings?.showTaxRatePos ==
-                                                  true ||
-                                              appSettings?.showTaxPos ==
-                                                  true) ...[
-                                            const SizedBox(height: 6),
-                                            Row(
-                                              children: [
-                                                if (appSettings?.showMrpPos ==
-                                                    true)
-                                                  Expanded(
-                                                    flex: 1,
-                                                    child:
-                                                        _buildCartItemFieldEditable(
-                                                      label: 'billing.table_mrp'
-                                                          .tr,
-                                                      value:
-                                                          '$currency ${(item.mrp ?? 0.0).toStringAsFixed(2)}',
-                                                      onTap: () =>
-                                                          _showEditCartItemDialog(
-                                                        context: context,
-                                                        item: item,
-                                                        currency: currency,
-                                                        localProductProvider:
-                                                            localProductProvider,
-                                                        field: 'mrp',
-                                                      ),
-                                                    ),
-                                                  ),
-                                                if (appSettings?.showMrpPos ==
-                                                        true &&
-                                                    (appSettings?.showTaxRatePos ==
-                                                            true ||
-                                                        appSettings
-                                                                ?.showTaxPos ==
-                                                            true))
-                                                  const SizedBox(width: 4),
-                                                if (appSettings
-                                                        ?.showTaxRatePos ==
-                                                    true)
-                                                  Expanded(
-                                                    flex: 1,
-                                                    child:
-                                                        _buildCartItemFieldEditable(
-                                                      label: 'billing.table_tax'
-                                                          .tr,
-                                                      value:
-                                                          '${(item.taxRate ?? 0.0).toStringAsFixed(1)}%',
-                                                      onTap: () =>
-                                                          _showEditCartItemDialog(
-                                                        context: context,
-                                                        item: item,
-                                                        currency: currency,
-                                                        localProductProvider:
-                                                            localProductProvider,
-                                                        field: 'tax',
-                                                      ),
-                                                    ),
-                                                  ),
-                                                if (appSettings
-                                                            ?.showTaxRatePos ==
-                                                        true &&
-                                                    appSettings?.showTaxPos ==
-                                                        true)
-                                                  const SizedBox(width: 4),
-                                                if (appSettings?.showTaxPos ==
-                                                    true)
-                                                  Expanded(
-                                                    flex: 1,
-                                                    child: _buildCartItemField(
-                                                      label:
-                                                          'billing.table_tax_amount'
-                                                              .tr,
-                                                      value:
-                                                          '$currency ${((item.taxAmount ?? 0.0) * item.quantity).toStringAsFixed(2)}',
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .end,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                    // Product Image (Right End)
-                                    Builder(builder: (context) {
-                                      String? primaryImage;
-                                      if (item.product.attachment != null &&
-                                          item.product.attachment!.isNotEmpty) {
-                                        for (final attachment
-                                            in item.product.attachment!) {
-                                          if (attachment.isPrimary == 1) {
-                                            primaryImage = attachment.filePath;
-                                            break;
-                                          }
-                                        }
-                                        primaryImage ??= item
-                                            .product.attachment!.first.filePath;
-                                      }
-
-                                      if (primaryImage == null) {
-                                        return const SizedBox.shrink();
-                                      }
-
-                                      return Padding(
-                                        padding:
-                                            const EdgeInsets.only(left: 8.0),
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          child: Image.network(
-                                            primaryImage,
-                                            width: 45,
-                                            height: 45,
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    Container(
-                                              width: 45,
-                                              height: 45,
-                                              color: Colors.grey.shade100,
-                                              child: const Icon(
-                                                  Icons.image_not_supported,
-                                                  size: 16,
-                                                  color: Colors.grey),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                // Row 4: Total (highlighted)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: ColorManager.kPrimaryColor
-                                        .withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(4),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.08),
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 1),
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Row 1: Product name and remove button
+                                  Row(
                                     children: [
-                                      Text(
-                                        'billing.table_total'.tr,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 10,
+                                      Expanded(
+                                        child: Text(
+                                          item.product.productName ?? '',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      Text(
-                                        '$currency ${itemTotal.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11.5,
-                                          color: ColorManager.kPrimaryColor,
+                                      GestureDetector(
+                                        onTap: () {
+                                          localProductProvider.removeFromCart(
+                                            item.product.productId!,
+                                            item.selectedStock,
+                                            saleUnitId: item.saleUnitId,
+                                          );
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: const Icon(
+                                            Icons.close,
+                                            size: 12,
+                                            color: Colors.red,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
+                                  const SizedBox(height: 6),
+                                  // Middle section with Details and Image
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            // Row 2: Unit, Quantity, Price
+                                            Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                // Unit
+                                                Expanded(
+                                                  flex: 1,
+                                                  child: _buildCartItemField(
+                                                    label:
+                                                        'billing.table_unit'.tr,
+                                                    value: item.product.unit ??
+                                                        '-',
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                // Quantity controls (no label to save height)
+                                                Expanded(
+                                                  flex: 1,
+                                                  child: Container(
+                                                    height: 28,
+                                                    decoration: BoxDecoration(
+                                                      border: Border.all(
+                                                          color: Colors
+                                                              .grey.shade300),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            localProductProvider
+                                                                .decrementCartItem(
+                                                              item.product
+                                                                  .productId!,
+                                                              item.selectedStock,
+                                                              stockGroupIds: item
+                                                                  .stockGroupIds,
+                                                              saleUnitId: item
+                                                                  .saleUnitId,
+                                                            );
+                                                          },
+                                                          child: const Icon(
+                                                              Icons.remove,
+                                                              size: 14),
+                                                        ),
+                                                        GestureDetector(
+                                                          onTap: () =>
+                                                              _showEditQuantityDialog(
+                                                            context: context,
+                                                            item: item,
+                                                            localProductProvider:
+                                                                localProductProvider,
+                                                          ),
+                                                          child: Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        8),
+                                                            child: Text(
+                                                              '${item.quantity}',
+                                                              style:
+                                                                  const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                                fontSize: 11.5,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            localProductProvider
+                                                                .addToCart(
+                                                              product:
+                                                                  item.product,
+                                                              quantity: 1,
+                                                              selectedStock: item
+                                                                  .selectedStock,
+                                                              isIncreamentUsingCompactQuantityControl:
+                                                                  true,
+                                                              stockGroupIds: item
+                                                                  .stockGroupIds,
+                                                              saleUnitId: item
+                                                                  .saleUnitId,
+                                                              saleUnitName: item
+                                                                  .saleUnitName,
+                                                              saleUnitConversionRate:
+                                                                  item.saleUnitConversionRate,
+                                                            );
+                                                          },
+                                                          child: const Icon(
+                                                              Icons.add,
+                                                              size: 14),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                // Price (Aligned Right)
+                                                Expanded(
+                                                  flex: 1,
+                                                  child:
+                                                      _buildCartItemFieldEditable(
+                                                    label: 'billing.table_price'
+                                                        .tr,
+                                                    value:
+                                                        '$currency ${(item.price ?? 0.0).toStringAsFixed(2)}',
+                                                    onTap: () =>
+                                                        _showEditCartItemDialog(
+                                                      context: context,
+                                                      item: item,
+                                                      currency: currency,
+                                                      localProductProvider:
+                                                          localProductProvider,
+                                                      field: 'price',
+                                                    ),
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.end,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            // Row 3: MRP, Tax %, Tax Amount
+                                            if (appSettings?.showMrpPos ==
+                                                    true ||
+                                                appSettings?.showTaxRatePos ==
+                                                    true ||
+                                                appSettings?.showTaxPos ==
+                                                    true) ...[
+                                              const SizedBox(height: 6),
+                                              Row(
+                                                children: [
+                                                  if (appSettings?.showMrpPos ==
+                                                      true)
+                                                    Expanded(
+                                                      flex: 1,
+                                                      child:
+                                                          _buildCartItemFieldEditable(
+                                                        label:
+                                                            'billing.table_mrp'
+                                                                .tr,
+                                                        value:
+                                                            '$currency ${(item.mrp ?? 0.0).toStringAsFixed(2)}',
+                                                        onTap: () =>
+                                                            _showEditCartItemDialog(
+                                                          context: context,
+                                                          item: item,
+                                                          currency: currency,
+                                                          localProductProvider:
+                                                              localProductProvider,
+                                                          field: 'mrp',
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (appSettings?.showMrpPos ==
+                                                          true &&
+                                                      (appSettings?.showTaxRatePos ==
+                                                              true ||
+                                                          appSettings
+                                                                  ?.showTaxPos ==
+                                                              true))
+                                                    const SizedBox(width: 4),
+                                                  if (appSettings
+                                                          ?.showTaxRatePos ==
+                                                      true)
+                                                    Expanded(
+                                                      flex: 1,
+                                                      child:
+                                                          _buildCartItemFieldEditable(
+                                                        label:
+                                                            'billing.table_tax'
+                                                                .tr,
+                                                        value:
+                                                            '${(item.taxRate ?? 0.0).toStringAsFixed(1)}%',
+                                                        onTap: () =>
+                                                            _showEditCartItemDialog(
+                                                          context: context,
+                                                          item: item,
+                                                          currency: currency,
+                                                          localProductProvider:
+                                                              localProductProvider,
+                                                          field: 'tax',
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  if (appSettings
+                                                              ?.showTaxRatePos ==
+                                                          true &&
+                                                      appSettings?.showTaxPos ==
+                                                          true)
+                                                    const SizedBox(width: 4),
+                                                  if (appSettings?.showTaxPos ==
+                                                      true)
+                                                    Expanded(
+                                                      flex: 1,
+                                                      child:
+                                                          _buildCartItemField(
+                                                        label:
+                                                            'billing.table_tax_amount'
+                                                                .tr,
+                                                        value:
+                                                            '$currency ${((item.taxAmount ?? 0.0) * item.quantity).toStringAsFixed(2)}',
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .end,
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      // Product Image (Right End)
+                                      Builder(builder: (context) {
+                                        String? primaryImage;
+                                        if (item.product.attachment != null &&
+                                            item.product.attachment!
+                                                .isNotEmpty) {
+                                          for (final attachment
+                                              in item.product.attachment!) {
+                                            if (attachment.isPrimary == 1) {
+                                              primaryImage =
+                                                  attachment.filePath;
+                                              break;
+                                            }
+                                          }
+                                          primaryImage ??= item.product
+                                              .attachment!.first.filePath;
+                                        }
+
+                                        if (primaryImage == null) {
+                                          return const SizedBox.shrink();
+                                        }
+
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(left: 8.0),
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            child: Image.network(
+                                              primaryImage,
+                                              width: 45,
+                                              height: 45,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error,
+                                                      stackTrace) =>
+                                                  Container(
+                                                width: 45,
+                                                height: 45,
+                                                color: Colors.grey.shade100,
+                                                child: const Icon(
+                                                    Icons.image_not_supported,
+                                                    size: 16,
+                                                    color: Colors.grey),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  // Row 4: Total (highlighted)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: ColorManager.kPrimaryColor
+                                          .withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'billing.table_total'.tr,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$currency ${itemTotal.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11.5,
+                                            color: ColorManager.kPrimaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -7563,369 +8460,470 @@ class BillingPageState extends State<BillingPageRestaurant>
         );
         final categories = [allCategory, ...rawCategories];
 
-        return Column(
-          children: [
-            // Category horizontal scroll
-            Container(
-              height: 90,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: categories.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
-                          },
-                        ),
-                        child: ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: categories.length,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          itemBuilder: (context, index) {
-                            final category = categories[index];
-                            final isSelected =
-                                index == _selectedMainCategoryIndex;
-
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedMainCategoryIndex = index;
-                                });
-
-                                if (category.categoryId == 0) {
-                                  productProvider.refreshProducts();
-                                } else {
-                                  productProvider.listAllProducts(
-                                      categoryId: category.categoryId);
-                                }
-                              },
-                              child: Container(
-                                width: 80,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    // Category circle
-                                    Container(
-                                      width: 50,
-                                      height: 50,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isSelected
-                                            ? ColorManager.kPrimaryColor
-                                            : Colors.grey.shade200,
-                                        boxShadow: isSelected
-                                            ? [
-                                                BoxShadow(
-                                                  color: ColorManager
-                                                      .kPrimaryColor
-                                                      .withOpacity(0.3),
-                                                  spreadRadius: 2,
-                                                  blurRadius: 4,
-                                                ),
-                                              ]
-                                            : null,
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(25),
-                                        child: category.categoryImage != null
-                                            ? Image.network(
-                                                category.categoryImage!,
-                                                width: 50,
-                                                height: 50,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error,
-                                                        stackTrace) =>
-                                                    Icon(
-                                                  Icons.category,
-                                                  size: 24,
-                                                  color: isSelected
-                                                      ? Colors.white
-                                                      : Colors.grey.shade600,
-                                                ),
-                                              )
-                                            : Icon(
-                                                Icons.category,
-                                                size: 24,
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : Colors.grey.shade600,
-                                              ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    // Category name
-                                    Text(
-                                      category.categoryName ?? 'Unknown',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: isSelected
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                        color: isSelected
-                                            ? ColorManager.kPrimaryColor
-                                            : Colors.grey.shade800,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
+        return FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: Column(
+            children: [
+              // Category horizontal scroll
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(10),
+                child: Focus(
+                  focusNode: _mainCategoryFocusNode,
+                  onKeyEvent: (node, event) => _handleMainCategoryKey(
+                      event, categories, productProvider),
+                  child: Container(
+                    height: 90,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: categories.isEmpty
+                        ? const Center(child: CircularProgressIndicator())
+                        : MouseRegion(
+                            cursor: SystemMouseCursors.grab,
+                            child: ScrollConfiguration(
+                              behavior:
+                                  ScrollConfiguration.of(context).copyWith(
+                                dragDevices: {
+                                  PointerDeviceKind.mouse,
+                                  PointerDeviceKind.touch,
+                                  PointerDeviceKind.stylus,
+                                  PointerDeviceKind.trackpad,
+                                },
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-            ),
+                              child: ListView.builder(
+                                controller: _mainCategoryScrollController,
+                                physics: const BouncingScrollPhysics(),
+                                scrollDirection: Axis.horizontal,
+                                itemCount: categories.length,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8),
+                                itemBuilder: (context, index) {
+                                  final category = categories[index];
+                                  final isSelected =
+                                      index == _selectedMainCategoryIndex;
+                                  final isKeyboardFocused =
+                                      _mainCategoryFocusNode.hasFocus &&
+                                          _focusedMainCategoryIndex == index;
 
-            // Divider
-            Container(
-              height: 1,
-              color: Colors.grey.shade200,
-            ),
-
-            // Product search bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: TextField(
-                        controller: _mainProductSearchController,
-                        decoration: InputDecoration(
-                          hintText: 'common.search_product'.tr,
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 14,
-                          ),
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        onChanged: (query) {
-                          productProvider.listAllProducts(filterName: query);
-                        },
-                      ),
-                    ),
-                  ),
-                  if (_mainProductSearchController.text.isNotEmpty)
-                    IconButton(
-                      icon: const Icon(Icons.clear, size: 20),
-                      onPressed: () {
-                        _mainProductSearchController.clear();
-                        productProvider.refreshProducts();
-                        setState(() {});
-                      },
-                    ),
-                ],
-              ),
-            ),
-
-            // Products grid - large tiles for quick tap
-            Expanded(
-              child: isProductsLoading
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Loading products...',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                                  return GestureDetector(
+                                    onTap: () => _selectMainCategory(
+                                      category,
+                                      index,
+                                      productProvider,
+                                    ),
+                                    child: Container(
+                                      width: 80,
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 4),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: isKeyboardFocused
+                                              ? const Color(0xFFF59E0B)
+                                              : Colors.transparent,
+                                          width: isKeyboardFocused ? 2 : 1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          // Category circle
+                                          Container(
+                                            width: 50,
+                                            height: 50,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: isSelected
+                                                  ? ColorManager.kPrimaryColor
+                                                  : Colors.grey.shade200,
+                                              boxShadow: isSelected
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: ColorManager
+                                                            .kPrimaryColor
+                                                            .withOpacity(0.3),
+                                                        spreadRadius: 2,
+                                                        blurRadius: 4,
+                                                      ),
+                                                    ]
+                                                  : null,
+                                            ),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(25),
+                                              child: category.categoryImage !=
+                                                      null
+                                                  ? Image.network(
+                                                      category.categoryImage!,
+                                                      width: 50,
+                                                      height: 50,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (context,
+                                                              error,
+                                                              stackTrace) =>
+                                                          Icon(
+                                                        Icons.category,
+                                                        size: 24,
+                                                        color: isSelected
+                                                            ? Colors.white
+                                                            : Colors
+                                                                .grey.shade600,
+                                                      ),
+                                                    )
+                                                  : Icon(
+                                                      Icons.category,
+                                                      size: 24,
+                                                      color: isSelected
+                                                          ? Colors.white
+                                                          : Colors
+                                                              .grey.shade600,
+                                                    ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          // Category name
+                                          Text(
+                                            category.categoryName ?? 'Unknown',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                              color: isSelected
+                                                  ? ColorManager.kPrimaryColor
+                                                  : Colors.grey.shade800,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
-                        ],
+                  ),
+                ),
+              ),
+
+              // Divider
+              Container(
+                height: 1,
+                color: Colors.grey.shade200,
+              ),
+
+              // Product search bar
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(20),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Focus(
+                            skipTraversal: true,
+                            onKeyEvent: (node, event) =>
+                                _handleMainProductSearchKey(event),
+                            child: TextField(
+                              controller: _mainProductSearchController,
+                              focusNode: _mainProductSearchFocusNode,
+                              decoration: InputDecoration(
+                                hintText: 'common.search_product'.tr,
+                                hintStyle: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 14,
+                                ),
+                                prefixIcon: const Icon(Icons.search, size: 20),
+                                border: InputBorder.none,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                              onChanged: (query) {
+                                setState(() {
+                                  _focusedMainProductIndex = 0;
+                                });
+                                productProvider.listAllProducts(
+                                    filterName: query);
+                              },
+                              onSubmitted: (_) => _focusMainProductGrid(),
+                            ),
+                          ),
+                        ),
                       ),
-                    )
-                  : products.isEmpty
+                      if (_mainProductSearchController.text.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () {
+                            _mainProductSearchController.clear();
+                            setState(() {
+                              _focusedMainProductIndex = 0;
+                            });
+                            productProvider.refreshProducts();
+                            _mainProductSearchFocusNode.requestFocus();
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Products grid - large tiles for quick tap
+              Expanded(
+                child: FocusTraversalOrder(
+                  order: const NumericFocusOrder(30),
+                  child: isProductsLoading
                       ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.inventory_2_outlined,
-                                  size: 64, color: Colors.grey.shade300),
-                              const SizedBox(height: 16),
-                              Text(
-                                "No products available",
-                                style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 16,
-                                ),
+                              const SizedBox(
+                                width: 28,
+                                height: 28,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2.5),
                               ),
                               const SizedBox(height: 12),
-                              CustomRoundButton(
-                                title: _isResyncingProducts
-                                    ? 'Resyncing...'
-                                    : 'Resync Products',
-                                fct: _isResyncingProducts
-                                    ? () {}
-                                    : _resyncProductsFromMainGrid,
-                                width: 170,
-                                height: 36,
-                                fontSize: 11,
-                                boxColor: ColorManager.kPrimaryColor,
-                                borderColor: ColorManager.kPrimaryColor,
-                                textColor: Colors.white,
-                                radius: 8,
+                              Text(
+                                'Loading products...',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
                         )
-                      : MouseRegion(
-                          cursor: SystemMouseCursors.grab,
-                          child: ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(context).copyWith(
-                              dragDevices: {
-                                PointerDeviceKind.mouse,
-                                PointerDeviceKind.touch,
-                                PointerDeviceKind.stylus,
-                                PointerDeviceKind.trackpad,
+                      : products.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.inventory_2_outlined,
+                                      size: 64, color: Colors.grey.shade300),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "No products available",
+                                    style: TextStyle(
+                                      color: Colors.grey.shade500,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  CustomRoundButton(
+                                    title: _isResyncingProducts
+                                        ? 'Resyncing...'
+                                        : 'Resync Products',
+                                    fct: _isResyncingProducts
+                                        ? () {}
+                                        : _resyncProductsFromMainGrid,
+                                    width: 170,
+                                    height: 36,
+                                    fontSize: 11,
+                                    boxColor: ColorManager.kPrimaryColor,
+                                    borderColor: ColorManager.kPrimaryColor,
+                                    textColor: Colors.white,
+                                    radius: 8,
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Focus(
+                              focusNode: _mainProductGridFocusNode,
+                              onFocusChange: (focused) {
+                                if (focused && products.isNotEmpty) {
+                                  setState(() {
+                                    _focusedMainProductIndex =
+                                        _focusedMainProductIndex
+                                            .clamp(0, products.length - 1)
+                                            .toInt();
+                                  });
+                                }
                               },
-                            ),
-                            child: Consumer<AppFontProvider>(
-                              builder: (context, fontProvider, child) {
-                                return LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    // Calculate columns based on available width and font size level
-                                    // Level 0 (Small): Compact Mode (No Image)
-                                    // Level 1 (Medium): Normal Mode
-                                    // Level 2 (Large): Large Mode
-                                    final bool showImage =
-                                        fontProvider.fontSizeLevel > 0;
+                              onKeyEvent: (node, event) =>
+                                  _handleMainProductGridKey(event, products),
+                              child: MouseRegion(
+                                cursor: SystemMouseCursors.grab,
+                                child: ScrollConfiguration(
+                                  behavior:
+                                      ScrollConfiguration.of(context).copyWith(
+                                    dragDevices: {
+                                      PointerDeviceKind.mouse,
+                                      PointerDeviceKind.touch,
+                                      PointerDeviceKind.stylus,
+                                      PointerDeviceKind.trackpad,
+                                    },
+                                  ),
+                                  child: Consumer<AppFontProvider>(
+                                    builder: (context, fontProvider, child) {
+                                      return LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          // Calculate columns based on available width and font size level
+                                          // Level 0 (Small): Compact Mode (No Image)
+                                          // Level 1 (Medium): Normal Mode
+                                          // Level 2 (Large): Large Mode
+                                          final bool showImage =
+                                              fontProvider.fontSizeLevel > 0;
 
-                                    double baseWidth;
-                                    double childAspectRatio;
+                                          double baseWidth;
+                                          double childAspectRatio;
 
-                                    if (!showImage) {
-                                      // Compact mode - denser grid, no images
-                                      baseWidth = 110.0;
-                                      childAspectRatio = 1.3;
-                                    } else {
-                                      // Normal/Large mode with images
-                                      // Modified to allow more products visible at a time (smaller cards)
-                                      // Level 1 -> 125, Level 2 -> 145 (previously 150 -> 190)
-                                      baseWidth = 125.0 +
-                                          ((fontProvider.fontSizeLevel - 1) *
-                                              20.0);
-                                      // Slightly adjusted aspect ratio
-                                      childAspectRatio = 0.80;
-                                    }
-
-                                    int columns =
-                                        (constraints.maxWidth / baseWidth)
-                                            .floor();
-                                    columns = columns.clamp(2, 12);
-
-                                    return GridView.builder(
-                                      padding: const EdgeInsets.all(8),
-                                      gridDelegate:
-                                          SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: columns,
-                                        childAspectRatio: childAspectRatio,
-                                        crossAxisSpacing: 6,
-                                        mainAxisSpacing: 6,
-                                      ),
-                                      physics: const BouncingScrollPhysics(),
-                                      itemCount: products.length,
-                                      itemBuilder: (context, index) {
-                                        final product = products[index];
-                                        final isSelected = product ==
-                                            productProvider.selectedProduct;
-
-                                        String? primaryImage;
-                                        if (showImage &&
-                                            product.attachment != null &&
-                                            product.attachment!.isNotEmpty) {
-                                          for (final attachment
-                                              in product.attachment!) {
-                                            if (attachment.isPrimary == 1) {
-                                              primaryImage =
-                                                  attachment.filePath;
-                                              break;
-                                            }
+                                          if (!showImage) {
+                                            // Compact mode - denser grid, no images
+                                            baseWidth = 110.0;
+                                            childAspectRatio = 1.3;
+                                          } else {
+                                            // Normal/Large mode with images
+                                            // Modified to allow more products visible at a time (smaller cards)
+                                            // Level 1 -> 125, Level 2 -> 145 (previously 150 -> 190)
+                                            baseWidth = 125.0 +
+                                                ((fontProvider.fontSizeLevel -
+                                                        1) *
+                                                    20.0);
+                                            // Slightly adjusted aspect ratio
+                                            childAspectRatio = 0.80;
                                           }
-                                          primaryImage ??= product
-                                              .attachment!.first.filePath;
-                                        }
 
-                                        return GestureDetector(
-                                          onTap: () async {
-                                            await ProductCartHelper
-                                                .handleProductSelection(
-                                              context: context,
-                                              product: product,
-                                              addToCartDirectly: true,
-                                            );
-                                          },
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: isSelected
-                                                  ? Border.all(
-                                                      color: ColorManager
-                                                          .kPrimaryColor,
-                                                      width: 2)
-                                                  : Border.all(
-                                                      color:
-                                                          Colors.grey.shade200),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.grey
-                                                      .withOpacity(0.1),
-                                                  spreadRadius: 1,
-                                                  blurRadius: 2,
-                                                  offset: const Offset(0, 1),
-                                                ),
-                                              ],
+                                          int columns =
+                                              (constraints.maxWidth / baseWidth)
+                                                  .floor();
+                                          columns = columns.clamp(2, 12);
+                                          _mainProductGridColumns = columns;
+                                          final itemWidth =
+                                              (constraints.maxWidth -
+                                                      16 -
+                                                      ((columns - 1) * 6)) /
+                                                  columns;
+                                          _mainProductGridRowExtent =
+                                              (itemWidth / childAspectRatio) +
+                                                  6;
+                                          final focusedProductIndex =
+                                              _focusedMainProductIndex
+                                                  .clamp(0, products.length - 1)
+                                                  .toInt();
+
+                                          return GridView.builder(
+                                            controller:
+                                                _mainProductGridScrollController,
+                                            padding: const EdgeInsets.all(8),
+                                            gridDelegate:
+                                                SliverGridDelegateWithFixedCrossAxisCount(
+                                              crossAxisCount: columns,
+                                              childAspectRatio:
+                                                  childAspectRatio,
+                                              crossAxisSpacing: 6,
+                                              mainAxisSpacing: 6,
                                             ),
-                                            child: showImage
-                                                ? _buildProductCardWithImage(
-                                                    context,
-                                                    product,
-                                                    primaryImage,
-                                                    fontProvider)
-                                                : _buildCompactProductCard(
-                                                    context,
-                                                    product,
-                                                    fontProvider),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                );
-                              },
+                                            physics:
+                                                const BouncingScrollPhysics(),
+                                            itemCount: products.length,
+                                            itemBuilder: (context, index) {
+                                              final product = products[index];
+                                              final isSelected = product ==
+                                                  productProvider
+                                                      .selectedProduct;
+                                              final isKeyboardFocused =
+                                                  _mainProductGridFocusNode
+                                                          .hasFocus &&
+                                                      focusedProductIndex ==
+                                                          index;
+
+                                              String? primaryImage;
+                                              if (showImage &&
+                                                  product.attachment != null &&
+                                                  product
+                                                      .attachment!.isNotEmpty) {
+                                                for (final attachment
+                                                    in product.attachment!) {
+                                                  if (attachment.isPrimary ==
+                                                      1) {
+                                                    primaryImage =
+                                                        attachment.filePath;
+                                                    break;
+                                                  }
+                                                }
+                                                primaryImage ??= product
+                                                    .attachment!.first.filePath;
+                                              }
+
+                                              return GestureDetector(
+                                                onTap: () async {
+                                                  setState(() {
+                                                    _focusedMainProductIndex =
+                                                        index;
+                                                  });
+                                                  await _addMainGridProduct(
+                                                      product);
+                                                },
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    color: isKeyboardFocused
+                                                        ? const Color(
+                                                            0xFFFFFBEB)
+                                                        : Colors.white,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                    border: Border.all(
+                                                      color: isKeyboardFocused
+                                                          ? const Color(
+                                                              0xFFF59E0B)
+                                                          : isSelected
+                                                              ? ColorManager
+                                                                  .kPrimaryColor
+                                                              : Colors.grey
+                                                                  .shade200,
+                                                      width:
+                                                          isKeyboardFocused ||
+                                                                  isSelected
+                                                              ? 2
+                                                              : 1,
+                                                    ),
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.grey
+                                                            .withOpacity(0.1),
+                                                        spreadRadius: 1,
+                                                        blurRadius: 2,
+                                                        offset:
+                                                            const Offset(0, 1),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  child: showImage
+                                                      ? _buildProductCardWithImage(
+                                                          context,
+                                                          product,
+                                                          primaryImage,
+                                                          fontProvider)
+                                                      : _buildCompactProductCard(
+                                                          context,
+                                                          product,
+                                                          fontProvider),
+                                                ),
+                                              );
+                                            },
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-            ),
-          ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

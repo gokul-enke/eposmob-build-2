@@ -53,15 +53,15 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
   static const double _headerGap = 0.0;
 
   @override
-  String get layoutId => 'arabic_english_table_headers';
+  String get layoutId => 'arabic_english_3_table_headers';
 
   @override
-  String get displayName => 'Arabic & English Table Headers';
+  String get displayName => 'Arabic & English 3 Table Headers';
 
   @override
   Future<void> printThermal(ReceiptLayoutParams params) async {
     debugPrint(
-        "===== ARABIC AND ENGLISH HEADERS ONLY LAYOUT: THERMAL PRINTING ====");
+        "===== ARABIC AND ENGLISH 3 HEADERS ONLY LAYOUT: THERMAL PRINTING ====");
 
     final context = params.context;
     final selectedPrinter = params.selectedPrinter;
@@ -1007,7 +1007,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
             ? '$slNumber. $productName'
             : productName;
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left),
+          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
         ]));
       }
       // Price details row with spacer matching header name columns
@@ -1042,7 +1042,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         final String itemText =
             w.containsKey('sl') ? '$slNumber. $productName' : productName;
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.right),
+          ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
         ]));
       }
       // Price details row (RTL order) with spacer on right
@@ -1349,6 +1349,23 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         rows.add(SpacingRow(_itemGap));
         rows.add(TextRow('$itemsCountText: ${params.cartItems.length}',
             scale: is58mm ? 0.75 : 0.85, isBold: true));
+      }
+    }
+
+    if (displayConfig?['showQuantityCount']?.visible == true) {
+      final quantityCountText = _getOptionText(
+        displayConfig,
+        'showQuantityCount',
+        defaultValue: isEnglish ? 'Total Qty' : 'إجمالي الكمية',
+      );
+
+      if (quantityCountText.isNotEmpty) {
+        final totalQuantity = params.totalQuantity;
+        rows.add(SpacingRow(_itemGap));
+        rows.add(TextRow(
+            '$quantityCountText: ${totalQuantity % 1 == 0 ? totalQuantity.toInt().toString() : totalQuantity.toStringAsFixed(2)}',
+            scale: is58mm ? 0.75 : 0.85,
+            isBold: true));
       }
     }
 

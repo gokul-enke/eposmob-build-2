@@ -773,6 +773,11 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 '${_cfgVal('showItemsCount', isRtl ? 'العدد' : 'Items')}: ${params.cartItems.length}',
                 style: footerStyle,
               ),
+            if (_cfgVisible('showQuantityCount'))
+              pw.Text(
+                '${_cfgVal('showQuantityCount', isRtl ? 'إجمالي الكمية' : 'Total Qty')}: ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
+                style: footerStyle,
+              ),
 
             // ═══════════════════════════════════════════════════════
             // YOU SAVED
@@ -1020,7 +1025,8 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
       if (showItems) {
-        cells.add(_dataCell(name, bodyStyle, align: pw.Alignment.centerLeft));
+        cells.add(_dataCell(name, bodyStyle,
+            align: pw.Alignment.centerLeft, textDirection: pw.TextDirection.ltr));
       }
       if (showQty) {
         cells.add(_dataCell(qty.toStringAsFixed(3), bodyStyle));
@@ -1055,7 +1061,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   /// Data cell for items table.
   pw.Widget _dataCell(String text, pw.TextStyle style,
-      {pw.Alignment align = pw.Alignment.center}) {
+      {pw.Alignment align = pw.Alignment.center, pw.TextDirection? textDirection}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 1.5, vertical: 2),
       child: pw.Align(
@@ -1065,6 +1071,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           style: style,
           maxLines: 1,
           overflow: pw.TextOverflow.clip,
+          textDirection: textDirection,
         ),
       ),
     );

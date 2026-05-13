@@ -14,11 +14,12 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_tax_modal.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
@@ -28,12 +29,13 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
+import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
@@ -44,6 +46,9 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/screens/billing/utils/billing_focus_orders.dart';
+import 'package:pos_machine/services/cash_drawer_service.dart';
+import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
@@ -53,6 +58,7 @@ import 'package:pos_machine/widgets/horizontal_saved_orders_view.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
+import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:provider/provider.dart';
@@ -68,8 +74,19 @@ import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
 
 enum CheckoutActionMode { confirm, save }
+
+class _CartUnitMenuOption {
+  final String value;
+  final String label;
+
+  const _CartUnitMenuOption({
+    required this.value,
+    required this.label,
+  });
+}
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
@@ -96,6 +113,7 @@ class BillingPageState extends State<BillingPage>
 
   GlobalKey _autocompletePhoneKey = GlobalKey();
   GlobalKey _autocompleteProductKey = GlobalKey();
+  GlobalKey<ProductAutocompleteState> _productAutocompleteKey = GlobalKey();
 
   // Flag to track if user has manually changed the paid amount
 
@@ -156,8 +174,11 @@ class BillingPageState extends State<BillingPage>
   bool isLoadingCreateOrder = false;
   bool isLoadingConfirmOrder = false;
   bool isLoadingSaveOrderAndPrint = false;
+  bool isLoadingCreateNewOrder = false;
+  bool isLoadingRestoreSavedOrder = false;
   bool isLoadingAddItem = false;
   bool _isProcessingBarcode = false;
+  bool _isOrderActionInProgress = false;
   final ListQueue<String> _barcodeQueue = ListQueue<String>();
   bool _toCustomerCreditEnabled = false;
   bool _isResyncingProducts = false;
@@ -193,6 +214,33 @@ class BillingPageState extends State<BillingPage>
   // Add flag to track if customer was manually selected
   bool _isCustomerManuallySelected = false;
 
+  // Sidebar keyboard navigation state
+  final FocusNode _sidebarFocusNode = FocusNode();
+  bool _isSidebarKeyboardActive = false;
+  int _sidebarFocusRequestId = 0;
+  bool _isSidebarProductsTabFocused = false;
+  bool _isSidebarOrdersTabFocused = false;
+  bool _isClearEntryFocused = false;
+
+  // Cart table keyboard navigation state
+  final FocusNode _cartTableFocusNode = FocusNode();
+  int? _cartTableFocusedRowIndex;
+  int? _cartTableFocusedCellIndex;
+  int _cartQuantityEditRequestId = 0;
+  int _cartPriceEditRequestId = 0;
+  int _cartQuantityRefreshRequestId = 0;
+  String? _cartQuantityEditRequestKey;
+  String? _cartPriceEditRequestKey;
+  String? _cartQuantityRefreshRequestKey;
+  String? _cartUnitMenuOpenRequestKey;
+  num? _cartQuantityRefreshQuantity;
+  bool _isCartUnitMenuOpen = false;
+  final Map<String, LayerLink> _cartUnitMenuLayerLinks = <String, LayerLink>{};
+  OverlayEntry? _cartUnitMenuOverlayEntry;
+  List<_CartUnitMenuOption> _cartUnitMenuOptions =
+      const <_CartUnitMenuOption>[];
+  int _cartUnitMenuHighlightedIndex = 0;
+
   StreamSubscription<String>? _barcodeSubscription;
 
   String? deliveryDate;
@@ -205,6 +253,28 @@ class BillingPageState extends State<BillingPage>
 
   bool get _hasInternet =>
       Provider.of<BillingProvider>(context, listen: false).hasInternet;
+
+  bool get _isOrderActionBusy =>
+      _isOrderActionInProgress ||
+      isLoadingClearCart ||
+      isLoadingSaveOrder ||
+      isLoadingCreateOrder ||
+      isLoadingConfirmOrder ||
+      isLoadingSaveOrderAndPrint ||
+      isLoadingCreateNewOrder ||
+      isLoadingRestoreSavedOrder;
+
+  bool _beginOrderAction() {
+    if (_isOrderActionInProgress) {
+      return false;
+    }
+    _isOrderActionInProgress = true;
+    return true;
+  }
+
+  void _endOrderAction() {
+    _isOrderActionInProgress = false;
+  }
 
   bool _shouldSuppressSystemKeyboard() {
     return SystemKeyboardPolicy.shouldSuppressForContext(
@@ -238,8 +308,12 @@ class BillingPageState extends State<BillingPage>
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId!, accessToken: accessToken ?? '');
     _focusNode.addListener(_handleFocusChange);
+    _cartTableFocusNode.addListener(_handleCartTableFocusChange);
     _paidAmountFocusNode
         .addListener(_handlePaidAmountFocusChange); // Add this line
+    HardwareKeyboard.instance.addHandler(_onBillingHardwareKey);
+    debugPrint(
+        "⌨️ [BillingPage] HardwareKeyboard handler registered in initState");
 
     // Debug logging for AppSettings
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -340,11 +414,11 @@ class BillingPageState extends State<BillingPage>
       };
       appSettingsProvider.addListener(_appSettingsDebugListener!);
 
-        final generalSettingsProvider =
+      final generalSettingsProvider =
           Provider.of<GeneralSettingsProvider>(context, listen: false);
-        _generalSettingsListener = _syncStockEnabledSetting;
-        generalSettingsProvider.addListener(_generalSettingsListener!);
-        _syncStockEnabledSetting();
+      _generalSettingsListener = _syncStockEnabledSetting;
+      generalSettingsProvider.addListener(_generalSettingsListener!);
+      _syncStockEnabledSetting();
 
       // Listen for cart changes to reset payment modal flag
       final localProductProvider =
@@ -362,6 +436,9 @@ class BillingPageState extends State<BillingPage>
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onBillingHardwareKey);
+    debugPrint("⌨️ [BillingPage] HardwareKeyboard handler removed in dispose");
+    _cartUnitMenuOverlayEntry?.remove();
     _barcodeSubscription?.cancel();
     barcodeController.dispose();
     mobileNumberTextController.dispose();
@@ -393,6 +470,7 @@ class BillingPageState extends State<BillingPage>
 
     _debounceTimer?.cancel();
     _customerTextFieldFocus.dispose();
+    _cartTableFocusNode.dispose();
     _customerScrollController.dispose();
 
     // Remove sales executive listener
@@ -760,43 +838,375 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _focusTextField() {
-    // debugPrint("Focusing Text Field");
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    if (appSettingsProvider.appSettings!.barcodeSales) {
+    final barcodeSales = appSettingsProvider.appSettings?.barcodeSales ?? false;
+    debugPrint(
+        "⌨️ [BillingPage] _focusTextField called | barcodeSales=$barcodeSales | ${_focusDebugSummary()}");
+    if (barcodeSales) {
       FocusScope.of(context).requestFocus(_barcodeNode);
-    } else {}
+    } else {
+      // When barcode is disabled, focus the Search Product field
+      _productAutocompleteKey.currentState?.requestFieldFocus();
+    }
     selectedProductNameController.clear();
     Provider.of<LocalProductProvider>(context, listen: false)
         .resetSelectedProduct();
+    debugPrint(
+        "⌨️ [BillingPage] _focusTextField completed | ${_focusDebugSummary()}");
+  }
+
+  void _focusSearchProductField() {
+    debugPrint(
+        "⌨️ [BillingPage] _focusSearchProductField called | ${_focusDebugSummary()}");
+    _productAutocompleteKey.currentState?.requestFieldFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _productAutocompleteKey.currentState?.requestFieldFocus();
+    });
+    selectedProductNameController.clear();
+    Provider.of<LocalProductProvider>(context, listen: false)
+        .resetSelectedProduct();
+    debugPrint(
+        "⌨️ [BillingPage] _focusSearchProductField completed | ${_focusDebugSummary()}");
+  }
+
+  void _focusBarcodeField() {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final barcodeSales = appSettingsProvider.appSettings?.barcodeSales ?? false;
+    debugPrint(
+        "⌨️ [BillingPage] _focusBarcodeField called | barcodeSales=$barcodeSales | ${_focusDebugSummary()}");
+    if (barcodeSales) {
+      FocusScope.of(context).requestFocus(_barcodeNode);
+      selectedProductNameController.clear();
+      Provider.of<LocalProductProvider>(context, listen: false)
+          .resetSelectedProduct();
+    } else {
+      _focusSearchProductField();
+    }
+    debugPrint(
+        "⌨️ [BillingPage] _focusBarcodeField completed | ${_focusDebugSummary()}");
+  }
+
+  String _focusDebugSummary() {
+    final primaryFocus = FocusManager.instance.primaryFocus;
+    final focusedWidget = primaryFocus?.context?.widget;
+    return "pageHasFocus=${_focusNode.hasFocus}, "
+        "pagePrimary=${_focusNode.hasPrimaryFocus}, "
+        "barcodeHasFocus=${_barcodeNode.hasFocus}, "
+        "customerHasFocus=${_customerTextFieldFocus.hasFocus}, "
+        "primaryFocus=${primaryFocus?.debugLabel ?? primaryFocus}, "
+        "primaryWidget=${focusedWidget?.runtimeType}";
+  }
+
+  void _restoreShortcutFocus(String reason) {
+    debugPrint(
+        "⌨️ [BillingPage] Restoring shortcut focus ($reason) | before: ${_focusDebugSummary()}");
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final barcodeSales =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+                  .appSettings
+                  ?.barcodeSales ??
+              false;
+      if (barcodeSales) {
+        FocusScope.of(context).requestFocus(_barcodeNode);
+        debugPrint("⌨️ [BillingPage] Requested barcode focus after $reason");
+      } else {
+        _focusNode.requestFocus();
+        debugPrint(
+            "⌨️ [BillingPage] Requested page shortcut focus after $reason");
+      }
+      debugPrint(
+          "⌨️ [BillingPage] Restoring shortcut focus ($reason) | after: ${_focusDebugSummary()}");
+    });
+  }
+
+  bool _isBillingShortcutKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.f1 ||
+        key == LogicalKeyboardKey.f2 ||
+        key == LogicalKeyboardKey.f3 ||
+        key == LogicalKeyboardKey.f4 ||
+        key == LogicalKeyboardKey.f5 ||
+        key == LogicalKeyboardKey.f6 ||
+        key == LogicalKeyboardKey.f7 ||
+        key == LogicalKeyboardKey.f8 ||
+        key == LogicalKeyboardKey.f9 ||
+        key == LogicalKeyboardKey.f10 ||
+        key == LogicalKeyboardKey.f11 ||
+        key == LogicalKeyboardKey.f12 ||
+        key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.insert ||
+        key == LogicalKeyboardKey.escape;
+  }
+
+  /// Returns true when the current key event is one of the Ctrl-modified
+  /// shortcuts handled by this page (Ctrl+H/A/K/D/S/Q/P/U).
+  bool _isBillingControlShortcut(LogicalKeyboardKey key) {
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+    return key == LogicalKeyboardKey.keyH ||
+        key == LogicalKeyboardKey.keyA ||
+        key == LogicalKeyboardKey.keyK ||
+        key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.keyU ||
+        key == LogicalKeyboardKey.keyQ ||
+        key == LogicalKeyboardKey.keyP ||
+        key == LogicalKeyboardKey.keyS;
   }
 
   void _handleFocusChange() {
+    debugPrint("⌨️ [BillingPage] Focus change | ${_focusDebugSummary()}");
     if (_focusNode.hasFocus) {
       // debugPrint('Focus gained');
     }
   }
 
-  void _handleKeyPress(KeyEvent event) {
-    final focusedContext = FocusManager.instance.primaryFocus?.context;
-    if (focusedContext != null && focusedContext.widget is EditableText) {
-      return;
+  void _handleCartTableFocusChange() {
+    // Always rebuild on cart-table focus changes so the orange focus ring
+    // around the cart container appears on focus gain and disappears on
+    // focus loss. The previous early-return only repainted on first gain
+    // (when row index was null), leaving a stale ring after Tab left the
+    // cart.
+    if (!mounted) return;
+    if (!_cartTableFocusNode.hasFocus) {
+      _closeCartUnitMenu(refocusCart: false);
+    }
+    setState(() {
+      if (_cartTableFocusNode.hasFocus) {
+        _cartTableFocusedRowIndex ??= 0;
+        _cartTableFocusedCellIndex ??= 0;
+      }
+      if (!_cartTableFocusNode.hasFocus) {
+        _cartTableFocusedCellIndex = null;
+      }
+    });
+  }
+
+  bool _onBillingHardwareKey(KeyEvent event) {
+    if (!mounted) return false;
+    if (event is! KeyDownEvent) return false;
+    // If any dialog/route is on top of this page, let it own the keyboard.
+    final route = ModalRoute.of(context);
+    final bool dialogIsOnTop = route != null && !route.isCurrent;
+    debugPrint(
+        "⌨️ [BillingPage] HW raw key=${event.logicalKey.debugName} | dialogOnTop=$dialogIsOnTop");
+    if (dialogIsOnTop) {
+      debugPrint(
+          "⌨️ [BillingPage] HW key ${event.logicalKey.debugName} IGNORED (dialog on top)");
+      return false;
     }
 
-    if (event is KeyDownEvent) {
-      try {
-        if (event.logicalKey == LogicalKeyboardKey.f6) {
-          _clearCart();
-        } else if (event.logicalKey == LogicalKeyboardKey.f7) {
-          _saveOrder();
-        } else if (event.logicalKey == LogicalKeyboardKey.f8) {
-          _createOrderAndPrint();
-        } else if (event.logicalKey == LogicalKeyboardKey.f9) {
-          _confirmOrder();
+    if (event.logicalKey == LogicalKeyboardKey.tab &&
+        !HardwareKeyboard.instance.isShiftPressed &&
+        _barcodeNode.hasFocus) {
+      debugPrint(
+          "⌨️ [BillingPage] Handling Tab from Barcode -> Search Product | ${_focusDebugSummary()}");
+      _focusSearchProductField();
+      return true;
+    }
+
+    if (!_isBillingShortcutKey(event.logicalKey) &&
+        !_isBillingControlShortcut(event.logicalKey)) {
+      return false;
+    }
+    debugPrint(
+        "⌨️ [BillingPage] HW key ${event.logicalKey.debugName} | ${_focusDebugSummary()}");
+    _handleKeyPress(event);
+    return true;
+  }
+
+  void _handleKeyPress(KeyEvent event) {
+    if (event is! KeyDownEvent) return;
+
+    debugPrint(
+        "⌨️ [BillingPage] _handleKeyPress ${event.logicalKey.debugName} | ${_focusDebugSummary()}");
+
+    try {
+      // Handle Esc to exit sidebar keyboard mode
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        if (_isSidebarKeyboardActive) {
+          debugPrint(
+              "⌨️ [BillingPage] Handling Esc -> exit sidebar keyboard mode");
+          setState(() {
+            _isSidebarKeyboardActive = false;
+          });
+          _focusNode.requestFocus();
+        } else {
+          debugPrint(
+              "⌨️ [BillingPage] Handling Esc -> focus Search Product field");
+          _focusSearchProductField();
         }
-      } catch (e) {
-        // debugPrint("Error handling key press: $e");
+        return;
       }
+
+      // Always allow F12 even when text fields are focused
+      if (event.logicalKey == LogicalKeyboardKey.f12) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F12 -> activate sidebar keyboard mode");
+        setState(() {
+          _isSidebarKeyboardActive = true;
+          _selectedSidebarTab = _selectedSidebarTab == 0 ? 1 : 0;
+          _sidebarFocusRequestId++;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _sidebarFocusNode.requestFocus();
+        });
+        return;
+      }
+
+      // Ctrl-modified shortcuts (header toolbar replacements).
+      if (HardwareKeyboard.instance.isControlPressed) {
+        if (event.logicalKey == LogicalKeyboardKey.keyA) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+A -> focus barcode field");
+          _focusBarcodeField();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyS) {
+          debugPrint(
+              "⌨️ [BillingPage] Handling Ctrl+S -> focus Search Product field");
+          _focusSearchProductField();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyH) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+H -> open shortcuts help");
+          _openShortcutsHelpDialog();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyK) {
+          debugPrint(
+              "⌨️ [BillingPage] Handling Ctrl+K -> toggle virtual keyboard");
+          _toggleVirtualKeyboardFromShortcut();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyD) {
+          debugPrint(
+              "⌨️ [BillingPage] Handling Ctrl+D -> focus cart table (item name)");
+          _focusCartTable();
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyQ) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+Q -> edit cart quantity");
+          _requestCartFieldEditFromShortcut(isQuantity: true);
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyU) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+U -> focus cart unit");
+          _requestCartFieldEditFromShortcut(isQuantity: null);
+          return;
+        }
+        if (event.logicalKey == LogicalKeyboardKey.keyP) {
+          debugPrint("⌨️ [BillingPage] Handling Ctrl+P -> edit cart price");
+          _requestCartFieldEditFromShortcut(isQuantity: false);
+          return;
+        }
+      }
+
+      if (!HardwareKeyboard.instance.isControlPressed &&
+          event.logicalKey == LogicalKeyboardKey.keyD) {
+        debugPrint("⌨️ [BillingPage] Handling D -> open cash drawer");
+        unawaited(_openCashDrawerFromShortcut());
+        return;
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.f1) {
+        debugPrint("⌨️ [BillingPage] Handling F1 -> clear cart");
+        _clearCart();
+      } else if (event.logicalKey == LogicalKeyboardKey.f2) {
+        debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
+        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+      } else if (event.logicalKey == LogicalKeyboardKey.f3) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F3 -> open checkout at Customer step");
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 0);
+      } else if (event.logicalKey == LogicalKeyboardKey.f4) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F4 -> open checkout at Delivery step");
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 1);
+      } else if (event.logicalKey == LogicalKeyboardKey.f5) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F5 -> open checkout at Payment step");
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 3);
+      } else if (event.logicalKey == LogicalKeyboardKey.f6) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F6 -> open checkout confirm & print");
+        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+      } else if (event.logicalKey == LogicalKeyboardKey.f7) {
+        debugPrint("⌨️ [BillingPage] Handling F7 -> create new order");
+        _createNewOrder();
+      } else if (event.logicalKey == LogicalKeyboardKey.f8) {
+        debugPrint("⌨️ [BillingPage] Handling F8 -> open checkout save");
+        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+      } else if (event.logicalKey == LogicalKeyboardKey.f9) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F9 -> open checkout save & print");
+        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+      } else if (event.logicalKey == LogicalKeyboardKey.f10) {
+        debugPrint(
+            "⌨️ [BillingPage] Handling F10 -> open checkout at Discount step");
+        _showCheckoutModal(
+            actionMode: CheckoutActionMode.confirm, initialStep: 2);
+      }
+    } catch (e) {
+      debugPrint("⌨️ [BillingPage] Error handling key press: $e");
+      // debugPrint("Error handling key press: $e");
+    }
+  }
+
+  /// Opens the keyboard-shortcuts help dialog. Triggered by Ctrl+H or by the
+  /// help icon in the header toolbar.
+  void _openShortcutsHelpDialog() {
+    if (!mounted) return;
+    KeyboardShortcutsHelpDialog.show(context);
+  }
+
+  /// Toggles the in-app virtual keyboard panel. Triggered by Ctrl+K.
+  void _toggleVirtualKeyboardFromShortcut() {
+    if (!mounted) return;
+    final keyboardProvider =
+        Provider.of<KeyboardProvider>(context, listen: false);
+    if (keyboardProvider.showKeyboardFeature) {
+      keyboardProvider.featureOff();
+      keyboardProvider.clear();
+    } else {
+      keyboardProvider.featureOn();
+    }
+  }
+
+  /// Opens the cash drawer through [CashDrawerService]. Triggered by Ctrl+D.
+  Future<void> _openCashDrawerFromShortcut() async {
+    if (!mounted) return;
+    try {
+      await const CashDrawerService().openDrawer(context);
+    } catch (e) {
+      debugPrint("⌨️ [BillingPage] Cash drawer shortcut failed: $e");
+    }
+  }
+
+  /// Triggers a full data sync via [SyncProvider]. Triggered by Ctrl+S.
+  Future<void> _triggerSyncFromShortcut() async {
+    if (!mounted) return;
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    if (!billingProvider.hasInternet) {
+      showScaffoldError(
+        context: context,
+        message: 'No internet connection available for sync.',
+      );
+      return;
+    }
+    final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+    if (syncProvider.isSyncing) return;
+    if (syncProvider.hasError) {
+      syncProvider.clearError();
+    }
+    try {
+      await syncProvider.syncAllData(context);
+    } catch (e) {
+      debugPrint("⌨️ [BillingPage] Sync shortcut failed: $e");
     }
   }
 
@@ -893,6 +1303,7 @@ class BillingPageState extends State<BillingPage>
             "🔴 [BillingPage.processBarcode] First product: ${filteredProducts.first.productName}");
         // Get the first product
         GetProduct product = filteredProducts.first;
+        final matchedSaleUnit = _findMatchingSaleUnit(product, query);
 
         num? quantity;
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
@@ -909,6 +1320,16 @@ class BillingPageState extends State<BillingPage>
             query.length == 14) {
           // Count-based product
           quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+        } else if (matchedSaleUnit != null) {
+          quantity = _resolveSaleUnitQuantity(matchedSaleUnit);
+          debugPrint(
+              "🔴 [BillingPage.processBarcode] Matched sale unit barcode:");
+          debugPrint(
+              "🔴 [BillingPage.processBarcode]   - Unit: ${matchedSaleUnit.unitName}");
+          debugPrint(
+              "🔴 [BillingPage.processBarcode]   - Conversion rate: ${matchedSaleUnit.conversionRate}");
+          debugPrint(
+              "🔴 [BillingPage.processBarcode]   - Base quantity to add: $quantity");
         }
 
         // Use centralized helper for stock handling
@@ -922,6 +1343,9 @@ class BillingPageState extends State<BillingPage>
         debugPrint(
             "🔴 [BillingPage.processBarcode]   - Customer Name: ${selectedCustomer?.name}");
 
+        final bool useSaleUnit = matchedSaleUnit != null &&
+            _resolveSaleUnitQuantity(matchedSaleUnit) > 1;
+
         await ProductCartHelper.handleProductSelection(
           context: context,
           product: product,
@@ -929,6 +1353,7 @@ class BillingPageState extends State<BillingPage>
           addToCartDirectly: true,
           customerId: selectedCustomerID,
           customerName: selectedCustomer?.name,
+          selectedSaleUnit: useSaleUnit ? matchedSaleUnit : null,
         );
 
         debugPrint(
@@ -990,6 +1415,30 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
+  SaleUnit? _findMatchingSaleUnit(GetProduct product, String barcode) {
+    final normalizedBarcode = barcode.trim();
+    if (normalizedBarcode.isEmpty) {
+      return null;
+    }
+
+    for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
+      final saleUnitBarcode = saleUnit.barcode?.trim() ?? '';
+      if (saleUnitBarcode.isNotEmpty && saleUnitBarcode == normalizedBarcode) {
+        return saleUnit;
+      }
+    }
+
+    return null;
+  }
+
+  num _resolveSaleUnitQuantity(SaleUnit saleUnit) {
+    final parsedRate = num.tryParse(saleUnit.conversionRate?.trim() ?? '');
+    if (parsedRate == null || parsedRate <= 0) {
+      return 1;
+    }
+    return parsedRate;
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
@@ -1025,9 +1474,9 @@ class BillingPageState extends State<BillingPage>
         Provider.of<GridSelectionProvider>(context, listen: false);
 
     return SafeArea(
-      child: KeyboardListener(
+      child: Focus(
         focusNode: _focusNode,
-        onKeyEvent: _handleKeyPress,
+        autofocus: true,
         child: Scaffold(
           body: Stack(
             children: [
@@ -1112,37 +1561,40 @@ class BillingPageState extends State<BillingPage>
       right: 10,
     ),
   }) {
-    return BuildBoxShadowContainer(
-      circleRadius: 10,
-      margin: margin,
-      child: Form(
-        key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _buildHeader(),
-              const Divider(thickness: 1),
-              _buildOrderHeader(
-                size: size,
-                barcodeController: barcodeController,
-                quantityController: quantityController,
-                unitPriceController: unitPriceController,
-                selectedProductIdController: selectedProductIdController,
-                productProvider: productProvider,
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: _buildCartItemsTable(size),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildActionButtons(),
-                  ],
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: BuildBoxShadowContainer(
+        circleRadius: 10,
+        margin: margin,
+        child: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildHeader(),
+                const Divider(thickness: 1),
+                _buildOrderHeader(
+                  size: size,
+                  barcodeController: barcodeController,
+                  quantityController: quantityController,
+                  unitPriceController: unitPriceController,
+                  selectedProductIdController: selectedProductIdController,
+                  productProvider: productProvider,
                 ),
-              ),
-            ],
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: _buildCartItemsTable(size),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildActionButtons(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1281,148 +1733,197 @@ class BillingPageState extends State<BillingPage>
       right: 10,
     ),
   }) {
-    return BuildBoxShadowContainer(
-      circleRadius: 10,
-      margin: margin,
-      child: Stack(
-        children: [
-          Column(
-            children: [
-              // Tab headers with improved design
-              Container(
-                height: 55,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(10),
-                    topRight: Radius.circular(10),
+    final focusHighlightEnabled =
+        context.watch<KeyboardFocusHighlightProvider>().enabled;
+    return Focus(
+      focusNode: _sidebarFocusNode,
+      canRequestFocus: _isSidebarKeyboardActive,
+      skipTraversal: !_isSidebarKeyboardActive,
+      child: BuildBoxShadowContainer(
+        circleRadius: 10,
+        margin: margin,
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                // Tab headers with improved design
+                Container(
+                  height: 55,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(10),
+                      topRight: Radius.circular(10),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 3,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 3,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedSidebarTab = 0;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: _selectedSidebarTab == 0
-                                ? ColorManager.kPrimaryColor
-                                : Colors.transparent,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          child: InkWell(
                             borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'billing.products'.tr,
-                                style: TextStyle(
-                                  color: _selectedSidebarTab == 0
-                                      ? Colors.white
-                                      : Colors.grey.shade700,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                            onFocusChange: (focused) {
+                              setState(() {
+                                _isSidebarProductsTabFocused = focused;
+                              });
+                            },
+                            onTap: () {
+                              setState(() {
+                                _selectedSidebarTab = 0;
+                                _sidebarFocusRequestId++;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: _selectedSidebarTab == 0
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: focusHighlightEnabled &&
+                                          _isSidebarProductsTabFocused
+                                      ? ColorManager.kPrimaryColor
+                                      : Colors.transparent,
+                                  width: focusHighlightEnabled &&
+                                          _isSidebarProductsTabFocused
+                                      ? 3
+                                      : 1,
                                 ),
                               ),
-                            ],
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'billing.products'.tr,
+                                    style: TextStyle(
+                                      color: _selectedSidebarTab == 0
+                                          ? Colors.white
+                                          : Colors.grey.shade700,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedSidebarTab = 1;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: _selectedSidebarTab == 1
-                                ? ColorManager.kPrimaryColor
-                                : Colors.transparent,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          child: InkWell(
                             borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'billing.orders'.tr,
-                                style: TextStyle(
-                                  color: _selectedSidebarTab == 1
-                                      ? Colors.white
-                                      : Colors.grey.shade700,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
+                            onFocusChange: (focused) {
+                              setState(() {
+                                _isSidebarOrdersTabFocused = focused;
+                              });
+                            },
+                            onTap: () {
+                              setState(() {
+                                _selectedSidebarTab = 1;
+                                _sidebarFocusRequestId++;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: _selectedSidebarTab == 1
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: focusHighlightEnabled &&
+                                          _isSidebarOrdersTabFocused
+                                      ? ColorManager.kPrimaryColor
+                                      : Colors.transparent,
+                                  width: focusHighlightEnabled &&
+                                          _isSidebarOrdersTabFocused
+                                      ? 3
+                                      : 1,
                                 ),
                               ),
-                            ],
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'billing.orders'.tr,
+                                    style: TextStyle(
+                                      color: _selectedSidebarTab == 1
+                                          ? Colors.white
+                                          : Colors.grey.shade700,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 50), // Space for toggle button
-                  ],
+                      const SizedBox(width: 50), // Space for toggle button
+                    ],
+                  ),
                 ),
-              ),
 
-              // Tab content
-              Expanded(
-                child: Container(
-                  child: _selectedSidebarTab == 0
-                      ? _buildProductTab()
-                      : _buildOrdersTab(),
+                // Tab content
+                Expanded(
+                  child: Container(
+                    child: _selectedSidebarTab == 0
+                        ? _buildProductTab()
+                        : _buildOrdersTab(),
+                  ),
                 ),
-              ),
 
-              // NEW: Footer (fixed height, visible in both tabs)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: _buildCheckoutFooter(),
-              ),
-            ],
-          ),
-
-          // Toggle button positioned at top-right
-          Positioned(
-            top: 10,
-            right: 8,
-            child: CustomRoundButton(
-              title: "×",
-              fct: () {
-                setState(() {
-                  _isSidebarVisible = !_isSidebarVisible;
-                });
-              },
-              fontSize: 18,
-              height: 35,
-              width: 35,
-              boxColor: ColorManager.kPrimaryColor,
-              borderColor: ColorManager.kPrimaryColor,
-              textColor: Colors.white,
-              radius: 8,
+                // NEW: Footer (fixed height, visible in both tabs)
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: _buildCheckoutFooter(),
+                ),
+              ],
             ),
-          ),
-        ],
+
+            // Toggle button positioned at top-right
+            Positioned(
+              top: 10,
+              right: 8,
+              child: CustomRoundButton(
+                title: "×",
+                fct: () {
+                  setState(() {
+                    _isSidebarVisible = !_isSidebarVisible;
+                  });
+                },
+                fontSize: 18,
+                height: 35,
+                width: 35,
+                boxColor: ColorManager.kPrimaryColor,
+                borderColor: ColorManager.kPrimaryColor,
+                textColor: Colors.white,
+                radius: 8,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1437,7 +1938,11 @@ class BillingPageState extends State<BillingPage>
             _isResyncingProducts;
 
         if (hasProducts) {
-          return const SideBarProductList();
+          return SideBarProductList(
+            autofocus: _isSidebarKeyboardActive && _selectedSidebarTab == 0,
+            focusRequestId: _sidebarFocusRequestId,
+            categorySectionInitiallyExpanded: false,
+          );
         }
 
         if (isLoading) {
@@ -1607,52 +2112,33 @@ class BillingPageState extends State<BillingPage>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: HorizontalSavedOrdersView(
+              autofocus: _isSidebarKeyboardActive && _selectedSidebarTab == 1,
+              focusRequestId: _sidebarFocusRequestId,
+              isBusy: _isOrderActionBusy,
+              onNewOrderPressed: _createNewOrder,
               onOrderSelected: (orderId) {
-                // Get the local provider
+                if (_isOrderActionBusy) {
+                  return;
+                }
+
                 final localProductProvider =
                     Provider.of<LocalProductProvider>(context, listen: false);
 
-                // If we're editing an order and there are items in the cart, update that order
-                if (localProductProvider.currentOrder != null &&
+                final isSwitchingOrder =
+                    localProductProvider.currentOrder?.id != orderId;
+                if (isSwitchingOrder &&
                     localProductProvider.cartItems.isNotEmpty) {
                   try {
-                    // Update the current order being edited
-                    localProductProvider.updateSavedOrder(
-                      localProductProvider.currentOrder!.id,
-                      customerName: selectedCustomer?.name,
-                      customerPhone: selectedCustomerPhone ?? mobileNumberText,
-                      comment: _commentController.text,
-                      deliveryMethod: deliveryMethod,
-                      context: context,
-                      deliveryDate: deliveryDate, // Pass deliveryDate
-                      deliveryTime: deliveryTime, // Pass deliveryTime
-                    );
-
-                    // Show quick feedback
-                    showScaffold(
-                      context: context,
-                      message: "billing.order_updated".tr,
-                    );
-                  } catch (e) {
-                    debugPrint("Error updating current order: $e");
-                  }
-                } // If cart has items, save as new order
-                else if (localProductProvider.cartItems.isNotEmpty) {
-                  try {
-                    localProductProvider.saveCurrentCartAsOrder(
-                      deliveryDate: deliveryDate, // Pass deliveryDate
-                      deliveryTime: deliveryTime, // Pass deliveryTime
-                    );
+                    _saveCurrentCartAsDraft(localProductProvider);
                     showScaffold(
                       context: context,
                       message: "billing.order_saved".tr,
                     );
                   } catch (e) {
-                    // Swallow exception if cart is empty
+                    debugPrint("Error preserving current order: $e");
                   }
                 }
 
-                // Now load the selected order
                 _loadSavedOrderForEditing(orderId);
               },
             ),
@@ -1681,7 +2167,10 @@ class BillingPageState extends State<BillingPage>
           flex: 1,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: const HorizontalProductViewLocal(),
+            child: HorizontalProductViewLocal(
+              autofocus: _isSidebarKeyboardActive && _selectedSidebarTab == 1,
+              focusRequestId: _sidebarFocusRequestId,
+            ),
           ),
         ),
       ],
@@ -1691,110 +2180,280 @@ class BillingPageState extends State<BillingPage>
   Widget _buildHeader() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: true);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: true);
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: true).appSettings;
     final bool isEditingOrder = localProductProvider.currentOrder != null;
+    final currentOrder = localProductProvider.currentOrder;
+    final String compactOrderNumber = currentOrder?.orderNumber
+            .replaceFirst(RegExp(r'^ORD-', caseSensitive: false), '')
+            .replaceFirst(RegExp(r'^0+'), '') ??
+        '';
+    final selectedHeaderCustomer =
+        customerSelectionProvider.selectedCustomer ?? selectedCustomer;
+    final fallbackCustomerName = selectedHeaderCustomer?.name ??
+        currentOrder?.customerName ??
+        currentOrder?.customerPhone;
+    final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
+    final bool showHeaderCustomerBalance = selectedHeaderCustomer != null &&
+        !customerSelectionProvider.isDefaultCustomer &&
+        !_isDefaultCustomerPhone(selectedHeaderCustomer.phone);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Text(
-              isEditingOrder
-                  ? '${'billing.edit_order'.tr} - '
-                  : '${'billing.new_order'.tr} - ',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                  0.30, ColorManager.textColor),
-            ),
-            Text(
-              isEditingOrder
-                  ? '#${localProductProvider.currentOrder!.orderNumber}'
-                  : '#00000',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s20,
-                  0.30, ColorManager.textColor),
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            // Live Clock
-            const LiveClock(),
-            const SizedBox(width: 12),
-            // Keyboard toggle button
-            IconButton(
-              icon: Icon(
-                Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                    ? Icons.keyboard_hide
-                    : Icons.keyboard,
-                color:
-                    Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                        ? ColorManager.kPrimaryColor
-                        : Colors.grey.shade600,
-              ),
-              tooltip:
-                  Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                      ? 'billing.keyboard_hide'.tr
-                      : 'billing.keyboard_show'.tr,
-              onPressed: () {
-                final keyboardProvider =
-                    Provider.of<KeyboardProvider>(context, listen: false);
-                if (keyboardProvider.showKeyboardFeature) {
-                  keyboardProvider.featureOff();
-                  keyboardProvider.clear();
-                } else {
-                  keyboardProvider.featureOn(); // or set type as needed
-                }
-              },
-            ),
-            // Font size toggle button
-            Consumer<AppFontProvider>(
-              builder: (context, fontProvider, child) {
-                return IconButton(
-                  icon: Icon(
-                    Icons.text_fields,
-                    color: fontProvider.fontSizeLevel > 0
-                        ? ColorManager.kPrimaryColor
-                        : Colors.grey.shade600,
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isEditingOrder ? '${'Edit'.tr} - ' : 'New'.tr,
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s18, 0.25, ColorManager.textColor),
                   ),
-                  tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
-                  onPressed: () {
-                    fontProvider.cycleFontSize();
-                  },
-                );
-              },
-            ),
-            OpenCashDrawerButton(
-              color: Colors.grey.shade600,
-            ),
-            // Sync button next to keyboard icon
-            const SyncButton(
-              showTooltip: true,
-              showText: false,
-            ),
-            // Connectivity indicator
-            const SizedBox(width: 0),
-            _buildConnectivityIndicator(),
-            // Show toggle button next to order number when sidebar is hidden
-            if (!_isSidebarVisible) ...[
-              const SizedBox(width: 12),
-              CustomRoundButton(
-                title: "☰",
-                fct: () {
-                  setState(() {
-                    _isSidebarVisible = !_isSidebarVisible;
-                  });
-                },
-                fontSize: 16,
-                height: 32,
-                width: 32,
-                boxColor: ColorManager.kPrimaryColor,
-                borderColor: ColorManager.kPrimaryColor,
-                textColor: Colors.white,
-                radius: 8,
+                  if (isEditingOrder)
+                    Text(
+                      '#${compactOrderNumber.isEmpty ? currentOrder!.orderNumber : compactOrderNumber}',
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s18, 0.25, ColorManager.textColor),
+                    ),
+                ],
               ),
+              if (fallbackCustomerName != null &&
+                  fallbackCustomerName.trim().isNotEmpty)
+                _buildHeaderCustomerDetails(
+                  name: fallbackCustomerName,
+                  balance: selectedHeaderCustomer?.balance,
+                  showBalance: showHeaderCustomerBalance,
+                  customerType: showCustomerType
+                      ? selectedHeaderCustomer?.customerType
+                      : null,
+                ),
             ],
-          ],
+          ),
+        ),
+        // Header toolbar icons are intentionally excluded from keyboard
+        // traversal — they have dedicated shortcuts (Ctrl+H, Ctrl+K, Ctrl+D,
+        // Ctrl+S) and don't belong on the main Tab path.
+        ExcludeFocus(
+          excluding: true,
+          child: Row(
+            children: [
+              // Live Clock
+              const LiveClock(),
+              const SizedBox(width: 12),
+              // Keyboard shortcuts help button
+              IconButton(
+                icon: Icon(
+                  Icons.help_outline,
+                  color: Colors.grey.shade600,
+                ),
+                tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+                onPressed: () {
+                  KeyboardShortcutsHelpDialog.show(context);
+                },
+              ),
+              // Keyboard toggle button
+              IconButton(
+                icon: Icon(
+                  Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                      ? Icons.keyboard_hide
+                      : Icons.keyboard,
+                  color:
+                      Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                          ? ColorManager.kPrimaryColor
+                          : Colors.grey.shade600,
+                ),
+                tooltip:
+                    Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                        ? 'billing.keyboard_hide'.tr
+                        : 'billing.keyboard_show'.tr,
+                onPressed: () {
+                  final keyboardProvider =
+                      Provider.of<KeyboardProvider>(context, listen: false);
+                  if (keyboardProvider.showKeyboardFeature) {
+                    keyboardProvider.featureOff();
+                    keyboardProvider.clear();
+                  } else {
+                    keyboardProvider.featureOn(); // or set type as needed
+                  }
+                },
+              ),
+              // Font size toggle button
+              Consumer<AppFontProvider>(
+                builder: (context, fontProvider, child) {
+                  return IconButton(
+                    icon: Icon(
+                      Icons.text_fields,
+                      color: fontProvider.fontSizeLevel > 0
+                          ? ColorManager.kPrimaryColor
+                          : Colors.grey.shade600,
+                    ),
+                    tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+                    onPressed: () {
+                      fontProvider.cycleFontSize();
+                    },
+                  );
+                },
+              ),
+              OpenCashDrawerButton(
+                color: Colors.grey.shade600,
+              ),
+              // Sync button next to keyboard icon
+              const SyncButton(
+                showTooltip: true,
+                showText: false,
+              ),
+              // Connectivity indicator
+              const SizedBox(width: 0),
+              _buildConnectivityIndicator(),
+              // Show toggle button next to order number when sidebar is hidden
+              if (!_isSidebarVisible) ...[
+                const SizedBox(width: 12),
+                CustomRoundButton(
+                  title: "☰",
+                  fct: () {
+                    setState(() {
+                      _isSidebarVisible = !_isSidebarVisible;
+                    });
+                  },
+                  fontSize: 16,
+                  height: 32,
+                  width: 32,
+                  boxColor: ColorManager.kPrimaryColor,
+                  borderColor: ColorManager.kPrimaryColor,
+                  textColor: Colors.white,
+                  radius: 8,
+                ),
+              ],
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHeaderCustomerDetails({
+    required String? name,
+    required double? balance,
+    required bool showBalance,
+    required String? customerType,
+  }) {
+    const int maxCustomerNameChars = 30;
+    final String rawName =
+        (name == null || name.trim().isEmpty) ? 'Customer' : name.trim();
+    final String displayName = rawName.length > maxCustomerNameChars
+        ? '${rawName.substring(0, maxCustomerNameChars)}...'
+        : rawName;
+    final String displayBalance = (balance ?? 0).toStringAsFixed(2);
+    final Color balanceColor = (balance ?? 0) < 0
+        ? Colors.red.shade600
+        : (balance ?? 0) > 0
+            ? Colors.green.shade700
+            : Colors.grey.shade600;
+    final String? displayCustomerType = customerType?.trim().isEmpty == true
+        ? null
+        : customerType?.trim().toUpperCase();
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => _showCheckoutModal(
+          actionMode: CheckoutActionMode.confirm,
+          initialStep: 0,
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: ColorManager.kPrimaryColor.withValues(alpha: 0.18),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                height: 18,
+                width: 18,
+                decoration: BoxDecoration(
+                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  size: 12,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.16,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ),
+              if (showBalance) ...[
+                Container(
+                  height: 14,
+                  width: 1,
+                  margin: const EdgeInsets.symmetric(horizontal: 7),
+                  color: Colors.grey.shade300,
+                ),
+                Text(
+                  'Bal $displayBalance',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.16,
+                    balanceColor,
+                  ),
+                ),
+              ],
+              if (displayCustomerType != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: displayCustomerType == 'B2B'
+                        ? Colors.green.shade100
+                        : ColorManager.kPrimaryColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    displayCustomerType,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s9,
+                      0.12,
+                      displayCustomerType == 'B2B'
+                          ? Colors.green.shade700
+                          : ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1856,25 +2515,29 @@ class BillingPageState extends State<BillingPage>
               child: Row(
                 children: [
                   appSettingsProvider.appSettings!.barcodeSales
-                      ? Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: buildColumnWidgetForTextFields(
-                              autofocus:
-                                  appSettingsProvider.appSettings!.barcodeSales,
-                              controller: barcodeController,
-                              focusNode: _barcodeNode,
-                              readOnly:
-                                  selectedProductNameController.text.isNotEmpty,
-                              onSubmitted: (query) {
-                                if (query != null && query.isNotEmpty) {
-                                  processBarcode(query);
-                                }
-                              },
-                              size: size,
-                              hintText: 'billing.barcode_hint'.tr,
+                      ? FocusTraversalOrder(
+                          order: const NumericFocusOrder(
+                              BillingFocusOrders.barcode),
+                          child: Expanded(
+                            flex: 2,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4.0),
+                              child: buildColumnWidgetForTextFields(
+                                autofocus: appSettingsProvider
+                                    .appSettings!.barcodeSales,
+                                controller: barcodeController,
+                                focusNode: _barcodeNode,
+                                readOnly: selectedProductNameController
+                                    .text.isNotEmpty,
+                                onSubmitted: (query) {
+                                  if (query != null && query.isNotEmpty) {
+                                    processBarcode(query);
+                                  }
+                                },
+                                size: size,
+                                hintText: 'billing.barcode_hint'.tr,
+                              ),
                             ),
                           ),
                         )
@@ -1895,203 +2558,255 @@ class BillingPageState extends State<BillingPage>
                             ),
                           ),
                         )
-                      : Expanded(
-                          flex: 4,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ProductAutocomplete(
-                                autocompleteProductKey: _autocompleteProductKey,
-                                autofocus: !appSettingsProvider
-                                    .appSettings!.barcodeSales,
-                                suppressSystemKeyboardOnAndroid: true,
-                                size: size,
-                                onSelected: (GetProduct selectedProduct,
-                                    Stock? selectedStock) async {
-                                  // Product is already added to cart by ProductCartHelper
-                                  // Clear fields and reset autocomplete for next product
-                                  setState(() {
-                                    _autocompleteProductKey = GlobalKey();
-                                    quantityController.clear();
-                                    barcodeController.clear();
-                                    selectedProductIdController.clear();
-                                    unitPriceController.clear();
-                                    selectedProductNameController.clear();
-                                  });
-                                  // Focus the barcode/search field for next entry
-                                  _focusTextField();
-                                },
-                                productList: productProvider.productList!,
-                              ),
-                            ],
-                          ),
-                        ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: buildColumnWidgetForTextFields(
-                        controller: quantityController,
-                        onchanged: (query) {},
-                        size: size,
-                        hintText: 'billing.quantity_hint'.tr,
-                        focusNode: _quantityFocusNode,
-                        useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
-                        keyboardType: TextInputType.number,
-                        onTap: () {
-                          Provider.of<KeyboardProvider>(context, listen: false)
-                              .show(
-                            'number',
-                            quantityController,
-                            replaceOnFirstInput: true,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: buildColumnWidgetForTextFields(
-                        controller: unitPriceController,
-                        onchanged: (query) {},
-                        size: size,
-                        focusNode: _unitPriceFocusNode,
-                        hintText: 'billing.unit_price_hint'.tr,
-                        useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
-                        keyboardType: TextInputType.number,
-                        onTap: () {
-                          Provider.of<KeyboardProvider>(context, listen: false)
-                              .show(
-                            'number',
-                            unitPriceController,
-                            replaceOnFirstInput: true,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: Center(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CustomRoundButton(
-                              title: "billing.add_item".tr,
-                              boxColor: ColorManager.kButtonGreen,
-                              borderColor: ColorManager.kButtonGreen,
-                              isLoading: isLoadingAddItem,
-                              fct: () async {
-                                setState(() {
-                                  isLoadingAddItem = true; // Start loading
-                                });
-                                try {
-                                  final localProductProvider =
-                                      Provider.of<LocalProductProvider>(context,
-                                          listen: false);
-
-                                  final selectedProduct =
-                                      localProductProvider.selectedProduct;
-
-                                  if (selectedProduct != null) {
-                                    final customPrice = double.tryParse(unitPriceController.text);
-                                    final customQuantity = num.tryParse(quantityController.text);
-
-                                    await ProductCartHelper.handleProductSelection(
-                                      context: context,
-                                      product: selectedProduct,
-                                      quantity: customQuantity,
-                                      customPrice: customPrice != null && customPrice > 0 ? customPrice : null,
-                                    );
-
-                                    // Clear input fields
+                      : FocusTraversalOrder(
+                          order: const NumericFocusOrder(
+                              BillingFocusOrders.searchProduct),
+                          child: Expanded(
+                            flex: 4,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ProductAutocomplete(
+                                  key: _productAutocompleteKey,
+                                  autocompleteProductKey:
+                                      _autocompleteProductKey,
+                                  autofocus: !appSettingsProvider
+                                      .appSettings!.barcodeSales,
+                                  suppressSystemKeyboardOnAndroid: true,
+                                  size: size,
+                                  onSelected: (GetProduct selectedProduct,
+                                      Stock? selectedStock) async {
+                                    // Product is already added to cart by ProductCartHelper
+                                    // Clear fields and reset autocomplete for next product
                                     setState(() {
                                       _autocompleteProductKey = GlobalKey();
                                       quantityController.clear();
                                       barcodeController.clear();
                                       selectedProductIdController.clear();
                                       unitPriceController.clear();
+                                      selectedProductNameController.clear();
                                     });
-                                    _focusTextField();
-                                  } else {
-                                    showScaffoldError(
-                                      context: context,
-                                      message: "billing.no_product_selected".tr,
-                                    );
-                                  }
-                                } catch (e) {
-                                  debugPrint('Error adding item: $e');
-                                  showScaffoldError(
-                                    context: context,
-                                    message: "billing.failed_add_item".tr,
-                                  );
-                                } finally {
-                                  debugPrint('Finally adding item');
-                                  setState(() {
-                                    isLoadingAddItem = false; // End loading
-                                  });
-                                }
-                              },
-                              fontSize: FontSize.s14,
-                              height: size.height * .07,
-                              width: size.width / 3,
+                                    // Focus the barcode/search field for next entry
+                                    _focusSearchProductField();
+                                  },
+                                  productList: productProvider.productList!,
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
+                        ),
+                  ExcludeFocus(
+                    child: Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: buildColumnWidgetForTextFields(
+                          controller: quantityController,
+                          onchanged: (query) {},
+                          size: size,
+                          hintText: 'billing.quantity_hint'.tr,
+                          focusNode: _quantityFocusNode,
+                          useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
+                          keyboardType: TextInputType.number,
+                          onTap: () {
+                            Provider.of<KeyboardProvider>(context,
+                                    listen: false)
+                                .show(
+                              'number',
+                              quantityController,
+                              replaceOnFirstInput: true,
+                            );
+                          },
                         ),
                       ),
                     ),
                   ),
-                  Expanded(
-                    flex: 1,
-                    child: Column(
-                      children: [
-                        BuildBoxShadowContainer(
-                          height: size.height * .07,
-                          width: 50,
-                          circleRadius: 5,
-                          child: InkWell(
-                            onTap: () => {
-                              setState(() {
-                                _autocompleteProductKey = GlobalKey();
-                                quantityController.clear();
-                                barcodeController.clear();
-                                selectedProductIdController.clear();
-                                unitPriceController.clear();
-                              }),
-                              Provider.of<LocalProductProvider>(context,
-                                      listen: false)
-                                  .resetSelectedProduct(),
-                              _focusTextField(),
-                              showScaffold(
-                                context: context,
-                                message: 'billing.product_cleared'.tr,
-                              )
-                            },
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Center(
-                                    child: WebsafeSvg.asset(
-                                      ImageAssets.oderlistCloseIcon,
-                                      width: 27,
-                                      colorFilter: const ColorFilter.mode(
-                                          ColorManager.kButtonRed,
-                                          BlendMode.srcIn),
-                                    ),
+                  ExcludeFocus(
+                    child: Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: buildColumnWidgetForTextFields(
+                          controller: unitPriceController,
+                          onchanged: (query) {},
+                          size: size,
+                          focusNode: _unitPriceFocusNode,
+                          hintText: 'billing.unit_price_hint'.tr,
+                          useSystemKeyboard: !_shouldSuppressSystemKeyboard(),
+                          keyboardType: TextInputType.number,
+                          onTap: () {
+                            Provider.of<KeyboardProvider>(context,
+                                    listen: false)
+                                .show(
+                              'number',
+                              unitPriceController,
+                              replaceOnFirstInput: true,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  ExcludeFocus(
+                    child: Expanded(
+                      flex: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: Center(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CustomRoundButton(
+                                title: "billing.add_item".tr,
+                                boxColor: ColorManager.kButtonGreen,
+                                borderColor: ColorManager.kButtonGreen,
+                                isLoading: isLoadingAddItem,
+                                fct: () async {
+                                  setState(() {
+                                    isLoadingAddItem = true; // Start loading
+                                  });
+                                  try {
+                                    final localProductProvider =
+                                        Provider.of<LocalProductProvider>(
+                                            context,
+                                            listen: false);
+
+                                    final selectedProduct =
+                                        localProductProvider.selectedProduct;
+
+                                    if (selectedProduct != null) {
+                                      final customPrice = double.tryParse(
+                                          unitPriceController.text);
+                                      final customQuantity =
+                                          num.tryParse(quantityController.text);
+
+                                      await ProductCartHelper
+                                          .handleProductSelection(
+                                        context: context,
+                                        product: selectedProduct,
+                                        quantity: customQuantity,
+                                        customPrice: customPrice != null &&
+                                                customPrice > 0
+                                            ? customPrice
+                                            : null,
+                                      );
+
+                                      // Clear input fields
+                                      setState(() {
+                                        _autocompleteProductKey = GlobalKey();
+                                        quantityController.clear();
+                                        barcodeController.clear();
+                                        selectedProductIdController.clear();
+                                        unitPriceController.clear();
+                                      });
+                                      _focusSearchProductField();
+                                    } else {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            "billing.no_product_selected".tr,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    debugPrint('Error adding item: $e');
+                                    showScaffoldError(
+                                      context: context,
+                                      message: "billing.failed_add_item".tr,
+                                    );
+                                  } finally {
+                                    debugPrint('Finally adding item');
+                                    setState(() {
+                                      isLoadingAddItem = false; // End loading
+                                    });
+                                  }
+                                },
+                                fontSize: FontSize.s14,
+                                height: size.height * .07,
+                                width: size.width / 3,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  ExcludeFocus(
+                    child: Expanded(
+                      flex: 1,
+                      child: Column(
+                        children: [
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 120),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: context
+                                            .watch<
+                                                KeyboardFocusHighlightProvider>()
+                                            .enabled &&
+                                        _isClearEntryFocused
+                                    ? ColorManager.kPrimaryColor
+                                    : Colors.transparent,
+                                width: context
+                                            .watch<
+                                                KeyboardFocusHighlightProvider>()
+                                            .enabled &&
+                                        _isClearEntryFocused
+                                    ? 3
+                                    : 1,
+                              ),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: BuildBoxShadowContainer(
+                              height: size.height * .07,
+                              width: 50,
+                              circleRadius: 5,
+                              child: InkWell(
+                                onFocusChange: (focused) {
+                                  setState(() {
+                                    _isClearEntryFocused = focused;
+                                  });
+                                },
+                                onTap: () => {
+                                  setState(() {
+                                    _autocompleteProductKey = GlobalKey();
+                                    quantityController.clear();
+                                    barcodeController.clear();
+                                    selectedProductIdController.clear();
+                                    unitPriceController.clear();
+                                  }),
+                                  Provider.of<LocalProductProvider>(context,
+                                          listen: false)
+                                      .resetSelectedProduct(),
+                                  _focusSearchProductField(),
+                                  showScaffold(
+                                    context: context,
+                                    message: 'billing.product_cleared'.tr,
+                                  )
+                                },
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Center(
+                                        child: WebsafeSvg.asset(
+                                          ImageAssets.oderlistCloseIcon,
+                                          width: 27,
+                                          colorFilter: const ColorFilter.mode(
+                                              ColorManager.kButtonRed,
+                                              BlendMode.srcIn),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -2103,6 +2818,296 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
+  double? _parseSaleUnitRate(SaleUnit saleUnit) {
+    final rate = double.tryParse(saleUnit.conversionRate?.trim() ?? '');
+    if (rate == null || rate <= 0) {
+      return null;
+    }
+    return rate;
+  }
+
+  List<SaleUnit> _validSaleUnitsForCartItem(LocalCartItem item) {
+    final uniqueSaleUnits = <int, SaleUnit>{};
+    for (final saleUnit in item.product.saleUnits ?? const <SaleUnit>[]) {
+      final id = saleUnit.id;
+      if (id == null || _parseSaleUnitRate(saleUnit) == null) {
+        continue;
+      }
+      uniqueSaleUnits[id] = saleUnit;
+    }
+    return uniqueSaleUnits.values.toList();
+  }
+
+  List<_CartUnitMenuOption> _cartUnitOptionsForItem(LocalCartItem item) {
+    final saleUnits = _validSaleUnitsForCartItem(item);
+    final baseUnit = item.product.unit?.trim();
+    final baseLabel = baseUnit == null || baseUnit.isEmpty ? '-' : baseUnit;
+    final options = <_CartUnitMenuOption>[
+      _CartUnitMenuOption(value: 'base', label: baseLabel),
+    ];
+    final normalizedBaseLabel = baseLabel.trim().toLowerCase();
+
+    for (final saleUnit in saleUnits) {
+      final saleUnitId = saleUnit.id;
+      final saleUnitLabel = saleUnit.unitName?.trim().isNotEmpty == true
+          ? saleUnit.unitName!.trim()
+          : saleUnitId?.toString();
+      if (saleUnitId == null || saleUnitLabel == null) {
+        continue;
+      }
+      final isDuplicateBaseUnit =
+          saleUnitLabel.trim().toLowerCase() == normalizedBaseLabel;
+      if (isDuplicateBaseUnit && item.saleUnitId != saleUnitId) {
+        continue;
+      }
+      options.add(
+        _CartUnitMenuOption(
+          value: saleUnitId.toString(),
+          label: saleUnitLabel,
+        ),
+      );
+    }
+    return options;
+  }
+
+  String _selectedCartUnitValue(LocalCartItem item) {
+    return item.saleUnitId == null ? 'base' : item.saleUnitId.toString();
+  }
+
+  void _closeCartUnitMenu({bool refocusCart = true}) {
+    _cartUnitMenuOverlayEntry?.remove();
+    _cartUnitMenuOverlayEntry = null;
+    _cartUnitMenuOptions = const <_CartUnitMenuOption>[];
+    _cartUnitMenuHighlightedIndex = 0;
+    _isCartUnitMenuOpen = false;
+    if (refocusCart && mounted) {
+      _cartTableFocusNode.requestFocus();
+    }
+  }
+
+  void _selectCartUnitOption({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required String value,
+  }) {
+    _closeCartUnitMenu();
+    if (item.product.productId == null) {
+      return;
+    }
+
+    if (value == 'base') {
+      if (item.saleUnitId == null) {
+        return;
+      }
+      localProductProvider.changeCartItemSaleUnit(
+        item.product.productId!,
+        item.selectedStock,
+        stockGroupIds: item.stockGroupIds,
+        currentSaleUnitId: item.saleUnitId,
+      );
+      return;
+    }
+
+    if (value == item.saleUnitId?.toString()) {
+      return;
+    }
+
+    final saleUnits = _validSaleUnitsForCartItem(item);
+    SaleUnit? selectedSaleUnit;
+    for (final saleUnit in saleUnits) {
+      if (saleUnit.id?.toString() == value) {
+        selectedSaleUnit = saleUnit;
+        break;
+      }
+    }
+    final selectedRate =
+        selectedSaleUnit == null ? null : _parseSaleUnitRate(selectedSaleUnit);
+    if (selectedSaleUnit == null || selectedRate == null) {
+      return;
+    }
+
+    localProductProvider.changeCartItemSaleUnit(
+      item.product.productId!,
+      item.selectedStock,
+      stockGroupIds: item.stockGroupIds,
+      currentSaleUnitId: item.saleUnitId,
+      newSaleUnitId: selectedSaleUnit.id,
+      newSaleUnitName: selectedSaleUnit.unitName,
+      newSaleUnitConversionRate: selectedRate,
+    );
+  }
+
+  void _openCartUnitMenu({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required LayerLink layerLink,
+  }) {
+    final options = _cartUnitOptionsForItem(item);
+    if (options.length <= 1 && item.saleUnitId == null) {
+      return;
+    }
+
+    final selectedValue = _selectedCartUnitValue(item);
+    final selectedIndex = options.indexWhere((option) {
+      return option.value == selectedValue;
+    });
+
+    _closeCartUnitMenu(refocusCart: false);
+    _cartUnitMenuOptions = options;
+    _cartUnitMenuHighlightedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    _isCartUnitMenuOpen = true;
+
+    _cartUnitMenuOverlayEntry = OverlayEntry(
+      builder: (context) {
+        return Positioned.fill(
+          child: Stack(
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => _closeCartUnitMenu(),
+              ),
+              CompositedTransformFollower(
+                link: layerLink,
+                showWhenUnlinked: false,
+                offset: const Offset(0, 28),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 84,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.14),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (int index = 0; index < options.length; index++)
+                          InkWell(
+                            onTap: () => _selectCartUnitOption(
+                              item: item,
+                              localProductProvider: localProductProvider,
+                              value: options[index].value,
+                            ),
+                            child: Container(
+                              height: 32,
+                              width: double.infinity,
+                              alignment: Alignment.centerLeft,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: index == _cartUnitMenuHighlightedIndex
+                                    ? ColorManager.kPrimaryColor
+                                        .withOpacity(0.12)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.vertical(
+                                  top: index == 0
+                                      ? const Radius.circular(8)
+                                      : Radius.zero,
+                                  bottom: index == options.length - 1
+                                      ? const Radius.circular(8)
+                                      : Radius.zero,
+                                ),
+                              ),
+                              child: Text(
+                                options[index].label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s12,
+                                  0.15,
+                                  ColorManager.textColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_cartUnitMenuOverlayEntry!);
+    _cartTableFocusNode.requestFocus();
+  }
+
+  Widget _buildCartUnitSelector({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required TextStyle textStyle,
+    required bool shouldAutoOpenFromShortcut,
+  }) {
+    final options = _cartUnitOptionsForItem(item);
+    final canChangeUnit = options.length > 1 || item.saleUnitId != null;
+    if (!canChangeUnit) {
+      return Text(
+        item.displayUnitName,
+        style: textStyle,
+        textAlign: TextAlign.left,
+      );
+    }
+
+    final identityKey = _cartIdentityKey(item);
+    final layerLink =
+        _cartUnitMenuLayerLinks.putIfAbsent(identityKey, LayerLink.new);
+    if (shouldAutoOpenFromShortcut) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _cartUnitMenuOpenRequestKey = null;
+        _openCartUnitMenu(
+          item: item,
+          localProductProvider: localProductProvider,
+          layerLink: layerLink,
+        );
+      });
+    }
+
+    return CompositedTransformTarget(
+      link: layerLink,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          _openCartUnitMenu(
+            item: item,
+            localProductProvider: localProductProvider,
+            layerLink: layerLink,
+          );
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                item.displayUnitName,
+                style: textStyle,
+                textAlign: TextAlign.left,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              size: 14,
+              color: ColorManager.kPrimaryColor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCartItemsTable(Size size) {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
@@ -2110,15 +3115,34 @@ class BillingPageState extends State<BillingPage>
         final appSettingsProvider =
             Provider.of<AppSettingsProvider>(context, listen: true);
         final appSettings = appSettingsProvider.appSettings;
+        final customerSelectionProvider =
+            Provider.of<CustomerSelectionProvider>(context, listen: true);
+        final bool canShowPurchaseHistoryAction =
+            appSettings?.showCustomerLastBuyedPriceList == true &&
+                customerSelectionProvider.hasSelectedCustomer &&
+                !customerSelectionProvider.isDefaultCustomer;
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            return Container(
+            final focusHighlightEnabled =
+                context.watch<KeyboardFocusHighlightProvider>().enabled;
+            final bool isCartTableFocused =
+                focusHighlightEnabled && _cartTableFocusNode.hasFocus;
+            final bool showCartContainerFocusRing =
+                isCartTableFocused && _cartTableFocusedCellIndex == null;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
               width: constraints.maxWidth,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.transparent),
+                border: Border.all(
+                  color: showCartContainerFocusRing
+                      ? Colors.orange
+                      : Colors.transparent,
+                  width: showCartContainerFocusRing ? 3 : 1,
+                ),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Column(
                 children: [
@@ -2131,6 +3155,9 @@ class BillingPageState extends State<BillingPage>
                             flex: 1, alignment: Alignment.center),
                         _buildHeaderCell('billing.table_item_name'.tr,
                             flex: 3, alignment: Alignment.centerLeft),
+                        if (appSettings?.itemCodeEnabled == true)
+                          _buildHeaderCell('Item Code',
+                              flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_unit'.tr,
                             flex: 1, alignment: Alignment.centerLeft),
                         _buildHeaderCell('billing.table_qty'.tr,
@@ -2155,68 +3182,176 @@ class BillingPageState extends State<BillingPage>
                   ),
                   // Scrollable content
                   Expanded(
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
-                          },
-                        ),
-                        child: ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: cartItems.length,
-                          itemBuilder: (context, index) {
-                            final item = cartItems[index];
-                            return Container(
-                              color: index == 0
-                                  ? Colors.green.withOpacity(0.32)
-                                  : (index % 2 == 0
-                                      ? Colors.white
-                                      : Colors.grey.shade50),
-                              child: Row(
-                                children: [
-                                  // Index Number
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          fontProvider.billingTableItemSize,
-                                          0.21,
-                                          ColorManager.textColor,
+                    child: FocusTraversalOrder(
+                      order:
+                          const NumericFocusOrder(BillingFocusOrders.cartTable),
+                      child: Focus(
+                        focusNode: _cartTableFocusNode,
+                        onKeyEvent: (FocusNode node, KeyEvent event) {
+                          return _handleCartTableKey(
+                              event, cartItems, localProductProvider);
+                        },
+                        // Cart cells (qty/price/mrp/tax/delete) remain
+                        // click-focusable, but Tab traversal must NOT descend
+                        // into them — the cart table is a single tab stop and
+                        // arrow keys handle internal navigation.
+                        child: Focus(
+                          descendantsAreTraversable: false,
+                          canRequestFocus: false,
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.grab,
+                            child: ScrollConfiguration(
+                              behavior:
+                                  ScrollConfiguration.of(context).copyWith(
+                                dragDevices: {
+                                  PointerDeviceKind.mouse,
+                                  PointerDeviceKind.touch,
+                                  PointerDeviceKind.stylus,
+                                  PointerDeviceKind.trackpad,
+                                },
+                              ),
+                              child: ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: cartItems.length,
+                                itemBuilder: (context, index) {
+                                  final item = cartItems[index];
+                                  final bool isFocusedRow =
+                                      isCartTableFocused &&
+                                          _cartTableFocusedRowIndex == index;
+                                  return Container(
+                                    color: isFocusedRow
+                                        ? Colors.orange.withOpacity(0.06)
+                                        : index % 2 == 0
+                                            ? Colors.white
+                                            : Colors.grey.shade50,
+                                    child: Row(
+                                      children: [
+                                        // Index Number
+                                        _buildContentCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 2),
+                                            child: Text(
+                                              '${index + 1}',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.regular,
+                                                fontProvider
+                                                    .billingTableItemSize,
+                                                0.21,
+                                                ColorManager.textColor,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.center,
                                         ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.center,
-                                  ),
 
-                                  // Item Name
-                                  _buildContentCell(
-                                    GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () =>
-                                          _showProductDetailsDialog(item),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Expanded(
-                                            child: Padding(
+                                        // Item Name
+                                        _buildContentCell(
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 0,
+                                            child: GestureDetector(
+                                              behavior: HitTestBehavior.opaque,
+                                              onTap: () =>
+                                                  _showProductDetailsDialog(
+                                                      item),
+                                              child: Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.center,
+                                                children: [
+                                                  Expanded(
+                                                    child: Padding(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          vertical: 2),
+                                                      child: Text(
+                                                        item.product
+                                                                .productName ??
+                                                            'general.unknown'
+                                                                .tr,
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .regular,
+                                                          fontProvider
+                                                              .billingTableItemSize,
+                                                          0.21,
+                                                          ColorManager
+                                                              .textColor,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Tooltip(
+                                                    message:
+                                                        'billing.view_details'
+                                                            .tr,
+                                                    waitDuration:
+                                                        const Duration(
+                                                            milliseconds: 400),
+                                                    child: InkWell(
+                                                      onTap: () =>
+                                                          _showProductDetailsDialog(
+                                                              item),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16),
+                                                      child: const Icon(
+                                                        Icons.info_outline,
+                                                        size: 16,
+                                                        color: ColorManager
+                                                            .kPrimaryColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (canShowPurchaseHistoryAction) ...[
+                                                    const SizedBox(width: 6),
+                                                    Tooltip(
+                                                      message:
+                                                          'Customer purchase history',
+                                                      waitDuration:
+                                                          const Duration(
+                                                              milliseconds:
+                                                                  400),
+                                                      child: InkWell(
+                                                        onTap: () =>
+                                                            _showCustomerPurchaseHistoryForCartItem(
+                                                                item),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(16),
+                                                        child: const Icon(
+                                                          Icons.history,
+                                                          size: 16,
+                                                          color: ColorManager
+                                                              .kPrimaryColor,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          flex: 3,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+
+                                        // Item Code
+                                        if (appSettings?.itemCodeEnabled ==
+                                            true)
+                                          _buildContentCell(
+                                            Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                       vertical: 2),
                                               child: Text(
-                                                item.product.productName ??
-                                                    'general.unknown'.tr,
+                                                item.product.itemCode ?? '-',
                                                 style: buildCustomStyle(
                                                   FontWeightManager.regular,
                                                   fontProvider
@@ -2228,228 +3363,270 @@ class BillingPageState extends State<BillingPage>
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
+                                            flex: 1,
+                                            alignment: Alignment.centerLeft,
                                           ),
-                                          const SizedBox(width: 6),
-                                          Tooltip(
-                                            message: 'billing.view_details'.tr,
-                                            waitDuration: const Duration(
-                                                milliseconds: 400),
-                                            child: InkWell(
-                                              onTap: () =>
-                                                  _showProductDetailsDialog(
-                                                      item),
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                              child: const Icon(
-                                                Icons.info_outline,
-                                                size: 16,
-                                                color:
-                                                    ColorManager.kPrimaryColor,
+
+                                        // Unit
+                                        _buildContentCell(
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 1,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: _buildCartUnitSelector(
+                                                item: item,
+                                                localProductProvider:
+                                                    localProductProvider,
+                                                textStyle: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  fontProvider
+                                                      .billingTableItemSize,
+                                                  0.21,
+                                                  ColorManager.textColor,
+                                                ),
+                                                shouldAutoOpenFromShortcut:
+                                                    _cartUnitMenuOpenRequestKey ==
+                                                        _cartIdentityKey(item),
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                    flex: 3,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Unit
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: Text(
-                                        item.product.unit ?? '-',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.regular,
-                                          fontProvider.billingTableItemSize,
-                                          0.21,
-                                          ColorManager.textColor,
+                                          flex: 1,
+                                          alignment: Alignment.centerLeft,
                                         ),
-                                        textAlign: TextAlign.left,
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-                                  // Qty
-                                  _buildContentCell(
-                                    Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: CompactQuantityControlLocal(
-                                          key: ValueKey(
-                                            'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}',
-                                          ),
-                                          productId: item.product.productId!,
-                                          quantity: item.quantity.toDouble(),
-                                          unitPrice: item.price.toString(),
-                                          productUnit: item.product.unit,
-                                          product: item.product,
-                                          cartItem: item,
-                                          selectedStock: item.selectedStock,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 2,
-                                    alignment: Alignment.center,
-                                  ),
-
-                                  // Tax Rate %
-                                  if (appSettings?.showTaxRatePos == true)
-                                    _buildContentCell(
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: SizedBox(
-                                          width: 60,
-                                          child: TaxTextField(
-                                            item: item,
-                                            localProductProvider:
-                                                localProductProvider,
-                                          ),
-                                        ),
-                                      ),
-                                      flex: 1,
-                                      alignment: Alignment.centerLeft,
-                                    ),
-
-                                  // MRP
-                                  if (appSettings?.showMrpPos == true)
-                                    _buildContentCell(
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: SizedBox(
-                                          width: 70,
-                                          child: MrpTextField(
-                                            key: ValueKey(
-                                              'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
-                                            ),
-                                            item: item,
-                                            localProductProvider:
-                                                localProductProvider,
-                                          ),
-                                        ),
-                                      ),
-                                      flex: 1,
-                                      alignment: Alignment.centerLeft,
-                                    ),
-
-                                  // Price
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: PriceTextField(
-                                          key: ValueKey(
-                                            'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}',
-                                          ),
-                                          item: item,
-                                          localProductProvider:
-                                              localProductProvider,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-
-                                  // Tax Amount
-                                  if (appSettings?.showTaxPos == true)
-                                    _buildContentCell(
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: SizedBox(
-                                          width: 60,
-                                          child: Builder(
-                                            builder: (context) {
-                                              // Calculate tax amount: (price * quantity * taxRate) / (100 + taxRate)
-                                              final double itemTotal =
-                                                  (item.price ?? 0.0) *
-                                                      item.quantity;
-                                              final double taxRate =
-                                                  item.taxRate ?? 0.0;
-                                              final double taxAmount =
-                                                  taxRate > 0
-                                                      ? (itemTotal *
-                                                          taxRate /
-                                                          (100 + taxRate))
-                                                      : 0.0;
-                                              return Text(
-                                                AmountHelper.formatAmount(
-                                                    taxAmount),
-                                                style: TextStyle(
-                                                  fontSize: fontProvider
-                                                      .billingTableItemSize,
-                                                  color: Colors.black,
+                                        // Qty
+                                        _buildContentCell(
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 2,
+                                            child: Center(
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 2),
+                                                child:
+                                                    CompactQuantityControlLocal(
+                                                  key: ValueKey(
+                                                    'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
+                                                  ),
+                                                  productId:
+                                                      item.product.productId!,
+                                                  quantity:
+                                                      item.quantity.toDouble(),
+                                                  unitPrice:
+                                                      item.price.toString(),
+                                                  productUnit:
+                                                      item.product.unit,
+                                                  product: item.product,
+                                                  cartItem: item,
+                                                  selectedStock:
+                                                      item.selectedStock,
+                                                  editRequestId:
+                                                      _cartQuantityEditRequestId,
+                                                  editRequestKey:
+                                                      _cartQuantityEditRequestKey,
+                                                  onEditingComplete: () {
+                                                    _cartTableFocusNode
+                                                        .requestFocus();
+                                                  },
+                                                  refreshRequestId:
+                                                      _cartQuantityRefreshRequestId,
+                                                  refreshRequestKey:
+                                                      _cartQuantityRefreshRequestKey,
+                                                  refreshQuantity:
+                                                      _cartQuantityRefreshQuantity,
                                                 ),
-                                                textAlign: TextAlign.left,
-                                              );
-                                            },
+                                              ),
+                                            ),
                                           ),
+                                          flex: 2,
+                                          alignment: Alignment.center,
                                         ),
-                                      ),
-                                      flex: 1,
-                                      alignment: Alignment.centerLeft,
-                                    ),
 
-                                  // Total
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: SizedBox(
-                                        width: 70,
-                                        child: Text(
-                                          AmountHelper.formatAmount(
-                                              (item.price! * item.quantity)),
-                                          style: TextStyle(
-                                              fontSize: fontProvider
-                                                  .billingTableItemSize),
-                                          textAlign: TextAlign.left,
-                                        ),
-                                      ),
-                                    ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
+                                        // Tax Rate %
+                                        if (appSettings?.showTaxRatePos == true)
+                                          _buildContentCell(
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: SizedBox(
+                                                width: 60,
+                                                child: TaxTextField(
+                                                  item: item,
+                                                  localProductProvider:
+                                                      localProductProvider,
+                                                ),
+                                              ),
+                                            ),
+                                            flex: 1,
+                                            alignment: Alignment.centerLeft,
+                                          ),
 
-                                  // Actions
-                                  _buildContentCell(
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 2),
-                                      child: IconButton(
-                                        icon: WebsafeSvg.asset(
-                                          ImageAssets.oderlistCloseIcon,
-                                          width: 15,
+                                        // MRP
+                                        if (appSettings?.showMrpPos == true)
+                                          _buildContentCell(
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: SizedBox(
+                                                width: 70,
+                                                child: MrpTextField(
+                                                  key: ValueKey(
+                                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                  ),
+                                                  item: item,
+                                                  localProductProvider:
+                                                      localProductProvider,
+                                                ),
+                                              ),
+                                            ),
+                                            flex: 1,
+                                            alignment: Alignment.centerLeft,
+                                          ),
+
+                                        // Price
+                                        _buildContentCell(
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 3,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: SizedBox(
+                                                width: 70,
+                                                child: PriceTextField(
+                                                  key: ValueKey(
+                                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                  ),
+                                                  item: item,
+                                                  localProductProvider:
+                                                      localProductProvider,
+                                                  editRequestId:
+                                                      _cartPriceEditRequestId,
+                                                  editRequestKey:
+                                                      _cartPriceEditRequestKey,
+                                                  onEditingComplete: () {
+                                                    _cartTableFocusNode
+                                                        .requestFocus();
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.centerLeft,
                                         ),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        visualDensity: VisualDensity.compact,
-                                        onPressed: () {
-                                          localProductProvider.removeFromCart(
-                                            item.product.productId!,
-                                            item.selectedStock,
-                                            stockGroupIds: item.stockGroupIds,
-                                          );
-                                        },
-                                      ),
+
+                                        // Tax Amount
+                                        if (appSettings?.showTaxPos == true)
+                                          _buildContentCell(
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: SizedBox(
+                                                width: 60,
+                                                child: Builder(
+                                                  builder: (context) {
+                                                    // Calculate tax amount: (price * quantity * taxRate) / (100 + taxRate)
+                                                    final double itemTotal =
+                                                        (item.price ?? 0.0) *
+                                                            item.quantity;
+                                                    final double taxRate =
+                                                        item.taxRate ?? 0.0;
+                                                    final double taxAmount =
+                                                        taxRate > 0
+                                                            ? (itemTotal *
+                                                                taxRate /
+                                                                (100 + taxRate))
+                                                            : 0.0;
+                                                    return Text(
+                                                      AmountHelper.formatAmount(
+                                                          taxAmount),
+                                                      style: TextStyle(
+                                                        fontSize: fontProvider
+                                                            .billingTableItemSize,
+                                                        color: Colors.black,
+                                                      ),
+                                                      textAlign: TextAlign.left,
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                            flex: 1,
+                                            alignment: Alignment.centerLeft,
+                                          ),
+
+                                        // Total
+                                        _buildContentCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 2),
+                                            child: SizedBox(
+                                              width: 70,
+                                              child: Text(
+                                                AmountHelper.formatAmount(
+                                                    (item.price! *
+                                                        item.quantity)),
+                                                style: TextStyle(
+                                                    fontSize: fontProvider
+                                                        .billingTableItemSize),
+                                                textAlign: TextAlign.left,
+                                              ),
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+
+                                        // Actions
+                                        _buildContentCell(
+                                          _buildCartKeyboardCell(
+                                            rowIndex: index,
+                                            cellIndex: 4,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 2),
+                                              child: IconButton(
+                                                icon: WebsafeSvg.asset(
+                                                  ImageAssets.oderlistCloseIcon,
+                                                  width: 15,
+                                                ),
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                                visualDensity:
+                                                    VisualDensity.compact,
+                                                onPressed: () {
+                                                  localProductProvider
+                                                      .removeFromCart(
+                                                    item.product.productId!,
+                                                    item.selectedStock,
+                                                    stockGroupIds:
+                                                        item.stockGroupIds,
+                                                    saleUnitId: item.saleUnitId,
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                          flex: 1,
+                                          alignment: Alignment.centerLeft,
+                                        ),
+                                      ],
                                     ),
-                                    flex: 1,
-                                    alignment: Alignment.centerLeft,
-                                  ),
-                                ],
+                                  );
+                                },
                               ),
-                            );
-                          },
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -2461,6 +3638,320 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+  }
+
+  void _focusCartTable() {
+    debugPrint("⌨️ [BillingPage] Focusing cart table");
+    _closeCartUnitMenu(refocusCart: false);
+    setState(() {
+      _cartTableFocusedRowIndex = 0;
+      _cartTableFocusedCellIndex = 0;
+    });
+    _cartTableFocusNode.requestFocus();
+  }
+
+  void _requestCartFieldEditFromShortcut({required bool? isQuantity}) {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final cartItems = localProductProvider.getCartItems();
+    if (cartItems.isEmpty) return;
+
+    final focusedIndex =
+        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
+    final item = cartItems[focusedIndex];
+
+    setState(() {
+      _cartTableFocusedRowIndex = focusedIndex;
+      if (isQuantity == true) {
+        _cartTableFocusedCellIndex = 2;
+        _cartQuantityEditRequestKey = _cartIdentityKey(item);
+        _cartQuantityEditRequestId++;
+      } else if (isQuantity == false) {
+        _cartTableFocusedCellIndex = 3;
+        _cartPriceEditRequestKey = _cartIdentityKey(item);
+        _cartPriceEditRequestId++;
+      } else {
+        _cartTableFocusedCellIndex = 1;
+        _cartUnitMenuOpenRequestKey = _cartIdentityKey(item);
+      }
+    });
+  }
+
+  KeyEventResult _handleOpenCartUnitMenuKey({
+    required KeyEvent event,
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required int cartLength,
+  }) {
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowUp) {
+      final optionCount = _cartUnitMenuOptions.length;
+      if (optionCount == 0) {
+        _closeCartUnitMenu();
+        return KeyEventResult.handled;
+      }
+      final delta = key == LogicalKeyboardKey.arrowDown ? 1 : -1;
+      _cartUnitMenuHighlightedIndex =
+          (_cartUnitMenuHighlightedIndex + delta + optionCount) % optionCount;
+      _cartUnitMenuOverlayEntry?.markNeedsBuild();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      if (_cartUnitMenuOptions.isEmpty) {
+        _closeCartUnitMenu();
+        return KeyEventResult.handled;
+      }
+      final selectedIndex = _cartUnitMenuHighlightedIndex
+          .clamp(0, _cartUnitMenuOptions.length - 1)
+          .toInt();
+      _selectCartUnitOption(
+        item: item,
+        localProductProvider: localProductProvider,
+        value: _cartUnitMenuOptions[selectedIndex].value,
+      );
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.escape) {
+      _closeCartUnitMenu();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.tab) {
+      _closeCartUnitMenu();
+      return _handleCartTableTabKey(cartLength);
+    }
+
+    return KeyEventResult.handled;
+  }
+
+  KeyEventResult _handleCartTableKey(
+      KeyEvent event,
+      List<LocalCartItem> cartItems,
+      LocalProductProvider localProductProvider) {
+    if (event is! KeyDownEvent || cartItems.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+
+    final focusedIndex =
+        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
+    final item = cartItems[focusedIndex];
+
+    if (_isCartUnitMenuOpen) {
+      return _handleOpenCartUnitMenuKey(
+        event: event,
+        item: item,
+        localProductProvider: localProductProvider,
+        cartLength: cartItems.length,
+      );
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.tab) {
+      return _handleCartTableTabKey(cartItems.length);
+    }
+
+    if (key == LogicalKeyboardKey.arrowDown) {
+      setState(() {
+        if (_cartTableFocusedRowIndex == null) {
+          _cartTableFocusedRowIndex = 0;
+        } else if (_cartTableFocusedRowIndex! < cartItems.length - 1) {
+          _cartTableFocusedRowIndex = _cartTableFocusedRowIndex! + 1;
+        }
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowUp) {
+      setState(() {
+        if (_cartTableFocusedRowIndex == null) {
+          _cartTableFocusedRowIndex = 0;
+        } else if (_cartTableFocusedRowIndex! > 0) {
+          _cartTableFocusedRowIndex = _cartTableFocusedRowIndex! - 1;
+        }
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowRight) {
+      setState(() {
+        _cartTableFocusedCellIndex =
+            ((_cartTableFocusedCellIndex ?? -1) + 1).clamp(0, 4).toInt();
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      setState(() {
+        _cartTableFocusedCellIndex =
+            ((_cartTableFocusedCellIndex ?? 0) - 1).clamp(0, 4).toInt();
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      if (_cartTableFocusedCellIndex == 0) {
+        _showProductDetailsDialog(item);
+      } else if (_cartTableFocusedCellIndex == 1) {
+        final identityKey = _cartIdentityKey(item);
+        final layerLink = _cartUnitMenuLayerLinks[identityKey];
+        if (layerLink != null) {
+          _openCartUnitMenu(
+            item: item,
+            localProductProvider: localProductProvider,
+            layerLink: layerLink,
+          );
+        }
+      } else if (_cartTableFocusedCellIndex == 2) {
+        setState(() {
+          _cartQuantityEditRequestKey = _cartIdentityKey(item);
+          _cartQuantityEditRequestId++;
+        });
+      } else if (_cartTableFocusedCellIndex == 3) {
+        setState(() {
+          _cartPriceEditRequestKey = _cartIdentityKey(item);
+          _cartPriceEditRequestId++;
+        });
+      } else if (_cartTableFocusedCellIndex == 4) {
+        _removeCartItemFromKeyboard(
+            item, localProductProvider, cartItems.length);
+      }
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.delete) {
+      _removeCartItemFromKeyboard(item, localProductProvider, cartItems.length);
+      return KeyEventResult.handled;
+    }
+
+    final character = event.character;
+    final isIncreaseKey = character == '+' ||
+        key == LogicalKeyboardKey.equal ||
+        key == LogicalKeyboardKey.numpadAdd;
+    final isDecreaseKey = character == '-' ||
+        key == LogicalKeyboardKey.minus ||
+        key == LogicalKeyboardKey.numpadSubtract;
+    final isHistoryKey = !HardwareKeyboard.instance.isControlPressed &&
+        (key == LogicalKeyboardKey.keyH || character?.toLowerCase() == 'h');
+
+    if (isIncreaseKey) {
+      unawaited(_adjustCartItemQuantityFromKeyboard(item, 1));
+      return KeyEventResult.handled;
+    }
+
+    if (isDecreaseKey) {
+      unawaited(_adjustCartItemQuantityFromKeyboard(item, -1));
+      return KeyEventResult.handled;
+    }
+
+    if (isHistoryKey) {
+      unawaited(_showCustomerPurchaseHistoryForCartItem(item));
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleCartTableTabKey(int cartLength) {
+    const int lastCellIndex = 4;
+    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final rowIndex = (_cartTableFocusedRowIndex ?? 0).clamp(0, cartLength - 1);
+    final cellIndex = _cartTableFocusedCellIndex;
+
+    if (isShiftPressed) {
+      if (cellIndex == null) {
+        return KeyEventResult.ignored;
+      }
+      setState(() {
+        if (cellIndex > 0) {
+          _cartTableFocusedCellIndex = cellIndex - 1;
+        } else if (rowIndex > 0) {
+          _cartTableFocusedRowIndex = rowIndex - 1;
+          _cartTableFocusedCellIndex = lastCellIndex;
+        } else {
+          _cartTableFocusedCellIndex = null;
+        }
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (cellIndex == null) {
+      setState(() {
+        _cartTableFocusedRowIndex = rowIndex;
+        _cartTableFocusedCellIndex = 0;
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (cellIndex < lastCellIndex) {
+      setState(() {
+        _cartTableFocusedCellIndex = cellIndex + 1;
+      });
+      return KeyEventResult.handled;
+    }
+
+    if (rowIndex < cartLength - 1) {
+      setState(() {
+        _cartTableFocusedRowIndex = rowIndex + 1;
+        _cartTableFocusedCellIndex = 0;
+      });
+      return KeyEventResult.handled;
+    }
+
+    setState(() {
+      _cartTableFocusedCellIndex = null;
+    });
+    return KeyEventResult.ignored;
+  }
+
+  void _removeCartItemFromKeyboard(LocalCartItem item,
+      LocalProductProvider localProductProvider, int previousCartLength) {
+    localProductProvider.removeFromCart(
+      item.product.productId!,
+      item.selectedStock,
+      stockGroupIds: item.stockGroupIds,
+      saleUnitId: item.saleUnitId,
+    );
+    setState(() {
+      if (previousCartLength <= 1) {
+        _cartTableFocusedRowIndex = null;
+      } else {
+        _cartTableFocusedRowIndex = (_cartTableFocusedRowIndex ?? 0)
+            .clamp(0, previousCartLength - 2)
+            .toInt();
+      }
+    });
+  }
+
+  Future<void> _adjustCartItemQuantityFromKeyboard(
+      LocalCartItem item, num delta) async {
+    final productId = item.product.productId;
+    if (productId == null) return;
+
+    final nextQuantity = item.quantity + delta;
+    debugPrint(
+      '🧮 [BillingPage] keyboard quantity adjust '
+      'productId=$productId, current=${item.quantity}, '
+      'delta=$delta, next=$nextQuantity',
+    );
+    final result = await CartQuantityStockHelper.syncCartItemQuantity(
+      context: context,
+      cartItem: item,
+      newQuantity: nextQuantity,
+    );
+    debugPrint(
+      '🧮 [BillingPage] keyboard quantity applied '
+      'productId=$productId, applied=${result.appliedQuantity}, '
+      'changed=${result.changed}, itemNow=${item.quantity}',
+    );
+    if (!mounted) return;
+    setState(() {
+      _cartQuantityRefreshRequestKey = _cartIdentityKey(item);
+      _cartQuantityRefreshQuantity = result.appliedQuantity;
+      _cartQuantityRefreshRequestId++;
+    });
   }
 
   Widget _buildHeaderCell(String text,
@@ -2498,6 +3989,37 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
+  Widget _buildCartKeyboardCell({
+    required int rowIndex,
+    required int cellIndex,
+    required Widget child,
+  }) {
+    final focusHighlightEnabled =
+        context.watch<KeyboardFocusHighlightProvider>().enabled;
+    final isFocused = focusHighlightEnabled &&
+        _cartTableFocusNode.hasFocus &&
+        _cartTableFocusedRowIndex == rowIndex &&
+        _cartTableFocusedCellIndex == cellIndex;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isFocused ? Colors.orange : Colors.transparent,
+          width: isFocused ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(5),
+        color: isFocused ? Colors.orange.withOpacity(0.10) : Colors.transparent,
+      ),
+      child: child,
+    );
+  }
+
+  String _cartIdentityKey(LocalCartItem item) {
+    final groupKey = item.stockGroupIds.join('_');
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
+  }
+
   // Show product details dialog for the given cart item using reusable widget
   void _showProductDetailsDialog(LocalCartItem item) {
     final appSettingsProvider =
@@ -2519,6 +4041,112 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+  }
+
+  Future<void> _showCustomerPurchaseHistoryForCartItem(
+      LocalCartItem item) async {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    if (appSettingsProvider.appSettings?.showCustomerLastBuyedPriceList !=
+        true) {
+      showScaffoldError(
+        context: context,
+        message: 'Customer purchase history is disabled',
+      );
+      return;
+    }
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    if (customerSelectionProvider.isDefaultCustomer) {
+      showScaffoldError(
+        context: context,
+        message: 'Purchase history is not shown for the default customer',
+      );
+      return;
+    }
+
+    final int? customerId =
+        customerSelectionProvider.selectedCustomerID ?? selectedCustomerID;
+    final String? customerName =
+        customerSelectionProvider.selectedCustomerName ??
+            selectedCustomer?.name;
+    final int? productId = item.product.productId;
+
+    if (customerId == null || productId == null || customerName == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Select a customer to view purchase history',
+      );
+      return;
+    }
+
+    final String? token = Provider.of<AuthModel>(context, listen: false).token;
+    if (token == null || token.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Unable to load purchase history',
+      );
+      return;
+    }
+
+    try {
+      final CustomerPurchaseHistory? purchaseHistory =
+          await CustomerPurchaseProvider().getCustomerLastPurchases(
+        accessToken: token,
+        customerId: customerId,
+        productId: productId,
+      );
+
+      if (!mounted) return;
+
+      if (purchaseHistory == null ||
+          !purchaseHistory.success ||
+          purchaseHistory.data.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'No purchase history found for this product',
+        );
+        return;
+      }
+
+      final result = await showDialog<Map<String, dynamic>?>(
+        context: context,
+        builder: (context) => CustomerPurchaseHistoryModal(
+          product: item.product,
+          purchaseHistory: purchaseHistory.data.take(5).toList(),
+          customerName: customerName,
+        ),
+      );
+
+      if (!mounted || result == null || result['useCurrentPrice'] == true) {
+        return;
+      }
+
+      final rawPrice = result['price'];
+      final double? selectedPrice = rawPrice is num
+          ? rawPrice.toDouble()
+          : double.tryParse(rawPrice?.toString() ?? '');
+      if (selectedPrice == null) {
+        return;
+      }
+
+      Provider.of<LocalProductProvider>(context, listen: false).updateItemPrice(
+        productId,
+        item.selectedStock,
+        selectedPrice,
+        stockGroupIds: item.stockGroupIds,
+        saleUnitId: item.saleUnitId,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load customer purchase history: $error');
+      debugPrint('$stackTrace');
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Unable to load purchase history',
+      );
+    }
   }
 
   Widget _buildPaymentSummary({bool compact = false}) {
@@ -3758,54 +5386,86 @@ class BillingPageState extends State<BillingPage>
   }
 
   Widget _buildActionButtons() {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildActionButton(
-            text: 'billing.clear_cart'.tr,
-            color: ColorManager.kButtonRed,
-            onPressed: _clearCart,
-            isLoading: isLoadingClearCart,
-          ),
-          _buildActionButton(
-            text: 'billing.save_order'.tr,
-            color: ColorManager.kButtonYellow,
-            onPressed: () =>
-                _showCheckoutModal(actionMode: CheckoutActionMode.save),
-            isLoading: isLoadingSaveOrder,
-          ),
-          if (_hasInternet) ...[
-            _buildActionButton(
-              text: 'billing.confirm_and_print'.tr,
-              color: ColorManager.kButtonBlue,
-              onPressed: () =>
-                  _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
-              isLoading: isLoadingCreateOrder,
-            ),
-            if (Provider.of<AppSettingsProvider>(context, listen: false)
-                    .appSettings
-                    ?.showConfirmOrderButton ??
-                true)
-              _buildActionButton(
-                text: 'billing.confirm_order'.tr,
-                color: ColorManager.kButtonGreen,
-                onPressed: () =>
-                    _showCheckoutModal(actionMode: CheckoutActionMode.confirm),
-                isLoading: isLoadingConfirmOrder,
+    final disableActions = _isOrderActionBusy;
+
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(BillingFocusOrders.clearCart),
+              child: _buildActionButton(
+                text: 'billing.clear_cart'.tr,
+                color: ColorManager.kButtonRed,
+                onPressed: _clearCart,
+                isLoading: isLoadingClearCart,
+                isDisabled: disableActions && !isLoadingClearCart,
+                shortcutLabel: 'F1',
               ),
-          ],
-          if (!_hasInternet) ...[
-            _buildActionButton(
-              text: 'billing.save_and_print'.tr,
-              color: ColorManager.kButtonYellow,
-              onPressed: () =>
-                  _showCheckoutModal(actionMode: CheckoutActionMode.save),
-              isLoading: isLoadingSaveOrderAndPrint,
             ),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(BillingFocusOrders.saveOrder),
+              child: _buildActionButton(
+                text: 'billing.save_order'.tr,
+                color: ColorManager.kButtonYellow,
+                onPressed: () =>
+                    _showCheckoutModal(actionMode: CheckoutActionMode.save),
+                isLoading: isLoadingSaveOrder,
+                isDisabled: disableActions && !isLoadingSaveOrder,
+                shortcutLabel: 'F8',
+              ),
+            ),
+            if (_hasInternet) ...[
+              FocusTraversalOrder(
+                order:
+                    const NumericFocusOrder(BillingFocusOrders.confirmAndPrint),
+                child: _buildActionButton(
+                  text: 'billing.confirm_and_print'.tr,
+                  color: ColorManager.kButtonBlue,
+                  onPressed: () => _showCheckoutModal(
+                      actionMode: CheckoutActionMode.confirm),
+                  isLoading: isLoadingCreateOrder,
+                  isDisabled: disableActions && !isLoadingCreateOrder,
+                  shortcutLabel: 'F6',
+                ),
+              ),
+              if (Provider.of<AppSettingsProvider>(context, listen: false)
+                      .appSettings
+                      ?.showConfirmOrderButton ??
+                  true)
+                FocusTraversalOrder(
+                  order:
+                      const NumericFocusOrder(BillingFocusOrders.confirmOrder),
+                  child: _buildActionButton(
+                    text: 'billing.confirm_order'.tr,
+                    color: ColorManager.kButtonGreen,
+                    onPressed: () => _showCheckoutModal(
+                        actionMode: CheckoutActionMode.confirm),
+                    isLoading: isLoadingConfirmOrder,
+                    isDisabled: disableActions && !isLoadingConfirmOrder,
+                    shortcutLabel: 'F2',
+                  ),
+                ),
+            ],
+            if (!_hasInternet) ...[
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(BillingFocusOrders.saveAndPrint),
+                child: _buildActionButton(
+                  text: 'billing.save_and_print'.tr,
+                  color: ColorManager.kButtonYellow,
+                  onPressed: () =>
+                      _showCheckoutModal(actionMode: CheckoutActionMode.save),
+                  isLoading: isLoadingSaveOrderAndPrint,
+                  isDisabled: disableActions && !isLoadingSaveOrderAndPrint,
+                  shortcutLabel: 'F9',
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -3815,35 +5475,68 @@ class BillingPageState extends State<BillingPage>
     required Color color,
     required VoidCallback onPressed,
     required bool isLoading,
+    bool isDisabled = false,
+    String? shortcutLabel,
   }) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: GestureDetector(
-          onTap: isLoading ? null : onPressed,
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10.0),
-              color: color,
-            ),
-            child: Center(
-              child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(10.0),
+          child: InkWell(
+            onTap: (isLoading || isDisabled) ? null : onPressed,
+            borderRadius: BorderRadius.circular(10.0),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10.0),
+                color: isDisabled ? color.withOpacity(0.55) : color,
+              ),
+              child: Center(
+                child: isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            text,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                          if (shortcutLabel != null) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                shortcutLabel,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    )
-                  : Text(
-                      text,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
+              ),
             ),
           ),
         ),
@@ -3851,7 +5544,155 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
-  void _clearCart() {
+  String? _trimToNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _customerNameForOrder() => _trimToNull(selectedCustomer?.name);
+
+  String? _customerPhoneForOrder() {
+    return _trimToNull(selectedCustomerPhone) ??
+        _trimToNull(selectedCustomer?.phone) ??
+        _trimToNull(mobileNumberText) ??
+        _trimToNull(mobileNumberTextController.text);
+  }
+
+  SavedOrder _saveCurrentCartAsDraft(
+      LocalProductProvider localProductProvider) {
+    final paymentData = _getPaymentMethodData();
+    final customerNameToSave = _customerNameForOrder();
+    final customerPhoneToSave = _customerPhoneForOrder();
+    final customerIdToSave = selectedCustomerID ?? selectedCustomer?.id;
+    final couponIdToSave =
+        isCouponApplied ? _trimToNull(coupenCodeTextController.text) : null;
+    final currentOrder = localProductProvider.currentOrder;
+
+    if (currentOrder != null) {
+      localProductProvider.updateSavedOrder(
+        currentOrder.id,
+        customerName: customerNameToSave,
+        customerPhone: customerPhoneToSave,
+        comment: _commentController.text,
+        deliveryMethod: deliveryMethod,
+        customerId: customerIdToSave,
+        paymentMethod: paymentData["paymentMethod"],
+        paidAmount: paymentData["paidAmount"],
+        balanceAmount: _balanceAmount.toString(),
+        transactionId: _transactionNumberController.text,
+        couponId: couponIdToSave,
+        deliveryMethodId: deliveryMethodId,
+        carNumber: _carNumberController.text,
+        deliveryDate: deliveryDate,
+        deliveryTime: deliveryTime,
+        context: context,
+        toCustomerCredit: _toCustomerCreditEnabled,
+        address: deliveryAddress,
+        deliveryCharge: _getDeliveryChargeForOrder(),
+      );
+      return localProductProvider.findOrderById(currentOrder.id) ??
+          currentOrder;
+    }
+
+    return localProductProvider.saveCurrentCartAsOrder(
+      customerName: customerNameToSave,
+      customerPhone: customerPhoneToSave,
+      comment: _commentController.text,
+      deliveryMethod: deliveryMethod,
+      customerId: customerIdToSave,
+      paymentMethod: paymentData["paymentMethod"],
+      paidAmount: paymentData["paidAmount"],
+      balanceAmount: _balanceAmount.toString(),
+      transactionId: _transactionNumberController.text,
+      couponId: couponIdToSave,
+      deliveryMethodId: deliveryMethodId,
+      carNumber: _carNumberController.text,
+      status: "saved",
+      deliveryDate: deliveryDate,
+      deliveryTime: deliveryTime,
+      context: context,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      address: deliveryAddress,
+      deliveryCharge: _getDeliveryChargeForOrder(),
+    );
+  }
+
+  void _resetBillingWorkspaceUi({bool refocus = true}) {
+    if (!mounted) return;
+
+    setState(() {
+      coupenCodeTextController.clear();
+      _transactionNumberController.clear();
+      _paidAmountController.clear();
+      _balanceAmount = 0;
+      _isCashSelected = false;
+      _isCardSelected = false;
+      _isUpiSelected = false;
+      _isDebitSelected = false;
+      _isCodSelected = false;
+      _cashAmountController.clear();
+      _cardAmountController.clear();
+      _upiAmountController.clear();
+      _codAmountController.clear();
+      _debitAmountController.clear();
+      _autocompleteProductKey = GlobalKey();
+      quantityController.clear();
+      barcodeController.clear();
+      selectedProductIdController.clear();
+      unitPriceController.clear();
+      selectedProductNameController.clear();
+      isCouponApplied = false;
+      _hasOpenedPaymentModalOnce = false;
+      _isCustomerManuallySelected = false;
+      _toCustomerCreditEnabled = false;
+      deliveryDate = null;
+      deliveryTime = null;
+      deliveryAddress = null;
+      _selectedDeliveryCharge = null;
+      _commentController.clear();
+      _carNumberController.clear();
+      mobileNumberText = "";
+      selectedCustomerID = null;
+      selectedCustomerPhone = null;
+      selectedCustomer = null;
+      isCustomerFound = false;
+      salesExecutivemobileNumberText = "";
+      mobileNumberTextController.clear();
+      _autocompletePhoneKey = GlobalKey();
+      _lastRehydratedOrderId = null;
+    });
+
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .clearSelectedCustomer();
+    resetAutocomplete(shouldFetchCustomers: false);
+    _applyDefaultCustomerFromCacheIfNeeded();
+    if (refocus) {
+      _focusTextField();
+    }
+  }
+
+  void _clearOrderWorkspace({
+    required LocalProductProvider localProductProvider,
+    required bool preserveStockDeduction,
+    bool providerCartAlreadyCleared = false,
+    bool refocus = true,
+  }) {
+    if (!providerCartAlreadyCleared) {
+      if (preserveStockDeduction) {
+        localProductProvider.clearCartAfterOrder();
+      } else {
+        localProductProvider.clearCart();
+      }
+    }
+    localProductProvider.clearCurrentOrder();
+    _resetBillingWorkspaceUi(refocus: refocus);
+  }
+
+  Future<void> _clearCart() async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
     debugPrint("Clear Cart pressed");
     setState(() {
       isLoadingClearCart = true; // Indicate that loading has started
@@ -3860,62 +5701,14 @@ class BillingPageState extends State<BillingPage>
       // Clear local cart
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-      localProductProvider.clearCart();
-      localProductProvider.clearCurrentOrder();
-
-      // Clear UI state
-      setState(() {
-        coupenCodeTextController.clear();
-        _transactionNumberController.clear();
-        _paidAmountController.clear();
-        _balanceAmount = 0;
-        // Reset all payment methods to none
-        _isCashSelected = false;
-        _isCardSelected = false;
-        _isUpiSelected = false;
-        _isDebitSelected = false;
-        _isCodSelected = false;
-        _cashAmountController.clear();
-        _cardAmountController.clear();
-        _upiAmountController.clear();
-        _codAmountController.clear();
-        _debitAmountController.clear();
-        _autocompleteProductKey = GlobalKey();
-        quantityController.clear();
-        barcodeController.clear();
-        selectedProductIdController.clear();
-        unitPriceController.clear();
-        isCouponApplied = false;
-        _hasOpenedPaymentModalOnce = false;
-        _isCustomerManuallySelected = false;
-        _toCustomerCreditEnabled = false;
-        // Clear delivery date and time
-        deliveryDate = null;
-        deliveryTime = null;
-        deliveryAddress = null;
-        _selectedDeliveryCharge = null;
-        // Clear delivery comment and car number
-        _commentController.clear();
-        _carNumberController.clear();
-
-        // Clear customer-related state completely
-        mobileNumberText = "";
-        selectedCustomerID = null;
-        selectedCustomerPhone = null;
-        selectedCustomer = null;
-        isCustomerFound = false;
-        salesExecutivemobileNumberText = "";
-        mobileNumberTextController.clear();
-        _autocompletePhoneKey = GlobalKey();
-      });
+      _clearOrderWorkspace(
+        localProductProvider: localProductProvider,
+        preserveStockDeduction: false,
+      );
       showScaffold(
         context: context,
         message: "billing.cart_cleared".tr,
       );
-      resetAutocomplete(
-          shouldFetchCustomers:
-              false); // Don't reset customer selection when clearing cart
-      _focusTextField();
     } catch (e) {
       debugPrint("Error clearing cart: $e");
       // showScaffold(
@@ -3930,27 +5723,30 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingClearCart = false;
       });
+      _endOrderAction();
     }
   }
 
   Future<void> _saveOrder() async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
     setState(() {
       isLoadingSaveOrder = true; // Indicate that loading has started
     });
     debugPrint("Save Order pressed");
     try {
-      if (Provider.of<LocalProductProvider>(context, listen: false)
-          .cartItems
-          .isEmpty) {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
           message: "billing.add_items_to_cart".tr,
         );
         return;
       }
-
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
 
       // Debug: Log current cart items with custom pricing
       debugPrint("💾 LOCAL SAVE - Cart items with custom pricing:");
@@ -3974,115 +5770,16 @@ class BillingPageState extends State<BillingPage>
       //   return;
       // }
 
-      // Check if we're editing an existing order
-      SavedOrder? currentOrder = localProductProvider.currentOrder;
+      _saveCurrentCartAsDraft(localProductProvider);
+      _clearOrderWorkspace(
+        localProductProvider: localProductProvider,
+        preserveStockDeduction: false,
+      );
 
-      if (currentOrder != null) {
-        // Update existing order
-        debugPrint("💾 Updating existing order: ${currentOrder.orderNumber}");
-
-        // Get payment method and data using multi-payment system
-        Map<String, String> paymentData = _getPaymentMethodData();
-        String paymentMethod = paymentData["paymentMethod"]!;
-        String paidAmount = paymentData["paidAmount"]!;
-
-        // Debug customer info being saved
-        debugPrint("📝 UPDATING ORDER - Customer info:");
-        debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
-        debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
-        debugPrint("  - mobileNumberText: '$mobileNumberText' 🔍");
-        debugPrint("  - selectedCustomerID: $selectedCustomerID");
-        debugPrint(
-            "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-
-        // **FIX**: Properly determine customer info for phone-only orders
-        String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
-
-        localProductProvider.updateSavedOrder(
-          currentOrder.id,
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          // Include all API-compatible fields
-          customerId: selectedCustomerID,
-          paymentMethod: paymentMethod,
-          paidAmount: paidAmount,
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "saved",
-          deliveryDate: deliveryDate, // Pass deliveryDate
-          deliveryTime: deliveryTime, // Pass deliveryTime
-          toCustomerCredit: _toCustomerCreditEnabled,
-          context: context,
-          // context: context, // Pass context
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-        );
-
-        showScaffold(
-          context: context,
-          message: "billing.order_updated_success".tr,
-        );
-        // Centralized clear
-        _clearCart();
-      } else {
-        // Save as new order
-        debugPrint("💾 Saving as new order");
-
-        // Debug customer info being saved
-        debugPrint("📝 SAVING NEW ORDER - Customer info:");
-        debugPrint("  - selectedCustomer?.name: '${selectedCustomer?.name}'");
-        debugPrint("  - selectedCustomerPhone: '$selectedCustomerPhone'");
-        debugPrint("  - mobileNumberText: '$mobileNumberText' 🔍");
-        debugPrint("  - selectedCustomerID: $selectedCustomerID");
-        debugPrint(
-            "  - mobileNumberTextController.text: '${mobileNumberTextController.text}'");
-
-        // **FIX**: Properly determine customer info for phone-only orders
-        String? customerNameToSave = selectedCustomer?.name;
-        String? customerPhoneToSave = selectedCustomerPhone ?? mobileNumberText;
-
-        // Determine payment method and data
-        Map<String, String> paymentData = _getPaymentMethodData();
-        String paymentMethod = paymentData["paymentMethod"]!;
-        String paidAmount = paymentData["paidAmount"]!;
-
-        localProductProvider.saveCurrentCartAsOrder(
-          customerName: customerNameToSave,
-          customerPhone: customerPhoneToSave,
-          comment: _commentController.text,
-          deliveryMethod: deliveryMethod,
-          // Include all API-compatible fields
-          customerId: selectedCustomerID,
-          paymentMethod: paymentMethod,
-          paidAmount: paidAmount,
-          balanceAmount: _balanceAmount.toString(),
-          transactionId: _transactionNumberController.text,
-          couponId: isCouponApplied ? coupenCodeTextController.text : null,
-          deliveryMethodId: deliveryMethodId,
-          carNumber: _carNumberController.text,
-          status: "saved",
-          deliveryDate: deliveryDate,
-          deliveryTime: deliveryTime,
-          context: context, // Pass context
-          toCustomerCredit: _toCustomerCreditEnabled,
-          address: deliveryAddress,
-          deliveryCharge: _getDeliveryChargeForOrder(),
-        );
-
-        showScaffold(
-          context: context,
-          message: "billing.order_saved_success".tr,
-        );
-        resetAutocomplete(shouldFetchCustomers: false);
-        // Centralized clear
-        _clearCart();
-      }
+      showScaffold(
+        context: context,
+        message: "billing.order_saved_success".tr,
+      );
     } catch (e) {
       debugPrint("Error saving order: $e");
       showScaffoldError(
@@ -4093,10 +5790,15 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingSaveOrder = false;
       });
+      _endOrderAction();
     }
   }
 
   Future<void> _saveOrderAndPrint() async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
     setState(() {
       isLoadingSaveOrderAndPrint = true; // Indicate that loading has started
     });
@@ -4112,8 +5814,11 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Check if customer is selected
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      // Check if customer is selected (consider pre-filled default text)
+      final hasCustomer = selectedCustomerID != null ||
+          (mobileNumberText?.isNotEmpty == true) ||
+          (salesExecutivemobileNumberText?.isNotEmpty == true);
+      if (!hasCustomer) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -4187,7 +5892,6 @@ class BillingPageState extends State<BillingPage>
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
           carNumber: _carNumberController.text,
-          status: "saved",
           deliveryDate: deliveryDate,
           deliveryTime: deliveryTime,
           toCustomerCredit: _toCustomerCreditEnabled,
@@ -4261,15 +5965,16 @@ class BillingPageState extends State<BillingPage>
       }
 
       try {
-        if (orderToUse != null) {
-          await printFromSavedOrder(orderToUse);
-        }
+        await printFromSavedOrder(orderToUse);
       } catch (error) {
         debugPrint("Error printing saved order: ${error.toString()}");
       }
 
       resetAutocomplete(shouldFetchCustomers: false);
-      _clearCart();
+      _clearOrderWorkspace(
+        localProductProvider: localProductProvider,
+        preserveStockDeduction: true,
+      );
     } catch (error) {
       debugPrint(error.toString());
       showScaffoldError(
@@ -4280,11 +5985,103 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingSaveOrderAndPrint = false;
       });
+      _endOrderAction();
+    }
+  }
+
+  Future<void> _createNewOrder() async {
+    debugPrint(
+        "⌨️ [BillingPage] _createNewOrder started | ${_focusDebugSummary()}");
+    if (!_beginOrderAction()) {
+      debugPrint(
+          "⌨️ [BillingPage] _createNewOrder ignored because another action is in progress");
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        isLoadingCreateNewOrder = true;
+      });
+    }
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      if (localProductProvider.cartItems.isNotEmpty) {
+        _saveCurrentCartAsDraft(localProductProvider);
+      }
+
+      _clearOrderWorkspace(
+        localProductProvider: localProductProvider,
+        preserveStockDeduction: false,
+      );
+
+      showScaffold(
+        context: context,
+        message: "common.create_new_order".tr,
+      );
+    } catch (error) {
+      debugPrint(
+          "⌨️ [BillingPage] Error creating new order: $error | ${_focusDebugSummary()}");
+      debugPrint("Error creating new order: $error");
+      showScaffoldError(
+        context: context,
+        message: "billing.failed_save_order".tr,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingCreateNewOrder = false;
+        });
+      }
+      _endOrderAction();
+      _restoreShortcutFocus('create new order');
+      debugPrint(
+          "⌨️ [BillingPage] _createNewOrder finished | ${_focusDebugSummary()}");
     }
   }
 
   // Function to load a saved order for editing
   void _loadSavedOrderForEditing(String orderId) async {
+    if (!_beginOrderAction()) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        isLoadingRestoreSavedOrder = true;
+      });
+    }
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      localProductProvider.loadOrderForEditing(orderId);
+      _rehydrateFromProvider();
+
+      showScaffold(
+        context: context,
+        message: "billing.order_loaded_editing".tr,
+      );
+
+      unawaited(_refreshPaymentMethodIdsThenRehydrate(orderId));
+    } catch (error) {
+      debugPrint("Error loading order: $error");
+      showScaffoldError(
+          context: context, message: "billing.failed_load_order".tr);
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingRestoreSavedOrder = false;
+        });
+      }
+      _endOrderAction();
+    }
+  }
+
+  Future<void> _refreshPaymentMethodIdsThenRehydrate(String orderId) async {
     try {
       final masterDataProvider =
           Provider.of<MasterDataProvider>(context, listen: false);
@@ -4292,46 +6089,38 @@ class BillingPageState extends State<BillingPage>
           Provider.of<BillingProvider>(context, listen: false);
 
       final methods = await masterDataProvider.fetchPaymentMethods();
-      if (methods != null && mounted) {
-        String? cashId, cardId, upiId, codId;
-        for (var m in methods) {
-          final val = m.value.toUpperCase();
-          if (val == 'CASH') {
-            cashId = m.id.toString();
-          } else if (val == 'CARD') {
-            cardId = m.id.toString();
-          } else if (val == 'UPI') {
-            upiId = m.id.toString();
-          } else if (val == 'COD') {
-            codId = m.id.toString();
-          }
-        }
-
-        billingProvider.updatePaymentMethodIds(
-          cashId: cashId,
-          cardId: cardId,
-          upiId: upiId,
-          codId: codId,
-        );
+      if (methods == null || !mounted) {
+        return;
       }
+
+      String? cashId, cardId, upiId, codId;
+      for (var method in methods) {
+        final value = method.value.toUpperCase();
+        if (value == 'CASH') {
+          cashId = method.id.toString();
+        } else if (value == 'CARD') {
+          cardId = method.id.toString();
+        } else if (value == 'UPI') {
+          upiId = method.id.toString();
+        } else if (value == 'COD') {
+          codId = method.id.toString();
+        }
+      }
+
+      billingProvider.updatePaymentMethodIds(
+        cashId: cashId,
+        cardId: cardId,
+        upiId: upiId,
+        codId: codId,
+      );
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
-
-      // Load the order into the provider's state
-      localProductProvider.loadOrderForEditing(orderId);
-
-      // Rehydrate the entire UI from the newly loaded order
-      _rehydrateFromProvider();
-
-      showScaffold(
-        context: context,
-        message: "billing.order_loaded_editing".tr,
-      );
+      if (localProductProvider.currentOrder?.id == orderId) {
+        _rehydrateFromProvider();
+      }
     } catch (error) {
-      debugPrint("Error loading order: $error");
-      showScaffoldError(
-          context: context, message: "billing.failed_load_order".tr);
+      debugPrint("Error refreshing payment methods for saved order: $error");
     }
   }
 
@@ -4353,11 +6142,18 @@ class BillingPageState extends State<BillingPage>
       return;
     }
 
+    if (!_beginOrderAction()) {
+      return;
+    }
+
     setState(() {
       isLoadingCreateOrder = true;
     });
     try {
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      final hasCustomer = selectedCustomerID != null ||
+          (mobileNumberText?.isNotEmpty == true) ||
+          (salesExecutivemobileNumberText?.isNotEmpty == true);
+      if (!hasCustomer) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -4624,10 +6420,9 @@ class BillingPageState extends State<BillingPage>
           // Clear the mobile number after successful save
           setState(() {
             mobileNumberText = ""; // Clear the variable
+            salesExecutivemobileNumberText = ""; // Clear default phone display
             selectedCustomerID = null;
             selectedCustomerPhone = null;
-            // Remove iconColor reset
-            // iconColor = 1; // DELETE THIS LINE
             mobileNumberTextController.clear();
             quantityController.clear();
             barcodeController.clear();
@@ -4645,13 +6440,32 @@ class BillingPageState extends State<BillingPage>
             deliveryDate = null;
             deliveryTime = null;
             deliveryAddress = null;
+            _isCustomerManuallySelected = false;
+            _hasOpenedPaymentModalOnce = false;
+            _toCustomerCreditEnabled = false;
+            _isCashSelected = false;
+            _isCardSelected = false;
+            _isUpiSelected = false;
+            _isCodSelected = false;
+            _isDebitSelected = false;
+            _cashAmountController.clear();
+            _cardAmountController.clear();
+            _upiAmountController.clear();
+            _codAmountController.clear();
+            _debitAmountController.clear();
+            _autocompletePhoneKey = GlobalKey();
           });
+          Provider.of<CustomerSelectionProvider>(context, listen: false)
+              .clearSelectedCustomer();
           resetAutocomplete(
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
 
-          _clearCart();
-          _focusTextField();
+          _clearOrderWorkspace(
+            localProductProvider: localProductProvider,
+            preserveStockDeduction: true,
+            providerCartAlreadyCleared: true,
+          );
         } else {
           debugPrint("❌ API ERROR - Create Order and Print failed");
           showScaffoldError(
@@ -4668,6 +6482,7 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingCreateOrder = false; // Indicate that loading has finished
       });
+      _endOrderAction();
       debugPrint("🏁 Create Order and Print process completed");
     }
   }
@@ -4690,11 +6505,18 @@ class BillingPageState extends State<BillingPage>
       return;
     }
 
+    if (!_beginOrderAction()) {
+      return;
+    }
+
     setState(() {
       isLoadingConfirmOrder = true;
     });
     try {
-      if (selectedCustomerID == null && mobileNumberText == "") {
+      final hasCustomer = selectedCustomerID != null ||
+          (mobileNumberText?.isNotEmpty == true) ||
+          (salesExecutivemobileNumberText?.isNotEmpty == true);
+      if (!hasCustomer) {
         showScaffoldError(
           context: context,
           message: "billing.select_customer".tr,
@@ -4818,7 +6640,7 @@ class BillingPageState extends State<BillingPage>
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
       )
-          .then((response) {
+          .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
         if (response["order_id"] != null) {
           showScaffold(
@@ -4839,10 +6661,9 @@ class BillingPageState extends State<BillingPage>
           // Clear the mobile number after successful save
           setState(() {
             mobileNumberText = ""; // Clear the variable
+            salesExecutivemobileNumberText = ""; // Clear default phone display
             selectedCustomerID = null;
             selectedCustomerPhone = null;
-            // Remove iconColor reset
-            // iconColor = 1; // DELETE THIS LINE
             mobileNumberTextController.clear();
             quantityController.clear();
             barcodeController.clear();
@@ -4860,7 +6681,23 @@ class BillingPageState extends State<BillingPage>
             deliveryDate = null;
             deliveryTime = null;
             deliveryAddress = null;
+            _isCustomerManuallySelected = false;
+            _hasOpenedPaymentModalOnce = false;
+            _toCustomerCreditEnabled = false;
+            _isCashSelected = false;
+            _isCardSelected = false;
+            _isUpiSelected = false;
+            _isCodSelected = false;
+            _isDebitSelected = false;
+            _cashAmountController.clear();
+            _cardAmountController.clear();
+            _upiAmountController.clear();
+            _codAmountController.clear();
+            _debitAmountController.clear();
+            _autocompletePhoneKey = GlobalKey();
           });
+          Provider.of<CustomerSelectionProvider>(context, listen: false)
+              .clearSelectedCustomer();
           resetAutocomplete(
               shouldFetchCustomers:
                   false); // Preserve customer selection after confirming
@@ -4882,6 +6719,7 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         isLoadingConfirmOrder = false; // Indicate that loading has finished
       });
+      _endOrderAction();
       debugPrint("🏁 Confirm Order process completed");
     }
   }
@@ -5018,13 +6856,27 @@ class BillingPageState extends State<BillingPage>
 
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
   /// This is called when clicking Confirm Order or Confirm & Print buttons
-  void _showCheckoutModal(
-      {CheckoutActionMode actionMode = CheckoutActionMode.confirm}) async {
+  void _showCheckoutModal({
+    CheckoutActionMode actionMode = CheckoutActionMode.confirm,
+    int? initialStep,
+  }) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
+    bool checkoutActionTriggered = false;
+    debugPrint(
+        "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
+    if (_isOrderActionBusy) {
+      debugPrint(
+          "⌨️ [BillingPage] _showCheckoutModal ignored because order action is busy");
+      return;
+    }
 
+    debugPrint(
+        "⌨️ [BillingPage] Releasing focus before checkout modal | ${_focusDebugSummary()}");
     // Release global shortcut focus so modal text fields receive keyboard input reliably.
     _focusNode.unfocus();
     FocusManager.instance.primaryFocus?.unfocus();
+    debugPrint(
+        "⌨️ [BillingPage] Focus released before checkout modal | ${_focusDebugSummary()}");
 
     // Ensure default customer is resolved from cached list before opening checkout.
     _hydrateCustomerListFromProviderCache();
@@ -5033,8 +6885,7 @@ class BillingPageState extends State<BillingPage>
     // Reload payment methods
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
-    final methods =
-        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
+    final methods = await masterDataProvider.fetchPaymentMethods();
 
     if (methods != null && mounted) {
       final billingProvider =
@@ -5101,11 +6952,14 @@ class BillingPageState extends State<BillingPage>
     // Check if delivery should be enabled (if methods exist)
     bool deliveryEnabled = deliveryMethodsProvider.deliveryMethods.isNotEmpty;
 
-    showDialog(
+    debugPrint(
+        "⌨️ [BillingPage] Opening checkout modal | mode=$actionMode | ${_focusDebugSummary()}");
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
         return CheckoutModal(
+          initialStep: initialStep,
           cartTotal: localProductProvider.priceSummary?.subTotal ??
               localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
@@ -5337,6 +7191,7 @@ class BillingPageState extends State<BillingPage>
             _updateBalanceAmount();
           },
           onConfirmOrder: () async {
+            checkoutActionTriggered = true;
             setState(() {
               if (isSaveMode) {
                 isLoadingSaveOrder = true;
@@ -5354,6 +7209,7 @@ class BillingPageState extends State<BillingPage>
             }
           },
           onConfirmAndPrint: () async {
+            checkoutActionTriggered = true;
             setState(() {
               if (isSaveMode) {
                 isLoadingSaveOrderAndPrint = true;
@@ -5373,6 +7229,18 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+    if (mounted && !checkoutActionTriggered) {
+      setState(() {
+        // Modal was dismissed (Esc/close) without triggering checkout action.
+        isLoadingSaveOrder = false;
+        isLoadingConfirmOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+        isLoadingCreateOrder = false;
+      });
+    }
+    debugPrint(
+        "⌨️ [BillingPage] Checkout modal closed | mode=$actionMode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
+    _restoreShortcutFocus('checkout modal closed');
   }
 
   // Multi-payment helper methods
@@ -5640,31 +7508,28 @@ class BillingPageState extends State<BillingPage>
   }
 
   List<Map<String, dynamic>> _getPaidMethods() {
-    List<Map<String, dynamic>> paidMethods = [];
+    final paidMethods = <Map<String, dynamic>>[];
 
     // Get payment method IDs from BillingProvider
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+    final cashId = billingProvider.cashPaymentMethodId ?? "CASH";
+    final cardId = billingProvider.cardPaymentMethodId ?? "CARD";
+    final upiId = billingProvider.upiPaymentMethodId ?? "UPI";
+    final codId = billingProvider.codPaymentMethodId ?? "COD";
 
     if (_isCashSelected &&
         (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
-      // Adjust cash amount by deducting balance (change returned to customer)
-      double rawCashAmount = double.tryParse(_cashAmountController.text) ?? 0;
-      double netCashAmount = rawCashAmount - _balanceAmount;
-      // Only add if net cash is positive (skip if balance equals or exceeds cash)
-      if (netCashAmount > 0) {
-        paidMethods.add({
-          // Use payment method ID if available, otherwise fallback to string
-          "method": billingProvider.cashPaymentMethodId ?? "CASH",
-          "amount": netCashAmount, // Net cash kept in drawer
-        });
-      }
+      paidMethods.add({
+        "method": cashId,
+        "amount": double.tryParse(_cashAmountController.text) ?? 0,
+      });
     }
 
     if (_isCardSelected &&
         (double.tryParse(_cardAmountController.text) ?? 0) > 0) {
       paidMethods.add({
-        "method": billingProvider.cardPaymentMethodId ?? "CARD",
+        "method": cardId,
         "amount": double.tryParse(_cardAmountController.text) ?? 0,
       });
     }
@@ -5672,7 +7537,7 @@ class BillingPageState extends State<BillingPage>
     if (_isUpiSelected &&
         (double.tryParse(_upiAmountController.text) ?? 0) > 0) {
       paidMethods.add({
-        "method": billingProvider.upiPaymentMethodId ?? "UPI",
+        "method": upiId,
         "amount": double.tryParse(_upiAmountController.text) ?? 0,
       });
     }
@@ -5680,7 +7545,7 @@ class BillingPageState extends State<BillingPage>
     if (_isCodSelected &&
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
       paidMethods.add({
-        "method": billingProvider.codPaymentMethodId ?? "COD",
+        "method": codId,
         "amount": double.tryParse(_codAmountController.text) ?? 0,
       });
     }
@@ -5692,7 +7557,12 @@ class BillingPageState extends State<BillingPage>
     //     "amount": double.tryParse(_debitAmountController.text) ?? 0,
     //   });
     // }
-    return paidMethods;
+    return PaymentHelper.normalizePaidMethodsForApi(
+      paidMethods: paidMethods,
+      balanceAmount: _balanceAmount,
+      cashMethodId: cashId,
+      codMethodId: codId,
+    );
   }
 
   Widget _buildQuickAccessIcons() {
@@ -6373,6 +8243,21 @@ class BillingPageState extends State<BillingPage>
 
   Future<void> printFromSavedOrder(SavedOrder savedOrder) async {
     try {
+      {
+        final printService = const PrintService();
+        Future<bool> printOnce() => printService.printSavedOrder(
+              context,
+              savedOrder,
+            );
+
+        final autoPrintSuccess = await printOnce();
+        await _maybePrintCustomerCopy(
+          canPrompt: autoPrintSuccess,
+          printAction: printOnce,
+        );
+        return;
+      }
+/*
       // Extract cart items from the saved order
       List<Map<String, dynamic>> cartItems = [];
       double totalMRP = 0.0;
@@ -6411,8 +8296,8 @@ class BillingPageState extends State<BillingPage>
       debugPrint("🖨️ BILLING SAVE AND PRINT CALCULATION:");
       debugPrint("  - Total MRP: $totalMRP");
       debugPrint("  - Net Total: $netTotal");
-        debugPrint("  - Total Tax: $totalTax");
-        debugPrint("  - Net Exc Tax: $netExcTax");
+      debugPrint("  - Total Tax: $totalTax");
+      debugPrint("  - Net Exc Tax: $netExcTax");
       debugPrint("  - You Saved: $youSaved");
       debugPrint("Sending ${cartItems.length} items to PrintPage");
       debugPrint(
@@ -6472,6 +8357,7 @@ class BillingPageState extends State<BillingPage>
         canPrompt: autoPrintSuccess,
         printAction: printOnce,
       );
+*/
     } catch (error) {
       debugPrint("Error printing saved order: ${error.toString()}");
       showScaffoldError(

@@ -4,12 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
-  import 'package:pos_machine/models/language.dart';
-  import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/models/language.dart';
+import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -17,6 +18,28 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/newcomponents/custom_container_box.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
+
+class _SaleUnitFormRow {
+  _SaleUnitFormRow({
+    this.selectedUnitId,
+    String conversionRate = '',
+    String barcode = '',
+  })  : conversionRateController = TextEditingController(text: conversionRate),
+        barcodeController = TextEditingController(text: barcode),
+        searchController = TextEditingController();
+
+  String? selectedUnitId;
+  final TextEditingController conversionRateController;
+  final TextEditingController barcodeController;
+  final TextEditingController searchController;
+  bool isGeneratingBarcode = false;
+
+  void dispose() {
+    conversionRateController.dispose();
+    barcodeController.dispose();
+    searchController.dispose();
+  }
+}
 
 class AddProductWithBarcodeModal extends StatefulWidget {
   final String? barcode;
@@ -44,9 +67,13 @@ class _AddProductWithBarcodeModalState
       TextEditingController();
   final TextEditingController _productPurchasePriceController =
       TextEditingController();
+  final TextEditingController _productItemCodeController =
+      TextEditingController();
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
+  final TextEditingController _baseConversionRateController =
+      TextEditingController(text: '1');
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
   final Map<int, FocusNode> _translateButtonFocusNodes = {};
@@ -59,6 +86,7 @@ class _AddProductWithBarcodeModalState
   final FocusNode _quantityFocusNode = FocusNode();
   final FocusNode _sellingPriceFocusNode = FocusNode();
   final FocusNode _purchasePriceFocusNode = FocusNode();
+  final FocusNode _itemCodeFocusNode = FocusNode();
   final FocusNode _unitFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
   final FocusNode _generateBarcodeFocusNode = FocusNode();
@@ -71,6 +99,9 @@ class _AddProductWithBarcodeModalState
   String? selectedUnit;
   Category? selectedCategory;
   bool isValidatedOnce = false;
+  bool _showAdvancedOptions = false;
+  bool _showSaleUnitValidation = false;
+  final List<_SaleUnitFormRow> _saleUnitRows = [];
 
   @override
   void initState() {
@@ -101,6 +132,7 @@ class _AddProductWithBarcodeModalState
       _quantityFocusNode,
       _sellingPriceFocusNode,
       _purchasePriceFocusNode,
+      _itemCodeFocusNode,
       _unitFocusNode,
       _categoryFocusNode,
     ];
@@ -498,6 +530,7 @@ class _AddProductWithBarcodeModalState
     setState(() {
       _productNameController.text = product.productName?.trim() ?? '';
       _productBarcodeController.text = product.barcode?.trim() ?? '';
+      _productItemCodeController.text = product.itemCode?.trim() ?? '';
       _productSellingPriceController.text = resolvedSellingPrice;
       _productMRPController.text = resolvedMrp;
       _productPurchasePriceController.text = resolvedPurchasePrice;
@@ -507,6 +540,7 @@ class _AddProductWithBarcodeModalState
     });
 
     _syncLanguageControllersFromProduct(product);
+    _syncSaleUnitsFromProduct(product);
   }
 
   Category? _resolveCategory(GetProduct product) {
@@ -665,6 +699,310 @@ class _AddProductWithBarcodeModalState
     }
   }
 
+  void _clearSaleUnitRows() {
+    for (final row in _saleUnitRows) {
+      row.dispose();
+    }
+    _saleUnitRows.clear();
+  }
+
+  void _syncSaleUnitsFromProduct(GetProduct product) {
+    _clearSaleUnitRows();
+
+    final saleUnits = product.saleUnits ?? const <SaleUnit>[];
+    for (final saleUnit in saleUnits) {
+      _saleUnitRows.add(
+        _SaleUnitFormRow(
+          selectedUnitId: saleUnit.unitId?.toString(),
+          conversionRate: saleUnit.conversionRate ?? '',
+          barcode: saleUnit.barcode ?? '',
+        ),
+      );
+    }
+
+    setState(() {
+      _showAdvancedOptions = saleUnits.isNotEmpty;
+      _showSaleUnitValidation = false;
+    });
+  }
+
+  String _resolveUnitLabel(String? unitId, Map<String, String>? unitList) {
+    if (unitId == null || unitId.isEmpty) {
+      return 'Select unit';
+    }
+    return unitList?[unitId] ?? unitId;
+  }
+
+  void _handleBaseUnitChange(String? newValue) {
+    setState(() {
+      selectedUnit = newValue;
+      for (final row in _saleUnitRows) {
+        if (row.selectedUnitId == newValue) {
+          row.selectedUnitId = null;
+        }
+      }
+    });
+  }
+
+  void _toggleAdvancedOptions(bool enabled) {
+    setState(() {
+      _showAdvancedOptions = enabled;
+      if (!enabled) {
+        _showSaleUnitValidation = false;
+        _clearSaleUnitRows();
+      }
+    });
+  }
+
+  void _addSaleUnitRow() {
+    setState(() {
+      _saleUnitRows.add(_SaleUnitFormRow(conversionRate: '1'));
+    });
+  }
+
+  void _removeSaleUnitRow(int index) {
+    final row = _saleUnitRows.removeAt(index);
+    row.dispose();
+    setState(() {});
+  }
+
+  Future<void> _generateBarcodeIntoController(
+    TextEditingController controller, {
+    void Function(bool value)? onLoadingChanged,
+  }) async {
+    onLoadingChanged?.call(true);
+    setState(() {});
+
+    try {
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+
+      if (accessToken == null || accessToken.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'Authentication token not found. Please log in again.',
+        );
+        return;
+      }
+
+      GridSelectionProvider gridSelectionProvider =
+          Provider.of<GridSelectionProvider>(context, listen: false);
+
+      final Map<String, dynamic>? result = await gridSelectionProvider
+          .generateBarcodeAPI(accessToken: accessToken);
+
+      if (!mounted) {
+        return;
+      }
+
+      if (result != null &&
+          result['status'] == 'success' &&
+          result['data'] != null) {
+        final String generatedBarcode = result['data']['barcode'];
+        final resolvedBarcode = _getNextAvailableBarcode(
+          generatedBarcode,
+          excludeController: controller,
+        );
+        final wasAdjusted = resolvedBarcode != generatedBarcode;
+
+        setState(() {
+          controller.text = resolvedBarcode;
+        });
+
+        showScaffold(
+          context: context,
+          message: wasAdjusted
+              ? 'Barcode generated and incremented to keep it unique'
+              : 'Barcode generated successfully',
+        );
+      } else {
+        showScaffoldError(
+          context: context,
+          message: result?['message'] ?? 'Failed to generate barcode',
+        );
+      }
+    } catch (e) {
+      showScaffoldError(
+        context: context,
+        message: 'Error generating barcode: ${e.toString()}',
+      );
+    } finally {
+      onLoadingChanged?.call(false);
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  Set<String> _collectCurrentFormBarcodes({
+    TextEditingController? excludeController,
+  }) {
+    final usedBarcodes = <String>{};
+
+    void addBarcode(String? value, TextEditingController controller) {
+      if (excludeController != null &&
+          identical(controller, excludeController)) {
+        return;
+      }
+      final trimmed = value?.trim() ?? '';
+      if (trimmed.isNotEmpty) {
+        usedBarcodes.add(trimmed);
+      }
+    }
+
+    addBarcode(_productBarcodeController.text, _productBarcodeController);
+    for (final row in _saleUnitRows) {
+      addBarcode(row.barcodeController.text, row.barcodeController);
+    }
+
+    return usedBarcodes;
+  }
+
+  bool _barcodeExistsInLocalProducts(String barcode) {
+    final normalized = barcode.trim();
+    if (normalized.isEmpty) {
+      return false;
+    }
+
+    return Provider.of<LocalProductProvider>(context, listen: false)
+        .filterProductByBarcode(barCode: normalized)
+        .isNotEmpty;
+  }
+
+  String _incrementBarcodeString(String barcode, int step) {
+    final trimmed = barcode.trim();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+
+    if (RegExp(r'^\d+$').hasMatch(trimmed)) {
+      final nextValue = BigInt.parse(trimmed) + BigInt.from(step);
+      final nextText = nextValue.toString();
+      return nextText.length < trimmed.length
+          ? nextText.padLeft(trimmed.length, '0')
+          : nextText;
+    }
+
+    return '$trimmed-$step';
+  }
+
+  String _getNextAvailableBarcode(
+    String seedBarcode, {
+    TextEditingController? excludeController,
+  }) {
+    final seed = seedBarcode.trim();
+    if (seed.isEmpty) {
+      return seedBarcode;
+    }
+
+    final currentFormBarcodes =
+        _collectCurrentFormBarcodes(excludeController: excludeController);
+
+    bool isTaken(String candidate) {
+      return currentFormBarcodes.contains(candidate) ||
+          _barcodeExistsInLocalProducts(candidate);
+    }
+
+    if (!isTaken(seed)) {
+      return seed;
+    }
+
+    for (int step = 1; step <= 9999; step++) {
+      final candidate = _incrementBarcodeString(seed, step);
+      if (!isTaken(candidate)) {
+        return candidate;
+      }
+    }
+
+    return '${seed}_${DateTime.now().millisecondsSinceEpoch}';
+  }
+
+  bool _validateSaleUnits() {
+    if (!_showAdvancedOptions || selectedUnit == null) {
+      return true;
+    }
+
+    final usedUnitIds = <String>{selectedUnit!};
+    final usedBarcodes = <String>{_productBarcodeController.text.trim()};
+
+    for (final row in _saleUnitRows) {
+      final unitId = row.selectedUnitId?.trim();
+      final conversionRate = row.conversionRateController.text.trim();
+      final barcode = row.barcodeController.text.trim();
+
+      if (unitId == null || unitId.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'Select a unit for every added sale unit row.',
+        );
+        return false;
+      }
+
+      if (usedUnitIds.contains(unitId)) {
+        showScaffoldError(
+          context: context,
+          message: 'Each sale unit must use a different unit.',
+        );
+        return false;
+      }
+      usedUnitIds.add(unitId);
+
+      if (conversionRate.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'Enter a conversion rate for every sale unit.',
+        );
+        return false;
+      }
+
+      final parsedRate = num.tryParse(conversionRate);
+      if (parsedRate == null || parsedRate <= 0) {
+        showScaffoldError(
+          context: context,
+          message: 'Conversion rate must be greater than 0.',
+        );
+        return false;
+      }
+
+      if (barcode.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'Enter or generate a barcode for every sale unit.',
+        );
+        return false;
+      }
+
+      if (usedBarcodes.contains(barcode)) {
+        showScaffoldError(
+          context: context,
+          message: 'Sale unit barcodes must be unique.',
+        );
+        return false;
+      }
+      usedBarcodes.add(barcode);
+    }
+
+    return true;
+  }
+
+  List<Map<String, dynamic>> _buildSaleUnitsPayload() {
+    if (!_showAdvancedOptions ||
+        selectedUnit == null ||
+        _saleUnitRows.isEmpty) {
+      return const <Map<String, dynamic>>[];
+    }
+
+    return _saleUnitRows
+        .map((row) => {
+              'unit_id':
+                  int.tryParse(row.selectedUnitId ?? '') ?? row.selectedUnitId,
+              'conversion_rate':
+                  num.parse(row.conversionRateController.text.trim()),
+              'barcode': row.barcodeController.text.trim(),
+            })
+        .toList(growable: false);
+  }
+
   @override
   void dispose() {
     _productBarcodeController.dispose();
@@ -673,8 +1011,10 @@ class _AddProductWithBarcodeModalState
     _productQuantityController.dispose();
     _productSellingPriceController.dispose();
     _productPurchasePriceController.dispose();
+    _productItemCodeController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
+    _baseConversionRateController.dispose();
 
     for (final controller in _languageNameControllers.values) {
       if (controller != _productNameController) {
@@ -683,6 +1023,7 @@ class _AddProductWithBarcodeModalState
     }
     _languageNameControllers.clear();
     _languageTranslating.clear();
+    _clearSaleUnitRows();
     for (final node in _translateButtonFocusNodes.values) {
       node.dispose();
     }
@@ -695,6 +1036,7 @@ class _AddProductWithBarcodeModalState
     _quantityFocusNode.dispose();
     _sellingPriceFocusNode.dispose();
     _purchasePriceFocusNode.dispose();
+    _itemCodeFocusNode.dispose();
     _unitFocusNode.dispose();
     _categoryFocusNode.dispose();
     _generateBarcodeFocusNode.dispose();
@@ -849,53 +1191,10 @@ class _AddProductWithBarcodeModalState
       isBarcodeGenerating = true;
     });
 
-    try {
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-
-      if (accessToken == null || accessToken.isEmpty) {
-        showScaffoldError(
-          context: context,
-          message: 'Authentication token not found. Please log in again.',
-        );
-        return;
-      }
-
-      GridSelectionProvider gridSelectionProvider =
-          Provider.of<GridSelectionProvider>(context, listen: false);
-
-      final Map<String, dynamic>? result = await gridSelectionProvider
-          .generateBarcodeAPI(accessToken: accessToken);
-
-      if (result != null &&
-          result['status'] == 'success' &&
-          result['data'] != null) {
-        final String generatedBarcode = result['data']['barcode'];
-
-        setState(() {
-          _productBarcodeController.text = generatedBarcode;
-        });
-
-        showScaffold(
-          context: context,
-          message: 'Barcode generated successfully',
-        );
-      } else {
-        showScaffoldError(
-          context: context,
-          message: result?['message'] ?? 'Failed to generate barcode',
-        );
-      }
-    } catch (e) {
-      showScaffoldError(
-        context: context,
-        message: 'Error generating barcode: ${e.toString()}',
-      );
-    } finally {
-      setState(() {
-        isBarcodeGenerating = false;
-      });
-    }
+    await _generateBarcodeIntoController(
+      _productBarcodeController,
+      onLoadingChanged: (value) => isBarcodeGenerating = value,
+    );
   }
 
   @override
@@ -916,6 +1215,12 @@ class _AddProductWithBarcodeModalState
       canRequestFocus: false,
       onKeyEvent: (node, event) {
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
+        if (event.logicalKey == LogicalKeyboardKey.escape) {
+          if (!isLoading && !isSaveAndCreateLoading) {
+            Navigator.pop(context, null);
+          }
+          return KeyEventResult.handled;
+        }
         if (event.logicalKey == LogicalKeyboardKey.f4) {
           if (!isLoading && !isSaveAndCreateLoading) {
             Navigator.pop(context, null);
@@ -937,344 +1242,387 @@ class _AddProductWithBarcodeModalState
         return KeyEventResult.ignored;
       },
       child: Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-      backgroundColor: Colors.transparent,
-      child: Container(
-        constraints: BoxConstraints(
-            maxWidth: size.width * 0.45,
-            maxHeight: MediaQuery.of(context).size.height * 0.75),
-        decoration: BoxDecoration(
-          color: Colors.white,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
         ),
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Create New Product",
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s20,
-                        0.30,
-                        ColorManager.textColor,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(
+              maxWidth: size.width * 0.45,
+              maxHeight: MediaQuery.of(context).size.height * 0.75),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "Create New Product",
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s20,
+                            0.30,
+                            ColorManager.textColor,
+                          ),
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.black54),
-                      onPressed: () => Navigator.of(context).pop(),
-                      splashRadius: 20,
-                    ),
-                  ],
-                ),
-                Text(
-                  widget.barcode != null
-                      ? "No product found with barcode ${widget.barcode}"
-                      : "Create a new product with custom barcode",
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    FontSize.s12,
-                    0.27,
-                    Colors.black54,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Advanced',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.27,
+                              Colors.black54,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Switch(
+                            value: _showAdvancedOptions,
+                            activeThumbColor: ColorManager.kPrimaryColor,
+                            onChanged: _toggleAdvancedOptions,
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.black54),
+                        onPressed: () => Navigator.of(context).pop(),
+                        splashRadius: 20,
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
+                  Text(
+                    widget.barcode != null
+                        ? "No product found with barcode ${widget.barcode}"
+                        : "Create a new product with custom barcode",
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.27,
+                      Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-                // Row 1: Product Name, Barcode, Category
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        "Product Name",
-                        _productNameController,
-                        TextInputType.text,
-                        size,
-                        isRequired: true,
-                        focusNode: _productNameFocusNode,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildBarcodeField(size),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildCategoryDropdown(size, categoryList),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildLanguageFields(size, languageProvider),
-                const SizedBox(height: 12),
-
-                // Row 2: Unit, Purchase Price, Max Sale Price / MRP
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildUnitDropdown(size, unitList),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildTextField(
-                        "Purchase Price",
-                        _productPurchasePriceController,
-                        TextInputType.number,
-                        size,
-                        isRequired: true,
-                        inputFormatter: FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
-                        focusNode: _purchasePriceFocusNode,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildTextField(
-                        "Max Sale Price / MRP",
-                        _productMRPController,
-                        TextInputType.number,
-                        size,
-                        isRequired: false,
-                        inputFormatter: FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
-                        focusNode: _mrpFocusNode,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Row 3: Selling Price, Quantity, Empty
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        "Selling Price",
-                        _productSellingPriceController,
-                        TextInputType.number,
-                        size,
-                        isRequired: true,
-                        inputFormatter: FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
-                        focusNode: _sellingPriceFocusNode,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildTextField(
-                        "Quantity",
-                        _productQuantityController,
-                        TextInputType.number,
-                        size,
-                        isRequired: true,
-                        inputFormatter: FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}$')),
-                        focusNode: _quantityFocusNode,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: SizedBox.shrink(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    // Close Button
-                    SizedBox(
-                      width: 115,
-                      height: 40,
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context, null),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: ColorManager.kPrimaryColor),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                  // Row 1: Product Name, Barcode, Category
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          "Product Name",
+                          _productNameController,
+                          TextInputType.text,
+                          size,
+                          isRequired: true,
+                          focusNode: _productNameFocusNode,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Close',
-                              style: TextStyle(
-                                color: ColorManager.kPrimaryColor,
-                                fontSize: FontSize.s12,
-                              ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildBarcodeField(size),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCategoryDropdown(size, categoryList),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildLanguageFields(size, languageProvider),
+                  const SizedBox(height: 12),
+
+                  // Row 2: Unit, Purchase Price, Max Sale Price / MRP
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildUnitDropdown(size, unitList),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTextField(
+                          "Purchase Price",
+                          _productPurchasePriceController,
+                          TextInputType.number,
+                          size,
+                          isRequired: true,
+                          inputFormatter: FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}$')),
+                          focusNode: _purchasePriceFocusNode,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTextField(
+                          "Max Sale Price / MRP",
+                          _productMRPController,
+                          TextInputType.number,
+                          size,
+                          isRequired: false,
+                          inputFormatter: FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}$')),
+                          focusNode: _mrpFocusNode,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Row 3: Selling Price, Quantity, Item Code (conditional)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          "Selling Price",
+                          _productSellingPriceController,
+                          TextInputType.number,
+                          size,
+                          isRequired: true,
+                          inputFormatter: FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}$')),
+                          focusNode: _sellingPriceFocusNode,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTextField(
+                          "Quantity",
+                          _productQuantityController,
+                          TextInputType.number,
+                          size,
+                          isRequired: true,
+                          inputFormatter: FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}$')),
+                          focusNode: _quantityFocusNode,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Consumer<AppSettingsProvider>(
+                          builder: (context, appSettingsProvider, child) {
+                            final itemCodeEnabled =
+                                appSettingsProvider.appSettings?.itemCodeEnabled ??
+                                    false;
+                            if (!itemCodeEnabled) {
+                              return const SizedBox.shrink();
+                            }
+                            return _buildTextField(
+                              "Item Code",
+                              _productItemCodeController,
+                              TextInputType.text,
+                              size,
+                              isRequired: false,
+                              focusNode: _itemCodeFocusNode,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (_showAdvancedOptions) ...[
+                    _buildAdvancedOptionsSection(size, unitList),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // Buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Close Button
+                      SizedBox(
+                        width: 115,
+                        height: 40,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context, null),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: ColorManager.kPrimaryColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            const SizedBox(width: 5),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: ColorManager.kPrimaryColor
-                                    .withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Text(
-                                'F4',
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Close',
                                 style: TextStyle(
+                                  color: ColorManager.kPrimaryColor,
+                                  fontSize: FontSize.s12,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
                                   color: ColorManager.kPrimaryColor
-                                      .withOpacity(0.7),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w600,
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  'F4',
+                                  style: TextStyle(
+                                    color: ColorManager.kPrimaryColor
+                                        .withOpacity(0.7),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Save and Create Button
+                      SizedBox(
+                        width: 172,
+                        height: 40,
+                        child: ElevatedButton(
+                          onPressed: (isLoading || isSaveAndCreateLoading)
+                              ? null
+                              : () => _submitForm(keepOpen: true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            side: BorderSide(color: ColorManager.kPrimaryColor),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Save and Create Button
-                    SizedBox(
-                      width: 172,
-                      height: 40,
-                      child: ElevatedButton(
-                        onPressed: (isLoading || isSaveAndCreateLoading)
-                            ? null
-                            : () => _submitForm(keepOpen: true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          side: BorderSide(color: ColorManager.kPrimaryColor),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ),
-                        child: isSaveAndCreateLoading
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      ColorManager.kPrimaryColor),
-                                ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Save and Create',
-                                    style: TextStyle(
-                                      color: ColorManager.kPrimaryColor,
-                                      fontSize: FontSize.s12,
-                                    ),
+                          child: isSaveAndCreateLoading
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        ColorManager.kPrimaryColor),
                                   ),
-                                  const SizedBox(width: 5),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: ColorManager.kPrimaryColor
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                    child: Text(
-                                      'F8',
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Save and Create',
                                       style: TextStyle(
+                                        color: ColorManager.kPrimaryColor,
+                                        fontSize: FontSize.s12,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4, vertical: 1),
+                                      decoration: BoxDecoration(
                                         color: ColorManager.kPrimaryColor
-                                            .withOpacity(0.7),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
+                                            .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(3),
+                                      ),
+                                      child: Text(
+                                        'F8',
+                                        style: TextStyle(
+                                          color: ColorManager.kPrimaryColor
+                                              .withOpacity(0.7),
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Add Product Button
-                    SizedBox(
-                      width: 120,
-                      height: 40,
-                      child: ElevatedButton(
-                        onPressed: (isLoading || isSaveAndCreateLoading)
-                            ? null
-                            : () => _submitForm(keepOpen: false),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ColorManager.kPrimaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
+                                  ],
                                 ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text(
-                                    'Save',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: FontSize.s12,
-                                    ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Add Product Button
+                      SizedBox(
+                        width: 120,
+                        height: 40,
+                        child: ElevatedButton(
+                          onPressed: (isLoading || isSaveAndCreateLoading)
+                              ? null
+                              : () => _submitForm(keepOpen: false),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ColorManager.kPrimaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
-                                  const SizedBox(width: 5),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                    child: const Text(
-                                      'F9',
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text(
+                                      'Save',
                                       style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                        fontSize: FontSize.s12,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                    const SizedBox(width: 5),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(3),
+                                      ),
+                                      child: const Text(
+                                        'F9',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    ), // Dialog
-  ); // Focus
+      ), // Dialog
+    ); // Focus
   }
 
   // Helper method for text fields
@@ -1709,14 +2057,437 @@ class _AddProductWithBarcodeModalState
           margin: EdgeInsets.zero,
           items: unitList?.entries.map((entry) => entry.key).toList() ?? [],
           onChanged: (String? newValue) {
-            setState(() {
-              selectedUnit = newValue;
-            });
+            _handleBaseUnitChange(newValue);
           },
           displayText: (item) => unitList?[item] ?? '',
           searchController: _unitSearchController,
         ),
         if (isValidatedOnce && selectedUnit == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Required',
+              style: TextStyle(color: Colors.red[700], fontSize: 11),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAdvancedOptionsSection(
+    Size size,
+    Map<String, String>? unitList,
+  ) {
+    final canConfigureSaleUnits = selectedUnit != null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFD),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: ColorManager.kPrimaryColor.withOpacity(0.15),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Multi Sale Unit',
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s12,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Base unit is required before adding additional sale units.',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.27,
+              Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (!canConfigureSaleUnits)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.withOpacity(0.35)),
+              ),
+              child: Text(
+                'Select the product unit first to activate this section.',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s11,
+                  0.27,
+                  Colors.orange.shade800,
+                ),
+              ),
+            )
+          else ...[
+            _buildBaseSaleUnitCard(size, unitList),
+            const SizedBox(height: 10),
+            ...List.generate(
+              _saleUnitRows.length,
+              (index) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: index == _saleUnitRows.length - 1 ? 0 : 10,
+                ),
+                child: _buildEditableSaleUnitCard(
+                  size,
+                  unitList,
+                  _saleUnitRows[index],
+                  index,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.center,
+              child: OutlinedButton.icon(
+                onPressed: _addSaleUnitRow,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Sale Unit'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  side: BorderSide(color: ColorManager.kPrimaryColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBaseSaleUnitCard(Size size, Map<String, String>? unitList) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                '${_resolveUnitLabel(selectedUnit, unitList)} (Base Unit)',
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s12,
+                  0.27,
+                  ColorManager.textColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildReadOnlyInfoField(
+                  'Sale Unit',
+                  _resolveUnitLabel(selectedUnit, unitList),
+                  size,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTextField(
+                  'Conversion Rate',
+                  _baseConversionRateController,
+                  TextInputType.number,
+                  size,
+                  isRequired: true,
+                  inputFormatter: FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d*\.?\d{0,3}$'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _productBarcodeController,
+                  builder: (context, value, _) {
+                    return _buildReadOnlyInfoField(
+                      'Barcode',
+                      value.text.trim().isEmpty ? '-' : value.text.trim(),
+                      size,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditableSaleUnitCard(
+    Size size,
+    Map<String, String>? unitList,
+    _SaleUnitFormRow row,
+    int index,
+  ) {
+    final availableUnits = (unitList ?? const <String, String>{})
+        .entries
+        .where((entry) => entry.key != selectedUnit)
+        .map((entry) => entry.key)
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _showSaleUnitValidation &&
+                  ((row.selectedUnitId?.isEmpty ?? true) ||
+                      row.conversionRateController.text.trim().isEmpty ||
+                      row.barcodeController.text.trim().isEmpty)
+              ? Colors.red.shade200
+              : Colors.grey.shade200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Sale Unit ${index + 1}',
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s12,
+                  0.27,
+                  ColorManager.textColor,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () => _removeSaleUnitRow(index),
+                splashRadius: 18,
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+              ),
+            ],
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sale Unit *',
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s12,
+                        0.27,
+                        Colors.black.withOpacity(0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    CustomDropDownWithSearch<String>(
+                      title: '',
+                      hintText: 'Select unit',
+                      value: row.selectedUnitId,
+                      height: size.height * 0.048,
+                      margin: EdgeInsets.zero,
+                      items: availableUnits,
+                      onChanged: (String? value) {
+                        setState(() {
+                          row.selectedUnitId = value;
+                        });
+                      },
+                      displayText: (item) => unitList?[item] ?? item,
+                      searchController: row.searchController,
+                    ),
+                    if (_showSaleUnitValidation &&
+                        (row.selectedUnitId == null ||
+                            row.selectedUnitId!.isEmpty))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Required',
+                          style:
+                              TextStyle(color: Colors.red[700], fontSize: 11),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTextField(
+                  'Conversion Rate',
+                  row.conversionRateController,
+                  TextInputType.number,
+                  size,
+                  isRequired: true,
+                  inputFormatter: FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d*\.?\d{0,3}$'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildBarcodeEditorField(size, row),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyInfoField(String title, String value, Size size) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        CustomBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: size.height * 0.048,
+          width: double.infinity,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.27,
+                ColorManager.textColor.withOpacity(0.7),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBarcodeEditorField(Size size, _SaleUnitFormRow row) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: 'Barcode',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.black.withOpacity(0.6),
+                ),
+              ),
+              TextSpan(
+                text: ' *',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.27,
+                  Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: CustomBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.centerLeft,
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.only(left: 12),
+                height: size.height * 0.048,
+                width: double.infinity,
+                child: TextFormField(
+                  controller: row.barcodeController,
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() {}),
+                  cursorColor: ColorManager.kPrimaryColor,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    ColorManager.textColor.withOpacity(0.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: size.height * 0.048,
+              width: size.height * 0.048,
+              child: ElevatedButton(
+                onPressed: row.isGeneratingBarcode
+                    ? null
+                    : () async {
+                        await _generateBarcodeIntoController(
+                          row.barcodeController,
+                          onLoadingChanged: (value) =>
+                              row.isGeneratingBarcode = value,
+                        );
+                      },
+                style: _buildSquareActionButtonStyle(),
+                child: row.isGeneratingBarcode
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.auto_awesome, size: 16),
+              ),
+            ),
+          ],
+        ),
+        if (_showSaleUnitValidation &&
+            row.barcodeController.text.trim().isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
@@ -1790,6 +2561,7 @@ class _AddProductWithBarcodeModalState
   Future<void> _submitForm({bool keepOpen = false}) async {
     setState(() {
       isValidatedOnce = true;
+      _showSaleUnitValidation = _showAdvancedOptions;
     });
 
     bool isFormValid = formKey.currentState!.validate();
@@ -1797,6 +2569,29 @@ class _AddProductWithBarcodeModalState
     bool isCategoryValid = selectedCategory != null;
 
     if (isFormValid && isUnitValid && isCategoryValid) {
+      if (!_validateSaleUnits()) {
+        return;
+      }
+
+      if (_showAdvancedOptions) {
+        final baseRate = _baseConversionRateController.text.trim();
+        if (baseRate.isEmpty) {
+          showScaffoldError(
+            context: context,
+            message: 'Base unit conversion rate is required.',
+          );
+          return;
+        }
+        final parsedRate = num.tryParse(baseRate);
+        if (parsedRate == null || parsedRate <= 0) {
+          showScaffoldError(
+            context: context,
+            message: 'Base unit conversion rate must be greater than 0.',
+          );
+          return;
+        }
+      }
+
       final canContinue = await _ensureBarcodeDuplicateConfirmed();
       if (!canContinue) {
         return;
@@ -1820,6 +2615,13 @@ class _AddProductWithBarcodeModalState
             Provider.of<LanguageProvider>(context, listen: false);
         final productNames =
             _buildProductNamesPayload(languageProvider.languages);
+        final saleUnits = _buildSaleUnitsPayload();
+
+        final itemCodeEnabled = Provider.of<AppSettingsProvider>(context,
+                    listen: false)
+                .appSettings
+                ?.itemCodeEnabled ??
+            false;
 
         final result = await gridSelectionProvider.createProductAPI(
           categoryId: selectedCategory!.categoryId.toString(),
@@ -1832,7 +2634,17 @@ class _AddProductWithBarcodeModalState
           accessToken: accessToken ?? "",
           purchasePrice: _productPurchasePriceController.text,
           productNames: productNames.isNotEmpty ? productNames : null,
+          saleUnits: saleUnits.isNotEmpty ? saleUnits : null,
+          conversionRateBase:
+              _baseConversionRateController.text.trim().isNotEmpty
+                  ? _baseConversionRateController.text.trim()
+                  : '1',
+          itemCode: itemCodeEnabled ? _productItemCodeController.text.trim() : null,
         );
+
+        if (!mounted) {
+          return;
+        }
 
         if (result is Map<String, dynamic> && result.containsKey('data')) {
           try {
@@ -1935,6 +2747,8 @@ class _AddProductWithBarcodeModalState
     _productQuantityController.text = '0';
     _productSellingPriceController.clear();
     _productPurchasePriceController.clear();
+    _productItemCodeController.clear();
+    _baseConversionRateController.text = '1';
     for (var controller in _languageNameControllers.values) {
       if (controller != _productNameController) {
         controller.clear();
@@ -1945,6 +2759,9 @@ class _AddProductWithBarcodeModalState
       selectedUnit = null;
       selectedCategory = null;
       isValidatedOnce = false;
+      _showAdvancedOptions = false;
+      _showSaleUnitValidation = false;
+      _clearSaleUnitRows();
     });
   }
 }
