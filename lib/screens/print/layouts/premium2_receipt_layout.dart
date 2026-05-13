@@ -324,6 +324,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         appSettings?.printTitle,
         'INVOICE',
       );
+      debugPrint(
+          "[Premium2ReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, hasCustomerKyc=${(params.customerVatNumber?.trim().isNotEmpty ?? false) || (params.customerCrNumber?.trim().isNotEmpty ?? false)}, printedInvoiceTitle=$invoiceTitle");
       rows.add(SpacingRow(5));
       rows.add(TextRow(invoiceTitle.toUpperCase(), isBold: true, scale: 1.1));
       rows.add(SpacingRow(2));

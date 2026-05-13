@@ -46,6 +46,7 @@ class PrintPage extends StatefulWidget {
   final String? paymentMethod;
   final String? customerVatNumber;
   final String? customerCrNumber;
+  final String? customerType;
   final Map<String, dynamic>?
       paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
@@ -76,6 +77,7 @@ class PrintPage extends StatefulWidget {
     this.paymentMethod,
     this.customerVatNumber,
     this.customerCrNumber,
+    this.customerType,
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
     this.netExcTax,
@@ -111,6 +113,7 @@ class PrintPage extends StatefulWidget {
     String? paymentMethod,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
     Map<String, dynamic>? paymentBreakdown,
     bool isDefaultCustomer = false,
     String? netExcTax,
@@ -175,6 +178,7 @@ class PrintPage extends StatefulWidget {
       }
 
       debugPrint('[PrintPage] Using cached config: ${billDocumentConfig.type}');
+      _debugInvoiceTitleConfig('autoPrint', billDocumentConfig);
 
       // Get paper size
       String paperSize = prefs.getString('default_paper_size') ?? '80mm';
@@ -192,6 +196,8 @@ class PrintPage extends StatefulWidget {
 
       // Create params
       debugPrint('[PrintPage.autoPrint] Creating ReceiptLayoutParams with ${cartItems.length} cart items');
+      debugPrint(
+          '[PrintPage.autoPrint] order=$orderNumber, customerType=${customerType ?? 'null'}, hasCustomerKyc=${(customerVatNumber?.trim().isNotEmpty ?? false) || (customerCrNumber?.trim().isNotEmpty ?? false)}, theme=$theme');
       for (int i = 0; i < cartItems.length; i++) {
         final item = cartItems[i];
         debugPrint('[PrintPage.autoPrint] Cart item $i: ${item.productName}, qty=${item.quantity}, total=${item.totalPrice}');
@@ -225,6 +231,7 @@ class PrintPage extends StatefulWidget {
         paymentMethod: paymentMethod,
         customerVatNumber: customerVatNumber,
         customerCrNumber: customerCrNumber,
+        customerType: customerType,
         paymentBreakdown: paymentBreakdown,
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
@@ -233,6 +240,9 @@ class PrintPage extends StatefulWidget {
         netExcTax: netExcTax,
         bankDetails: bankProvider.banks,
       );
+      final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
+      debugPrint(
+          '[PrintPage.autoPrint] resolved showInvoiceTitle visible=${invoiceTitleConfig?.visible}, value=${invoiceTitleConfig?.value}');
 
       // Print
       if (paperSize == '112mm' || paperSize == '80mm' || paperSize == '58mm') {
@@ -266,6 +276,25 @@ class PrintPage extends StatefulWidget {
     }
 
     return 'classic';
+  }
+
+  static void _debugInvoiceTitleConfig(
+      String source, DocumentConfig billDocumentConfig) {
+    final options = billDocumentConfig.displayConfiguration?.options;
+    final normalTitle = options?['showInvoiceTitle'];
+    final b2bTitle =
+        options?['showInvoiceTitleB2B'] ?? options?['showInvoiceTitleB2b'];
+    final b2bTitleKey = options?['showInvoiceTitleB2B'] != null
+        ? 'showInvoiceTitleB2B'
+        : (options?['showInvoiceTitleB2b'] != null
+            ? 'showInvoiceTitleB2b'
+            : 'missing');
+    debugPrint(
+        '[PrintPage.$source] documentConfig type=${billDocumentConfig.type}, activeTheme=${billDocumentConfig.activeTheme}, optionsCount=${options?.length ?? 0}');
+    debugPrint(
+        '[PrintPage.$source] showInvoiceTitle visible=${normalTitle?.visible}, value=${normalTitle?.value}, default=${normalTitle?.defaultValue}');
+    debugPrint(
+        '[PrintPage.$source] B2B invoice title key=$b2bTitleKey, exists=${b2bTitle != null}, visible=${b2bTitle?.visible}, value=${b2bTitle?.value}, default=${b2bTitle?.defaultValue}');
   }
 }
 
@@ -549,6 +578,10 @@ class _PrintPageState extends State<PrintPage> {
         debugPrint(
             "✅ Document config loaded from cache: ${_billDocumentConfig?.type}");
       }
+      if (_billDocumentConfig != null) {
+        PrintPage._debugInvoiceTitleConfig(
+            '_loadDocumentConfigurationsFromProvider', _billDocumentConfig!);
+      }
 
       setState(() {
         _isLoading = false;
@@ -700,6 +733,7 @@ class _PrintPageState extends State<PrintPage> {
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,
       customerCrNumber: widget.customerCrNumber,
+      customerType: widget.customerType,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
@@ -708,6 +742,9 @@ class _PrintPageState extends State<PrintPage> {
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
     );
+    final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
+    debugPrint(
+        '[PrintPage._printThermalReceipt] order=${widget.orderNumber}, customerType=${widget.customerType ?? 'null'}, hasCustomerKyc=${(widget.customerVatNumber?.trim().isNotEmpty ?? false) || (widget.customerCrNumber?.trim().isNotEmpty ?? false)}, resolved showInvoiceTitle visible=${invoiceTitleConfig?.visible}, value=${invoiceTitleConfig?.value}');
 
     // Print using the selected layout
     await layout.printThermal(params);
@@ -793,6 +830,7 @@ class _PrintPageState extends State<PrintPage> {
       paymentMethod: widget.paymentMethod,
       customerVatNumber: widget.customerVatNumber,
       customerCrNumber: widget.customerCrNumber,
+      customerType: widget.customerType,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
@@ -801,6 +839,9 @@ class _PrintPageState extends State<PrintPage> {
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
     );
+    final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
+    debugPrint(
+        '[PrintPage._generateAndPrintPDF] order=${widget.orderNumber}, customerType=${widget.customerType ?? 'null'}, hasCustomerKyc=${(widget.customerVatNumber?.trim().isNotEmpty ?? false) || (widget.customerCrNumber?.trim().isNotEmpty ?? false)}, resolved showInvoiceTitle visible=${invoiceTitleConfig?.visible}, value=${invoiceTitleConfig?.value}');
 
     // Print using the selected standard PDF layout
     await standardLayout.generateAndPrintPdf(params);

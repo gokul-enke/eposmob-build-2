@@ -127,6 +127,7 @@ class OrderPanelState extends State<OrderPanel> {
       _selectedCustomer?.id ?? _selectedCustomerID;
   String? get selectedCustomerPhoneForDraft =>
       _selectedCustomer?.phone ?? _selectedCustomerPhone;
+  String? get selectedCustomerTypeForDraft => _selectedCustomer?.customerType;
   String get deliveryMethodForDraft => _deliveryMethod;
   String get deliveryMethodIdForDraft => _deliveryMethodId.isNotEmpty
       ? _deliveryMethodId
@@ -5634,6 +5635,7 @@ class OrderPanelState extends State<OrderPanel> {
     String? customerAlternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -5664,6 +5666,7 @@ class OrderPanelState extends State<OrderPanel> {
       customerAlternatePhone: customerAlternatePhone,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -5696,6 +5699,7 @@ class OrderPanelState extends State<OrderPanel> {
             customerAlternatePhone: customerAlternatePhone,
             customerVatNumber: customerVatNumber,
             customerCrNumber: customerCrNumber,
+            customerType: customerType,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -6875,6 +6879,7 @@ class OrderPanelState extends State<OrderPanel> {
           tableId: widget.tableId,
           address: deliveryAddressForDraft,
           deliveryCharge: deliveryChargeForDraft,
+          customerType: selectedCustomerTypeForDraft,
         );
         showScaffold(context: context, message: 'Updated local draft');
       } else {
@@ -6899,6 +6904,7 @@ class OrderPanelState extends State<OrderPanel> {
           tableId: widget.tableId,
           address: deliveryAddressForDraft,
           deliveryCharge: deliveryChargeForDraft,
+          customerType: selectedCustomerTypeForDraft,
         );
         showScaffold(
             context: context,

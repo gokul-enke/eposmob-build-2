@@ -1351,12 +1351,17 @@ Powered by CloudPOS''',
                     orderDetails.data?.getCustomerAddressForDisplay();
                 String? customerAlternatePhone =
                     orderDetails.data?.customerDetails?.alternatePhone;
+                String? customerType =
+                    orderDetails.data?.customerDetails?.customerType;
                 String? customerVatNumber =
                     orderDetails.data?.kycInfo?.vatNumber;
                 String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
                 String? paymentMethod =
                     orderDetails.data?.paymentDetails?.paymentMethod;
                 String? deliveryMethod = orderDetails.data?.deliveryMethodName;
+
+                debugPrint(
+                    "[SalesPrint] order=${orderDetails.data?.orderNumber}, customerType=${customerType ?? 'null'}");
 
                 String? orderComment;
                 if (orderDetails.data?.orderProps != null) {
@@ -1450,6 +1455,7 @@ Powered by CloudPOS''',
                   customerAlternatePhone: customerAlternatePhone,
                   customerVatNumber: customerVatNumber,
                   customerCrNumber: customerCrNumber,
+                  customerType: customerType,
                   paymentMethod: paymentMethod,
                   paymentBreakdown:
                       paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
@@ -1484,6 +1490,7 @@ Powered by CloudPOS''',
                         customerAlternatePhone: customerAlternatePhone,
                         customerVatNumber: customerVatNumber,
                         customerCrNumber: customerCrNumber,
+                        customerType: customerType,
                         paymentMethod: paymentMethod,
                         paymentBreakdown: paymentBreakdown.isNotEmpty
                             ? paymentBreakdown

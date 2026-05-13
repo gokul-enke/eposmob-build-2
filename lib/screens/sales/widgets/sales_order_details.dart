@@ -373,6 +373,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               String? customerAddress =
                   orderDetailsModelData?.getCustomerAddressForDisplay();
               String? customerAlternatePhone = customerDetails?.alternatePhone;
+              String? customerType = customerDetails?.customerType;
               String? paymentMethod =
                   orderDetailsModelData?.paymentDetails?.paymentMethod;
               String? customerVatNumber =
@@ -441,6 +442,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 paymentMethod: paymentMethod,
                 customerVatNumber: customerVatNumber,
                 customerCrNumber: customerCrNumber,
+                customerType: customerType,
                 orderComment: orderComment,
                 deliveryMethod: deliveryMethod,
                 orderReturns: orderDetailsModelData?.orderReturns,
@@ -473,6 +475,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       paymentMethod: paymentMethod,
                       customerVatNumber: customerVatNumber,
                       customerCrNumber: customerCrNumber,
+                      customerType: customerType,
                       orderComment: orderComment,
                       deliveryMethod: deliveryMethod,
                       orderReturns: orderDetailsModelData?.orderReturns,
