@@ -741,6 +741,23 @@ class Premium1ReceiptLayout implements ReceiptLayout {
 
     rows.add(SpacingRow(_itemGap));
 
+    // Items Count
+    if (displayConfig?['showItemsCount']?.visible == true) {
+      final itemsCountLabel = _getLabel(
+        displayConfig,
+        'showItemsCount',
+        null,
+        isEnglish ? "Items" : "أغراض",
+      );
+      final int itemCount = params.cartItems.length;
+      rows.add(TextRow(
+        "$itemsCountLabel: $itemCount",
+        scale: 0.9,
+        isBold: true,
+      ));
+      rows.add(SpacingRow(_itemGap));
+    }
+
     if (displayConfig?['showQuantityCount']?.visible == true) {
       final quantityCountLabel = _getLabel(
         displayConfig,
