@@ -78,6 +78,16 @@ import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dial
 
 enum CheckoutActionMode { confirm, save }
 
+class _CartUnitMenuOption {
+  final String value;
+  final String label;
+
+  const _CartUnitMenuOption({
+    required this.value,
+    required this.label,
+  });
+}
+
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});
 
@@ -222,7 +232,14 @@ class BillingPageState extends State<BillingPage>
   String? _cartQuantityEditRequestKey;
   String? _cartPriceEditRequestKey;
   String? _cartQuantityRefreshRequestKey;
+  String? _cartUnitMenuOpenRequestKey;
   num? _cartQuantityRefreshQuantity;
+  bool _isCartUnitMenuOpen = false;
+  final Map<String, LayerLink> _cartUnitMenuLayerLinks = <String, LayerLink>{};
+  OverlayEntry? _cartUnitMenuOverlayEntry;
+  List<_CartUnitMenuOption> _cartUnitMenuOptions =
+      const <_CartUnitMenuOption>[];
+  int _cartUnitMenuHighlightedIndex = 0;
 
   StreamSubscription<String>? _barcodeSubscription;
 
@@ -421,6 +438,7 @@ class BillingPageState extends State<BillingPage>
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onBillingHardwareKey);
     debugPrint("⌨️ [BillingPage] HardwareKeyboard handler removed in dispose");
+    _cartUnitMenuOverlayEntry?.remove();
     _barcodeSubscription?.cancel();
     barcodeController.dispose();
     mobileNumberTextController.dispose();
@@ -951,6 +969,9 @@ class BillingPageState extends State<BillingPage>
     // (when row index was null), leaving a stale ring after Tab left the
     // cart.
     if (!mounted) return;
+    if (!_cartTableFocusNode.hasFocus) {
+      _closeCartUnitMenu(refocusCart: false);
+    }
     setState(() {
       if (_cartTableFocusNode.hasFocus) {
         _cartTableFocusedRowIndex ??= 0;
@@ -2817,42 +2838,220 @@ class BillingPageState extends State<BillingPage>
     return uniqueSaleUnits.values.toList();
   }
 
+  List<_CartUnitMenuOption> _cartUnitOptionsForItem(LocalCartItem item) {
+    final saleUnits = _validSaleUnitsForCartItem(item);
+    final baseUnit = item.product.unit?.trim();
+    final baseLabel = baseUnit == null || baseUnit.isEmpty ? '-' : baseUnit;
+    final options = <_CartUnitMenuOption>[
+      _CartUnitMenuOption(value: 'base', label: baseLabel),
+    ];
+    final normalizedBaseLabel = baseLabel.trim().toLowerCase();
+
+    for (final saleUnit in saleUnits) {
+      final saleUnitId = saleUnit.id;
+      final saleUnitLabel = saleUnit.unitName?.trim().isNotEmpty == true
+          ? saleUnit.unitName!.trim()
+          : saleUnitId?.toString();
+      if (saleUnitId == null || saleUnitLabel == null) {
+        continue;
+      }
+      final isDuplicateBaseUnit =
+          saleUnitLabel.trim().toLowerCase() == normalizedBaseLabel;
+      if (isDuplicateBaseUnit && item.saleUnitId != saleUnitId) {
+        continue;
+      }
+      options.add(
+        _CartUnitMenuOption(
+          value: saleUnitId.toString(),
+          label: saleUnitLabel,
+        ),
+      );
+    }
+    return options;
+  }
+
+  String _selectedCartUnitValue(LocalCartItem item) {
+    return item.saleUnitId == null ? 'base' : item.saleUnitId.toString();
+  }
+
+  void _closeCartUnitMenu({bool refocusCart = true}) {
+    _cartUnitMenuOverlayEntry?.remove();
+    _cartUnitMenuOverlayEntry = null;
+    _cartUnitMenuOptions = const <_CartUnitMenuOption>[];
+    _cartUnitMenuHighlightedIndex = 0;
+    _isCartUnitMenuOpen = false;
+    if (refocusCart && mounted) {
+      _cartTableFocusNode.requestFocus();
+    }
+  }
+
+  void _selectCartUnitOption({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required String value,
+  }) {
+    _closeCartUnitMenu();
+    if (item.product.productId == null) {
+      return;
+    }
+
+    if (value == 'base') {
+      if (item.saleUnitId == null) {
+        return;
+      }
+      localProductProvider.changeCartItemSaleUnit(
+        item.product.productId!,
+        item.selectedStock,
+        stockGroupIds: item.stockGroupIds,
+        currentSaleUnitId: item.saleUnitId,
+      );
+      return;
+    }
+
+    if (value == item.saleUnitId?.toString()) {
+      return;
+    }
+
+    final saleUnits = _validSaleUnitsForCartItem(item);
+    SaleUnit? selectedSaleUnit;
+    for (final saleUnit in saleUnits) {
+      if (saleUnit.id?.toString() == value) {
+        selectedSaleUnit = saleUnit;
+        break;
+      }
+    }
+    final selectedRate =
+        selectedSaleUnit == null ? null : _parseSaleUnitRate(selectedSaleUnit);
+    if (selectedSaleUnit == null || selectedRate == null) {
+      return;
+    }
+
+    localProductProvider.changeCartItemSaleUnit(
+      item.product.productId!,
+      item.selectedStock,
+      stockGroupIds: item.stockGroupIds,
+      currentSaleUnitId: item.saleUnitId,
+      newSaleUnitId: selectedSaleUnit.id,
+      newSaleUnitName: selectedSaleUnit.unitName,
+      newSaleUnitConversionRate: selectedRate,
+    );
+  }
+
+  void _openCartUnitMenu({
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required LayerLink layerLink,
+  }) {
+    final options = _cartUnitOptionsForItem(item);
+    if (options.length <= 1 && item.saleUnitId == null) {
+      return;
+    }
+
+    final selectedValue = _selectedCartUnitValue(item);
+    final selectedIndex = options.indexWhere((option) {
+      return option.value == selectedValue;
+    });
+
+    _closeCartUnitMenu(refocusCart: false);
+    _cartUnitMenuOptions = options;
+    _cartUnitMenuHighlightedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    _isCartUnitMenuOpen = true;
+
+    _cartUnitMenuOverlayEntry = OverlayEntry(
+      builder: (context) {
+        return Positioned.fill(
+          child: Stack(
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => _closeCartUnitMenu(),
+              ),
+              CompositedTransformFollower(
+                link: layerLink,
+                showWhenUnlinked: false,
+                offset: const Offset(0, 28),
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 84,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.14),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (int index = 0; index < options.length; index++)
+                          InkWell(
+                            onTap: () => _selectCartUnitOption(
+                              item: item,
+                              localProductProvider: localProductProvider,
+                              value: options[index].value,
+                            ),
+                            child: Container(
+                              height: 32,
+                              width: double.infinity,
+                              alignment: Alignment.centerLeft,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: index == _cartUnitMenuHighlightedIndex
+                                    ? ColorManager.kPrimaryColor
+                                        .withOpacity(0.12)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.vertical(
+                                  top: index == 0
+                                      ? const Radius.circular(8)
+                                      : Radius.zero,
+                                  bottom: index == options.length - 1
+                                      ? const Radius.circular(8)
+                                      : Radius.zero,
+                                ),
+                              ),
+                              child: Text(
+                                options[index].label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s12,
+                                  0.15,
+                                  ColorManager.textColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_cartUnitMenuOverlayEntry!);
+    _cartTableFocusNode.requestFocus();
+  }
+
   Widget _buildCartUnitSelector({
     required LocalCartItem item,
     required LocalProductProvider localProductProvider,
     required TextStyle textStyle,
+    required bool shouldAutoOpenFromShortcut,
   }) {
-    final saleUnits = _validSaleUnitsForCartItem(item);
-    final baseUnit = item.product.unit?.trim();
-    final baseLabel = baseUnit == null || baseUnit.isEmpty ? '-' : baseUnit;
-    final isBaseSelected = item.saleUnitId == null;
-
-    final List<PopupMenuEntry<String>> unitMenuItems = [];
-    if (!isBaseSelected) {
-      unitMenuItems.add(
-        PopupMenuItem<String>(
-          value: 'base',
-          child: Text('$baseLabel (Base)'),
-        ),
-      );
-    }
-
-    for (final saleUnit in saleUnits) {
-      final saleUnitId = saleUnit.id;
-      if (saleUnitId == null || saleUnitId == item.saleUnitId) {
-        continue;
-      }
-      unitMenuItems.add(
-        PopupMenuItem<String>(
-          value: saleUnitId.toString(),
-          child: Text(saleUnit.unitName?.trim().isNotEmpty == true
-              ? saleUnit.unitName!.trim()
-              : saleUnitId.toString()),
-        ),
-      );
-    }
-
-    if (unitMenuItems.isEmpty) {
+    final options = _cartUnitOptionsForItem(item);
+    final canChangeUnit = options.length > 1 || item.saleUnitId != null;
+    if (!canChangeUnit) {
       return Text(
         item.displayUnitName,
         style: textStyle,
@@ -2860,73 +3059,51 @@ class BillingPageState extends State<BillingPage>
       );
     }
 
-    return PopupMenuButton<String>(
-      tooltip: 'Change unit',
-      padding: EdgeInsets.zero,
-      color: Colors.white,
-      elevation: 8,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      onSelected: (value) {
-        if (item.product.productId == null) {
-          return;
-        }
-
-        if (value == 'base') {
-          localProductProvider.changeCartItemSaleUnit(
-            item.product.productId!,
-            item.selectedStock,
-            stockGroupIds: item.stockGroupIds,
-            currentSaleUnitId: item.saleUnitId,
-          );
-          return;
-        }
-
-        SaleUnit? selectedSaleUnit;
-        for (final saleUnit in saleUnits) {
-          if (saleUnit.id?.toString() == value) {
-            selectedSaleUnit = saleUnit;
-            break;
-          }
-        }
-        final selectedRate = selectedSaleUnit == null
-            ? null
-            : _parseSaleUnitRate(selectedSaleUnit);
-        if (selectedSaleUnit == null || selectedRate == null) {
-          return;
-        }
-
-        localProductProvider.changeCartItemSaleUnit(
-          item.product.productId!,
-          item.selectedStock,
-          stockGroupIds: item.stockGroupIds,
-          currentSaleUnitId: item.saleUnitId,
-          newSaleUnitId: selectedSaleUnit.id,
-          newSaleUnitName: selectedSaleUnit.unitName,
-          newSaleUnitConversionRate: selectedRate,
+    final identityKey = _cartIdentityKey(item);
+    final layerLink =
+        _cartUnitMenuLayerLinks.putIfAbsent(identityKey, LayerLink.new);
+    if (shouldAutoOpenFromShortcut) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _cartUnitMenuOpenRequestKey = null;
+        _openCartUnitMenu(
+          item: item,
+          localProductProvider: localProductProvider,
+          layerLink: layerLink,
         );
-      },
-      itemBuilder: (context) => unitMenuItems,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Text(
-              item.displayUnitName,
-              style: textStyle,
-              textAlign: TextAlign.left,
-              overflow: TextOverflow.ellipsis,
+      });
+    }
+
+    return CompositedTransformTarget(
+      link: layerLink,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          _openCartUnitMenu(
+            item: item,
+            localProductProvider: localProductProvider,
+            layerLink: layerLink,
+          );
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                item.displayUnitName,
+                style: textStyle,
+                textAlign: TextAlign.left,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          const SizedBox(width: 2),
-          const Icon(
-            Icons.keyboard_arrow_down,
-            size: 14,
-            color: ColorManager.kPrimaryColor,
-          ),
-        ],
+            const SizedBox(width: 2),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              size: 14,
+              color: ColorManager.kPrimaryColor,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3210,6 +3387,9 @@ class BillingPageState extends State<BillingPage>
                                                   0.21,
                                                   ColorManager.textColor,
                                                 ),
+                                                shouldAutoOpenFromShortcut:
+                                                    _cartUnitMenuOpenRequestKey ==
+                                                        _cartIdentityKey(item),
                                               ),
                                             ),
                                           ),
@@ -3462,6 +3642,7 @@ class BillingPageState extends State<BillingPage>
 
   void _focusCartTable() {
     debugPrint("⌨️ [BillingPage] Focusing cart table");
+    _closeCartUnitMenu(refocusCart: false);
     setState(() {
       _cartTableFocusedRowIndex = 0;
       _cartTableFocusedCellIndex = 0;
@@ -3491,8 +3672,59 @@ class BillingPageState extends State<BillingPage>
         _cartPriceEditRequestId++;
       } else {
         _cartTableFocusedCellIndex = 1;
+        _cartUnitMenuOpenRequestKey = _cartIdentityKey(item);
       }
     });
+  }
+
+  KeyEventResult _handleOpenCartUnitMenuKey({
+    required KeyEvent event,
+    required LocalCartItem item,
+    required LocalProductProvider localProductProvider,
+    required int cartLength,
+  }) {
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowUp) {
+      final optionCount = _cartUnitMenuOptions.length;
+      if (optionCount == 0) {
+        _closeCartUnitMenu();
+        return KeyEventResult.handled;
+      }
+      final delta = key == LogicalKeyboardKey.arrowDown ? 1 : -1;
+      _cartUnitMenuHighlightedIndex =
+          (_cartUnitMenuHighlightedIndex + delta + optionCount) % optionCount;
+      _cartUnitMenuOverlayEntry?.markNeedsBuild();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
+      if (_cartUnitMenuOptions.isEmpty) {
+        _closeCartUnitMenu();
+        return KeyEventResult.handled;
+      }
+      final selectedIndex = _cartUnitMenuHighlightedIndex
+          .clamp(0, _cartUnitMenuOptions.length - 1)
+          .toInt();
+      _selectCartUnitOption(
+        item: item,
+        localProductProvider: localProductProvider,
+        value: _cartUnitMenuOptions[selectedIndex].value,
+      );
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.escape) {
+      _closeCartUnitMenu();
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.tab) {
+      _closeCartUnitMenu();
+      return _handleCartTableTabKey(cartLength);
+    }
+
+    return KeyEventResult.handled;
   }
 
   KeyEventResult _handleCartTableKey(
@@ -3501,6 +3733,19 @@ class BillingPageState extends State<BillingPage>
       LocalProductProvider localProductProvider) {
     if (event is! KeyDownEvent || cartItems.isEmpty) {
       return KeyEventResult.ignored;
+    }
+
+    final focusedIndex =
+        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
+    final item = cartItems[focusedIndex];
+
+    if (_isCartUnitMenuOpen) {
+      return _handleOpenCartUnitMenuKey(
+        event: event,
+        item: item,
+        localProductProvider: localProductProvider,
+        cartLength: cartItems.length,
+      );
     }
 
     final key = event.logicalKey;
@@ -3546,13 +3791,19 @@ class BillingPageState extends State<BillingPage>
       return KeyEventResult.handled;
     }
 
-    final focusedIndex =
-        (_cartTableFocusedRowIndex ?? 0).clamp(0, cartItems.length - 1).toInt();
-    final item = cartItems[focusedIndex];
-
-    if (key == LogicalKeyboardKey.enter) {
+    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
       if (_cartTableFocusedCellIndex == 0) {
         _showProductDetailsDialog(item);
+      } else if (_cartTableFocusedCellIndex == 1) {
+        final identityKey = _cartIdentityKey(item);
+        final layerLink = _cartUnitMenuLayerLinks[identityKey];
+        if (layerLink != null) {
+          _openCartUnitMenu(
+            item: item,
+            localProductProvider: localProductProvider,
+            layerLink: layerLink,
+          );
+        }
       } else if (_cartTableFocusedCellIndex == 2) {
         setState(() {
           _cartQuantityEditRequestKey = _cartIdentityKey(item);
