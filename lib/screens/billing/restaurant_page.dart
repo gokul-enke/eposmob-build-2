@@ -428,6 +428,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
           if (!isCompact) ...[
             if (widget.allowCounterBillingFromAttender) ...[
               const SizedBox(width: 8),
+              _buildTopBarNewOrderButton(),
+            ],
+            if (widget.allowCounterBillingFromAttender) ...[
+              const SizedBox(width: 8),
               _buildTopBarCounterToggle(isCompact: false),
             ],
             const SizedBox(width: 14),
@@ -591,6 +595,34 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBarNewOrderButton() {
+    return SizedBox(
+      height: 38,
+      child: ElevatedButton.icon(
+        onPressed: _startNewCounterOrder,
+        icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+        label: Text(
+          'New Order',
+          style: buildCustomStyle(
+            FontWeightManager.bold,
+            FontSize.s12,
+            0.21,
+            Colors.white,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2563EB),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
       ),
@@ -904,6 +936,29 @@ class _RestaurantPageState extends State<RestaurantPage> {
         _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
       }
     });
+    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    _orderPanelKey.currentState?.showCurrentOrderTab();
+  }
+
+  void _startNewCounterOrder() {
+    if (!widget.allowCounterBillingFromAttender) return;
+
+    _autoSaveCurrentTableBeforeSwitch();
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+
+    setState(() {
+      _isCounterBillingMode = true;
+      _activeTableId = null;
+      _selectedTableName = null;
+      _selectedOrderFromOrderPanel = null;
+      _selectedDeliveryMethodId = defaultMethod?.id ?? kFallbackDeliveryMethodId;
+      _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
+      _refreshCounter = (_refreshCounter ?? 0) + 1;
+    });
+
     _orderPanelKey.currentState?.resetPaymentModalFlag();
     _orderPanelKey.currentState?.showCurrentOrderTab();
   }
