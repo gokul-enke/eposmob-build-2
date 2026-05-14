@@ -156,7 +156,10 @@ class SideBarController extends GetxController {
     SupplierListScreen(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
     ConfirmedOrdersScreen(), // 54 Confirmed Orders
-    RestaurantPage(), // 55 Restaurant Page
+    RestaurantPage(
+      allowCounterBillingFromAttender: false,
+      defaultCounterBillingMode: false,
+    ), // 55 Restaurant Page (Attender)
     KitchenMaster(), // 56 Kitchen Master
     SupplierDetailsScreen(), // 57 Supplier Details
     SalesExecutiveReportScreen(), // 58 Sales Executive Report

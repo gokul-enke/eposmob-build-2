@@ -59,10 +59,12 @@ bool isApiSuccess(dynamic response) {
 
 class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
+  final bool defaultCounterBillingMode;
 
   const RestaurantPage({
     super.key,
     this.allowCounterBillingFromAttender = true,
+    this.defaultCounterBillingMode = false,
   });
 
   @override
@@ -96,6 +98,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   @override
   void initState() {
     super.initState();
+    _isCounterBillingMode = widget.defaultCounterBillingMode;
     // Initialize data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
@@ -403,10 +406,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
               ],
             ),
           ),
-          if (widget.allowCounterBillingFromAttender) ...[
-            const SizedBox(width: 12),
-            _buildTopBarCounterToggle(isCompact: isCompact),
-          ],
           if (!isCompact) ...[
             const SizedBox(width: 14),
             _buildTopBarActions(),
