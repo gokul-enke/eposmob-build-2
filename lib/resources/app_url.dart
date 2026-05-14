@@ -108,6 +108,7 @@ class APPUrl {
       '$baseURL/api/v1/product/edit-product-props';
   static String get editProductImageUrl =>
       '$baseURL/api/v1/product/edit-product-image';
+  static String get deleteProductUrl => '$baseURL/api/v1/product/delete-product';
   static String get listFilesForImageUrl => '$baseURL/api/v1/file/list-files';
 
   static String get getStores => '$baseURL/api/v1/stores/get-stores?store_name';
