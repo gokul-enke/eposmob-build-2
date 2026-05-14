@@ -4779,7 +4779,7 @@ class OrderPanelState extends State<OrderPanel> {
     return (comment == null || comment.isEmpty) ? null : comment;
   }
 
-  void _showCheckoutModal({bool forCurrentCart = false}) async {
+  void _showCheckoutModal({bool forCurrentCart = false}) {
     // Release any current focus so checkout modal text fields receive input cleanly.
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -4800,35 +4800,9 @@ class OrderPanelState extends State<OrderPanel> {
       _syncOrderItemsWithLocalCart();
     }
 
-    // Reload payment methods and refresh BillingProvider method IDs
-    final masterDataProvider =
-        Provider.of<MasterDataProvider>(context, listen: false);
-    final methods =
-        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
-
-    if (methods != null && mounted) {
-      final billingProvider =
-          Provider.of<BillingProvider>(context, listen: false);
-      String? cashId, cardId, upiId, codId;
-      for (var m in methods) {
-        final val = m.value.toUpperCase();
-        if (val == 'CASH') {
-          cashId = m.id.toString();
-        } else if (val == 'CARD') {
-          cardId = m.id.toString();
-        } else if (val == 'UPI') {
-          upiId = m.id.toString();
-        } else if (val == 'COD') {
-          codId = m.id.toString();
-        }
-      }
-      billingProvider.updatePaymentMethodIds(
-        cashId: cashId,
-        cardId: cardId,
-        upiId: upiId,
-        codId: codId,
-      );
-    }
+    // Keep checkout modal launch instant: do not block on payment-method API.
+    // BillingProvider IDs will use already-cached values and can be refreshed
+    // later by existing background/bootstrap flows if needed.
 
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
