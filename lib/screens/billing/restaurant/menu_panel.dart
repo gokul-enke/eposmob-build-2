@@ -1155,11 +1155,13 @@ class _MenuPanelState extends State<MenuPanel> {
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: EdgeInsets.all(compact ? 8.0 : 12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween, // Distribute content evenly
-              children: [
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween, // Distribute content evenly
+                children: [
                 // Top section: Image, name, price, description
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1277,7 +1279,8 @@ class _MenuPanelState extends State<MenuPanel> {
                     ),
                   ],
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
