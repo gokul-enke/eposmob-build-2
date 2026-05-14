@@ -473,24 +473,24 @@ class _MenuPanelState extends State<MenuPanel> {
           if (widget.isCompact) {
             if (widget.screenSize.width > 600) {
               crossAxisCount = 2;
-              childAspectRatio = 1.8;
+              childAspectRatio = 1.48;
             } else {
               crossAxisCount = 1;
-              childAspectRatio = 1.95;
+              childAspectRatio = 1.62;
             }
           } else {
             if (widget.screenSize.width > 1600) {
               crossAxisCount = 5;
-              childAspectRatio = 1.75;
+              childAspectRatio = 1.48;
             } else if (widget.screenSize.width > 1300) {
               crossAxisCount = 4;
-              childAspectRatio = 1.72;
+              childAspectRatio = 1.45;
             } else if (widget.screenSize.width > 1000) {
               crossAxisCount = 3;
-              childAspectRatio = 1.68;
+              childAspectRatio = 1.4;
             } else {
               crossAxisCount = 2;
-              childAspectRatio = 1.65;
+              childAspectRatio = 1.36;
             }
           }
         } else if (cardMode == MenuCardMode.medium) {

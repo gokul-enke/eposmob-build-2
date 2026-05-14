@@ -49,7 +49,7 @@ class _BillingPageResponsiveState extends State<BillingPageResponsive> {
     // Show RestaurantPage for restaurant_sales role, otherwise show BillingPage
     if (userRole == 'restaurant_sales') {
       return const RestaurantPage(
-        allowCounterBillingFromAttender: false,
+        allowCounterBillingFromAttender: true,
         defaultCounterBillingMode: true,
       );
     }

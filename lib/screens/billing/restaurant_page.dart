@@ -137,6 +137,25 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
     // Load tables from API
     await tableProvider.loadTables(accessToken: authModel.token);
+
+    // If this page opens directly in counter mode, ensure a delivery context
+    // is preselected so add/send actions don't fail validation.
+    _ensureCounterDeliveryContext();
+  }
+
+  void _ensureCounterDeliveryContext() {
+    if (!_isCounterBillingMode) return;
+    if (_activeTableId != null || _selectedDeliveryMethodId != null) return;
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+
+    if (!mounted) return;
+    setState(() {
+      _selectedDeliveryMethodId = defaultMethod?.id ?? kFallbackDeliveryMethodId;
+      _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
+    });
   }
 
   @override
@@ -407,6 +426,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
             ),
           ),
           if (!isCompact) ...[
+            if (widget.allowCounterBillingFromAttender) ...[
+              const SizedBox(width: 8),
+              _buildTopBarCounterToggle(isCompact: false),
+            ],
             const SizedBox(width: 14),
             _buildTopBarActions(),
             const SizedBox(width: 6),

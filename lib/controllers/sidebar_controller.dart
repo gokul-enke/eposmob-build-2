@@ -157,7 +157,7 @@ class SideBarController extends GetxController {
     PrinterSettings(), // 53 Printer Settings
     ConfirmedOrdersScreen(), // 54 Confirmed Orders
     RestaurantPage(
-      allowCounterBillingFromAttender: false,
+      allowCounterBillingFromAttender: true,
       defaultCounterBillingMode: false,
     ), // 55 Restaurant Page (Attender)
     KitchenMaster(), // 56 Kitchen Master
