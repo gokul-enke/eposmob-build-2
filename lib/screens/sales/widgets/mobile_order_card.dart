@@ -308,6 +308,8 @@ class MobileOrderCard extends StatelessWidget {
             orderDetails.data?.getCustomerAddressForDisplay();
         String? customerAlternatePhone =
             orderDetails.data?.customerDetails?.alternatePhone;
+        String? customerType =
+            orderDetails.data?.customerDetails?.customerType;
         String? paymentMethod =
             orderDetails.data?.paymentDetails?.paymentMethod;
 
@@ -367,6 +369,7 @@ class MobileOrderCard extends StatelessWidget {
               customerEmail: customerEmail,
               customerAddress: customerAddress,
               customerAlternatePhone: customerAlternatePhone,
+              customerType: customerType,
               paymentMethod: paymentMethod,
               orderComment: orderComment,
               orderReturns: orderDetails.data?.orderReturns,

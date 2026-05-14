@@ -2498,6 +2498,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       toCustomerCredit: _toCustomerCreditEnabled,
                       address: deliveryAddress,
                       deliveryCharge: _getDeliveryChargeForOrder(),
+                      customerType: selectedCustomer?.customerType,
                     );
 
                     // Show quick feedback
@@ -2533,6 +2534,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       toCustomerCredit: _toCustomerCreditEnabled,
                       address: deliveryAddress,
                       deliveryCharge: _getDeliveryChargeForOrder(),
+                      customerType: selectedCustomer?.customerType,
                     );
                     showScaffold(
                       context: context,
@@ -4625,6 +4627,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     final currentOrder = localProductProvider.currentOrder;
     final customerNameToSave = selectedCustomer?.name;
     final customerPhoneToSave = _resolveCustomerPhoneForPayload();
+    final customerTypeToSave = selectedCustomer?.customerType;
     final couponIdToSave =
         isCouponApplied ? coupenCodeTextController.text : null;
 
@@ -4650,6 +4653,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         context: context,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        customerType: customerTypeToSave,
       );
       return localProductProvider.findOrderById(currentOrder.id) ??
           currentOrder;
@@ -4675,6 +4679,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       toCustomerCredit: _toCustomerCreditEnabled,
       address: deliveryAddress,
       deliveryCharge: _getDeliveryChargeForOrder(),
+      customerType: customerTypeToSave,
     );
   }
 
@@ -4923,6 +4928,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           context: context,
           address: deliveryAddress, // Pass address
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
           // context: context, // Pass context
         );
 
@@ -4967,6 +4973,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           transactionId: _transactionNumberController.text,
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
+          customerType: selectedCustomer?.customerType,
           carNumber: _carNumberController.text,
           status: 'saved',
           deliveryDate: deliveryDate,
@@ -5098,6 +5105,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           context: context,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         orderToUse = localProductProvider.moveToConfirmedOrders(currentOrderId);
@@ -5121,6 +5129,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         showScaffold(
@@ -5149,6 +5158,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           transactionId: _transactionNumberController.text,
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
+          customerType: selectedCustomer?.customerType,
           carNumber: _carNumberController.text,
           status: 'confirmed',
           deliveryDate: deliveryDate,
@@ -5515,6 +5525,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 customerAlternatePhone: customerAlternatePhone,
                 customerVatNumber: customerVatNumber,
                 customerCrNumber: customerCrNumber,
+                customerType: selectedCustomer?.customerType,
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
@@ -6864,6 +6875,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     String? customerAlternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -6894,6 +6906,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       customerAlternatePhone: customerAlternatePhone,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -6926,6 +6939,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             customerAlternatePhone: customerAlternatePhone,
             customerVatNumber: customerVatNumber,
             customerCrNumber: customerCrNumber,
+            customerType: customerType,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -7037,6 +7051,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           customerAlternatePhone: savedOrder.alternatePhone,
           customerVatNumber: savedOrder.customerVatNumber,
           customerCrNumber: savedOrder.customerCrNumber,
+          customerType: savedOrder.customerType,
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0

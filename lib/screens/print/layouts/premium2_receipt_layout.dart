@@ -324,6 +324,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         appSettings?.printTitle,
         'INVOICE',
       );
+      debugPrint(
+          "[Premium2ReceiptLayout] order=${params.orderNumber}, customerType=${params.customerType ?? 'null'}, hasCustomerKyc=${(params.customerVatNumber?.trim().isNotEmpty ?? false) || (params.customerCrNumber?.trim().isNotEmpty ?? false)}, printedInvoiceTitle=$invoiceTitle");
       rows.add(SpacingRow(5));
       rows.add(TextRow(invoiceTitle.toUpperCase(), isBold: true, scale: 1.1));
       rows.add(SpacingRow(2));
@@ -757,6 +759,23 @@ class Premium2ReceiptLayout implements ReceiptLayout {
     }
 
     rows.add(SpacingRow(_itemGap));
+
+    // Items Count
+    if (displayConfig?['showItemsCount']?.visible == true) {
+      final itemsCountLabel = _getLabel(
+        displayConfig,
+        'showItemsCount',
+        null,
+        isEnglish ? "Items" : "أغراض",
+      );
+      final int itemCount = params.cartItems.length;
+      rows.add(TextRow(
+        "$itemsCountLabel: $itemCount",
+        scale: 0.9,
+        isBold: true,
+      ));
+      rows.add(SpacingRow(_itemGap));
+    }
 
     if (displayConfig?['showQuantityCount']?.visible == true) {
       final quantityCountLabel = _getLabel(

@@ -83,6 +83,7 @@ class PrintService {
           orderDetails.data?.customerDetails?.alternatePhone;
       final customerVatNumber = orderDetails.data?.kycInfo?.vatNumber;
       final customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
+      final customerType = orderDetails.data?.customerDetails?.customerType;
 
       final paymentMethod =
           orderDetails.data?.paymentDetails?.paymentMethod ?? 'N/A';
@@ -134,6 +135,7 @@ class PrintService {
         customerAlternatePhone: customerAlternatePhone,
         customerVatNumber: customerVatNumber,
         customerCrNumber: customerCrNumber,
+        customerType: customerType,
         paymentMethod: paymentMethod,
         paymentBreakdown: paymentBreakdown,
         orderComment: orderComment,
@@ -164,6 +166,7 @@ class PrintService {
               customerAlternatePhone: customerAlternatePhone,
               customerVatNumber: customerVatNumber,
               customerCrNumber: customerCrNumber,
+              customerType: customerType,
               paymentMethod: paymentMethod,
               paymentBreakdown: paymentBreakdown,
               orderComment: orderComment,
@@ -261,6 +264,7 @@ class PrintService {
           customerAlternatePhone: savedOrder.alternatePhone,
           customerVatNumber: savedOrder.customerVatNumber,
           customerCrNumber: savedOrder.customerCrNumber,
+          customerType: savedOrder.customerType,
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod,
           paidAmount: paidAmount,
@@ -290,6 +294,7 @@ class PrintService {
                 customerAlternatePhone: savedOrder.alternatePhone,
                 customerVatNumber: savedOrder.customerVatNumber,
                 customerCrNumber: savedOrder.customerCrNumber,
+                customerType: savedOrder.customerType,
                 orderComment: savedOrder.comment,
                 deliveryMethod: savedOrder.deliveryMethod,
                 paidAmount: paidAmount,

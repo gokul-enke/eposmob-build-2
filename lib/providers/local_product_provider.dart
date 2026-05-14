@@ -212,6 +212,7 @@ class SavedOrder {
   final double? deliveryCharge;
   final String? customerVatNumber;
   final String? customerCrNumber;
+  final String? customerType;
 
   SavedOrder({
     required this.id,
@@ -244,6 +245,7 @@ class SavedOrder {
     this.deliveryCharge,
     this.customerVatNumber,
     this.customerCrNumber,
+    this.customerType,
   });
 }
 
@@ -1216,6 +1218,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryCharge: hiveSavedOrder.deliveryCharge,
           customerVatNumber: hiveSavedOrder.customerVatNumber,
           customerCrNumber: hiveSavedOrder.customerCrNumber,
+          customerType: hiveSavedOrder.customerType,
         ));
       }
       notifyListeners();
@@ -1270,6 +1273,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryCharge: order.deliveryCharge,
           customerVatNumber: order.customerVatNumber,
           customerCrNumber: order.customerCrNumber,
+          customerType: order.customerType,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -1351,6 +1355,7 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryCharge: hiveSavedOrder.deliveryCharge,
         customerVatNumber: hiveSavedOrder.customerVatNumber,
         customerCrNumber: hiveSavedOrder.customerCrNumber,
+        customerType: hiveSavedOrder.customerType,
       );
       _savedOrders.add(savedOrder);
       debugPrint(
@@ -1483,6 +1488,7 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryCharge: order.deliveryCharge,
         customerVatNumber: order.customerVatNumber,
         customerCrNumber: order.customerCrNumber,
+        customerType: order.customerType,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -3019,6 +3025,7 @@ class LocalProductProvider extends ChangeNotifier {
     double? deliveryCharge,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -3068,6 +3075,7 @@ class LocalProductProvider extends ChangeNotifier {
       deliveryCharge: deliveryCharge,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
     );
 
     // Add to confirmed orders list
@@ -3120,6 +3128,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryCharge: order.deliveryCharge,
           customerVatNumber: order.customerVatNumber,
           customerCrNumber: order.customerCrNumber,
+          customerType: order.customerType,
         );
 
         // Add to confirmed orders
@@ -3203,6 +3212,7 @@ class LocalProductProvider extends ChangeNotifier {
     double? deliveryCharge,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
@@ -3261,6 +3271,7 @@ class LocalProductProvider extends ChangeNotifier {
       deliveryCharge: deliveryCharge,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
     );
 
     // Add to saved orders list
@@ -3387,6 +3398,7 @@ class LocalProductProvider extends ChangeNotifier {
     double? deliveryCharge,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
@@ -3448,6 +3460,7 @@ class LocalProductProvider extends ChangeNotifier {
             customerVatNumber ?? _savedOrders[index].customerVatNumber,
         customerCrNumber:
             customerCrNumber ?? _savedOrders[index].customerCrNumber,
+        customerType: customerType ?? _savedOrders[index].customerType,
       );
 
       // Update in list

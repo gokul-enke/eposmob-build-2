@@ -159,13 +159,14 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       deliveryCharge: fields[26] as double?,
       customerVatNumber: fields[27] as String?,
       customerCrNumber: fields[28] as String?,
+      customerType: fields[29] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveSavedOrder obj) {
     writer
-      ..writeByte(29)
+      ..writeByte(30)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -223,7 +224,9 @@ class HiveSavedOrderAdapter extends TypeAdapter<HiveSavedOrder> {
       ..writeByte(27)
       ..write(obj.customerVatNumber)
       ..writeByte(28)
-      ..write(obj.customerCrNumber);
+      ..write(obj.customerCrNumber)
+      ..writeByte(29)
+      ..write(obj.customerType);
   }
 
   @override

@@ -5564,6 +5564,7 @@ class BillingPageState extends State<BillingPage>
     final customerNameToSave = _customerNameForOrder();
     final customerPhoneToSave = _customerPhoneForOrder();
     final customerIdToSave = selectedCustomerID ?? selectedCustomer?.id;
+    final customerTypeToSave = selectedCustomer?.customerType;
     final couponIdToSave =
         isCouponApplied ? _trimToNull(coupenCodeTextController.text) : null;
     final currentOrder = localProductProvider.currentOrder;
@@ -5589,6 +5590,7 @@ class BillingPageState extends State<BillingPage>
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        customerType: customerTypeToSave,
       );
       return localProductProvider.findOrderById(currentOrder.id) ??
           currentOrder;
@@ -5614,6 +5616,7 @@ class BillingPageState extends State<BillingPage>
       toCustomerCredit: _toCustomerCreditEnabled,
       address: deliveryAddress,
       deliveryCharge: _getDeliveryChargeForOrder(),
+      customerType: customerTypeToSave,
     );
   }
 
@@ -5898,6 +5901,7 @@ class BillingPageState extends State<BillingPage>
           context: context,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         orderToUse = localProductProvider.moveToConfirmedOrders(currentOrderId);
@@ -5921,6 +5925,7 @@ class BillingPageState extends State<BillingPage>
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         showScaffold(
@@ -5956,6 +5961,7 @@ class BillingPageState extends State<BillingPage>
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         showScaffold(
@@ -6394,6 +6400,7 @@ class BillingPageState extends State<BillingPage>
                 customerAlternatePhone: customerAlternatePhone,
                 customerVatNumber: customerVatNumber,
                 customerCrNumber: customerCrNumber,
+                customerType: selectedCustomer?.customerType,
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
@@ -8165,6 +8172,7 @@ class BillingPageState extends State<BillingPage>
     String? customerAlternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -8195,6 +8203,7 @@ class BillingPageState extends State<BillingPage>
       customerAlternatePhone: customerAlternatePhone,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -8227,6 +8236,7 @@ class BillingPageState extends State<BillingPage>
             customerAlternatePhone: customerAlternatePhone,
             customerVatNumber: customerVatNumber,
             customerCrNumber: customerCrNumber,
+            customerType: customerType,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -8342,6 +8352,7 @@ class BillingPageState extends State<BillingPage>
           customerAlternatePhone: savedOrder.alternatePhone,
           customerVatNumber: savedOrder.customerVatNumber,
           customerCrNumber: savedOrder.customerCrNumber,
+          customerType: savedOrder.customerType,
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
