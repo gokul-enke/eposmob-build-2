@@ -92,6 +92,8 @@ class OrderPanelState extends State<OrderPanel> {
   bool _isLoadingConfirm = false; // Loading state for Confirm button
   bool _isLoadingPrintKot =
       false; // Loading state for edit-order Print KOT button
+  bool _isProcessingCheckout =
+      false; // Loading state for footer checkout button
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
 
@@ -5079,23 +5081,41 @@ class OrderPanelState extends State<OrderPanel> {
           onConfirmOrder: () async {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
+              _isProcessingCheckout = true;
             });
             Navigator.of(dialogContext).pop();
-            if (forCurrentCart) {
-              await _confirmCurrentCart(printBill: false);
-            } else {
-              await _confirmOrder();
+            try {
+              if (forCurrentCart) {
+                await _confirmCurrentCart(printBill: false);
+              } else {
+                await _confirmOrder();
+              }
+            } finally {
+              if (mounted) {
+                setState(() {
+                  _isProcessingCheckout = false;
+                });
+              }
             }
           },
           onConfirmAndPrint: () async {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
+              _isProcessingCheckout = true;
             });
             Navigator.of(dialogContext).pop();
-            if (forCurrentCart) {
-              await _confirmCurrentCart(printBill: true);
-            } else {
-              await _confirmOrderAndPrintBill();
+            try {
+              if (forCurrentCart) {
+                await _confirmCurrentCart(printBill: true);
+              } else {
+                await _confirmOrderAndPrintBill();
+              }
+            } finally {
+              if (mounted) {
+                setState(() {
+                  _isProcessingCheckout = false;
+                });
+              }
             }
           },
         );
@@ -7022,12 +7042,25 @@ class OrderPanelState extends State<OrderPanel> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        flex: 2,
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Send',
+                          icon: Icons.send,
+                          color: const Color(0xFF2563EB),
+                          isDisabled:
+                              cartItems.isEmpty || widget.isLoadingPrint,
+                          isLoading: widget.isLoadingPrint,
+                          onTap: () => widget.onPrintOrder(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: _buildCurrentCartFooterButton(
                           label: 'Checkout',
                           icon: Icons.point_of_sale,
                           color: const Color(0xFF059669),
-                          isDisabled: cartItems.isEmpty,
+                          isDisabled:
+                              cartItems.isEmpty || _isProcessingCheckout,
+                          isLoading: _isProcessingCheckout,
                           onTap: () => _showCheckoutModal(forCurrentCart: true),
                         ),
                       ),

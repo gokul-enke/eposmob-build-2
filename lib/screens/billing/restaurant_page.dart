@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -39,6 +40,8 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
+import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
+import 'package:pos_machine/widgets/sync_button.dart';
 
 import 'package:pos_machine/screens/billing/restaurant/tables_panel.dart';
 import 'package:pos_machine/screens/billing/restaurant/menu_panel.dart';
@@ -207,7 +210,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       orElse: () => tableProvider.tables.first,
                     );
                     setState(() {
-                      _isCounterBillingMode = false;
                       _activeTableId = id;
                       _selectedTableName = selectedTable.name;
                       _selectedDeliveryMethodId = null;
@@ -215,11 +217,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     });
                   },
                   selectedDeliveryMethodId: _selectedDeliveryMethodId,
+                  showDeliveryMethods: _isCounterBillingMode,
                   onDeliveryMethodSelected: (id, name) {
                     if (id.isEmpty) {
                       // Deselect delivery method
                       setState(() {
-                        _isCounterBillingMode = false;
                         _selectedDeliveryMethodId = null;
                         _selectedDeliveryMethodName = null;
                       });
@@ -367,14 +369,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: isCounterEnabled
-                          ? const Color(0xFFECFDF5)
-                          : const Color(0xFFEFF6FF),
+                      color: const Color(0xFFEFF6FF),
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(
-                        color: isCounterEnabled
-                            ? const Color(0xFFA7F3D0)
-                            : const Color(0xFFBFDBFE),
+                        color: const Color(0xFFBFDBFE),
                       ),
                     ),
                     child: Row(
@@ -411,10 +409,87 @@ class _RestaurantPageState extends State<RestaurantPage> {
           ],
           if (!isCompact) ...[
             const SizedBox(width: 14),
+            _buildTopBarActions(),
+            const SizedBox(width: 6),
             const LiveClock(),
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildTopBarActions() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Consumer<KeyboardProvider>(
+          builder: (context, keyboardProvider, child) {
+            return IconButton(
+              icon: Icon(
+                keyboardProvider.showKeyboardFeature
+                    ? Icons.keyboard_hide
+                    : Icons.keyboard,
+                color: keyboardProvider.showKeyboardFeature
+                    ? const Color(0xFF2563EB)
+                    : Colors.grey.shade600,
+              ),
+              tooltip: keyboardProvider.showKeyboardFeature
+                  ? 'Hide Keyboard'
+                  : 'Show Keyboard',
+              onPressed: () {
+                if (keyboardProvider.showKeyboardFeature) {
+                  keyboardProvider.featureOff();
+                  keyboardProvider.clear();
+                } else {
+                  keyboardProvider.featureOn();
+                }
+              },
+            );
+          },
+        ),
+        Consumer<AppFontProvider>(
+          builder: (context, fontProvider, child) {
+            return IconButton(
+              icon: Icon(
+                Icons.text_fields,
+                color: fontProvider.fontSizeLevel > 0
+                    ? const Color(0xFF2563EB)
+                    : Colors.grey.shade600,
+              ),
+              tooltip: 'Font: ${fontProvider.fontSizeLevelName}',
+              onPressed: fontProvider.cycleFontSize,
+            );
+          },
+        ),
+        OpenCashDrawerButton(color: Colors.grey.shade600),
+        const SyncButton(
+          showTooltip: true,
+          showText: false,
+        ),
+        Consumer<BillingProvider>(
+          builder: (context, billingProvider, child) {
+            final hasInternet = billingProvider.hasInternet;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              decoration: BoxDecoration(
+                color: hasInternet
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: hasInternet ? Colors.green : Colors.red,
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                hasInternet ? Icons.wifi : Icons.wifi_off,
+                size: 16,
+                color: hasInternet ? Colors.green : Colors.red,
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -438,24 +513,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
               vertical: isCompact ? 8 : 9,
             ),
             decoration: BoxDecoration(
-              color:
-                  isEnabled ? const Color(0xFF059669) : const Color(0xFFF8FAFC),
+              color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: isEnabled
-                    ? const Color(0xFF059669)
-                    : const Color(0xFFCBD5E1),
+                color: const Color(0xFFCBD5E1),
                 width: 1.2,
               ),
-              boxShadow: isEnabled
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFF059669).withOpacity(0.24),
-                        blurRadius: 14,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : [],
+              boxShadow: const [],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -463,18 +527,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 Icon(
                   Icons.point_of_sale_rounded,
                   size: isCompact ? 15 : 16,
-                  color: isEnabled ? Colors.white : const Color(0xFF64748B),
+                  color: const Color(0xFF64748B),
                 ),
                 SizedBox(width: isCompact ? 6 : 8),
                 Text(
                   isCompact
                       ? (isEnabled ? 'Counter On' : 'Counter')
-                      : (isEnabled ? 'Quick Counter Active' : 'Quick Counter'),
+                      : 'Quick Counter',
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     isCompact ? FontSize.s12 : FontSize.s13,
                     0.21,
-                    isEnabled ? Colors.white : const Color(0xFF0F766E),
+                    const Color(0xFF0F766E),
                   ),
                 ),
                 SizedBox(width: isCompact ? 8 : 10),
@@ -484,9 +548,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   height: isCompact ? 16 : 18,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: isEnabled
-                        ? Colors.white.withOpacity(0.28)
-                        : const Color(0xFFE2E8F0),
+                    color: const Color(0xFFE2E8F0),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: AnimatedAlign(
@@ -499,8 +561,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       width: isCompact ? 12 : 14,
                       height: isCompact ? 12 : 14,
                       decoration: BoxDecoration(
-                        color:
-                            isEnabled ? Colors.white : const Color(0xFF94A3B8),
+                        color: const Color(0xFF94A3B8),
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -590,7 +651,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 orElse: () => tableProvider.tables.first,
               );
               setState(() {
-                _isCounterBillingMode = false;
                 _activeTableId = id;
                 _selectedTableName = selectedTable.name;
                 _selectedDeliveryMethodId = null;
@@ -600,10 +660,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
               });
             },
             selectedDeliveryMethodId: _selectedDeliveryMethodId,
+            showDeliveryMethods: _isCounterBillingMode,
             onDeliveryMethodSelected: (id, name) {
               if (id.isEmpty) {
                 setState(() {
-                  _isCounterBillingMode = false;
                   _selectedDeliveryMethodId = null;
                   _selectedDeliveryMethodName = null;
                 });
@@ -802,10 +862,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (!enabled) {
       setState(() {
         _isCounterBillingMode = false;
-        _selectedDeliveryMethodId = null;
-        _selectedDeliveryMethodName = null;
-        _activeTableId = null;
-        _selectedTableName = null;
       });
       _orderPanelKey.currentState?.resetPaymentModalFlag();
       _orderPanelKey.currentState?.showCurrentOrderTab();
@@ -818,11 +874,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
     setState(() {
       _isCounterBillingMode = true;
-      _activeTableId = null;
-      _selectedTableName = null;
-      _selectedDeliveryMethodId =
-          defaultMethod?.id ?? kFallbackDeliveryMethodId;
-      _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
+      // Keep existing table/delivery context. If nothing is selected yet,
+      // default to a delivery context so counter checkout can proceed.
+      if (_activeTableId == null && _selectedDeliveryMethodId == null) {
+        _selectedDeliveryMethodId =
+            defaultMethod?.id ?? kFallbackDeliveryMethodId;
+        _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
+      }
     });
     _orderPanelKey.currentState?.resetPaymentModalFlag();
     _orderPanelKey.currentState?.showCurrentOrderTab();

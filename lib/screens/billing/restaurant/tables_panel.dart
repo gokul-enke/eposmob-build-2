@@ -18,6 +18,7 @@ class TablesPanel extends StatelessWidget {
   final bool isCompact;
   final Size screenSize;
   final String? selectedDeliveryMethodId;
+  final bool showDeliveryMethods;
   final void Function(String id, String name) onDeliveryMethodSelected;
 
   const TablesPanel({
@@ -27,6 +28,7 @@ class TablesPanel extends StatelessWidget {
     this.isCompact = false,
     required this.screenSize,
     this.selectedDeliveryMethodId,
+    this.showDeliveryMethods = true,
     required this.onDeliveryMethodSelected,
   });
 
@@ -171,8 +173,7 @@ class TablesPanel extends StatelessWidget {
                   child: _buildTablesView(tables, context), // Pass context here
                 ),
               ),
-              // Delivery Methods Section at bottom
-              _buildDeliveryMethodsSection(context),
+              if (showDeliveryMethods) _buildDeliveryMethodsSection(context),
             ],
           ),
         );
