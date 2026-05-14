@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -39,6 +38,7 @@ import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/widgets/live_clock.dart';
 
 import 'package:pos_machine/screens/billing/restaurant/tables_panel.dart';
 import 'package:pos_machine/screens/billing/restaurant/menu_panel.dart';
@@ -55,7 +55,12 @@ bool isApiSuccess(dynamic response) {
 }
 
 class RestaurantPage extends StatefulWidget {
-  const RestaurantPage({super.key});
+  final bool allowCounterBillingFromAttender;
+
+  const RestaurantPage({
+    super.key,
+    this.allowCounterBillingFromAttender = true,
+  });
 
   @override
   State<RestaurantPage> createState() => _RestaurantPageState();
@@ -83,6 +88,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   // Delivery method selection (alternative to table selection)
   String? _selectedDeliveryMethodId;
   String? _selectedDeliveryMethodName;
+  bool _isCounterBillingMode = false;
 
   @override
   void initState() {
@@ -114,10 +120,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final deliveryMethodsProvider =
         Provider.of<DeliveryMethodsProvider>(context, listen: false);
     if (!deliveryMethodsProvider.hasMethods) {
-      debugPrint('🚚 [RestaurantPage] Delivery methods not in memory — triggering fetch (will use cache if available)');
-      deliveryMethodsProvider.fetchDeliveryMethods(); // fire-and-forget, Consumer will rebuild
+      debugPrint(
+          '🚚 [RestaurantPage] Delivery methods not in memory — triggering fetch (will use cache if available)');
+      deliveryMethodsProvider
+          .fetchDeliveryMethods(); // fire-and-forget, Consumer will rebuild
     } else {
-      debugPrint('🚚 [RestaurantPage] ✅ ${deliveryMethodsProvider.deliveryMethods.length} delivery methods already in provider memory — no API call needed');
+      debugPrint(
+          '🚚 [RestaurantPage] ✅ ${deliveryMethodsProvider.deliveryMethods.length} delivery methods already in provider memory — no API call needed');
     }
 
     // Load tables from API
@@ -177,106 +186,347 @@ class _RestaurantPageState extends State<RestaurantPage> {
       orderPanelFlex = 2.2;
     }
 
-    return Row(
+    return Column(
       children: [
-        // Tables panel - flexible width
+        _buildAttenderTopBar(isCompact: !isLargeScreen),
         Expanded(
-          flex: tablesPanelFlex.round(),
-          child: TablesPanel(
-            activeTableId: _activeTableId,
-            onSelect: (id) {
-              _autoSaveCurrentTableBeforeSwitch();
-              // Get table name from provider for desktop mode
-              final tableProvider =
-                  Provider.of<TableProvider>(context, listen: false);
-              final selectedTable = tableProvider.tables.firstWhere(
-                (table) => table.id == id,
-                orElse: () => tableProvider.tables.first,
-              );
-              setState(() {
-                _activeTableId = id;
-                _selectedTableName = selectedTable.name;
-                _selectedDeliveryMethodId = null;
-                _selectedDeliveryMethodName = null;
-              });
-            },
-            selectedDeliveryMethodId: _selectedDeliveryMethodId,
-            onDeliveryMethodSelected: (id, name) {
-              if (id.isEmpty) {
-                // Deselect delivery method
-                setState(() {
-                  _selectedDeliveryMethodId = null;
-                  _selectedDeliveryMethodName = null;
-                });
-                return;
-              }
-              _autoSaveCurrentTableBeforeSwitch();
-              setState(() {
-                _selectedDeliveryMethodId = id;
-                _selectedDeliveryMethodName = name;
-                _activeTableId = null;
-                _selectedTableName = null;
-              });
-              _orderPanelKey.currentState?.resetPaymentModalFlag();
-              _orderPanelKey.currentState?.showCurrentOrderTab();
-            },
-            screenSize: screenSize,
-          ),
-        ),
-        // Menu panel - flexible width (gets most space)
-        Expanded(
-          flex: menuPanelFlex.round(),
-          child: MenuPanel(
-            onCategoryChanged: (cid) => setState(() => _activeCategoryId = cid),
-            activeCategoryId: _activeCategoryId,
-            onItemAdd: _handleItemAdd,
-            screenSize: screenSize,
-            selectedOrder: _selectedOrderFromOrderPanel, // Pass selected order
-          ),
-        ),
-        // Order panel - flexible width
-        Expanded(
-          flex: orderPanelFlex.round(),
-          child: OrderPanel(
-            key: _orderPanelKey, // Add key to access methods
-            tableId: _activeTableId,
-            preselectedDeliveryMethodId: _selectedDeliveryMethodId,
-            preselectedDeliveryMethodName: _selectedDeliveryMethodName,
-            screenSize: screenSize,
-            onSendToKitchen:
-                _sendOrderToKitchenWithLoading, // Use wrapper method
-            onNewOrder: _handleNewOrder, // Pass the new callback
-            onPrintOrder: _printOrderWithLoading, // Pass the print callback
-            onOrderSelected: (order) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  setState(() {
-                    _selectedOrderFromOrderPanel = order;
-                  });
-                }
-              });
-            }, // Pass callback to update selected order
-            selectedOrderFromParent:
-                _selectedOrderFromOrderPanel, // Pass the selected order
-            refreshCounter: _refreshCounter, // Pass refresh counter
-            isLoadingSendToKitchen:
-                _isLoadingSendToKitchen, // Pass loading state
-            isLoadingPrint: _isLoadingPrint, // Pass print loading state
+          child: Row(
+            children: [
+              // Tables panel - flexible width
+              Expanded(
+                flex: tablesPanelFlex.round(),
+                child: TablesPanel(
+                  activeTableId: _activeTableId,
+                  onSelect: (id) {
+                    _autoSaveCurrentTableBeforeSwitch();
+                    // Get table name from provider for desktop mode
+                    final tableProvider =
+                        Provider.of<TableProvider>(context, listen: false);
+                    final selectedTable = tableProvider.tables.firstWhere(
+                      (table) => table.id == id,
+                      orElse: () => tableProvider.tables.first,
+                    );
+                    setState(() {
+                      _isCounterBillingMode = false;
+                      _activeTableId = id;
+                      _selectedTableName = selectedTable.name;
+                      _selectedDeliveryMethodId = null;
+                      _selectedDeliveryMethodName = null;
+                    });
+                  },
+                  selectedDeliveryMethodId: _selectedDeliveryMethodId,
+                  onDeliveryMethodSelected: (id, name) {
+                    if (id.isEmpty) {
+                      // Deselect delivery method
+                      setState(() {
+                        _isCounterBillingMode = false;
+                        _selectedDeliveryMethodId = null;
+                        _selectedDeliveryMethodName = null;
+                      });
+                      return;
+                    }
+                    _autoSaveCurrentTableBeforeSwitch();
+                    setState(() {
+                      _selectedDeliveryMethodId = id;
+                      _selectedDeliveryMethodName = name;
+                      _activeTableId = null;
+                      _selectedTableName = null;
+                    });
+                    _orderPanelKey.currentState?.resetPaymentModalFlag();
+                    _orderPanelKey.currentState?.showCurrentOrderTab();
+                  },
+                  screenSize: screenSize,
+                ),
+              ),
+              // Menu panel - flexible width (gets most space)
+              Expanded(
+                flex: menuPanelFlex.round(),
+                child: MenuPanel(
+                  onCategoryChanged: (cid) =>
+                      setState(() => _activeCategoryId = cid),
+                  activeCategoryId: _activeCategoryId,
+                  onItemAdd: _handleItemAdd,
+                  screenSize: screenSize,
+                  selectedOrder:
+                      _selectedOrderFromOrderPanel, // Pass selected order
+                ),
+              ),
+              // Order panel - flexible width
+              Expanded(
+                flex: orderPanelFlex.round(),
+                child: OrderPanel(
+                  key: _orderPanelKey, // Add key to access methods
+                  tableId: _activeTableId,
+                  preselectedDeliveryMethodId: _selectedDeliveryMethodId,
+                  preselectedDeliveryMethodName: _selectedDeliveryMethodName,
+                  screenSize: screenSize,
+                  onSendToKitchen:
+                      _sendOrderToKitchenWithLoading, // Use wrapper method
+                  onNewOrder: _handleNewOrder, // Pass the new callback
+                  onPrintOrder:
+                      _printOrderWithLoading, // Pass the print callback
+                  allowCounterBilling: widget.allowCounterBillingFromAttender,
+                  isCounterBillingMode: _isCounterBillingMode,
+                  onOrderSelected: (order) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _selectedOrderFromOrderPanel = order;
+                        });
+                      }
+                    });
+                  }, // Pass callback to update selected order
+                  selectedOrderFromParent:
+                      _selectedOrderFromOrderPanel, // Pass the selected order
+                  refreshCounter: _refreshCounter, // Pass refresh counter
+                  isLoadingSendToKitchen:
+                      _isLoadingSendToKitchen, // Pass loading state
+                  isLoadingPrint: _isLoadingPrint, // Pass print loading state
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildMobileLayout(Size screenSize) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: _currentMobileView == MobileView.tables
-            ? _buildTablesView(screenSize)
-            : _buildOrdersView(screenSize),
+  Widget _buildAttenderTopBar({required bool isCompact}) {
+    final isCounterEnabled =
+        widget.allowCounterBillingFromAttender && _isCounterBillingMode;
+    final title = isCounterEnabled ? 'New Order - #00000' : 'Attender Orders';
+    final contextLabel = isCounterEnabled
+        ? (_selectedDeliveryMethodName ?? 'Store Takeaway')
+        : _activeTableId != null
+            ? (_selectedTableName ?? 'Selected table')
+            : (_selectedDeliveryMethodName ?? 'Select table or delivery');
+    final contextIcon = isCounterEnabled
+        ? Icons.point_of_sale_rounded
+        : _activeTableId != null
+            ? Icons.table_restaurant_rounded
+            : Icons.delivery_dining_rounded;
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(8, isCompact ? 8 : 8, 8, 0),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 14 : 20,
+        vertical: isCompact ? 10 : 14,
       ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(isCompact ? 9 : 11),
+            decoration: BoxDecoration(
+              color: isCounterEnabled
+                  ? const Color(0xFF059669).withOpacity(0.12)
+                  : const Color(0xFF2563EB).withOpacity(0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              isCounterEnabled
+                  ? Icons.point_of_sale_rounded
+                  : Icons.restaurant_menu_rounded,
+              color: isCounterEnabled
+                  ? const Color(0xFF059669)
+                  : const Color(0xFF2563EB),
+              size: isCompact ? 19 : 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    isCompact ? FontSize.s16 : FontSize.s18,
+                    0.30,
+                    const Color(0xFF1E293B),
+                  ),
+                ),
+                if (!isCompact)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isCounterEnabled
+                          ? const Color(0xFFECFDF5)
+                          : const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: isCounterEnabled
+                            ? const Color(0xFFA7F3D0)
+                            : const Color(0xFFBFDBFE),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          contextIcon,
+                          size: 14,
+                          color: isCounterEnabled
+                              ? const Color(0xFF047857)
+                              : const Color(0xFF2563EB),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          contextLabel,
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s12,
+                            0.21,
+                            isCounterEnabled
+                                ? const Color(0xFF047857)
+                                : const Color(0xFF1D4ED8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (widget.allowCounterBillingFromAttender) ...[
+            const SizedBox(width: 12),
+            _buildTopBarCounterToggle(isCompact: isCompact),
+          ],
+          if (!isCompact) ...[
+            const SizedBox(width: 14),
+            const LiveClock(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopBarCounterToggle({required bool isCompact}) {
+    final isEnabled = _isCounterBillingMode;
+
+    return Tooltip(
+      message: isEnabled
+          ? 'Disable quick counter billing'
+          : 'Enable quick counter billing',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _setCounterBillingMode(!isEnabled),
+          borderRadius: BorderRadius.circular(999),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 10 : 14,
+              vertical: isCompact ? 8 : 9,
+            ),
+            decoration: BoxDecoration(
+              color:
+                  isEnabled ? const Color(0xFF059669) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: isEnabled
+                    ? const Color(0xFF059669)
+                    : const Color(0xFFCBD5E1),
+                width: 1.2,
+              ),
+              boxShadow: isEnabled
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF059669).withOpacity(0.24),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.point_of_sale_rounded,
+                  size: isCompact ? 15 : 16,
+                  color: isEnabled ? Colors.white : const Color(0xFF64748B),
+                ),
+                SizedBox(width: isCompact ? 6 : 8),
+                Text(
+                  isCompact
+                      ? (isEnabled ? 'Counter On' : 'Counter')
+                      : (isEnabled ? 'Quick Counter Active' : 'Quick Counter'),
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    isCompact ? FontSize.s12 : FontSize.s13,
+                    0.21,
+                    isEnabled ? Colors.white : const Color(0xFF0F766E),
+                  ),
+                ),
+                SizedBox(width: isCompact ? 8 : 10),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: isCompact ? 30 : 34,
+                  height: isCompact ? 16 : 18,
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: isEnabled
+                        ? Colors.white.withOpacity(0.28)
+                        : const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: AnimatedAlign(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    alignment: isEnabled
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      width: isCompact ? 12 : 14,
+                      height: isCompact ? 12 : 14,
+                      decoration: BoxDecoration(
+                        color:
+                            isEnabled ? Colors.white : const Color(0xFF94A3B8),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(Size screenSize) {
+    return Column(
+      children: [
+        _buildAttenderTopBar(isCompact: true),
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: _currentMobileView == MobileView.tables
+                ? _buildTablesView(screenSize)
+                : _buildOrdersView(screenSize),
+          ),
+        ),
+      ],
     );
   }
 
@@ -340,6 +590,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 orElse: () => tableProvider.tables.first,
               );
               setState(() {
+                _isCounterBillingMode = false;
                 _activeTableId = id;
                 _selectedTableName = selectedTable.name;
                 _selectedDeliveryMethodId = null;
@@ -352,6 +603,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onDeliveryMethodSelected: (id, name) {
               if (id.isEmpty) {
                 setState(() {
+                  _isCounterBillingMode = false;
                   _selectedDeliveryMethodId = null;
                   _selectedDeliveryMethodName = null;
                 });
@@ -442,6 +694,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onSendToKitchen: _sendOrderToKitchenWithLoading,
             onNewOrder: _handleNewOrder,
             onPrintOrder: _printOrderWithLoading,
+            allowCounterBilling: widget.allowCounterBillingFromAttender,
+            isCounterBillingMode: _isCounterBillingMode,
             onOrderSelected: (order) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
@@ -532,6 +786,46 @@ class _RestaurantPageState extends State<RestaurantPage> {
         },
       ),
     );
+  }
+
+  void _setCounterBillingMode(bool enabled) {
+    if (!widget.allowCounterBillingFromAttender) {
+      showScaffoldError(
+        context: context,
+        message: 'Counter billing is disabled for this screen',
+      );
+      return;
+    }
+
+    _autoSaveCurrentTableBeforeSwitch();
+
+    if (!enabled) {
+      setState(() {
+        _isCounterBillingMode = false;
+        _selectedDeliveryMethodId = null;
+        _selectedDeliveryMethodName = null;
+        _activeTableId = null;
+        _selectedTableName = null;
+      });
+      _orderPanelKey.currentState?.resetPaymentModalFlag();
+      _orderPanelKey.currentState?.showCurrentOrderTab();
+      return;
+    }
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+
+    setState(() {
+      _isCounterBillingMode = true;
+      _activeTableId = null;
+      _selectedTableName = null;
+      _selectedDeliveryMethodId =
+          defaultMethod?.id ?? kFallbackDeliveryMethodId;
+      _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
+    });
+    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    _orderPanelKey.currentState?.showCurrentOrderTab();
   }
 
   Future<void> _handleItemAdd(GetProduct product, int quantity) async {
@@ -695,7 +989,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       final manualComment = currentComment.trim();
       final resolvedCustomerId =
           _orderPanelKey.currentState?.selectedCustomerIdForDraft;
-        final sendToKitchenRequestBody = {
+      final sendToKitchenRequestBody = {
         'items': items,
         'cart_id': 0,
         'transaction_number': '',
@@ -709,17 +1003,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
         'coupon_id': null,
         'comment': manualComment.isNotEmpty ? manualComment : null,
         'delivery_method_id': _selectedDeliveryMethodId ??
-          Provider.of<DeliveryMethodsProvider>(context, listen: false)
-              .defaultDeliveryMethod
-              ?.id ??
+            Provider.of<DeliveryMethodsProvider>(context, listen: false)
+                .defaultDeliveryMethod
+                ?.id ??
             kFallbackDeliveryMethodId,
         'car_number': null,
         'status': 'new',
         'delivery_date': null,
         'delivery_time': null,
         'table': _activeTableId,
-        };
-        debugPrint(
+      };
+      debugPrint(
           '📤 SEND TO KITCHEN request body: ${json.encode(sendToKitchenRequestBody)}');
       final response = await cartProvider.addToOrderAPI(
         items: items,
@@ -738,9 +1032,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
         comment: manualComment.isNotEmpty ? manualComment : null,
         deliveryMethodId: _selectedDeliveryMethodId ??
             Provider.of<DeliveryMethodsProvider>(context, listen: false)
-                    .defaultDeliveryMethod
-                    ?.id ??
-                kFallbackDeliveryMethodId,
+                .defaultDeliveryMethod
+                ?.id ??
+            kFallbackDeliveryMethodId,
         carNumber: null, // Not applicable
         status: "new", // Set status to "new"
         deliveryDate: null, // Not applicable
@@ -912,9 +1206,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
       }
 
       // Capture data for printing BEFORE clearing
-        final tableName =
+      final tableName =
           _selectedTableName ?? _selectedDeliveryMethodName ?? 'Order';
-        final showTableLabel =
+      final showTableLabel =
           _selectedTableName != null && _selectedTableName!.trim().isNotEmpty;
       final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
       final manualComment = currentComment.trim();
@@ -971,9 +1265,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
         comment: manualComment.isNotEmpty ? manualComment : null,
         deliveryMethodId: _selectedDeliveryMethodId ??
             Provider.of<DeliveryMethodsProvider>(context, listen: false)
-                    .defaultDeliveryMethod
-                    ?.id ??
-                kFallbackDeliveryMethodId,
+                .defaultDeliveryMethod
+                ?.id ??
+            kFallbackDeliveryMethodId,
         carNumber: null,
         status: "new",
         deliveryDate: null,
@@ -993,7 +1287,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
             final savedResponse = await cartProvider.listSavedOrders(
               accessToken: authModel.token ?? '',
               tableId: _activeTableId,
-              deliveryMethodId: _activeTableId == null ? _selectedDeliveryMethodId : null,
+              deliveryMethodId:
+                  _activeTableId == null ? _selectedDeliveryMethodId : null,
             );
             if (savedResponse['status'] == 'success') {
               final orders = savedResponse['orders'] as List<dynamic>;

@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
@@ -183,11 +184,13 @@ class TablesPanel extends StatelessWidget {
     return Consumer<DeliveryMethodsProvider>(
       builder: (context, deliveryMethodsProvider, _) {
         final methods = deliveryMethodsProvider.deliveryMethods;
-        debugPrint('🚚 [TablesPanel] Consumer rebuild — isLoading=${deliveryMethodsProvider.isLoading}, methods=${methods.length}, hasMethods=${deliveryMethodsProvider.hasMethods}');
+        debugPrint(
+            '🚚 [TablesPanel] Consumer rebuild — isLoading=${deliveryMethodsProvider.isLoading}, methods=${methods.length}, hasMethods=${deliveryMethodsProvider.hasMethods}');
 
         // Show a compact loading row while fetching
         if (deliveryMethodsProvider.isLoading && methods.isEmpty) {
-          debugPrint('🚚 [TablesPanel] Showing loading spinner (first-time fetch in progress)');
+          debugPrint(
+              '🚚 [TablesPanel] Showing loading spinner (first-time fetch in progress)');
           return Container(
             decoration: BoxDecoration(
               border: Border(
@@ -235,11 +238,13 @@ class TablesPanel extends StatelessWidget {
         }
 
         if (methods.isEmpty) {
-          debugPrint('🚚 [TablesPanel] No delivery methods available — hiding section');
+          debugPrint(
+              '🚚 [TablesPanel] No delivery methods available — hiding section');
           return const SizedBox.shrink();
         }
 
-        debugPrint('🚚 [TablesPanel] Rendering ${methods.length} delivery method chips (selected=$selectedDeliveryMethodId)');
+        debugPrint(
+            '🚚 [TablesPanel] Rendering ${methods.length} delivery method chips (selected=$selectedDeliveryMethodId)');
         return Container(
           decoration: BoxDecoration(
             border: Border(
@@ -276,8 +281,9 @@ class TablesPanel extends StatelessWidget {
                       const Color(0xFF1E293B),
                     ),
                   ),
+                  const Spacer(),
                   if (selectedDeliveryMethodId != null) ...[
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => onDeliveryMethodSelected('', ''),
                       child: Icon(
@@ -297,7 +303,8 @@ class TablesPanel extends StatelessWidget {
                 children: methods.map((method) {
                   final isSelected = selectedDeliveryMethodId == method.id;
                   return GestureDetector(
-                    onTap: () => onDeliveryMethodSelected(method.id, method.name),
+                    onTap: () =>
+                        onDeliveryMethodSelected(method.id, method.name),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: EdgeInsets.symmetric(
@@ -318,7 +325,8 @@ class TablesPanel extends StatelessWidget {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: const Color(0xFF1A56DB).withOpacity(0.25),
+                                  color:
+                                      const Color(0xFF1A56DB).withOpacity(0.25),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
