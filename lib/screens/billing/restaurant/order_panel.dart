@@ -2706,8 +2706,15 @@ class OrderPanelState extends State<OrderPanel> {
         '💵 Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
     debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
 
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+    final netAmount = finalOrderTotal;
+    const taxAmount = 0.0;
+    final totalPayable = finalOrderTotal;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -2726,130 +2733,37 @@ class OrderPanelState extends State<OrderPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
-            children: [
-              const Icon(
-                Icons.account_balance_wallet,
-                color: Color(0xFF2563EB),
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Payment Summary',
-                style: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s15,
-                  0.21,
-                  const Color(0xFF1E293B),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Summary rows
           _buildSummaryRow(
-            'Order Total',
-            '${orderTotal.toStringAsFixed(2)}',
-            color: const Color(0xFF64748B),
+            'Net Amount',
+            '$currency ${netAmount.toStringAsFixed(2)}',
+            color: const Color(0xFF3F3F46),
           ),
-
-          // Show discount information if any discount is applied (single line format like billing_page.dart)
-          if (_hasDiscount()) ...[
-            _buildSummaryRow(
-              'Discount',
-              '${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
-              color: const Color(0xFFDC2626),
-            ),
-            if (_isfreeDeliveryMinimumAmount())
-              _buildSummaryRow(
-                'Delivery Charge',
-                '${deliveryCharge.toStringAsFixed(2)}',
-                color: deliveryCharge > 0
-                    ? const Color(0xFF8B5CF6)
-                    : const Color(0xFF059669),
-              ),
-            _buildSummaryRow(
-              'Final Total',
-              '${finalOrderTotal.toStringAsFixed(2)}',
-              color: const Color(0xFF059669),
-              isBold: true,
-            ),
-          ] else ...[
-            if (_isfreeDeliveryMinimumAmount())
-              _buildSummaryRow(
-                'Delivery Charge',
-                '${deliveryCharge.toStringAsFixed(2)}',
-                color: deliveryCharge > 0
-                    ? const Color(0xFF8B5CF6)
-                    : const Color(0xFF059669),
-              ),
-            _buildSummaryRow(
-              'Final Total',
-              '${(orderTotal + deliveryCharge).toStringAsFixed(2)}',
-              color: const Color(0xFF059669),
-              isBold: true,
-            ),
-          ],
-
-          // Hide discount section for now
-          // if (_hasDiscount()) ...[
-          //   _buildSummaryRow(
-          //     'Discount',
-          //     '-${discountAmount.toStringAsFixed(2)}',
-          //     color: const Color(0xFFD97706),
-          //   ),
-          //   _buildSummaryRow(
-          //     'Final Total',
-          //     '${finalOrderTotal.toStringAsFixed(2)}',
-          //     color: const Color(0xFF1E293B),
-          //     isBold: true,
-          //   ),
-          // ],
-
-          // Only show customer balance if a customer is selected AND it's NOT the default customer
-          if (_selectedCustomer != null &&
-              !Provider.of<CustomerSelectionProvider>(context, listen: false)
-                  .isDefaultCustomer) ...[
-            const SizedBox(height: 8),
-            Container(
-              height: 1,
-              color: Colors.grey.shade200,
-            ),
-            const SizedBox(height: 8),
-            _buildSummaryRow(
-              'Customer Balance',
-              '${customerBalance.toStringAsFixed(2)}',
-              color: customerBalance >= 0
-                  ? const Color(0xFF059669)
-                  : const Color(0xFFDC2626),
-            ),
-          ],
-
-          if (_hasPaymentMethod()) ...[
-            const SizedBox(height: 8),
-            Container(
-              height: 1,
-              color: Colors.grey.shade200,
-            ),
-            const SizedBox(height: 8),
-            _buildSummaryRow(
-              'Paid Amount',
-              '${totalPaidAmount.toStringAsFixed(2)}',
-              color: const Color(0xFF059669),
-            ),
-            _buildSummaryRow(
-              'Balance',
-              rawBalance >= 0
-                  ? '${rawBalance.toStringAsFixed(2)}'
-                  : 'Short: ${(-rawBalance).toStringAsFixed(2)}',
-              color: rawBalance >= 0
-                  ? const Color(0xFF059669)
-                  : const Color(0xFFDC2626),
-              isBold: true,
-            ),
-          ],
+          _buildSummaryRow(
+            'Tax',
+            '$currency ${taxAmount.toStringAsFixed(2)}',
+            color: const Color(0xFF7C8DB5),
+          ),
+          const SizedBox(height: 6),
+          Container(height: 1, color: const Color(0xFFE4E4ED)),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            'Total Payable',
+            '$currency ${totalPayable.toStringAsFixed(2)}',
+            color: const Color(0xFF3B82F6),
+            isBold: true,
+            large: true,
+          ),
+          _buildSummaryRow(
+            'Total Paid',
+            '$currency ${totalPaidAmount.toStringAsFixed(2)}',
+            color: const Color(0xFF3F3F46),
+          ),
+          _buildSummaryRow(
+            'Balance',
+            '$currency ${cashBalance.toStringAsFixed(2)}',
+            color: const Color(0xFF00C739),
+            isBold: true,
+          ),
         ],
       ),
     );
@@ -2860,9 +2774,10 @@ class OrderPanelState extends State<OrderPanel> {
     String amount, {
     required Color color,
     bool isBold = false,
+    bool large = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -2870,16 +2785,16 @@ class OrderPanelState extends State<OrderPanel> {
             label,
             style: buildCustomStyle(
               isBold ? FontWeightManager.semiBold : FontWeightManager.regular,
-              FontSize.s14,
+              large ? FontSize.s18 : FontSize.s14,
               0.21,
-              const Color(0xFF64748B),
+              color,
             ),
           ),
           Text(
             amount,
             style: buildCustomStyle(
               isBold ? FontWeightManager.bold : FontWeightManager.semiBold,
-              FontSize.s15,
+              large ? FontSize.s18 : FontSize.s14,
               0.21,
               color,
             ),
@@ -2891,6 +2806,10 @@ class OrderPanelState extends State<OrderPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final isNonTableOrderContext = widget.tableId == null &&
+        ((widget.preselectedDeliveryMethodId != null &&
+                widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+            (widget.allowCounterBilling && widget.isCounterBillingMode));
     final hasOrderContext = widget.tableId != null ||
         (widget.preselectedDeliveryMethodId != null &&
             widget.preselectedDeliveryMethodId!.isNotEmpty) ||
@@ -2951,7 +2870,9 @@ class OrderPanelState extends State<OrderPanel> {
       if (_error!.toLowerCase().contains('no init status orders found') ||
           _error!.toLowerCase().contains('no orders found') ||
           _error!.toLowerCase().contains('no saved orders')) {
-        // Show the custom empty state instead of error
+        if (isNonTableOrderContext) {
+          return _buildCurrentCartView(const []);
+        }
         return _buildSavedOrdersList();
       }
       // For other errors, show the error message
@@ -2972,7 +2893,7 @@ class OrderPanelState extends State<OrderPanel> {
             // Show current cart items
             return _buildCurrentCartView(cartItems);
           } else {
-            // Display list of saved orders
+            // No active cart: show pending list (and saved list only for table mode).
             return _buildSavedOrdersList();
           }
         },
@@ -3072,6 +2993,11 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Widget _buildSavedOrdersList() {
+    final isNonTableOrderContext = widget.tableId == null &&
+        ((widget.preselectedDeliveryMethodId != null &&
+                widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+            (widget.allowCounterBilling && widget.isCounterBillingMode));
+
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -3089,7 +3015,9 @@ class OrderPanelState extends State<OrderPanel> {
         children: [
           // Pending Orders Section (independent scroll)
           _buildPanelHeader(
-              'Pending Orders', Icons.pending_actions, const Color(0xFFD97706),
+              isNonTableOrderContext ? 'Saved Orders' : 'Pending Orders',
+              Icons.pending_actions,
+              const Color(0xFFD97706),
               itemCount: _localDrafts.length),
           Flexible(
             flex: 1,
@@ -3157,88 +3085,20 @@ class OrderPanelState extends State<OrderPanel> {
                     ),
             ),
           ),
-          const SizedBox(height: 8),
-          // Saved Orders Section (independent scroll)
-          _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
-              itemCount: _savedOrders.length),
-          Flexible(
-            flex: 2,
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await _fetchSavedOrders();
-                _refreshLocalDrafts();
-              },
-              child: _savedOrders.isEmpty
-                  ? ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(
-                        dragDevices: {
-                          PointerDeviceKind.mouse,
-                          PointerDeviceKind.touch,
-                          PointerDeviceKind.stylus,
-                          PointerDeviceKind.trackpad,
-                        },
-                      ),
-                      child: CustomScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(
-                            parent: BouncingScrollPhysics()),
-                        slivers: [
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Center(
-                              child: Padding(
-                                padding:
-                                    EdgeInsets.all(widget.isCompact ? 12 : 16),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF059669)
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Icon(
-                                        Icons.add_shopping_cart,
-                                        size: widget.isCompact ? 36 : 48,
-                                        color: const Color(0xFF059669),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    Text(
-                                      'No orders found',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                          FontWeightManager.bold,
-                                          widget.isCompact
-                                              ? FontSize.s16
-                                              : FontSize.s18,
-                                          0.21,
-                                          const Color(0xFF1E293B)),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Add products from the menu\nto start a new order',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
-                                          const Color(0xFF64748B)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
+          if (!isNonTableOrderContext) ...[
+            const SizedBox(height: 8),
+            // Saved Orders Section (independent scroll)
+            _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
+                itemCount: _savedOrders.length),
+            Flexible(
+              flex: 2,
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await _fetchSavedOrders();
+                  _refreshLocalDrafts();
+                },
+                child: _savedOrders.isEmpty
+                    ? ScrollConfiguration(
                         behavior: ScrollConfiguration.of(context).copyWith(
                           dragDevices: {
                             PointerDeviceKind.mouse,
@@ -3247,25 +3107,96 @@ class OrderPanelState extends State<OrderPanel> {
                             PointerDeviceKind.trackpad,
                           },
                         ),
-                        child: ListView.separated(
+                        child: CustomScrollView(
                           physics: const AlwaysScrollableScrollPhysics(
                               parent: BouncingScrollPhysics()),
-                          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-                          itemCount: _savedOrders.length,
-                          separatorBuilder: (_, __) => Container(
-                            height: 1,
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            color: Colors.grey.shade100,
+                          slivers: [
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(
+                                      widget.isCompact ? 12 : 16),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF059669)
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                        child: Icon(
+                                          Icons.add_shopping_cart,
+                                          size: widget.isCompact ? 36 : 48,
+                                          color: const Color(0xFF059669),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        'No orders found',
+                                        textAlign: TextAlign.center,
+                                        style: buildCustomStyle(
+                                            FontWeightManager.bold,
+                                            widget.isCompact
+                                                ? FontSize.s16
+                                                : FontSize.s18,
+                                            0.21,
+                                            const Color(0xFF1E293B)),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Add products from the menu\nto start a new order',
+                                        textAlign: TextAlign.center,
+                                        style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            widget.isCompact
+                                                ? FontSize.s13
+                                                : FontSize.s14,
+                                            0.21,
+                                            const Color(0xFF64748B)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
                           ),
-                          itemBuilder: (context, index) {
-                            final order = _savedOrders[index];
-                            return _buildOrderListItem(order);
-                          },
+                          child: ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics()),
+                            padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                            itemCount: _savedOrders.length,
+                            separatorBuilder: (_, __) => Container(
+                              height: 1,
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              color: Colors.grey.shade100,
+                            ),
+                            itemBuilder: (context, index) {
+                              final order = _savedOrders[index];
+                              return _buildOrderListItem(order);
+                            },
+                          ),
                         ),
                       ),
-                    ),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -4244,7 +4175,9 @@ class OrderPanelState extends State<OrderPanel> {
       child: Column(
         children: [
           _buildPanelHeader(
-            'Edit Order',
+            _selectedOrder['order_number'] != null
+                ? 'Edit Order - ${_selectedOrder['order_number']}'
+                : 'Edit Order',
             Icons.shopping_cart,
             const Color(0xFFD97706),
             showBackButton: true,
@@ -4256,8 +4189,6 @@ class OrderPanelState extends State<OrderPanel> {
               });
               widget.onOrderSelected(null);
             },
-            totalPrice: total,
-            subtitle: '${_selectedOrder['order_number']}',
           ),
           Expanded(
             child: RefreshIndicator(
@@ -4634,6 +4565,31 @@ class OrderPanelState extends State<OrderPanel> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 12),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _showCommentDialog,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: widget.isCompact ? 44 : 48,
+                      height: widget.isCompact ? 44 : 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.chat_bubble_outline,
+                        size: widget.isCompact ? 18 : 20,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -4670,64 +4626,45 @@ class OrderPanelState extends State<OrderPanel> {
     double finalOrderTotal =
         (orderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
 
-    final resolvedComment = _orderComment.isNotEmpty
-        ? _orderComment
-        : (_extractOrderLevelComment(_selectedOrder) ?? '');
-    final hasComment = resolvedComment.trim().isNotEmpty;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Total: ',
-                  style: buildCustomStyle(
-                      FontWeightManager.semiBold, 16, 0.2, Colors.black87),
-                ),
-                Text(
-                  finalOrderTotal.toStringAsFixed(2),
-                  style: buildCustomStyle(
-                      FontWeightManager.bold, 16, 0.2, const Color(0xFF2563EB)),
-                ),
-              ],
-            ),
+          _buildSummaryRow(
+            'Net Amount',
+            '$currency ${finalOrderTotal.toStringAsFixed(2)}',
+            color: const Color(0xFF3F3F46),
           ),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _showCommentDialog,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: hasComment
-                      ? const Color(0xFF2563EB).withOpacity(0.12)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: hasComment
-                        ? const Color(0xFF2563EB).withOpacity(0.3)
-                        : Colors.blue.shade100,
-                  ),
-                ),
-                child: Icon(
-                  hasComment ? Icons.chat : Icons.chat_bubble_outline,
-                  size: 18,
-                  color: hasComment
-                      ? const Color(0xFF2563EB)
-                      : const Color(0xFF64748B),
-                ),
-              ),
-            ),
+          const SizedBox(height: 6),
+          Container(height: 1, color: const Color(0xFFE4E4ED)),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            'Total Payable',
+            '$currency ${finalOrderTotal.toStringAsFixed(2)}',
+            color: const Color(0xFF3B82F6),
+            isBold: true,
+            large: true,
+          ),
+          _buildSummaryRow(
+            'Total Paid',
+            '$currency 0.00',
+            color: const Color(0xFF3F3F46),
+          ),
+          _buildSummaryRow(
+            'Balance',
+            '$currency ${finalOrderTotal.toStringAsFixed(2)}',
+            color: const Color(0xFF00C739),
+            isBold: true,
           ),
         ],
       ),
@@ -6691,6 +6628,10 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Widget _buildCurrentCartItem(LocalCartItem cartItem, int index) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
     final productName = cartItem.product.productName ?? 'Unknown Product';
     final quantity = cartItem.quantity;
     final unitPrice = cartItem.price ?? 0.0;
@@ -6733,7 +6674,7 @@ class OrderPanelState extends State<OrderPanel> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${totalPrice.toStringAsFixed(0)}',
+                  '$currency ${totalPrice.toStringAsFixed(2)}',
                   style: buildCustomStyle(FontWeightManager.bold, FontSize.s12,
                       0.21, const Color(0xFF059669)),
                 ),
@@ -6762,7 +6703,7 @@ class OrderPanelState extends State<OrderPanel> {
                       color: Colors.blue.withOpacity(0.05),
                     ),
                     child: Text(
-                      '${unitPrice.toStringAsFixed(2)}',
+                      '$currency ${unitPrice.toStringAsFixed(2)}',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           widget.isCompact ? FontSize.s11 : FontSize.s12,
@@ -7015,13 +6956,11 @@ class OrderPanelState extends State<OrderPanel> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildCurrentCartFooterButton(
-                          label: 'Send',
-                          icon: Icons.send,
+                          label: 'Save',
+                          icon: Icons.save,
                           color: const Color(0xFF2563EB),
-                          isDisabled:
-                              cartItems.isEmpty || widget.isLoadingPrint,
-                          isLoading: widget.isLoadingPrint,
-                          onTap: () => widget.onPrintOrder(),
+                          isDisabled: cartItems.isEmpty,
+                          onTap: () => _saveCurrentCartAsPending(),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -7240,6 +7179,16 @@ class OrderPanelState extends State<OrderPanel> {
     try {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
+      final isNonTableOrderContext = widget.tableId == null &&
+          (widget.preselectedDeliveryMethodId?.isNotEmpty == true ||
+              (widget.allowCounterBilling && widget.isCounterBillingMode));
+
+      debugPrint('📝 [_saveCurrentCartAsPending] START');
+      debugPrint('📝 tableId: ${widget.tableId}');
+      debugPrint(
+          '📝 preselectedDeliveryMethodId: ${widget.preselectedDeliveryMethodId}');
+      debugPrint('📝 isNonTableOrderContext: $isNonTableOrderContext');
+      debugPrint('📝 cartItemsCount: ${localProductProvider.cartItems.length}');
 
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
@@ -7248,7 +7197,14 @@ class OrderPanelState extends State<OrderPanel> {
       }
 
       final paymentData = _getLocalDraftPaymentData();
-      final draftComment = buildTaggedDraftComment(widget.tableId!);
+      final draftComment = widget.tableId != null
+          ? buildTaggedDraftComment(widget.tableId!)
+          : _orderComment.trim();
+      debugPrint('📝 draftComment: "$draftComment"');
+      debugPrint('📝 deliveryMethodForDraft: $deliveryMethodForDraft');
+      debugPrint('📝 deliveryMethodIdForDraft: $deliveryMethodIdForDraft');
+      debugPrint('📝 selectedCustomerIdForDraft: $selectedCustomerIdForDraft');
+      debugPrint('📝 paymentData: $paymentData');
 
       // If a local draft is loaded, update it instead of creating a new one
       if (_loadedLocalDraftId != null) {
@@ -7773,6 +7729,10 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Widget _buildSavedOrderItem(dynamic cartItem, int index) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
     final productName = cartItem['product']?['name'] ??
         cartItem['product_name'] ??
         cartItem['names']?[0]?['name'] ??
@@ -7844,7 +7804,7 @@ class OrderPanelState extends State<OrderPanel> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${totalPrice.toStringAsFixed(0)}',
+                      '$currency ${totalPrice.toStringAsFixed(2)}',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           widget.isCompact ? FontSize.s12 : FontSize.s14,
@@ -7911,7 +7871,7 @@ class OrderPanelState extends State<OrderPanel> {
                             ),
                           )
                         : Text(
-                            '${unitPrice.toStringAsFixed(2)}',
+                            '$currency ${unitPrice.toStringAsFixed(2)}',
                             style: buildCustomStyle(
                                 FontWeightManager.bold,
                                 widget.isCompact ? FontSize.s11 : FontSize.s12,
