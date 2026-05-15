@@ -537,7 +537,7 @@ class _MenuPanelState extends State<MenuPanel> {
             children: [
               // Enhanced header
               Container(
-                padding: EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
+                padding: EdgeInsets.all(widget.isCompact ? 10.0 : 12.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -557,7 +557,7 @@ class _MenuPanelState extends State<MenuPanel> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF059669).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -565,15 +565,15 @@ class _MenuPanelState extends State<MenuPanel> {
                       child: Icon(
                         Icons.restaurant_menu,
                         color: const Color(0xFF059669),
-                        size: widget.isCompact ? 18 : 20,
+                        size: widget.isCompact ? 14 : 16,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Text(
                       'Menu',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
-                          widget.isCompact ? FontSize.s16 : FontSize.s18,
+                          widget.isCompact ? FontSize.s14 : FontSize.s16,
                           0.30,
                           const Color(0xFF1E293B)),
                     ),
@@ -581,7 +581,7 @@ class _MenuPanelState extends State<MenuPanel> {
                     if (items.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                            horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           color: const Color(0xFF059669).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -589,7 +589,7 @@ class _MenuPanelState extends State<MenuPanel> {
                         child: Text(
                           '${items.length} items',
                           style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s12, 0.21, const Color(0xFF059669)),
+                              FontSize.s11, 0.21, const Color(0xFF059669)),
                         ),
                       ),
                   ],

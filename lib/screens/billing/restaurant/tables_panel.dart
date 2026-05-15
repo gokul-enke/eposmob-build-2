@@ -109,7 +109,7 @@ class TablesPanel extends StatelessWidget {
             children: [
               // Enhanced header with modern styling
               Container(
-                padding: EdgeInsets.all(isCompact ? 16.0 : 20.0),
+                padding: EdgeInsets.all(isCompact ? 10.0 : 12.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -129,7 +129,7 @@ class TablesPanel extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF2563EB).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -137,22 +137,22 @@ class TablesPanel extends StatelessWidget {
                       child: Icon(
                         Icons.table_restaurant,
                         color: const Color(0xFF2563EB),
-                        size: isCompact ? 18 : 20,
+                        size: isCompact ? 14 : 16,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Text(
                       'Tables',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
-                          isCompact ? FontSize.s16 : FontSize.s18,
+                          isCompact ? FontSize.s14 : FontSize.s16,
                           0.30,
                           const Color(0xFF1E293B)),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
                         color: const Color(0xFF059669).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -160,7 +160,7 @@ class TablesPanel extends StatelessWidget {
                       child: Text(
                         '${tables.length}',
                         style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s12, 0.21, const Color(0xFF059669)),
+                            FontSize.s11, 0.21, const Color(0xFF059669)),
                       ),
                     ),
                   ],

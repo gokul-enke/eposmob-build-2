@@ -318,23 +318,24 @@ class _RestaurantPageState extends State<RestaurantPage> {
   Widget _buildAttenderTopBar({required bool isCompact}) {
     final isCounterEnabled =
         widget.allowCounterBillingFromAttender && _isCounterBillingMode;
-    final title = isCounterEnabled ? 'New Order - #00000' : 'Attender Orders';
-    final contextLabel = isCounterEnabled
-        ? (_selectedDeliveryMethodName ?? 'Store Takeaway')
-        : _activeTableId != null
-            ? (_selectedTableName ?? 'Selected table')
+    final hasActiveTable = _activeTableId != null;
+    final contextLabel = hasActiveTable
+        ? (_selectedTableName ?? 'Selected table')
+        : isCounterEnabled
+            ? (_selectedDeliveryMethodName ?? 'Store Takeaway')
             : (_selectedDeliveryMethodName ?? 'Select table or delivery');
-    final contextIcon = isCounterEnabled
-        ? Icons.point_of_sale_rounded
-        : _activeTableId != null
-            ? Icons.table_restaurant_rounded
+    const title = 'New Order';
+    final contextIcon = hasActiveTable
+        ? Icons.table_restaurant_rounded
+        : isCounterEnabled
+            ? Icons.point_of_sale_rounded
             : Icons.delivery_dining_rounded;
 
     return Container(
       margin: EdgeInsets.fromLTRB(8, isCompact ? 8 : 8, 8, 0),
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 14 : 20,
-        vertical: isCompact ? 10 : 14,
+        horizontal: isCompact ? 12 : 16,
+        vertical: isCompact ? 8 : 10,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -351,7 +352,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(isCompact ? 9 : 11),
+            padding: EdgeInsets.all(isCompact ? 7 : 9),
             decoration: BoxDecoration(
               color: isCounterEnabled
                   ? const Color(0xFF059669).withOpacity(0.12)
@@ -365,10 +366,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
               color: isCounterEnabled
                   ? const Color(0xFF059669)
                   : const Color(0xFF2563EB),
-              size: isCompact ? 19 : 22,
+              size: isCompact ? 16 : 19,
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
           Expanded(
             child: Wrap(
               spacing: 12,
@@ -379,7 +380,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   title,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
-                    isCompact ? FontSize.s16 : FontSize.s18,
+                    isCompact ? FontSize.s14 : FontSize.s16,
                     0.30,
                     const Color(0xFF1E293B),
                   ),
@@ -447,6 +448,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         Consumer<KeyboardProvider>(
           builder: (context, keyboardProvider, child) {
             return IconButton(
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
               icon: Icon(
                 keyboardProvider.showKeyboardFeature
                     ? Icons.keyboard_hide
@@ -472,6 +475,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         Consumer<AppFontProvider>(
           builder: (context, fontProvider, child) {
             return IconButton(
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
               icon: Icon(
                 Icons.text_fields,
                 color: fontProvider.fontSizeLevel > 0
@@ -599,15 +604,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Widget _buildTopBarNewOrderButton() {
     return SizedBox(
-      height: 38,
+      height: 34,
       child: ElevatedButton.icon(
         onPressed: _startNewCounterOrder,
-        icon: const Icon(Icons.add_shopping_cart_rounded, size: 16),
+        icon: const Icon(Icons.add_shopping_cart_rounded, size: 14),
         label: Text(
           'New Order',
           style: buildCustomStyle(
             FontWeightManager.bold,
-            FontSize.s12,
+            FontSize.s11,
             0.21,
             Colors.white,
           ),
@@ -616,7 +621,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           backgroundColor: const Color(0xFF2563EB),
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),

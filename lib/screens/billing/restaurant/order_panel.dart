@@ -3090,9 +3090,7 @@ class OrderPanelState extends State<OrderPanel> {
           // Pending Orders Section (independent scroll)
           _buildPanelHeader(
               'Pending Orders', Icons.pending_actions, const Color(0xFFD97706),
-              itemCount: _localDrafts.length,
-              subtitle: widget.tableId?.toString() ??
-                  widget.preselectedDeliveryMethodName),
+              itemCount: _localDrafts.length),
           Flexible(
             flex: 1,
             child: RefreshIndicator(
@@ -3162,9 +3160,7 @@ class OrderPanelState extends State<OrderPanel> {
           const SizedBox(height: 8),
           // Saved Orders Section (independent scroll)
           _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
-              itemCount: _savedOrders.length,
-              subtitle: widget.tableId?.toString() ??
-                  widget.preselectedDeliveryMethodName),
+              itemCount: _savedOrders.length),
           Flexible(
             flex: 2,
             child: RefreshIndicator(
@@ -4360,8 +4356,8 @@ class OrderPanelState extends State<OrderPanel> {
       String? subtitle}) {
     return Container(
       padding: showBackButton
-          ? const EdgeInsets.fromLTRB(0, 16, 16, 16)
-          : EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
+          ? const EdgeInsets.fromLTRB(0, 10, 12, 10)
+          : EdgeInsets.all(widget.isCompact ? 10.0 : 12.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -4385,10 +4381,12 @@ class OrderPanelState extends State<OrderPanel> {
             IconButton(
               icon: const Icon(Icons.arrow_back, color: Color(0xFF64748B)),
               onPressed: onBackButtonPressed,
-              splashRadius: 20,
+              splashRadius: 16,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
@@ -4396,10 +4394,10 @@ class OrderPanelState extends State<OrderPanel> {
             child: Icon(
               icon,
               color: color,
-              size: widget.isCompact ? 18 : 20,
+              size: widget.isCompact ? 14 : 16,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4408,7 +4406,7 @@ class OrderPanelState extends State<OrderPanel> {
                   title,
                   style: buildCustomStyle(
                       FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s16 : FontSize.s18,
+                      widget.isCompact ? FontSize.s14 : FontSize.s16,
                       0.30,
                       const Color(0xFF1E293B)),
                 ),
@@ -4417,7 +4415,7 @@ class OrderPanelState extends State<OrderPanel> {
                     subtitle,
                     style: buildCustomStyle(
                         FontWeightManager.medium,
-                        widget.isCompact ? FontSize.s12 : FontSize.s13,
+                        widget.isCompact ? FontSize.s11 : FontSize.s12,
                         0.21,
                         const Color(0xFF64748B)),
                   ),
@@ -4442,7 +4440,7 @@ class OrderPanelState extends State<OrderPanel> {
             ),
           if (itemCount != null)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
