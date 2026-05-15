@@ -6874,6 +6874,7 @@ class OrderPanelState extends State<OrderPanel> {
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     final showCounterCheckout =
         widget.allowCounterBilling && widget.isCounterBillingMode;
+    final hasTableOrderContext = widget.tableId != null;
 
     return SafeArea(
       top: false,
@@ -6891,6 +6892,8 @@ class OrderPanelState extends State<OrderPanel> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _buildCurrentCartSummaryCard(cartItems),
+            const SizedBox(height: 12),
             // Top: Comment button (full width)
             SizedBox(
               width: double.infinity,
@@ -6947,18 +6950,29 @@ class OrderPanelState extends State<OrderPanel> {
                       Expanded(
                         child: _buildCurrentCartFooterButton(
                           label: 'Clear',
-                          icon: Icons.delete_outline,
                           color: const Color(0xFFDC2626),
                           isDisabled: cartItems.isEmpty,
                           onTap: () => _clearCurrentCart(),
                         ),
                       ),
                       const SizedBox(width: 8),
+                      if (hasTableOrderContext) ...[
+                        Expanded(
+                          child: _buildCurrentCartFooterButton(
+                            label: 'Send',
+                            color: const Color(0xFF2563EB),
+                            isDisabled:
+                                cartItems.isEmpty || widget.isLoadingPrint,
+                            isLoading: widget.isLoadingPrint,
+                            onTap: () => widget.onPrintOrder(),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
                       Expanded(
                         child: _buildCurrentCartFooterButton(
                           label: 'Save',
-                          icon: Icons.save,
-                          color: const Color(0xFF2563EB),
+                          color: const Color(0xFFEAB308),
                           isDisabled: cartItems.isEmpty,
                           onTap: () => _saveCurrentCartAsPending(),
                         ),
@@ -6967,7 +6981,6 @@ class OrderPanelState extends State<OrderPanel> {
                       Expanded(
                         child: _buildCurrentCartFooterButton(
                           label: 'Checkout',
-                          icon: Icons.point_of_sale,
                           color: const Color(0xFF059669),
                           isDisabled:
                               cartItems.isEmpty || _isProcessingCheckout,
@@ -6980,8 +6993,7 @@ class OrderPanelState extends State<OrderPanel> {
                       Expanded(
                         child: _buildCurrentCartFooterButton(
                           label: 'Save',
-                          icon: Icons.save,
-                          color: const Color(0xFF2563EB),
+                          color: const Color(0xFFEAB308),
                           isDisabled:
                               cartItems.isEmpty || widget.tableId == null,
                           onTap: () => _saveCurrentCartAsPending(),
@@ -6992,7 +7004,6 @@ class OrderPanelState extends State<OrderPanel> {
                         flex: 2,
                         child: _buildCurrentCartFooterButton(
                           label: 'Send To Kitchen',
-                          icon: Icons.send,
                           color: const Color(0xFF059669),
                           isDisabled:
                               cartItems.isEmpty || widget.isLoadingPrint,
@@ -7008,9 +7019,61 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
+  Widget _buildCurrentCartSummaryCard(List<LocalCartItem> cartItems) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+    double netAmount = 0.0;
+    for (final item in cartItems) {
+      final unitPrice = item.price ?? 0.0;
+      netAmount += unitPrice * item.quantity;
+    }
+    final totalPayable = netAmount;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildSummaryRow(
+            'Net Amount',
+            '$currency ${netAmount.toStringAsFixed(2)}',
+            color: const Color(0xFF3F3F46),
+          ),
+          const SizedBox(height: 6),
+          Container(height: 1, color: const Color(0xFFE4E4ED)),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            'Total Payable',
+            '$currency ${totalPayable.toStringAsFixed(2)}',
+            color: const Color(0xFF3B82F6),
+            isBold: true,
+            large: true,
+          ),
+          _buildSummaryRow(
+            'Total Paid',
+            '$currency 0.00',
+            color: const Color(0xFF3F3F46),
+          ),
+          _buildSummaryRow(
+            'Balance',
+            '$currency ${totalPayable.toStringAsFixed(2)}',
+            color: const Color(0xFF00C739),
+            isBold: true,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCurrentCartFooterButton({
     required String label,
-    required IconData icon,
     required Color color,
     required VoidCallback onTap,
     bool isDisabled = false,
@@ -7052,12 +7115,6 @@ class OrderPanelState extends State<OrderPanel> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        icon,
-                        color: Colors.white,
-                        size: widget.isCompact ? 14 : 16,
-                      ),
-                      const SizedBox(width: 4),
                       Flexible(
                         child: Text(
                           label,
