@@ -11,8 +11,8 @@ class SupplierResponse {
 
   factory SupplierResponse.fromJson(Map<String, dynamic> json) {
     return SupplierResponse(
-      status: json['status'] ?? '',
-      message: json['message'] ?? '',
+      status: json['status']?.toString() ?? '',
+      message: json['message']?.toString() ?? '',
       data: (json['data'] as List<dynamic>?)
               ?.map((item) => Supplier.fromJson(item))
               .toList() ??
@@ -47,14 +47,14 @@ class SupplierTransaction {
   factory SupplierTransaction.fromJson(Map<String, dynamic> json) {
     return SupplierTransaction(
       id: json['id'] ?? 0,
-      date: json['date'] ?? '',
-      paymentMethod: json['payment_method'] ?? '',
-      type: json['type'] ?? '',
-      transactionType: json['transaction_type'] ?? '',
+      date: json['date']?.toString() ?? '',
+      paymentMethod: json['payment_method']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      transactionType: json['transaction_type']?.toString() ?? '',
       amount: json['amount']?.toString() ?? '0.000',
-      currency: json['currency'] ?? 'INR',
-      reference: json['reference'] ?? '',
-      status: json['status'] ?? '',
+      currency: json['currency']?.toString() ?? 'INR',
+      reference: json['reference']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
     );
   }
 }
@@ -77,10 +77,10 @@ class PurchaseItem {
   factory PurchaseItem.fromJson(Map<String, dynamic> json) {
     return PurchaseItem(
       id: json['id'] ?? 0,
-      productName: json['product_name'] ?? '',
+      productName: json['product_name']?.toString() ?? '',
       quantity: json['quantity']?.toString() ?? '0.00',
-      unitPrice: json['unit_price'] ?? '0.000',
-      totalPrice: json['total_price'] ?? '0.000',
+      unitPrice: json['unit_price']?.toString() ?? '0.000',
+      totalPrice: json['total_price']?.toString() ?? '0.000',
     );
   }
 
@@ -117,10 +117,10 @@ class SupplierPurchase {
 
     return SupplierPurchase(
       id: json['id'] ?? 0,
-      purchaseNumber: json['purchase_number'] ?? '',
-      status: json['status'] ?? '',
-      amountTotal: json['amount_total'] ?? '0.000',
-      taxTotal: json['tax_total'],
+      purchaseNumber: json['purchase_number']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      amountTotal: json['amount_total']?.toString() ?? '0.000',
+      taxTotal: json['tax_total']?.toString(),
       items: itemsList,
     );
   }
@@ -207,17 +207,17 @@ class Supplier {
     return Supplier(
       id: json['id'] ?? 0,
       // Try top-level first, then fallback to nested user data
-      name: json['name'] ?? userData['name'] ?? '',
-      email: json['email'] ?? userData['email'] ?? '',
-      phone: json['phone'] ?? userData['phone'] ?? '',
-      altPhone: json['alt_phone'],
+      name: json['name']?.toString() ?? userData['name']?.toString() ?? '',
+      email: json['email']?.toString() ?? userData['email']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? userData['phone']?.toString() ?? '',
+      altPhone: json['alt_phone']?.toString(),
       productCategories: productCategoriesStr,
-      address: json['address'] ?? '',
+      address: json['address']?.toString() ?? '',
       balance: parseBalance(json['balance']),
-      paymentType: json['payment_type'] ?? 'to_pay',
+      paymentType: json['payment_type']?.toString() ?? 'to_pay',
       companyId: json['company_id'] ?? 0,
       currentBalance: parseBalance(json['current_balance']),
-      balanceStatus: json['balance_status'] ?? '',
+      balanceStatus: json['balance_status']?.toString() ?? '',
       userId: json['user_id'] ?? 0,
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
       updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at']) : null,
