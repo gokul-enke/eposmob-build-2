@@ -430,10 +430,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
               const SizedBox(width: 8),
               _buildTopBarNewOrderButton(),
             ],
-            if (widget.allowCounterBillingFromAttender) ...[
-              const SizedBox(width: 8),
-              _buildTopBarCounterToggle(isCompact: false),
-            ],
             const SizedBox(width: 14),
             _buildTopBarActions(),
             const SizedBox(width: 6),
