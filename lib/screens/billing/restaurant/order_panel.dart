@@ -6956,6 +6956,15 @@ class OrderPanelState extends State<OrderPanel> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Save',
+                          color: const Color(0xFFEAB308),
+                          isDisabled: cartItems.isEmpty,
+                          onTap: () => _saveCurrentCartAsPending(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       if (hasTableOrderContext) ...[
                         Expanded(
                           child: _buildCurrentCartFooterButton(
@@ -6971,15 +6980,6 @@ class OrderPanelState extends State<OrderPanel> {
                       ],
                       Expanded(
                         child: _buildCurrentCartFooterButton(
-                          label: 'Save',
-                          color: const Color(0xFFEAB308),
-                          isDisabled: cartItems.isEmpty,
-                          onTap: () => _saveCurrentCartAsPending(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildCurrentCartFooterButton(
                           label: 'Checkout',
                           color: const Color(0xFF059669),
                           isDisabled:
@@ -6992,8 +6992,17 @@ class OrderPanelState extends State<OrderPanel> {
                   : [
                       Expanded(
                         child: _buildCurrentCartFooterButton(
+                          label: 'Clear',
+                          color: const Color(0xFFDC2626),
+                          isDisabled: cartItems.isEmpty,
+                          onTap: () => _clearCurrentCart(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
                           label: 'Save',
-                          color: const Color(0xFFEAB308),
+                          color: const Color(0xFF2563EB),
                           isDisabled:
                               cartItems.isEmpty || widget.tableId == null,
                           onTap: () => _saveCurrentCartAsPending(),
