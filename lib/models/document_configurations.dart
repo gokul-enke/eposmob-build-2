@@ -68,7 +68,8 @@ class DocumentConfig {
   final dynamic createdAt; // Can be null
   final String? updatedAt;
   final String? language; // Added language field
-  final String? activeTheme; // Theme identifier for layout selection (e.g., "classic", "modern", "minimal")
+  final String?
+      activeTheme; // Theme identifier for layout selection (e.g., "classic", "modern", "minimal")
   final DisplayConfiguration? displayConfiguration; // Nested object
   final ResolvedLabels? resolvedLabels; // Nested object
 
@@ -149,11 +150,11 @@ class DocumentConfig {
       accentColor: json["accent_color"],
       font: json["font"],
       template: json["template"],
-        itemName: parseItemName(json["item_name"]),
-        taxName: parseItemName(json["tax_name"]),
-        unitName: parseItemName(json["unit_name"]),
-        priceName: parseItemName(json["price_name"]),
-        amountName: parseItemName(json["amount_name"]),
+      itemName: parseItemName(json["item_name"]),
+      taxName: parseItemName(json["tax_name"]),
+      unitName: parseItemName(json["unit_name"]),
+      priceName: parseItemName(json["price_name"]),
+      amountName: parseItemName(json["amount_name"]),
       createdBy: json["created_by"],
       updatedBy: json["updated_by"],
       createdAt: json["created_at"],

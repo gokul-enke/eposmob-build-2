@@ -1076,6 +1076,28 @@ class StandardPrinter {
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Slightly larger for price values
     }
+    if (displayConfig?['showRateExcTax']?.visible == true) {
+      final label =
+          (displayConfig?['showRateExcTax']?.value as String?)?.isNotEmpty ==
+                  true
+              ? displayConfig!['showRateExcTax']!.value as String
+              : 'RATE';
+      tableHeaders.add(label.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(1.5);
+    }
+    if (displayConfig?['showUnit']?.visible == true) {
+      final label =
+          (displayConfig?['showUnit']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showUnit']!.value as String
+              : (billDocumentConfig?.resolvedLabels?.unitName?.isNotEmpty ==
+                      true
+                  ? billDocumentConfig!.resolvedLabels!.unitName!
+                  : 'UNIT');
+      tableHeaders.add(label.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.center;
+      columnWidths.add(1.1);
+    }
     if (displayConfig?['showTotal']?.visible == true) {
       // Use displayConfig value first, then fallback to resolved_labels, then default
       final label =
@@ -1111,6 +1133,8 @@ class StandardPrinter {
       String mrp = '';
       String quantity = '';
       String unitPrice = '';
+      String unitPriceExTax = '';
+      String unitName = '';
       String totalPrice = '';
       String itemTaxAmount = '';
 
@@ -1119,9 +1143,19 @@ class StandardPrinter {
         mrp = (double.tryParse(item['mrp']?.toString() ?? '0') ?? 0.0)
             .toStringAsFixed(2);
         quantity = item['quantity'] ?? '0';
-        unitPrice =
-            (double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0.0)
-                .toStringAsFixed(2);
+        final unitPriceValue =
+            double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0.0;
+        final taxValue =
+            double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
+        final quantityValue =
+            double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+        unitPrice = unitPriceValue.toStringAsFixed(2);
+        unitPriceExTax = (unitPriceValue -
+                (quantityValue > 0 ? taxValue / quantityValue : 0))
+            .toStringAsFixed(2);
+        unitName =
+            (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
+                .toString();
         totalPrice =
             (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0)
                 .toStringAsFixed(2);
@@ -1138,11 +1172,26 @@ class StandardPrinter {
           mrp = (double.tryParse(item['mrp']?.toString() ?? '0') ?? 0.0)
               .toStringAsFixed(2);
           quantity = item['quantity']?.toString() ?? '0';
-          unitPrice = (double.tryParse(item['unit_price']?.toString() ??
+          final unitPriceValue = double.tryParse(
+                  item['unit_price']?.toString() ??
                       item['unitPrice']?.toString() ??
                       '0') ??
-                  0.0)
+              0.0;
+          final taxValue = double.tryParse(item['tax_amount']?.toString() ??
+                  item['taxAmount']?.toString() ??
+                  '0') ??
+              0.0;
+          final quantityValue =
+              double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0;
+          unitPrice = unitPriceValue.toStringAsFixed(2);
+          unitPriceExTax = (unitPriceValue -
+                  (quantityValue > 0 ? taxValue / quantityValue : 0))
               .toStringAsFixed(2);
+          unitName = (item['product_unit'] ??
+                  item['productUnit'] ??
+                  item['unit'] ??
+                  '')
+              .toString();
           totalPrice = (double.tryParse(item['total_price']?.toString() ??
                       item['totalPrice']?.toString() ??
                       '0') ??
@@ -1160,9 +1209,17 @@ class StandardPrinter {
             mrp = (double.tryParse(item.mrp?.toString() ?? '0') ?? 0.0)
                 .toStringAsFixed(2);
             quantity = item.quantity?.toString() ?? '0';
-            unitPrice =
-                (double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0.0)
-                    .toStringAsFixed(2);
+            final unitPriceValue =
+                double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0.0;
+            final taxValue =
+                double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;
+            final quantityValue =
+                double.tryParse(item.quantity?.toString() ?? '0') ?? 0.0;
+            unitPrice = unitPriceValue.toStringAsFixed(2);
+            unitPriceExTax = (unitPriceValue -
+                    (quantityValue > 0 ? taxValue / quantityValue : 0))
+                .toStringAsFixed(2);
+            unitName = (item.productUnit ?? '').toString();
             totalPrice =
                 (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
                     .toStringAsFixed(2);
@@ -1178,6 +1235,8 @@ class StandardPrinter {
             mrp = '0.00';
             quantity = '0';
             unitPrice = '0.00';
+            unitPriceExTax = '0.00';
+            unitName = '';
             totalPrice = '0.00';
             itemTaxAmount = '0.00';
           }
@@ -1203,6 +1262,12 @@ class StandardPrinter {
       }
       if (displayConfig?['showRate']?.visible == true) {
         rowData.add(unitPrice);
+      }
+      if (displayConfig?['showRateExcTax']?.visible == true) {
+        rowData.add(unitPriceExTax);
+      }
+      if (displayConfig?['showUnit']?.visible == true) {
+        rowData.add(unitName);
       }
       if (displayConfig?['showTotal']?.visible == true) {
         rowData.add(totalPrice);
@@ -2391,7 +2456,7 @@ class StandardPrinter {
                       ? displayConfig!['showFinalAmountInWords']!.value
                           as String
                       : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                    '${AmountHelper().convertNumberToWords(finalTotal, currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
+                  '${AmountHelper().convertNumberToWords(finalTotal, currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                   summaryStyle,
                   isRtl: isRtl,
                 ),
@@ -3045,7 +3110,7 @@ class StandardPrinter {
                           ? updatedSettings!['showAmountInWords']!.value
                               as String
                           : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                        '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
+                      '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                       summaryStyle,
                       isRtl: isRtl,
                     ),
@@ -3223,13 +3288,14 @@ class StandardPrinter {
       final uri = Uri.parse(fullUrl);
       final prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
-      
-      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
-      
+
       final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         debugPrint("[LOGO_DEBUG] Network logo fetched successfully for PDF");
