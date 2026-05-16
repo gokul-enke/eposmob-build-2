@@ -20,6 +20,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_confirmation_dialog.dart';
@@ -85,6 +86,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   bool _isLoadingSendToKitchen =
       false; // Loading state for Send to Kitchen button
   bool _isLoadingPrint = false; // Loading state for Print button
+  bool _showTablesPanel = true; // Desktop toggle for left tables panel
 
   // Mobile navigation state
   MobileView _currentMobileView = MobileView.tables;
@@ -99,10 +101,35 @@ class _RestaurantPageState extends State<RestaurantPage> {
   void initState() {
     super.initState();
     _isCounterBillingMode = widget.defaultCounterBillingMode;
+    _loadTablesPanelPreference();
     // Initialize data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
+  }
+
+  Future<void> _loadTablesPanelPreference() async {
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final prefsProvider =
+        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    final isVisible = await prefsProvider.getRestaurantTablesPanelVisible(
+      userId: authModel.userId,
+    );
+
+    if (!mounted || isVisible == null) return;
+    setState(() {
+      _showTablesPanel = isVisible;
+    });
+  }
+
+  Future<void> _saveTablesPanelPreference(bool isVisible) async {
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final prefsProvider =
+        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    await prefsProvider.saveRestaurantTablesPanelVisible(
+      isVisible,
+      userId: authModel.userId,
+    );
   }
 
   Future<void> _initializeData() async {
@@ -218,50 +245,51 @@ class _RestaurantPageState extends State<RestaurantPage> {
           child: Row(
             children: [
               // Tables panel - flexible width
-              Expanded(
-                flex: tablesPanelFlex.round(),
-                child: TablesPanel(
-                  activeTableId: _activeTableId,
-                  onSelect: (id) {
-                    _autoSaveCurrentTableBeforeSwitch();
-                    // Get table name from provider for desktop mode
-                    final tableProvider =
-                        Provider.of<TableProvider>(context, listen: false);
-                    final selectedTable = tableProvider.tables.firstWhere(
-                      (table) => table.id == id,
-                      orElse: () => tableProvider.tables.first,
-                    );
-                    setState(() {
-                      _activeTableId = id;
-                      _selectedTableName = selectedTable.name;
-                      _selectedDeliveryMethodId = null;
-                      _selectedDeliveryMethodName = null;
-                    });
-                  },
-                  selectedDeliveryMethodId: _selectedDeliveryMethodId,
-                  showDeliveryMethods: _isCounterBillingMode,
-                  onDeliveryMethodSelected: (id, name) {
-                    if (id.isEmpty) {
-                      // Deselect delivery method
+              if (_showTablesPanel)
+                Expanded(
+                  flex: tablesPanelFlex.round(),
+                  child: TablesPanel(
+                    activeTableId: _activeTableId,
+                    onSelect: (id) {
+                      _autoSaveCurrentTableBeforeSwitch();
+                      // Get table name from provider for desktop mode
+                      final tableProvider =
+                          Provider.of<TableProvider>(context, listen: false);
+                      final selectedTable = tableProvider.tables.firstWhere(
+                        (table) => table.id == id,
+                        orElse: () => tableProvider.tables.first,
+                      );
                       setState(() {
+                        _activeTableId = id;
+                        _selectedTableName = selectedTable.name;
                         _selectedDeliveryMethodId = null;
                         _selectedDeliveryMethodName = null;
                       });
-                      return;
-                    }
-                    _autoSaveCurrentTableBeforeSwitch();
-                    setState(() {
-                      _selectedDeliveryMethodId = id;
-                      _selectedDeliveryMethodName = name;
-                      _activeTableId = null;
-                      _selectedTableName = null;
-                    });
-                    _orderPanelKey.currentState?.resetPaymentModalFlag();
-                    _orderPanelKey.currentState?.showCurrentOrderTab();
-                  },
-                  screenSize: screenSize,
+                    },
+                    selectedDeliveryMethodId: _selectedDeliveryMethodId,
+                    showDeliveryMethods: _isCounterBillingMode,
+                    onDeliveryMethodSelected: (id, name) {
+                      if (id.isEmpty) {
+                        // Deselect delivery method
+                        setState(() {
+                          _selectedDeliveryMethodId = null;
+                          _selectedDeliveryMethodName = null;
+                        });
+                        return;
+                      }
+                      _autoSaveCurrentTableBeforeSwitch();
+                      setState(() {
+                        _selectedDeliveryMethodId = id;
+                        _selectedDeliveryMethodName = name;
+                        _activeTableId = null;
+                        _selectedTableName = null;
+                      });
+                      _orderPanelKey.currentState?.resetPaymentModalFlag();
+                      _orderPanelKey.currentState?.showCurrentOrderTab();
+                    },
+                    screenSize: screenSize,
+                  ),
                 ),
-              ),
               // Menu panel - flexible width (gets most space)
               Expanded(
                 flex: menuPanelFlex.round(),
@@ -351,6 +379,24 @@ class _RestaurantPageState extends State<RestaurantPage> {
       ),
       child: Row(
         children: [
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+            icon: Icon(
+              _showTablesPanel
+                  ? Icons.menu_open_rounded
+                  : Icons.menu_rounded,
+              color: const Color(0xFF2563EB),
+              size: isCompact ? 18 : 20,
+            ),
+            tooltip: _showTablesPanel ? 'Hide Tables Panel' : 'Show Tables Panel',
+            onPressed: () {
+              final nextValue = !_showTablesPanel;
+              setState(() => _showTablesPanel = nextValue);
+              _saveTablesPanelPreference(nextValue);
+            },
+          ),
+          const SizedBox(width: 6),
           Container(
             padding: EdgeInsets.all(isCompact ? 7 : 9),
             decoration: BoxDecoration(

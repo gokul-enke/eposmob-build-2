@@ -5,12 +5,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SharedPreferenceProvider extends ChangeNotifier {
   static const String _billingSidebarWidthKey =
       'billing_sidebar_width_fraction';
+  static const String _restaurantTablesPanelVisibleKey =
+      'restaurant_tables_panel_visible';
 
   String _billingSidebarWidthPrefKey({int? userId}) {
     if (userId == null) {
       return _billingSidebarWidthKey;
     }
     return '${_billingSidebarWidthKey}_$userId';
+  }
+
+  String _restaurantTablesPanelVisiblePrefKey({int? userId}) {
+    if (userId == null) {
+      return _restaurantTablesPanelVisibleKey;
+    }
+    return '${_restaurantTablesPanelVisibleKey}_$userId';
   }
 
   saveAccessToken(String accessToken) async {
@@ -301,6 +310,30 @@ class SharedPreferenceProvider extends ChangeNotifier {
     }
 
     return prefs.getDouble(_billingSidebarWidthKey);
+  }
+
+  Future<void> saveRestaurantTablesPanelVisible(
+    bool isVisible, {
+    int? userId,
+  }) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(
+      _restaurantTablesPanelVisiblePrefKey(userId: userId),
+      isVisible,
+    );
+  }
+
+  Future<bool?> getRestaurantTablesPanelVisible({int? userId}) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    final scopedValue = prefs.getBool(
+      _restaurantTablesPanelVisiblePrefKey(userId: userId),
+    );
+    if (scopedValue != null) {
+      return scopedValue;
+    }
+
+    return prefs.getBool(_restaurantTablesPanelVisibleKey);
   }
 
   // ==================== ZATCA METHODS ====================
