@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
@@ -87,6 +88,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
       false; // Loading state for Send to Kitchen button
   bool _isLoadingPrint = false; // Loading state for Print button
   bool _showTablesPanel = true; // Desktop toggle for left tables panel
+  bool _isTablesPanelPrefLoaded = false;
+  double _leftPanelWidthFraction = 0.22;
+  double _rightPanelWidthFraction = 0.30;
+  static const double _splitterWidth = 12;
+  static const double _leftPanelMinWidth = 220;
+  static const double _rightPanelMinWidth = 300;
+  static const double _menuPanelMinWidth = 420;
 
   // Mobile navigation state
   MobileView _currentMobileView = MobileView.tables;
@@ -102,10 +110,57 @@ class _RestaurantPageState extends State<RestaurantPage> {
     super.initState();
     _isCounterBillingMode = widget.defaultCounterBillingMode;
     _loadTablesPanelPreference();
+    _loadPanelWidthPreferences();
     // Initialize data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
+  }
+
+  Future<void> _loadPanelWidthPreferences() async {
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final prefsProvider =
+        Provider.of<SharedPreferenceProvider>(context, listen: false);
+
+    final leftFraction = await prefsProvider.getRestaurantLeftPanelWidthFraction(
+      userId: authModel.userId,
+    );
+    final rightFraction =
+        await prefsProvider.getRestaurantRightPanelWidthFraction(
+      userId: authModel.userId,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      if (leftFraction != null && leftFraction.isFinite && leftFraction > 0) {
+        _leftPanelWidthFraction = leftFraction;
+      }
+      if (rightFraction != null &&
+          rightFraction.isFinite &&
+          rightFraction > 0) {
+        _rightPanelWidthFraction = rightFraction;
+      }
+    });
+  }
+
+  Future<void> _saveLeftPanelWidthPreference() async {
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final prefsProvider =
+        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    await prefsProvider.saveRestaurantLeftPanelWidthFraction(
+      _leftPanelWidthFraction,
+      userId: authModel.userId,
+    );
+  }
+
+  Future<void> _saveRightPanelWidthPreference() async {
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final prefsProvider =
+        Provider.of<SharedPreferenceProvider>(context, listen: false);
+    await prefsProvider.saveRestaurantRightPanelWidthFraction(
+      _rightPanelWidthFraction,
+      userId: authModel.userId,
+    );
   }
 
   Future<void> _loadTablesPanelPreference() async {
@@ -116,9 +171,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
       userId: authModel.userId,
     );
 
-    if (!mounted || isVisible == null) return;
+    if (!mounted) return;
     setState(() {
-      _showTablesPanel = isVisible;
+      if (isVisible != null) {
+        _showTablesPanel = isVisible;
+      }
+      _isTablesPanelPrefLoaded = true;
     });
   }
 
@@ -208,138 +266,176 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Widget _buildDesktopLayout(Size screenSize, bool isLargeScreen) {
-    // More responsive width calculations
-    final screenWidth = screenSize.width;
-
-    // Calculate flexible widths based on screen size
-    double tablesPanelFlex;
-    double orderPanelFlex;
-    double menuPanelFlex;
-
-    if (screenWidth >= 1400) {
-      // Large screens: more space for menu
-      tablesPanelFlex = 2;
-      menuPanelFlex = 5.0;
-      orderPanelFlex = 3.0;
-    } else if (screenWidth >= 1200) {
-      // Medium-large screens: balanced
-      tablesPanelFlex = 2;
-      menuPanelFlex = 4.5;
-      orderPanelFlex = 3.0;
-    } else if (screenWidth >= 1000) {
-      // Medium screens: compact tables
-      tablesPanelFlex = 2.0;
-      menuPanelFlex = 4.0;
-      orderPanelFlex = 2.5;
-    } else {
-      // Small desktop screens: very compact
-      tablesPanelFlex = 1.8;
-      menuPanelFlex = 3.5;
-      orderPanelFlex = 2.2;
+    if (!_isTablesPanelPrefLoaded) {
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
 
     return Column(
       children: [
         _buildAttenderTopBar(isCompact: !isLargeScreen),
         Expanded(
-          child: Row(
-            children: [
-              // Tables panel - flexible width
-              if (_showTablesPanel)
-                Expanded(
-                  flex: tablesPanelFlex.round(),
-                  child: TablesPanel(
-                    activeTableId: _activeTableId,
-                    onSelect: (id) {
-                      _autoSaveCurrentTableBeforeSwitch();
-                      // Get table name from provider for desktop mode
-                      final tableProvider =
-                          Provider.of<TableProvider>(context, listen: false);
-                      final selectedTable = tableProvider.tables.firstWhere(
-                        (table) => table.id == id,
-                        orElse: () => tableProvider.tables.first,
-                      );
-                      setState(() {
-                        _activeTableId = id;
-                        _selectedTableName = selectedTable.name;
-                        _selectedDeliveryMethodId = null;
-                        _selectedDeliveryMethodName = null;
-                      });
-                    },
-                    selectedDeliveryMethodId: _selectedDeliveryMethodId,
-                    showDeliveryMethods: _isCounterBillingMode,
-                    onDeliveryMethodSelected: (id, name) {
-                      if (id.isEmpty) {
-                        // Deselect delivery method
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final totalWidth = constraints.maxWidth;
+              final splitterCount = _showTablesPanel ? 2 : 1;
+              final totalSplitterWidth = splitterCount * _splitterWidth;
+              final availableWidth = math.max(0, totalWidth - totalSplitterWidth);
+              final leftMin = _showTablesPanel ? _leftPanelMinWidth : 0.0;
+              final leftMax = _showTablesPanel
+                  ? math.max(leftMin, availableWidth - _menuPanelMinWidth - _rightPanelMinWidth)
+                  : 0.0;
+              final rightMin = _rightPanelMinWidth;
+              final rightMax = math.max(
+                rightMin,
+                availableWidth - (_showTablesPanel ? leftMin : 0) - _menuPanelMinWidth,
+              );
+
+              final leftWidth = _showTablesPanel
+                  ? (availableWidth * _leftPanelWidthFraction).clamp(leftMin, leftMax).toDouble()
+                  : 0.0;
+              final rightWidth =
+                  (availableWidth * _rightPanelWidthFraction).clamp(rightMin, rightMax).toDouble();
+              final menuWidth = math.max(
+                _menuPanelMinWidth,
+                availableWidth - leftWidth - rightWidth,
+              );
+
+              return Row(
+                children: [
+                  if (_showTablesPanel)
+                    SizedBox(
+                      width: leftWidth,
+                      child: TablesPanel(
+                        activeTableId: _activeTableId,
+                        onSelect: (id) {
+                          _autoSaveCurrentTableBeforeSwitch();
+                          // Get table name from provider for desktop mode
+                          final tableProvider =
+                              Provider.of<TableProvider>(context, listen: false);
+                          final selectedTable = tableProvider.tables.firstWhere(
+                            (table) => table.id == id,
+                            orElse: () => tableProvider.tables.first,
+                          );
+                          setState(() {
+                            _activeTableId = id;
+                            _selectedTableName = selectedTable.name;
+                            _selectedDeliveryMethodId = null;
+                            _selectedDeliveryMethodName = null;
+                          });
+                        },
+                        selectedDeliveryMethodId: _selectedDeliveryMethodId,
+                        showDeliveryMethods: _isCounterBillingMode,
+                        onDeliveryMethodSelected: (id, name) {
+                          if (id.isEmpty) {
+                            // Deselect delivery method
+                            setState(() {
+                              _selectedDeliveryMethodId = null;
+                              _selectedDeliveryMethodName = null;
+                            });
+                            return;
+                          }
+                          _autoSaveCurrentTableBeforeSwitch();
+                          setState(() {
+                            _selectedDeliveryMethodId = id;
+                            _selectedDeliveryMethodName = name;
+                            _activeTableId = null;
+                            _selectedTableName = null;
+                          });
+                          _orderPanelKey.currentState?.resetPaymentModalFlag();
+                          _orderPanelKey.currentState?.showCurrentOrderTab();
+                        },
+                        screenSize: screenSize,
+                      ),
+                    ),
+                  if (_showTablesPanel)
+                    _buildHorizontalSplitter(
+                      onDragUpdate: (dx) {
+                        final nextLeftWidth = (leftWidth + dx).clamp(leftMin, leftMax).toDouble();
                         setState(() {
-                          _selectedDeliveryMethodId = null;
-                          _selectedDeliveryMethodName = null;
+                          _leftPanelWidthFraction = nextLeftWidth / availableWidth;
                         });
-                        return;
-                      }
-                      _autoSaveCurrentTableBeforeSwitch();
-                      setState(() {
-                        _selectedDeliveryMethodId = id;
-                        _selectedDeliveryMethodName = name;
-                        _activeTableId = null;
-                        _selectedTableName = null;
-                      });
-                      _orderPanelKey.currentState?.resetPaymentModalFlag();
-                      _orderPanelKey.currentState?.showCurrentOrderTab();
-                    },
-                    screenSize: screenSize,
+                      },
+                      onDragEnd: _saveLeftPanelWidthPreference,
+                    ),
+                  SizedBox(
+                    width: menuWidth,
+                    child: MenuPanel(
+                      onCategoryChanged: (cid) =>
+                          setState(() => _activeCategoryId = cid),
+                      activeCategoryId: _activeCategoryId,
+                      onItemAdd: _handleItemAdd,
+                      screenSize: screenSize,
+                      selectedOrder: _selectedOrderFromOrderPanel,
+                    ),
                   ),
-                ),
-              // Menu panel - flexible width (gets most space)
-              Expanded(
-                flex: menuPanelFlex.round(),
-                child: MenuPanel(
-                  onCategoryChanged: (cid) =>
-                      setState(() => _activeCategoryId = cid),
-                  activeCategoryId: _activeCategoryId,
-                  onItemAdd: _handleItemAdd,
-                  screenSize: screenSize,
-                  selectedOrder:
-                      _selectedOrderFromOrderPanel, // Pass selected order
-                ),
-              ),
-              // Order panel - flexible width
-              Expanded(
-                flex: orderPanelFlex.round(),
-                child: OrderPanel(
-                  key: _orderPanelKey, // Add key to access methods
-                  tableId: _activeTableId,
-                  preselectedDeliveryMethodId: _selectedDeliveryMethodId,
-                  preselectedDeliveryMethodName: _selectedDeliveryMethodName,
-                  screenSize: screenSize,
-                  onSendToKitchen:
-                      _sendOrderToKitchenWithLoading, // Use wrapper method
-                  onNewOrder: _handleNewOrder, // Pass the new callback
-                  onPrintOrder:
-                      _printOrderWithLoading, // Pass the print callback
-                  allowCounterBilling: widget.allowCounterBillingFromAttender,
-                  isCounterBillingMode: _isCounterBillingMode,
-                  onOrderSelected: (order) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() {
-                          _selectedOrderFromOrderPanel = order;
+                  _buildHorizontalSplitter(
+                    onDragUpdate: (dx) {
+                      final nextRightWidth = (rightWidth - dx).clamp(rightMin, rightMax).toDouble();
+                      setState(() {
+                        _rightPanelWidthFraction = nextRightWidth / availableWidth;
+                      });
+                    },
+                    onDragEnd: _saveRightPanelWidthPreference,
+                  ),
+                  SizedBox(
+                    width: rightWidth,
+                    child: OrderPanel(
+                      key: _orderPanelKey,
+                      tableId: _activeTableId,
+                      preselectedDeliveryMethodId: _selectedDeliveryMethodId,
+                      preselectedDeliveryMethodName: _selectedDeliveryMethodName,
+                      screenSize: screenSize,
+                      onSendToKitchen: _sendOrderToKitchenWithLoading,
+                      onNewOrder: _handleNewOrder,
+                      onPrintOrder: _printOrderWithLoading,
+                      allowCounterBilling: widget.allowCounterBillingFromAttender,
+                      isCounterBillingMode: _isCounterBillingMode,
+                      onOrderSelected: (order) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            setState(() {
+                              _selectedOrderFromOrderPanel = order;
+                            });
+                          }
                         });
-                      }
-                    });
-                  }, // Pass callback to update selected order
-                  selectedOrderFromParent:
-                      _selectedOrderFromOrderPanel, // Pass the selected order
-                  refreshCounter: _refreshCounter, // Pass refresh counter
-                  isLoadingSendToKitchen:
-                      _isLoadingSendToKitchen, // Pass loading state
-                  isLoadingPrint: _isLoadingPrint, // Pass print loading state
-                ),
-              ),
-            ],
+                      },
+                      selectedOrderFromParent: _selectedOrderFromOrderPanel,
+                      refreshCounter: _refreshCounter,
+                      isLoadingSendToKitchen: _isLoadingSendToKitchen,
+                      isLoadingPrint: _isLoadingPrint,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHorizontalSplitter({
+    required void Function(double deltaDx) onDragUpdate,
+    required Future<void> Function() onDragEnd,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragUpdate: (details) => onDragUpdate(details.delta.dx),
+      onHorizontalDragEnd: (_) => onDragEnd(),
+      onHorizontalDragCancel: () => onDragEnd(),
+      child: SizedBox(
+        width: _splitterWidth,
+        child: Center(
+          child: Container(
+            width: 3,
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.35),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

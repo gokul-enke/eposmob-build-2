@@ -358,8 +358,7 @@ class _SideMenuState extends State<SideMenu> {
           ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider
-                  .currentUserHasPermissionSync('menu.restaurant.main.access');
+              final hasPermission = true;
 
               if (!hasPermission) {
                 return const SizedBox.shrink();

@@ -7,6 +7,10 @@ class SharedPreferenceProvider extends ChangeNotifier {
       'billing_sidebar_width_fraction';
   static const String _restaurantTablesPanelVisibleKey =
       'restaurant_tables_panel_visible';
+  static const String _restaurantLeftPanelWidthKey =
+      'restaurant_left_panel_width_fraction';
+  static const String _restaurantRightPanelWidthKey =
+      'restaurant_right_panel_width_fraction';
 
   String _billingSidebarWidthPrefKey({int? userId}) {
     if (userId == null) {
@@ -20,6 +24,19 @@ class SharedPreferenceProvider extends ChangeNotifier {
       return _restaurantTablesPanelVisibleKey;
     }
     return '${_restaurantTablesPanelVisibleKey}_$userId';
+  }
+  String _restaurantLeftPanelWidthPrefKey({int? userId}) {
+    if (userId == null) {
+      return _restaurantLeftPanelWidthKey;
+    }
+    return '${_restaurantLeftPanelWidthKey}_$userId';
+  }
+
+  String _restaurantRightPanelWidthPrefKey({int? userId}) {
+    if (userId == null) {
+      return _restaurantRightPanelWidthKey;
+    }
+    return '${_restaurantRightPanelWidthKey}_$userId';
   }
 
   saveAccessToken(String accessToken) async {
@@ -334,6 +351,58 @@ class SharedPreferenceProvider extends ChangeNotifier {
     }
 
     return prefs.getBool(_restaurantTablesPanelVisibleKey);
+  }
+
+  Future<void> saveRestaurantLeftPanelWidthFraction(
+    double fraction, {
+    int? userId,
+  }) async {
+    if (!fraction.isFinite || fraction <= 0) return;
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(
+      _restaurantLeftPanelWidthPrefKey(userId: userId),
+      fraction,
+    );
+  }
+
+  Future<double?> getRestaurantLeftPanelWidthFraction({int? userId}) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    final scopedValue = prefs.getDouble(
+      _restaurantLeftPanelWidthPrefKey(userId: userId),
+    );
+    if (scopedValue != null) {
+      return scopedValue;
+    }
+
+    return prefs.getDouble(_restaurantLeftPanelWidthKey);
+  }
+
+  Future<void> saveRestaurantRightPanelWidthFraction(
+    double fraction, {
+    int? userId,
+  }) async {
+    if (!fraction.isFinite || fraction <= 0) return;
+
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(
+      _restaurantRightPanelWidthPrefKey(userId: userId),
+      fraction,
+    );
+  }
+
+  Future<double?> getRestaurantRightPanelWidthFraction({int? userId}) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    final scopedValue = prefs.getDouble(
+      _restaurantRightPanelWidthPrefKey(userId: userId),
+    );
+    if (scopedValue != null) {
+      return scopedValue;
+    }
+
+    return prefs.getDouble(_restaurantRightPanelWidthKey);
   }
 
   // ==================== ZATCA METHODS ====================
