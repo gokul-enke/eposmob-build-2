@@ -96,6 +96,8 @@ class OrderPanelState extends State<OrderPanel> {
       false; // Loading state for footer checkout button
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
+  bool _showSavedOrdersView = false;
+  int _lastObservedCartCount = 0;
 
   // Scroll + highlight for newly added items in edit-order view
   final ScrollController _editOrderScrollController = ScrollController();
@@ -218,6 +220,9 @@ class OrderPanelState extends State<OrderPanel> {
     if (widget.tableId != oldWidget.tableId ||
         widget.preselectedDeliveryMethodId !=
             oldWidget.preselectedDeliveryMethodId) {
+      setState(() {
+        _showSavedOrdersView = false;
+      });
       if (widget.tableId != null ||
           (widget.preselectedDeliveryMethodId != null &&
               widget.preselectedDeliveryMethodId!.isNotEmpty)) {
@@ -2870,8 +2875,16 @@ class OrderPanelState extends State<OrderPanel> {
       if (_error!.toLowerCase().contains('no init status orders found') ||
           _error!.toLowerCase().contains('no orders found') ||
           _error!.toLowerCase().contains('no saved orders')) {
+        if (_showSavedOrdersView) {
+          return _buildSavedOrdersList();
+        }
         if (isNonTableOrderContext) {
-          return _buildCurrentCartView(const []);
+          return Consumer<LocalProductProvider>(
+            builder: (context, localProductProvider, _) {
+              final cartItems = localProductProvider.getCartItems();
+              return _buildCurrentCartView(cartItems);
+            },
+          );
         }
         return _buildSavedOrdersList();
       }
@@ -2888,8 +2901,22 @@ class OrderPanelState extends State<OrderPanel> {
         builder: (context, localProductProvider, _) {
           final cartItems = localProductProvider.getCartItems();
           final hasCurrentCart = cartItems.isNotEmpty;
+          final currentCartCount = cartItems.length;
 
-          if (hasCurrentCart) {
+          // If user is on Saved Orders view and starts a fresh cart again,
+          // auto-return to Current Order view.
+          if (_showSavedOrdersView &&
+              currentCartCount > _lastObservedCartCount) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() {
+                _showSavedOrdersView = false;
+              });
+            });
+          }
+          _lastObservedCartCount = currentCartCount;
+
+          if (hasCurrentCart && !_showSavedOrdersView) {
             // Show current cart items
             return _buildCurrentCartView(cartItems);
           } else {
@@ -2926,7 +2953,32 @@ class OrderPanelState extends State<OrderPanel> {
             'Current Order',
             Icons.shopping_cart,
             const Color(0xFF059669),
-            totalPrice: total,
+            trailing: TextButton.icon(
+              onPressed: () {
+                _refreshLocalDrafts();
+                _fetchSavedOrders();
+                setState(() => _showSavedOrdersView = true);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF1D4ED8),
+                backgroundColor: const Color(0xFFEFF6FF),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Color(0xFFBFDBFE)),
+                ),
+              ),
+              icon: const Icon(Icons.receipt_long_rounded, size: 16),
+              label: Text(
+                'Saved Orders',
+                style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    widget.isCompact ? FontSize.s11 : FontSize.s12,
+                    0.21,
+                    const Color(0xFF1D4ED8)),
+              ),
+            ),
           ),
           Expanded(
             child: cartItems.isEmpty
@@ -3018,6 +3070,10 @@ class OrderPanelState extends State<OrderPanel> {
               isNonTableOrderContext ? 'Saved Orders' : 'Pending Orders',
               Icons.pending_actions,
               const Color(0xFFD97706),
+              showBackButton: _showSavedOrdersView,
+              onBackButtonPressed: () {
+                setState(() => _showSavedOrdersView = false);
+              },
               itemCount: _localDrafts.length),
           Flexible(
             flex: 1,
@@ -4284,7 +4340,8 @@ class OrderPanelState extends State<OrderPanel> {
       VoidCallback? onBackButtonPressed,
       double? totalPrice,
       int? itemCount,
-      String? subtitle}) {
+      String? subtitle,
+      Widget? trailing}) {
     return Container(
       padding: showBackButton
           ? const EdgeInsets.fromLTRB(0, 10, 12, 10)
@@ -4382,6 +4439,7 @@ class OrderPanelState extends State<OrderPanel> {
                     FontWeightManager.semiBold, FontSize.s12, 0.21, color),
               ),
             ),
+          if (trailing != null) trailing,
         ],
       ),
     );
@@ -7333,6 +7391,7 @@ class OrderPanelState extends State<OrderPanel> {
       setState(() {
         _loadedLocalDraftId = null;
         _orderComment = '';
+        _showSavedOrdersView = true;
       });
       _refreshLocalDrafts();
     } catch (e) {

@@ -336,9 +336,8 @@ class _SideMenuState extends State<SideMenu> {
           // 1. HOME (Index: 46)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = false;
-              // final hasPermission = roleProvider
-              //     .currentUserHasPermissionSync('menu.restaurant.main.access');
+              final hasPermission = roleProvider
+                  .currentUserHasPermissionSync('menu.restaurant.main.access');
 
               if (!hasPermission) {
                 return const SizedBox.shrink();
@@ -358,7 +357,8 @@ class _SideMenuState extends State<SideMenu> {
           ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = true;
+              final hasPermission = roleProvider
+                  .currentUserHasPermissionSync('menu.restaurant.main.access');
 
               if (!hasPermission) {
                 return const SizedBox.shrink();
