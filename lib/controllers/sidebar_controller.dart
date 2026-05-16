@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:pos_machine/screens/billing/billing_page_responsive.dart';
+import 'package:pos_machine/screens/billing/billing_page_restaurant.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
 import 'package:pos_machine/screens/billing/restaurant_page.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
@@ -190,5 +191,6 @@ class SideBarController extends GetxController {
     ProductBarcodeScreen(), // 83 Product Barcode Screen
     AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
+    BillingPageRestaurant(), // 86 Restaurant Billing Page
   ];
 }
