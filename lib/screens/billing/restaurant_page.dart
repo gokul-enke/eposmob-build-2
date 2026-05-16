@@ -91,7 +91,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   bool _isTablesPanelPrefLoaded = false;
   double _leftPanelWidthFraction = 0.22;
   double _rightPanelWidthFraction = 0.30;
-  static const double _splitterWidth = 12;
+  static const double _splitterWidth = 4;
   static const double _leftPanelMinWidth = 220;
   static const double _rightPanelMinWidth = 300;
   static const double _menuPanelMinWidth = 420;
@@ -418,20 +418,23 @@ class _RestaurantPageState extends State<RestaurantPage> {
     required void Function(double deltaDx) onDragUpdate,
     required Future<void> Function() onDragEnd,
   }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragUpdate: (details) => onDragUpdate(details.delta.dx),
-      onHorizontalDragEnd: (_) => onDragEnd(),
-      onHorizontalDragCancel: () => onDragEnd(),
-      child: SizedBox(
-        width: _splitterWidth,
-        child: Center(
-          child: Container(
-            width: 3,
-            height: 72,
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.35),
-              borderRadius: BorderRadius.circular(999),
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragUpdate: (details) => onDragUpdate(details.delta.dx),
+        onHorizontalDragEnd: (_) => onDragEnd(),
+        onHorizontalDragCancel: () => onDragEnd(),
+        child: SizedBox(
+          width: _splitterWidth,
+          child: Center(
+            child: Container(
+              width: 2,
+              height: 72,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.60),
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
           ),
         ),
