@@ -6991,6 +6991,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           'productName': item.product.productName ?? 'Unknown',
           'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
+          'product_unit': item.product.unit ?? '',
           'unitPrice': itemPrice.toString(),
           'totalPrice': itemTotalPrice.toString(),
           'tax_amount': itemTax.toString(),

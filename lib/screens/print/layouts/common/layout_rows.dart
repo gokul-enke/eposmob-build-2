@@ -123,7 +123,10 @@ class StandardBoxedTotalsRow extends ReceiptRow {
           final src = Rect.fromLTWH(
               0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
           final dst = Rect.fromLTWH(
-              padding, currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
+              padding,
+              currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08),
+              iconSize,
+              iconSize);
           canvas.drawImageRect(item.icon!, src, dst, Paint());
           valueOffsetX += iconSize + 4;
         }
@@ -262,14 +265,16 @@ class MultiLineReceiptTableRow extends ReceiptRow {
     for (var col in columns) {
       final colWidth = width * col.weight;
       final tp = _createPainter(col, width, fontSize, textDirection);
+      final contentWidth =
+          (colWidth - (col.horizontalPadding * 2)).clamp(0.0, double.infinity);
 
-      double xOffset = 0;
+      double xOffset = col.horizontalPadding;
       if (col.align == TextAlign.center) {
-        xOffset = (colWidth - tp.width) / 2;
+        xOffset = col.horizontalPadding + ((contentWidth - tp.width) / 2);
       } else if (col.align == TextAlign.right) {
-        xOffset = colWidth - tp.width;
+        xOffset = col.horizontalPadding + contentWidth - tp.width;
       } else if (col.align == TextAlign.left) {
-        xOffset = 0;
+        xOffset = col.horizontalPadding;
       }
 
       tp.paint(canvas, Offset(currentX + xOffset, y + 2));
@@ -292,6 +297,8 @@ class MultiLineReceiptTableRow extends ReceiptRow {
       textDirection: textDirection,
       textAlign: col.align,
       maxLines: maxLines,
-    )..layout(maxWidth: totalWidth * col.weight);
+    )..layout(
+        maxWidth: ((totalWidth * col.weight) - (col.horizontalPadding * 2))
+            .clamp(0.0, double.infinity));
   }
 }

@@ -54,6 +54,8 @@ class OrderPanel extends StatefulWidget {
       preselectedDeliveryMethodId; // Delivery method chosen from tables panel
   final String?
       preselectedDeliveryMethodName; // Name of preselected delivery method
+  final bool allowCounterBilling;
+  final bool isCounterBillingMode;
 
   const OrderPanel({
     super.key, // Add key parameter
@@ -70,6 +72,8 @@ class OrderPanel extends StatefulWidget {
     this.isLoadingPrint = false, // Add loading state parameter for print
     this.preselectedDeliveryMethodId, // Preselected delivery method from tables panel
     this.preselectedDeliveryMethodName, // Name of preselected delivery method
+    this.allowCounterBilling = false,
+    this.isCounterBillingMode = false,
   });
 
   @override
@@ -88,8 +92,12 @@ class OrderPanelState extends State<OrderPanel> {
   bool _isLoadingConfirm = false; // Loading state for Confirm button
   bool _isLoadingPrintKot =
       false; // Loading state for edit-order Print KOT button
+  bool _isProcessingCheckout =
+      false; // Loading state for footer checkout button
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
+  bool _showSavedOrdersView = false;
+  int _lastObservedCartCount = 0;
 
   // Scroll + highlight for newly added items in edit-order view
   final ScrollController _editOrderScrollController = ScrollController();
@@ -212,6 +220,9 @@ class OrderPanelState extends State<OrderPanel> {
     if (widget.tableId != oldWidget.tableId ||
         widget.preselectedDeliveryMethodId !=
             oldWidget.preselectedDeliveryMethodId) {
+      setState(() {
+        _showSavedOrdersView = false;
+      });
       if (widget.tableId != null ||
           (widget.preselectedDeliveryMethodId != null &&
               widget.preselectedDeliveryMethodId!.isNotEmpty)) {
@@ -2700,8 +2711,15 @@ class OrderPanelState extends State<OrderPanel> {
         '💵 Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
     debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
 
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+    final netAmount = finalOrderTotal;
+    const taxAmount = 0.0;
+    final totalPayable = finalOrderTotal;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -2720,130 +2738,37 @@ class OrderPanelState extends State<OrderPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
-            children: [
-              const Icon(
-                Icons.account_balance_wallet,
-                color: Color(0xFF2563EB),
-                size: 18,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Payment Summary',
-                style: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s15,
-                  0.21,
-                  const Color(0xFF1E293B),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Summary rows
           _buildSummaryRow(
-            'Order Total',
-            '${orderTotal.toStringAsFixed(2)}',
-            color: const Color(0xFF64748B),
+            'Net Amount',
+            '$currency ${netAmount.toStringAsFixed(2)}',
+            color: const Color(0xFF3F3F46),
           ),
-
-          // Show discount information if any discount is applied (single line format like billing_page.dart)
-          if (_hasDiscount()) ...[
-            _buildSummaryRow(
-              'Discount',
-              '${totalDiscountAmount.toStringAsFixed(2)} (${(orderTotal > 0 ? ((totalDiscountAmount / orderTotal) * 100) : 0.0).toStringAsFixed(1)}%)',
-              color: const Color(0xFFDC2626),
-            ),
-            if (_isfreeDeliveryMinimumAmount())
-              _buildSummaryRow(
-                'Delivery Charge',
-                '${deliveryCharge.toStringAsFixed(2)}',
-                color: deliveryCharge > 0
-                    ? const Color(0xFF8B5CF6)
-                    : const Color(0xFF059669),
-              ),
-            _buildSummaryRow(
-              'Final Total',
-              '${finalOrderTotal.toStringAsFixed(2)}',
-              color: const Color(0xFF059669),
-              isBold: true,
-            ),
-          ] else ...[
-            if (_isfreeDeliveryMinimumAmount())
-              _buildSummaryRow(
-                'Delivery Charge',
-                '${deliveryCharge.toStringAsFixed(2)}',
-                color: deliveryCharge > 0
-                    ? const Color(0xFF8B5CF6)
-                    : const Color(0xFF059669),
-              ),
-            _buildSummaryRow(
-              'Final Total',
-              '${(orderTotal + deliveryCharge).toStringAsFixed(2)}',
-              color: const Color(0xFF059669),
-              isBold: true,
-            ),
-          ],
-
-          // Hide discount section for now
-          // if (_hasDiscount()) ...[
-          //   _buildSummaryRow(
-          //     'Discount',
-          //     '-${discountAmount.toStringAsFixed(2)}',
-          //     color: const Color(0xFFD97706),
-          //   ),
-          //   _buildSummaryRow(
-          //     'Final Total',
-          //     '${finalOrderTotal.toStringAsFixed(2)}',
-          //     color: const Color(0xFF1E293B),
-          //     isBold: true,
-          //   ),
-          // ],
-
-          // Only show customer balance if a customer is selected AND it's NOT the default customer
-          if (_selectedCustomer != null &&
-              !Provider.of<CustomerSelectionProvider>(context, listen: false)
-                  .isDefaultCustomer) ...[
-            const SizedBox(height: 8),
-            Container(
-              height: 1,
-              color: Colors.grey.shade200,
-            ),
-            const SizedBox(height: 8),
-            _buildSummaryRow(
-              'Customer Balance',
-              '${customerBalance.toStringAsFixed(2)}',
-              color: customerBalance >= 0
-                  ? const Color(0xFF059669)
-                  : const Color(0xFFDC2626),
-            ),
-          ],
-
-          if (_hasPaymentMethod()) ...[
-            const SizedBox(height: 8),
-            Container(
-              height: 1,
-              color: Colors.grey.shade200,
-            ),
-            const SizedBox(height: 8),
-            _buildSummaryRow(
-              'Paid Amount',
-              '${totalPaidAmount.toStringAsFixed(2)}',
-              color: const Color(0xFF059669),
-            ),
-            _buildSummaryRow(
-              'Balance',
-              rawBalance >= 0
-                  ? '${rawBalance.toStringAsFixed(2)}'
-                  : 'Short: ${(-rawBalance).toStringAsFixed(2)}',
-              color: rawBalance >= 0
-                  ? const Color(0xFF059669)
-                  : const Color(0xFFDC2626),
-              isBold: true,
-            ),
-          ],
+          _buildSummaryRow(
+            'Tax',
+            '$currency ${taxAmount.toStringAsFixed(2)}',
+            color: const Color(0xFF7C8DB5),
+          ),
+          const SizedBox(height: 6),
+          Container(height: 1, color: const Color(0xFFE4E4ED)),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            'Total Payable',
+            '$currency ${totalPayable.toStringAsFixed(2)}',
+            color: const Color(0xFF3B82F6),
+            isBold: true,
+            large: true,
+          ),
+          _buildSummaryRow(
+            'Total Paid',
+            '$currency ${totalPaidAmount.toStringAsFixed(2)}',
+            color: const Color(0xFF3F3F46),
+          ),
+          _buildSummaryRow(
+            'Balance',
+            '$currency ${cashBalance.toStringAsFixed(2)}',
+            color: const Color(0xFF00C739),
+            isBold: true,
+          ),
         ],
       ),
     );
@@ -2854,9 +2779,10 @@ class OrderPanelState extends State<OrderPanel> {
     String amount, {
     required Color color,
     bool isBold = false,
+    bool large = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -2864,16 +2790,16 @@ class OrderPanelState extends State<OrderPanel> {
             label,
             style: buildCustomStyle(
               isBold ? FontWeightManager.semiBold : FontWeightManager.regular,
-              FontSize.s14,
+              large ? FontSize.s18 : FontSize.s14,
               0.21,
-              const Color(0xFF64748B),
+              color,
             ),
           ),
           Text(
             amount,
             style: buildCustomStyle(
               isBold ? FontWeightManager.bold : FontWeightManager.semiBold,
-              FontSize.s15,
+              large ? FontSize.s18 : FontSize.s14,
               0.21,
               color,
             ),
@@ -2885,7 +2811,16 @@ class OrderPanelState extends State<OrderPanel> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.tableId == null && widget.preselectedDeliveryMethodId == null) {
+    final isNonTableOrderContext = widget.tableId == null &&
+        ((widget.preselectedDeliveryMethodId != null &&
+                widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+            (widget.allowCounterBilling && widget.isCounterBillingMode));
+    final hasOrderContext = widget.tableId != null ||
+        (widget.preselectedDeliveryMethodId != null &&
+            widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+        (widget.allowCounterBilling && widget.isCounterBillingMode);
+
+    if (!hasOrderContext) {
       return Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -2940,7 +2875,17 @@ class OrderPanelState extends State<OrderPanel> {
       if (_error!.toLowerCase().contains('no init status orders found') ||
           _error!.toLowerCase().contains('no orders found') ||
           _error!.toLowerCase().contains('no saved orders')) {
-        // Show the custom empty state instead of error
+        if (_showSavedOrdersView) {
+          return _buildSavedOrdersList();
+        }
+        if (isNonTableOrderContext) {
+          return Consumer<LocalProductProvider>(
+            builder: (context, localProductProvider, _) {
+              final cartItems = localProductProvider.getCartItems();
+              return _buildCurrentCartView(cartItems);
+            },
+          );
+        }
         return _buildSavedOrdersList();
       }
       // For other errors, show the error message
@@ -2956,12 +2901,26 @@ class OrderPanelState extends State<OrderPanel> {
         builder: (context, localProductProvider, _) {
           final cartItems = localProductProvider.getCartItems();
           final hasCurrentCart = cartItems.isNotEmpty;
+          final currentCartCount = cartItems.length;
 
-          if (hasCurrentCart) {
+          // If user is on Saved Orders view and starts a fresh cart again,
+          // auto-return to Current Order view.
+          if (_showSavedOrdersView &&
+              currentCartCount > _lastObservedCartCount) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              setState(() {
+                _showSavedOrdersView = false;
+              });
+            });
+          }
+          _lastObservedCartCount = currentCartCount;
+
+          if (hasCurrentCart && !_showSavedOrdersView) {
             // Show current cart items
             return _buildCurrentCartView(cartItems);
           } else {
-            // Display list of saved orders
+            // No active cart: show pending list (and saved list only for table mode).
             return _buildSavedOrdersList();
           }
         },
@@ -2994,7 +2953,32 @@ class OrderPanelState extends State<OrderPanel> {
             'Current Order',
             Icons.shopping_cart,
             const Color(0xFF059669),
-            totalPrice: total,
+            trailing: TextButton.icon(
+              onPressed: () {
+                _refreshLocalDrafts();
+                _fetchSavedOrders();
+                setState(() => _showSavedOrdersView = true);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF1D4ED8),
+                backgroundColor: const Color(0xFFEFF6FF),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Color(0xFFBFDBFE)),
+                ),
+              ),
+              icon: const Icon(Icons.receipt_long_rounded, size: 16),
+              label: Text(
+                'Saved Orders',
+                style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    widget.isCompact ? FontSize.s11 : FontSize.s12,
+                    0.21,
+                    const Color(0xFF1D4ED8)),
+              ),
+            ),
           ),
           Expanded(
             child: cartItems.isEmpty
@@ -3061,6 +3045,11 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Widget _buildSavedOrdersList() {
+    final isNonTableOrderContext = widget.tableId == null &&
+        ((widget.preselectedDeliveryMethodId != null &&
+                widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+            (widget.allowCounterBilling && widget.isCounterBillingMode));
+
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -3078,10 +3067,14 @@ class OrderPanelState extends State<OrderPanel> {
         children: [
           // Pending Orders Section (independent scroll)
           _buildPanelHeader(
-              'Pending Orders', Icons.pending_actions, const Color(0xFFD97706),
-              itemCount: _localDrafts.length,
-              subtitle: widget.tableId?.toString() ??
-                  widget.preselectedDeliveryMethodName),
+              isNonTableOrderContext ? 'Saved Orders' : 'Pending Orders',
+              Icons.pending_actions,
+              const Color(0xFFD97706),
+              showBackButton: _showSavedOrdersView,
+              onBackButtonPressed: () {
+                setState(() => _showSavedOrdersView = false);
+              },
+              itemCount: _localDrafts.length),
           Flexible(
             flex: 1,
             child: RefreshIndicator(
@@ -3148,90 +3141,20 @@ class OrderPanelState extends State<OrderPanel> {
                     ),
             ),
           ),
-          const SizedBox(height: 8),
-          // Saved Orders Section (independent scroll)
-          _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
-              itemCount: _savedOrders.length,
-              subtitle: widget.tableId?.toString() ??
-                  widget.preselectedDeliveryMethodName),
-          Flexible(
-            flex: 2,
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await _fetchSavedOrders();
-                _refreshLocalDrafts();
-              },
-              child: _savedOrders.isEmpty
-                  ? ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(
-                        dragDevices: {
-                          PointerDeviceKind.mouse,
-                          PointerDeviceKind.touch,
-                          PointerDeviceKind.stylus,
-                          PointerDeviceKind.trackpad,
-                        },
-                      ),
-                      child: CustomScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(
-                            parent: BouncingScrollPhysics()),
-                        slivers: [
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Center(
-                              child: Padding(
-                                padding:
-                                    EdgeInsets.all(widget.isCompact ? 12 : 16),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF059669)
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Icon(
-                                        Icons.add_shopping_cart,
-                                        size: widget.isCompact ? 36 : 48,
-                                        color: const Color(0xFF059669),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    Text(
-                                      'No orders found',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                          FontWeightManager.bold,
-                                          widget.isCompact
-                                              ? FontSize.s16
-                                              : FontSize.s18,
-                                          0.21,
-                                          const Color(0xFF1E293B)),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Add products from the menu\nto start a new order',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
-                                          const Color(0xFF64748B)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
+          if (!isNonTableOrderContext) ...[
+            const SizedBox(height: 8),
+            // Saved Orders Section (independent scroll)
+            _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
+                itemCount: _savedOrders.length),
+            Flexible(
+              flex: 2,
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await _fetchSavedOrders();
+                  _refreshLocalDrafts();
+                },
+                child: _savedOrders.isEmpty
+                    ? ScrollConfiguration(
                         behavior: ScrollConfiguration.of(context).copyWith(
                           dragDevices: {
                             PointerDeviceKind.mouse,
@@ -3240,25 +3163,96 @@ class OrderPanelState extends State<OrderPanel> {
                             PointerDeviceKind.trackpad,
                           },
                         ),
-                        child: ListView.separated(
+                        child: CustomScrollView(
                           physics: const AlwaysScrollableScrollPhysics(
                               parent: BouncingScrollPhysics()),
-                          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-                          itemCount: _savedOrders.length,
-                          separatorBuilder: (_, __) => Container(
-                            height: 1,
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            color: Colors.grey.shade100,
+                          slivers: [
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(
+                                      widget.isCompact ? 12 : 16),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF059669)
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                        child: Icon(
+                                          Icons.add_shopping_cart,
+                                          size: widget.isCompact ? 36 : 48,
+                                          color: const Color(0xFF059669),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        'No orders found',
+                                        textAlign: TextAlign.center,
+                                        style: buildCustomStyle(
+                                            FontWeightManager.bold,
+                                            widget.isCompact
+                                                ? FontSize.s16
+                                                : FontSize.s18,
+                                            0.21,
+                                            const Color(0xFF1E293B)),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Add products from the menu\nto start a new order',
+                                        textAlign: TextAlign.center,
+                                        style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            widget.isCompact
+                                                ? FontSize.s13
+                                                : FontSize.s14,
+                                            0.21,
+                                            const Color(0xFF64748B)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
                           ),
-                          itemBuilder: (context, index) {
-                            final order = _savedOrders[index];
-                            return _buildOrderListItem(order);
-                          },
+                          child: ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(
+                                parent: BouncingScrollPhysics()),
+                            padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                            itemCount: _savedOrders.length,
+                            separatorBuilder: (_, __) => Container(
+                              height: 1,
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              color: Colors.grey.shade100,
+                            ),
+                            itemBuilder: (context, index) {
+                              final order = _savedOrders[index];
+                              return _buildOrderListItem(order);
+                            },
+                          ),
                         ),
                       ),
-                    ),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -4237,7 +4231,9 @@ class OrderPanelState extends State<OrderPanel> {
       child: Column(
         children: [
           _buildPanelHeader(
-            'Edit Order',
+            _selectedOrder['order_number'] != null
+                ? 'Edit Order - ${_selectedOrder['order_number']}'
+                : 'Edit Order',
             Icons.shopping_cart,
             const Color(0xFFD97706),
             showBackButton: true,
@@ -4249,8 +4245,6 @@ class OrderPanelState extends State<OrderPanel> {
               });
               widget.onOrderSelected(null);
             },
-            totalPrice: total,
-            subtitle: '${_selectedOrder['order_number']}',
           ),
           Expanded(
             child: RefreshIndicator(
@@ -4346,11 +4340,12 @@ class OrderPanelState extends State<OrderPanel> {
       VoidCallback? onBackButtonPressed,
       double? totalPrice,
       int? itemCount,
-      String? subtitle}) {
+      String? subtitle,
+      Widget? trailing}) {
     return Container(
       padding: showBackButton
-          ? const EdgeInsets.fromLTRB(0, 16, 16, 16)
-          : EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
+          ? const EdgeInsets.fromLTRB(0, 10, 12, 10)
+          : EdgeInsets.all(widget.isCompact ? 10.0 : 12.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -4374,10 +4369,12 @@ class OrderPanelState extends State<OrderPanel> {
             IconButton(
               icon: const Icon(Icons.arrow_back, color: Color(0xFF64748B)),
               onPressed: onBackButtonPressed,
-              splashRadius: 20,
+              splashRadius: 16,
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
@@ -4385,10 +4382,10 @@ class OrderPanelState extends State<OrderPanel> {
             child: Icon(
               icon,
               color: color,
-              size: widget.isCompact ? 18 : 20,
+              size: widget.isCompact ? 14 : 16,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4397,7 +4394,7 @@ class OrderPanelState extends State<OrderPanel> {
                   title,
                   style: buildCustomStyle(
                       FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s16 : FontSize.s18,
+                      widget.isCompact ? FontSize.s14 : FontSize.s16,
                       0.30,
                       const Color(0xFF1E293B)),
                 ),
@@ -4406,7 +4403,7 @@ class OrderPanelState extends State<OrderPanel> {
                     subtitle,
                     style: buildCustomStyle(
                         FontWeightManager.medium,
-                        widget.isCompact ? FontSize.s12 : FontSize.s13,
+                        widget.isCompact ? FontSize.s11 : FontSize.s12,
                         0.21,
                         const Color(0xFF64748B)),
                   ),
@@ -4431,7 +4428,7 @@ class OrderPanelState extends State<OrderPanel> {
             ),
           if (itemCount != null)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
@@ -4442,6 +4439,7 @@ class OrderPanelState extends State<OrderPanel> {
                     FontWeightManager.semiBold, FontSize.s12, 0.21, color),
               ),
             ),
+          if (trailing != null) trailing,
         ],
       ),
     );
@@ -4625,6 +4623,31 @@ class OrderPanelState extends State<OrderPanel> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 12),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _showCommentDialog,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: widget.isCompact ? 44 : 48,
+                      height: widget.isCompact ? 44 : 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.chat_bubble_outline,
+                        size: widget.isCompact ? 18 : 20,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -4661,64 +4684,45 @@ class OrderPanelState extends State<OrderPanel> {
     double finalOrderTotal =
         (orderTotal - totalDiscountAmount) + _getDeliveryChargeForOrder();
 
-    final resolvedComment = _orderComment.isNotEmpty
-        ? _orderComment
-        : (_extractOrderLevelComment(_selectedOrder) ?? '');
-    final hasComment = resolvedComment.trim().isNotEmpty;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Total: ',
-                  style: buildCustomStyle(
-                      FontWeightManager.semiBold, 16, 0.2, Colors.black87),
-                ),
-                Text(
-                  finalOrderTotal.toStringAsFixed(2),
-                  style: buildCustomStyle(
-                      FontWeightManager.bold, 16, 0.2, const Color(0xFF2563EB)),
-                ),
-              ],
-            ),
+          _buildSummaryRow(
+            'Net Amount',
+            '$currency ${finalOrderTotal.toStringAsFixed(2)}',
+            color: const Color(0xFF3F3F46),
           ),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _showCommentDialog,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: hasComment
-                      ? const Color(0xFF2563EB).withOpacity(0.12)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: hasComment
-                        ? const Color(0xFF2563EB).withOpacity(0.3)
-                        : Colors.blue.shade100,
-                  ),
-                ),
-                child: Icon(
-                  hasComment ? Icons.chat : Icons.chat_bubble_outline,
-                  size: 18,
-                  color: hasComment
-                      ? const Color(0xFF2563EB)
-                      : const Color(0xFF64748B),
-                ),
-              ),
-            ),
+          const SizedBox(height: 6),
+          Container(height: 1, color: const Color(0xFFE4E4ED)),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            'Total Payable',
+            '$currency ${finalOrderTotal.toStringAsFixed(2)}',
+            color: const Color(0xFF3B82F6),
+            isBold: true,
+            large: true,
+          ),
+          _buildSummaryRow(
+            'Total Paid',
+            '$currency 0.00',
+            color: const Color(0xFF3F3F46),
+          ),
+          _buildSummaryRow(
+            'Balance',
+            '$currency ${finalOrderTotal.toStringAsFixed(2)}',
+            color: const Color(0xFF00C739),
+            isBold: true,
           ),
         ],
       ),
@@ -4768,7 +4772,7 @@ class OrderPanelState extends State<OrderPanel> {
     return (comment == null || comment.isEmpty) ? null : comment;
   }
 
-  void _showCheckoutModal() async {
+  void _showCheckoutModal({bool forCurrentCart = false}) {
     // Release any current focus so checkout modal text fields receive input cleanly.
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -4783,38 +4787,23 @@ class OrderPanelState extends State<OrderPanel> {
 
     if (!mounted) return;
 
-    // Sync LocalProductProvider cart with order items before showing checkout modal
-    _syncOrderItemsWithLocalCart();
-
-    // Reload payment methods and refresh BillingProvider method IDs
-    final masterDataProvider =
-        Provider.of<MasterDataProvider>(context, listen: false);
-    final methods =
-        await masterDataProvider.fetchPaymentMethods(forceRefresh: true);
-
-    if (methods != null && mounted) {
-      final billingProvider =
-          Provider.of<BillingProvider>(context, listen: false);
-      String? cashId, cardId, upiId, codId;
-      for (var m in methods) {
-        final val = m.value.toUpperCase();
-        if (val == 'CASH') {
-          cashId = m.id.toString();
-        } else if (val == 'CARD') {
-          cardId = m.id.toString();
-        } else if (val == 'UPI') {
-          upiId = m.id.toString();
-        } else if (val == 'COD') {
-          codId = m.id.toString();
-        }
-      }
-      billingProvider.updatePaymentMethodIds(
-        cashId: cashId,
-        cardId: cardId,
-        upiId: upiId,
-        codId: codId,
-      );
+    // Sync LocalProductProvider cart with saved-order items only when confirming
+    // an existing kitchen order. Current-cart checkout already uses that cart.
+    if (!forCurrentCart) {
+      _syncOrderItemsWithLocalCart();
     }
+
+    // Keep checkout modal launch instant: do not block on payment-method API.
+    // BillingProvider IDs will use already-cached values and can be refreshed
+    // later by existing background/bootstrap flows if needed.
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    localProductProvider.cartTotal; // Refresh priceSummary before modal totals.
+    final checkoutCartTotal = forCurrentCart
+        ? (localProductProvider.priceSummary?.subTotal ??
+            localProductProvider.cartTotal)
+        : _calculateOrderTotal();
 
     showDialog(
       context: context,
@@ -4826,7 +4815,7 @@ class OrderPanelState extends State<OrderPanel> {
             deliveryMethodsProvider.deliveryMethods.isNotEmpty;
 
         return CheckoutModal(
-          cartTotal: _calculateOrderTotal(),
+          cartTotal: checkoutCartTotal,
           availableCustomers: _customers,
           selectedCustomer: _selectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
@@ -5059,16 +5048,42 @@ class OrderPanelState extends State<OrderPanel> {
           onConfirmOrder: () async {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
+              _isProcessingCheckout = true;
             });
             Navigator.of(dialogContext).pop();
-            await _confirmOrder();
+            try {
+              if (forCurrentCart) {
+                await _confirmCurrentCart(printBill: false);
+              } else {
+                await _confirmOrder();
+              }
+            } finally {
+              if (mounted) {
+                setState(() {
+                  _isProcessingCheckout = false;
+                });
+              }
+            }
           },
           onConfirmAndPrint: () async {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
+              _isProcessingCheckout = true;
             });
             Navigator.of(dialogContext).pop();
-            await _confirmOrderAndPrintBill();
+            try {
+              if (forCurrentCart) {
+                await _confirmCurrentCart(printBill: true);
+              } else {
+                await _confirmOrderAndPrintBill();
+              }
+            } finally {
+              if (mounted) {
+                setState(() {
+                  _isProcessingCheckout = false;
+                });
+              }
+            }
           },
         );
       },
@@ -5076,7 +5091,11 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   double _calculateOrderTotal() {
-    if (_selectedOrder == null) return 0.0;
+    if (_selectedOrder == null) {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      return localProductProvider.cartTotal;
+    }
     List<dynamic> cartItems = _getCartItemsFromOrder(_selectedOrder);
     double total = 0.0;
     for (var item in cartItems) {
@@ -5940,6 +5959,406 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
+  List<String> _getSelectedPaymentMethodsForApi() {
+    final methods = <String>[];
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+
+    String methodId(String name, String? providerId) {
+      return providerId ??
+          masterDataProvider.getPaymentMethodId(name)?.toString() ??
+          name;
+    }
+
+    if (_isCashSelected && (double.tryParse(_cashAmount) ?? 0) > 0) {
+      methods.add(methodId('CASH', billingProvider.cashPaymentMethodId));
+    }
+    if (_isCardSelected && (double.tryParse(_cardAmount) ?? 0) > 0) {
+      methods.add(methodId('CARD', billingProvider.cardPaymentMethodId));
+    }
+    if (_isUpiSelected && (double.tryParse(_upiAmount) ?? 0) > 0) {
+      methods.add(methodId('UPI', billingProvider.upiPaymentMethodId));
+    }
+    if (_isCodSelected && (double.tryParse(_codAmount) ?? 0) > 0) {
+      methods.add(methodId('COD', billingProvider.codPaymentMethodId));
+    }
+
+    return methods;
+  }
+
+  List<Map<String, dynamic>> _getPaidMethodsForApi(double balanceAmount) {
+    final paidMethods = <Map<String, dynamic>>[];
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+
+    String methodId(String name, String? providerId) {
+      return providerId ??
+          masterDataProvider.getPaymentMethodId(name)?.toString() ??
+          name;
+    }
+
+    final cashId = methodId('CASH', billingProvider.cashPaymentMethodId);
+    final cardId = methodId('CARD', billingProvider.cardPaymentMethodId);
+    final upiId = methodId('UPI', billingProvider.upiPaymentMethodId);
+    final codId = methodId('COD', billingProvider.codPaymentMethodId);
+
+    void addPaidMethod(bool selected, String amountText, String method) {
+      final amount = double.tryParse(amountText) ?? 0.0;
+      if (!selected || amount <= 0) return;
+      paidMethods.add({'method': method, 'amount': amount});
+    }
+
+    addPaidMethod(_isCashSelected, _cashAmount, cashId);
+    addPaidMethod(_isCardSelected, _cardAmount, cardId);
+    addPaidMethod(_isUpiSelected, _upiAmount, upiId);
+    addPaidMethod(_isCodSelected, _codAmount, codId);
+
+    return PaymentHelper.normalizePaidMethodsForApi(
+      paidMethods: paidMethods,
+      balanceAmount: balanceAmount > 0 ? balanceAmount : 0.0,
+      cashMethodId: cashId,
+      codMethodId: codId,
+    );
+  }
+
+  double _getTotalPaidAmountFromState() {
+    return (double.tryParse(_cashAmount) ?? 0.0) +
+        (double.tryParse(_cardAmount) ?? 0.0) +
+        (double.tryParse(_upiAmount) ?? 0.0) +
+        (double.tryParse(_codAmount) ?? 0.0);
+  }
+
+  Map<String, dynamic> _orderResponseData(dynamic response) {
+    if (response is Map<String, dynamic>) {
+      final rawData = response['data'];
+      if (rawData is Map) {
+        return Map<String, dynamic>.from(rawData);
+      }
+      return Map<String, dynamic>.from(response);
+    }
+    if (response is Map) {
+      final rawData = response['data'];
+      if (rawData is Map) {
+        return Map<String, dynamic>.from(rawData);
+      }
+      return Map<String, dynamic>.from(response);
+    }
+    return <String, dynamic>{};
+  }
+
+  Future<void> _printCurrentCartKot(
+    String orderNumber,
+    List<LocalCartItem> cartItems, {
+    String? tokenNumber,
+  }) async {
+    final printItems = cartItems.map((item) {
+      return {
+        'productName': item.product.productName ?? '',
+        'quantity': item.quantity.toString(),
+        'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
+        'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+        'mrp': item.mrp?.toStringAsFixed(2) ??
+            item.price?.toStringAsFixed(2) ??
+            '0.00',
+        if (item.comment != null && item.comment!.isNotEmpty)
+          'notes': item.comment,
+      };
+    }).toList();
+
+    final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
+    final tableName = _deliveryMethod.isNotEmpty
+        ? _deliveryMethod
+        : (widget.preselectedDeliveryMethodName ?? 'Store Takeaway');
+
+    final success = await KotPrintPage.autoPrint(
+      context,
+      orderNumber: orderNumber,
+      tokenNumber: tokenNumber,
+      tableName: tableName,
+      showTableLabel: false,
+      orderTime: orderTime,
+      items: printItems,
+      comment: _orderComment.isNotEmpty ? _orderComment : null,
+    );
+
+    if (!success && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => KotPrintPage(
+            orderNumber: orderNumber,
+            tokenNumber: tokenNumber,
+            tableName: tableName,
+            showTableLabel: false,
+            orderTime: orderTime,
+            items: printItems,
+            comment: _orderComment.isNotEmpty ? _orderComment : null,
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<String?> _printConfirmedCurrentCartBill(dynamic response) async {
+    final responseData = _orderResponseData(response);
+    final orderLookup = (responseData['order_number'] ??
+            responseData['order_id'] ??
+            responseData['orders_id'] ??
+            (response is Map ? response['order_number'] : null) ??
+            (response is Map ? response['order_id'] : null))
+        ?.toString();
+
+    if (orderLookup == null || orderLookup.isEmpty) {
+      throw Exception('Order number not found for printing');
+    }
+
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final detailsResponse = await SalesProvider().listOrderDetails(
+      context,
+      orderLookup,
+      authModel.token ?? '',
+    );
+    final orderDetails = OrderDetailsModel.fromJson(detailsResponse);
+    final detailsData = orderDetails.data;
+    final cart = detailsData?.cart;
+
+    final formattedTotal = cart?.priceSummary?.netPayable?.toString() ??
+        cart?.priceSummary?.netTotal.toString() ??
+        _getEffectiveOrderTotal().toStringAsFixed(2);
+    final savedTotal = cart?.priceSummary?.savedTotal.toString();
+    final totalPaid = _getTotalPaidAmountFromState();
+    final oldBalance = _selectedCustomer?.balance;
+    double? currentBalance;
+    if (oldBalance != null) {
+      final cartTotal = double.tryParse(formattedTotal) ?? 0.0;
+      currentBalance = oldBalance - (cartTotal - totalPaid);
+    }
+
+    Future<bool> printOnce() {
+      return _printOrderDetailsWithFallback(
+        storeName: cart?.storeName ?? '',
+        cartItems: cart?.cartItems ?? const [],
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount: detailsData?.priceSummary?.discount?.toString() ??
+            (detailsData?.cart?.priceSummary?.discount?.toString() ?? '0.00'),
+        orderDate: detailsData?.orderDate ?? '',
+        orderNumber: detailsData?.orderNumber?.toString() ?? orderLookup,
+        tokenNumber: detailsData?.tokenNumber,
+        customerName:
+            detailsData?.customerDetails?.name ?? _selectedCustomer?.name,
+        customerPhone:
+            detailsData?.customerDetails?.phone ?? _selectedCustomerPhone,
+        customerEmail: detailsData?.customerDetails?.email,
+        customerAddress: detailsData?.getCustomerAddressForDisplay(),
+        customerOldBalance: oldBalance,
+        customerCurrentBalance: currentBalance,
+        paidAmount: totalPaid > 0 ? totalPaid : null,
+        customerAlternatePhone: detailsData?.customerDetails?.alternatePhone,
+        customerVatNumber: detailsData?.kycInfo?.vatNumber,
+        customerCrNumber: detailsData?.kycInfo?.crNumber,
+        customerType: _selectedCustomer?.customerType,
+        paymentMethod: detailsData?.paymentDetails?.paymentMethod,
+        paymentBreakdown: detailsData?.payments,
+        orderComment: _orderComment.isNotEmpty ? _orderComment : null,
+        deliveryMethod: detailsData?.deliveryMethodName ?? _deliveryMethod,
+        isDefaultCustomer: _isDefaultCustomerPhone(
+          detailsData?.customerDetails?.phone ?? _selectedCustomerPhone,
+        ),
+        netExcTax: cart?.priceSummary?.netExcTax?.toString(),
+      );
+    }
+
+    final autoPrintSuccess = await printOnce();
+    await _maybePrintCustomerCopy(
+      canPrompt: autoPrintSuccess,
+      printAction: printOnce,
+    );
+
+    return detailsData?.tokenNumber;
+  }
+
+  void _resetCurrentCartCheckoutState() {
+    setState(() {
+      _selectedCustomer = null;
+      _selectedCustomerID = null;
+      _selectedCustomerPhone = null;
+      _isCustomerManuallySelected = false;
+      _orderComment = '';
+      _cashAmount = '';
+      _cardAmount = '';
+      _upiAmount = '';
+      _codAmount = '';
+      _debitAmount = '';
+      _transactionNumber = '';
+      _balanceAmount = 0.0;
+      _toCustomerCreditEnabled = false;
+      _toCustomerCreditAmount = 0.0;
+      _hasOpenedPaymentModalOnce = false;
+      _flatDiscount = 0.0;
+      _percentageDiscount = 0.0;
+      _couponCode = '';
+      _isCouponApplied = false;
+      _loadedLocalDraftId = null;
+    });
+    Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .clearSelectedCustomer();
+    _applyDefaultCustomer();
+  }
+
+  Future<bool> _confirmCurrentCart({required bool printBill}) async {
+    if (!widget.allowCounterBilling || !widget.isCounterBillingMode) {
+      showScaffoldError(
+        context: context,
+        message: 'Quick counter billing is disabled',
+      );
+      return false;
+    }
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
+    if (cartItems.isEmpty) {
+      showScaffoldError(context: context, message: 'No items in cart');
+      return false;
+    }
+
+    final customerPhone = _selectedCustomer?.phone ?? _selectedCustomerPhone;
+    if (_selectedCustomerID == null &&
+        _selectedCustomer?.id == null &&
+        (customerPhone == null || customerPhone.isEmpty)) {
+      showScaffoldError(context: context, message: 'Please select a customer');
+      return false;
+    }
+
+    setState(() {
+      _isLoadingConfirm = true;
+    });
+
+    try {
+      localProductProvider.cartTotal; // Recalculate priceSummary.
+      final priceSummary = localProductProvider.priceSummary;
+      final netTotal = priceSummary?.netTotal ?? localProductProvider.cartTotal;
+      final deliveryCharge = _getDeliveryChargeForOrder();
+      final payableTotal = netTotal + deliveryCharge;
+      final totalPaid = _getTotalPaidAmountFromState();
+      final balanceAmount = totalPaid - payableTotal;
+      final paymentMethods = _getSelectedPaymentMethodsForApi();
+      final paidMethods = _getPaidMethodsForApi(balanceAmount);
+
+      final items = cartItems.map((item) {
+        return {
+          'product_id': item.product.productId,
+          'quantity': item.quantity,
+          'price': item.price,
+          'mrp': item.mrp,
+          'stock_id': item.selectedStock?.id,
+          if (item.comment != null && item.comment!.isNotEmpty)
+            'comment': item.comment,
+        };
+      }).toList();
+
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final deliveryMethodId = _deliveryMethodId.isNotEmpty
+          ? _deliveryMethodId
+          : (widget.preselectedDeliveryMethodId?.isNotEmpty == true
+              ? widget.preselectedDeliveryMethodId
+              : _getDefaultDeliveryMethodId());
+
+      final response = await cartProvider.addToOrderAPI(
+        items: items,
+        cartIds: 0,
+        accessToken: authModel.token ?? '',
+        transactionId: _transactionNumber,
+        totalPrice: netTotal.toStringAsFixed(2),
+        customerId: _selectedCustomer?.id ?? _selectedCustomerID,
+        customerPhone: customerPhone,
+        paymentMethod: null,
+        paidAmount: null,
+        paymentMethods: paymentMethods,
+        paidMethods: paidMethods,
+        balanceAmount: balanceAmount.toStringAsFixed(2),
+        couponId:
+            _isCouponApplied && _couponCode.isNotEmpty ? _couponCode : null,
+        comment: _orderComment.trim().isNotEmpty ? _orderComment.trim() : null,
+        deliveryMethodId: deliveryMethodId,
+        status: 'confirmed',
+        deliveryDate: _deliveryDate,
+        deliveryTime: _deliveryTime,
+        flatDiscount: priceSummary?.flatDiscount,
+        percentageDiscount: priceSummary?.percentageDiscount,
+        discountAmount: priceSummary?.discount,
+        toCustomerCredit: _toCustomerCreditEnabled,
+        address: _deliveryAddress.isNotEmpty ? _deliveryAddress : null,
+        deliveryCharge: deliveryCharge,
+      );
+
+      final responseData = _orderResponseData(response);
+      final orderId = responseData['order_id'] ??
+          responseData['orders_id'] ??
+          (response is Map ? response['order_id'] : null);
+      if (orderId == null && !isApiSuccess(response)) {
+        showScaffoldError(
+          context: context,
+          message: response is Map
+              ? (response['message']?.toString() ?? 'Failed to confirm order')
+              : 'Failed to confirm order',
+        );
+        return false;
+      }
+
+      String? tokenNumber;
+      if (printBill) {
+        tokenNumber = await _printConfirmedCurrentCartBill(response);
+      }
+
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      if (printBill &&
+          (appSettingsProvider.appSettings?.enableKOTPrint ?? true)) {
+        final orderNumber = (responseData['order_number'] ??
+                (response is Map ? response['order_number'] : null) ??
+                'ORD-$orderId')
+            .toString();
+        await _printCurrentCartKot(
+          orderNumber,
+          cartItems,
+          tokenNumber: tokenNumber ?? _extractTokenNumber(responseData),
+        );
+      }
+
+      _refreshCustomersInBackgroundAfterSale();
+      deleteLoadedDraftIfAny();
+      localProductProvider.clearCartAfterOrder();
+      _resetCurrentCartCheckoutState();
+      showScaffold(
+        context: context,
+        message: printBill
+            ? 'Counter order confirmed and printed'
+            : 'Counter order confirmed',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Error confirming counter order: $e');
+      showScaffoldError(
+        context: context,
+        message: 'Failed to confirm counter order: ${e.toString()}',
+      );
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingConfirm = false;
+        });
+      }
+    }
+  }
+
   Future<bool> _confirmOrder({bool closeOnSuccess = true}) async {
     if (_selectedOrder == null) {
       showScaffoldError(
@@ -6267,6 +6686,10 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Widget _buildCurrentCartItem(LocalCartItem cartItem, int index) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
     final productName = cartItem.product.productName ?? 'Unknown Product';
     final quantity = cartItem.quantity;
     final unitPrice = cartItem.price ?? 0.0;
@@ -6309,7 +6732,7 @@ class OrderPanelState extends State<OrderPanel> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${totalPrice.toStringAsFixed(0)}',
+                  '$currency ${totalPrice.toStringAsFixed(2)}',
                   style: buildCustomStyle(FontWeightManager.bold, FontSize.s12,
                       0.21, const Color(0xFF059669)),
                 ),
@@ -6338,7 +6761,7 @@ class OrderPanelState extends State<OrderPanel> {
                       color: Colors.blue.withOpacity(0.05),
                     ),
                     child: Text(
-                      '${unitPrice.toStringAsFixed(2)}',
+                      '$currency ${unitPrice.toStringAsFixed(2)}',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           widget.isCompact ? FontSize.s11 : FontSize.s12,
@@ -6507,6 +6930,10 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
+    final showCounterCheckout =
+        widget.allowCounterBilling && widget.isCounterBillingMode;
+    final hasTableOrderContext = widget.tableId != null;
+
     return SafeArea(
       top: false,
       child: Container(
@@ -6523,6 +6950,8 @@ class OrderPanelState extends State<OrderPanel> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _buildCurrentCartSummaryCard(cartItems),
+            const SizedBox(height: 12),
             // Top: Comment button (full width)
             SizedBox(
               width: double.infinity,
@@ -6572,173 +7001,202 @@ class OrderPanelState extends State<OrderPanel> {
               ),
             ),
             const SizedBox(height: 12),
-            // Bottom row: Save, Send & Print
+            // Bottom row: table service actions or quick counter checkout.
             Row(
-              children: [
-                // New button - REMOVED
-                // Expanded(
-                //   child: Material(
-                //     color: Colors.transparent,
-                //     child: InkWell(
-                //       onTap: () => widget.onNewOrder(),
-                //       borderRadius: BorderRadius.circular(12),
-                //       child: AnimatedContainer(
-                //         duration: const Duration(milliseconds: 200),
-                //         height: widget.isCompact ? 44 : 48,
-                //         decoration: BoxDecoration(
-                //           color: Colors.white,
-                //           border: Border.all(
-                //             color: const Color(0xFF64748B),
-                //             width: 1.5,
-                //           ),
-                //           borderRadius: BorderRadius.circular(12),
-                //         ),
-                //         child: Center(
-                //           child: Text(
-                //             'New',
-                //             style: buildCustomStyle(
-                //                 FontWeightManager.semiBold,
-                //                 widget.isCompact ? FontSize.s12 : FontSize.s13,
-                //                 0.21,
-                //                 const Color(0xFF64748B)),
-                //           ),
-                //         ),
-                //       ),
-                //     ),
-                //   ),
-                // ),
-                // const SizedBox(width: 8),
-                // Save button
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: (cartItems.isEmpty || widget.tableId == null)
-                          ? null
-                          : () => _saveCurrentCartAsPending(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: (cartItems.isEmpty || widget.tableId == null)
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF2563EB),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow:
-                              (cartItems.isNotEmpty && widget.tableId != null)
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xFF2563EB)
-                                            .withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : [],
+              children: showCounterCheckout
+                  ? [
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Clear',
+                          color: const Color(0xFFDC2626),
+                          isDisabled: cartItems.isEmpty,
+                          onTap: () => _clearCurrentCart(),
                         ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.save,
-                                color: Colors.white,
-                                size: widget.isCompact ? 14 : 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  'Save',
-                                  style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      widget.isCompact
-                                          ? FontSize.s12
-                                          : FontSize.s13,
-                                      0.21,
-                                      Colors.white),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Save',
+                          color: const Color(0xFFEAB308),
+                          isDisabled: cartItems.isEmpty,
+                          onTap: () => _saveCurrentCartAsPending(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (hasTableOrderContext) ...[
+                        Expanded(
+                          child: _buildCurrentCartFooterButton(
+                            label: 'Send',
+                            color: const Color(0xFF2563EB),
+                            isDisabled:
+                                cartItems.isEmpty || widget.isLoadingPrint,
+                            isLoading: widget.isLoadingPrint,
+                            onTap: () => widget.onPrintOrder(),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Send & Print KOT button (Mixed)
-                Expanded(
-                  flex: 2, // Give it more space as it's the primary action
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: (cartItems.isEmpty || widget.isLoadingPrint)
-                          ? null
-                          : () => widget.onPrintOrder(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: (cartItems.isEmpty || widget.isLoadingPrint)
-                              ? const Color(0xFF94A3B8)
-                              : const Color(0xFF059669),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow:
-                              (cartItems.isNotEmpty && !widget.isLoadingPrint)
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xFF059669)
-                                            .withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : [],
-                        ),
-                        child: Center(
-                          child: widget.isLoadingPrint
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 20,
-                                  height: widget.isCompact ? 16 : 20,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.send,
-                                      color: Colors.white,
-                                      size: widget.isCompact ? 14 : 16,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Send To Kitchen',
-                                      style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s12
-                                              : FontSize.s13,
-                                          0.21,
-                                          Colors.white),
-                                    ),
-                                  ],
-                                ),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Checkout',
+                          color: const Color(0xFF059669),
+                          isDisabled:
+                              cartItems.isEmpty || _isProcessingCheckout,
+                          isLoading: _isProcessingCheckout,
+                          onTap: () => _showCheckoutModal(forCurrentCart: true),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-              ],
+                    ]
+                  : [
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Clear',
+                          color: const Color(0xFFDC2626),
+                          isDisabled: cartItems.isEmpty,
+                          onTap: () => _clearCurrentCart(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Save',
+                          color: const Color(0xFF2563EB),
+                          isDisabled:
+                              cartItems.isEmpty || widget.tableId == null,
+                          onTap: () => _saveCurrentCartAsPending(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Send To Kitchen',
+                          color: const Color(0xFF059669),
+                          isDisabled:
+                              cartItems.isEmpty || widget.isLoadingPrint,
+                          isLoading: widget.isLoadingPrint,
+                          onTap: () => widget.onPrintOrder(),
+                        ),
+                      ),
+                    ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentCartSummaryCard(List<LocalCartItem> cartItems) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
+    double netAmount = 0.0;
+    for (final item in cartItems) {
+      final unitPrice = item.price ?? 0.0;
+      netAmount += unitPrice * item.quantity;
+    }
+    final totalPayable = netAmount;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildSummaryRow(
+            'Net Amount',
+            '$currency ${netAmount.toStringAsFixed(2)}',
+            color: const Color(0xFF3F3F46),
+          ),
+          const SizedBox(height: 6),
+          Container(height: 1, color: const Color(0xFFE4E4ED)),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            'Total Payable',
+            '$currency ${totalPayable.toStringAsFixed(2)}',
+            color: const Color(0xFF3B82F6),
+            isBold: true,
+            large: true,
+          ),
+          _buildSummaryRow(
+            'Total Paid',
+            '$currency 0.00',
+            color: const Color(0xFF3F3F46),
+          ),
+          _buildSummaryRow(
+            'Balance',
+            '$currency ${totalPayable.toStringAsFixed(2)}',
+            color: const Color(0xFF00C739),
+            isBold: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentCartFooterButton({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+    bool isDisabled = false,
+    bool isLoading = false,
+  }) {
+    final disabled = isDisabled || isLoading;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: disabled ? null : onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: widget.isCompact ? 44 : 48,
+          decoration: BoxDecoration(
+            color: disabled ? const Color(0xFF94A3B8) : color,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: disabled
+                ? []
+                : [
+                    BoxShadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: Center(
+            child: isLoading
+                ? SizedBox(
+                    width: widget.isCompact ? 16 : 20,
+                    height: widget.isCompact ? 16 : 20,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          label,
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            widget.isCompact ? FontSize.s12 : FontSize.s13,
+                            0.21,
+                            Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
@@ -6845,6 +7303,16 @@ class OrderPanelState extends State<OrderPanel> {
     try {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
+      final isNonTableOrderContext = widget.tableId == null &&
+          (widget.preselectedDeliveryMethodId?.isNotEmpty == true ||
+              (widget.allowCounterBilling && widget.isCounterBillingMode));
+
+      debugPrint('📝 [_saveCurrentCartAsPending] START');
+      debugPrint('📝 tableId: ${widget.tableId}');
+      debugPrint(
+          '📝 preselectedDeliveryMethodId: ${widget.preselectedDeliveryMethodId}');
+      debugPrint('📝 isNonTableOrderContext: $isNonTableOrderContext');
+      debugPrint('📝 cartItemsCount: ${localProductProvider.cartItems.length}');
 
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
@@ -6853,7 +7321,14 @@ class OrderPanelState extends State<OrderPanel> {
       }
 
       final paymentData = _getLocalDraftPaymentData();
-      final draftComment = buildTaggedDraftComment(widget.tableId!);
+      final draftComment = widget.tableId != null
+          ? buildTaggedDraftComment(widget.tableId!)
+          : _orderComment.trim();
+      debugPrint('📝 draftComment: "$draftComment"');
+      debugPrint('📝 deliveryMethodForDraft: $deliveryMethodForDraft');
+      debugPrint('📝 deliveryMethodIdForDraft: $deliveryMethodIdForDraft');
+      debugPrint('📝 selectedCustomerIdForDraft: $selectedCustomerIdForDraft');
+      debugPrint('📝 paymentData: $paymentData');
 
       // If a local draft is loaded, update it instead of creating a new one
       if (_loadedLocalDraftId != null) {
@@ -6916,6 +7391,7 @@ class OrderPanelState extends State<OrderPanel> {
       setState(() {
         _loadedLocalDraftId = null;
         _orderComment = '';
+        _showSavedOrdersView = true;
       });
       _refreshLocalDrafts();
     } catch (e) {
@@ -7378,6 +7854,10 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Widget _buildSavedOrderItem(dynamic cartItem, int index) {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+
     final productName = cartItem['product']?['name'] ??
         cartItem['product_name'] ??
         cartItem['names']?[0]?['name'] ??
@@ -7449,7 +7929,7 @@ class OrderPanelState extends State<OrderPanel> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '${totalPrice.toStringAsFixed(0)}',
+                      '$currency ${totalPrice.toStringAsFixed(2)}',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           widget.isCompact ? FontSize.s12 : FontSize.s14,
@@ -7516,7 +7996,7 @@ class OrderPanelState extends State<OrderPanel> {
                             ),
                           )
                         : Text(
-                            '${unitPrice.toStringAsFixed(2)}',
+                            '$currency ${unitPrice.toStringAsFixed(2)}',
                             style: buildCustomStyle(
                                 FontWeightManager.bold,
                                 widget.isCompact ? FontSize.s11 : FontSize.s12,

@@ -87,13 +87,14 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final uri = Uri.parse(fullUrl);
       final prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
-      
-      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
-      
+
       final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         return pw.MemoryImage(response.bodyBytes);
@@ -581,11 +582,19 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                 _fromToRow('Alt Phone :', custAltPhone,
                                     'هاتف بديل :', fromToLabel, fromToValue),
                               if (params.customerVatNumber?.isNotEmpty == true)
-                                _fromToRow('VAT No :', params.customerVatNumber!,
-                                    'رقم الضريبة :', fromToLabel, fromToValue),
+                                _fromToRow(
+                                    'VAT No :',
+                                    params.customerVatNumber!,
+                                    'رقم الضريبة :',
+                                    fromToLabel,
+                                    fromToValue),
                               if (params.customerCrNumber?.isNotEmpty == true)
-                                _fromToRow('C.R No :', params.customerCrNumber!,
-                                    'السجل التجاري :', fromToLabel, fromToValue),
+                                _fromToRow(
+                                    'C.R No :',
+                                    params.customerCrNumber!,
+                                    'السجل التجاري :',
+                                    fromToLabel,
+                                    fromToValue),
                             ],
                           ),
                         ),
@@ -826,6 +835,8 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final showItems = _col('showParticulars');
     final showQty = _col('showQty');
     final showRate = _col('showRate');
+    final showRateExcTax = _col('showRateExcTax');
+    final showUnit = _col('showUnit');
     final showDiscount = _col('showDiscount');
     final showTax = _col('showTaxHeader');
     final showTotal = _col('showTotal');
@@ -837,6 +848,8 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (showItems) colWidths[ci++] = const pw.FlexColumnWidth(3.5);
     if (showQty) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
     if (showRate) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    if (showRateExcTax) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    if (showUnit) colWidths[ci++] = const pw.FlexColumnWidth(0.8);
     if (showDiscount) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
     // Taxable amount
     colWidths[ci++] = const pw.FlexColumnWidth(1.2);
@@ -868,8 +881,10 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (showSL) hdrs.add(hdr('S\nNo:', ''));
     if (showItems) hdrs.add(hdr('Description', 'البيان'));
     if (showQty) hdrs.add(hdr('Qty', 'كمية'));
-    if (showRate) hdrs.add(hdr('Rate', 'مجموع'));
-    if (showDiscount) hdrs.add(hdr('Discount', 'خصم'));
+    if (showRate) hdrs.add(hdr('Rate', '?????'));
+    if (showRateExcTax) hdrs.add(hdr('Rate Ex Tax', ''));
+    if (showUnit) hdrs.add(hdr('Unit', ''));
+    if (showDiscount) hdrs.add(hdr('Discount', '???'));
     // Taxable Amount always shown
     hdrs.add(hdr('Taxable\nAmt', 'المبلغ\nالخاضع'));
     if (showTax) hdrs.add(hdr('VAT (15%)', 'الضريبة'));
@@ -880,12 +895,16 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     for (int i = 0; i < params.cartItems.length; i++) {
       final item = params.cartItems[i];
       String name = '';
+      String unitName = '';
       double qty = 0, unitPrice = 0, iDiscount = 0, iTax = 0, iTotal = 0;
 
       if (params.isFromLocalStorage) {
         name = item['productName']?.toString() ?? '';
         qty = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
         unitPrice = double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0;
+        unitName =
+            (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
+                .toString();
         iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
         iTax = double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0;
         iTotal = double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0;
@@ -898,6 +917,9 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 item['unitPrice']?.toString() ??
                 '0') ??
             0;
+        unitName =
+            (item['product_unit'] ?? item['productUnit'] ?? item['unit'] ?? '')
+                .toString();
         iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
         iTax = double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0;
         iTotal = double.tryParse(item['total_price']?.toString() ??
@@ -909,6 +931,7 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           name = item.productName ?? '';
           qty = double.tryParse(item.quantity?.toString() ?? '0') ?? 0;
           unitPrice = double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0;
+          unitName = (item.productUnit ?? '').toString();
           iTax = double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0;
           iTotal = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0;
         } catch (_) {}
@@ -919,18 +942,26 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       }
 
       double taxableAmt = iTotal - iTax;
+      double rateExcTax = qty > 0 ? unitPrice - (iTax / qty) : unitPrice;
 
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
       if (showItems) {
         cells.add(_dataCell(name, bodyStyle,
-            align: pw.Alignment.centerLeft, textDirection: pw.TextDirection.ltr));
+            align: pw.Alignment.centerLeft,
+            textDirection: pw.TextDirection.ltr));
       }
       if (showQty) {
         cells.add(_dataCell(qty.toStringAsFixed(3), bodyStyle));
       }
       if (showRate) {
         cells.add(_dataCell(unitPrice.toStringAsFixed(2), bodyStyle));
+      }
+      if (showRateExcTax) {
+        cells.add(_dataCell(rateExcTax.toStringAsFixed(2), bodyStyle));
+      }
+      if (showUnit) {
+        cells.add(_dataCell(unitName, bodyStyle));
       }
       if (showDiscount) {
         cells.add(_dataCell(iDiscount.toStringAsFixed(2), bodyStyle));
@@ -959,11 +990,13 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   /// Data cell for items table.
   pw.Widget _dataCell(String text, pw.TextStyle style,
-      {pw.Alignment align = pw.Alignment.center, pw.TextDirection? textDirection}) {
+      {pw.Alignment align = pw.Alignment.center,
+      pw.TextDirection? textDirection}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       child: pw.Align(
-          alignment: align, child: pw.Text(text, style: style, textDirection: textDirection)),
+          alignment: align,
+          child: pw.Text(text, style: style, textDirection: textDirection)),
     );
   }
 }
