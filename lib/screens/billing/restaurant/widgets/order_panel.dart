@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -60,6 +61,7 @@ class OrderPanel extends StatefulWidget {
       preselectedDeliveryMethodName; // Name of preselected delivery method
   final bool allowCounterBilling;
   final bool isCounterBillingMode;
+  final ValueChanged<SavedOrder>? onLocalDraftLoaded;
 
   const OrderPanel({
     super.key, // Add key parameter
@@ -78,6 +80,7 @@ class OrderPanel extends StatefulWidget {
     this.preselectedDeliveryMethodName, // Name of preselected delivery method
     this.allowCounterBilling = false,
     this.isCounterBillingMode = false,
+    this.onLocalDraftLoaded,
   });
 
   @override
@@ -194,12 +197,19 @@ class OrderPanelState extends State<OrderPanel> {
           widget.preselectedDeliveryMethodName ?? 'Store Takeaway';
     }
 
-    // Load saved orders and local drafts when the widget is first created with a tableId or delivery method
+    // Load saved orders and local drafts when the widget is first created with
+    // a table/delivery context. Counter mode can show all local drafts before a
+    // context is selected.
     if (widget.tableId != null ||
         (widget.preselectedDeliveryMethodId != null &&
-            widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+            widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+        _usesCounterOrderTabs) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _fetchSavedOrders();
+        if (widget.tableId != null ||
+            (widget.preselectedDeliveryMethodId != null &&
+                widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+          _fetchSavedOrders();
+        }
         _refreshLocalDrafts();
       });
     }
@@ -238,8 +248,13 @@ class OrderPanelState extends State<OrderPanel> {
       });
       if (widget.tableId != null ||
           (widget.preselectedDeliveryMethodId != null &&
-              widget.preselectedDeliveryMethodId!.isNotEmpty)) {
-        _fetchSavedOrders();
+              widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+          _usesCounterOrderTabs) {
+        if (widget.tableId != null ||
+            (widget.preselectedDeliveryMethodId != null &&
+                widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+          _fetchSavedOrders();
+        }
         _refreshLocalDrafts();
       } else {
         setState(() {
@@ -365,20 +380,32 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Public method to refresh saved orders from external calls
   void refreshSavedOrders() {
-    if (widget.tableId != null || widget.preselectedDeliveryMethodId != null) {
+    if (widget.tableId != null ||
+        widget.preselectedDeliveryMethodId != null ||
+        _usesCounterOrderTabs) {
       debugPrint(
           'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ External refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
-      _fetchSavedOrders();
+      if (widget.tableId != null ||
+          (widget.preselectedDeliveryMethodId != null &&
+              widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+        _fetchSavedOrders();
+      }
       _refreshLocalDrafts();
     }
   }
 
   // Public method to refresh saved orders silently (no loading spinner)
   Future<void> refreshSavedOrdersSilently() async {
-    if (widget.tableId != null || widget.preselectedDeliveryMethodId != null) {
+    if (widget.tableId != null ||
+        widget.preselectedDeliveryMethodId != null ||
+        _usesCounterOrderTabs) {
       debugPrint(
           'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ External silent refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
-      await _refreshSavedOrdersSilently();
+      if (widget.tableId != null ||
+          (widget.preselectedDeliveryMethodId != null &&
+              widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+        await _refreshSavedOrdersSilently();
+      }
       _refreshLocalDrafts();
     }
   }
@@ -6359,14 +6386,18 @@ class OrderPanelState extends State<OrderPanel> {
     _showCheckoutModal(forCurrentCart: true);
   }
 
-  void showCurrentOrderTab() {
+  void showCurrentOrderTab({bool preserveLoadedDraftMetadata = false}) {
     setState(() {
       _selectedOrder = null;
       _isLoadingOrders = false;
       _isLoadingOrderDetails = false;
       _error = null;
-      _orderComment = '';
-      _loadedLocalDraftId = null;
+      if (!preserveLoadedDraftMetadata) {
+        _orderComment = '';
+        _loadedLocalDraftId = null;
+      }
+      _showSavedOrdersView = false;
+      _forceCounterCartView = true;
     });
     widget.onOrderSelected(null);
   }

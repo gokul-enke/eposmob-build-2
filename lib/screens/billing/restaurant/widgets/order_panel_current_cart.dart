@@ -686,6 +686,11 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
       final drafts = localProvider.savedOrders.where((o) {
         final st = (o.status ?? '').toLowerCase();
         if (st != 'pending') return false;
+        // In counter billing mode, Orders should show every local pending draft
+        // even before the user chooses Dining or Delivery.
+        if (_usesCounterOrderTabs) {
+          return true;
+        }
         // Filter by table when a table is selected
         if (widget.tableId != null) {
           return o.tableId == widget.tableId;
@@ -715,6 +720,17 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
   // Local draft item card
   Widget _buildLocalDraftItem(SavedOrder order) {
     final int totalItems = order.items.length;
+    final tableName = _localDraftTableName(order);
+    final contextLabel = tableName != null
+        ? 'Dining: $tableName'
+        : ((order.deliveryMethod?.isNotEmpty ?? false)
+            ? 'Delivery: ${order.deliveryMethod}'
+            : 'No context');
+    final contextIcon =
+        tableName != null ? Icons.restaurant_rounded : Icons.local_shipping;
+    final customerLabel = _localDraftCustomerLabel(order);
+    final comment = this._cleanDraftComment(order.comment);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -725,7 +741,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           _loadedLocalDraftId = order.id;
           localProductProvider.loadOrderForEditing(order.id);
           _rehydrateLocalDraftMetadata(order);
-          showCurrentOrderTab();
+          widget.onLocalDraftLoaded?.call(order);
+          showCurrentOrderTab(preserveLoadedDraftMetadata: true);
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
@@ -811,18 +828,55 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _buildLocalDraftInfoChip(
+                    icon: contextIcon,
+                    label: contextLabel,
+                    color: tableName != null
+                        ? const Color(0xFF2563EB)
+                        : const Color(0xFF059669),
+                  ),
+                  if (customerLabel != null)
+                    _buildLocalDraftInfoChip(
+                      icon: Icons.person_rounded,
+                      label: customerLabel,
+                      color: const Color(0xFF7C3AED),
+                    ),
+                  if (order.deliveryDate?.isNotEmpty == true ||
+                      order.deliveryTime?.isNotEmpty == true)
+                    _buildLocalDraftInfoChip(
+                      icon: Icons.schedule_rounded,
+                      label: [
+                        if (order.deliveryDate?.isNotEmpty == true)
+                          order.deliveryDate,
+                        if (order.deliveryTime?.isNotEmpty == true)
+                          order.deliveryTime,
+                      ].whereType<String>().join(' '),
+                      color: const Color(0xFF64748B),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    this._cleanDraftComment(order.comment),
-                    style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        widget.isCompact ? FontSize.s11 : FontSize.s13,
-                        0.21,
-                        const Color(0xFF64748B)),
+                  Expanded(
+                    child: Text(
+                      comment.isNotEmpty ? comment : 'No note',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          widget.isCompact ? FontSize.s11 : FontSize.s13,
+                          0.21,
+                          const Color(0xFF64748B)),
+                    ),
                   ),
+                  const SizedBox(width: 10),
                   Text(
                     'Items: $totalItems',
                     style: buildCustomStyle(
@@ -836,6 +890,68 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  String? _localDraftTableName(SavedOrder order) {
+    if (order.tableId == null || order.tableId!.isEmpty) return null;
+    try {
+      final tableProvider = Provider.of<TableProvider>(context, listen: false);
+      for (final table in tableProvider.tables) {
+        if (table.id == order.tableId) {
+          return table.name;
+        }
+      }
+    } catch (_) {
+      // Fall through to id display when provider is not ready.
+    }
+    return order.tableId;
+  }
+
+  String? _localDraftCustomerLabel(SavedOrder order) {
+    final name = order.customerName?.trim();
+    final phone = order.customerPhone?.trim();
+    if (name != null && name.isNotEmpty && phone != null && phone.isNotEmpty) {
+      return '$name / $phone';
+    }
+    if (name != null && name.isNotEmpty) return name;
+    if (phone != null && phone.isNotEmpty) return phone;
+    return null;
+  }
+
+  Widget _buildLocalDraftInfoChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 210),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: widget.isCompact ? 13 : 14, color: color),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                widget.isCompact ? FontSize.s10 : FontSize.s11,
+                0.21,
+                color,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -330,6 +330,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       refreshCounter: _refreshCounter,
                       isLoadingSendToKitchen: _isLoadingSendToKitchen,
                       isLoadingPrint: _isLoadingPrint,
+                      onLocalDraftLoaded: _applyLocalDraftContext,
                     ),
                   ),
                 ],
@@ -784,6 +785,33 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (!isEditingSelectedOrder) {
       _orderPanelKey.currentState?.showCurrentOrderTab();
     }
+  }
+
+  void _applyLocalDraftContext(SavedOrder order) {
+    String? tableName;
+    if (order.tableId != null && order.tableId!.isNotEmpty) {
+      final tableProvider = Provider.of<TableProvider>(context, listen: false);
+      for (final table in tableProvider.tables) {
+        if (table.id == order.tableId) {
+          tableName = table.name;
+          break;
+        }
+      }
+    }
+
+    setState(() {
+      if (order.tableId != null && order.tableId!.isNotEmpty) {
+        _activeTableId = order.tableId;
+        _selectedTableName = tableName ?? order.tableId;
+        _selectedDeliveryMethodId = null;
+        _selectedDeliveryMethodName = null;
+      } else {
+        _activeTableId = null;
+        _selectedTableName = null;
+        _selectedDeliveryMethodId = order.deliveryMethodId;
+        _selectedDeliveryMethodName = order.deliveryMethod;
+      }
+    });
   }
 
   void _showDiningSelectionModal() {
@@ -1352,6 +1380,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             refreshCounter: _refreshCounter,
             isLoadingSendToKitchen: _isLoadingSendToKitchen,
             isLoadingPrint: _isLoadingPrint,
+            onLocalDraftLoaded: _applyLocalDraftContext,
           ),
         ),
       ],
