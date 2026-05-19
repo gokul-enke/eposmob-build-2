@@ -436,6 +436,7 @@ class _SideMenuState extends State<SideMenu> {
               final hasDayClosingPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.sales.day_closing.access');
+              final hasQuotationsPermission = true; // TODO: revert to roleProvider check when backend adds 'menu.sales.quotations.access'
               final isCompanyAdmin = userRole == 'company_admin';
 
               // Only show the expandable menu if user has at least one permission
@@ -463,17 +464,23 @@ class _SideMenuState extends State<SideMenu> {
                   onTapTitle5: () {
                     sideBarController.index.value = 84;
                   },
+                  onTapTitle6: () {
+                    sideBarController.index.value = 86;
+                  },
                   listTitle1: "Sales",
                   listTitle2: "Confirmed Orders",
                   listTitle3: "Sales Return",
                   listTitle4: "Day Sale Closing",
                   listTitle5: "Admin Day Sale records",
+                  listTitle6: "Quotations",
+
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
                   showTitle2: hasConfirmedOrdersPermission && !isCompanyAdmin,
                   showTitle3: hasSalesReturnPermission && !isCompanyAdmin,
                   showTitle4: hasDayClosingPermission && !isCompanyAdmin,
                   showTitle5: isCompanyAdmin && hasDayClosingPermission,
+                  showTitle6: hasQuotationsPermission,
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'Sales',
                   onTap: () {
@@ -495,7 +502,8 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 54 ||
                       sideBarController.index.value == 78 ||
                       sideBarController.index.value == 79 ||
-                      sideBarController.index.value == 84,
+                      sideBarController.index.value == 84 ||
+                      sideBarController.index.value == 86,
                 ),
               );
             },

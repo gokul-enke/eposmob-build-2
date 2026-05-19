@@ -1798,6 +1798,55 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  /// Delete a product via API and update local state
+  Future<bool> deleteProductAPI(int productId) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+      String? accessToken = prefs.getString('access_token');
+
+      if (apiKey == null || accessToken == null) {
+        throw const HttpException("Authentication details missing. Please login again.");
+      }
+
+      final url = Uri.parse(APPUrl.deleteProductUrl);
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: json.encode({"product_id": productId.toString()}),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['status'] == true || jsonData['status'] == 'success' || jsonData['success'] == true) {
+          // Remove from local list
+          _products.removeWhere((p) => p.productId == productId);
+          _filteredProducts.removeWhere((p) => p.productId == productId);
+          
+          // Rebuild barcode index and update pagination
+          _rebuildBarcodeIndex();
+          _updatePagination();
+          
+          // Save updated list to Hive
+          _saveProductsToHive();
+          
+          notifyListeners();
+          return true;
+        }
+      }
+      
+      debugPrint("❌ [API] Delete product failed: ${response.statusCode} - ${response.body}");
+      return false;
+    } catch (e) {
+      debugPrint("❌ [API] Error deleting product: $e");
+      return false;
+    }
+  }
+
   /// Updates pagination info based on filtered products
   void _updatePagination() {
     _totalPages = (_filteredProducts.length / _itemsPerPage).ceil();
@@ -2965,6 +3014,7 @@ class LocalProductProvider extends ChangeNotifier {
     _saveProductsToHive();
     refreshProducts();
   }
+
 
   /// Retrieves a product by its ID.
   GetProduct? getProductById(int productId) {

@@ -12,6 +12,8 @@ import 'package:pos_machine/screens/customer_profile/open_customer_profile.dart'
 import 'package:pos_machine/screens/customers/add_customers.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
+import 'package:pos_machine/screens/sales/widgets/create_quotation_screen.dart';
+import 'package:pos_machine/screens/sales/widgets/quotation_details.dart';
 import 'package:pos_machine/screens/dashboard/company_admin.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
 
@@ -89,6 +91,7 @@ import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
+import 'package:pos_machine/screens/sales/quotations_list.dart';
 
 class SideBarController extends GetxController {
   RxInt index =
@@ -191,6 +194,9 @@ class SideBarController extends GetxController {
     ProductBarcodeScreen(), // 83 Product Barcode Screen
     AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
-    BillingPageRestaurant(), // 86 Restaurant Billing Page
+    QuotationsListScreen(), // 86 Quotations
+    CreateQuotationScreen(), // 87 Create Quotation
+    QuotationDetailsScreen(quotationId: null), // 88 Quotation Details (ID from Provider)
+    BillingPageRestaurant(), // 89 Restaurant Billing Page
   ];
 }
