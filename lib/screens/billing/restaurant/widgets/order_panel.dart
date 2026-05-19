@@ -96,8 +96,6 @@ class OrderPanelState extends State<OrderPanel> {
   bool _isLoadingConfirm = false; // Loading state for Confirm button
   bool _isLoadingPrintKot =
       false; // Loading state for edit-order Print KOT button
-  bool _isProcessingCheckout =
-      false; // Loading state for footer checkout button
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
   bool _showSavedOrdersView = false;
@@ -1657,6 +1655,10 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
+  void showCustomerSelectionModal() {
+    _showCustomerSelectionModal();
+  }
+
   // Helper method to check if any discount is applied
   bool _hasDiscount() {
     return _isCouponApplied ||
@@ -2966,31 +2968,38 @@ class OrderPanelState extends State<OrderPanel> {
             'Current Order',
             Icons.shopping_cart,
             const Color(0xFF059669),
-            trailing: TextButton.icon(
-              onPressed: () {
-                _refreshLocalDrafts();
-                _fetchSavedOrders();
-                setState(() => _showSavedOrdersView = true);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF1D4ED8),
-                backgroundColor: const Color(0xFFEFF6FF),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: const BorderSide(color: Color(0xFFBFDBFE)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildHeaderCustomerButton(),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () {
+                    _refreshLocalDrafts();
+                    _fetchSavedOrders();
+                    setState(() => _showSavedOrdersView = true);
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF1D4ED8),
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0xFFBFDBFE)),
+                    ),
+                  ),
+                  icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                  label: Text(
+                    'Saved Orders',
+                    style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        widget.isCompact ? FontSize.s11 : FontSize.s12,
+                        0.21,
+                        const Color(0xFF1D4ED8)),
+                  ),
                 ),
-              ),
-              icon: const Icon(Icons.receipt_long_rounded, size: 16),
-              label: Text(
-                'Saved Orders',
-                style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    widget.isCompact ? FontSize.s11 : FontSize.s12,
-                    0.21,
-                    const Color(0xFF1D4ED8)),
-              ),
+              ],
             ),
           ),
           Expanded(
@@ -3085,7 +3094,9 @@ class OrderPanelState extends State<OrderPanel> {
               const Color(0xFFD97706),
               showBackButton: _showSavedOrdersView, onBackButtonPressed: () {
             setState(() => _showSavedOrdersView = false);
-          }, itemCount: _localDrafts.length),
+          },
+              itemCount: _localDrafts.length,
+              trailing: _buildHeaderCustomerButton()),
           Flexible(
             flex: 1,
             child: RefreshIndicator(
@@ -4456,6 +4467,61 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
+  Widget _buildHeaderCustomerButton() {
+    final customerName = (_selectedCustomer?.name ?? '').trim();
+    final customerPhone =
+        (_selectedCustomer?.phone ?? _selectedCustomerPhone ?? '').trim();
+    final hasCustomer = _selectedCustomerID != null ||
+        _selectedCustomer != null ||
+        customerPhone.isNotEmpty;
+    final label = hasCustomer
+        ? (customerName.isNotEmpty
+            ? customerName
+            : customerPhone.isNotEmpty
+                ? customerPhone
+                : 'Customer')
+        : 'Customer';
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: widget.isCompact ? 120 : 180),
+      child: TextButton.icon(
+        onPressed: _showCustomerSelectionModal,
+        style: TextButton.styleFrom(
+          foregroundColor:
+              hasCustomer ? const Color(0xFF047857) : const Color(0xFF475569),
+          backgroundColor:
+              hasCustomer ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+              color: hasCustomer
+                  ? const Color(0xFFA7F3D0)
+                  : const Color(0xFFE2E8F0),
+            ),
+          ),
+        ),
+        icon: Icon(
+          hasCustomer
+              ? Icons.person_pin_circle_rounded
+              : Icons.person_add_alt_1_rounded,
+          size: 16,
+        ),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            widget.isCompact ? FontSize.s11 : FontSize.s12,
+            0.21,
+            hasCustomer ? const Color(0xFF047857) : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSavedOrderActionButtons(List<dynamic> cartItems) {
     final allItemsServed = cartItems.isNotEmpty &&
         cartItems.every((item) {
@@ -5059,7 +5125,6 @@ class OrderPanelState extends State<OrderPanel> {
           onConfirmOrder: () async {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
-              _isProcessingCheckout = true;
             });
             Navigator.of(dialogContext).pop();
             try {
@@ -5070,16 +5135,13 @@ class OrderPanelState extends State<OrderPanel> {
               }
             } finally {
               if (mounted) {
-                setState(() {
-                  _isProcessingCheckout = false;
-                });
+                setState(() {});
               }
             }
           },
           onConfirmAndPrint: () async {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
-              _isProcessingCheckout = true;
             });
             Navigator.of(dialogContext).pop();
             try {
@@ -5090,9 +5152,7 @@ class OrderPanelState extends State<OrderPanel> {
               }
             } finally {
               if (mounted) {
-                setState(() {
-                  _isProcessingCheckout = false;
-                });
+                setState(() {});
               }
             }
           },
@@ -6734,6 +6794,14 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   // Public method to force switch to Current Order tab
+  Future<void> clearCurrentCartFromParent() => _clearCurrentCart();
+
+  Future<void> saveCurrentCartFromParent() => _saveCurrentCartAsPending();
+
+  void showCurrentCartCheckoutFromParent() {
+    _showCheckoutModal(forCurrentCart: true);
+  }
+
   void showCurrentOrderTab() {
     setState(() {
       _selectedOrder = null;
