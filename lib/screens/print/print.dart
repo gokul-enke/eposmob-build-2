@@ -146,7 +146,7 @@ class PrintPage extends StatefulWidget {
           Provider.of<DocumentConfigProvider>(context, listen: false);
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
-        final bankProvider = Provider.of<BankProvider>(context, listen: false);
+      final bankProvider = Provider.of<BankProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
 
       if (appSettings == null) {
@@ -195,12 +195,14 @@ class PrintPage extends StatefulWidget {
       final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
 
       // Create params
-      debugPrint('[PrintPage.autoPrint] Creating ReceiptLayoutParams with ${cartItems.length} cart items');
+      debugPrint(
+          '[PrintPage.autoPrint] Creating ReceiptLayoutParams with ${cartItems.length} cart items');
       debugPrint(
           '[PrintPage.autoPrint] order=$orderNumber, customerType=${customerType ?? 'null'}, hasCustomerKyc=${(customerVatNumber?.trim().isNotEmpty ?? false) || (customerCrNumber?.trim().isNotEmpty ?? false)}, theme=$theme');
       for (int i = 0; i < cartItems.length; i++) {
         final item = cartItems[i];
-        debugPrint('[PrintPage.autoPrint] Cart item $i: ${item.productName}, qty=${item.quantity}, total=${item.totalPrice}');
+        debugPrint(
+            '[PrintPage.autoPrint] Cart item $i: ${_cartItemName(item)}, qty=${_cartItemQuantity(item)}, total=${_cartItemTotal(item)}');
       }
       final params = ReceiptLayoutParams(
         context: context,
@@ -295,6 +297,27 @@ class PrintPage extends StatefulWidget {
         '[PrintPage.$source] showInvoiceTitle visible=${normalTitle?.visible}, value=${normalTitle?.value}, default=${normalTitle?.defaultValue}');
     debugPrint(
         '[PrintPage.$source] B2B invoice title key=$b2bTitleKey, exists=${b2bTitle != null}, visible=${b2bTitle?.visible}, value=${b2bTitle?.value}, default=${b2bTitle?.defaultValue}');
+  }
+
+  static String _cartItemName(dynamic item) {
+    if (item is Map) {
+      return (item['productName'] ?? item['product_name'] ?? '').toString();
+    }
+    return item.productName?.toString() ?? '';
+  }
+
+  static String _cartItemQuantity(dynamic item) {
+    if (item is Map) {
+      return (item['quantity'] ?? '').toString();
+    }
+    return item.quantity?.toString() ?? '';
+  }
+
+  static String _cartItemTotal(dynamic item) {
+    if (item is Map) {
+      return (item['totalPrice'] ?? item['total_price'] ?? '').toString();
+    }
+    return item.totalPrice?.toString() ?? '';
   }
 }
 
@@ -699,10 +722,12 @@ class _PrintPageState extends State<PrintPage> {
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
     // Create params object for the layout
-    debugPrint('[PrintPage._printThermalReceipt] Cart items count: ${widget.cartItems.length}');
+    debugPrint(
+        '[PrintPage._printThermalReceipt] Cart items count: ${widget.cartItems.length}');
     for (int i = 0; i < widget.cartItems.length; i++) {
       final item = widget.cartItems[i];
-      debugPrint('[PrintPage._printThermalReceipt] Item $i: name=${item.productName}, qty=${item.quantity}, total=${item.totalPrice}');
+      debugPrint(
+          '[PrintPage._printThermalReceipt] Item $i: name=${PrintPage._cartItemName(item)}, qty=${PrintPage._cartItemQuantity(item)}, total=${PrintPage._cartItemTotal(item)}');
     }
     final params = ReceiptLayoutParams(
       context: context,

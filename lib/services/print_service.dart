@@ -9,7 +9,6 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 
 class PrintService {
@@ -62,14 +61,13 @@ class PrintService {
         return;
       }
 
-      final formattedTotal = orderDetails
-              .data?.cart?.priceSummary?.netPayable
-              ?.toString() ??
-          orderDetails.data?.cart?.priceSummary?.netTotal.toString() ??
-          '0.00';
-      final savedTotal = orderDetails.data?.cart?.priceSummary?.savedTotal
-              .toString() ??
-          '0.00';
+      final formattedTotal =
+          orderDetails.data?.cart?.priceSummary?.netPayable?.toString() ??
+              orderDetails.data?.cart?.priceSummary?.netTotal.toString() ??
+              '0.00';
+      final savedTotal =
+          orderDetails.data?.cart?.priceSummary?.savedTotal.toString() ??
+              '0.00';
 
       final storeName = cart?.storeName ?? '';
       final orderDate = orderDetails.data?.orderDate ?? '';
@@ -77,8 +75,7 @@ class PrintService {
       final customerName = orderDetails.data?.customerDetails?.name;
       final customerPhone = orderDetails.data?.customerDetails?.phone;
       final customerEmail = orderDetails.data?.customerDetails?.email;
-      final customerAddress =
-          orderDetails.data?.customerDetails?.address?.join(', ');
+      final customerAddress = orderDetails.data?.getCustomerAddressForDisplay();
       final customerAlternatePhone =
           orderDetails.data?.customerDetails?.alternatePhone;
       final customerVatNumber = orderDetails.data?.kycInfo?.vatNumber;
@@ -95,12 +92,16 @@ class PrintService {
         final totalPaid = paymentBreakdown.values.fold<double>(
           0.0,
           (sum, val) =>
-              sum + (val is num ? val.toDouble() : double.tryParse(val.toString()) ?? 0.0),
+              sum +
+              (val is num
+                  ? val.toDouble()
+                  : double.tryParse(val.toString()) ?? 0.0),
         );
         if (totalPaid > 0) paidAmount = totalPaid;
       }
 
       String? orderComment;
+      double? customerCurrentBalance;
       if (orderDetails.data?.orderProps != null) {
         try {
           final commentProp = orderDetails.data!.orderProps!.firstWhere(
@@ -108,6 +109,15 @@ class PrintService {
             orElse: () => OrderDetailsModelDataOrderProp(),
           );
           orderComment = commentProp.propsValue;
+        } catch (_) {}
+
+        try {
+          final balanceProp = orderDetails.data!.orderProps!.firstWhere(
+            (prop) => prop.propsCode == "BALANCE",
+            orElse: () => OrderDetailsModelDataOrderProp(),
+          );
+          customerCurrentBalance =
+              double.tryParse(balanceProp.propsValue?.toString() ?? '');
         } catch (_) {}
       }
 
@@ -126,8 +136,9 @@ class PrintService {
         savedTotal: savedTotal,
         discountAmount:
             orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
-        orderDate: DateHelper.formatInputToDisplay(orderDate),
+        orderDate: orderDate,
         orderNumber: orderDetails.data!.orderNumber ?? '',
+        tokenNumber: orderDetails.data?.tokenNumber,
         customerName: customerName,
         customerPhone: customerPhone,
         customerEmail: customerEmail,
@@ -140,7 +151,9 @@ class PrintService {
         paymentBreakdown: paymentBreakdown,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        orderReturns: orderDetails.data?.orderReturns,
         paidAmount: paidAmount,
+        customerCurrentBalance: customerCurrentBalance,
         isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
         netExcTax: netExcTax,
       );
@@ -156,9 +169,11 @@ class PrintService {
               formattedTotal: formattedTotal,
               savedTotal: savedTotal,
               discountAmount:
-                  orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
-              orderDate: DateHelper.formatInputToDisplay(orderDate),
+                  orderDetails.data!.priceSummary?.discount?.toString() ??
+                      '0.00',
+              orderDate: orderDate,
               orderNumber: orderDetails.data!.orderNumber ?? '',
+              tokenNumber: orderDetails.data?.tokenNumber,
               customerName: customerName,
               customerPhone: customerPhone,
               customerEmail: customerEmail,
@@ -171,8 +186,11 @@ class PrintService {
               paymentBreakdown: paymentBreakdown,
               orderComment: orderComment,
               deliveryMethod: deliveryMethod,
+              orderReturns: orderDetails.data?.orderReturns,
               paidAmount: paidAmount,
-              isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
+              customerCurrentBalance: customerCurrentBalance,
+              isDefaultCustomer:
+                  _isDefaultCustomerPhone(context, customerPhone),
               netExcTax: netExcTax,
             ),
           ),
@@ -208,6 +226,7 @@ class PrintService {
             'productName': item.product.productName ?? 'Unknown',
             'mrp': itemMrp.toString(),
             'quantity': item.quantity.toString(),
+            'product_unit': item.product.unit ?? '',
             'unitPrice': itemPrice.toString(),
             'totalPrice': itemTotalPrice.toString(),
             'tax_amount': itemTax.toString(),
@@ -327,6 +346,7 @@ class PrintService {
           'productName': item.product.productName ?? 'Unknown',
           'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
+          'product_unit': item.product.unit ?? '',
           'unitPrice': itemPrice.toString(),
           'totalPrice': itemTotalPrice.toString(),
         });

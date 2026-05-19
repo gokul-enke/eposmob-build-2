@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
@@ -11,6 +12,8 @@ import '../../../components/build_round_button.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
+
+enum MenuCardMode { compact, medium, large }
 
 class MenuPanel extends StatefulWidget {
   final ValueChanged<int?> onCategoryChanged;
@@ -38,6 +41,23 @@ class _MenuPanelState extends State<MenuPanel> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isResyncingProducts = false;
+
+  MenuCardMode _resolveCardMode(int fontLevel) {
+    if (widget.isCompact) return MenuCardMode.compact;
+    if (fontLevel <= 0) return MenuCardMode.compact;
+    if (fontLevel == 1) return MenuCardMode.medium;
+    return MenuCardMode.large;
+  }
+
+  String? _resolvePrimaryImage(GetProduct product) {
+    if (product.attachment == null || product.attachment!.isEmpty) return null;
+    for (var attachment in product.attachment!) {
+      if (attachment.isPrimary == 1 && (attachment.filePath ?? '').isNotEmpty) {
+        return attachment.filePath;
+      }
+    }
+    return product.attachment!.first.filePath;
+  }
 
   void _showProductInfoDialog(
       BuildContext context, GetProduct product, bool compact) {
@@ -405,6 +425,8 @@ class _MenuPanelState extends State<MenuPanel> {
   Widget build(BuildContext context) {
     return Consumer2<CategoryProvider, LocalProductProvider>(
       builder: (context, categoryProvider, productProvider, _) {
+        final fontProvider =
+            Provider.of<AppFontProvider>(context, listen: true);
         if (categoryProvider.isLoading &&
             (categoryProvider.category?.isEmpty ?? true)) {
           return const BuildBoxShadowContainer(
@@ -439,35 +461,61 @@ class _MenuPanelState extends State<MenuPanel> {
           }).toList();
         }
 
+        final int fontLevel = fontProvider.fontSizeLevel;
+        final cardMode = _resolveCardMode(fontLevel);
+
         // Calculate responsive grid columns with better aspect ratios
         int crossAxisCount;
         double childAspectRatio;
 
-        if (widget.isCompact) {
-          // Mobile/small tablet layout
-          if (widget.screenSize.width > 600) {
-            crossAxisCount = 2;
-            childAspectRatio =
-                1.7; // Balanced - prevents overflow while keeping compact
+        if (cardMode == MenuCardMode.compact) {
+          // Small-font compact mode: keep cards dense (especially desktop).
+          if (widget.isCompact) {
+            if (widget.screenSize.width > 600) {
+              crossAxisCount = 2;
+              childAspectRatio = 1.48;
+            } else {
+              crossAxisCount = 1;
+              childAspectRatio = 1.62;
+            }
           } else {
-            crossAxisCount = 1;
-            childAspectRatio =
-                1.9; // Balanced - prevents overflow while keeping compact
+            if (widget.screenSize.width > 1600) {
+              crossAxisCount = 5;
+              childAspectRatio = 1.48;
+            } else if (widget.screenSize.width > 1300) {
+              crossAxisCount = 4;
+              childAspectRatio = 1.45;
+            } else if (widget.screenSize.width > 1000) {
+              crossAxisCount = 3;
+              childAspectRatio = 1.4;
+            } else {
+              crossAxisCount = 2;
+              childAspectRatio = 1.36;
+            }
+          }
+        } else if (cardMode == MenuCardMode.medium) {
+          // Medium: image-enabled but still dense.
+          if (widget.screenSize.width > 1600) {
+            crossAxisCount = 5;
+            childAspectRatio = 1.16;
+          } else if (widget.screenSize.width > 1200) {
+            crossAxisCount = 4;
+            childAspectRatio = 1.12;
+          } else {
+            crossAxisCount = 3;
+            childAspectRatio = 1.06;
           }
         } else {
-          // Desktop/large tablet layout
-          if (widget.screenSize.width > 1400) {
+          // Large: bigger image-focused cards.
+          if (widget.screenSize.width > 1000) {
             crossAxisCount = 4;
-            childAspectRatio =
-                1.6; // Balanced - prevents overflow while keeping compact
-          } else if (widget.screenSize.width > 1000) {
+            childAspectRatio = 1.14;
+          } else if (widget.screenSize.width > 800) {
             crossAxisCount = 3;
-            childAspectRatio =
-                1.7; // Balanced - prevents overflow while keeping compact
+            childAspectRatio = 1.08;
           } else {
             crossAxisCount = 2;
-            childAspectRatio =
-                1.7; // Balanced - prevents overflow while keeping compact
+            childAspectRatio = 1.02;
           }
         }
 
@@ -489,7 +537,7 @@ class _MenuPanelState extends State<MenuPanel> {
             children: [
               // Enhanced header
               Container(
-                padding: EdgeInsets.all(widget.isCompact ? 16.0 : 20.0),
+                padding: EdgeInsets.all(widget.isCompact ? 10.0 : 12.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -509,7 +557,7 @@ class _MenuPanelState extends State<MenuPanel> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF059669).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -517,15 +565,15 @@ class _MenuPanelState extends State<MenuPanel> {
                       child: Icon(
                         Icons.restaurant_menu,
                         color: const Color(0xFF059669),
-                        size: widget.isCompact ? 18 : 20,
+                        size: widget.isCompact ? 14 : 16,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Text(
                       'Menu',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
-                          widget.isCompact ? FontSize.s16 : FontSize.s18,
+                          widget.isCompact ? FontSize.s14 : FontSize.s16,
                           0.30,
                           const Color(0xFF1E293B)),
                     ),
@@ -533,7 +581,7 @@ class _MenuPanelState extends State<MenuPanel> {
                     if (items.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                            horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           color: const Color(0xFF059669).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -541,7 +589,7 @@ class _MenuPanelState extends State<MenuPanel> {
                         child: Text(
                           '${items.length} items',
                           style: buildCustomStyle(FontWeightManager.semiBold,
-                              FontSize.s12, 0.21, const Color(0xFF059669)),
+                              FontSize.s11, 0.21, const Color(0xFF059669)),
                         ),
                       ),
                   ],
@@ -849,8 +897,29 @@ class _MenuPanelState extends State<MenuPanel> {
                                 itemCount: items.length,
                                 itemBuilder: (_, idx) {
                                   final item = items[idx];
-                                  return _buildMenuItem(
-                                      item, widget.isCompact, context);
+                                  switch (cardMode) {
+                                    case MenuCardMode.compact:
+                                      return _buildMenuItem(
+                                          item, widget.isCompact, context);
+                                    case MenuCardMode.medium:
+                                      return _buildMenuItemRich(
+                                        item,
+                                        context,
+                                        imageFlex: 6,
+                                        detailsFlex: 7,
+                                        titleLines: 1,
+                                        showCategory: false,
+                                      );
+                                    case MenuCardMode.large:
+                                      return _buildMenuItemRich(
+                                        item,
+                                        context,
+                                        imageFlex: 7,
+                                        detailsFlex: 7,
+                                        titleLines: 1,
+                                        showCategory: true,
+                                      );
+                                  }
                                 },
                                 physics: const BouncingScrollPhysics(),
                               ),
@@ -861,6 +930,193 @@ class _MenuPanelState extends State<MenuPanel> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMenuItemRich(
+    GetProduct item,
+    BuildContext context, {
+    required int imageFlex,
+    required int detailsFlex,
+    required int titleLines,
+    required bool showCategory,
+  }) {
+    bool isAvailable = true;
+    if (item.stock != null && item.stock!.isNotEmpty) {
+      isAvailable = item.stock!.any((stock) => (stock.quantity ?? 0) > 0);
+    }
+    final imageUrl = _resolvePrimaryImage(item);
+    final denseMode = !showCategory;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isAvailable ? Colors.white : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isAvailable ? () => widget.onItemAdd(item, 1) : null,
+          borderRadius: BorderRadius.circular(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: imageFlex,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(14),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    color: Colors.grey.shade100,
+                    child: imageUrl != null
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildImageFallback(),
+                          )
+                        : _buildImageFallback(),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: detailsFlex,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    denseMode ? 8 : 10,
+                    denseMode ? 6 : 8,
+                    denseMode ? 8 : 10,
+                    denseMode ? 6 : 10,
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.productName ?? 'Unknown Product',
+                              maxLines: titleLines,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                denseMode ? FontSize.s12 : FontSize.s13,
+                                0.21,
+                                isAvailable
+                                    ? const Color(0xFF1E293B)
+                                    : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF059669).withOpacity(0.10),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${item.price?.price ?? '0'}',
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                denseMode ? FontSize.s11 : FontSize.s12,
+                                0.21,
+                                const Color(0xFF059669),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: denseMode ? 6 : 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Wrap(
+                              spacing: denseMode ? 3 : 4,
+                              runSpacing: denseMode ? 2 : 4,
+                              children: [
+                                ..._buildFoodTypeTags(item, false),
+                                if (!_hasFoodType(item) && isAvailable)
+                                  _buildCompactTag('Available',
+                                      const Color(0xFF059669), false),
+                                if (!isAvailable)
+                                  _buildCompactTag('No Stock',
+                                      const Color(0xFF6B7280), false),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () =>
+                                  _showProductInfoDialog(context, item, false),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xFF2563EB).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.info_outline,
+                                  color: Color(0xFF2563EB),
+                                  size: 15,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (showCategory)
+                        Text(
+                          item.category?.name ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s11,
+                            0.21,
+                            const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageFallback() {
+    return Center(
+      child: Icon(
+        Icons.image_outlined,
+        color: Colors.grey.shade400,
+        size: 30,
+      ),
     );
   }
 
@@ -899,11 +1155,13 @@ class _MenuPanelState extends State<MenuPanel> {
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: EdgeInsets.all(compact ? 8.0 : 12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween, // Distribute content evenly
-              children: [
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween, // Distribute content evenly
+                children: [
                 // Top section: Image, name, price, description
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -973,8 +1231,8 @@ class _MenuPanelState extends State<MenuPanel> {
                   children: [
                     SizedBox(
                         height: compact
-                            ? 6
-                            : 8), // Add space between top and bottom sections
+                            ? 4
+                            : 6), // Keep separation while avoiding tiny bottom overflow
                     // Tags and add button
                     Row(
                       children: [
@@ -1021,7 +1279,8 @@ class _MenuPanelState extends State<MenuPanel> {
                     ),
                   ],
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1039,8 +1298,8 @@ class _MenuPanelState extends State<MenuPanel> {
       ),
       child: Text(
         text,
-        style: buildCustomStyle(FontWeightManager.semiBold,
-            FontSize.s8, 0.14, color),
+        style: buildCustomStyle(
+            FontWeightManager.semiBold, FontSize.s8, 0.14, color),
       ),
     );
   }

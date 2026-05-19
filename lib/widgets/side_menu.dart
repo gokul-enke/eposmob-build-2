@@ -346,6 +346,27 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.home,
+                  title: 'Restaurant Legacy',
+                  onTap: () {
+                    sideBarController.index.value = 86;
+                  },
+                  selected: sideBarController.index.value == 86,
+                ),
+              );
+            },
+          ),
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              final hasPermission = roleProvider
+                  .currentUserHasPermissionSync('menu.restaurant.main.access');
+
+              if (!hasPermission) {
+                return const SizedBox.shrink();
+              }
+
+              return Obx(
+                () => DrawerListTile(
+                  icon: fa.FontAwesomeIcons.home,
                   title: 'Restaurant',
                   onTap: () {
                     sideBarController.index.value = 46;
