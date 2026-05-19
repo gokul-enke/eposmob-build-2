@@ -1163,7 +1163,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             title: 'Selected Customer',
                             value:
                                 _localSelectedCustomer?.name ?? 'Not selected',
-                            supportingText: _localSelectedCustomer?.phone,
+                            supportingText: _selectedCustomerSupportingText(),
                             canDone: _localSelectedCustomer != null,
                           )
                         : Column(
@@ -2463,6 +2463,26 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return _localSelectedCustomer != null &&
         _hasOpenedPaymentModalOnce &&
         _hasPaymentMethod();
+  }
+
+  String? _selectedCustomerSupportingText() {
+    final customer = _localSelectedCustomer;
+    if (customer == null) return null;
+
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'SAR';
+    final lines = <String>[];
+    final phone = customer.phone?.trim();
+
+    if (phone != null && phone.isNotEmpty) {
+      lines.add(phone);
+    }
+    lines.add(
+        'Balance: $currency ${(customer.balance ?? 0.0).toStringAsFixed(2)}');
+
+    return lines.join('\n');
   }
 
   Widget _buildSelectionOnlySidePanel({
