@@ -49,6 +49,7 @@ import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/providers/quotations_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
@@ -357,6 +358,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CustomerVoucherProvider()),
         ChangeNotifierProvider(create: (_) => SupplierVoucherProvider()),
         ChangeNotifierProvider(create: (_) => AppFontProvider()),
+        ChangeNotifierProvider(create: (_) => QuotationsProvider()),
       ],
       child: KeyboardDispatcher(
         child: Consumer<KeyboardFocusHighlightProvider>(

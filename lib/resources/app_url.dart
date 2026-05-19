@@ -69,6 +69,12 @@ class APPUrl {
   static String get acknowledgeKotPrint =>
       '$baseURL/api/v1/order/acknowledge-kot-print';
 
+  // Quotations
+  static String get listQuotations => '$baseURL/api/v1/quotations';
+  static String viewQuotation(dynamic id) => '$baseURL/api/v1/quotations/$id';
+  static String get updateQuotationStatus => '$baseURL/api/v1/quotations/update-status';
+
+
   static String get loginUrl => '$baseURL/api/v1/user/signin';
   static String get forgotPasswordUrl => '$baseURL/api/v1/user/forgot';
   static String get resetPasswordUrl => '$baseURL/api/v1/user/reset';
@@ -108,6 +114,7 @@ class APPUrl {
       '$baseURL/api/v1/product/edit-product-props';
   static String get editProductImageUrl =>
       '$baseURL/api/v1/product/edit-product-image';
+  static String get deleteProductUrl => '$baseURL/api/v1/product/delete-product';
   static String get listFilesForImageUrl => '$baseURL/api/v1/file/list-files';
 
   static String get getStores => '$baseURL/api/v1/stores/get-stores?store_name';
