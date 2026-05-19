@@ -32,6 +32,7 @@ import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.
 import 'package:pos_machine/screens/billing/restaurant/widgets/tables_panel.dart';
 import 'package:pos_machine/screens/billing/restaurant/widgets/menu_panel.dart';
 import 'package:pos_machine/screens/billing/restaurant/widgets/order_panel.dart';
+import 'package:pos_machine/screens/billing/widgets/dining_selection_modal.dart';
 
 class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
@@ -423,7 +424,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             color: const Color(0xFF7C3AED),
             isSelected:
                 _orderPanelKey.currentState?.selectedCustomerIdForDraft != null,
-            onTap: () {
+            onTap: () async {
               final state = _orderPanelKey.currentState;
               if (state == null) {
                 showScaffoldError(
@@ -432,7 +433,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 );
                 return;
               }
-              state.showCustomerSelectionModal();
+              await state.showCustomerSelectionModal();
+              if (mounted) setState(() {});
             },
           ),
           const SizedBox(height: 10),
@@ -442,7 +444,28 @@ class _RestaurantPageState extends State<RestaurantPage> {
             value: _selectedDeliveryMethodName ?? 'Select delivery',
             color: const Color(0xFF059669),
             isSelected: _selectedDeliveryMethodId != null,
-            onTap: _showDeliverySelectionModal,
+            onTap: () async {
+              final state = _orderPanelKey.currentState;
+              if (state == null) {
+                showScaffoldError(
+                  context: context,
+                  message: 'Delivery selector is not ready yet',
+                );
+                return;
+              }
+              await state.showDeliverySelectionModalFromParent();
+              if (!mounted) return;
+              final deliveryMethodId = state.selectedDeliveryMethodIdForDraft;
+              final deliveryMethod = state.selectedDeliveryMethodForDraft;
+              if (deliveryMethodId.isNotEmpty) {
+                _selectDeliveryMethod(
+                  deliveryMethodId,
+                  deliveryMethod.isNotEmpty ? deliveryMethod : 'Delivery',
+                );
+              } else {
+                setState(() {});
+              }
+            },
           ),
           const Spacer(),
           Container(
@@ -702,157 +725,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final tableProvider = Provider.of<TableProvider>(context, listen: false);
     showDialog(
       context: context,
-      builder: (dialogContext) {
-        final tables = tableProvider.tables;
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Select Dining Table'),
-          content: SizedBox(
-            width: 420,
-            child: tables.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('No tables available'),
-                  )
-                : GridView.builder(
-                    shrinkWrap: true,
-                    itemCount: tables.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 2.8,
-                    ),
-                    itemBuilder: (context, index) {
-                      final table = tables[index];
-                      final isSelected = table.id == _activeTableId;
-                      return OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(dialogContext).pop();
-                          _selectDiningTable(table.id);
-                        },
-                        icon: Icon(
-                          Icons.table_restaurant_rounded,
-                          color: isSelected
-                              ? Colors.white
-                              : const Color(0xFF2563EB),
-                        ),
-                        label: Text(
-                          table.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: isSelected
-                              ? const Color(0xFF2563EB)
-                              : Colors.white,
-                          foregroundColor: isSelected
-                              ? Colors.white
-                              : const Color(0xFF1E293B),
-                          side: BorderSide(
-                            color: isSelected
-                                ? const Color(0xFF2563EB)
-                                : const Color(0xFFE2E8F0),
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showDeliverySelectionModal() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return Consumer<DeliveryMethodsProvider>(
-          builder: (context, provider, _) {
-            final methods = provider.deliveryMethods;
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text('Select Delivery Method'),
-              content: SizedBox(
-                width: 420,
-                child: provider.isLoading && methods.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    : methods.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('No delivery methods available'),
-                          )
-                        : ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: methods.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final method = methods[index];
-                              final isSelected =
-                                  method.id == _selectedDeliveryMethodId;
-                              return ListTile(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  side: BorderSide(
-                                    color: isSelected
-                                        ? const Color(0xFF059669)
-                                        : const Color(0xFFE2E8F0),
-                                  ),
-                                ),
-                                tileColor: isSelected
-                                    ? const Color(0xFFECFDF5)
-                                    : Colors.white,
-                                leading: Icon(
-                                  Icons.local_shipping_rounded,
-                                  color: isSelected
-                                      ? const Color(0xFF059669)
-                                      : const Color(0xFF64748B),
-                                ),
-                                title: Text(method.name),
-                                trailing: isSelected
-                                    ? const Icon(Icons.check_circle,
-                                        color: Color(0xFF059669))
-                                    : null,
-                                onTap: () {
-                                  Navigator.of(dialogContext).pop();
-                                  _selectDeliveryMethod(
-                                    method.id,
-                                    method.name,
-                                  );
-                                },
-                              );
-                            },
-                          ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Close'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => DiningSelectionModal(
+        tables: tableProvider.tables,
+        selectedTableId: _activeTableId,
+        onTableSelected: (table) => _selectDiningTable(table.id),
+      ),
     );
   }
 
