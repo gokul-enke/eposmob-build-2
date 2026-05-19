@@ -6,12 +6,12 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/models/get_product.dart';
-import '../../../components/build_container_box.dart';
-import '../../../components/build_dialog_box.dart';
-import '../../../components/build_round_button.dart';
-import '../../../resources/color_manager.dart';
-import '../../../resources/font_manager.dart';
-import '../../../resources/style_manager.dart';
+import '../../../../components/build_container_box.dart';
+import '../../../../components/build_dialog_box.dart';
+import '../../../../components/build_round_button.dart';
+import '../../../../resources/color_manager.dart';
+import '../../../../resources/font_manager.dart';
+import '../../../../resources/style_manager.dart';
 
 enum MenuCardMode { compact, medium, large }
 
@@ -1003,101 +1003,102 @@ class _MenuPanelState extends State<MenuPanel> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.productName ?? 'Unknown Product',
-                              maxLines: titleLines,
-                              overflow: TextOverflow.ellipsis,
-                              style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                denseMode ? FontSize.s12 : FontSize.s13,
-                                0.21,
-                                isAvailable
-                                    ? const Color(0xFF1E293B)
-                                    : const Color(0xFF64748B),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF059669).withOpacity(0.10),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${item.price?.price ?? '0'}',
-                              style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                denseMode ? FontSize.s11 : FontSize.s12,
-                                0.21,
-                                const Color(0xFF059669),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: denseMode ? 6 : 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Wrap(
-                              spacing: denseMode ? 3 : 4,
-                              runSpacing: denseMode ? 2 : 4,
-                              children: [
-                                ..._buildFoodTypeTags(item, false),
-                                if (!_hasFoodType(item) && isAvailable)
-                                  _buildCompactTag('Available',
-                                      const Color(0xFF059669), false),
-                                if (!isAvailable)
-                                  _buildCompactTag('No Stock',
-                                      const Color(0xFF6B7280), false),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () =>
-                                  _showProductInfoDialog(context, item, false),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF2563EB).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Icon(
-                                  Icons.info_outline,
-                                  color: Color(0xFF2563EB),
-                                  size: 15,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.productName ?? 'Unknown Product',
+                                maxLines: titleLines,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.bold,
+                                  denseMode ? FontSize.s12 : FontSize.s13,
+                                  0.21,
+                                  isAvailable
+                                      ? const Color(0xFF1E293B)
+                                      : const Color(0xFF64748B),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      if (showCategory)
-                        Text(
-                          item.category?.name ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s11,
-                            0.21,
-                            const Color(0xFF64748B),
-                          ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    const Color(0xFF059669).withOpacity(0.10),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${item.price?.price ?? '0'}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.bold,
+                                  denseMode ? FontSize.s11 : FontSize.s12,
+                                  0.21,
+                                  const Color(0xFF059669),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                        SizedBox(height: denseMode ? 6 : 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Wrap(
+                                spacing: denseMode ? 3 : 4,
+                                runSpacing: denseMode ? 2 : 4,
+                                children: [
+                                  ..._buildFoodTypeTags(item, false),
+                                  if (!_hasFoodType(item) && isAvailable)
+                                    _buildCompactTag('Available',
+                                        const Color(0xFF059669), false),
+                                  if (!isAvailable)
+                                    _buildCompactTag('No Stock',
+                                        const Color(0xFF6B7280), false),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _showProductInfoDialog(
+                                    context, item, false),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2563EB)
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.info_outline,
+                                    color: Color(0xFF2563EB),
+                                    size: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (showCategory)
+                          Text(
+                            item.category?.name ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s11,
+                              0.21,
+                              const Color(0xFF64748B),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -1162,123 +1163,123 @@ class _MenuPanelState extends State<MenuPanel> {
                 mainAxisAlignment:
                     MainAxisAlignment.spaceBetween, // Distribute content evenly
                 children: [
-                // Top section: Image, name, price, description
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with name and price
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.productName ?? 'Unknown Product',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              compact ? FontSize.s10 : FontSize.s12,
-                              0.21,
-                              isAvailable
-                                  ? const Color(0xFF1E293B)
-                                  : const Color(0xFF64748B),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: compact ? 4 : 6,
-                            vertical: compact ? 2 : 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF059669).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            '${item.price?.price ?? '0'}',
-                            style: buildCustomStyle(
-                              FontWeightManager.bold,
-                              compact ? FontSize.s9 : FontSize.s11,
-                              0.23,
-                              isAvailable
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFF059669).withOpacity(0.5),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: compact ? 2 : 4),
-                    // productName
-                    if (item.productName != null)
-                      Text(
-                        item.productName.toString(),
-                        maxLines: compact ? 1 : 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          compact ? FontSize.s8 : FontSize.s10,
-                          0.21,
-                          const Color(0xFF64748B),
-                        ),
-                      ),
-                  ],
-                ),
-
-                // Bottom section: Tags and add button with proper spacing
-                Column(
-                  children: [
-                    SizedBox(
-                        height: compact
-                            ? 4
-                            : 6), // Keep separation while avoiding tiny bottom overflow
-                    // Tags and add button
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Wrap(
-                            spacing: compact ? 3 : 4,
-                            runSpacing: 2,
-                            children: [
-                              // Check for FOOD_TYPE in product_props
-                              ...(_buildFoodTypeTags(item, compact)),
-                              // Show unit if no food type is available
-                              if (!_hasFoodType(item) && isAvailable)
-                                _buildCompactTag('Available',
-                                    const Color(0xFF059669), compact),
-                              if (!isAvailable)
-                                _buildCompactTag('No Stock',
-                                    const Color(0xFF6B7280), compact),
-                            ],
-                          ),
-                        ),
-                        if (isAvailable)
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => _showProductInfoDialog(
-                                  context, item, compact),
-                              borderRadius: BorderRadius.circular(6),
-                              child: Container(
-                                padding: EdgeInsets.all(compact ? 3 : 4),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFF2563EB).withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Icon(
-                                  Icons.info_outline,
-                                  color: const Color(0xFF2563EB),
-                                  size: compact ? 12 : 14,
-                                ),
+                  // Top section: Image, name, price, description
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with name and price
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.productName ?? 'Unknown Product',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                compact ? FontSize.s10 : FontSize.s12,
+                                0.21,
+                                isAvailable
+                                    ? const Color(0xFF1E293B)
+                                    : const Color(0xFF64748B),
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                  ],
-                ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 4 : 6,
+                              vertical: compact ? 2 : 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF059669).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${item.price?.price ?? '0'}',
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                compact ? FontSize.s9 : FontSize.s11,
+                                0.23,
+                                isAvailable
+                                    ? const Color(0xFF059669)
+                                    : const Color(0xFF059669).withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: compact ? 2 : 4),
+                      // productName
+                      if (item.productName != null)
+                        Text(
+                          item.productName.toString(),
+                          maxLines: compact ? 1 : 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: buildCustomStyle(
+                            FontWeightManager.regular,
+                            compact ? FontSize.s8 : FontSize.s10,
+                            0.21,
+                            const Color(0xFF64748B),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  // Bottom section: Tags and add button with proper spacing
+                  Column(
+                    children: [
+                      SizedBox(
+                          height: compact
+                              ? 4
+                              : 6), // Keep separation while avoiding tiny bottom overflow
+                      // Tags and add button
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Wrap(
+                              spacing: compact ? 3 : 4,
+                              runSpacing: 2,
+                              children: [
+                                // Check for FOOD_TYPE in product_props
+                                ...(_buildFoodTypeTags(item, compact)),
+                                // Show unit if no food type is available
+                                if (!_hasFoodType(item) && isAvailable)
+                                  _buildCompactTag('Available',
+                                      const Color(0xFF059669), compact),
+                                if (!isAvailable)
+                                  _buildCompactTag('No Stock',
+                                      const Color(0xFF6B7280), compact),
+                              ],
+                            ),
+                          ),
+                          if (isAvailable)
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _showProductInfoDialog(
+                                    context, item, compact),
+                                borderRadius: BorderRadius.circular(6),
+                                child: Container(
+                                  padding: EdgeInsets.all(compact ? 3 : 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2563EB)
+                                        .withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Icon(
+                                    Icons.info_outline,
+                                    color: const Color(0xFF2563EB),
+                                    size: compact ? 12 : 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'package:pos_machine/screens/billing/billing_page_desktop.dart';
 import 'package:pos_machine/screens/billing/billing_page_mobile.dart';
-import 'package:pos_machine/screens/billing/restaurant_page.dart';
+import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'billing_page.dart';
 

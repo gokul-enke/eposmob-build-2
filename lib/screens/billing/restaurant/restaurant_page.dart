@@ -15,12 +15,12 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
 import 'package:pos_machine/providers/shared_preferences.dart';
 
-import '../../components/build_dialog_box.dart';
-import '../../resources/font_manager.dart';
-import '../../resources/style_manager.dart';
+import '../../../components/build_dialog_box.dart';
+import '../../../resources/font_manager.dart';
+import '../../../resources/style_manager.dart';
 
 // Add button import
-import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
+import '../../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
@@ -28,19 +28,10 @@ import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 
-import 'package:pos_machine/screens/billing/restaurant/tables_panel.dart';
-import 'package:pos_machine/screens/billing/restaurant/menu_panel.dart';
-import 'package:pos_machine/screens/billing/restaurant/order_panel.dart';
-
-/// Fallback delivery method ID when no default is configured.
-const String kFallbackDeliveryMethodId = '11';
-
-/// Checks if an API response status indicates success (handles known server typo).
-bool isApiSuccess(dynamic response) {
-  if (response == null) return false;
-  final status = (response['status'] as String?)?.toLowerCase();
-  return status == 'success' || status == 'sucesss';
-}
+import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
+import 'package:pos_machine/screens/billing/restaurant/widgets/tables_panel.dart';
+import 'package:pos_machine/screens/billing/restaurant/widgets/menu_panel.dart';
+import 'package:pos_machine/screens/billing/restaurant/widgets/order_panel.dart';
 
 class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
