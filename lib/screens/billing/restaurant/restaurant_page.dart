@@ -450,89 +450,96 @@ class _RestaurantPageState extends State<RestaurantPage> {
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
               child: Column(
                 children: [
-          _buildCounterSelectorButton(
-            icon: Icons.restaurant_rounded,
-            title: 'Dining',
-            value: _selectedTableName ?? 'Select table',
-            color: const Color(0xFF2563EB),
-            isSelected: _activeTableId != null,
-            onTap: _showDiningSelectionModal,
-          ),
-          const SizedBox(height: 10),
-          _buildCounterSelectorButton(
-            icon: Icons.person_rounded,
-            title: 'Customer',
-            value: _orderPanelKey.currentState?.selectedCustomerNameForDraft ??
-                _orderPanelKey.currentState?.selectedCustomerPhoneForDraft ??
-                'Select customer',
-            color: const Color(0xFF7C3AED),
-            isSelected:
-                _orderPanelKey.currentState?.selectedCustomerIdForDraft != null,
-            onTap: () async {
-              final state = _orderPanelKey.currentState;
-              if (state == null) {
-                showScaffoldError(
-                  context: context,
-                  message: 'Customer selector is not ready yet',
-                );
-                return;
-              }
-              await state.showCustomerSelectionModal();
-              if (mounted) setState(() {});
-            },
-          ),
-          const SizedBox(height: 10),
-          _buildCounterSelectorButton(
-            icon: Icons.local_shipping_rounded,
-            title: 'Delivery',
-            value: _selectedDeliveryMethodName ?? 'Select delivery',
-            color: const Color(0xFF059669),
-            isSelected: _selectedDeliveryMethodId != null,
-            onTap: () async {
-              final state = _orderPanelKey.currentState;
-              if (state == null) {
-                showScaffoldError(
-                  context: context,
-                  message: 'Delivery selector is not ready yet',
-                );
-                return;
-              }
-              await state.showDeliverySelectionModalFromParent();
-              if (!mounted) return;
-              final deliveryMethodId = state.selectedDeliveryMethodIdForDraft;
-              final deliveryMethod = state.selectedDeliveryMethodForDraft;
-              if (deliveryMethodId.isNotEmpty) {
-                _selectDeliveryMethod(
-                  deliveryMethodId,
-                  deliveryMethod.isNotEmpty ? deliveryMethod : 'Delivery',
-                );
-              } else {
-                setState(() {});
-              }
-            },
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Text(
-              _activeTableId != null
-                  ? 'Dining order: ${_selectedTableName ?? _activeTableId}'
-                  : _selectedDeliveryMethodId != null
-                      ? 'Delivery order: $_selectedDeliveryMethodName'
-                      : 'Choose Dining or Delivery before saving or confirming',
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.21,
-                const Color(0xFF475569),
-              ),
-            ),
-          ),
+                  _buildCounterSelectorButton(
+                    icon: Icons.restaurant_rounded,
+                    title: 'Dining',
+                    value: _selectedTableName ?? 'Select table',
+                    color: const Color(0xFF2563EB),
+                    isSelected: _activeTableId != null,
+                    onTap: _showDiningSelectionModal,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCounterSelectorButton(
+                    icon: Icons.person_rounded,
+                    title: 'Customer',
+                    value: _orderPanelKey
+                            .currentState?.selectedCustomerNameForDraft ??
+                        _orderPanelKey
+                            .currentState?.selectedCustomerPhoneForDraft ??
+                        'Select customer',
+                    color: const Color(0xFF7C3AED),
+                    isSelected: _orderPanelKey
+                            .currentState?.selectedCustomerIdForDraft !=
+                        null,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Customer selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showCustomerSelectionModal();
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCounterSelectorButton(
+                    icon: Icons.local_shipping_rounded,
+                    title: 'Delivery',
+                    value: _selectedDeliveryMethodName ?? 'Select delivery',
+                    color: const Color(0xFF059669),
+                    isSelected: _selectedDeliveryMethodId != null,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Delivery selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showDeliverySelectionModalFromParent();
+                      if (!mounted) return;
+                      final deliveryMethodId =
+                          state.selectedDeliveryMethodIdForDraft;
+                      final deliveryMethod =
+                          state.selectedDeliveryMethodForDraft;
+                      if (deliveryMethodId.isNotEmpty) {
+                        _selectDeliveryMethod(
+                          deliveryMethodId,
+                          deliveryMethod.isNotEmpty
+                              ? deliveryMethod
+                              : 'Delivery',
+                        );
+                      } else {
+                        setState(() {});
+                      }
+                    },
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Text(
+                      _activeTableId != null
+                          ? 'Dining order: ${_selectedTableName ?? _activeTableId}'
+                          : _selectedDeliveryMethodId != null
+                              ? 'Delivery order: $_selectedDeliveryMethodName'
+                              : 'Choose Dining or Delivery before saving or confirming',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.21,
+                        const Color(0xFF475569),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

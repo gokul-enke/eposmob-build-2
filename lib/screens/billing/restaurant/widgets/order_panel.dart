@@ -99,7 +99,11 @@ class OrderPanelState extends State<OrderPanel> {
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
   bool _showSavedOrdersView = false;
+  bool _forceCounterCartView = false;
   int _lastObservedCartCount = 0;
+
+  bool get _usesCounterOrderTabs =>
+      widget.allowCounterBilling && widget.isCounterBillingMode;
 
   // Scroll + highlight for newly added items in edit-order view
   final ScrollController _editOrderScrollController = ScrollController();
@@ -2352,12 +2356,18 @@ class OrderPanelState extends State<OrderPanel> {
               if (!mounted) return;
               setState(() {
                 _showSavedOrdersView = false;
+                _forceCounterCartView = true;
               });
             });
           }
           _lastObservedCartCount = currentCartCount;
 
-          if (hasCurrentCart && !_showSavedOrdersView) {
+          final shouldShowCounterCart = _usesCounterOrderTabs &&
+              !_showSavedOrdersView &&
+              _forceCounterCartView;
+
+          if ((hasCurrentCart && !_showSavedOrdersView) ||
+              shouldShowCounterCart) {
             // Show current cart items
             return _buildCurrentCartView(cartItems);
           } else {
@@ -2394,37 +2404,39 @@ class OrderPanelState extends State<OrderPanel> {
             'Current Order',
             Icons.shopping_cart,
             const Color(0xFF059669),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    _refreshLocalDrafts();
-                    _fetchSavedOrders();
-                    setState(() => _showSavedOrdersView = true);
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF1D4ED8),
-                    backgroundColor: const Color(0xFFEFF6FF),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      side: const BorderSide(color: Color(0xFFBFDBFE)),
-                    ),
+            trailing: _usesCounterOrderTabs
+                ? _buildCartOrdersSegmentedSwitch(showingOrders: false)
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          _refreshLocalDrafts();
+                          _fetchSavedOrders();
+                          setState(() => _showSavedOrdersView = true);
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF1D4ED8),
+                          backgroundColor: const Color(0xFFEFF6FF),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: const BorderSide(color: Color(0xFFBFDBFE)),
+                          ),
+                        ),
+                        icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                        label: Text(
+                          'Ongoing Orders',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s11 : FontSize.s12,
+                              0.21,
+                              const Color(0xFF1D4ED8)),
+                        ),
+                      ),
+                    ],
                   ),
-                  icon: const Icon(Icons.receipt_long_rounded, size: 16),
-                  label: Text(
-                    'Ongoing Orders',
-                    style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        widget.isCompact ? FontSize.s11 : FontSize.s12,
-                        0.21,
-                        const Color(0xFF1D4ED8)),
-                  ),
-                ),
-              ],
-            ),
           ),
           Expanded(
             child: cartItems.isEmpty
@@ -2512,11 +2524,16 @@ class OrderPanelState extends State<OrderPanel> {
       child: Column(
         children: [
           // Saved Orders Section (local drafts, independent scroll)
-          _buildPanelHeader(
-              'Saved Orders', Icons.pending_actions, const Color(0xFFD97706),
-              showBackButton: _showSavedOrdersView, onBackButtonPressed: () {
+          _buildPanelHeader(_usesCounterOrderTabs ? 'Orders' : 'Saved Orders',
+              Icons.pending_actions, const Color(0xFFD97706),
+              showBackButton: !_usesCounterOrderTabs && _showSavedOrdersView,
+              onBackButtonPressed: () {
             setState(() => _showSavedOrdersView = false);
-          }, itemCount: _localDrafts.length),
+          },
+              itemCount: _usesCounterOrderTabs ? null : _localDrafts.length,
+              trailing: _usesCounterOrderTabs
+                  ? _buildCartOrdersSegmentedSwitch(showingOrders: true)
+                  : null),
           Flexible(
             flex: 1,
             child: RefreshIndicator(
@@ -3795,6 +3812,94 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
+  Widget _buildCartOrdersSegmentedSwitch({required bool showingOrders}) {
+    Widget segment({
+      required String label,
+      required IconData icon,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+      final foreground = selected ? Colors.white : const Color(0xFF64748B);
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: selected ? null : onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFF3B82F6) : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 15, color: foreground),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        widget.isCompact ? FontSize.s11 : FontSize.s12,
+                        0.21,
+                        foreground,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: widget.isCompact ? 150 : 172,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            segment(
+              label: 'Cart',
+              icon: Icons.shopping_cart_rounded,
+              selected: !showingOrders,
+              onTap: () => setState(() {
+                _showSavedOrdersView = false;
+                _forceCounterCartView = true;
+              }),
+            ),
+            segment(
+              label: 'Orders',
+              icon: Icons.receipt_long_rounded,
+              selected: showingOrders,
+              onTap: () {
+                _refreshLocalDrafts();
+                _fetchSavedOrders();
+                setState(() {
+                  _showSavedOrdersView = true;
+                  _forceCounterCartView = false;
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPanelHeader(String title, IconData icon, Color color,
       {bool showBackButton = false,
       VoidCallback? onBackButtonPressed,
@@ -3852,6 +3957,8 @@ class OrderPanelState extends State<OrderPanel> {
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
                       FontWeightManager.bold,
                       widget.isCompact ? FontSize.s14 : FontSize.s16,
@@ -3899,7 +4006,10 @@ class OrderPanelState extends State<OrderPanel> {
                     FontWeightManager.semiBold, FontSize.s12, 0.21, color),
               ),
             ),
-          if (trailing != null) trailing,
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            trailing,
+          ],
         ],
       ),
     );
