@@ -224,6 +224,11 @@ class OrderPanelState extends State<OrderPanel> {
     if (widget.tableId != oldWidget.tableId ||
         widget.preselectedDeliveryMethodId !=
             oldWidget.preselectedDeliveryMethodId) {
+      if (_selectedOrder != null) {
+        _applyCurrentContextToSelectedOrder();
+        return;
+      }
+
       setState(() {
         _showSavedOrdersView = false;
       });
@@ -275,6 +280,41 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
+  void _applyCurrentContextToSelectedOrder() {
+    setState(() {
+      if (widget.tableId != null && widget.tableId!.isNotEmpty) {
+        _deliveryMethodId = '';
+        _deliveryMethod = 'Store Takeaway';
+        if (_selectedOrder is Map) {
+          _selectedOrder['table_id'] = widget.tableId;
+          _selectedOrder['delivery_method_id'] = null;
+          _selectedOrder['delivery_method_name'] = null;
+          _selectedOrder['delivery_method'] = null;
+          final orderProps = _selectedOrder['orderProps'];
+          if (orderProps is Map) {
+            orderProps['TABLE'] = widget.tableId;
+          }
+        }
+      } else if (widget.preselectedDeliveryMethodId != null &&
+          widget.preselectedDeliveryMethodId!.isNotEmpty) {
+        _deliveryMethodId = widget.preselectedDeliveryMethodId!;
+        _deliveryMethod =
+            widget.preselectedDeliveryMethodName ?? 'Store Takeaway';
+        if (_selectedOrder is Map) {
+          _selectedOrder['table_id'] = null;
+          _selectedOrder['delivery_method_id'] = _deliveryMethodId;
+          _selectedOrder['delivery_method_name'] = _deliveryMethod;
+          _selectedOrder['delivery_method'] = _deliveryMethod;
+          final orderProps = _selectedOrder['orderProps'];
+          if (orderProps is Map) {
+            orderProps.remove('TABLE');
+          }
+        }
+      }
+    });
+    widget.onOrderSelected(_selectedOrder);
+  }
+
   Future<void> _fetchSavedOrders() async {
     setState(() {
       _isLoadingOrders = true;
@@ -288,16 +328,17 @@ class OrderPanelState extends State<OrderPanel> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
     debugPrint(
-        'ðŸ”„ _fetchSavedOrders: Sending request with tableId: ${widget.tableId}, deliveryMethodId: ${widget.preselectedDeliveryMethodId}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _fetchSavedOrders: Sending request with tableId: ${widget.tableId}, deliveryMethodId: ${widget.preselectedDeliveryMethodId}');
     try {
-      debugPrint('âž¡ï¸ Calling CartProvider.listSavedOrders');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.listSavedOrders');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
         deliveryMethodId:
             widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
-      debugPrint('âœ… listSavedOrders Response: $response');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
         setState(() {
           _savedOrders = response['orders'];
@@ -322,7 +363,7 @@ class OrderPanelState extends State<OrderPanel> {
   void refreshSavedOrders() {
     if (widget.tableId != null || widget.preselectedDeliveryMethodId != null) {
       debugPrint(
-          'ðŸ”„ External refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ External refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
       _fetchSavedOrders();
       _refreshLocalDrafts();
     }
@@ -332,7 +373,7 @@ class OrderPanelState extends State<OrderPanel> {
   Future<void> refreshSavedOrdersSilently() async {
     if (widget.tableId != null || widget.preselectedDeliveryMethodId != null) {
       debugPrint(
-          'ðŸ”„ External silent refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ External silent refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
       await _refreshSavedOrdersSilently();
       _refreshLocalDrafts();
     }
@@ -376,13 +417,13 @@ class OrderPanelState extends State<OrderPanel> {
 
     _applyDefaultCustomer();
     debugPrint(
-        'ðŸ—‚ï¸ Restaurant order panel hydrated customers from provider cache: ${_customers.length}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬Å¡ÃƒÂ¯Ã‚Â¸Ã‚Â Restaurant order panel hydrated customers from provider cache: ${_customers.length}');
   }
 
   void _refreshCustomersInBackgroundAfterSale() {
     if (!mounted) return;
     debugPrint(
-        'ðŸ”„ Refreshing customers in background after successful confirm (restaurant order panel)');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing customers in background after successful confirm (restaurant order panel)');
 
     Future.microtask(() async {
       try {
@@ -398,7 +439,7 @@ class OrderPanelState extends State<OrderPanel> {
         _hydrateCustomerListFromProviderCache();
       } catch (e) {
         debugPrint(
-            'âš ï¸ Background customer refresh failed after confirm (restaurant order panel): $e');
+            'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Background customer refresh failed after confirm (restaurant order panel): $e');
       }
     });
   }
@@ -630,7 +671,8 @@ class OrderPanelState extends State<OrderPanel> {
 
   /// Fetch cart item statuses for Mark Served functionality
   Future<void> _fetchCartItemStatuses() async {
-    debugPrint('ðŸš€ === FETCHING CART ITEM STATUSES (Restaurant) ===');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ === FETCHING CART ITEM STATUSES (Restaurant) ===');
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
@@ -646,23 +688,24 @@ class OrderPanelState extends State<OrderPanel> {
         });
 
         debugPrint(
-            'âœ… Fetched ${_availableStatuses.length} cart item statuses');
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Fetched ${_availableStatuses.length} cart item statuses');
         for (var status in _availableStatuses) {
-          debugPrint('   ðŸ“Š ID: ${status.id}, Value: "${status.value}"');
+          debugPrint(
+              '   ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  ID: ${status.id}, Value: "${status.value}"');
         }
       } else {
         debugPrint(
-            'âŒ Failed to fetch cart item statuses: ${response['message']}');
+            'ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to fetch cart item statuses: ${response['message']}');
       }
     } catch (e) {
-      debugPrint('âŒ Exception fetching cart item statuses: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Exception fetching cart item statuses: $e');
     }
   }
 
   /// Helper method to find status ID by value
   int? _findStatusIdByValue(String value) {
     if (_availableStatuses.isEmpty) {
-      debugPrint('âš ï¸ No available statuses loaded yet');
+      debugPrint('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â No available statuses loaded yet');
       return null;
     }
 
@@ -673,11 +716,12 @@ class OrderPanelState extends State<OrderPanel> {
 
     if (status.id == 0) {
       debugPrint(
-          'âš ï¸ Status value "$value" not found in available statuses');
+          'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Status value "$value" not found in available statuses');
       return null;
     }
 
-    debugPrint('ðŸ” Found status ID ${status.id} for value "$value"');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Found status ID ${status.id} for value "$value"');
     return status.id;
   }
 
@@ -690,8 +734,8 @@ class OrderPanelState extends State<OrderPanel> {
         _selectedOrder['display_order_id']?.toString() ??
         orderId.toString();
 
-    debugPrint('ðŸš€ === MARKING ALL ORDER ITEMS AS SERVED ===');
-    debugPrint('ðŸ“¦ Order ID: $orderId');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ === MARKING ALL ORDER ITEMS AS SERVED ===');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ Order ID: $orderId');
 
     final statusId = _findStatusIdByValue('SERVED');
     if (statusId == null) {
@@ -713,10 +757,10 @@ class OrderPanelState extends State<OrderPanel> {
         accessToken: authModel.token ?? '',
       );
 
-      debugPrint('ðŸ“¥ API Response: $response');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ API Response: $response');
 
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
-        debugPrint('âœ… All order items updated to SERVED');
+        debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ All order items updated to SERVED');
 
         // Refresh the saved orders to get updated statuses
         await _refreshSavedOrdersSilently();
@@ -741,7 +785,7 @@ class OrderPanelState extends State<OrderPanel> {
           );
         }
       } else {
-        debugPrint('âŒ Failed to update all order items');
+        debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to update all order items');
         if (mounted) {
           showScaffoldError(
             context: context,
@@ -750,7 +794,7 @@ class OrderPanelState extends State<OrderPanel> {
         }
       }
     } catch (e) {
-      debugPrint('âŒ Exception updating all order items: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Exception updating all order items: $e');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -763,20 +807,21 @@ class OrderPanelState extends State<OrderPanel> {
           _isMarkingServed = false;
         });
       }
-      debugPrint('ðŸ === MARK ALL SERVED COMPLETED ===');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â === MARK ALL SERVED COMPLETED ===');
     }
   }
 
   /// Extracts and applies the default customer from app settings
   void _applyDefaultCustomer() {
-    debugPrint("ðŸ” [DEBUG] Restaurant: _applyDefaultCustomer called");
+    debugPrint(
+        "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â [DEBUG] Restaurant: _applyDefaultCustomer called");
 
     // Safeguard: if customer was manually selected or already partially entered, don't reset to default
     if (_isCustomerManuallySelected &&
         (_selectedCustomerID != null ||
             _selectedCustomerPhone?.isNotEmpty == true)) {
       debugPrint(
-          "ðŸ›¡ï¸ [DEBUG] Restaurant: Customer manually selected (ID: $_selectedCustomerID, Phone: $_selectedCustomerPhone), skipping reset to default");
+          "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â [DEBUG] Restaurant: Customer manually selected (ID: $_selectedCustomerID, Phone: $_selectedCustomerPhone), skipping reset to default");
       return;
     }
 
@@ -788,11 +833,11 @@ class OrderPanelState extends State<OrderPanel> {
           appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? false;
 
       debugPrint(
-          "ðŸ”§ [DEBUG] Restaurant: Auto-assign enabled in settings: $autoAssignEnabled");
+          "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ [DEBUG] Restaurant: Auto-assign enabled in settings: $autoAssignEnabled");
 
       if (!autoAssignEnabled) {
         debugPrint(
-            "ðŸ”§ [DEBUG] APP SETTINGS: Auto-assign default customer is DISABLED for Restaurant");
+            "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ [DEBUG] APP SETTINGS: Auto-assign default customer is DISABLED for Restaurant");
         return;
       }
 
@@ -803,7 +848,7 @@ class OrderPanelState extends State<OrderPanel> {
                 "";
 
         debugPrint(
-            "ðŸ”§ [DEBUG] Restaurant: Default customer phone from settings: '$defaultPhone'");
+            "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ [DEBUG] Restaurant: Default customer phone from settings: '$defaultPhone'");
 
         if (defaultPhone.isNotEmpty) {
           try {
@@ -811,7 +856,7 @@ class OrderPanelState extends State<OrderPanel> {
               (customer) => customer.phone == defaultPhone,
             );
             debugPrint(
-                "âœ… [DEBUG] Found default customer for restaurant: ${defaultCustomer.name} (ID: ${defaultCustomer.id})");
+                "ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [DEBUG] Found default customer for restaurant: ${defaultCustomer.name} (ID: ${defaultCustomer.id})");
 
             setState(() {
               _selectedCustomer = defaultCustomer;
@@ -821,22 +866,23 @@ class OrderPanelState extends State<OrderPanel> {
 
             // Also update the global provider
             debugPrint(
-                "ðŸ”„ [DEBUG] Syncing with CustomerSelectionProvider...");
+                "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [DEBUG] Syncing with CustomerSelectionProvider...");
             Provider.of<CustomerSelectionProvider>(context, listen: false)
                 .setSelectedCustomer(defaultCustomer, isDefault: true);
           } catch (e) {
             debugPrint(
-                "âš ï¸ [DEBUG] No customer found in list of ${_customers.length} with phone '$defaultPhone' for restaurant");
+                "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [DEBUG] No customer found in list of ${_customers.length} with phone '$defaultPhone' for restaurant");
           }
         } else {
           debugPrint(
-              "âš ï¸ [DEBUG] Default phone number is empty in AppSettings");
+              "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [DEBUG] Default phone number is empty in AppSettings");
         }
       } else {
-        debugPrint("âš ï¸ [DEBUG] Customer list is empty, cannot auto-assign");
+        debugPrint(
+            "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [DEBUG] Customer list is empty, cannot auto-assign");
       }
     } catch (e) {
-      debugPrint('âŒ [DEBUG] Error applying default customer: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ [DEBUG] Error applying default customer: $e');
     }
   }
 
@@ -852,7 +898,7 @@ class OrderPanelState extends State<OrderPanel> {
     double orderTotal = _getEffectiveOrderTotal();
 
     debugPrint(
-        'ðŸ’° Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
 
@@ -876,7 +922,7 @@ class OrderPanelState extends State<OrderPanel> {
 
       if (defaultPayment != null && defaultPayment.isNotEmpty) {
         debugPrint(
-            'ðŸ’° Applying default payment method from AppSettings: $defaultPayment');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Applying default payment method from AppSettings: $defaultPayment');
         switch (defaultPayment.toUpperCase()) {
           case 'CASH':
             _isCashSelected = true;
@@ -907,19 +953,23 @@ class OrderPanelState extends State<OrderPanel> {
         (_cashAmount.isEmpty || double.tryParse(_cashAmount) == 0)) {
       autoFillCashAmount = orderTotal.toStringAsFixed(2);
       _cashAmount = autoFillCashAmount; // Update state immediately
-      debugPrint('ðŸ”§ Auto-fill triggered for CASH: $autoFillCashAmount');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Auto-fill triggered for CASH: $autoFillCashAmount');
     } else if (_isCardSelected &&
         (_cardAmount.isEmpty || double.tryParse(_cardAmount) == 0)) {
       _cardAmount = orderTotal.toStringAsFixed(2);
-      debugPrint('ðŸ”§ Auto-fill triggered for CARD: $_cardAmount');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Auto-fill triggered for CARD: $_cardAmount');
     } else if (_isUpiSelected &&
         (_upiAmount.isEmpty || double.tryParse(_upiAmount) == 0)) {
       _upiAmount = orderTotal.toStringAsFixed(2);
-      debugPrint('ðŸ”§ Auto-fill triggered for UPI: $_upiAmount');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Auto-fill triggered for UPI: $_upiAmount');
     } else if (_isCodSelected &&
         (_codAmount.isEmpty || double.tryParse(_codAmount) == 0)) {
       _codAmount = orderTotal.toStringAsFixed(2);
-      debugPrint('ðŸ”§ Auto-fill triggered for COD: $_codAmount');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Auto-fill triggered for COD: $_codAmount');
     }
 
     showDialog(
@@ -977,7 +1027,7 @@ class OrderPanelState extends State<OrderPanel> {
             // Capture the actual customer credit amount from the debit parameter
             _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0;
 
-            debugPrint('ðŸ’³ Payment Method Updated:');
+            debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â³ Payment Method Updated:');
             debugPrint(
                 '  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
             debugPrint(
@@ -1096,16 +1146,17 @@ class OrderPanelState extends State<OrderPanel> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
     debugPrint(
-        'ðŸ”„ _refreshSavedOrdersKeepingSelection: Sending request with tableId: ${widget.tableId}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _refreshSavedOrdersKeepingSelection: Sending request with tableId: ${widget.tableId}');
     try {
-      debugPrint('âž¡ï¸ Calling CartProvider.listSavedOrders');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.listSavedOrders');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
         deliveryMethodId:
             widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
-      debugPrint('âœ… listSavedOrders Response: $response');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
         final newOrders = response['orders'] as List<dynamic>;
 
@@ -1117,7 +1168,8 @@ class OrderPanelState extends State<OrderPanel> {
             if (_blockReselectAfterPlace) {
               _selectedOrder = null;
               widget.onOrderSelected(null);
-              debugPrint('âœ… Skipping reselect after order placed');
+              debugPrint(
+                  'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Skipping reselect after order placed');
               return;
             }
             final currentOrderId =
@@ -1134,12 +1186,13 @@ class OrderPanelState extends State<OrderPanel> {
               widget.onOrderSelected(updatedOrder); // Notify parent widget
               _hasOpenedPaymentModalOnce =
                   false; // Reset payment modal flag when switching orders
-              debugPrint('âœ… Updated selected order with fresh data');
+              debugPrint(
+                  'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Updated selected order with fresh data');
             } else {
               // Keep the current selection - don't clear it immediately
               // The order might just be processing on the server
               debugPrint(
-                  'âš ï¸ Selected order not found in updated list, keeping current selection');
+                  'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Selected order not found in updated list, keeping current selection');
               // Only clear if we're sure the order is gone (you can add more logic here if needed)
             }
           }
@@ -1168,16 +1221,18 @@ class OrderPanelState extends State<OrderPanel> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
     debugPrint(
-        'ðŸ”„ _refreshSavedOrdersSilently: Sending request with tableId: ${widget.tableId}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _refreshSavedOrdersSilently: Sending request with tableId: ${widget.tableId}');
     try {
-      debugPrint('âž¡ï¸ Calling CartProvider.listSavedOrders (silent)');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.listSavedOrders (silent)');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
         deliveryMethodId:
             widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
-      debugPrint('âœ… listSavedOrders Response (silent): $response');
+      debugPrint(
+          'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ listSavedOrders Response (silent): $response');
       if (response['status'] == 'success') {
         final newOrders = response['orders'] as List<dynamic>;
 
@@ -1189,7 +1244,8 @@ class OrderPanelState extends State<OrderPanel> {
             if (_blockReselectAfterPlace) {
               _selectedOrder = null;
               widget.onOrderSelected(null);
-              debugPrint('âœ… Skipping reselect after order placed');
+              debugPrint(
+                  'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Skipping reselect after order placed');
               return;
             }
             final currentOrderId =
@@ -1206,19 +1262,20 @@ class OrderPanelState extends State<OrderPanel> {
               widget.onOrderSelected(updatedOrder); // Notify parent widget
               _hasOpenedPaymentModalOnce =
                   false; // Reset payment modal flag when switching orders
-              debugPrint('âœ… Updated selected order with fresh data (silent)');
+              debugPrint(
+                  'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Updated selected order with fresh data (silent)');
             } else {
               debugPrint(
-                  'âš ï¸ Selected order not found in updated list (silent)');
+                  'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Selected order not found in updated list (silent)');
             }
           }
         });
       } else {
         debugPrint(
-            'âš ï¸ Failed to refresh saved orders (silent): ${response['message']}');
+            'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Failed to refresh saved orders (silent): ${response['message']}');
       }
     } catch (e) {
-      debugPrint('âŒ Error in silent refresh: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error in silent refresh: ${e.toString()}');
     }
   }
 
@@ -1229,8 +1286,9 @@ class OrderPanelState extends State<OrderPanel> {
     });
 
     try {
-      debugPrint('ðŸ”„ _fetchOrderDetails: Processing saved order data.');
-      debugPrint('ðŸ“‹ Order details: $order');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _fetchOrderDetails: Processing saved order data.');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Order details: $order');
 
       // Clear previous order's customer and payment state to prevent contamination
       _clearOrderEditingState();
@@ -1243,7 +1301,7 @@ class OrderPanelState extends State<OrderPanel> {
       // Load order-specific data if available
       _loadOrderSpecificData(order);
     } catch (e) {
-      debugPrint('âŒ _fetchOrderDetails Exception: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _fetchOrderDetails Exception: ${e.toString()}');
       setState(() {
         _error = 'Error processing order details: ${e.toString()}';
       });
@@ -1256,7 +1314,7 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Clear customer and payment state when switching orders
   void _clearOrderEditingState() {
-    debugPrint('ðŸ§¹ Clearing previous order editing state...');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¹ Clearing previous order editing state...');
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
     setState(() {
@@ -1301,12 +1359,12 @@ class OrderPanelState extends State<OrderPanel> {
       _deliveryTime = null;
       _selectedDeliveryCharge = null;
     });
-    debugPrint('âœ… Order editing state cleared');
+    debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order editing state cleared');
   }
 
   // Sync variant without setState to avoid triggering extra rebuilds in lifecycle hooks
   void _clearOrderEditingStateSync() {
-    debugPrint('ðŸ§¹ Clearing previous order editing state...');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¹ Clearing previous order editing state...');
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
     // Clear customer selection
@@ -1350,7 +1408,7 @@ class OrderPanelState extends State<OrderPanel> {
     _deliveryTime = null;
     _selectedDeliveryCharge = null;
 
-    debugPrint('âœ… Order editing state cleared');
+    debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order editing state cleared');
   }
 
   // Public method to reset payment modal flag (called from parent)
@@ -1371,7 +1429,7 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Load order-specific data (customer, payment, etc.) from the selected order
   void _loadOrderSpecificData(dynamic order) {
-    debugPrint('ðŸ“‹ Loading order-specific data...');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Loading order-specific data...');
 
     try {
       // Load customer information if available
@@ -1403,10 +1461,10 @@ class OrderPanelState extends State<OrderPanel> {
         );
 
         debugPrint(
-            'âœ… Loaded customer from order: ${customer.name} (${customer.phone})');
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded customer from order: ${customer.name} (${customer.phone})');
       } else {
         debugPrint(
-            'â„¹ï¸ No customer associated with this order. Applying default if applicable...');
+            'ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â No customer associated with this order. Applying default if applicable...');
         customerSelectionProvider.clearSelectedCustomer();
         _applyDefaultCustomer();
       }
@@ -1459,7 +1517,7 @@ class OrderPanelState extends State<OrderPanel> {
         });
 
         debugPrint(
-            'âœ… Loaded payment method: $paymentMethod, Amount: $paidAmount');
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded payment method: $paymentMethod, Amount: $paidAmount');
       }
 
       // Load existing order-level comment from supported API shapes.
@@ -1486,7 +1544,7 @@ class OrderPanelState extends State<OrderPanel> {
         );
         loadedDeliveryMethodName = match.name;
         debugPrint(
-            'ðŸšš Resolved delivery method name from provider: $loadedDeliveryMethodName (id: $loadedDeliveryMethodId)');
+            'ÃƒÂ°Ã…Â¸Ã…Â¡Ã…Â¡ Resolved delivery method name from provider: $loadedDeliveryMethodName (id: $loadedDeliveryMethodId)');
       }
       final loadedDeliveryDate = order['delivery_date']?.toString();
       final loadedDeliveryTime = order['delivery_time']?.toString();
@@ -1519,7 +1577,7 @@ class OrderPanelState extends State<OrderPanel> {
       });
 
       if (_isCouponApplied) {
-        debugPrint('âœ… Loaded discount data:');
+        debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded discount data:');
         debugPrint('   - Flat Discount: ${_flatDiscount.toStringAsFixed(2)}');
         debugPrint(
             '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
@@ -1530,12 +1588,12 @@ class OrderPanelState extends State<OrderPanel> {
       _balanceAmount = _calculateBalanceAmount();
 
       debugPrint(
-          'ðŸ’° Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');
     } catch (e) {
-      debugPrint('âŒ Error loading order-specific data: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error loading order-specific data: $e');
     }
 
-    debugPrint('âœ… Order-specific data loading completed');
+    debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order-specific data loading completed');
   }
 
   bool _hasPaymentMethod() {
@@ -1795,9 +1853,9 @@ class OrderPanelState extends State<OrderPanel> {
           }
 
           debugPrint(
-              'âž¡ï¸ Calling CartProvider.addToCartAPI for item comment update');
+              'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.addToCartAPI for item comment update');
           debugPrint(
-              'ðŸ“¦ addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 0, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 0, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
 
           final response = await cartProvider.addToCartAPI(
             customerId: int.parse(customerId.toString()),
@@ -1963,7 +2021,7 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     debugPrint(
-        'ðŸ’° Payment Summary - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Payment Summary - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerBalance = _selectedCustomer?.balance ?? 0.0;
     final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
@@ -1972,8 +2030,9 @@ class OrderPanelState extends State<OrderPanel> {
     final codAmount = double.tryParse(_codAmount) ?? 0.0;
     final totalPaidAmount = cashAmount + cardAmount + upiAmount + codAmount;
 
-    debugPrint('\nðŸ§® === RESTAURANT PAGE BALANCE CALCULATION START ===');
-    debugPrint('ðŸ’° Input Values:');
+    debugPrint(
+        '\nÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â® === RESTAURANT PAGE BALANCE CALCULATION START ===');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Input Values:');
     debugPrint('  - Order Total: ${orderTotal.toStringAsFixed(2)}');
     debugPrint('  - Customer Balance: ${customerBalance.toStringAsFixed(2)}');
     debugPrint('  - Cash Amount: ${cashAmount.toStringAsFixed(2)}');
@@ -1998,14 +2057,15 @@ class OrderPanelState extends State<OrderPanel> {
 
     if (_toCustomerCreditEnabled && _selectedCustomer != null) {
       debugPrint(
-          'ðŸ”› RESTAURANT PAGE: Toggle is ON - Calculating with customer credit consideration');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Âº RESTAURANT PAGE: Toggle is ON - Calculating with customer credit consideration');
 
       if (customerBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
-        debugPrint('ðŸ’³ Customer has debt - using transaction excess logic');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â³ Customer has debt - using transaction excess logic');
         final transactionExcess = totalPaidAmount - finalOrderTotal;
         debugPrint(
-            'ðŸ’° Transaction excess: ${transactionExcess.toStringAsFixed(2)}');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Transaction excess: ${transactionExcess.toStringAsFixed(2)}');
 
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
@@ -2029,10 +2089,10 @@ class OrderPanelState extends State<OrderPanel> {
       } else {
         // Customer has positive/zero balance - use Net Due logic
         debugPrint(
-            'ðŸ’µ Customer has credit/zero balance - using Net Due logic');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âµ Customer has credit/zero balance - using Net Due logic');
         // Net Due = Final Order Total - Customer Previous Balance
         double netDue = finalOrderTotal - customerBalance;
-        debugPrint('ðŸ’° Net Due calculation:');
+        debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Net Due calculation:');
         debugPrint('  - Purchase Total: ${finalOrderTotal.toStringAsFixed(2)}');
         debugPrint(
             '  - Customer Prev Balance: ${customerBalance.toStringAsFixed(2)}');
@@ -2067,7 +2127,7 @@ class OrderPanelState extends State<OrderPanel> {
       }
     } else {
       debugPrint(
-          'ðŸ”´ RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
       cashBalance = totalPaidAmount - finalOrderTotal;
       debugPrint(
@@ -2081,14 +2141,16 @@ class OrderPanelState extends State<OrderPanel> {
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (cashBalance < 0) {
       debugPrint(
-          'ðŸš« RESTAURANT PAGE: Clamping negative cash balance (${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
+          'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â« RESTAURANT PAGE: Clamping negative cash balance (${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
       cashBalance = 0.0;
     }
 
-    debugPrint('ðŸ’µ Final cash balance: ${cashBalance.toStringAsFixed(2)}');
     debugPrint(
-        'ðŸ’µ Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
-    debugPrint('ðŸ§® === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âµ Final cash balance: ${cashBalance.toStringAsFixed(2)}');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âµ Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â® === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
 
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -2335,8 +2397,6 @@ class OrderPanelState extends State<OrderPanel> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildHeaderCustomerButton(),
-                const SizedBox(width: 8),
                 TextButton.icon(
                   onPressed: () {
                     _refreshLocalDrafts();
@@ -2355,7 +2415,7 @@ class OrderPanelState extends State<OrderPanel> {
                   ),
                   icon: const Icon(Icons.receipt_long_rounded, size: 16),
                   label: Text(
-                    'Saved Orders',
+                    'Ongoing Orders',
                     style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         widget.isCompact ? FontSize.s11 : FontSize.s12,
@@ -2451,16 +2511,12 @@ class OrderPanelState extends State<OrderPanel> {
       ),
       child: Column(
         children: [
-          // Pending Orders Section (independent scroll)
+          // Saved Orders Section (local drafts, independent scroll)
           _buildPanelHeader(
-              isNonTableOrderContext ? 'Saved Orders' : 'Pending Orders',
-              Icons.pending_actions,
-              const Color(0xFFD97706),
+              'Saved Orders', Icons.pending_actions, const Color(0xFFD97706),
               showBackButton: _showSavedOrdersView, onBackButtonPressed: () {
             setState(() => _showSavedOrdersView = false);
-          },
-              itemCount: _localDrafts.length,
-              trailing: _buildHeaderCustomerButton()),
+          }, itemCount: _localDrafts.length),
           Flexible(
             flex: 1,
             child: RefreshIndicator(
@@ -2485,7 +2541,7 @@ class OrderPanelState extends State<OrderPanel> {
                             hasScrollBody: false,
                             child: Center(
                               child: Text(
-                                'No pending orders',
+                                'No saved orders',
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     widget.isCompact
@@ -2529,8 +2585,8 @@ class OrderPanelState extends State<OrderPanel> {
           ),
           if (!isNonTableOrderContext) ...[
             const SizedBox(height: 8),
-            // Saved Orders Section (independent scroll)
-            _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
+            // Ongoing Orders Section (backend orders, independent scroll)
+            _buildPanelHeader('Ongoing Orders', Icons.receipt, Colors.blue,
                 itemCount: _savedOrders.length),
             Flexible(
               flex: 2,
@@ -2787,10 +2843,10 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Print KOT for new add-on items and pending cancel queue items.
   Future<void> _printNewKOT() async {
-    debugPrint('ðŸ–¨ï¸ _printNewKOT() called');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT() called');
 
     if (_selectedOrder == null) {
-      debugPrint('âŒ _printNewKOT: No order selected');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _printNewKOT: No order selected');
       showScaffoldError(
         context: context,
         message: 'Please select an order first',
@@ -2799,18 +2855,19 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     debugPrint(
-        'ðŸ“‹ _printNewKOT: Selected order ID: ${_selectedOrder['id'] ?? _selectedOrder['order_id']}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ _printNewKOT: Selected order ID: ${_selectedOrder['id'] ?? _selectedOrder['order_id']}');
 
     // Get all cart items
     List<dynamic> allCartItems = _getCartItemsFromOrder(_selectedOrder);
-    debugPrint('ðŸ“¦ _printNewKOT: Total cart items: ${allCartItems.length}');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ _printNewKOT: Total cart items: ${allCartItems.length}');
 
     // Filter for items where status is null
     List<dynamic> newItems = allCartItems.where((item) {
       if (item is Map<String, dynamic>) {
         final status = item['status'];
         debugPrint(
-            'ðŸ” Item: ${item['product_name'] ?? 'Unknown'}, Status: $status');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Item: ${item['product_name'] ?? 'Unknown'}, Status: $status');
         return status == null;
       }
       return false;
@@ -2820,12 +2877,13 @@ class OrderPanelState extends State<OrderPanel> {
         await _fetchPendingCancelKotItems(_selectedOrder);
 
     debugPrint(
-        'ðŸ†• _printNewKOT: New items (status=null): ${newItems.length}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â Ã¢â‚¬Â¢ _printNewKOT: New items (status=null): ${newItems.length}');
     debugPrint(
-        'ðŸš« _printNewKOT: Pending cancel items: ${pendingCancelQueue.length}');
+        'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â« _printNewKOT: Pending cancel items: ${pendingCancelQueue.length}');
 
     if (newItems.isEmpty && pendingCancelQueue.isEmpty) {
-      debugPrint('âš ï¸ _printNewKOT: No pending add-on or cancel KOT items');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT: No pending add-on or cancel KOT items');
       showScaffoldError(
         context: context,
         message: 'No pending KOT items to print',
@@ -2836,73 +2894,83 @@ class OrderPanelState extends State<OrderPanel> {
     if (newItems.isNotEmpty) {
       // Call API to update status for null items BEFORE printing
       debugPrint(
-          'ðŸ“¡ [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
       debugPrint(
-          'ðŸ“¡ [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
 
       try {
-        debugPrint('ðŸ“¡ [KOT STATUS UPDATE] Step 1: Getting providers...');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 1: Getting providers...');
         final authModel = Provider.of<AuthModel>(context, listen: false);
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
-        debugPrint('ðŸ“¡ [KOT STATUS UPDATE] Step 1: Providers obtained âœ…');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 1: Providers obtained ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦');
 
-        debugPrint('ðŸ“¡ [KOT STATUS UPDATE] Step 2: Parsing order ID...');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 2: Parsing order ID...');
         final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
         debugPrint(
-            'ðŸ“¡ [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
         final orderId = int.tryParse(orderIdValue.toString());
         final accessToken = authModel.token ?? '';
         debugPrint(
-            'ðŸ“¡ [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId âœ…');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦');
         debugPrint(
-            'ðŸ“¡ [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} âœ…');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦');
 
-        debugPrint('ðŸ“¡ [KOT STATUS UPDATE] Step 3: Checking orderId...');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 3: Checking orderId...');
         if (orderId != null) {
           debugPrint(
-              'ðŸ“¡ [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
           debugPrint(
-              'ðŸ“¡ [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
 
           debugPrint(
-              'ðŸ“¡ [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
           final response = await cartProvider.updateNullOrderItemsStatus(
             orderId: orderId,
             accessToken: accessToken,
           );
 
-          debugPrint('ðŸ“¡ [KOT STATUS UPDATE] Step 4: API call completed âœ…');
-          debugPrint('ðŸ“¥ [KOT STATUS UPDATE] Full response: $response');
           debugPrint(
-              'ðŸ“¥ [KOT STATUS UPDATE] Response status: ${response['status']}');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 4: API call completed ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦');
           debugPrint(
-              'ðŸ“¥ [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ [KOT STATUS UPDATE] Full response: $response');
+          debugPrint(
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ [KOT STATUS UPDATE] Response status: ${response['status']}');
+          debugPrint(
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
 
           if (response['status'] == 'success') {
             debugPrint(
-                'âœ… [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
-            debugPrint('ðŸ”„ [KOT STATUS UPDATE] Refreshing order details...');
+                'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
+            debugPrint(
+                'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [KOT STATUS UPDATE] Refreshing order details...');
             await _refreshSelectedOrderAfterCartUpdate();
-            debugPrint('âœ… [KOT STATUS UPDATE] Order refresh completed');
+            debugPrint(
+                'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [KOT STATUS UPDATE] Order refresh completed');
           } else {
             debugPrint(
-                'âš ï¸ [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
+                'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
           }
         } else {
           debugPrint(
-              'âŒ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
+              'ÃƒÂ¢Ã‚ÂÃ…â€™ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
         }
       } catch (e, stackTrace) {
-        debugPrint('âŒ [KOT STATUS UPDATE] EXCEPTION: $e');
-        debugPrint('âŒ [KOT STATUS UPDATE] Stack trace: $stackTrace');
+        debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ [KOT STATUS UPDATE] EXCEPTION: $e');
+        debugPrint(
+            'ÃƒÂ¢Ã‚ÂÃ…â€™ [KOT STATUS UPDATE] Stack trace: $stackTrace');
       }
 
       debugPrint(
-          'ðŸ“¡ [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
     }
 
     if (newItems.isNotEmpty) {
-      debugPrint('ðŸ–¨ï¸ _printNewKOT: Printing add-on KOT...');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT: Printing add-on KOT...');
       await _printSavedOrderKot(
         _selectedOrder,
         newItems,
@@ -2911,7 +2979,8 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     if (pendingCancelQueue.isNotEmpty) {
-      debugPrint('ðŸ–¨ï¸ _printNewKOT: Printing cancel KOT...');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT: Printing cancel KOT...');
       final cancelPrintItems = _buildCancelKotPrintItems(pendingCancelQueue);
       await _printSavedOrderKot(
         _selectedOrder,
@@ -3094,7 +3163,7 @@ class OrderPanelState extends State<OrderPanel> {
         }
       }
     } catch (e) {
-      debugPrint('âŒ Failed to fetch pending cancel KOT items: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to fetch pending cancel KOT items: $e');
     }
 
     return [];
@@ -3256,7 +3325,8 @@ class OrderPanelState extends State<OrderPanel> {
     final orderIdValue = order['id'] ?? order['order_id'];
     final orderId = int.tryParse(orderIdValue?.toString() ?? '');
     if (orderId == null) {
-      debugPrint('âš ï¸ acknowledgeKotPrint skipped: invalid order ID');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â acknowledgeKotPrint skipped: invalid order ID');
       return;
     }
 
@@ -3273,7 +3343,8 @@ class OrderPanelState extends State<OrderPanel> {
 
     final status = (response['status'] as String?)?.toLowerCase();
     if (status == 'success' || status == 'sucesss') {
-      debugPrint('âœ… KOT print acknowledged for events: $eventIds');
+      debugPrint(
+          'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ KOT print acknowledged for events: $eventIds');
       _removeAcknowledgedKotEventsFromOrderCache(
         order: order,
         eventIds: eventIds,
@@ -3284,7 +3355,7 @@ class OrderPanelState extends State<OrderPanel> {
 
     final message = response['message']?.toString() ??
         'KOT printed, but failed to acknowledge printed cancel events';
-    debugPrint('âŒ KOT print acknowledge failed: $message');
+    debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ KOT print acknowledge failed: $message');
     showScaffoldError(
       context: context,
       message: message,
@@ -3298,7 +3369,7 @@ class OrderPanelState extends State<OrderPanel> {
     String kotType = 'standard',
   }) async {
     debugPrint(
-        'ðŸ–¨ï¸ _printSavedOrderKot() called with ${cartItems.length} items');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot() called with ${cartItems.length} items');
 
     // Get order number
     final orderNumber = order['order_number']?.toString() ?? 'Unknown';
@@ -3463,12 +3534,14 @@ class OrderPanelState extends State<OrderPanel> {
         Provider.of<AppSettingsProvider>(context, listen: false);
     final enableKOTPrint =
         appSettingsProvider.appSettings?.enableKOTPrint ?? true;
-    debugPrint('âš™ï¸ _printSavedOrderKot: enableKOTPrint = $enableKOTPrint');
+    debugPrint(
+        'ÃƒÂ¢Ã…Â¡Ã¢â€žÂ¢ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: enableKOTPrint = $enableKOTPrint');
 
     if (enableKOTPrint) {
-      debugPrint('ðŸ–¨ï¸ _printSavedOrderKot: Trying auto-print first');
       debugPrint(
-          'ðŸ“‹ Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: Trying auto-print first');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
 
       // Try auto-print with default printer first
       final success = await KotPrintPage.autoPrint(
@@ -3492,7 +3565,7 @@ class OrderPanelState extends State<OrderPanel> {
       // Only show print page if auto-print failed
       if (!success && mounted) {
         debugPrint(
-            'ðŸ–¨ï¸ _printSavedOrderKot: Auto-print failed, showing print page');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: Auto-print failed, showing print page');
         await Navigator.push<bool>(
           context,
           MaterialPageRoute(
@@ -3517,7 +3590,7 @@ class OrderPanelState extends State<OrderPanel> {
       }
     } else {
       debugPrint(
-          'âš ï¸ _printSavedOrderKot: KOT printing is disabled in app settings');
+          'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: KOT printing is disabled in app settings');
       showScaffoldError(
         context: context,
         message: 'KOT printing is disabled in settings',
@@ -3600,7 +3673,7 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     debugPrint(
-        'ðŸ“Š Cart items count: ${cartItems.length}, Total: ${total.toStringAsFixed(2)}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  Cart items count: ${cartItems.length}, Total: ${total.toStringAsFixed(2)}');
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -3828,61 +3901,6 @@ class OrderPanelState extends State<OrderPanel> {
             ),
           if (trailing != null) trailing,
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderCustomerButton() {
-    final customerName = (_selectedCustomer?.name ?? '').trim();
-    final customerPhone =
-        (_selectedCustomer?.phone ?? _selectedCustomerPhone ?? '').trim();
-    final hasCustomer = _selectedCustomerID != null ||
-        _selectedCustomer != null ||
-        customerPhone.isNotEmpty;
-    final label = hasCustomer
-        ? (customerName.isNotEmpty
-            ? customerName
-            : customerPhone.isNotEmpty
-                ? customerPhone
-                : 'Customer')
-        : 'Customer';
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: widget.isCompact ? 120 : 180),
-      child: TextButton.icon(
-        onPressed: showCustomerSelectionModal,
-        style: TextButton.styleFrom(
-          foregroundColor:
-              hasCustomer ? const Color(0xFF047857) : const Color(0xFF475569),
-          backgroundColor:
-              hasCustomer ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(
-              color: hasCustomer
-                  ? const Color(0xFFA7F3D0)
-                  : const Color(0xFFE2E8F0),
-            ),
-          ),
-        ),
-        icon: Icon(
-          hasCustomer
-              ? Icons.person_pin_circle_rounded
-              : Icons.person_add_alt_1_rounded,
-          size: 16,
-        ),
-        label: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            widget.isCompact ? FontSize.s11 : FontSize.s12,
-            0.21,
-            hasCustomer ? const Color(0xFF047857) : const Color(0xFF475569),
-          ),
-        ),
       ),
     );
   }
@@ -4585,7 +4603,8 @@ class OrderPanelState extends State<OrderPanel> {
           Provider.of<LocalProductProvider>(context, listen: false);
       final List<dynamic> orderItems = _getCartItemsFromOrder(_selectedOrder);
 
-      debugPrint('ðŸ”„ Syncing order items with LocalProductProvider cart...');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Syncing order items with LocalProductProvider cart...');
       debugPrint('   Order items count: ${orderItems.length}');
 
       // Clear the current cart first
@@ -4603,7 +4622,8 @@ class OrderPanelState extends State<OrderPanel> {
             (p) => p.productId == productId,
           );
         } catch (_) {
-          debugPrint('âš ï¸ Product $productId not found in product list');
+          debugPrint(
+              'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Product $productId not found in product list');
           continue;
         }
 
@@ -4639,7 +4659,7 @@ class OrderPanelState extends State<OrderPanel> {
         );
 
         debugPrint(
-            '   âœ“ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
+            '   ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
       }
 
       // Apply discounts from the order
@@ -4648,9 +4668,10 @@ class OrderPanelState extends State<OrderPanel> {
         percentageDiscount: _percentageDiscount,
       );
 
-      debugPrint('âœ… Order items synced with LocalProductProvider cart');
+      debugPrint(
+          'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order items synced with LocalProductProvider cart');
     } catch (e) {
-      debugPrint('âŒ Error syncing order items with cart: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error syncing order items with cart: $e');
     }
   }
 
@@ -4731,10 +4752,12 @@ class OrderPanelState extends State<OrderPanel> {
           return;
         }
 
-        debugPrint('âž¡ï¸ Calling CartProvider.addToCartAPI for increment');
         debugPrint(
-            'ðŸ“¦ addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
-        debugPrint('ðŸ” Customer ID source: _selectedOrder data structure');
+            'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.addToCartAPI for increment');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.addToCartAPI(
           customerId: int.parse(customerId.toString()),
@@ -4744,16 +4767,17 @@ class OrderPanelState extends State<OrderPanel> {
           accessToken: authModel.token ?? '',
           cartId: orderCartId,
         );
-        debugPrint('âœ… addToCartAPI Response: $response');
+        debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ addToCartAPI Response: $response');
       } else if (newQuantity <= currentQuantity) {
         // Decrement quantity or remove item (including 0) - use decrementCartItemQuantityAPI
         String actionType =
             newQuantity == 0 ? 'remove (set to 0)' : 'decrement';
         debugPrint(
-            'âž¡ï¸ Calling CartProvider.decrementCartItemQuantityAPI for $actionType');
+            'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.decrementCartItemQuantityAPI for $actionType');
         debugPrint(
-            'ðŸ“¦ decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: ${newQuantity.toInt()}, cartId: $orderCartId}');
-        debugPrint('ðŸ” Customer ID source: _selectedOrder data structure');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: ${newQuantity.toInt()}, cartId: $orderCartId}');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.decrementCartItemQuantityAPI(
           customerId: int.parse(customerId.toString()),
@@ -4763,7 +4787,8 @@ class OrderPanelState extends State<OrderPanel> {
           quantity: newQuantity.toInt(), // Can be 0 for removal
           accessToken: authModel.token ?? '',
         );
-        debugPrint('âœ… decrementCartItemQuantityAPI Response: $response');
+        debugPrint(
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ decrementCartItemQuantityAPI Response: $response');
       } else {
         // Quantity is the same, no action needed
         debugPrint(
@@ -4819,7 +4844,7 @@ class OrderPanelState extends State<OrderPanel> {
         final bool isIncrement = newQuantity > currentQuantity;
         final itemStatus = cartItem['status']?.toString();
         // Backend creates a NEW cart entry (status=null) whenever the existing
-        // item already has ANY status â€” not just 'PREPARING' / 'COOKING' etc.
+        // item already has ANY status ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not just 'PREPARING' / 'COOKING' etc.
         // 'STARTED' also triggers this behaviour, so check for any non-null status.
         final itemAlreadyHasStatus =
             itemStatus != null && itemStatus.isNotEmpty;
@@ -4880,7 +4905,7 @@ class OrderPanelState extends State<OrderPanel> {
         );
       }
     } catch (e) {
-      debugPrint('âŒ Error updating cart item: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error updating cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
         message: 'Failed to update cart item: ${e.toString()}',
@@ -4903,7 +4928,7 @@ class OrderPanelState extends State<OrderPanel> {
               '');
 
       debugPrint(
-          'ðŸ—‘ï¸ Removing cart item (using unified API): Sending request with customerId: $customerId, cartItemId: ${cartItem['id']}');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬ËœÃƒÂ¯Ã‚Â¸Ã‚Â Removing cart item (using unified API): Sending request with customerId: $customerId, cartItemId: ${cartItem['id']}');
       // Use the unified decrementCartItemQuantityAPI with quantity 0 for removal
       final response = await cartProvider.decrementCartItemQuantityAPI(
         customerId: int.parse(customerId.toString()),
@@ -4914,7 +4939,8 @@ class OrderPanelState extends State<OrderPanel> {
         accessToken: authModel.token ?? '',
       );
 
-      debugPrint('ðŸ—‘ï¸ Remove response (unified API): $response');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬ËœÃƒÂ¯Ã‚Â¸Ã‚Â Remove response (unified API): $response');
 
       // Update the UI optimistically first
       setState(() {
@@ -4949,7 +4975,7 @@ class OrderPanelState extends State<OrderPanel> {
         );
       }
     } catch (e) {
-      debugPrint('âŒ Error removing cart item: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error removing cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
         message: 'Failed to remove item: ${e.toString()}',
@@ -4959,7 +4985,8 @@ class OrderPanelState extends State<OrderPanel> {
 
   Future<void> _refreshOrderDetails() async {
     try {
-      debugPrint('ðŸ”„ Refreshing order details by fetching saved orders...');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing order details by fetching saved orders...');
 
       // Instead of trying to fetch cart data directly,
       // refresh the saved orders list and find the current order
@@ -4992,77 +5019,82 @@ class OrderPanelState extends State<OrderPanel> {
               _selectedOrder = null;
             });
             widget.onOrderSelected(null);
-            debugPrint('âœ… Skipping reselect after order placed');
+            debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Skipping reselect after order placed');
             return;
           }
           setState(() {
             _selectedOrder = updatedOrder;
           });
-          debugPrint('âœ… Order details refreshed successfully');
+          debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order details refreshed successfully');
         } else {
-          debugPrint('âš ï¸ Could not find updated order in the list');
+          debugPrint(
+              'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Could not find updated order in the list');
         }
       } else {
         debugPrint(
-            'âš ï¸ Failed to refresh saved orders: ${response['message']}');
+            'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Failed to refresh saved orders: ${response['message']}');
       }
     } catch (e) {
-      debugPrint('âŒ Error refreshing order details: ${e.toString()}');
+      debugPrint(
+          'ÃƒÂ¢Ã‚ÂÃ…â€™ Error refreshing order details: ${e.toString()}');
       // As a fallback, try to refresh the saved orders list
       try {
         await _fetchSavedOrders();
       } catch (fallbackError) {
         debugPrint(
-            'âŒ Fallback refresh also failed: ${fallbackError.toString()}');
+            'ÃƒÂ¢Ã‚ÂÃ…â€™ Fallback refresh also failed: ${fallbackError.toString()}');
       }
     }
   }
 
   List<dynamic> _getCartItemsFromOrder(dynamic order) {
-    debugPrint('ðŸ“¦ _getCartItemsFromOrder called');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ _getCartItemsFromOrder called');
     if (order == null) {
-      debugPrint('âŒ _getCartItemsFromOrder: Order is null');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _getCartItemsFromOrder: Order is null');
       return [];
     }
 
     debugPrint(
-        'ðŸ” _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
 
     if (order['cart_items'] != null) {
-      debugPrint('âœ“ Found cart_items key');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Found cart_items key');
       if (order['cart_items']['cart_items'] is List) {
         final items = order['cart_items']['cart_items'];
         debugPrint(
-            'âœ“ Returning ${items.length} items from cart_items.cart_items');
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from cart_items.cart_items');
         return items;
       } else if (order['cart_items'] is List) {
         final items = order['cart_items'];
         debugPrint(
-            'âœ“ Returning ${items.length} items from cart_items (List)');
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from cart_items (List)');
         return items;
       }
     } else if (order['cart'] != null) {
-      debugPrint('âœ“ Found cart key');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Found cart key');
       if (order['cart']['cart_items'] is List) {
         final items = order['cart']['cart_items'];
-        debugPrint('âœ“ Returning ${items.length} items from cart.cart_items');
+        debugPrint(
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from cart.cart_items');
         return items;
       } else if (order['cart']['items'] is List) {
         final items = order['cart']['items'];
-        debugPrint('âœ“ Returning ${items.length} items from cart.items');
+        debugPrint(
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from cart.items');
         return items;
       }
     } else if (order['items'] is List) {
       final items = order['items'];
-      debugPrint('âœ“ Returning ${items.length} items from items');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from items');
       return items;
     } else if (order['order_items'] is List) {
       final items = order['order_items'];
-      debugPrint('âœ“ Returning ${items.length} items from order_items');
+      debugPrint(
+          'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from order_items');
       return items;
     }
 
-    debugPrint('âŒ _getCartItemsFromOrder: No cart items found');
+    debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _getCartItemsFromOrder: No cart items found');
     return [];
   }
 
@@ -5219,7 +5251,7 @@ class OrderPanelState extends State<OrderPanel> {
         final accessToken = authModel.token;
 
         debugPrint(
-            "ðŸ” Fetching order details for bill print - Order $orderNumber");
+            "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Fetching order details for bill print - Order $orderNumber");
         final response = await SalesProvider().listOrderDetails(
           context,
           orderNumber,
@@ -5287,7 +5319,8 @@ class OrderPanelState extends State<OrderPanel> {
           }
 
           if (mounted) {
-            debugPrint("ðŸ–¨ï¸ Attempting auto-print for order #$orderNumber");
+            debugPrint(
+                "ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â Attempting auto-print for order #$orderNumber");
 
             Future<bool> printOnce() {
               return _printOrderDetailsWithFallback(
@@ -5336,7 +5369,7 @@ class OrderPanelState extends State<OrderPanel> {
           }
         }
       } catch (e) {
-        debugPrint("âŒ Error printing bill: $e");
+        debugPrint("ÃƒÂ¢Ã‚ÂÃ…â€™ Error printing bill: $e");
         showScaffoldError(
             context: context, message: "Failed to print bill: $e");
 
@@ -5360,11 +5393,12 @@ class OrderPanelState extends State<OrderPanel> {
         _selectedOrder = null;
       });
       widget.onOrderSelected(null);
-      debugPrint('âœ… Skipping reselect after order placed');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Skipping reselect after order placed');
       return;
     }
 
-    debugPrint('ðŸ”„ Refreshing selected order after cart update...');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing selected order after cart update...');
 
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
@@ -5405,18 +5439,18 @@ class OrderPanelState extends State<OrderPanel> {
           // widget.onOrderSelected(updatedOrder); // Commented out to prevent loop
 
           debugPrint(
-              'âœ… Selected order refreshed successfully after cart update');
+              'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Selected order refreshed successfully after cart update');
         } else {
           debugPrint(
-              'âš ï¸ Could not find updated order in the list after cart update');
+              'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Could not find updated order in the list after cart update');
         }
       } else {
         debugPrint(
-            'âš ï¸ Failed to refresh saved orders after cart update: ${response['message']}');
+            'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Failed to refresh saved orders after cart update: ${response['message']}');
       }
     } catch (e) {
       debugPrint(
-          'âŒ Error refreshing selected order after cart update: ${e.toString()}');
+          'ÃƒÂ¢Ã‚ÂÃ…â€™ Error refreshing selected order after cart update: ${e.toString()}');
     }
   }
 
@@ -5887,7 +5921,8 @@ class OrderPanelState extends State<OrderPanel> {
       final orderId = _selectedOrder['id'] ?? _selectedOrder['order_id'];
       final orderNumber = _selectedOrder['order_number'];
 
-      debugPrint('ðŸ”„ Confirming order: $orderNumber (ID: $orderId)');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Confirming order: $orderNumber (ID: $orderId)');
 
       // Get order details for API call
       final customerId = _selectedCustomer?.id ??
@@ -6021,7 +6056,7 @@ class OrderPanelState extends State<OrderPanel> {
       _balanceAmount = _calculateBalanceAmount();
       final balanceAmount = _balanceAmount.toString();
 
-      debugPrint('ðŸ“¦ Order details for confirmation:');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ Order details for confirmation:');
       debugPrint('   - Customer ID: $customerId');
       debugPrint('   - Customer Phone: $customerPhone');
       debugPrint('   - Total Price: $totalPrice');
@@ -6029,7 +6064,7 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('   - Payment Method: $paymentMethod');
       debugPrint('   - Paid Amount: $paidAmount');
       debugPrint('   - Balance Amount: $balanceAmount');
-      debugPrint('ðŸŽ« Discount details for confirmation:');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â« Discount details for confirmation:');
       debugPrint(
           '   - Flat Discount: ${flatDiscountAmount.toStringAsFixed(2)}');
       debugPrint(
@@ -6037,7 +6072,7 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint(
           '   - Total Discount Amount: ${totalDiscountAmount.toStringAsFixed(2)}');
       debugPrint('   - Coupon Code: $_couponCode');
-      debugPrint('ðŸ”§ Payment Methods Details:');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Payment Methods Details:');
       debugPrint('   - Payment Methods Array: $paymentMethods');
       debugPrint('   - Paid Methods Array: $paidMethods');
       debugPrint(
@@ -6045,7 +6080,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint(
           '   - Is Card Selected: $_isCardSelected (Amount: $_cardAmount)');
       debugPrint('   - Is UPI Selected: $_isUpiSelected (Amount: $_upiAmount)');
-      debugPrint('\nðŸš€ CALLING updateOrderAPI with these parameters:');
+      debugPrint(
+          '\nÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ CALLING updateOrderAPI with these parameters:');
       debugPrint('   orderId: ${orderId.toString()}');
       debugPrint(
           '   accessToken: ${authModel.token != null ? "[PROVIDED]" : "[NULL]"}');
@@ -6066,7 +6102,7 @@ class OrderPanelState extends State<OrderPanel> {
           '   percentageDiscount: ${_percentageDiscount > 0 ? _percentageDiscount : null}');
       debugPrint(
           '   discountAmount: ${totalDiscountAmount > 0 ? totalDiscountAmount : null}');
-      debugPrint('\nðŸ“¡ About to call updateOrderAPI...');
+      debugPrint('\nÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ About to call updateOrderAPI...');
 
       // Call update order API with status "confirmed" and payment data
       final response = await cartProvider.updateOrderAPI(
@@ -6083,9 +6119,12 @@ class OrderPanelState extends State<OrderPanel> {
         paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
-        deliveryMethodId: _deliveryMethodId.isNotEmpty
-            ? _deliveryMethodId
-            : _getDefaultDeliveryMethodId(),
+        deliveryMethodId: widget.tableId == null
+            ? (_deliveryMethodId.isNotEmpty
+                ? _deliveryMethodId
+                : _getDefaultDeliveryMethodId())
+            : '',
+        tableId: widget.tableId ?? '',
         address: _deliveryAddress.isNotEmpty ? _deliveryAddress : null,
         // Add discount parameters
         flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
@@ -6096,7 +6135,7 @@ class OrderPanelState extends State<OrderPanel> {
         deliveryCharge: _getDeliveryChargeForOrder(),
       );
 
-      debugPrint('\nðŸ“¥ updateOrderAPI RESPONSE:');
+      debugPrint('\nÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ updateOrderAPI RESPONSE:');
       debugPrint('   Response: $response');
       debugPrint('   Response Type: ${response.runtimeType}');
       if (response is Map) {
@@ -6104,7 +6143,7 @@ class OrderPanelState extends State<OrderPanel> {
         debugPrint('   Message: ${response['message']}');
         debugPrint('   Data: ${response['data']}');
       }
-      debugPrint('âœ… Confirm order response: $response');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Confirm order response: $response');
 
       if (isApiSuccess(response)) {
         _refreshCustomersInBackgroundAfterSale();
@@ -6115,11 +6154,12 @@ class OrderPanelState extends State<OrderPanel> {
         );
 
         // Refresh saved orders to show updated status
-        debugPrint('ðŸ”„ Refreshing saved orders after confirming order');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing saved orders after confirming order');
         await Future.delayed(const Duration(milliseconds: 500));
         await _fetchSavedOrders();
 
-        // Delete the local draft so it no longer appears in Pending Orders
+        // Delete the local draft so it no longer appears in Saved Orders
         this.deleteLoadedDraftIfAny();
 
         // Clear the cart to prevent auto-save from recreating a draft on table switch
@@ -6143,7 +6183,7 @@ class OrderPanelState extends State<OrderPanel> {
         return false;
       }
     } catch (e) {
-      debugPrint('âŒ Error confirming order: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error confirming order: ${e.toString()}');
       showScaffoldError(
         context: context,
         message: 'Failed to confirm order: ${e.toString()}',
@@ -6168,7 +6208,8 @@ class OrderPanelState extends State<OrderPanel> {
       );
 
       // Refresh saved orders to show updated status
-      debugPrint('ðŸ”„ Refreshing saved orders after updating order status');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing saved orders after updating order status');
       await Future.delayed(const Duration(milliseconds: 500));
       await _fetchSavedOrders();
 

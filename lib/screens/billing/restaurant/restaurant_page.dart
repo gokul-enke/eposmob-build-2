@@ -380,7 +380,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   Widget _buildCounterSelectionPanel(Size screenSize) {
     return Container(
       margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.zero,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -396,16 +396,60 @@ class _RestaurantPageState extends State<RestaurantPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Order Context',
-            style: buildCustomStyle(
-              FontWeightManager.bold,
-              FontSize.s16,
-              0.21,
-              const Color(0xFF1E293B),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF10B981).withOpacity(0.05),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.shade100,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.tune_rounded,
+                    color: Color(0xFF10B981),
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Order Context',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s16,
+                      0.30,
+                      const Color(0xFF1E293B),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                children: [
           _buildCounterSelectorButton(
             icon: Icons.restaurant_rounded,
             title: 'Dining',
@@ -486,6 +530,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 FontSize.s12,
                 0.21,
                 const Color(0xFF475569),
+              ),
+            ),
+          ),
+                ],
               ),
             ),
           ),
@@ -690,7 +738,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       orElse: () => tableProvider.tables.first,
     );
 
-    _autoSaveCurrentTableBeforeSwitch();
+    final isEditingSelectedOrder = _selectedOrderFromOrderPanel != null;
+    if (!isEditingSelectedOrder) {
+      _autoSaveCurrentTableBeforeSwitch();
+    }
     setState(() {
       _activeTableId = id;
       _selectedTableName = selectedTable.name;
@@ -698,7 +749,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _selectedDeliveryMethodName = null;
     });
     _orderPanelKey.currentState?.resetPaymentModalFlag();
-    _orderPanelKey.currentState?.showCurrentOrderTab();
+    if (!isEditingSelectedOrder) {
+      _orderPanelKey.currentState?.showCurrentOrderTab();
+    }
   }
 
   void _selectDeliveryMethod(String id, String name) {
@@ -710,7 +763,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       return;
     }
 
-    _autoSaveCurrentTableBeforeSwitch();
+    final isEditingSelectedOrder = _selectedOrderFromOrderPanel != null;
+    if (!isEditingSelectedOrder) {
+      _autoSaveCurrentTableBeforeSwitch();
+    }
     setState(() {
       _selectedDeliveryMethodId = id;
       _selectedDeliveryMethodName = name;
@@ -718,7 +774,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _selectedTableName = null;
     });
     _orderPanelKey.currentState?.resetPaymentModalFlag();
-    _orderPanelKey.currentState?.showCurrentOrderTab();
+    if (!isEditingSelectedOrder) {
+      _orderPanelKey.currentState?.showCurrentOrderTab();
+    }
   }
 
   void _showDiningSelectionModal() {
