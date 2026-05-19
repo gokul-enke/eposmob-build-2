@@ -4,43 +4,26 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/helpers/payment_helper.dart';
 
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/models/restaurant/table_model.dart';
-import 'package:pos_machine/models/customer_list.dart';
-import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
-import 'package:pos_machine/providers/master_data_provider.dart';
-import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 
-import '../../components/build_container_box.dart';
-import '../../components/build_confirmation_dialog.dart';
 import '../../components/build_dialog_box.dart';
-import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
-import '../../screens/customers/add_customer_modal.dart';
-import '../../screens/billing/widgets/payment_method_modal.dart';
 
-import '../../components/build_round_button.dart'; // Add button import
+// Add button import
 import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
-import 'package:pos_machine/screens/print/print.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
-import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
@@ -122,7 +105,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final prefsProvider =
         Provider.of<SharedPreferenceProvider>(context, listen: false);
 
-    final leftFraction = await prefsProvider.getRestaurantLeftPanelWidthFraction(
+    final leftFraction =
+        await prefsProvider.getRestaurantLeftPanelWidthFraction(
       userId: authModel.userId,
     );
     final rightFraction =
@@ -238,7 +222,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
     if (!mounted) return;
     setState(() {
-      _selectedDeliveryMethodId = defaultMethod?.id ?? kFallbackDeliveryMethodId;
+      _selectedDeliveryMethodId =
+          defaultMethod?.id ?? kFallbackDeliveryMethodId;
       _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
     });
   }
@@ -279,22 +264,29 @@ class _RestaurantPageState extends State<RestaurantPage> {
               final totalWidth = constraints.maxWidth;
               final splitterCount = _showTablesPanel ? 2 : 1;
               final totalSplitterWidth = splitterCount * _splitterWidth;
-              final availableWidth = math.max(0, totalWidth - totalSplitterWidth);
+              final availableWidth =
+                  math.max(0, totalWidth - totalSplitterWidth);
               final leftMin = _showTablesPanel ? _leftPanelMinWidth : 0.0;
               final leftMax = _showTablesPanel
-                  ? math.max(leftMin, availableWidth - _menuPanelMinWidth - _rightPanelMinWidth)
+                  ? math.max(leftMin,
+                      availableWidth - _menuPanelMinWidth - _rightPanelMinWidth)
                   : 0.0;
               final rightMin = _rightPanelMinWidth;
               final rightMax = math.max(
                 rightMin,
-                availableWidth - (_showTablesPanel ? leftMin : 0) - _menuPanelMinWidth,
+                availableWidth -
+                    (_showTablesPanel ? leftMin : 0) -
+                    _menuPanelMinWidth,
               );
 
               final leftWidth = _showTablesPanel
-                  ? (availableWidth * _leftPanelWidthFraction).clamp(leftMin, leftMax).toDouble()
+                  ? (availableWidth * _leftPanelWidthFraction)
+                      .clamp(leftMin, leftMax)
+                      .toDouble()
                   : 0.0;
-              final rightWidth =
-                  (availableWidth * _rightPanelWidthFraction).clamp(rightMin, rightMax).toDouble();
+              final rightWidth = (availableWidth * _rightPanelWidthFraction)
+                  .clamp(rightMin, rightMax)
+                  .toDouble();
               final menuWidth = math.max(
                 _menuPanelMinWidth,
                 availableWidth - leftWidth - rightWidth,
@@ -310,8 +302,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         onSelect: (id) {
                           _autoSaveCurrentTableBeforeSwitch();
                           // Get table name from provider for desktop mode
-                          final tableProvider =
-                              Provider.of<TableProvider>(context, listen: false);
+                          final tableProvider = Provider.of<TableProvider>(
+                              context,
+                              listen: false);
                           final selectedTable = tableProvider.tables.firstWhere(
                             (table) => table.id == id,
                             orElse: () => tableProvider.tables.first,
@@ -350,9 +343,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   if (_showTablesPanel)
                     _buildHorizontalSplitter(
                       onDragUpdate: (dx) {
-                        final nextLeftWidth = (leftWidth + dx).clamp(leftMin, leftMax).toDouble();
+                        final nextLeftWidth =
+                            (leftWidth + dx).clamp(leftMin, leftMax).toDouble();
                         setState(() {
-                          _leftPanelWidthFraction = nextLeftWidth / availableWidth;
+                          _leftPanelWidthFraction =
+                              nextLeftWidth / availableWidth;
                         });
                       },
                       onDragEnd: _saveLeftPanelWidthPreference,
@@ -370,9 +365,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ),
                   _buildHorizontalSplitter(
                     onDragUpdate: (dx) {
-                      final nextRightWidth = (rightWidth - dx).clamp(rightMin, rightMax).toDouble();
+                      final nextRightWidth = (rightWidth - dx)
+                          .clamp(rightMin, rightMax)
+                          .toDouble();
                       setState(() {
-                        _rightPanelWidthFraction = nextRightWidth / availableWidth;
+                        _rightPanelWidthFraction =
+                            nextRightWidth / availableWidth;
                       });
                     },
                     onDragEnd: _saveRightPanelWidthPreference,
@@ -383,12 +381,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       key: _orderPanelKey,
                       tableId: _activeTableId,
                       preselectedDeliveryMethodId: _selectedDeliveryMethodId,
-                      preselectedDeliveryMethodName: _selectedDeliveryMethodName,
+                      preselectedDeliveryMethodName:
+                          _selectedDeliveryMethodName,
                       screenSize: screenSize,
                       onSendToKitchen: _sendOrderToKitchenWithLoading,
                       onNewOrder: _handleNewOrder,
                       onPrintOrder: _printOrderWithLoading,
-                      allowCounterBilling: widget.allowCounterBillingFromAttender,
+                      allowCounterBilling:
+                          widget.allowCounterBillingFromAttender,
                       isCounterBillingMode: _isCounterBillingMode,
                       onOrderSelected: (order) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -482,13 +482,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
             visualDensity: VisualDensity.compact,
             constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
             icon: Icon(
-              _showTablesPanel
-                  ? Icons.menu_open_rounded
-                  : Icons.menu_rounded,
+              _showTablesPanel ? Icons.menu_open_rounded : Icons.menu_rounded,
               color: const Color(0xFF2563EB),
               size: isCompact ? 18 : 20,
             ),
-            tooltip: _showTablesPanel ? 'Hide Tables Panel' : 'Show Tables Panel',
+            tooltip:
+                _showTablesPanel ? 'Hide Tables Panel' : 'Show Tables Panel',
             onPressed: () {
               final nextValue = !_showTablesPanel;
               setState(() => _showTablesPanel = nextValue);
@@ -1100,7 +1099,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _activeTableId = null;
       _selectedTableName = null;
       _selectedOrderFromOrderPanel = null;
-      _selectedDeliveryMethodId = defaultMethod?.id ?? kFallbackDeliveryMethodId;
+      _selectedDeliveryMethodId =
+          defaultMethod?.id ?? kFallbackDeliveryMethodId;
       _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
       _refreshCounter = (_refreshCounter ?? 0) + 1;
     });
