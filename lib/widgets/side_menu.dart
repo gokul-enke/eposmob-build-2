@@ -504,7 +504,9 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 78 ||
                       sideBarController.index.value == 79 ||
                       sideBarController.index.value == 84 ||
-                      sideBarController.index.value == 86,
+                      sideBarController.index.value == 86 ||
+                      sideBarController.index.value == 87 ||
+                      sideBarController.index.value == 88,
                 ),
               );
             },
