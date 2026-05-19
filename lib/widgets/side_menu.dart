@@ -348,9 +348,9 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.home,
                   title: 'Restaurant Legacy',
                   onTap: () {
-                    sideBarController.index.value = 86;
+                    sideBarController.index.value = 89;
                   },
-                  selected: sideBarController.index.value == 86,
+                  selected: sideBarController.index.value == 89,
                 ),
               );
             },
@@ -436,7 +436,8 @@ class _SideMenuState extends State<SideMenu> {
               final hasDayClosingPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.sales.day_closing.access');
-              final hasQuotationsPermission = true; // TODO: revert to roleProvider check when backend adds 'menu.sales.quotations.access'
+              final hasQuotationsPermission =
+                  true; // TODO: revert to roleProvider check when backend adds 'menu.sales.quotations.access'
               final isCompanyAdmin = userRole == 'company_admin';
 
               // Only show the expandable menu if user has at least one permission
