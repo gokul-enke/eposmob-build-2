@@ -9,6 +9,7 @@ import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/cart_item_status.dart';
@@ -983,12 +984,8 @@ class OrderPanelState extends State<OrderPanel> {
             if (codMethodId != null)
               debugPrint('  - COD Method ID: $codMethodId');
 
-            // Calculate balance
-            final totalPaid = (double.tryParse(cash) ?? 0.0) +
-                (double.tryParse(card) ?? 0.0) +
-                (double.tryParse(upi) ?? 0.0) +
-                (double.tryParse(cod) ?? 0.0);
-            _balanceAmount = totalPaid - orderTotal;
+            // Match billing_page.dart: balance is cash returned after customer credit.
+            _balanceAmount = _calculateBalanceAmount();
           });
 
           // Store payment method IDs in BillingProvider for API use
@@ -2162,11 +2159,8 @@ class OrderPanelState extends State<OrderPanel> {
         debugPrint('   - Coupon Code: $_couponCode');
       }
 
-      // Calculate balance amount
-      final orderTotal =
-          double.tryParse(order['grand_total']?.toString() ?? '0') ?? 0.0;
-      final totalPaid = double.tryParse(paidAmount) ?? 0.0;
-      _balanceAmount = totalPaid - orderTotal;
+      // Match billing_page.dart: balance is cash returned after customer credit.
+      _balanceAmount = _calculateBalanceAmount();
 
       debugPrint('💰 Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');
     } catch (e) {
@@ -2553,6 +2547,22 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   double _getEffectiveOrderTotal() {
+    if (_selectedOrder == null) {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+
+      final baseTotal = localProductProvider.priceSummary?.netTotal ??
+          localProductProvider.cartTotal;
+      final roundedOrBaseTotal =
+          appSettingsProvider.appSettings?.priceRoundOff == true
+              ? AmountHelper.roundOffAmount(baseTotal)
+              : baseTotal;
+
+      return roundedOrBaseTotal + _getDeliveryChargeForOrder();
+    }
+
     return _getDiscountedOrderTotalWithoutDelivery() +
         _getDeliveryChargeForOrder();
   }
@@ -5988,7 +5998,7 @@ class OrderPanelState extends State<OrderPanel> {
     return methods;
   }
 
-  List<Map<String, dynamic>> _getPaidMethodsForApi(double balanceAmount) {
+  List<Map<String, dynamic>> _getPaidMethodsForApi() {
     final paidMethods = <Map<String, dynamic>>[];
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
@@ -6019,7 +6029,7 @@ class OrderPanelState extends State<OrderPanel> {
 
     return PaymentHelper.normalizePaidMethodsForApi(
       paidMethods: paidMethods,
-      balanceAmount: balanceAmount > 0 ? balanceAmount : 0.0,
+      balanceAmount: _balanceAmount,
       cashMethodId: cashId,
       codMethodId: codId,
     );
@@ -6030,6 +6040,43 @@ class OrderPanelState extends State<OrderPanel> {
         (double.tryParse(_cardAmount) ?? 0.0) +
         (double.tryParse(_upiAmount) ?? 0.0) +
         (double.tryParse(_codAmount) ?? 0.0);
+  }
+
+  double _calculateBalanceAmount() {
+    final totalPaid = _getTotalPaidAmountFromState();
+    final payableTotal = _getEffectiveOrderTotal();
+    final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
+    final requestedCustomerCredit = _toCustomerCreditEnabled
+        ? (double.tryParse(_debitAmount) ?? _toCustomerCreditAmount)
+        : 0.0;
+
+    double cashBalance = 0.0;
+    if (_toCustomerCreditEnabled && _selectedCustomer != null) {
+      if (customerPrevBalance < 0) {
+        final transactionExcess = totalPaid - payableTotal;
+        if (transactionExcess > 0) {
+          final customerCredit = requestedCustomerCredit.clamp(
+            0.0,
+            transactionExcess,
+          ).toDouble();
+          cashBalance = transactionExcess - customerCredit;
+        }
+      } else {
+        final netDue = payableTotal - customerPrevBalance;
+        final availableBalance = totalPaid - netDue;
+        if (availableBalance > 0) {
+          final customerCredit = requestedCustomerCredit.clamp(
+            0.0,
+            availableBalance,
+          ).toDouble();
+          cashBalance = availableBalance - customerCredit;
+        }
+      }
+    } else {
+      cashBalance = totalPaid - payableTotal;
+    }
+
+    return cashBalance > 0 ? cashBalance : 0.0;
   }
 
   Map<String, dynamic> _orderResponseData(dynamic response) {
@@ -6244,11 +6291,9 @@ class OrderPanelState extends State<OrderPanel> {
       final priceSummary = localProductProvider.priceSummary;
       final netTotal = priceSummary?.netTotal ?? localProductProvider.cartTotal;
       final deliveryCharge = _getDeliveryChargeForOrder();
-      final payableTotal = netTotal + deliveryCharge;
-      final totalPaid = _getTotalPaidAmountFromState();
-      final balanceAmount = totalPaid - payableTotal;
+      _balanceAmount = _calculateBalanceAmount();
       final paymentMethods = _getSelectedPaymentMethodsForApi();
-      final paidMethods = _getPaidMethodsForApi(balanceAmount);
+      final paidMethods = _getPaidMethodsForApi();
 
       final items = cartItems.map((item) {
         return {
@@ -6282,7 +6327,7 @@ class OrderPanelState extends State<OrderPanel> {
         paidAmount: null,
         paymentMethods: paymentMethods,
         paidMethods: paidMethods,
-        balanceAmount: balanceAmount.toStringAsFixed(2),
+        balanceAmount: _balanceAmount.toString(),
         couponId:
             _isCouponApplied && _couponCode.isNotEmpty ? _couponCode : null,
         comment: _orderComment.trim().isNotEmpty ? _orderComment.trim() : null,
@@ -6488,6 +6533,7 @@ class OrderPanelState extends State<OrderPanel> {
           final totalPaid =
               cashAmountVal + cardAmountVal + upiAmountVal + codAmountVal;
           paidAmount = totalPaid.toString();
+          _balanceAmount = _calculateBalanceAmount();
 
           // Prepare raw paid methods, then normalize balance/change once.
           if (_isCashSelected && cashAmountVal > 0) {
@@ -6503,11 +6549,9 @@ class OrderPanelState extends State<OrderPanel> {
             paidMethods.add({"method": codId, "amount": codAmountVal});
           }
 
-          final orderAmount = double.tryParse(totalPrice) ?? 0.0;
-          final balanceAmountVal = totalPaid - orderAmount;
           paidMethods = PaymentHelper.normalizePaidMethodsForApi(
             paidMethods: paidMethods,
-            balanceAmount: balanceAmountVal > 0 ? balanceAmountVal : 0.0,
+            balanceAmount: _balanceAmount,
             cashMethodId: cashId,
             codMethodId: codId,
           );
@@ -6519,9 +6563,8 @@ class OrderPanelState extends State<OrderPanel> {
       }
 
       // Calculate balance amount
-      final totalPaid = double.tryParse(paidAmount ?? '0') ?? 0.0;
-      final orderAmount = double.tryParse(totalPrice) ?? 0.0;
-      final balanceAmount = (totalPaid - orderAmount).toString();
+      _balanceAmount = _calculateBalanceAmount();
+      final balanceAmount = _balanceAmount.toString();
 
       debugPrint('📦 Order details for confirmation:');
       debugPrint('   - Customer ID: $customerId');
