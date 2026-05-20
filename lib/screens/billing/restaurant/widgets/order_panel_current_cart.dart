@@ -249,7 +249,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
   // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     final showClearSaveActions = !_usesCounterOrderTabs;
-    final showSendToKitchen = widget.tableId != null;
+    final hasKitchenOrderContext = widget.tableId != null ||
+        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false);
+    final showSendToKitchen = hasKitchenOrderContext;
     final showFooterButtons = showClearSaveActions || showSendToKitchen;
 
     return SafeArea(
@@ -806,25 +808,27 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD97706).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: const Color(0xFFD97706).withOpacity(0.4)),
+                      if (!_usesCounterOrderTabs)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color:
+                                    const Color(0xFFD97706).withOpacity(0.4)),
+                          ),
+                          child: Text(
+                            'PENDING',
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s10 : FontSize.s11,
+                                0.21,
+                                const Color(0xFFD97706)),
+                          ),
                         ),
-                        child: Text(
-                          'PENDING',
-                          style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              widget.isCompact ? FontSize.s10 : FontSize.s11,
-                              0.21,
-                              const Color(0xFFD97706)),
-                        ),
-                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
