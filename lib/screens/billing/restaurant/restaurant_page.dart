@@ -941,7 +941,71 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     const Color(0xFF1E293B),
                   ),
                 ),
-                if (!isCompact)
+                if (!isCompact && isCounterEnabled) ...[
+                  _buildTopBarContextChip(
+                    icon: Icons.restaurant_rounded,
+                    label: _selectedTableName ?? 'Dining',
+                    color: const Color(0xFF2563EB),
+                    isSelected: _activeTableId != null,
+                    onTap: _showDiningSelectionModal,
+                  ),
+                  _buildTopBarContextChip(
+                    icon: Icons.person_rounded,
+                    label: _orderPanelKey
+                            .currentState?.selectedCustomerNameForDraft ??
+                        _orderPanelKey
+                            .currentState?.selectedCustomerPhoneForDraft ??
+                        'Customer',
+                    color: const Color(0xFF7C3AED),
+                    isSelected: _orderPanelKey
+                            .currentState?.selectedCustomerIdForDraft !=
+                        null,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Customer selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showCustomerSelectionModal();
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  _buildTopBarContextChip(
+                    icon: Icons.local_shipping_rounded,
+                    label: _selectedDeliveryMethodName ?? 'Delivery',
+                    color: const Color(0xFF059669),
+                    isSelected: _selectedDeliveryMethodId != null,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Delivery selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showDeliverySelectionModalFromParent();
+                      if (!mounted) return;
+                      final deliveryMethodId =
+                          state.selectedDeliveryMethodIdForDraft;
+                      final deliveryMethod =
+                          state.selectedDeliveryMethodForDraft;
+                      if (deliveryMethodId.isNotEmpty) {
+                        _selectDeliveryMethod(
+                          deliveryMethodId,
+                          deliveryMethod.isNotEmpty
+                              ? deliveryMethod
+                              : 'Delivery',
+                        );
+                      } else {
+                        setState(() {});
+                      }
+                    },
+                  ),
+                ] else if (!isCompact)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -993,6 +1057,55 @@ class _RestaurantPageState extends State<RestaurantPage> {
             const LiveClock(),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildTopBarContextChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.10) : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color:
+                  isSelected ? color.withOpacity(0.45) : Colors.grey.shade200,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon,
+                  size: 14, color: isSelected ? color : Colors.grey.shade600),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s12,
+                    0.21,
+                    isSelected ? color : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

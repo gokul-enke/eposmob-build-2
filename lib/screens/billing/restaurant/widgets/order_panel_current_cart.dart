@@ -248,9 +248,6 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
-    final showCounterCheckout =
-        widget.allowCounterBilling && widget.isCounterBillingMode;
-
     return SafeArea(
       top: false,
       child: Container(
@@ -318,39 +315,41 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
               ),
             ),
             const SizedBox(height: 12),
-            if (!showCounterCheckout)
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCurrentCartFooterButton(
-                      label: 'Clear',
-                      color: const Color(0xFFDC2626),
-                      isDisabled: cartItems.isEmpty,
-                      onTap: () => _clearCurrentCart(),
-                    ),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCurrentCartFooterButton(
+                    label: 'Clear',
+                    color: const Color(0xFFDC2626),
+                    isDisabled: cartItems.isEmpty,
+                    onTap: () => _clearCurrentCart(),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildCurrentCartFooterButton(
-                      label: 'Save',
-                      color: const Color(0xFF2563EB),
-                      isDisabled: cartItems.isEmpty || widget.tableId == null,
-                      onTap: () => _saveCurrentCartAsPending(),
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildCurrentCartFooterButton(
+                    label: 'Save',
+                    color: const Color(0xFF2563EB),
+                    isDisabled: cartItems.isEmpty ||
+                        (widget.tableId == null &&
+                            (widget.preselectedDeliveryMethodId == null ||
+                                widget.preselectedDeliveryMethodId!.isEmpty)),
+                    onTap: () => _saveCurrentCartAsPending(),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: _buildCurrentCartFooterButton(
-                      label: 'Send To Kitchen',
-                      color: const Color(0xFF059669),
-                      isDisabled: cartItems.isEmpty || widget.isLoadingPrint,
-                      isLoading: widget.isLoadingPrint,
-                      onTap: () => widget.onPrintOrder(),
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: _buildCurrentCartFooterButton(
+                    label: 'Send To Kitchen',
+                    color: const Color(0xFF059669),
+                    isDisabled: cartItems.isEmpty || widget.isLoadingPrint,
+                    isLoading: widget.isLoadingPrint,
+                    onTap: () => widget.onPrintOrder(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
