@@ -630,8 +630,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, _) {
         final hasItems = localProductProvider.cartItems.isNotEmpty;
-        final hasOrderContext =
-            _activeTableId != null || _selectedDeliveryMethodId != null;
+        final canCheckout = hasItems;
         return SafeArea(
           top: false,
           child: Padding(
@@ -665,7 +664,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     text: 'Save Order',
                     shortcutLabel: 'F8',
                     color: const Color(0xFFF59E0B),
-                    isDisabled: !hasItems || !hasOrderContext,
+                    isDisabled: !hasItems,
                     onPressed: () => _orderPanelKey.currentState
                         ?.saveCurrentCartFromParent(),
                   ),
@@ -674,7 +673,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     text: 'Confirm and Print',
                     shortcutLabel: 'F6',
                     color: const Color(0xFF5B8DEF),
-                    isDisabled: !hasItems || !hasOrderContext,
+                    isDisabled: !canCheckout,
                     onPressed: () => _orderPanelKey.currentState
                         ?.showCurrentCartCheckoutFromParent(),
                   ),
@@ -683,7 +682,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     text: 'Confirm Order',
                     shortcutLabel: 'F2',
                     color: const Color(0xFF08C63F),
-                    isDisabled: !hasItems || !hasOrderContext,
+                    isDisabled: !canCheckout,
                     onPressed: () => _orderPanelKey.currentState
                         ?.showCurrentCartCheckoutFromParent(),
                   ),

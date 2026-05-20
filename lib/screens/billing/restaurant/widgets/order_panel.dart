@@ -6738,7 +6738,24 @@ class OrderPanelState extends State<OrderPanel> {
   Future<void> saveCurrentCartFromParent() => _saveCurrentCartAsPending();
 
   void showCurrentCartCheckoutFromParent() {
-    _showCheckoutModal(forCurrentCart: true);
+    _showCheckoutModal(
+      forCurrentCart: true,
+      initialStep: _resolveCurrentCartCheckoutInitialStep(),
+    );
+  }
+
+  int _resolveCurrentCartCheckoutInitialStep() {
+    final hasCustomer = _selectedCustomer != null ||
+        _selectedCustomerID != null ||
+        (_selectedCustomerPhone?.trim().isNotEmpty ?? false);
+    if (!hasCustomer) return 0;
+
+    final hasOrderContext = widget.tableId != null ||
+        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false) ||
+        _deliveryMethodId.trim().isNotEmpty;
+    if (!hasOrderContext) return 1;
+
+    return 3;
   }
 
   void showCurrentOrderTab({bool preserveLoadedDraftMetadata = false}) {

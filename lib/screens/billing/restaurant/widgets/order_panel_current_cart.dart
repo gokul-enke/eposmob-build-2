@@ -593,14 +593,6 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   // Save current cart locally as a PENDING draft for the active table/delivery method
   Future<void> _saveCurrentCartAsPending() async {
-    if (widget.tableId == null &&
-        (widget.preselectedDeliveryMethodId == null ||
-            widget.preselectedDeliveryMethodId!.isEmpty)) {
-      showScaffoldError(
-          context: context, message: 'Select a table or delivery method first');
-      return;
-    }
-
     try {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
