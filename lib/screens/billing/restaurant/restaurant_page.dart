@@ -4,60 +4,35 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
-import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
-import 'package:pos_machine/helpers/payment_helper.dart';
 
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/models/restaurant/table_model.dart';
-import 'package:pos_machine/models/customer_list.dart';
-import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
-import 'package:pos_machine/providers/master_data_provider.dart';
-import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 
-import '../../components/build_container_box.dart';
-import '../../components/build_confirmation_dialog.dart';
-import '../../components/build_dialog_box.dart';
-import '../../resources/color_manager.dart';
-import '../../resources/font_manager.dart';
-import '../../resources/style_manager.dart';
-import '../../screens/customers/add_customer_modal.dart';
-import '../../screens/billing/widgets/payment_method_modal.dart';
+import '../../../components/build_dialog_box.dart';
+import '../../../resources/font_manager.dart';
+import '../../../resources/style_manager.dart';
 
-import '../../components/build_round_button.dart'; // Add button import
-import '../../providers/keyboard_provider.dart'; // Add keyboard provider import
+// Add button import
+import '../../../providers/keyboard_provider.dart'; // Add keyboard provider import
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
-import 'package:pos_machine/screens/print/print.dart';
-import 'package:pos_machine/providers/sales_provider.dart';
-import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/widgets/live_clock.dart';
 import 'package:pos_machine/widgets/open_cash_drawer_button.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
 
-import 'package:pos_machine/screens/billing/restaurant/tables_panel.dart';
-import 'package:pos_machine/screens/billing/restaurant/menu_panel.dart';
-import 'package:pos_machine/screens/billing/restaurant/order_panel.dart';
-
-/// Fallback delivery method ID when no default is configured.
-const String kFallbackDeliveryMethodId = '11';
-
-/// Checks if an API response status indicates success (handles known server typo).
-bool isApiSuccess(dynamic response) {
-  if (response == null) return false;
-  final status = (response['status'] as String?)?.toLowerCase();
-  return status == 'success' || status == 'sucesss';
-}
+import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
+import 'package:pos_machine/screens/billing/restaurant/widgets/tables_panel.dart';
+import 'package:pos_machine/screens/billing/restaurant/widgets/menu_panel.dart';
+import 'package:pos_machine/screens/billing/restaurant/widgets/order_panel.dart';
+import 'package:pos_machine/screens/billing/widgets/dining_selection_modal.dart';
 
 class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
@@ -99,6 +74,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   // Mobile navigation state
   MobileView _currentMobileView = MobileView.tables;
   String? _selectedTableName; // Store selected table name for header
+  SavedOrder? _editingLocalDraft;
 
   // Delivery method selection (alternative to table selection)
   String? _selectedDeliveryMethodId;
@@ -122,7 +98,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final prefsProvider =
         Provider.of<SharedPreferenceProvider>(context, listen: false);
 
-    final leftFraction = await prefsProvider.getRestaurantLeftPanelWidthFraction(
+    final leftFraction =
+        await prefsProvider.getRestaurantLeftPanelWidthFraction(
       userId: authModel.userId,
     );
     final rightFraction =
@@ -223,24 +200,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     // Load tables from API
     await tableProvider.loadTables(accessToken: authModel.token);
 
-    // If this page opens directly in counter mode, ensure a delivery context
-    // is preselected so add/send actions don't fail validation.
-    _ensureCounterDeliveryContext();
-  }
-
-  void _ensureCounterDeliveryContext() {
-    if (!_isCounterBillingMode) return;
-    if (_activeTableId != null || _selectedDeliveryMethodId != null) return;
-
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
-    final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
-
-    if (!mounted) return;
-    setState(() {
-      _selectedDeliveryMethodId = defaultMethod?.id ?? kFallbackDeliveryMethodId;
-      _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
-    });
+    // Counter mode starts without an implicit table/delivery context.
+    // The user can add items first, then choose Dining or Delivery explicitly.
   }
 
   @override
@@ -249,7 +210,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final screenWidth = screenSize.width;
 
     // Better responsive breakpoints
-    final isLargeScreen = screenWidth >= 1200;
+    final isLargeScreen = screenWidth >= 1024;
     final isSmallScreen = screenWidth < 900;
 
     return Scaffold(
@@ -279,22 +240,29 @@ class _RestaurantPageState extends State<RestaurantPage> {
               final totalWidth = constraints.maxWidth;
               final splitterCount = _showTablesPanel ? 2 : 1;
               final totalSplitterWidth = splitterCount * _splitterWidth;
-              final availableWidth = math.max(0, totalWidth - totalSplitterWidth);
+              final availableWidth =
+                  math.max(0, totalWidth - totalSplitterWidth);
               final leftMin = _showTablesPanel ? _leftPanelMinWidth : 0.0;
               final leftMax = _showTablesPanel
-                  ? math.max(leftMin, availableWidth - _menuPanelMinWidth - _rightPanelMinWidth)
+                  ? math.max(leftMin,
+                      availableWidth - _menuPanelMinWidth - _rightPanelMinWidth)
                   : 0.0;
               final rightMin = _rightPanelMinWidth;
               final rightMax = math.max(
                 rightMin,
-                availableWidth - (_showTablesPanel ? leftMin : 0) - _menuPanelMinWidth,
+                availableWidth -
+                    (_showTablesPanel ? leftMin : 0) -
+                    _menuPanelMinWidth,
               );
 
               final leftWidth = _showTablesPanel
-                  ? (availableWidth * _leftPanelWidthFraction).clamp(leftMin, leftMax).toDouble()
+                  ? (availableWidth * _leftPanelWidthFraction)
+                      .clamp(leftMin, leftMax)
+                      .toDouble()
                   : 0.0;
-              final rightWidth =
-                  (availableWidth * _rightPanelWidthFraction).clamp(rightMin, rightMax).toDouble();
+              final rightWidth = (availableWidth * _rightPanelWidthFraction)
+                  .clamp(rightMin, rightMax)
+                  .toDouble();
               final menuWidth = math.max(
                 _menuPanelMinWidth,
                 availableWidth - leftWidth - rightWidth,
@@ -305,74 +273,32 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   if (_showTablesPanel)
                     SizedBox(
                       width: leftWidth,
-                      child: TablesPanel(
-                        activeTableId: _activeTableId,
-                        onSelect: (id) {
-                          _autoSaveCurrentTableBeforeSwitch();
-                          // Get table name from provider for desktop mode
-                          final tableProvider =
-                              Provider.of<TableProvider>(context, listen: false);
-                          final selectedTable = tableProvider.tables.firstWhere(
-                            (table) => table.id == id,
-                            orElse: () => tableProvider.tables.first,
-                          );
-                          setState(() {
-                            _activeTableId = id;
-                            _selectedTableName = selectedTable.name;
-                            _selectedDeliveryMethodId = null;
-                            _selectedDeliveryMethodName = null;
-                          });
-                        },
-                        selectedDeliveryMethodId: _selectedDeliveryMethodId,
-                        showDeliveryMethods: _isCounterBillingMode,
-                        onDeliveryMethodSelected: (id, name) {
-                          if (id.isEmpty) {
-                            // Deselect delivery method
-                            setState(() {
-                              _selectedDeliveryMethodId = null;
-                              _selectedDeliveryMethodName = null;
-                            });
-                            return;
-                          }
-                          _autoSaveCurrentTableBeforeSwitch();
-                          setState(() {
-                            _selectedDeliveryMethodId = id;
-                            _selectedDeliveryMethodName = name;
-                            _activeTableId = null;
-                            _selectedTableName = null;
-                          });
-                          _orderPanelKey.currentState?.resetPaymentModalFlag();
-                          _orderPanelKey.currentState?.showCurrentOrderTab();
-                        },
-                        screenSize: screenSize,
-                      ),
+                      child: _buildLeftPanel(screenSize),
                     ),
                   if (_showTablesPanel)
                     _buildHorizontalSplitter(
                       onDragUpdate: (dx) {
-                        final nextLeftWidth = (leftWidth + dx).clamp(leftMin, leftMax).toDouble();
+                        final nextLeftWidth =
+                            (leftWidth + dx).clamp(leftMin, leftMax).toDouble();
                         setState(() {
-                          _leftPanelWidthFraction = nextLeftWidth / availableWidth;
+                          _leftPanelWidthFraction =
+                              nextLeftWidth / availableWidth;
                         });
                       },
                       onDragEnd: _saveLeftPanelWidthPreference,
                     ),
                   SizedBox(
                     width: menuWidth,
-                    child: MenuPanel(
-                      onCategoryChanged: (cid) =>
-                          setState(() => _activeCategoryId = cid),
-                      activeCategoryId: _activeCategoryId,
-                      onItemAdd: _handleItemAdd,
-                      screenSize: screenSize,
-                      selectedOrder: _selectedOrderFromOrderPanel,
-                    ),
+                    child: _buildMenuArea(screenSize),
                   ),
                   _buildHorizontalSplitter(
                     onDragUpdate: (dx) {
-                      final nextRightWidth = (rightWidth - dx).clamp(rightMin, rightMax).toDouble();
+                      final nextRightWidth = (rightWidth - dx)
+                          .clamp(rightMin, rightMax)
+                          .toDouble();
                       setState(() {
-                        _rightPanelWidthFraction = nextRightWidth / availableWidth;
+                        _rightPanelWidthFraction =
+                            nextRightWidth / availableWidth;
                       });
                     },
                     onDragEnd: _saveRightPanelWidthPreference,
@@ -383,18 +309,23 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       key: _orderPanelKey,
                       tableId: _activeTableId,
                       preselectedDeliveryMethodId: _selectedDeliveryMethodId,
-                      preselectedDeliveryMethodName: _selectedDeliveryMethodName,
+                      preselectedDeliveryMethodName:
+                          _selectedDeliveryMethodName,
                       screenSize: screenSize,
                       onSendToKitchen: _sendOrderToKitchenWithLoading,
                       onNewOrder: _handleNewOrder,
                       onPrintOrder: _printOrderWithLoading,
-                      allowCounterBilling: widget.allowCounterBillingFromAttender,
+                      allowCounterBilling:
+                          widget.allowCounterBillingFromAttender,
                       isCounterBillingMode: _isCounterBillingMode,
                       onOrderSelected: (order) {
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           if (mounted) {
                             setState(() {
                               _selectedOrderFromOrderPanel = order;
+                              if (order != null) {
+                                _editingLocalDraft = null;
+                              }
                             });
                           }
                         });
@@ -403,6 +334,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       refreshCounter: _refreshCounter,
                       isLoadingSendToKitchen: _isLoadingSendToKitchen,
                       isLoadingPrint: _isLoadingPrint,
+                      onLocalDraftLoaded: _applyLocalDraftContext,
+                      onLocalDraftSaved: _resetCounterOrderContextAfterSave,
                     ),
                   ),
                 ],
@@ -411,6 +344,516 @@ class _RestaurantPageState extends State<RestaurantPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLeftPanel(Size screenSize) {
+    if (_isCounterBillingMode) {
+      return _buildCounterSelectionPanel(screenSize);
+    }
+
+    return TablesPanel(
+      activeTableId: _activeTableId,
+      onSelect: _selectDiningTable,
+      selectedDeliveryMethodId: _selectedDeliveryMethodId,
+      showDeliveryMethods: _isCounterBillingMode,
+      onDeliveryMethodSelected: _selectDeliveryMethod,
+      screenSize: screenSize,
+    );
+  }
+
+  Widget _buildMenuArea(Size screenSize) {
+    final menuPanel = MenuPanel(
+      onCategoryChanged: (cid) => setState(() => _activeCategoryId = cid),
+      activeCategoryId: _activeCategoryId,
+      onItemAdd: _handleItemAdd,
+      screenSize: screenSize,
+      selectedOrder: _selectedOrderFromOrderPanel,
+    );
+
+    if (!_isCounterBillingMode) {
+      return menuPanel;
+    }
+
+    return Column(
+      children: [
+        Expanded(child: menuPanel),
+        _buildCounterActionBar(),
+      ],
+    );
+  }
+
+  Widget _buildCounterSelectionPanel(Size screenSize) {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      padding: EdgeInsets.zero,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF10B981).withOpacity(0.05),
+                  Colors.transparent,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.shade100,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.tune_rounded,
+                    color: Color(0xFF10B981),
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Order',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s16,
+                      0.30,
+                      const Color(0xFF1E293B),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+              child: Column(
+                children: [
+                  _buildCounterSelectorButton(
+                    icon: Icons.restaurant_rounded,
+                    title: 'Dining',
+                    value: _selectedTableName ?? 'Select table',
+                    color: const Color(0xFF2563EB),
+                    isSelected: _activeTableId != null,
+                    onTap: _showDiningSelectionModal,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCounterSelectorButton(
+                    icon: Icons.person_rounded,
+                    title: 'Customer',
+                    value: _orderPanelKey
+                            .currentState?.selectedCustomerNameForDraft ??
+                        _orderPanelKey
+                            .currentState?.selectedCustomerPhoneForDraft ??
+                        'Select customer',
+                    color: const Color(0xFF7C3AED),
+                    isSelected: _orderPanelKey
+                            .currentState?.selectedCustomerIdForDraft !=
+                        null,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Customer selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showCustomerSelectionModal();
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCounterSelectorButton(
+                    icon: Icons.local_shipping_rounded,
+                    title: 'Delivery',
+                    value: _selectedDeliveryMethodName ?? 'Select delivery',
+                    color: const Color(0xFF059669),
+                    isSelected: _selectedDeliveryMethodId != null,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Delivery selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showDeliverySelectionModalFromParent();
+                      if (!mounted) return;
+                      final deliveryMethodId =
+                          state.selectedDeliveryMethodIdForDraft;
+                      final deliveryMethod =
+                          state.selectedDeliveryMethodForDraft;
+                      if (deliveryMethodId.isNotEmpty) {
+                        _selectDeliveryMethod(
+                          deliveryMethodId,
+                          deliveryMethod.isNotEmpty
+                              ? deliveryMethod
+                              : 'Delivery',
+                        );
+                      } else {
+                        setState(() {});
+                      }
+                    },
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Text(
+                      _activeTableId != null
+                          ? 'Dining order: ${_selectedTableName ?? _activeTableId}'
+                          : _selectedDeliveryMethodId != null
+                              ? 'Delivery order: $_selectedDeliveryMethodName'
+                              : 'Choose Dining or Delivery before saving or confirming',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.21,
+                        const Color(0xFF475569),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCounterSelectorButton({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.08) : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? color : const Color(0xFFE2E8F0),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        FontSize.s13,
+                        0.21,
+                        const Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s11,
+                        0.21,
+                        const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: Colors.grey.shade500, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCounterActionBar() {
+    return Consumer<LocalProductProvider>(
+      builder: (context, localProductProvider, _) {
+        final hasItems = localProductProvider.cartItems.isNotEmpty;
+        final hasOrderContext =
+            _activeTableId != null || _selectedDeliveryMethodId != null;
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  _buildCounterActionButton(
+                    text: 'Clear Cart',
+                    shortcutLabel: 'F1',
+                    color: const Color(0xFFEF233C),
+                    isDisabled: !hasItems,
+                    onPressed: () => _orderPanelKey.currentState
+                        ?.clearCurrentCartFromParent(),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCounterActionButton(
+                    text: 'Save Order',
+                    shortcutLabel: 'F8',
+                    color: const Color(0xFFF59E0B),
+                    isDisabled: !hasItems || !hasOrderContext,
+                    onPressed: () => _orderPanelKey.currentState
+                        ?.saveCurrentCartFromParent(),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCounterActionButton(
+                    text: 'Confirm and Print',
+                    shortcutLabel: 'F6',
+                    color: const Color(0xFF5B8DEF),
+                    isDisabled: !hasItems || !hasOrderContext,
+                    onPressed: () => _orderPanelKey.currentState
+                        ?.showCurrentCartCheckoutFromParent(),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCounterActionButton(
+                    text: 'Confirm Order',
+                    shortcutLabel: 'F2',
+                    color: const Color(0xFF08C63F),
+                    isDisabled: !hasItems || !hasOrderContext,
+                    onPressed: () => _orderPanelKey.currentState
+                        ?.showCurrentCartCheckoutFromParent(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCounterActionButton({
+    required String text,
+    required String shortcutLabel,
+    required Color color,
+    required VoidCallback onPressed,
+    bool isDisabled = false,
+  }) {
+    return Expanded(
+      child: ElevatedButton(
+        onPressed: isDisabled ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          disabledBackgroundColor: color.withOpacity(0.55),
+          foregroundColor: Colors.white,
+          disabledForegroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                text,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.white.withOpacity(0.35)),
+              ),
+              child: Text(
+                shortcutLabel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _selectDiningTable(String id) {
+    final tableProvider = Provider.of<TableProvider>(context, listen: false);
+    final selectedTable = tableProvider.tables.firstWhere(
+      (table) => table.id == id,
+      orElse: () => tableProvider.tables.first,
+    );
+
+    final isEditingSelectedOrder = _selectedOrderFromOrderPanel != null;
+    if (!_isCounterBillingMode && !isEditingSelectedOrder) {
+      _autoSaveCurrentTableBeforeSwitch();
+    }
+    setState(() {
+      _activeTableId = id;
+      _selectedTableName = selectedTable.name;
+      _selectedDeliveryMethodId = null;
+      _selectedDeliveryMethodName = null;
+    });
+    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    if (!isEditingSelectedOrder) {
+      _orderPanelKey.currentState?.showCurrentOrderTab();
+    }
+  }
+
+  void _selectDeliveryMethod(String id, String name) {
+    if (id.isEmpty) {
+      setState(() {
+        _selectedDeliveryMethodId = null;
+        _selectedDeliveryMethodName = null;
+      });
+      return;
+    }
+
+    final isEditingSelectedOrder = _selectedOrderFromOrderPanel != null;
+    if (!_isCounterBillingMode && !isEditingSelectedOrder) {
+      _autoSaveCurrentTableBeforeSwitch();
+    }
+    setState(() {
+      _selectedDeliveryMethodId = id;
+      _selectedDeliveryMethodName = name;
+      _activeTableId = null;
+      _selectedTableName = null;
+    });
+    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    if (!isEditingSelectedOrder) {
+      _orderPanelKey.currentState?.showCurrentOrderTab();
+    }
+  }
+
+  void _applyLocalDraftContext(SavedOrder order) {
+    String? tableName;
+    if (order.tableId != null && order.tableId!.isNotEmpty) {
+      final tableProvider = Provider.of<TableProvider>(context, listen: false);
+      for (final table in tableProvider.tables) {
+        if (table.id == order.tableId) {
+          tableName = table.name;
+          break;
+        }
+      }
+    }
+
+    setState(() {
+      _editingLocalDraft = order;
+      _selectedOrderFromOrderPanel = null;
+      if (order.tableId != null && order.tableId!.isNotEmpty) {
+        _activeTableId = order.tableId;
+        _selectedTableName = tableName ?? order.tableId;
+        _selectedDeliveryMethodId = null;
+        _selectedDeliveryMethodName = null;
+      } else {
+        _activeTableId = null;
+        _selectedTableName = null;
+        _selectedDeliveryMethodId = order.deliveryMethodId;
+        _selectedDeliveryMethodName = order.deliveryMethod;
+      }
+    });
+  }
+
+  void _resetCounterOrderContextAfterSave() {
+    if (!_isCounterBillingMode) return;
+    setState(() {
+      _activeTableId = null;
+      _selectedTableName = null;
+      _selectedDeliveryMethodId = null;
+      _selectedDeliveryMethodName = null;
+      _selectedOrderFromOrderPanel = null;
+      _editingLocalDraft = null;
+      _refreshCounter = (_refreshCounter ?? 0) + 1;
+    });
+  }
+
+  void _showDiningSelectionModal() {
+    final tableProvider = Provider.of<TableProvider>(context, listen: false);
+    showDialog(
+      context: context,
+      builder: (_) => DiningSelectionModal(
+        tables: tableProvider.tables,
+        selectedTableId: _activeTableId,
+        onTableSelected: (table) => _selectDiningTable(table.id),
+      ),
     );
   }
 
@@ -449,9 +892,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final contextLabel = hasActiveTable
         ? (_selectedTableName ?? 'Selected table')
         : isCounterEnabled
-            ? (_selectedDeliveryMethodName ?? 'Store Takeaway')
+            ? (_selectedDeliveryMethodName ?? 'Choose Dining or Delivery')
             : (_selectedDeliveryMethodName ?? 'Select table or delivery');
-    const title = 'New Order';
+    final title = _topBarOrderTitle;
     final contextIcon = hasActiveTable
         ? Icons.table_restaurant_rounded
         : isCounterEnabled
@@ -482,38 +925,37 @@ class _RestaurantPageState extends State<RestaurantPage> {
             visualDensity: VisualDensity.compact,
             constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
             icon: Icon(
-              _showTablesPanel
-                  ? Icons.menu_open_rounded
-                  : Icons.menu_rounded,
+              _showTablesPanel ? Icons.menu_open_rounded : Icons.menu_rounded,
               color: const Color(0xFF2563EB),
               size: isCompact ? 18 : 20,
             ),
-            tooltip: _showTablesPanel ? 'Hide Tables Panel' : 'Show Tables Panel',
+            tooltip:
+                _showTablesPanel ? 'Hide Tables Panel' : 'Show Tables Panel',
             onPressed: () {
               final nextValue = !_showTablesPanel;
               setState(() => _showTablesPanel = nextValue);
               _saveTablesPanelPreference(nextValue);
             },
           ),
-          const SizedBox(width: 6),
-          Container(
-            padding: EdgeInsets.all(isCompact ? 7 : 9),
-            decoration: BoxDecoration(
-              color: isCounterEnabled
-                  ? const Color(0xFF059669).withOpacity(0.12)
-                  : const Color(0xFF2563EB).withOpacity(0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              isCounterEnabled
-                  ? Icons.point_of_sale_rounded
-                  : Icons.restaurant_menu_rounded,
-              color: isCounterEnabled
-                  ? const Color(0xFF059669)
-                  : const Color(0xFF2563EB),
-              size: isCompact ? 16 : 19,
-            ),
-          ),
+          // const SizedBox(width: 6),
+          // Container(
+          //   padding: EdgeInsets.all(isCompact ? 7 : 9),
+          //   decoration: BoxDecoration(
+          //     color: isCounterEnabled
+          //         ? const Color(0xFF059669).withOpacity(0.12)
+          //         : const Color(0xFF2563EB).withOpacity(0.10),
+          //     borderRadius: BorderRadius.circular(12),
+          //   ),
+          //   child: Icon(
+          //     isCounterEnabled
+          //         ? Icons.point_of_sale_rounded
+          //         : Icons.restaurant_menu_rounded,
+          //     color: isCounterEnabled
+          //         ? const Color(0xFF059669)
+          //         : const Color(0xFF2563EB),
+          //     size: isCompact ? 16 : 19,
+          //   ),
+          // ),
           const SizedBox(width: 10),
           Expanded(
             child: Wrap(
@@ -530,7 +972,71 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     const Color(0xFF1E293B),
                   ),
                 ),
-                if (!isCompact)
+                if (!isCompact && isCounterEnabled) ...[
+                  _buildTopBarContextChip(
+                    icon: Icons.restaurant_rounded,
+                    label: _selectedTableName ?? 'Dining',
+                    color: const Color(0xFF2563EB),
+                    isSelected: _activeTableId != null,
+                    onTap: _showDiningSelectionModal,
+                  ),
+                  _buildTopBarContextChip(
+                    icon: Icons.person_rounded,
+                    label: _orderPanelKey
+                            .currentState?.selectedCustomerNameForDraft ??
+                        _orderPanelKey
+                            .currentState?.selectedCustomerPhoneForDraft ??
+                        'Customer',
+                    color: const Color(0xFF7C3AED),
+                    isSelected: _orderPanelKey
+                            .currentState?.selectedCustomerIdForDraft !=
+                        null,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Customer selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showCustomerSelectionModal();
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  _buildTopBarContextChip(
+                    icon: Icons.local_shipping_rounded,
+                    label: _selectedDeliveryMethodName ?? 'Delivery',
+                    color: const Color(0xFF059669),
+                    isSelected: _selectedDeliveryMethodId != null,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Delivery selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showDeliverySelectionModalFromParent();
+                      if (!mounted) return;
+                      final deliveryMethodId =
+                          state.selectedDeliveryMethodIdForDraft;
+                      final deliveryMethod =
+                          state.selectedDeliveryMethodForDraft;
+                      if (deliveryMethodId.isNotEmpty) {
+                        _selectDeliveryMethod(
+                          deliveryMethodId,
+                          deliveryMethod.isNotEmpty
+                              ? deliveryMethod
+                              : 'Delivery',
+                        );
+                      } else {
+                        setState(() {});
+                      }
+                    },
+                  ),
+                ] else if (!isCompact)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -582,6 +1088,87 @@ class _RestaurantPageState extends State<RestaurantPage> {
             const LiveClock(),
           ],
         ],
+      ),
+    );
+  }
+
+  String get _topBarOrderTitle {
+    if (_editingLocalDraft != null) {
+      final orderNumber = _editingLocalDraft!.orderNumber.trim();
+      return orderNumber.isNotEmpty
+          ? 'Edit Draft - #$orderNumber'
+          : 'Edit Draft';
+    }
+
+    final selected = _selectedOrderFromOrderPanel;
+    if (selected is Map) {
+      final orderNumber = _firstNonEmptyTopBarValue([
+        selected['order_number'],
+        selected['display_order_id'],
+        selected['order_id'],
+        selected['id'],
+      ]);
+      return orderNumber != null ? 'Edit Order - #$orderNumber' : 'Edit Order';
+    }
+
+    return 'New Order';
+  }
+
+  String? _firstNonEmptyTopBarValue(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty && text.toLowerCase() != 'null') {
+        return text;
+      }
+    }
+    return null;
+  }
+
+  Widget _buildTopBarContextChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.10) : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color:
+                  isSelected ? color.withOpacity(0.45) : Colors.grey.shade200,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon,
+                  size: 14, color: isSelected ? color : Colors.grey.shade600),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s12,
+                    0.21,
+                    isSelected ? color : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -842,7 +1429,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
           child: TablesPanel(
             activeTableId: _activeTableId,
             onSelect: (id) {
-              _autoSaveCurrentTableBeforeSwitch();
+              if (!_isCounterBillingMode) {
+                _autoSaveCurrentTableBeforeSwitch();
+              }
               // Get table name from provider
               final tableProvider =
                   Provider.of<TableProvider>(context, listen: false);
@@ -869,7 +1458,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 });
                 return;
               }
-              _autoSaveCurrentTableBeforeSwitch();
+              if (!_isCounterBillingMode) {
+                _autoSaveCurrentTableBeforeSwitch();
+              }
               setState(() {
                 _selectedDeliveryMethodId = id;
                 _selectedDeliveryMethodName = name;
@@ -961,6 +1552,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 if (mounted) {
                   setState(() {
                     _selectedOrderFromOrderPanel = order;
+                    if (order != null) {
+                      _editingLocalDraft = null;
+                    }
                   });
                 }
               });
@@ -969,6 +1563,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
             refreshCounter: _refreshCounter,
             isLoadingSendToKitchen: _isLoadingSendToKitchen,
             isLoadingPrint: _isLoadingPrint,
+            onLocalDraftLoaded: _applyLocalDraftContext,
+            onLocalDraftSaved: _resetCounterOrderContextAfterSave,
           ),
         ),
       ],
@@ -1057,8 +1653,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
       return;
     }
 
-    _autoSaveCurrentTableBeforeSwitch();
-
     if (!enabled) {
       setState(() {
         _isCounterBillingMode = false;
@@ -1068,19 +1662,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       return;
     }
 
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
-    final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
-
     setState(() {
       _isCounterBillingMode = true;
-      // Keep existing table/delivery context. If nothing is selected yet,
-      // default to a delivery context so counter checkout can proceed.
-      if (_activeTableId == null && _selectedDeliveryMethodId == null) {
-        _selectedDeliveryMethodId =
-            defaultMethod?.id ?? kFallbackDeliveryMethodId;
-        _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
-      }
     });
     _orderPanelKey.currentState?.resetPaymentModalFlag();
     _orderPanelKey.currentState?.showCurrentOrderTab();
@@ -1090,39 +1673,27 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (!widget.allowCounterBillingFromAttender) return;
 
     _autoSaveCurrentTableBeforeSwitch();
-
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
-    final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+    Provider.of<LocalProductProvider>(context, listen: false).clearCart();
 
     setState(() {
       _isCounterBillingMode = true;
       _activeTableId = null;
       _selectedTableName = null;
       _selectedOrderFromOrderPanel = null;
-      _selectedDeliveryMethodId = defaultMethod?.id ?? kFallbackDeliveryMethodId;
-      _selectedDeliveryMethodName = defaultMethod?.name ?? 'Store Takeaway';
+      _editingLocalDraft = null;
+      _selectedDeliveryMethodId = null;
+      _selectedDeliveryMethodName = null;
       _refreshCounter = (_refreshCounter ?? 0) + 1;
     });
 
-    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    _orderPanelKey.currentState?.resetActiveOrderContext();
     _orderPanelKey.currentState?.showCurrentOrderTab();
   }
 
   Future<void> _handleItemAdd(GetProduct product, int quantity) async {
-    if (_activeTableId == null && _selectedDeliveryMethodId == null) {
-      showScaffoldError(
-        context: context,
-        message: 'Select a table or delivery method first',
-      );
-      return;
-    }
-
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
 
       // Only call API when editing an existing saved order
       final bool isEditingExistingOrder = _selectedOrderFromOrderPanel != null;
@@ -1426,17 +1997,22 @@ class _RestaurantPageState extends State<RestaurantPage> {
       );
     }
 
-    // Deselect the active table
+    // Deselect active order context
     setState(() {
       _activeTableId = null;
+      _selectedTableName = null;
+      _selectedDeliveryMethodId = null;
+      _selectedDeliveryMethodName = null;
+      _selectedOrderFromOrderPanel = null;
+      _editingLocalDraft = null;
     });
 
-    // Reset payment modal flag in OrderPanel
-    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    _orderPanelKey.currentState?.resetActiveOrderContext();
+    _orderPanelKey.currentState?.showCurrentOrderTab();
 
     showScaffold(
       context: context,
-      message: 'New order started. Cart cleared and table deselected.',
+      message: 'New order started. Cart and context cleared.',
     );
   }
 
@@ -1706,6 +2282,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         couponId: orderPanelState?.couponIdForDraft,
         deliveryMethodId: _selectedDeliveryMethodId ??
             orderPanelState?.deliveryMethodIdForDraft,
+        carNumber: orderPanelState?.carNumberForDraft,
         status: 'pending',
         deliveryDate: orderPanelState?.deliveryDateForDraft,
         deliveryTime: orderPanelState?.deliveryTimeForDraft,
@@ -1714,6 +2291,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
         tableId: _activeTableId,
         address: orderPanelState?.deliveryAddressForDraft,
         deliveryCharge: orderPanelState?.deliveryChargeForDraft,
+        alternatePhone: orderPanelState?.selectedCustomerAlternatePhoneForDraft,
+        customerVatNumber: orderPanelState?.selectedCustomerVatNumberForDraft,
+        customerCrNumber: orderPanelState?.selectedCustomerCrNumberForDraft,
+        customerType: orderPanelState?.selectedCustomerTypeForDraft,
       );
 
       debugPrint(

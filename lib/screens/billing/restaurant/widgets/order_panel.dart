@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -16,16 +17,16 @@ import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
-import '../../../components/build_container_box.dart';
-import '../../../components/build_confirmation_dialog.dart';
-import '../../../components/build_dialog_box.dart';
-import '../../../components/build_round_button.dart';
-import '../../../resources/color_manager.dart';
-import '../../../resources/font_manager.dart';
-import '../../../resources/style_manager.dart';
-import '../../../screens/customers/add_customer_modal.dart';
-import '../../../screens/billing/widgets/payment_method_modal.dart';
-import '../../../providers/keyboard_provider.dart';
+import '../../../../components/build_container_box.dart';
+import '../../../../components/build_confirmation_dialog.dart';
+import '../../../../components/build_dialog_box.dart';
+import '../../../../components/build_round_button.dart';
+import '../../../../resources/color_manager.dart';
+import '../../../../resources/font_manager.dart';
+import '../../../../resources/style_manager.dart';
+import '../../../../screens/customers/add_customer_modal.dart';
+import '../../../../screens/billing/widgets/payment_method_modal.dart';
+import '../../../../providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -34,7 +35,12 @@ import 'package:pos_machine/screens/print/print_kot.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/screens/billing/restaurant_page.dart';
+import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.dart';
+
+part 'order_panel_current_cart.dart';
+part 'order_panel_saved_order_item.dart';
+
+enum OrderPanelTab { cart, saved, ongoing }
 
 class OrderPanel extends StatefulWidget {
   final String? tableId;
@@ -57,6 +63,8 @@ class OrderPanel extends StatefulWidget {
       preselectedDeliveryMethodName; // Name of preselected delivery method
   final bool allowCounterBilling;
   final bool isCounterBillingMode;
+  final ValueChanged<SavedOrder>? onLocalDraftLoaded;
+  final VoidCallback? onLocalDraftSaved;
 
   const OrderPanel({
     super.key, // Add key parameter
@@ -75,6 +83,8 @@ class OrderPanel extends StatefulWidget {
     this.preselectedDeliveryMethodName, // Name of preselected delivery method
     this.allowCounterBilling = false,
     this.isCounterBillingMode = false,
+    this.onLocalDraftLoaded,
+    this.onLocalDraftSaved,
   });
 
   @override
@@ -86,6 +96,7 @@ class OrderPanelState extends State<OrderPanel> {
   List<dynamic> _savedOrders = [];
   List<SavedOrder> _localDrafts = [];
   bool _isLoadingOrders = false;
+  bool _isLoadingOngoingOrders = false;
   bool _isLoadingOrderDetails = false;
   String? _error;
   final Set<String> _loadingCartItems =
@@ -93,12 +104,15 @@ class OrderPanelState extends State<OrderPanel> {
   bool _isLoadingConfirm = false; // Loading state for Confirm button
   bool _isLoadingPrintKot =
       false; // Loading state for edit-order Print KOT button
-  bool _isProcessingCheckout =
-      false; // Loading state for footer checkout button
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
   bool _showSavedOrdersView = false;
+  bool _forceCounterCartView = false;
+  OrderPanelTab _activeOrderPanelTab = OrderPanelTab.cart;
   int _lastObservedCartCount = 0;
+
+  bool get _usesCounterOrderTabs =>
+      widget.allowCounterBilling && widget.isCounterBillingMode;
 
   // Scroll + highlight for newly added items in edit-order view
   final ScrollController _editOrderScrollController = ScrollController();
@@ -125,6 +139,7 @@ class OrderPanelState extends State<OrderPanel> {
   String _deliveryMethod = "Store Takeaway";
   String _deliveryMethodId = "";
   String _deliveryAddress = "";
+  String _carNumber = "";
   String? _deliveryDate;
   String? _deliveryTime;
   double? _selectedDeliveryCharge;
@@ -137,6 +152,8 @@ class OrderPanelState extends State<OrderPanel> {
   String? get selectedCustomerPhoneForDraft =>
       _selectedCustomer?.phone ?? _selectedCustomerPhone;
   String? get selectedCustomerTypeForDraft => _selectedCustomer?.customerType;
+  String get selectedDeliveryMethodForDraft => _deliveryMethod;
+  String get selectedDeliveryMethodIdForDraft => _deliveryMethodId;
   String get deliveryMethodForDraft => _deliveryMethod;
   String get deliveryMethodIdForDraft => _deliveryMethodId.isNotEmpty
       ? _deliveryMethodId
@@ -145,6 +162,8 @@ class OrderPanelState extends State<OrderPanel> {
   String? get deliveryTimeForDraft => _deliveryTime;
   String? get deliveryAddressForDraft =>
       _deliveryAddress.isNotEmpty ? _deliveryAddress : null;
+  String? get carNumberForDraft =>
+      _carNumber.trim().isNotEmpty ? _carNumber.trim() : null;
   double get deliveryChargeForDraft => _getDeliveryChargeForOrder();
   bool get toCustomerCreditForDraft => _toCustomerCreditEnabled;
   String? get transactionNumberForDraft =>
@@ -154,6 +173,12 @@ class OrderPanelState extends State<OrderPanel> {
   String? get paymentMethodForDraft =>
       _getLocalDraftPaymentData()['paymentMethod'];
   String? get paidAmountForDraft => _getLocalDraftPaymentData()['paidAmount'];
+  String? get selectedCustomerAlternatePhoneForDraft =>
+      _firstNonEmptyString([_selectedCustomer?.altPhone]);
+  String? get selectedCustomerVatNumberForDraft =>
+      _extractCustomerKycValue(_selectedCustomer, 'VAT NUMBER');
+  String? get selectedCustomerCrNumberForDraft =>
+      _extractCustomerKycValue(_selectedCustomer, 'CR NUMBER');
 
   // Customer Selection Variables
   CustomerListModelData? _selectedCustomer;
@@ -187,12 +212,19 @@ class OrderPanelState extends State<OrderPanel> {
           widget.preselectedDeliveryMethodName ?? 'Store Takeaway';
     }
 
-    // Load saved orders and local drafts when the widget is first created with a tableId or delivery method
+    // Load saved orders and local drafts when the widget is first created with
+    // a table/delivery context. Counter mode can show all local drafts before a
+    // context is selected.
     if (widget.tableId != null ||
         (widget.preselectedDeliveryMethodId != null &&
-            widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+            widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+        _usesCounterOrderTabs) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _fetchSavedOrders();
+        if (widget.tableId != null ||
+            (widget.preselectedDeliveryMethodId != null &&
+                widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+          _fetchSavedOrders();
+        }
         _refreshLocalDrafts();
       });
     }
@@ -221,13 +253,23 @@ class OrderPanelState extends State<OrderPanel> {
     if (widget.tableId != oldWidget.tableId ||
         widget.preselectedDeliveryMethodId !=
             oldWidget.preselectedDeliveryMethodId) {
+      if (_selectedOrder != null) {
+        _applyCurrentContextToSelectedOrder();
+        return;
+      }
+
       setState(() {
         _showSavedOrdersView = false;
       });
       if (widget.tableId != null ||
           (widget.preselectedDeliveryMethodId != null &&
-              widget.preselectedDeliveryMethodId!.isNotEmpty)) {
-        _fetchSavedOrders();
+              widget.preselectedDeliveryMethodId!.isNotEmpty) ||
+          _usesCounterOrderTabs) {
+        if (widget.tableId != null ||
+            (widget.preselectedDeliveryMethodId != null &&
+                widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+          _fetchSavedOrders();
+        }
         _refreshLocalDrafts();
       } else {
         setState(() {
@@ -272,9 +314,48 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
-  Future<void> _fetchSavedOrders() async {
+  void _applyCurrentContextToSelectedOrder() {
     setState(() {
-      _isLoadingOrders = true;
+      if (widget.tableId != null && widget.tableId!.isNotEmpty) {
+        _deliveryMethodId = '';
+        _deliveryMethod = 'Store Takeaway';
+        if (_selectedOrder is Map) {
+          _selectedOrder['table_id'] = widget.tableId;
+          _selectedOrder['delivery_method_id'] = null;
+          _selectedOrder['delivery_method_name'] = null;
+          _selectedOrder['delivery_method'] = null;
+          final orderProps = _selectedOrder['orderProps'];
+          if (orderProps is Map) {
+            orderProps['TABLE'] = widget.tableId;
+          }
+        }
+      } else if (widget.preselectedDeliveryMethodId != null &&
+          widget.preselectedDeliveryMethodId!.isNotEmpty) {
+        _deliveryMethodId = widget.preselectedDeliveryMethodId!;
+        _deliveryMethod =
+            widget.preselectedDeliveryMethodName ?? 'Store Takeaway';
+        if (_selectedOrder is Map) {
+          _selectedOrder['table_id'] = null;
+          _selectedOrder['delivery_method_id'] = _deliveryMethodId;
+          _selectedOrder['delivery_method_name'] = _deliveryMethod;
+          _selectedOrder['delivery_method'] = _deliveryMethod;
+          final orderProps = _selectedOrder['orderProps'];
+          if (orderProps is Map) {
+            orderProps.remove('TABLE');
+          }
+        }
+      }
+    });
+    widget.onOrderSelected(_selectedOrder);
+  }
+
+  Future<void> _fetchSavedOrders({bool showFullPanelLoader = true}) async {
+    setState(() {
+      if (showFullPanelLoader) {
+        _isLoadingOrders = true;
+      } else {
+        _isLoadingOngoingOrders = true;
+      }
       _savedOrders = [];
       _selectedOrder = null;
       _error = null;
@@ -285,16 +366,17 @@ class OrderPanelState extends State<OrderPanel> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
     debugPrint(
-        '🔄 _fetchSavedOrders: Sending request with tableId: ${widget.tableId}, deliveryMethodId: ${widget.preselectedDeliveryMethodId}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _fetchSavedOrders: Sending request with tableId: ${widget.tableId}, deliveryMethodId: ${widget.preselectedDeliveryMethodId}');
     try {
-      debugPrint('➡️ Calling CartProvider.listSavedOrders');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.listSavedOrders');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
         deliveryMethodId:
             widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
-      debugPrint('✅ listSavedOrders Response: $response');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
         setState(() {
           _savedOrders = response['orders'];
@@ -310,27 +392,43 @@ class OrderPanelState extends State<OrderPanel> {
       });
     } finally {
       setState(() {
-        _isLoadingOrders = false;
+        if (showFullPanelLoader) {
+          _isLoadingOrders = false;
+        } else {
+          _isLoadingOngoingOrders = false;
+        }
       });
     }
   }
 
   // Public method to refresh saved orders from external calls
   void refreshSavedOrders() {
-    if (widget.tableId != null || widget.preselectedDeliveryMethodId != null) {
+    if (widget.tableId != null ||
+        widget.preselectedDeliveryMethodId != null ||
+        _usesCounterOrderTabs) {
       debugPrint(
-          '🔄 External refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
-      _fetchSavedOrders();
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ External refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
+      if (widget.tableId != null ||
+          (widget.preselectedDeliveryMethodId != null &&
+              widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+        _fetchSavedOrders();
+      }
       _refreshLocalDrafts();
     }
   }
 
   // Public method to refresh saved orders silently (no loading spinner)
   Future<void> refreshSavedOrdersSilently() async {
-    if (widget.tableId != null || widget.preselectedDeliveryMethodId != null) {
+    if (widget.tableId != null ||
+        widget.preselectedDeliveryMethodId != null ||
+        _usesCounterOrderTabs) {
       debugPrint(
-          '🔄 External silent refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
-      await _refreshSavedOrdersSilently();
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ External silent refresh of saved orders triggered for table: ${widget.tableId}, delivery: ${widget.preselectedDeliveryMethodId}');
+      if (widget.tableId != null ||
+          (widget.preselectedDeliveryMethodId != null &&
+              widget.preselectedDeliveryMethodId!.isNotEmpty)) {
+        await _refreshSavedOrdersSilently();
+      }
       _refreshLocalDrafts();
     }
   }
@@ -373,13 +471,13 @@ class OrderPanelState extends State<OrderPanel> {
 
     _applyDefaultCustomer();
     debugPrint(
-        '🗂️ Restaurant order panel hydrated customers from provider cache: ${_customers.length}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬Å¡ÃƒÂ¯Ã‚Â¸Ã‚Â Restaurant order panel hydrated customers from provider cache: ${_customers.length}');
   }
 
   void _refreshCustomersInBackgroundAfterSale() {
     if (!mounted) return;
     debugPrint(
-        '🔄 Refreshing customers in background after successful confirm (restaurant order panel)');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing customers in background after successful confirm (restaurant order panel)');
 
     Future.microtask(() async {
       try {
@@ -395,7 +493,7 @@ class OrderPanelState extends State<OrderPanel> {
         _hydrateCustomerListFromProviderCache();
       } catch (e) {
         debugPrint(
-            '⚠️ Background customer refresh failed after confirm (restaurant order panel): $e');
+            'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Background customer refresh failed after confirm (restaurant order panel): $e');
       }
     });
   }
@@ -489,8 +587,49 @@ class OrderPanelState extends State<OrderPanel> {
     return null;
   }
 
+  CustomerListModelData? _buildDraftCustomerFallback(SavedOrder order) {
+    final hasCustomerData = order.customerId != null ||
+        (order.customerName?.trim().isNotEmpty ?? false) ||
+        (order.customerPhone?.trim().isNotEmpty ?? false);
+    if (!hasCustomerData) return null;
+
+    final kyc = <Kyc>[];
+    if (order.customerCrNumber?.trim().isNotEmpty ?? false) {
+      kyc.add(Kyc(key: 'CR NUMBER', value: order.customerCrNumber!.trim()));
+    }
+    if (order.customerVatNumber?.trim().isNotEmpty ?? false) {
+      kyc.add(Kyc(key: 'VAT NUMBER', value: order.customerVatNumber!.trim()));
+    }
+
+    return CustomerListModelData(
+      id: order.customerId,
+      name: order.customerName,
+      phone: order.customerPhone,
+      altPhone: order.alternatePhone,
+      customerType: order.customerType,
+      address: order.address,
+      kyc: kyc.isNotEmpty ? kyc : null,
+    );
+  }
+
+  String? _extractCustomerKycValue(
+    CustomerListModelData? customer,
+    String key,
+  ) {
+    if (customer?.kyc == null) return null;
+    final normalizedKey = key.trim().toUpperCase();
+    for (final item in customer!.kyc!) {
+      if ((item.key ?? '').trim().toUpperCase() == normalizedKey) {
+        final value = item.value?.trim();
+        if (value != null && value.isNotEmpty) return value;
+      }
+    }
+    return null;
+  }
+
   void _rehydrateLocalDraftMetadata(SavedOrder order) {
-    final matchedCustomer = _resolveDraftCustomer(order);
+    final matchedCustomer =
+        _resolveDraftCustomer(order) ?? _buildDraftCustomerFallback(order);
     final parsedPayment =
         PaymentHelper.parseLocalMultiPayment(context, order.paymentMethod);
     final paymentBreakdown = parsedPayment?.paymentBreakdown;
@@ -535,11 +674,12 @@ class OrderPanelState extends State<OrderPanel> {
       _isCustomerManuallySelected = order.customerId != null ||
           (order.customerPhone?.isNotEmpty ?? false);
 
-      _orderComment = _cleanDraftComment(order.comment);
+      _orderComment = this._cleanDraftComment(order.comment);
       _deliveryMethod = order.deliveryMethod ?? 'Store Takeaway';
       _deliveryMethodId =
           order.deliveryMethodId ?? _getDefaultDeliveryMethodId();
       _deliveryAddress = order.address ?? '';
+      _carNumber = order.carNumber ?? '';
       _deliveryDate = order.deliveryDate;
       _deliveryTime = order.deliveryTime;
       _selectedDeliveryCharge = order.deliveryCharge;
@@ -554,7 +694,7 @@ class OrderPanelState extends State<OrderPanel> {
       _transactionNumber = order.transactionId ?? '';
       _balanceAmount = double.tryParse(order.balanceAmount ?? '') ?? 0.0;
       _toCustomerCreditEnabled = order.toCustomerCredit ?? false;
-      _toCustomerCreditAmount = 0.0;
+      _toCustomerCreditAmount = _toCustomerCreditEnabled ? debitAmount : 0.0;
 
       _isCashSelected = cashAmount > 0;
       _cashAmount = cashAmount > 0 ? cashAmount.toStringAsFixed(2) : '';
@@ -627,7 +767,8 @@ class OrderPanelState extends State<OrderPanel> {
 
   /// Fetch cart item statuses for Mark Served functionality
   Future<void> _fetchCartItemStatuses() async {
-    debugPrint('🚀 === FETCHING CART ITEM STATUSES (Restaurant) ===');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ === FETCHING CART ITEM STATUSES (Restaurant) ===');
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
@@ -642,23 +783,25 @@ class OrderPanelState extends State<OrderPanel> {
           _availableStatuses = statusResponse.data;
         });
 
-        debugPrint('✅ Fetched ${_availableStatuses.length} cart item statuses');
+        debugPrint(
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Fetched ${_availableStatuses.length} cart item statuses');
         for (var status in _availableStatuses) {
-          debugPrint('   📊 ID: ${status.id}, Value: "${status.value}"');
+          debugPrint(
+              '   ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  ID: ${status.id}, Value: "${status.value}"');
         }
       } else {
         debugPrint(
-            '❌ Failed to fetch cart item statuses: ${response['message']}');
+            'ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to fetch cart item statuses: ${response['message']}');
       }
     } catch (e) {
-      debugPrint('❌ Exception fetching cart item statuses: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Exception fetching cart item statuses: $e');
     }
   }
 
   /// Helper method to find status ID by value
   int? _findStatusIdByValue(String value) {
     if (_availableStatuses.isEmpty) {
-      debugPrint('⚠️ No available statuses loaded yet');
+      debugPrint('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â No available statuses loaded yet');
       return null;
     }
 
@@ -668,11 +811,13 @@ class OrderPanelState extends State<OrderPanel> {
     );
 
     if (status.id == 0) {
-      debugPrint('⚠️ Status value "$value" not found in available statuses');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Status value "$value" not found in available statuses');
       return null;
     }
 
-    debugPrint('🔍 Found status ID ${status.id} for value "$value"');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Found status ID ${status.id} for value "$value"');
     return status.id;
   }
 
@@ -685,8 +830,8 @@ class OrderPanelState extends State<OrderPanel> {
         _selectedOrder['display_order_id']?.toString() ??
         orderId.toString();
 
-    debugPrint('🚀 === MARKING ALL ORDER ITEMS AS SERVED ===');
-    debugPrint('📦 Order ID: $orderId');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ === MARKING ALL ORDER ITEMS AS SERVED ===');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ Order ID: $orderId');
 
     final statusId = _findStatusIdByValue('SERVED');
     if (statusId == null) {
@@ -708,10 +853,10 @@ class OrderPanelState extends State<OrderPanel> {
         accessToken: authModel.token ?? '',
       );
 
-      debugPrint('📥 API Response: $response');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ API Response: $response');
 
       if ((response['status'] as String?)?.toLowerCase() == 'success') {
-        debugPrint('✅ All order items updated to SERVED');
+        debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ All order items updated to SERVED');
 
         // Refresh the saved orders to get updated statuses
         await _refreshSavedOrdersSilently();
@@ -736,7 +881,7 @@ class OrderPanelState extends State<OrderPanel> {
           );
         }
       } else {
-        debugPrint('❌ Failed to update all order items');
+        debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to update all order items');
         if (mounted) {
           showScaffoldError(
             context: context,
@@ -745,7 +890,7 @@ class OrderPanelState extends State<OrderPanel> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Exception updating all order items: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Exception updating all order items: $e');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -758,20 +903,21 @@ class OrderPanelState extends State<OrderPanel> {
           _isMarkingServed = false;
         });
       }
-      debugPrint('🏁 === MARK ALL SERVED COMPLETED ===');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã‚ÂÃ‚Â === MARK ALL SERVED COMPLETED ===');
     }
   }
 
   /// Extracts and applies the default customer from app settings
   void _applyDefaultCustomer() {
-    debugPrint("🔍 [DEBUG] Restaurant: _applyDefaultCustomer called");
+    debugPrint(
+        "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â [DEBUG] Restaurant: _applyDefaultCustomer called");
 
     // Safeguard: if customer was manually selected or already partially entered, don't reset to default
     if (_isCustomerManuallySelected &&
         (_selectedCustomerID != null ||
             _selectedCustomerPhone?.isNotEmpty == true)) {
       debugPrint(
-          "🛡️ [DEBUG] Restaurant: Customer manually selected (ID: $_selectedCustomerID, Phone: $_selectedCustomerPhone), skipping reset to default");
+          "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â [DEBUG] Restaurant: Customer manually selected (ID: $_selectedCustomerID, Phone: $_selectedCustomerPhone), skipping reset to default");
       return;
     }
 
@@ -783,11 +929,11 @@ class OrderPanelState extends State<OrderPanel> {
           appSettingsProvider.appSettings?.autoAssignDefaultCustomer ?? false;
 
       debugPrint(
-          "🔧 [DEBUG] Restaurant: Auto-assign enabled in settings: $autoAssignEnabled");
+          "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ [DEBUG] Restaurant: Auto-assign enabled in settings: $autoAssignEnabled");
 
       if (!autoAssignEnabled) {
         debugPrint(
-            "🔧 [DEBUG] APP SETTINGS: Auto-assign default customer is DISABLED for Restaurant");
+            "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ [DEBUG] APP SETTINGS: Auto-assign default customer is DISABLED for Restaurant");
         return;
       }
 
@@ -798,7 +944,7 @@ class OrderPanelState extends State<OrderPanel> {
                 "";
 
         debugPrint(
-            "🔧 [DEBUG] Restaurant: Default customer phone from settings: '$defaultPhone'");
+            "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ [DEBUG] Restaurant: Default customer phone from settings: '$defaultPhone'");
 
         if (defaultPhone.isNotEmpty) {
           try {
@@ -806,7 +952,7 @@ class OrderPanelState extends State<OrderPanel> {
               (customer) => customer.phone == defaultPhone,
             );
             debugPrint(
-                "✅ [DEBUG] Found default customer for restaurant: ${defaultCustomer.name} (ID: ${defaultCustomer.id})");
+                "ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [DEBUG] Found default customer for restaurant: ${defaultCustomer.name} (ID: ${defaultCustomer.id})");
 
             setState(() {
               _selectedCustomer = defaultCustomer;
@@ -815,21 +961,24 @@ class OrderPanelState extends State<OrderPanel> {
             });
 
             // Also update the global provider
-            debugPrint("🔄 [DEBUG] Syncing with CustomerSelectionProvider...");
+            debugPrint(
+                "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [DEBUG] Syncing with CustomerSelectionProvider...");
             Provider.of<CustomerSelectionProvider>(context, listen: false)
                 .setSelectedCustomer(defaultCustomer, isDefault: true);
           } catch (e) {
             debugPrint(
-                "⚠️ [DEBUG] No customer found in list of ${_customers.length} with phone '$defaultPhone' for restaurant");
+                "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [DEBUG] No customer found in list of ${_customers.length} with phone '$defaultPhone' for restaurant");
           }
         } else {
-          debugPrint("⚠️ [DEBUG] Default phone number is empty in AppSettings");
+          debugPrint(
+              "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [DEBUG] Default phone number is empty in AppSettings");
         }
       } else {
-        debugPrint("⚠️ [DEBUG] Customer list is empty, cannot auto-assign");
+        debugPrint(
+            "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [DEBUG] Customer list is empty, cannot auto-assign");
       }
     } catch (e) {
-      debugPrint('❌ [DEBUG] Error applying default customer: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ [DEBUG] Error applying default customer: $e');
     }
   }
 
@@ -845,7 +994,7 @@ class OrderPanelState extends State<OrderPanel> {
     double orderTotal = _getEffectiveOrderTotal();
 
     debugPrint(
-        '💰 Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
 
@@ -869,7 +1018,7 @@ class OrderPanelState extends State<OrderPanel> {
 
       if (defaultPayment != null && defaultPayment.isNotEmpty) {
         debugPrint(
-            '💰 Applying default payment method from AppSettings: $defaultPayment');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Applying default payment method from AppSettings: $defaultPayment');
         switch (defaultPayment.toUpperCase()) {
           case 'CASH':
             _isCashSelected = true;
@@ -900,19 +1049,23 @@ class OrderPanelState extends State<OrderPanel> {
         (_cashAmount.isEmpty || double.tryParse(_cashAmount) == 0)) {
       autoFillCashAmount = orderTotal.toStringAsFixed(2);
       _cashAmount = autoFillCashAmount; // Update state immediately
-      debugPrint('🔧 Auto-fill triggered for CASH: $autoFillCashAmount');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Auto-fill triggered for CASH: $autoFillCashAmount');
     } else if (_isCardSelected &&
         (_cardAmount.isEmpty || double.tryParse(_cardAmount) == 0)) {
       _cardAmount = orderTotal.toStringAsFixed(2);
-      debugPrint('🔧 Auto-fill triggered for CARD: $_cardAmount');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Auto-fill triggered for CARD: $_cardAmount');
     } else if (_isUpiSelected &&
         (_upiAmount.isEmpty || double.tryParse(_upiAmount) == 0)) {
       _upiAmount = orderTotal.toStringAsFixed(2);
-      debugPrint('🔧 Auto-fill triggered for UPI: $_upiAmount');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Auto-fill triggered for UPI: $_upiAmount');
     } else if (_isCodSelected &&
         (_codAmount.isEmpty || double.tryParse(_codAmount) == 0)) {
       _codAmount = orderTotal.toStringAsFixed(2);
-      debugPrint('🔧 Auto-fill triggered for COD: $_codAmount');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Auto-fill triggered for COD: $_codAmount');
     }
 
     showDialog(
@@ -970,7 +1123,7 @@ class OrderPanelState extends State<OrderPanel> {
             // Capture the actual customer credit amount from the debit parameter
             _toCustomerCreditAmount = double.tryParse(debit) ?? 0.0;
 
-            debugPrint('💳 Payment Method Updated:');
+            debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â³ Payment Method Updated:');
             debugPrint(
                 '  - To Customer Credit Enabled: $_toCustomerCreditEnabled');
             debugPrint(
@@ -1008,646 +1161,6 @@ class OrderPanelState extends State<OrderPanel> {
             cardMethodId: cardMethodId,
             upiMethodId: upiMethodId,
             codMethodId: codMethodId,
-          );
-        },
-      ),
-    );
-  }
-
-  void _showCustomerSelectionModal() {
-    // Local state for search
-    String searchQuery = '';
-    List<CustomerListModelData> filteredCustomers = _customers;
-    final TextEditingController searchController = TextEditingController();
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          // Filter customers based on search query
-          void filterCustomers(String query) {
-            setModalState(() {
-              searchQuery = query.toLowerCase();
-              if (searchQuery.isEmpty) {
-                filteredCustomers = _customers;
-              } else {
-                filteredCustomers = _customers.where((customer) {
-                  final name = (customer.name ?? '').toLowerCase();
-                  final phone = (customer.phone ?? '').toLowerCase();
-                  return name.contains(searchQuery) ||
-                      phone.contains(searchQuery);
-                }).toList();
-              }
-            });
-          }
-
-          return Dialog(
-            backgroundColor: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 10,
-            child: Container(
-              width: 500,
-              constraints: const BoxConstraints(maxHeight: 650),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
-                      ),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.grey.shade100,
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF2563EB).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.people,
-                                color: Color(0xFF2563EB),
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Select Customer',
-                              style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                FontSize.s18,
-                                0.30,
-                                const Color(0xFF1E293B),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => Navigator.of(context).pop(),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                Icons.close,
-                                color: Colors.grey.shade600,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Search Bar
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey.shade200,
-                          width: 1,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: searchController,
-                        onChanged: filterCustomers,
-                        decoration: InputDecoration(
-                          hintText: 'Search by name or phone number...',
-                          hintStyle: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s14,
-                            0.21,
-                            const Color(0xFF64748B),
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.search,
-                            color: Color(0xFF64748B),
-                            size: 20,
-                          ),
-                          suffixIcon: searchQuery.isNotEmpty
-                              ? Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () {
-                                      searchController.clear();
-                                      filterCustomers('');
-                                    },
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      child: const Icon(
-                                        Icons.clear,
-                                        color: Color(0xFF64748B),
-                                        size: 18,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s14,
-                          0.21,
-                          const Color(0xFF1E293B),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Content
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (filteredCustomers.isEmpty &&
-                              searchQuery.isNotEmpty)
-                            // No search results
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 40),
-                              child: Column(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF59E0B)
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: const Icon(
-                                      Icons.search_off,
-                                      size: 48,
-                                      color: Color(0xFFF59E0B),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No customers found',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      FontSize.s16,
-                                      0.21,
-                                      const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Try searching with different keywords',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s14,
-                                      0.21,
-                                      const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          else if (filteredCustomers.isEmpty)
-                            // No customers at all
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 40),
-                              child: Column(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF64748B)
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: const Icon(
-                                      Icons.person_outline,
-                                      size: 48,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No customers found',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.semiBold,
-                                      FontSize.s16,
-                                      0.21,
-                                      const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () {
-                                        Navigator.of(context).pop();
-                                        // Check if search query is a 10-digit number
-                                        String phoneToPreFill = '';
-                                        if (searchQuery.length == 10 &&
-                                            RegExp(r'^[0-9]+$')
-                                                .hasMatch(searchQuery)) {
-                                          phoneToPreFill = searchQuery;
-                                        }
-                                        showAddCustomerModal(context,
-                                                MediaQuery.of(context).size,
-                                                mobileNumber: phoneToPreFill)
-                                            .then((result) async {
-                                          if (result != null &&
-                                              result['status'] == 'success') {
-                                            final authModel =
-                                                Provider.of<AuthModel>(context,
-                                                    listen: false);
-                                            final customerProvider =
-                                                Provider.of<CustomerProvider>(
-                                                    context,
-                                                    listen: false);
-                                            await customerProvider
-                                                .fetchCustomers(
-                                              accessToken:
-                                                  authModel.token ?? '',
-                                              listAll: true,
-                                            );
-                                            if (!mounted) return;
-                                            _hydrateCustomerListFromProviderCache();
-
-                                            // Find and auto-select the newly added customer by phone
-                                            final addedPhone = result['phone'];
-                                            final matchingCustomer =
-                                                _customers.firstWhere(
-                                              (customer) =>
-                                                  customer.phone == addedPhone,
-                                              orElse: () =>
-                                                  CustomerListModelData(),
-                                            );
-                                            if (matchingCustomer.phone ==
-                                                addedPhone) {
-                                              setState(() {
-                                                _selectedCustomer =
-                                                    matchingCustomer;
-                                                _selectedCustomerID =
-                                                    matchingCustomer.id;
-                                                _selectedCustomerPhone =
-                                                    matchingCustomer.phone;
-                                              });
-                                            }
-                                          }
-                                        });
-                                      },
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Container(
-                                        height: 48,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 24),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF2563EB),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF2563EB)
-                                                  .withOpacity(0.3),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(
-                                              Icons.person_add,
-                                              color: Colors.white,
-                                              size: 16,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Add New Customer',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.semiBold,
-                                                FontSize.s14,
-                                                0.21,
-                                                Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          else
-                            // Customer list
-                            Flexible(
-                              child: Container(
-                                constraints:
-                                    const BoxConstraints(maxHeight: 320),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.grey.shade200,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: ListView.separated(
-                                  shrinkWrap: true,
-                                  padding: const EdgeInsets.all(8),
-                                  itemCount: filteredCustomers.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 4),
-                                  itemBuilder: (context, index) {
-                                    final customer = filteredCustomers[index];
-                                    final isSelected =
-                                        _selectedCustomer?.id == customer.id;
-
-                                    // Highlight search terms
-                                    String highlightedName =
-                                        customer.name ?? 'Unknown';
-                                    String highlightedPhone =
-                                        customer.phone ?? '';
-
-                                    return Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        onTap: () {
-                                          setState(() {
-                                            _selectedCustomer = customer;
-                                            _selectedCustomerID = customer.id;
-                                            _selectedCustomerPhone =
-                                                customer.phone;
-                                            _isCustomerManuallySelected =
-                                                true; // Mark as manually selected
-                                          });
-
-                                          // Also update the global provider
-                                          Provider.of<CustomerSelectionProvider>(
-                                                  context,
-                                                  listen: false)
-                                              .setSelectedCustomer(customer);
-
-                                          Navigator.of(context).pop();
-                                        },
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: AnimatedContainer(
-                                          duration:
-                                              const Duration(milliseconds: 200),
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? const Color(0xFF2563EB)
-                                                    .withOpacity(0.1)
-                                                : Colors.white,
-                                            border: Border.all(
-                                              color: isSelected
-                                                  ? const Color(0xFF2563EB)
-                                                  : Colors.grey.shade200,
-                                              width: 1.5,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            boxShadow: isSelected
-                                                ? [
-                                                    BoxShadow(
-                                                      color: const Color(
-                                                              0xFF2563EB)
-                                                          .withOpacity(0.1),
-                                                      blurRadius: 4,
-                                                      offset:
-                                                          const Offset(0, 2),
-                                                    ),
-                                                  ]
-                                                : null,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: isSelected
-                                                      ? const Color(0xFF2563EB)
-                                                      : const Color(0xFF64748B),
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                ),
-                                                child: Center(
-                                                  child: Text(
-                                                    (customer.name ?? 'U')
-                                                        .substring(0, 1)
-                                                        .toUpperCase(),
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.bold,
-                                                      FontSize.s14,
-                                                      0.21,
-                                                      Colors.white,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      highlightedName,
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .semiBold,
-                                                        FontSize.s14,
-                                                        0.21,
-                                                        isSelected
-                                                            ? const Color(
-                                                                0xFF2563EB)
-                                                            : const Color(
-                                                                0xFF1E293B),
-                                                      ),
-                                                    ),
-                                                    if (highlightedPhone
-                                                        .isNotEmpty)
-                                                      Text(
-                                                        highlightedPhone,
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .medium,
-                                                          FontSize.s12,
-                                                          0.21,
-                                                          const Color(
-                                                              0xFF64748B),
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                              ),
-                                              if (isSelected)
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.all(4),
-                                                  decoration: BoxDecoration(
-                                                    color:
-                                                        const Color(0xFF059669),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            12),
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.check,
-                                                    color: Colors.white,
-                                                    size: 16,
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Footer - Always show Add New Customer button
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(16),
-                        bottomRight: Radius.circular(16),
-                      ),
-                      border: Border(
-                        top: BorderSide(
-                          color: Colors.grey.shade100,
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          // Check if search query is a 10-digit number
-                          String phoneToPreFill = '';
-                          if (searchQuery.length == 10 &&
-                              RegExp(r'^[0-9]+$').hasMatch(searchQuery)) {
-                            phoneToPreFill = searchQuery;
-                          }
-                          showAddCustomerModal(
-                                  context, MediaQuery.of(context).size,
-                                  mobileNumber: phoneToPreFill)
-                              .then((result) async {
-                            if (result != null &&
-                                result['status'] == 'success') {
-                              final authModel = Provider.of<AuthModel>(context,
-                                  listen: false);
-                              final customerProvider =
-                                  Provider.of<CustomerProvider>(context,
-                                      listen: false);
-                              await customerProvider.fetchCustomers(
-                                accessToken: authModel.token ?? '',
-                                listAll: true,
-                              );
-                              if (!mounted) return;
-                              _hydrateCustomerListFromProviderCache();
-
-                              // Find and auto-select the newly added customer by phone
-                              final addedPhone = result['phone'];
-                              final matchingCustomer = _customers.firstWhere(
-                                (customer) => customer.phone == addedPhone,
-                                orElse: () => CustomerListModelData(),
-                              );
-                              if (matchingCustomer.phone == addedPhone) {
-                                setState(() {
-                                  _selectedCustomer = matchingCustomer;
-                                  _selectedCustomerID = matchingCustomer.id;
-                                  _selectedCustomerPhone =
-                                      matchingCustomer.phone;
-                                });
-                              }
-                            }
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            border: Border.all(
-                              color: Colors.grey.shade300,
-                              width: 1.5,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.person_add,
-                                color: Color(0xFF64748B),
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Add New Customer',
-                                style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s14,
-                                  0.21,
-                                  const Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           );
         },
       ),
@@ -1729,16 +1242,17 @@ class OrderPanelState extends State<OrderPanel> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
     debugPrint(
-        '🔄 _refreshSavedOrdersKeepingSelection: Sending request with tableId: ${widget.tableId}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _refreshSavedOrdersKeepingSelection: Sending request with tableId: ${widget.tableId}');
     try {
-      debugPrint('➡️ Calling CartProvider.listSavedOrders');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.listSavedOrders');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
         deliveryMethodId:
             widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
-      debugPrint('✅ listSavedOrders Response: $response');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
         final newOrders = response['orders'] as List<dynamic>;
 
@@ -1750,7 +1264,8 @@ class OrderPanelState extends State<OrderPanel> {
             if (_blockReselectAfterPlace) {
               _selectedOrder = null;
               widget.onOrderSelected(null);
-              debugPrint('✅ Skipping reselect after order placed');
+              debugPrint(
+                  'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Skipping reselect after order placed');
               return;
             }
             final currentOrderId =
@@ -1767,12 +1282,13 @@ class OrderPanelState extends State<OrderPanel> {
               widget.onOrderSelected(updatedOrder); // Notify parent widget
               _hasOpenedPaymentModalOnce =
                   false; // Reset payment modal flag when switching orders
-              debugPrint('✅ Updated selected order with fresh data');
+              debugPrint(
+                  'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Updated selected order with fresh data');
             } else {
               // Keep the current selection - don't clear it immediately
               // The order might just be processing on the server
               debugPrint(
-                  '⚠️ Selected order not found in updated list, keeping current selection');
+                  'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Selected order not found in updated list, keeping current selection');
               // Only clear if we're sure the order is gone (you can add more logic here if needed)
             }
           }
@@ -1801,16 +1317,18 @@ class OrderPanelState extends State<OrderPanel> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
     debugPrint(
-        '🔄 _refreshSavedOrdersSilently: Sending request with tableId: ${widget.tableId}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _refreshSavedOrdersSilently: Sending request with tableId: ${widget.tableId}');
     try {
-      debugPrint('➡️ Calling CartProvider.listSavedOrders (silent)');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.listSavedOrders (silent)');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
         tableId: widget.tableId,
         deliveryMethodId:
             widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
       );
-      debugPrint('✅ listSavedOrders Response (silent): $response');
+      debugPrint(
+          'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ listSavedOrders Response (silent): $response');
       if (response['status'] == 'success') {
         final newOrders = response['orders'] as List<dynamic>;
 
@@ -1822,7 +1340,8 @@ class OrderPanelState extends State<OrderPanel> {
             if (_blockReselectAfterPlace) {
               _selectedOrder = null;
               widget.onOrderSelected(null);
-              debugPrint('✅ Skipping reselect after order placed');
+              debugPrint(
+                  'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Skipping reselect after order placed');
               return;
             }
             final currentOrderId =
@@ -1839,19 +1358,20 @@ class OrderPanelState extends State<OrderPanel> {
               widget.onOrderSelected(updatedOrder); // Notify parent widget
               _hasOpenedPaymentModalOnce =
                   false; // Reset payment modal flag when switching orders
-              debugPrint('✅ Updated selected order with fresh data (silent)');
+              debugPrint(
+                  'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Updated selected order with fresh data (silent)');
             } else {
               debugPrint(
-                  '⚠️ Selected order not found in updated list (silent)');
+                  'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Selected order not found in updated list (silent)');
             }
           }
         });
       } else {
         debugPrint(
-            '⚠️ Failed to refresh saved orders (silent): ${response['message']}');
+            'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Failed to refresh saved orders (silent): ${response['message']}');
       }
     } catch (e) {
-      debugPrint('❌ Error in silent refresh: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error in silent refresh: ${e.toString()}');
     }
   }
 
@@ -1862,8 +1382,9 @@ class OrderPanelState extends State<OrderPanel> {
     });
 
     try {
-      debugPrint('🔄 _fetchOrderDetails: Processing saved order data.');
-      debugPrint('📋 Order details: $order');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _fetchOrderDetails: Processing saved order data.');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Order details: $order');
 
       // Clear previous order's customer and payment state to prevent contamination
       _clearOrderEditingState();
@@ -1876,7 +1397,7 @@ class OrderPanelState extends State<OrderPanel> {
       // Load order-specific data if available
       _loadOrderSpecificData(order);
     } catch (e) {
-      debugPrint('❌ _fetchOrderDetails Exception: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _fetchOrderDetails Exception: ${e.toString()}');
       setState(() {
         _error = 'Error processing order details: ${e.toString()}';
       });
@@ -1889,7 +1410,7 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Clear customer and payment state when switching orders
   void _clearOrderEditingState() {
-    debugPrint('🧹 Clearing previous order editing state...');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¹ Clearing previous order editing state...');
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
     setState(() {
@@ -1930,16 +1451,17 @@ class OrderPanelState extends State<OrderPanel> {
       _deliveryMethod = "Store Takeaway";
       _deliveryMethodId = "";
       _deliveryAddress = "";
+      _carNumber = "";
       _deliveryDate = null;
       _deliveryTime = null;
       _selectedDeliveryCharge = null;
     });
-    debugPrint('✅ Order editing state cleared');
+    debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order editing state cleared');
   }
 
   // Sync variant without setState to avoid triggering extra rebuilds in lifecycle hooks
   void _clearOrderEditingStateSync() {
-    debugPrint('🧹 Clearing previous order editing state...');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¹ Clearing previous order editing state...');
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
     // Clear customer selection
@@ -1979,17 +1501,30 @@ class OrderPanelState extends State<OrderPanel> {
     _deliveryMethod = "Store Takeaway";
     _deliveryMethodId = "";
     _deliveryAddress = "";
+    _carNumber = "";
     _deliveryDate = null;
     _deliveryTime = null;
     _selectedDeliveryCharge = null;
 
-    debugPrint('✅ Order editing state cleared');
+    debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order editing state cleared');
   }
 
   // Public method to reset payment modal flag (called from parent)
   void resetPaymentModalFlag() {
     setState(() {
       _hasOpenedPaymentModalOnce = false;
+    });
+  }
+
+  void resetActiveOrderContext() {
+    _clearOrderEditingState();
+    if (!mounted) return;
+    setState(() {
+      _loadedLocalDraftId = null;
+      _activeOrderPanelTab =
+          _usesCounterOrderTabs ? OrderPanelTab.saved : _activeOrderPanelTab;
+      _showSavedOrdersView = _usesCounterOrderTabs || _showSavedOrdersView;
+      _forceCounterCartView = false;
     });
   }
 
@@ -2004,7 +1539,7 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Load order-specific data (customer, payment, etc.) from the selected order
   void _loadOrderSpecificData(dynamic order) {
-    debugPrint('📋 Loading order-specific data...');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Loading order-specific data...');
 
     try {
       // Load customer information if available
@@ -2036,10 +1571,10 @@ class OrderPanelState extends State<OrderPanel> {
         );
 
         debugPrint(
-            '✅ Loaded customer from order: ${customer.name} (${customer.phone})');
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded customer from order: ${customer.name} (${customer.phone})');
       } else {
         debugPrint(
-            'ℹ️ No customer associated with this order. Applying default if applicable...');
+            'ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â No customer associated with this order. Applying default if applicable...');
         customerSelectionProvider.clearSelectedCustomer();
         _applyDefaultCustomer();
       }
@@ -2092,7 +1627,7 @@ class OrderPanelState extends State<OrderPanel> {
         });
 
         debugPrint(
-            '✅ Loaded payment method: $paymentMethod, Amount: $paidAmount');
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded payment method: $paymentMethod, Amount: $paidAmount');
       }
 
       // Load existing order-level comment from supported API shapes.
@@ -2119,11 +1654,12 @@ class OrderPanelState extends State<OrderPanel> {
         );
         loadedDeliveryMethodName = match.name;
         debugPrint(
-            '🚚 Resolved delivery method name from provider: $loadedDeliveryMethodName (id: $loadedDeliveryMethodId)');
+            'ÃƒÂ°Ã…Â¸Ã…Â¡Ã…Â¡ Resolved delivery method name from provider: $loadedDeliveryMethodName (id: $loadedDeliveryMethodId)');
       }
       final loadedDeliveryDate = order['delivery_date']?.toString();
       final loadedDeliveryTime = order['delivery_time']?.toString();
       final loadedDeliveryAddress = order['address']?.toString() ?? '';
+      final loadedCarNumber = order['car_number']?.toString() ?? '';
       final loadedDeliveryCharge =
           double.tryParse(order['delivery_charge']?.toString() ?? '');
 
@@ -2133,6 +1669,7 @@ class OrderPanelState extends State<OrderPanel> {
         _deliveryDate = loadedDeliveryDate;
         _deliveryTime = loadedDeliveryTime;
         _deliveryAddress = loadedDeliveryAddress;
+        _carNumber = loadedCarNumber;
         _selectedDeliveryCharge = loadedDeliveryCharge;
       });
 
@@ -2152,7 +1689,7 @@ class OrderPanelState extends State<OrderPanel> {
       });
 
       if (_isCouponApplied) {
-        debugPrint('✅ Loaded discount data:');
+        debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded discount data:');
         debugPrint('   - Flat Discount: ${_flatDiscount.toStringAsFixed(2)}');
         debugPrint(
             '   - Percentage Discount: ${_percentageDiscount.toStringAsFixed(1)}%');
@@ -2162,12 +1699,13 @@ class OrderPanelState extends State<OrderPanel> {
       // Match billing_page.dart: balance is cash returned after customer credit.
       _balanceAmount = _calculateBalanceAmount();
 
-      debugPrint('💰 Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');
     } catch (e) {
-      debugPrint('❌ Error loading order-specific data: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error loading order-specific data: $e');
     }
 
-    debugPrint('✅ Order-specific data loading completed');
+    debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order-specific data loading completed');
   }
 
   bool _hasPaymentMethod() {
@@ -2427,9 +1965,9 @@ class OrderPanelState extends State<OrderPanel> {
           }
 
           debugPrint(
-              '➡️ Calling CartProvider.addToCartAPI for item comment update');
+              'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.addToCartAPI for item comment update');
           debugPrint(
-              '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 0, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: 0, unitPrice: $unitPrice, cartId: $orderCartId, comment: $comment}');
 
           final response = await cartProvider.addToCartAPI(
             customerId: int.parse(customerId.toString()),
@@ -2595,7 +2133,7 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     debugPrint(
-        '💰 Payment Summary - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Payment Summary - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
 
     final customerBalance = _selectedCustomer?.balance ?? 0.0;
     final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
@@ -2604,8 +2142,9 @@ class OrderPanelState extends State<OrderPanel> {
     final codAmount = double.tryParse(_codAmount) ?? 0.0;
     final totalPaidAmount = cashAmount + cardAmount + upiAmount + codAmount;
 
-    debugPrint('\n🧮 === RESTAURANT PAGE BALANCE CALCULATION START ===');
-    debugPrint('💰 Input Values:');
+    debugPrint(
+        '\nÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â® === RESTAURANT PAGE BALANCE CALCULATION START ===');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Input Values:');
     debugPrint('  - Order Total: ${orderTotal.toStringAsFixed(2)}');
     debugPrint('  - Customer Balance: ${customerBalance.toStringAsFixed(2)}');
     debugPrint('  - Cash Amount: ${cashAmount.toStringAsFixed(2)}');
@@ -2630,14 +2169,15 @@ class OrderPanelState extends State<OrderPanel> {
 
     if (_toCustomerCreditEnabled && _selectedCustomer != null) {
       debugPrint(
-          '🔛 RESTAURANT PAGE: Toggle is ON - Calculating with customer credit consideration');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Âº RESTAURANT PAGE: Toggle is ON - Calculating with customer credit consideration');
 
       if (customerBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
-        debugPrint('💳 Customer has debt - using transaction excess logic');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â³ Customer has debt - using transaction excess logic');
         final transactionExcess = totalPaidAmount - finalOrderTotal;
         debugPrint(
-            '💰 Transaction excess: ${transactionExcess.toStringAsFixed(2)}');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Transaction excess: ${transactionExcess.toStringAsFixed(2)}');
 
         if (transactionExcess > 0) {
           // Get the actual customer credit amount being allocated
@@ -2660,10 +2200,11 @@ class OrderPanelState extends State<OrderPanel> {
         }
       } else {
         // Customer has positive/zero balance - use Net Due logic
-        debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âµ Customer has credit/zero balance - using Net Due logic');
         // Net Due = Final Order Total - Customer Previous Balance
         double netDue = finalOrderTotal - customerBalance;
-        debugPrint('💰 Net Due calculation:');
+        debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Net Due calculation:');
         debugPrint('  - Purchase Total: ${finalOrderTotal.toStringAsFixed(2)}');
         debugPrint(
             '  - Customer Prev Balance: ${customerBalance.toStringAsFixed(2)}');
@@ -2698,7 +2239,7 @@ class OrderPanelState extends State<OrderPanel> {
       }
     } else {
       debugPrint(
-          '🔴 RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ RESTAURANT PAGE: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
       cashBalance = totalPaidAmount - finalOrderTotal;
       debugPrint(
@@ -2712,14 +2253,16 @@ class OrderPanelState extends State<OrderPanel> {
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (cashBalance < 0) {
       debugPrint(
-          '🚫 RESTAURANT PAGE: Clamping negative cash balance (${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
+          'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â« RESTAURANT PAGE: Clamping negative cash balance (${cashBalance.toStringAsFixed(2)}) to 0 for UI display');
       cashBalance = 0.0;
     }
 
-    debugPrint('💵 Final cash balance: ${cashBalance.toStringAsFixed(2)}');
     debugPrint(
-        '💵 Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
-    debugPrint('🧮 === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âµ Final cash balance: ${cashBalance.toStringAsFixed(2)}');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âµ Raw balance (before clamping): ${rawBalance.toStringAsFixed(2)}');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â® === RESTAURANT PAGE BALANCE CALCULATION END ===\n');
 
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -2796,22 +2339,35 @@ class OrderPanelState extends State<OrderPanel> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: buildCustomStyle(
-              isBold ? FontWeightManager.semiBold : FontWeightManager.regular,
-              large ? FontSize.s18 : FontSize.s14,
-              0.21,
-              color,
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                isBold ? FontWeightManager.semiBold : FontWeightManager.regular,
+                large ? FontSize.s16 : FontSize.s14,
+                0.21,
+                color,
+              ),
             ),
           ),
-          Text(
-            amount,
-            style: buildCustomStyle(
-              isBold ? FontWeightManager.bold : FontWeightManager.semiBold,
-              large ? FontSize.s18 : FontSize.s14,
-              0.21,
-              color,
+          const SizedBox(width: 8),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                amount,
+                maxLines: 1,
+                textAlign: TextAlign.right,
+                style: buildCustomStyle(
+                  isBold ? FontWeightManager.bold : FontWeightManager.semiBold,
+                  large ? FontSize.s18 : FontSize.s14,
+                  0.21,
+                  color,
+                ),
+              ),
             ),
           ),
         ],
@@ -2913,6 +2469,26 @@ class OrderPanelState extends State<OrderPanel> {
           final hasCurrentCart = cartItems.isNotEmpty;
           final currentCartCount = cartItems.length;
 
+          if (_usesCounterOrderTabs) {
+            if (_activeOrderPanelTab != OrderPanelTab.cart &&
+                currentCartCount > _lastObservedCartCount) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                setState(() {
+                  _activeOrderPanelTab = OrderPanelTab.cart;
+                  _showSavedOrdersView = false;
+                  _forceCounterCartView = true;
+                });
+              });
+            }
+            _lastObservedCartCount = currentCartCount;
+
+            if (_activeOrderPanelTab == OrderPanelTab.cart) {
+              return _buildCurrentCartView(cartItems);
+            }
+            return _buildSavedOrdersList();
+          }
+
           // If user is on Saved Orders view and starts a fresh cart again,
           // auto-return to Current Order view.
           if (_showSavedOrdersView &&
@@ -2921,12 +2497,18 @@ class OrderPanelState extends State<OrderPanel> {
               if (!mounted) return;
               setState(() {
                 _showSavedOrdersView = false;
+                _forceCounterCartView = true;
               });
             });
           }
           _lastObservedCartCount = currentCartCount;
 
-          if (hasCurrentCart && !_showSavedOrdersView) {
+          final shouldShowCounterCart = _usesCounterOrderTabs &&
+              !_showSavedOrdersView &&
+              _forceCounterCartView;
+
+          if ((hasCurrentCart && !_showSavedOrdersView) ||
+              shouldShowCounterCart) {
             // Show current cart items
             return _buildCurrentCartView(cartItems);
           } else {
@@ -2959,37 +2541,44 @@ class OrderPanelState extends State<OrderPanel> {
       ),
       child: Column(
         children: [
-          _buildPanelHeader(
-            'Current Order',
-            Icons.shopping_cart,
-            const Color(0xFF059669),
-            trailing: TextButton.icon(
-              onPressed: () {
-                _refreshLocalDrafts();
-                _fetchSavedOrders();
-                setState(() => _showSavedOrdersView = true);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF1D4ED8),
-                backgroundColor: const Color(0xFFEFF6FF),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: const BorderSide(color: Color(0xFFBFDBFE)),
+          _usesCounterOrderTabs
+              ? _buildOrderPanelTabsHeader()
+              : _buildPanelHeader(
+                  'Cart',
+                  Icons.shopping_cart,
+                  const Color(0xFF059669),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          _refreshLocalDrafts();
+                          _fetchSavedOrders();
+                          setState(() => _showSavedOrdersView = true);
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF1D4ED8),
+                          backgroundColor: const Color(0xFFEFF6FF),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: const BorderSide(color: Color(0xFFBFDBFE)),
+                          ),
+                        ),
+                        icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                        label: Text(
+                          'Ongoing Orders',
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              widget.isCompact ? FontSize.s11 : FontSize.s12,
+                              0.21,
+                              const Color(0xFF1D4ED8)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              icon: const Icon(Icons.receipt_long_rounded, size: 16),
-              label: Text(
-                'Saved Orders',
-                style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    widget.isCompact ? FontSize.s11 : FontSize.s12,
-                    0.21,
-                    const Color(0xFF1D4ED8)),
-              ),
-            ),
-          ),
           Expanded(
             child: cartItems.isEmpty
                 ? Center(
@@ -3042,13 +2631,13 @@ class OrderPanelState extends State<OrderPanel> {
                         ),
                         itemBuilder: (_, idx) {
                           final item = cartItems[idx];
-                          return _buildCurrentCartItem(item, idx);
+                          return this._buildCurrentCartItem(item, idx);
                         },
                       ),
                     ),
                   ),
           ),
-          _buildCurrentCartActionButtons(cartItems),
+          this._buildCurrentCartActionButtons(cartItems),
         ],
       ),
     );
@@ -3059,6 +2648,33 @@ class OrderPanelState extends State<OrderPanel> {
         ((widget.preselectedDeliveryMethodId != null &&
                 widget.preselectedDeliveryMethodId!.isNotEmpty) ||
             (widget.allowCounterBilling && widget.isCounterBillingMode));
+
+    if (_usesCounterOrderTabs) {
+      return Container(
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            _buildOrderPanelTabsHeader(),
+            Expanded(
+              child: _activeOrderPanelTab == OrderPanelTab.ongoing
+                  ? _buildOngoingOrdersContent()
+                  : _buildLocalDraftsContent(),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -3075,16 +2691,15 @@ class OrderPanelState extends State<OrderPanel> {
       ),
       child: Column(
         children: [
-          // Pending Orders Section (independent scroll)
-          _buildPanelHeader(
-              isNonTableOrderContext ? 'Saved Orders' : 'Pending Orders',
-              Icons.pending_actions,
-              const Color(0xFFD97706),
-              showBackButton: _showSavedOrdersView,
+          // Saved Orders Section (local drafts, independent scroll)
+          _buildPanelHeader(_usesCounterOrderTabs ? 'Orders' : 'Saved Orders',
+              Icons.pending_actions, const Color(0xFFD97706),
+              showBackButton: !_usesCounterOrderTabs && _showSavedOrdersView,
               onBackButtonPressed: () {
-                setState(() => _showSavedOrdersView = false);
-              },
-              itemCount: _localDrafts.length),
+            setState(() => _showSavedOrdersView = false);
+          },
+              itemCount: _usesCounterOrderTabs ? null : _localDrafts.length,
+              trailing: null),
           Flexible(
             flex: 1,
             child: RefreshIndicator(
@@ -3109,7 +2724,7 @@ class OrderPanelState extends State<OrderPanel> {
                             hasScrollBody: false,
                             child: Center(
                               child: Text(
-                                'No pending orders',
+                                'No saved orders',
                                 style: buildCustomStyle(
                                     FontWeightManager.medium,
                                     widget.isCompact
@@ -3145,7 +2760,7 @@ class OrderPanelState extends State<OrderPanel> {
                             color: Colors.grey.shade100,
                           ),
                           itemBuilder: (_, index) =>
-                              _buildLocalDraftItem(_localDrafts[index]),
+                              this._buildLocalDraftItem(_localDrafts[index]),
                         ),
                       ),
                     ),
@@ -3153,8 +2768,8 @@ class OrderPanelState extends State<OrderPanel> {
           ),
           if (!isNonTableOrderContext) ...[
             const SizedBox(height: 8),
-            // Saved Orders Section (independent scroll)
-            _buildPanelHeader('Saved Orders', Icons.receipt, Colors.blue,
+            // Ongoing Orders Section (backend orders, independent scroll)
+            _buildPanelHeader('Ongoing Orders', Icons.receipt, Colors.blue,
                 itemCount: _savedOrders.length),
             Flexible(
               flex: 2,
@@ -3265,6 +2880,147 @@ class OrderPanelState extends State<OrderPanel> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildLocalDraftsContent() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        _refreshLocalDrafts();
+      },
+      child: _localDrafts.isEmpty
+          ? ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Text(
+                        'No saved orders',
+                        style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            widget.isCompact ? FontSize.s12 : FontSize.s13,
+                            0.21,
+                            const Color(0xFF64748B)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics()),
+                  padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                  itemCount: _localDrafts.length,
+                  separatorBuilder: (_, __) => Container(
+                    height: 1,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    color: Colors.grey.shade100,
+                  ),
+                  itemBuilder: (_, index) =>
+                      this._buildLocalDraftItem(_localDrafts[index]),
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildOngoingOrdersContent() {
+    if (_isLoadingOngoingOrders) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _fetchSavedOrders(showFullPanelLoader: false);
+        _refreshLocalDrafts();
+      },
+      child: _savedOrders.isEmpty
+          ? ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                        child: Text(
+                          'No ongoing orders',
+                          textAlign: TextAlign.center,
+                          style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              widget.isCompact ? FontSize.s12 : FontSize.s13,
+                              0.21,
+                              const Color(0xFF64748B)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics()),
+                  padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                  itemCount: _savedOrders.length,
+                  separatorBuilder: (_, __) => Container(
+                    height: 1,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    color: Colors.grey.shade100,
+                  ),
+                  itemBuilder: (context, index) {
+                    final order = _savedOrders[index];
+                    return _buildOrderListItem(order);
+                  },
+                ),
+              ),
+            ),
     );
   }
 
@@ -3411,10 +3167,10 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Print KOT for new add-on items and pending cancel queue items.
   Future<void> _printNewKOT() async {
-    debugPrint('🖨️ _printNewKOT() called');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT() called');
 
     if (_selectedOrder == null) {
-      debugPrint('❌ _printNewKOT: No order selected');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _printNewKOT: No order selected');
       showScaffoldError(
         context: context,
         message: 'Please select an order first',
@@ -3423,18 +3179,19 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     debugPrint(
-        '📋 _printNewKOT: Selected order ID: ${_selectedOrder['id'] ?? _selectedOrder['order_id']}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ _printNewKOT: Selected order ID: ${_selectedOrder['id'] ?? _selectedOrder['order_id']}');
 
     // Get all cart items
     List<dynamic> allCartItems = _getCartItemsFromOrder(_selectedOrder);
-    debugPrint('📦 _printNewKOT: Total cart items: ${allCartItems.length}');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ _printNewKOT: Total cart items: ${allCartItems.length}');
 
     // Filter for items where status is null
     List<dynamic> newItems = allCartItems.where((item) {
       if (item is Map<String, dynamic>) {
         final status = item['status'];
         debugPrint(
-            '🔍 Item: ${item['product_name'] ?? 'Unknown'}, Status: $status');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Item: ${item['product_name'] ?? 'Unknown'}, Status: $status');
         return status == null;
       }
       return false;
@@ -3443,12 +3200,14 @@ class OrderPanelState extends State<OrderPanel> {
     final pendingCancelQueue =
         await _fetchPendingCancelKotItems(_selectedOrder);
 
-    debugPrint('🆕 _printNewKOT: New items (status=null): ${newItems.length}');
     debugPrint(
-        '🚫 _printNewKOT: Pending cancel items: ${pendingCancelQueue.length}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â Ã¢â‚¬Â¢ _printNewKOT: New items (status=null): ${newItems.length}');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â« _printNewKOT: Pending cancel items: ${pendingCancelQueue.length}');
 
     if (newItems.isEmpty && pendingCancelQueue.isEmpty) {
-      debugPrint('⚠️ _printNewKOT: No pending add-on or cancel KOT items');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT: No pending add-on or cancel KOT items');
       showScaffoldError(
         context: context,
         message: 'No pending KOT items to print',
@@ -3459,73 +3218,83 @@ class OrderPanelState extends State<OrderPanel> {
     if (newItems.isNotEmpty) {
       // Call API to update status for null items BEFORE printing
       debugPrint(
-          '📡 [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] ========== STARTING STATUS UPDATE ==========');
       debugPrint(
-          '📡 [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Preparing to update ${newItems.length} items to START status');
 
       try {
-        debugPrint('📡 [KOT STATUS UPDATE] Step 1: Getting providers...');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 1: Getting providers...');
         final authModel = Provider.of<AuthModel>(context, listen: false);
         final cartProvider = Provider.of<CartProvider>(context, listen: false);
-        debugPrint('📡 [KOT STATUS UPDATE] Step 1: Providers obtained ✅');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 1: Providers obtained ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦');
 
-        debugPrint('📡 [KOT STATUS UPDATE] Step 2: Parsing order ID...');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 2: Parsing order ID...');
         final orderIdValue = _selectedOrder['id'] ?? _selectedOrder['order_id'];
         debugPrint(
-            '📡 [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 2: order_id value = $orderIdValue');
         final orderId = int.tryParse(orderIdValue.toString());
         final accessToken = authModel.token ?? '';
         debugPrint(
-            '📡 [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ✅');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 2: Parsed orderId = $orderId ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦');
         debugPrint(
-            '📡 [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ✅');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 2: Access token length = ${accessToken.length} ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦');
 
-        debugPrint('📡 [KOT STATUS UPDATE] Step 3: Checking orderId...');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 3: Checking orderId...');
         if (orderId != null) {
           debugPrint(
-              '📡 [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 3: Order ID is valid, proceeding to API call...');
           debugPrint(
-              '📡 [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] API Params: order_id=$orderId, status=START, all=false');
 
           debugPrint(
-              '📡 [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 4: Calling updateNullOrderItemsStatus...');
           final response = await cartProvider.updateNullOrderItemsStatus(
             orderId: orderId,
             accessToken: accessToken,
           );
 
-          debugPrint('📡 [KOT STATUS UPDATE] Step 4: API call completed ✅');
-          debugPrint('📥 [KOT STATUS UPDATE] Full response: $response');
           debugPrint(
-              '📥 [KOT STATUS UPDATE] Response status: ${response['status']}');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] Step 4: API call completed ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦');
           debugPrint(
-              '📥 [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ [KOT STATUS UPDATE] Full response: $response');
+          debugPrint(
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ [KOT STATUS UPDATE] Response status: ${response['status']}');
+          debugPrint(
+              'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ [KOT STATUS UPDATE] Response message: ${response['message'] ?? "No message"}');
 
           if (response['status'] == 'success') {
             debugPrint(
-                '✅ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
-            debugPrint('🔄 [KOT STATUS UPDATE] Refreshing order details...');
+                'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [KOT STATUS UPDATE] SUCCESS! Items updated to START status');
+            debugPrint(
+                'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [KOT STATUS UPDATE] Refreshing order details...');
             await _refreshSelectedOrderAfterCartUpdate();
-            debugPrint('✅ [KOT STATUS UPDATE] Order refresh completed');
+            debugPrint(
+                'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [KOT STATUS UPDATE] Order refresh completed');
           } else {
             debugPrint(
-                '⚠️ [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
+                'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [KOT STATUS UPDATE] FAILED! Status: ${response['status']}, Message: ${response['message']}');
           }
         } else {
           debugPrint(
-              '❌ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
+              'ÃƒÂ¢Ã‚ÂÃ…â€™ [KOT STATUS UPDATE] ERROR: Invalid order ID: $orderIdValue');
         }
       } catch (e, stackTrace) {
-        debugPrint('❌ [KOT STATUS UPDATE] EXCEPTION: $e');
-        debugPrint('❌ [KOT STATUS UPDATE] Stack trace: $stackTrace');
+        debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ [KOT STATUS UPDATE] EXCEPTION: $e');
+        debugPrint(
+            'ÃƒÂ¢Ã‚ÂÃ…â€™ [KOT STATUS UPDATE] Stack trace: $stackTrace');
       }
 
       debugPrint(
-          '📡 [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ [KOT STATUS UPDATE] ========== STATUS UPDATE COMPLETE ==========');
     }
 
     if (newItems.isNotEmpty) {
-      debugPrint('🖨️ _printNewKOT: Printing add-on KOT...');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT: Printing add-on KOT...');
       await _printSavedOrderKot(
         _selectedOrder,
         newItems,
@@ -3534,7 +3303,8 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     if (pendingCancelQueue.isNotEmpty) {
-      debugPrint('🖨️ _printNewKOT: Printing cancel KOT...');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printNewKOT: Printing cancel KOT...');
       final cancelPrintItems = _buildCancelKotPrintItems(pendingCancelQueue);
       await _printSavedOrderKot(
         _selectedOrder,
@@ -3717,7 +3487,7 @@ class OrderPanelState extends State<OrderPanel> {
         }
       }
     } catch (e) {
-      debugPrint('❌ Failed to fetch pending cancel KOT items: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to fetch pending cancel KOT items: $e');
     }
 
     return [];
@@ -3879,7 +3649,8 @@ class OrderPanelState extends State<OrderPanel> {
     final orderIdValue = order['id'] ?? order['order_id'];
     final orderId = int.tryParse(orderIdValue?.toString() ?? '');
     if (orderId == null) {
-      debugPrint('⚠️ acknowledgeKotPrint skipped: invalid order ID');
+      debugPrint(
+          'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â acknowledgeKotPrint skipped: invalid order ID');
       return;
     }
 
@@ -3896,7 +3667,8 @@ class OrderPanelState extends State<OrderPanel> {
 
     final status = (response['status'] as String?)?.toLowerCase();
     if (status == 'success' || status == 'sucesss') {
-      debugPrint('✅ KOT print acknowledged for events: $eventIds');
+      debugPrint(
+          'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ KOT print acknowledged for events: $eventIds');
       _removeAcknowledgedKotEventsFromOrderCache(
         order: order,
         eventIds: eventIds,
@@ -3907,7 +3679,7 @@ class OrderPanelState extends State<OrderPanel> {
 
     final message = response['message']?.toString() ??
         'KOT printed, but failed to acknowledge printed cancel events';
-    debugPrint('❌ KOT print acknowledge failed: $message');
+    debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ KOT print acknowledge failed: $message');
     showScaffoldError(
       context: context,
       message: message,
@@ -3921,7 +3693,7 @@ class OrderPanelState extends State<OrderPanel> {
     String kotType = 'standard',
   }) async {
     debugPrint(
-        '🖨️ _printSavedOrderKot() called with ${cartItems.length} items');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot() called with ${cartItems.length} items');
 
     // Get order number
     final orderNumber = order['order_number']?.toString() ?? 'Unknown';
@@ -4086,12 +3858,14 @@ class OrderPanelState extends State<OrderPanel> {
         Provider.of<AppSettingsProvider>(context, listen: false);
     final enableKOTPrint =
         appSettingsProvider.appSettings?.enableKOTPrint ?? true;
-    debugPrint('⚙️ _printSavedOrderKot: enableKOTPrint = $enableKOTPrint');
+    debugPrint(
+        'ÃƒÂ¢Ã…Â¡Ã¢â€žÂ¢ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: enableKOTPrint = $enableKOTPrint');
 
     if (enableKOTPrint) {
-      debugPrint('🖨️ _printSavedOrderKot: Trying auto-print first');
       debugPrint(
-          '📋 Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: Trying auto-print first');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Order Number: $orderNumber, Table: $tableName, Items: ${printItems.length}');
 
       // Try auto-print with default printer first
       final success = await KotPrintPage.autoPrint(
@@ -4115,7 +3889,7 @@ class OrderPanelState extends State<OrderPanel> {
       // Only show print page if auto-print failed
       if (!success && mounted) {
         debugPrint(
-            '🖨️ _printSavedOrderKot: Auto-print failed, showing print page');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: Auto-print failed, showing print page');
         await Navigator.push<bool>(
           context,
           MaterialPageRoute(
@@ -4140,7 +3914,7 @@ class OrderPanelState extends State<OrderPanel> {
       }
     } else {
       debugPrint(
-          '⚠️ _printSavedOrderKot: KOT printing is disabled in app settings');
+          'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â _printSavedOrderKot: KOT printing is disabled in app settings');
       showScaffoldError(
         context: context,
         message: 'KOT printing is disabled in settings',
@@ -4223,7 +3997,7 @@ class OrderPanelState extends State<OrderPanel> {
     }
 
     debugPrint(
-        '📊 Cart items count: ${cartItems.length}, Total: ${total.toStringAsFixed(2)}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  Cart items count: ${cartItems.length}, Total: ${total.toStringAsFixed(2)}');
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -4332,7 +4106,7 @@ class OrderPanelState extends State<OrderPanel> {
                           ),
                           itemBuilder: (_, idx) {
                             final item = cartItems[idx];
-                            return _buildSavedOrderItem(item, idx);
+                            return this._buildSavedOrderItem(item, idx);
                           },
                         ),
                       ),
@@ -4342,6 +4116,167 @@ class OrderPanelState extends State<OrderPanel> {
           _buildSavedOrderActionButtons(cartItems),
         ],
       ),
+    );
+  }
+
+  Widget _buildOrderPanelTabsHeader() {
+    Widget segment({
+      required String label,
+      required IconData icon,
+      required OrderPanelTab tab,
+      required int count,
+      required VoidCallback onTap,
+      required bool showIcon,
+    }) {
+      final selected = _activeOrderPanelTab == tab;
+      final foreground = selected ? Colors.white : const Color(0xFF64748B);
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: selected ? null : onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFF3B82F6) : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showIcon) ...[
+                    Icon(icon, size: 15, color: foreground),
+                    const SizedBox(width: 5),
+                  ],
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        widget.isCompact ? FontSize.s11 : FontSize.s12,
+                        0.21,
+                        foreground,
+                      ),
+                    ),
+                  ),
+                  if (count > 0) ...[
+                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? Colors.white.withOpacity(0.18)
+                            : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        count.toString(),
+                        style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          FontSize.s10,
+                          0.21,
+                          selected ? Colors.white : const Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final cartCount = Provider.of<LocalProductProvider>(context, listen: false)
+        .cartItems
+        .length;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showIcon = constraints.maxWidth >= 370;
+
+        return Container(
+          padding: EdgeInsets.all(widget.isCompact ? 10.0 : 12.0),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF3B82F6).withOpacity(0.05),
+                Colors.transparent,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.grey.shade100,
+                width: 1,
+              ),
+            ),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                segment(
+                  label: 'Cart',
+                  icon: Icons.shopping_cart_rounded,
+                  tab: OrderPanelTab.cart,
+                  count: cartCount,
+                  showIcon: showIcon,
+                  onTap: () => setState(() {
+                    _activeOrderPanelTab = OrderPanelTab.cart;
+                    _showSavedOrdersView = false;
+                    _forceCounterCartView = true;
+                  }),
+                ),
+                segment(
+                  label: 'Saved',
+                  icon: Icons.receipt_long_rounded,
+                  tab: OrderPanelTab.saved,
+                  count: _localDrafts.length,
+                  showIcon: showIcon,
+                  onTap: () {
+                    _refreshLocalDrafts();
+                    setState(() {
+                      _activeOrderPanelTab = OrderPanelTab.saved;
+                      _showSavedOrdersView = true;
+                      _forceCounterCartView = false;
+                    });
+                  },
+                ),
+                segment(
+                  label: 'Ongoing',
+                  icon: Icons.fact_check_rounded,
+                  tab: OrderPanelTab.ongoing,
+                  count: _savedOrders.length,
+                  showIcon: showIcon,
+                  onTap: () {
+                    setState(() {
+                      _activeOrderPanelTab = OrderPanelTab.ongoing;
+                      _showSavedOrdersView = true;
+                      _forceCounterCartView = false;
+                    });
+                    _fetchSavedOrders(showFullPanelLoader: false);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -4402,6 +4337,8 @@ class OrderPanelState extends State<OrderPanel> {
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
                       FontWeightManager.bold,
                       widget.isCompact ? FontSize.s14 : FontSize.s16,
@@ -4449,7 +4386,10 @@ class OrderPanelState extends State<OrderPanel> {
                     FontWeightManager.semiBold, FontSize.s12, 0.21, color),
               ),
             ),
-          if (trailing != null) trailing,
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            trailing,
+          ],
         ],
       ),
     );
@@ -4782,7 +4722,12 @@ class OrderPanelState extends State<OrderPanel> {
     return (comment == null || comment.isEmpty) ? null : comment;
   }
 
-  void _showCheckoutModal({bool forCurrentCart = false}) {
+  Future<void> _showCheckoutModal({
+    bool forCurrentCart = false,
+    CheckoutModalMode mode = CheckoutModalMode.checkout,
+    int? initialStep,
+    String? title,
+  }) async {
     // Release any current focus so checkout modal text fields receive input cleanly.
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -4791,15 +4736,17 @@ class OrderPanelState extends State<OrderPanel> {
     _hydrateCustomerListFromProviderCache();
 
     // Mark that payment modal opportunity has been given (via checkout dialog)
-    setState(() {
-      _hasOpenedPaymentModalOnce = false;
-    });
+    if (mode == CheckoutModalMode.checkout) {
+      setState(() {
+        _hasOpenedPaymentModalOnce = false;
+      });
+    }
 
     if (!mounted) return;
 
     // Sync LocalProductProvider cart with saved-order items only when confirming
     // an existing kitchen order. Current-cart checkout already uses that cart.
-    if (!forCurrentCart) {
+    if (!forCurrentCart && mode == CheckoutModalMode.checkout) {
       _syncOrderItemsWithLocalCart();
     }
 
@@ -4815,9 +4762,9 @@ class OrderPanelState extends State<OrderPanel> {
             localProductProvider.cartTotal)
         : _calculateOrderTotal();
 
-    showDialog(
+    await showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: mode == CheckoutModalMode.selectionOnly,
       builder: (dialogContext) {
         final deliveryMethodsProvider =
             Provider.of<DeliveryMethodsProvider>(context, listen: false);
@@ -4825,6 +4772,9 @@ class OrderPanelState extends State<OrderPanel> {
             deliveryMethodsProvider.deliveryMethods.isNotEmpty;
 
         return CheckoutModal(
+          mode: mode,
+          title: title ?? 'Finalize Order',
+          initialStep: initialStep,
           cartTotal: checkoutCartTotal,
           availableCustomers: _customers,
           selectedCustomer: _selectedCustomer,
@@ -4832,21 +4782,28 @@ class OrderPanelState extends State<OrderPanel> {
 
           // Delivery State
           enableDelivery: deliveryEnabled,
-          deliveryMethod:
-              _deliveryMethod.isNotEmpty ? _deliveryMethod : "Store Takeaway",
+          deliveryMethod: _deliveryMethod.isNotEmpty
+              ? _deliveryMethod
+              : mode == CheckoutModalMode.checkout
+                  ? "Store Takeaway"
+                  : "",
           deliveryMethodId: _deliveryMethodId.isNotEmpty
               ? _deliveryMethodId
-              : _getDefaultDeliveryMethodId(),
+              : mode == CheckoutModalMode.checkout
+                  ? _getDefaultDeliveryMethodId()
+                  : "",
           deliveryComment: _orderComment,
           deliveryAddress: _deliveryAddress,
           deliveryDate: _deliveryDate,
           deliveryTime: _deliveryTime,
+          carNumber: _carNumber,
           initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
           onDeliveryUpdated:
               (method, methodId, carNo, comment, date, time, address) {
             setState(() {
               _deliveryMethod = method;
               _deliveryMethodId = methodId;
+              _carNumber = carNo;
               _orderComment = comment;
               _deliveryDate = date;
               _deliveryTime = time;
@@ -5056,9 +5013,12 @@ class OrderPanelState extends State<OrderPanel> {
                 codMethodId: codMethodId);
           },
           onConfirmOrder: () async {
+            if (mode == CheckoutModalMode.selectionOnly) {
+              Navigator.of(dialogContext).pop();
+              return;
+            }
             setState(() {
               _hasOpenedPaymentModalOnce = true;
-              _isProcessingCheckout = true;
             });
             Navigator.of(dialogContext).pop();
             try {
@@ -5069,16 +5029,17 @@ class OrderPanelState extends State<OrderPanel> {
               }
             } finally {
               if (mounted) {
-                setState(() {
-                  _isProcessingCheckout = false;
-                });
+                setState(() {});
               }
             }
           },
           onConfirmAndPrint: () async {
+            if (mode == CheckoutModalMode.selectionOnly) {
+              Navigator.of(dialogContext).pop();
+              return;
+            }
             setState(() {
               _hasOpenedPaymentModalOnce = true;
-              _isProcessingCheckout = true;
             });
             Navigator.of(dialogContext).pop();
             try {
@@ -5089,9 +5050,7 @@ class OrderPanelState extends State<OrderPanel> {
               }
             } finally {
               if (mounted) {
-                setState(() {
-                  _isProcessingCheckout = false;
-                });
+                setState(() {});
               }
             }
           },
@@ -5136,7 +5095,8 @@ class OrderPanelState extends State<OrderPanel> {
           Provider.of<LocalProductProvider>(context, listen: false);
       final List<dynamic> orderItems = _getCartItemsFromOrder(_selectedOrder);
 
-      debugPrint('🔄 Syncing order items with LocalProductProvider cart...');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Syncing order items with LocalProductProvider cart...');
       debugPrint('   Order items count: ${orderItems.length}');
 
       // Clear the current cart first
@@ -5154,7 +5114,8 @@ class OrderPanelState extends State<OrderPanel> {
             (p) => p.productId == productId,
           );
         } catch (_) {
-          debugPrint('⚠️ Product $productId not found in product list');
+          debugPrint(
+              'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Product $productId not found in product list');
           continue;
         }
 
@@ -5190,7 +5151,7 @@ class OrderPanelState extends State<OrderPanel> {
         );
 
         debugPrint(
-            '   ✓ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
+            '   ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Added: ${product.productName} (Qty: $quantity, Price: $unitPrice)');
       }
 
       // Apply discounts from the order
@@ -5199,9 +5160,10 @@ class OrderPanelState extends State<OrderPanel> {
         percentageDiscount: _percentageDiscount,
       );
 
-      debugPrint('✅ Order items synced with LocalProductProvider cart');
+      debugPrint(
+          'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order items synced with LocalProductProvider cart');
     } catch (e) {
-      debugPrint('❌ Error syncing order items with cart: $e');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error syncing order items with cart: $e');
     }
   }
 
@@ -5282,10 +5244,12 @@ class OrderPanelState extends State<OrderPanel> {
           return;
         }
 
-        debugPrint('➡️ Calling CartProvider.addToCartAPI for increment');
         debugPrint(
-            '📦 addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
-        debugPrint('🔍 Customer ID source: _selectedOrder data structure');
+            'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.addToCartAPI for increment');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ addToCartAPI Request Body: {customerId: $customerId, productId: $productId, quantity: $deltaQuantity, unitPrice: $unitPrice, cartId: $orderCartId}');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.addToCartAPI(
           customerId: int.parse(customerId.toString()),
@@ -5295,16 +5259,17 @@ class OrderPanelState extends State<OrderPanel> {
           accessToken: authModel.token ?? '',
           cartId: orderCartId,
         );
-        debugPrint('✅ addToCartAPI Response: $response');
+        debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ addToCartAPI Response: $response');
       } else if (newQuantity <= currentQuantity) {
         // Decrement quantity or remove item (including 0) - use decrementCartItemQuantityAPI
         String actionType =
             newQuantity == 0 ? 'remove (set to 0)' : 'decrement';
         debugPrint(
-            '➡️ Calling CartProvider.decrementCartItemQuantityAPI for $actionType');
+            'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.decrementCartItemQuantityAPI for $actionType');
         debugPrint(
-            '📦 decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: ${newQuantity.toInt()}, cartId: $orderCartId}');
-        debugPrint('🔍 Customer ID source: _selectedOrder data structure');
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: ${newQuantity.toInt()}, cartId: $orderCartId}');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Customer ID source: _selectedOrder data structure');
 
         response = await cartProvider.decrementCartItemQuantityAPI(
           customerId: int.parse(customerId.toString()),
@@ -5314,7 +5279,8 @@ class OrderPanelState extends State<OrderPanel> {
           quantity: newQuantity.toInt(), // Can be 0 for removal
           accessToken: authModel.token ?? '',
         );
-        debugPrint('✅ decrementCartItemQuantityAPI Response: $response');
+        debugPrint(
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ decrementCartItemQuantityAPI Response: $response');
       } else {
         // Quantity is the same, no action needed
         debugPrint(
@@ -5370,7 +5336,7 @@ class OrderPanelState extends State<OrderPanel> {
         final bool isIncrement = newQuantity > currentQuantity;
         final itemStatus = cartItem['status']?.toString();
         // Backend creates a NEW cart entry (status=null) whenever the existing
-        // item already has ANY status — not just 'PREPARING' / 'COOKING' etc.
+        // item already has ANY status ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â not just 'PREPARING' / 'COOKING' etc.
         // 'STARTED' also triggers this behaviour, so check for any non-null status.
         final itemAlreadyHasStatus =
             itemStatus != null && itemStatus.isNotEmpty;
@@ -5431,7 +5397,7 @@ class OrderPanelState extends State<OrderPanel> {
         );
       }
     } catch (e) {
-      debugPrint('❌ Error updating cart item: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error updating cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
         message: 'Failed to update cart item: ${e.toString()}',
@@ -5454,7 +5420,7 @@ class OrderPanelState extends State<OrderPanel> {
               '');
 
       debugPrint(
-          '🗑️ Removing cart item (using unified API): Sending request with customerId: $customerId, cartItemId: ${cartItem['id']}');
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬ËœÃƒÂ¯Ã‚Â¸Ã‚Â Removing cart item (using unified API): Sending request with customerId: $customerId, cartItemId: ${cartItem['id']}');
       // Use the unified decrementCartItemQuantityAPI with quantity 0 for removal
       final response = await cartProvider.decrementCartItemQuantityAPI(
         customerId: int.parse(customerId.toString()),
@@ -5465,7 +5431,8 @@ class OrderPanelState extends State<OrderPanel> {
         accessToken: authModel.token ?? '',
       );
 
-      debugPrint('🗑️ Remove response (unified API): $response');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬ËœÃƒÂ¯Ã‚Â¸Ã‚Â Remove response (unified API): $response');
 
       // Update the UI optimistically first
       setState(() {
@@ -5500,7 +5467,7 @@ class OrderPanelState extends State<OrderPanel> {
         );
       }
     } catch (e) {
-      debugPrint('❌ Error removing cart item: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error removing cart item: ${e.toString()}');
       showScaffoldError(
         context: context,
         message: 'Failed to remove item: ${e.toString()}',
@@ -5510,7 +5477,8 @@ class OrderPanelState extends State<OrderPanel> {
 
   Future<void> _refreshOrderDetails() async {
     try {
-      debugPrint('🔄 Refreshing order details by fetching saved orders...');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing order details by fetching saved orders...');
 
       // Instead of trying to fetch cart data directly,
       // refresh the saved orders list and find the current order
@@ -5543,75 +5511,82 @@ class OrderPanelState extends State<OrderPanel> {
               _selectedOrder = null;
             });
             widget.onOrderSelected(null);
-            debugPrint('✅ Skipping reselect after order placed');
+            debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Skipping reselect after order placed');
             return;
           }
           setState(() {
             _selectedOrder = updatedOrder;
           });
-          debugPrint('✅ Order details refreshed successfully');
+          debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Order details refreshed successfully');
         } else {
-          debugPrint('⚠️ Could not find updated order in the list');
+          debugPrint(
+              'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Could not find updated order in the list');
         }
       } else {
-        debugPrint('⚠️ Failed to refresh saved orders: ${response['message']}');
+        debugPrint(
+            'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Failed to refresh saved orders: ${response['message']}');
       }
     } catch (e) {
-      debugPrint('❌ Error refreshing order details: ${e.toString()}');
+      debugPrint(
+          'ÃƒÂ¢Ã‚ÂÃ…â€™ Error refreshing order details: ${e.toString()}');
       // As a fallback, try to refresh the saved orders list
       try {
         await _fetchSavedOrders();
       } catch (fallbackError) {
         debugPrint(
-            '❌ Fallback refresh also failed: ${fallbackError.toString()}');
+            'ÃƒÂ¢Ã‚ÂÃ…â€™ Fallback refresh also failed: ${fallbackError.toString()}');
       }
     }
   }
 
   List<dynamic> _getCartItemsFromOrder(dynamic order) {
-    debugPrint('📦 _getCartItemsFromOrder called');
+    debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ _getCartItemsFromOrder called');
     if (order == null) {
-      debugPrint('❌ _getCartItemsFromOrder: Order is null');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _getCartItemsFromOrder: Order is null');
       return [];
     }
 
     debugPrint(
-        '🔍 _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â _getCartItemsFromOrder: Available keys: ${order.keys.toList()}');
 
     if (order['cart_items'] != null) {
-      debugPrint('✓ Found cart_items key');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Found cart_items key');
       if (order['cart_items']['cart_items'] is List) {
         final items = order['cart_items']['cart_items'];
         debugPrint(
-            '✓ Returning ${items.length} items from cart_items.cart_items');
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from cart_items.cart_items');
         return items;
       } else if (order['cart_items'] is List) {
         final items = order['cart_items'];
-        debugPrint('✓ Returning ${items.length} items from cart_items (List)');
+        debugPrint(
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from cart_items (List)');
         return items;
       }
     } else if (order['cart'] != null) {
-      debugPrint('✓ Found cart key');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Found cart key');
       if (order['cart']['cart_items'] is List) {
         final items = order['cart']['cart_items'];
-        debugPrint('✓ Returning ${items.length} items from cart.cart_items');
+        debugPrint(
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from cart.cart_items');
         return items;
       } else if (order['cart']['items'] is List) {
         final items = order['cart']['items'];
-        debugPrint('✓ Returning ${items.length} items from cart.items');
+        debugPrint(
+            'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from cart.items');
         return items;
       }
     } else if (order['items'] is List) {
       final items = order['items'];
-      debugPrint('✓ Returning ${items.length} items from items');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from items');
       return items;
     } else if (order['order_items'] is List) {
       final items = order['order_items'];
-      debugPrint('✓ Returning ${items.length} items from order_items');
+      debugPrint(
+          'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Returning ${items.length} items from order_items');
       return items;
     }
 
-    debugPrint('❌ _getCartItemsFromOrder: No cart items found');
+    debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ _getCartItemsFromOrder: No cart items found');
     return [];
   }
 
@@ -5768,7 +5743,7 @@ class OrderPanelState extends State<OrderPanel> {
         final accessToken = authModel.token;
 
         debugPrint(
-            "🔍 Fetching order details for bill print - Order $orderNumber");
+            "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Fetching order details for bill print - Order $orderNumber");
         final response = await SalesProvider().listOrderDetails(
           context,
           orderNumber,
@@ -5836,7 +5811,8 @@ class OrderPanelState extends State<OrderPanel> {
           }
 
           if (mounted) {
-            debugPrint("🖨️ Attempting auto-print for order #$orderNumber");
+            debugPrint(
+                "ÃƒÂ°Ã…Â¸Ã¢â‚¬â€œÃ‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â Attempting auto-print for order #$orderNumber");
 
             Future<bool> printOnce() {
               return _printOrderDetailsWithFallback(
@@ -5885,7 +5861,7 @@ class OrderPanelState extends State<OrderPanel> {
           }
         }
       } catch (e) {
-        debugPrint("❌ Error printing bill: $e");
+        debugPrint("ÃƒÂ¢Ã‚ÂÃ…â€™ Error printing bill: $e");
         showScaffoldError(
             context: context, message: "Failed to print bill: $e");
 
@@ -5909,11 +5885,12 @@ class OrderPanelState extends State<OrderPanel> {
         _selectedOrder = null;
       });
       widget.onOrderSelected(null);
-      debugPrint('✅ Skipping reselect after order placed');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Skipping reselect after order placed');
       return;
     }
 
-    debugPrint('🔄 Refreshing selected order after cart update...');
+    debugPrint(
+        'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing selected order after cart update...');
 
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
@@ -5954,18 +5931,18 @@ class OrderPanelState extends State<OrderPanel> {
           // widget.onOrderSelected(updatedOrder); // Commented out to prevent loop
 
           debugPrint(
-              '✅ Selected order refreshed successfully after cart update');
+              'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Selected order refreshed successfully after cart update');
         } else {
           debugPrint(
-              '⚠️ Could not find updated order in the list after cart update');
+              'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Could not find updated order in the list after cart update');
         }
       } else {
         debugPrint(
-            '⚠️ Failed to refresh saved orders after cart update: ${response['message']}');
+            'ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Failed to refresh saved orders after cart update: ${response['message']}');
       }
     } catch (e) {
       debugPrint(
-          '❌ Error refreshing selected order after cart update: ${e.toString()}');
+          'ÃƒÂ¢Ã‚ÂÃ…â€™ Error refreshing selected order after cart update: ${e.toString()}');
     }
   }
 
@@ -6055,20 +6032,24 @@ class OrderPanelState extends State<OrderPanel> {
       if (customerPrevBalance < 0) {
         final transactionExcess = totalPaid - payableTotal;
         if (transactionExcess > 0) {
-          final customerCredit = requestedCustomerCredit.clamp(
-            0.0,
-            transactionExcess,
-          ).toDouble();
+          final customerCredit = requestedCustomerCredit
+              .clamp(
+                0.0,
+                transactionExcess,
+              )
+              .toDouble();
           cashBalance = transactionExcess - customerCredit;
         }
       } else {
         final netDue = payableTotal - customerPrevBalance;
         final availableBalance = totalPaid - netDue;
         if (availableBalance > 0) {
-          final customerCredit = requestedCustomerCredit.clamp(
-            0.0,
-            availableBalance,
-          ).toDouble();
+          final customerCredit = requestedCustomerCredit
+              .clamp(
+                0.0,
+                availableBalance,
+              )
+              .toDouble();
           cashBalance = availableBalance - customerCredit;
         }
       }
@@ -6378,7 +6359,7 @@ class OrderPanelState extends State<OrderPanel> {
       }
 
       _refreshCustomersInBackgroundAfterSale();
-      deleteLoadedDraftIfAny();
+      this.deleteLoadedDraftIfAny();
       localProductProvider.clearCartAfterOrder();
       _resetCurrentCartCheckoutState();
       showScaffold(
@@ -6432,7 +6413,8 @@ class OrderPanelState extends State<OrderPanel> {
       final orderId = _selectedOrder['id'] ?? _selectedOrder['order_id'];
       final orderNumber = _selectedOrder['order_number'];
 
-      debugPrint('🔄 Confirming order: $orderNumber (ID: $orderId)');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Confirming order: $orderNumber (ID: $orderId)');
 
       // Get order details for API call
       final customerId = _selectedCustomer?.id ??
@@ -6566,7 +6548,7 @@ class OrderPanelState extends State<OrderPanel> {
       _balanceAmount = _calculateBalanceAmount();
       final balanceAmount = _balanceAmount.toString();
 
-      debugPrint('📦 Order details for confirmation:');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ Order details for confirmation:');
       debugPrint('   - Customer ID: $customerId');
       debugPrint('   - Customer Phone: $customerPhone');
       debugPrint('   - Total Price: $totalPrice');
@@ -6574,7 +6556,7 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint('   - Payment Method: $paymentMethod');
       debugPrint('   - Paid Amount: $paidAmount');
       debugPrint('   - Balance Amount: $balanceAmount');
-      debugPrint('🎫 Discount details for confirmation:');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â« Discount details for confirmation:');
       debugPrint(
           '   - Flat Discount: ${flatDiscountAmount.toStringAsFixed(2)}');
       debugPrint(
@@ -6582,7 +6564,7 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint(
           '   - Total Discount Amount: ${totalDiscountAmount.toStringAsFixed(2)}');
       debugPrint('   - Coupon Code: $_couponCode');
-      debugPrint('🔧 Payment Methods Details:');
+      debugPrint('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Payment Methods Details:');
       debugPrint('   - Payment Methods Array: $paymentMethods');
       debugPrint('   - Paid Methods Array: $paidMethods');
       debugPrint(
@@ -6590,7 +6572,8 @@ class OrderPanelState extends State<OrderPanel> {
       debugPrint(
           '   - Is Card Selected: $_isCardSelected (Amount: $_cardAmount)');
       debugPrint('   - Is UPI Selected: $_isUpiSelected (Amount: $_upiAmount)');
-      debugPrint('\n🚀 CALLING updateOrderAPI with these parameters:');
+      debugPrint(
+          '\nÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ CALLING updateOrderAPI with these parameters:');
       debugPrint('   orderId: ${orderId.toString()}');
       debugPrint(
           '   accessToken: ${authModel.token != null ? "[PROVIDED]" : "[NULL]"}');
@@ -6611,7 +6594,7 @@ class OrderPanelState extends State<OrderPanel> {
           '   percentageDiscount: ${_percentageDiscount > 0 ? _percentageDiscount : null}');
       debugPrint(
           '   discountAmount: ${totalDiscountAmount > 0 ? totalDiscountAmount : null}');
-      debugPrint('\n📡 About to call updateOrderAPI...');
+      debugPrint('\nÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¡ About to call updateOrderAPI...');
 
       // Call update order API with status "confirmed" and payment data
       final response = await cartProvider.updateOrderAPI(
@@ -6628,9 +6611,12 @@ class OrderPanelState extends State<OrderPanel> {
         paidMethods: paidMethods.isNotEmpty ? paidMethods : null,
         status: 'confirmed',
         comment: comment,
-        deliveryMethodId: _deliveryMethodId.isNotEmpty
-            ? _deliveryMethodId
-            : _getDefaultDeliveryMethodId(),
+        deliveryMethodId: widget.tableId == null
+            ? (_deliveryMethodId.isNotEmpty
+                ? _deliveryMethodId
+                : _getDefaultDeliveryMethodId())
+            : '',
+        tableId: widget.tableId ?? '',
         address: _deliveryAddress.isNotEmpty ? _deliveryAddress : null,
         // Add discount parameters
         flatDiscount: _flatDiscount > 0 ? _flatDiscount : null,
@@ -6641,7 +6627,7 @@ class OrderPanelState extends State<OrderPanel> {
         deliveryCharge: _getDeliveryChargeForOrder(),
       );
 
-      debugPrint('\n📥 updateOrderAPI RESPONSE:');
+      debugPrint('\nÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¥ updateOrderAPI RESPONSE:');
       debugPrint('   Response: $response');
       debugPrint('   Response Type: ${response.runtimeType}');
       if (response is Map) {
@@ -6649,7 +6635,7 @@ class OrderPanelState extends State<OrderPanel> {
         debugPrint('   Message: ${response['message']}');
         debugPrint('   Data: ${response['data']}');
       }
-      debugPrint('✅ Confirm order response: $response');
+      debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Confirm order response: $response');
 
       if (isApiSuccess(response)) {
         _refreshCustomersInBackgroundAfterSale();
@@ -6660,12 +6646,13 @@ class OrderPanelState extends State<OrderPanel> {
         );
 
         // Refresh saved orders to show updated status
-        debugPrint('🔄 Refreshing saved orders after confirming order');
+        debugPrint(
+            'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing saved orders after confirming order');
         await Future.delayed(const Duration(milliseconds: 500));
         await _fetchSavedOrders();
 
-        // Delete the local draft so it no longer appears in Pending Orders
-        deleteLoadedDraftIfAny();
+        // Delete the local draft so it no longer appears in Saved Orders
+        this.deleteLoadedDraftIfAny();
 
         // Clear the cart to prevent auto-save from recreating a draft on table switch
         Provider.of<LocalProductProvider>(context, listen: false).clearCart();
@@ -6688,7 +6675,7 @@ class OrderPanelState extends State<OrderPanel> {
         return false;
       }
     } catch (e) {
-      debugPrint('❌ Error confirming order: ${e.toString()}');
+      debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Error confirming order: ${e.toString()}');
       showScaffoldError(
         context: context,
         message: 'Failed to confirm order: ${e.toString()}',
@@ -6713,7 +6700,8 @@ class OrderPanelState extends State<OrderPanel> {
       );
 
       // Refresh saved orders to show updated status
-      debugPrint('🔄 Refreshing saved orders after updating order status');
+      debugPrint(
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Refreshing saved orders after updating order status');
       await Future.delayed(const Duration(milliseconds: 500));
       await _fetchSavedOrders();
 
@@ -6728,1548 +6716,44 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
-  Widget _buildCurrentCartItem(LocalCartItem cartItem, int index) {
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-
-    final productName = cartItem.product.productName ?? 'Unknown Product';
-    final quantity = cartItem.quantity;
-    final unitPrice = cartItem.price ?? 0.0;
-    final totalPrice = quantity * unitPrice;
-
-    return Container(
-      padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.shade200,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Item name and price
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  productName,
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s13 : FontSize.s15,
-                      0.21,
-                      const Color(0xFF1E293B)),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF059669).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$currency ${totalPrice.toStringAsFixed(2)}',
-                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s12,
-                      0.21, const Color(0xFF059669)),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Unit price and quantity info
-          Row(
-            children: [
-              // Editable Price Trigger for Local Items (Blue Box style)
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () =>
-                      _showEditItemPriceDialog(cartItem, isLocal: true),
-                  borderRadius: BorderRadius.circular(4),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(4),
-                      color: Colors.blue.withOpacity(0.05),
-                    ),
-                    child: Text(
-                      '$currency ${unitPrice.toStringAsFixed(2)}',
-                      style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          widget.isCompact ? FontSize.s11 : FontSize.s12,
-                          0.21,
-                          const Color(0xFF2563EB)),
-                    ),
-                  ),
-                ),
-              ),
-              Text(
-                ' × ${quantity.toStringAsFixed(0)}',
-                style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    widget.isCompact ? FontSize.s11 : FontSize.s12,
-                    0.21,
-                    const Color(0xFF64748B)),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Quantity controls with modern styling (for current cart, these will use local provider)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.grey.shade300,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _updateCurrentCartItemQuantity(
-                            cartItem, quantity - 1),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.remove,
-                            size: widget.isCompact ? 16 : 18,
-                            color: const Color(0xFFDC2626),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      width: widget.isCompact ? 32 : 40,
-                      alignment: Alignment.center,
-                      child: Text(
-                        quantity.toStringAsFixed(0),
-                        style: buildCustomStyle(FontWeightManager.bold,
-                            FontSize.s14, 0.21, const Color(0xFF1E293B)),
-                      ),
-                    ),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _updateCurrentCartItemQuantity(
-                            cartItem, quantity + 1),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.add,
-                            size: widget.isCompact ? 16 : 18,
-                            color: const Color(0xFF059669),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (cartItem.comment != null && cartItem.comment!.isNotEmpty)
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: widget.isCompact ? 90 : 130,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Text(
-                          cartItem.comment!,
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            FontSize.s11,
-                            0.21,
-                            const Color(0xFF64748B),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ),
-                  // Comment button
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () =>
-                          _showItemCommentDialog(cartItem, isLocal: true),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: cartItem.comment != null &&
-                                  cartItem.comment!.isNotEmpty
-                              ? const Color(0xFF2563EB).withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          cartItem.comment != null &&
-                                  cartItem.comment!.isNotEmpty
-                              ? Icons.chat
-                              : Icons.chat_bubble_outline,
-                          size: widget.isCompact ? 16 : 18,
-                          color: cartItem.comment != null &&
-                                  cartItem.comment!.isNotEmpty
-                              ? const Color(0xFF2563EB)
-                              : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Remove button with modern styling
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _removeCurrentCartItem(cartItem),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDC2626).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.delete_outline,
-                          size: widget.isCompact ? 16 : 18,
-                          color: const Color(0xFFDC2626),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Footer actions for current cart (New Order flow)
-  Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
-    final showCounterCheckout =
-        widget.allowCounterBilling && widget.isCounterBillingMode;
-    final hasTableOrderContext = widget.tableId != null;
-
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: EdgeInsets.all(widget.isCompact ? 12.0 : 16.0),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey.shade100,
-              width: 1,
-            ),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildCurrentCartSummaryCard(cartItems),
-            const SizedBox(height: 12),
-            // Top: Comment button (full width)
-            SizedBox(
-              width: double.infinity,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _showCommentDialog(),
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: widget.isCompact ? 44 : 48,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      border: Border.all(
-                        color: Colors.grey.shade300,
-                        width: 1.5,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _orderComment.isNotEmpty
-                                ? Icons.check_circle
-                                : Icons.comment,
-                            color: _orderComment.isNotEmpty
-                                ? const Color(0xFF059669)
-                                : const Color(0xFF64748B),
-                            size: widget.isCompact ? 14 : 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Comment',
-                            style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s13 : FontSize.s14,
-                                0.21,
-                                const Color(0xFF64748B)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Bottom row: table service actions or quick counter checkout.
-            Row(
-              children: showCounterCheckout
-                  ? [
-                      Expanded(
-                        child: _buildCurrentCartFooterButton(
-                          label: 'Clear',
-                          color: const Color(0xFFDC2626),
-                          isDisabled: cartItems.isEmpty,
-                          onTap: () => _clearCurrentCart(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildCurrentCartFooterButton(
-                          label: 'Save',
-                          color: const Color(0xFFEAB308),
-                          isDisabled: cartItems.isEmpty,
-                          onTap: () => _saveCurrentCartAsPending(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (hasTableOrderContext) ...[
-                        Expanded(
-                          child: _buildCurrentCartFooterButton(
-                            label: 'Send',
-                            color: const Color(0xFF2563EB),
-                            isDisabled:
-                                cartItems.isEmpty || widget.isLoadingPrint,
-                            isLoading: widget.isLoadingPrint,
-                            onTap: () => widget.onPrintOrder(),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: _buildCurrentCartFooterButton(
-                          label: 'Checkout',
-                          color: const Color(0xFF059669),
-                          isDisabled:
-                              cartItems.isEmpty || _isProcessingCheckout,
-                          isLoading: _isProcessingCheckout,
-                          onTap: () => _showCheckoutModal(forCurrentCart: true),
-                        ),
-                      ),
-                    ]
-                  : [
-                      Expanded(
-                        child: _buildCurrentCartFooterButton(
-                          label: 'Clear',
-                          color: const Color(0xFFDC2626),
-                          isDisabled: cartItems.isEmpty,
-                          onTap: () => _clearCurrentCart(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildCurrentCartFooterButton(
-                          label: 'Save',
-                          color: const Color(0xFF2563EB),
-                          isDisabled:
-                              cartItems.isEmpty || widget.tableId == null,
-                          onTap: () => _saveCurrentCartAsPending(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: _buildCurrentCartFooterButton(
-                          label: 'Send To Kitchen',
-                          color: const Color(0xFF059669),
-                          isDisabled:
-                              cartItems.isEmpty || widget.isLoadingPrint,
-                          isLoading: widget.isLoadingPrint,
-                          onTap: () => widget.onPrintOrder(),
-                        ),
-                      ),
-                    ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCurrentCartSummaryCard(List<LocalCartItem> cartItems) {
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-
-    double netAmount = 0.0;
-    for (final item in cartItems) {
-      final unitPrice = item.price ?? 0.0;
-      netAmount += unitPrice * item.quantity;
-    }
-    final totalPayable = netAmount;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildSummaryRow(
-            'Net Amount',
-            '$currency ${netAmount.toStringAsFixed(2)}',
-            color: const Color(0xFF3F3F46),
-          ),
-          const SizedBox(height: 6),
-          Container(height: 1, color: const Color(0xFFE4E4ED)),
-          const SizedBox(height: 8),
-          _buildSummaryRow(
-            'Total Payable',
-            '$currency ${totalPayable.toStringAsFixed(2)}',
-            color: const Color(0xFF3B82F6),
-            isBold: true,
-            large: true,
-          ),
-          _buildSummaryRow(
-            'Total Paid',
-            '$currency 0.00',
-            color: const Color(0xFF3F3F46),
-          ),
-          _buildSummaryRow(
-            'Balance',
-            '$currency ${totalPayable.toStringAsFixed(2)}',
-            color: const Color(0xFF00C739),
-            isBold: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCurrentCartFooterButton({
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-    bool isDisabled = false,
-    bool isLoading = false,
-  }) {
-    final disabled = isDisabled || isLoading;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: disabled ? null : onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: widget.isCompact ? 44 : 48,
-          decoration: BoxDecoration(
-            color: disabled ? const Color(0xFF94A3B8) : color,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: disabled
-                ? []
-                : [
-                    BoxShadow(
-                      color: color.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Center(
-            child: isLoading
-                ? SizedBox(
-                    width: widget.isCompact ? 16 : 20,
-                    height: widget.isCompact ? 16 : 20,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          label,
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            widget.isCompact ? FontSize.s12 : FontSize.s13,
-                            0.21,
-                            Colors.white,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Methods for current cart operations
-  Future<void> _updateCurrentCartItemQuantity(
-      LocalCartItem cartItem, double newQuantity) async {
-    if (newQuantity <= 0) {
-      await _removeCurrentCartItem(cartItem);
-      return;
-    }
-
-    try {
-      debugPrint(
-          '🔄 _updateCurrentCartItemQuantity: Updating quantity for ${cartItem.product.productName} to ${newQuantity.toInt()}');
-
-      final result = await CartQuantityStockHelper.syncCartItemQuantity(
-        context: context,
-        cartItem: cartItem,
-        newQuantity: newQuantity,
-      );
-
-      if (result.changed) {
-        showScaffold(
-          context: context,
-          message: 'Item quantity updated successfully',
-        );
-      }
-    } catch (e) {
-      showScaffoldError(
-        context: context,
-        message: 'Failed to update quantity: ${e.toString()}',
-      );
-    }
-  }
-
-  Future<void> _removeCurrentCartItem(LocalCartItem cartItem) async {
-    try {
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-
-      debugPrint(
-          '🗑️ _removeCurrentCartItem: Removing ${cartItem.product.productName} from cart');
-
-      // Use LocalProductProvider to remove the item
-      localProductProvider.removeFromCart(
-        cartItem.product.productId!,
-        cartItem.selectedStock,
-        stockGroupIds: cartItem.stockGroupIds,
-        saleUnitId: cartItem.saleUnitId,
-      );
-
-      showScaffold(
-        context: context,
-        message: 'Item removed successfully',
-      );
-    } catch (e) {
-      showScaffoldError(
-        context: context,
-        message: 'Failed to remove item: ${e.toString()}',
-      );
-    }
-  }
-
-  Future<void> _clearCurrentCart() async {
-    try {
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-
-      if (localProductProvider.cartItems.isNotEmpty) {
-        debugPrint('🗑️ _clearCurrentCart: Clearing local cart');
-
-        // Use LocalProductProvider to clear the cart
-        localProductProvider.clearCart();
-        setState(() {
-          _orderComment = '';
-          _loadedLocalDraftId = null;
-        });
-
-        showScaffold(
-          context: context,
-          message: 'Cart cleared successfully',
-        );
-      }
-    } catch (e) {
-      showScaffoldError(
-        context: context,
-        message: 'Failed to clear cart: ${e.toString()}',
-      );
-    }
-  }
-
-  // Save current cart locally as a PENDING draft for the active table/delivery method
-  Future<void> _saveCurrentCartAsPending() async {
-    if (widget.tableId == null &&
-        (widget.preselectedDeliveryMethodId == null ||
-            widget.preselectedDeliveryMethodId!.isEmpty)) {
-      showScaffoldError(
-          context: context, message: 'Select a table or delivery method first');
-      return;
-    }
-
-    try {
-      final localProductProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-      final isNonTableOrderContext = widget.tableId == null &&
-          (widget.preselectedDeliveryMethodId?.isNotEmpty == true ||
-              (widget.allowCounterBilling && widget.isCounterBillingMode));
-
-      debugPrint('📝 [_saveCurrentCartAsPending] START');
-      debugPrint('📝 tableId: ${widget.tableId}');
-      debugPrint(
-          '📝 preselectedDeliveryMethodId: ${widget.preselectedDeliveryMethodId}');
-      debugPrint('📝 isNonTableOrderContext: $isNonTableOrderContext');
-      debugPrint('📝 cartItemsCount: ${localProductProvider.cartItems.length}');
-
-      if (localProductProvider.cartItems.isEmpty) {
-        showScaffoldError(
-            context: context, message: 'No items in cart to save');
-        return;
-      }
-
-      final paymentData = _getLocalDraftPaymentData();
-      final draftComment = widget.tableId != null
-          ? buildTaggedDraftComment(widget.tableId!)
-          : _orderComment.trim();
-      debugPrint('📝 draftComment: "$draftComment"');
-      debugPrint('📝 deliveryMethodForDraft: $deliveryMethodForDraft');
-      debugPrint('📝 deliveryMethodIdForDraft: $deliveryMethodIdForDraft');
-      debugPrint('📝 selectedCustomerIdForDraft: $selectedCustomerIdForDraft');
-      debugPrint('📝 paymentData: $paymentData');
-
-      // If a local draft is loaded, update it instead of creating a new one
-      if (_loadedLocalDraftId != null) {
-        debugPrint('📝 Updating existing local draft $_loadedLocalDraftId');
-        localProductProvider.updateSavedOrder(
-          _loadedLocalDraftId!,
-          customerName: selectedCustomerNameForDraft,
-          customerPhone: selectedCustomerPhoneForDraft,
-          comment: draftComment.isNotEmpty ? draftComment : null,
-          deliveryMethod: deliveryMethodForDraft,
-          customerId: selectedCustomerIdForDraft,
-          paymentMethod: paymentData['paymentMethod'],
-          paidAmount: paymentData['paidAmount'],
-          balanceAmount: balanceAmountForDraft,
-          transactionId: transactionNumberForDraft,
-          couponId: couponIdForDraft,
-          deliveryMethodId: deliveryMethodIdForDraft,
-          status: 'pending',
-          deliveryDate: deliveryDateForDraft,
-          deliveryTime: deliveryTimeForDraft,
-          toCustomerCredit: toCustomerCreditForDraft,
-          context: context,
-          tableId: widget.tableId,
-          address: deliveryAddressForDraft,
-          deliveryCharge: deliveryChargeForDraft,
-          customerType: selectedCustomerTypeForDraft,
-        );
-        showScaffold(context: context, message: 'Updated local draft');
-      } else {
-        debugPrint('📝 Creating new local draft');
-        final saved = localProductProvider.saveCurrentCartAsOrder(
-          customerName: selectedCustomerNameForDraft,
-          customerPhone: selectedCustomerPhoneForDraft,
-          comment: draftComment.isNotEmpty ? draftComment : null,
-          deliveryMethod: deliveryMethodForDraft,
-          customerId: selectedCustomerIdForDraft,
-          paymentMethod: paymentData['paymentMethod'],
-          paidAmount: paymentData['paidAmount'],
-          balanceAmount: balanceAmountForDraft,
-          transactionId: transactionNumberForDraft,
-          couponId: couponIdForDraft,
-          deliveryMethodId: deliveryMethodIdForDraft,
-          status: 'pending',
-          deliveryDate: deliveryDateForDraft,
-          deliveryTime: deliveryTimeForDraft,
-          toCustomerCredit: toCustomerCreditForDraft,
-          context: context,
-          tableId: widget.tableId,
-          address: deliveryAddressForDraft,
-          deliveryCharge: deliveryChargeForDraft,
-          customerType: selectedCustomerTypeForDraft,
-        );
-        showScaffold(
-            context: context,
-            message: 'Saved local draft ${saved.orderNumber}');
-      }
-
-      // Clear cart and refresh local drafts
-      localProductProvider.clearCart();
-      setState(() {
-        _loadedLocalDraftId = null;
-        _orderComment = '';
-        _showSavedOrdersView = true;
-      });
-      _refreshLocalDrafts();
-    } catch (e) {
-      showScaffoldError(
-          context: context,
-          message: 'Failed to save local draft: ${e.toString()}');
-    }
-  }
-
-  // Refresh local drafts from Hive filtered by table tag and pending status
-  Future<void> _refreshLocalDrafts() async {
-    // Reset manual selection flag when table changes context or drafts are refreshed
-    _isCustomerManuallySelected = false;
-
-    // Apply default customer logic for the current table context
-    _applyDefaultCustomer();
-
-    try {
-      final localProvider =
-          Provider.of<LocalProductProvider>(context, listen: false);
-      final drafts = localProvider.savedOrders.where((o) {
-        final st = (o.status ?? '').toLowerCase();
-        if (st != 'pending') return false;
-        // Filter by table when a table is selected
-        if (widget.tableId != null) {
-          return o.tableId == widget.tableId;
-        }
-        // Filter by delivery method when no table is selected
-        if (widget.preselectedDeliveryMethodId != null &&
-            widget.preselectedDeliveryMethodId!.isNotEmpty) {
-          return o.tableId == null &&
-              o.deliveryMethodId == widget.preselectedDeliveryMethodId;
-        }
-        return false;
-      }).toList();
-      setState(() {
-        _localDrafts = drafts;
-      });
-    } catch (_) {}
-  }
-
-  // Delete local draft
-  void _deleteLocalDraft(SavedOrder order) {
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-    localProductProvider.deleteSavedOrder(order.id);
-    _refreshLocalDrafts();
-  }
-
-  // Local draft item card
-  Widget _buildLocalDraftItem(SavedOrder order) {
-    final int totalItems = order.items.length;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          // Load back to current cart for editing
-          final localProductProvider =
-              Provider.of<LocalProductProvider>(context, listen: false);
-          _loadedLocalDraftId = order.id;
-          localProductProvider.loadOrderForEditing(order.id);
-          _rehydrateLocalDraftMetadata(order);
-          showCurrentOrderTab();
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    order.orderNumber,
-                    style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        widget.isCompact ? FontSize.s13 : FontSize.s15,
-                        0.21,
-                        const Color(0xFF1E293B)),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD97706).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: const Color(0xFFD97706).withOpacity(0.4)),
-                        ),
-                        child: Text(
-                          'PENDING',
-                          style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              widget.isCompact ? FontSize.s10 : FontSize.s11,
-                              0.21,
-                              const Color(0xFFD97706)),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF059669).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '$totalItems',
-                          style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              widget.isCompact ? FontSize.s11 : FontSize.s13,
-                              0.21,
-                              const Color(0xFF059669)),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _deleteLocalDraft(order),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDC2626).withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.delete_outline,
-                              size: widget.isCompact ? 16 : 18,
-                              color: const Color(0xFFDC2626),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _cleanDraftComment(order.comment),
-                    style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        widget.isCompact ? FontSize.s11 : FontSize.s13,
-                        0.21,
-                        const Color(0xFF64748B)),
-                  ),
-                  Text(
-                    'Items: $totalItems',
-                    style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        widget.isCompact ? FontSize.s11 : FontSize.s13,
-                        0.21,
-                        const Color(0xFF64748B)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Safe comment cleaner: strips TABLE:<id> prefix without regex
-  String _cleanDraftComment(String? comment) {
-    final c = (comment ?? '').trim();
-    if (c.startsWith('TABLE:')) {
-      final parts = c.split('|');
-      if (parts.length >= 2) {
-        return parts.sublist(1).join('|').trim();
-      } else {
-        return '';
-      }
-    }
-    return c;
-  }
-
-  // Public method called by parent after successful send
-  void deleteLoadedDraftIfAny() {
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-
-    if (_loadedLocalDraftId != null) {
-      localProductProvider.deleteSavedOrder(_loadedLocalDraftId!);
-      _loadedLocalDraftId = null;
-    } else {
-      // Fallback: clean up any pending drafts for the current context
-      // (handles auto-saved drafts that were never tracked by _loadedLocalDraftId)
-      final staleDrafts = localProductProvider.savedOrders.where((o) {
-        if ((o.status ?? '').toLowerCase() != 'pending') return false;
-        if (widget.tableId != null) {
-          return o.tableId == widget.tableId;
-        }
-        if (widget.preselectedDeliveryMethodId != null &&
-            widget.preselectedDeliveryMethodId!.isNotEmpty) {
-          return o.tableId == null &&
-              o.deliveryMethodId == widget.preselectedDeliveryMethodId;
-        }
-        return false;
-      }).toList();
-      for (final draft in staleDrafts) {
-        localProductProvider.deleteSavedOrder(draft.id);
-      }
-    }
-
-    _refreshLocalDrafts();
-  }
-
-  Future<void> _updateSavedItemPrice(
-      dynamic cartItem, String newPriceStr) async {
-    final newPrice = double.tryParse(newPriceStr);
-    if (newPrice == null || newPrice < 0) {
-      showScaffoldError(context: context, message: 'Invalid price');
-      return;
-    }
-
-    // Determine cartItemId
-    final cartItemId = cartItem['id'];
-    if (cartItemId == null) {
-      showScaffoldError(context: context, message: 'Item ID not found');
-      return;
-    }
-
-    setState(() {
-      _loadingCartItems.add('${cartItemId}_price');
-      // _isLoadingOrderDetails = true; // Removed full loader
-    });
-
-    try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final cartProvider = Provider.of<CartProvider>(context, listen: false);
-
-      debugPrint(
-          '🔄 Updating saved item price: Item $cartItemId to $newPriceStr');
-
-      final response = await cartProvider.updateCartItemPrice(
-        cartItemId: int.parse(cartItemId.toString()),
-        unitPrice: newPriceStr,
-        accessToken: authModel.token ?? '',
-        // Pass cartId and customerId if available/needed
-        cartId: _selectedOrder['cart']?['id'] ?? _selectedOrder['cart_id'],
-        customerId: _selectedOrder['customer_id'] ??
-            _selectedOrder['cart']?['customer_id'],
-      );
-
-      if (isApiSuccess(response)) {
-        debugPrint('✅ Price updated successfully');
-        showScaffold(context: context, message: 'Price updated successfully');
-
-        // Refresh the order to show new price
-        await _refreshSelectedOrderAfterCartUpdate();
-      } else {
-        debugPrint('❌ Price update failed: ${response['message']}');
-        showScaffoldError(
-            context: context,
-            message: response['message'] ?? 'Failed to update price');
-      }
-    } catch (e) {
-      debugPrint('❌ Exception updating price: $e');
-      showScaffoldError(context: context, message: 'Error updating price: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loadingCartItems.remove('${cartItemId}_price');
-          // _isLoadingOrderDetails = false; // Removed full loader
-        });
-      }
-    }
-  }
-
-  void _showEditItemPriceDialog(dynamic cartItem, {bool isLocal = false}) {
-    final double price = isLocal
-        ? (cartItem as LocalCartItem).price ?? 0.0
-        : (double.tryParse((cartItem['unit_price'] ?? cartItem['price'] ?? 0)
-                .toString()) ??
-            0.0);
-
-    final String productName = isLocal
-        ? (cartItem as LocalCartItem).product.productName ?? 'Item'
-        : (cartItem['product']?['name'] ?? cartItem['product_name'] ?? 'Item');
-
-    final TextEditingController priceController =
-        TextEditingController(text: price.toStringAsFixed(2));
-
-    // Auto-select all text when dialog opens
-    priceController.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: priceController.text.length,
-    );
-
-    void handleUpdate() {
-      Navigator.pop(context);
-      final newPriceStr = priceController.text;
-      final newPrice = double.tryParse(newPriceStr);
-
-      if (newPrice != null && newPrice >= 0) {
-        if (isLocal) {
-          // Update Local Item
-          final localItem = cartItem as LocalCartItem;
-          final localProductProvider =
-              Provider.of<LocalProductProvider>(context, listen: false);
-          localProductProvider.updateItemPrice(
-            localItem.product.productId!,
-            localItem.selectedStock,
-            newPrice,
-            stockGroupIds: localItem.stockGroupIds,
-            saleUnitId: localItem.saleUnitId,
-          );
-        } else {
-          // Update Saved Item
-          _updateSavedItemPrice(cartItem, newPriceStr);
-        }
-      } else {
-        showScaffoldError(context: context, message: 'Invalid price');
-      }
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child:
-                    const Icon(Icons.edit, color: Color(0xFF2563EB), size: 20),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Edit Price',
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18,
-                    0.21, const Color(0xFF1E293B)),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                productName,
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
-                    0.21, const Color(0xFF1E293B)),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Current Price: ${price.toStringAsFixed(2)}',
-                style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
-                    0.21, const Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: priceController,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => handleUpdate(),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
-                    0.21, const Color(0xFF1E293B)),
-                decoration: InputDecoration(
-                  labelText: 'New Unit Price',
-                  labelStyle: const TextStyle(color: Color(0xFF64748B)),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Color(0xFF2563EB), width: 2),
-                  ),
-                  prefixText: ' ',
-                  prefixStyle: const TextStyle(
-                      color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
-                ),
-                onTap: () {
-                  Provider.of<KeyboardProvider>(context, listen: false)
-                      .show('numeric', priceController);
-                },
-              ),
-            ],
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: Text(
-                      'Cancel',
-                      style: buildCustomStyle(FontWeightManager.semiBold,
-                          FontSize.s14, 0.21, const Color(0xFF64748B)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: handleUpdate,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Update',
-                      style: buildCustomStyle(FontWeightManager.bold,
-                          FontSize.s14, 0.21, Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildSavedOrderItem(dynamic cartItem, int index) {
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-
-    final productName = cartItem['product']?['name'] ??
-        cartItem['product_name'] ??
-        cartItem['names']?[0]?['name'] ??
-        'Unknown Product';
-    final quantity = double.tryParse(cartItem['quantity'].toString()) ?? 0.0;
-    final unitPrice = double.tryParse(cartItem['unit_price'].toString()) ?? 0.0;
-    final totalPrice = double.tryParse(cartItem['total_price'].toString()) ??
-        (quantity * unitPrice);
-
-    final status = cartItem['status']?.toString();
-    final statusUpper = (status ?? '').toUpperCase();
-    final hasStarted = statusUpper == 'PREPARING' ||
-        statusUpper == 'COOKING' ||
-        statusUpper == 'IN_PROGRESS' ||
-        statusUpper == 'READY' ||
-        statusUpper == 'SERVED' ||
-        statusUpper == 'COMPLETED';
-    final isRemovable = !hasStarted;
-    final statusText = _statusTextForDisplay(status);
-
-    // Highlight newly added item: matches product ID and has no status yet
-    final cartItemProductId = cartItem['product_id']?.toString() ??
-        cartItem['product']?['id']?.toString();
-    final isHighlighted = _highlightedCartItemProductId != null &&
-        cartItemProductId == _highlightedCartItemProductId.toString() &&
-        status == null;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-      decoration: BoxDecoration(
-        color: isHighlighted
-            ? const Color(0xFF059669).withOpacity(0.08)
-            : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isHighlighted ? const Color(0xFF059669) : Colors.grey.shade200,
-          width: isHighlighted ? 2.0 : 1.0,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Item name and price
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  productName,
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s13 : FontSize.s15,
-                      0.21,
-                      const Color(0xFF1E293B)),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF059669).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$currency ${totalPrice.toStringAsFixed(2)}',
-                      style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          widget.isCompact ? FontSize.s12 : FontSize.s14,
-                          0.21,
-                          const Color(0xFF059669)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _statusColor(status).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: _statusColor(status).withOpacity(0.4)),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        widget.isCompact ? FontSize.s10 : FontSize.s11,
-                        0.21,
-                        _statusColor(status),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Unit price and quantity info
-          Row(
-            children: [
-              // Editable Price for Saved Items (Tap to edit)
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _loadingCartItems.contains('${cartItem['id']}_price')
-                      ? null
-                      : () =>
-                          _showEditItemPriceDialog(cartItem, isLocal: false),
-                  borderRadius: BorderRadius.circular(4),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(4),
-                      color: Colors.blue.withOpacity(0.05),
-                    ),
-                    child: _loadingCartItems.contains('${cartItem['id']}_price')
-                        ? SizedBox(
-                            width: widget.isCompact ? 16 : 18,
-                            height: widget.isCompact ? 16 : 18,
-                            child: const CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF2563EB),
-                              ),
-                            ),
-                          )
-                        : Text(
-                            '$currency ${unitPrice.toStringAsFixed(2)}',
-                            style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                widget.isCompact ? FontSize.s11 : FontSize.s12,
-                                0.21,
-                                const Color(0xFF2563EB)),
-                          ),
-                  ),
-                ),
-              ),
-              Text(
-                ' × ${quantity.toStringAsFixed(0)}',
-                style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    widget.isCompact ? FontSize.s11 : FontSize.s12,
-                    0.21,
-                    const Color(0xFF64748B)),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Quantity controls with modern styling (for saved orders, these will use cart API)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.grey.shade300,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _loadingCartItems
-                                    .contains('${cartItem['id']}_decrease') ||
-                                !isRemovable
-                            ? null
-                            : () => _updateCartItemQuantityWithLoading(
-                                cartItem, quantity - 1, 'decrease'),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: _loadingCartItems
-                                  .contains('${cartItem['id']}_decrease')
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 18,
-                                  height: widget.isCompact ? 16 : 18,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFFDC2626),
-                                    ),
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.remove,
-                                  size: widget.isCompact ? 16 : 18,
-                                  color: isRemovable
-                                      ? const Color(0xFFDC2626)
-                                      : Colors.grey,
-                                ),
-                        ),
-                      ),
-                    ),
-                    Container(
-                      width: widget.isCompact ? 32 : 40,
-                      alignment: Alignment.center,
-                      child: Text(
-                        quantity.toStringAsFixed(0),
-                        style: buildCustomStyle(
-                            FontWeightManager.bold,
-                            widget.isCompact ? FontSize.s14 : FontSize.s16,
-                            0.21,
-                            const Color(0xFF1E293B)),
-                      ),
-                    ),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _loadingCartItems
-                                .contains('${cartItem['id']}_increase')
-                            ? null
-                            : () => _updateCartItemQuantityWithLoading(
-                                cartItem, quantity + 1, 'increase'),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: _loadingCartItems
-                                  .contains('${cartItem['id']}_increase')
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 18,
-                                  height: widget.isCompact ? 16 : 18,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF059669),
-                                    ),
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.add,
-                                  size: widget.isCompact ? 16 : 18,
-                                  color: const Color(0xFF059669),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Comment and Remove buttons
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (cartItem['comment'] != null &&
-                      cartItem['comment'].toString().isNotEmpty)
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: widget.isCompact ? 90 : 130,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Text(
-                          cartItem['comment'].toString(),
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            FontSize.s11,
-                            0.21,
-                            const Color(0xFF64748B),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ),
-                  // Comment button for saved order item
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () =>
-                          _showItemCommentDialog(cartItem, isLocal: false),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: (cartItem['comment'] != null &&
-                                  cartItem['comment'].toString().isNotEmpty)
-                              ? const Color(0xFF2563EB).withOpacity(0.1)
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          (cartItem['comment'] != null &&
-                                  cartItem['comment'].toString().isNotEmpty)
-                              ? Icons.chat
-                              : Icons.chat_bubble_outline,
-                          size: widget.isCompact ? 16 : 18,
-                          color: (cartItem['comment'] != null &&
-                                  cartItem['comment'].toString().isNotEmpty)
-                              ? const Color(0xFF2563EB)
-                              : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (isRemovable) ...[
-                    const SizedBox(width: 8),
-                    // Remove button with modern styling
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _loadingCartItems
-                                .contains('${cartItem['id']}_remove')
-                            ? null
-                            : () => _removeCartItemWithLoading(cartItem),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDC2626).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: _loadingCartItems
-                                  .contains('${cartItem['id']}_remove')
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 18,
-                                  height: widget.isCompact ? 16 : 18,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFFDC2626),
-                                    ),
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.delete_outline,
-                                  size: widget.isCompact ? 16 : 18,
-                                  color: const Color(0xFFDC2626),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   // Public method to force switch to Current Order tab
-  void showCurrentOrderTab() {
+  Future<void> showCustomerSelectionModal() {
+    return _showCheckoutModal(
+      mode: CheckoutModalMode.selectionOnly,
+      initialStep: 0,
+      title: 'Select Customer',
+    );
+  }
+
+  Future<void> showDeliverySelectionModalFromParent() {
+    return _showCheckoutModal(
+      mode: CheckoutModalMode.selectionOnly,
+      initialStep: 1,
+      title: 'Select Delivery Method',
+    );
+  }
+
+  Future<void> clearCurrentCartFromParent() => _clearCurrentCart();
+
+  Future<void> saveCurrentCartFromParent() => _saveCurrentCartAsPending();
+
+  void showCurrentCartCheckoutFromParent() {
+    _showCheckoutModal(forCurrentCart: true);
+  }
+
+  void showCurrentOrderTab({bool preserveLoadedDraftMetadata = false}) {
     setState(() {
       _selectedOrder = null;
       _isLoadingOrders = false;
       _isLoadingOrderDetails = false;
       _error = null;
-      _orderComment = '';
-      _loadedLocalDraftId = null;
+      if (!preserveLoadedDraftMetadata) {
+        _orderComment = '';
+        _loadedLocalDraftId = null;
+      }
+      _activeOrderPanelTab = OrderPanelTab.cart;
+      _showSavedOrdersView = false;
+      _forceCounterCartView = true;
     });
     widget.onOrderSelected(null);
   }

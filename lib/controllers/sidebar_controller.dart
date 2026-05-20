@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import 'package:pos_machine/screens/billing/billing_page_responsive.dart';
 import 'package:pos_machine/screens/billing/billing_page_restaurant.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
-import 'package:pos_machine/screens/billing/restaurant_page.dart';
+import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
@@ -196,7 +196,8 @@ class SideBarController extends GetxController {
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
     QuotationsListScreen(), // 86 Quotations
     CreateQuotationScreen(), // 87 Create Quotation
-    QuotationDetailsScreen(quotationId: null), // 88 Quotation Details (ID from Provider)
+    QuotationDetailsScreen(
+        quotationId: null), // 88 Quotation Details (ID from Provider)
     BillingPageRestaurant(), // 89 Restaurant Billing Page
   ];
 }

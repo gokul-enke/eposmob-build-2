@@ -5,10 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
-import '../../../components/build_container_box.dart';
-import '../../../resources/color_manager.dart';
-import '../../../resources/font_manager.dart';
-import '../../../resources/style_manager.dart';
+import '../../../../components/build_container_box.dart';
+import '../../../../resources/color_manager.dart';
+import '../../../../resources/font_manager.dart';
+import '../../../../resources/style_manager.dart';
 
 // Using the existing TableModel and TableStatus from your models
 

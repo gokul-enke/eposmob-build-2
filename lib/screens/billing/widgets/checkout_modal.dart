@@ -24,10 +24,17 @@ import 'package:pos_machine/resources/style_manager.dart'; // Re-added for deliv
 import 'package:pos_machine/components/build_dialog_box.dart'; // For showScaffoldError
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 
+enum CheckoutModalMode {
+  checkout,
+  selectionOnly,
+}
+
 class CheckoutModal extends StatefulWidget {
   final double cartTotal;
   final List<CustomerListModelData> availableCustomers;
   final CustomerListModelData? selectedCustomer;
+  final CheckoutModalMode mode;
+  final String title;
 
   // Payment Modal State
   final bool hasOpenedPaymentModalOnce;
@@ -113,6 +120,8 @@ class CheckoutModal extends StatefulWidget {
     required this.cartTotal,
     required this.availableCustomers,
     this.selectedCustomer,
+    this.mode = CheckoutModalMode.checkout,
+    this.title = 'Finalize Order',
     this.hasOpenedPaymentModalOnce = false,
     required this.isCashSelected,
     required this.isCardSelected,
@@ -211,6 +220,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   /// Name of the delivery-method tile that currently has keyboard focus,
   /// or null when none. Drives the orange focus ring on each tile.
   String? _focusedDeliveryMethodName;
+
+  bool get _isSelectionOnly => widget.mode == CheckoutModalMode.selectionOnly;
 
   // Local Payment State
   late bool _lIsCashSelected;
@@ -472,7 +483,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     if (event.logicalKey == LogicalKeyboardKey.f2) {
       debugPrint("⌨️ [CheckoutModal] Handling F2 -> confirm");
-      if (_canConfirmOrPrint && !_isConfirming) _handleConfirm();
+      if (_isSelectionOnly) {
+        _closeSelectionOnlyModal();
+      } else if (_canConfirmOrPrint && !_isConfirming) {
+        _handleConfirm();
+      }
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.f3) {
@@ -547,6 +562,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   void _goToStep(int step) {
     if (_isAddingCustomer) return;
+    if (_isSelectionOnly && step != _currentStep) return;
     if (!widget.enableDelivery && step == 1) return;
     if (step >= 0 && step <= 3) {
       setState(() {
@@ -679,8 +695,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _localSelectedCustomer = customer;
     });
     widget.onCustomerSelected(customer);
-    // Auto-move to payment tab after customer selection
-    _goToStep(3);
+    if (!_isSelectionOnly) {
+      // Auto-move to payment tab after customer selection
+      _goToStep(3);
+    }
+  }
+
+  void _closeSelectionOnlyModal() {
+    Navigator.of(context).pop();
   }
 
   void _handleAddNewCustomer() async {
@@ -840,7 +862,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         alignment: Alignment.center,
         children: [
           Text(
-            "Finalize Order",
+            widget.title,
             style: buildCustomStyle(
               FontWeightManager.bold,
               FontSize.s20,
@@ -1135,15 +1157,24 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   // Right: Summary only (no customer card)
                   Expanded(
                     flex: 2,
-                    child: Column(
-                      children: [
-                        Expanded(child: _buildCompactSummary()),
-                        _buildFooter(
-                          onPrint: _handlePrint,
-                          onConfirm: _handleConfirm,
-                        ),
-                      ],
-                    ),
+                    child: _isSelectionOnly
+                        ? _buildSelectionOnlySidePanel(
+                            icon: Icons.person,
+                            title: 'Selected Customer',
+                            value:
+                                _localSelectedCustomer?.name ?? 'Not selected',
+                            supportingText: _selectedCustomerSupportingText(),
+                            canDone: _localSelectedCustomer != null,
+                          )
+                        : Column(
+                            children: [
+                              Expanded(child: _buildCompactSummary()),
+                              _buildFooter(
+                                onPrint: _handlePrint,
+                                onConfirm: _handleConfirm,
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),
@@ -2060,15 +2091,28 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   // Right: Summary
                   Expanded(
                     flex: 2,
-                    child: Column(
-                      children: [
-                        Expanded(child: _buildCompactSummary()),
-                        _buildFooter(
-                          onPrint: _handlePrint,
-                          onConfirm: _handleConfirm,
-                        ),
-                      ],
-                    ),
+                    child: _isSelectionOnly
+                        ? _buildSelectionOnlySidePanel(
+                            icon: Icons.local_shipping,
+                            title: 'Selected Delivery',
+                            value: _lDeliveryMethod.isNotEmpty
+                                ? _lDeliveryMethod
+                                : 'Not selected',
+                            supportingText: _lDeliveryMethodId.isNotEmpty
+                                ? 'Method ID: $_lDeliveryMethodId'
+                                : null,
+                            canDone: _lDeliveryMethodId.isNotEmpty ||
+                                _lDeliveryMethod.isNotEmpty,
+                          )
+                        : Column(
+                            children: [
+                              Expanded(child: _buildCompactSummary()),
+                              _buildFooter(
+                                onPrint: _handlePrint,
+                                onConfirm: _handleConfirm,
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),
@@ -2419,6 +2463,130 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return _localSelectedCustomer != null &&
         _hasOpenedPaymentModalOnce &&
         _hasPaymentMethod();
+  }
+
+  String? _selectedCustomerSupportingText() {
+    final customer = _localSelectedCustomer;
+    if (customer == null) return null;
+
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'SAR';
+    final lines = <String>[];
+    final phone = customer.phone?.trim();
+
+    if (phone != null && phone.isNotEmpty) {
+      lines.add(phone);
+    }
+    lines.add(
+        'Balance: $currency ${(customer.balance ?? 0.0).toStringAsFixed(2)}');
+
+    return lines.join('\n');
+  }
+
+  Widget _buildSelectionOnlySidePanel({
+    required IconData icon,
+    required String title,
+    required String value,
+    String? supportingText,
+    required bool canDone,
+  }) {
+    return Column(
+      children: [
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: const Color(0xFF2563EB), size: 22),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                if (supportingText != null &&
+                    supportingText.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    supportingText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _closeSelectionOnlyModal,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: canDone ? _closeSelectionOnlyModal : null,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Done'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildFooter({

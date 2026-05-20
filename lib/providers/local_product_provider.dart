@@ -1806,7 +1806,8 @@ class LocalProductProvider extends ChangeNotifier {
       String? accessToken = prefs.getString('access_token');
 
       if (apiKey == null || accessToken == null) {
-        throw const HttpException("Authentication details missing. Please login again.");
+        throw const HttpException(
+            "Authentication details missing. Please login again.");
       }
 
       final url = Uri.parse(APPUrl.deleteProductUrl);
@@ -1822,24 +1823,27 @@ class LocalProductProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        if (jsonData['status'] == true || jsonData['status'] == 'success' || jsonData['success'] == true) {
+        if (jsonData['status'] == true ||
+            jsonData['status'] == 'success' ||
+            jsonData['success'] == true) {
           // Remove from local list
           _products.removeWhere((p) => p.productId == productId);
           _filteredProducts.removeWhere((p) => p.productId == productId);
-          
+
           // Rebuild barcode index and update pagination
           _rebuildBarcodeIndex();
           _updatePagination();
-          
+
           // Save updated list to Hive
           _saveProductsToHive();
-          
+
           notifyListeners();
           return true;
         }
       }
-      
-      debugPrint("❌ [API] Delete product failed: ${response.statusCode} - ${response.body}");
+
+      debugPrint(
+          "❌ [API] Delete product failed: ${response.statusCode} - ${response.body}");
       return false;
     } catch (e) {
       debugPrint("❌ [API] Error deleting product: $e");
@@ -3015,7 +3019,6 @@ class LocalProductProvider extends ChangeNotifier {
     refreshProducts();
   }
 
-
   /// Retrieves a product by its ID.
   GetProduct? getProductById(int productId) {
     try {
@@ -3260,6 +3263,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? tableId,
     String? address,
     double? deliveryCharge,
+    String? alternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
     String? customerType,
@@ -3315,7 +3319,7 @@ class LocalProductProvider extends ChangeNotifier {
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
       tableId: tableId,
-      alternatePhone: null, // Add if needed
+      alternatePhone: alternatePhone,
       address:
           address, // Pass address if available, or update if passed as param
       deliveryCharge: deliveryCharge,
@@ -3446,6 +3450,7 @@ class LocalProductProvider extends ChangeNotifier {
     String? tableId,
     String? address,
     double? deliveryCharge,
+    String? alternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
     String? customerType,
@@ -3503,7 +3508,7 @@ class LocalProductProvider extends ChangeNotifier {
         toCustomerCredit:
             toCustomerCredit ?? _savedOrders[index].toCustomerCredit,
         tableId: tableId ?? _savedOrders[index].tableId,
-        alternatePhone: _savedOrders[index].alternatePhone,
+        alternatePhone: alternatePhone ?? _savedOrders[index].alternatePhone,
         address: address ?? _savedOrders[index].address,
         deliveryCharge: deliveryCharge ?? _savedOrders[index].deliveryCharge,
         customerVatNumber:
