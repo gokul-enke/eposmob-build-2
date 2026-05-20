@@ -7376,21 +7376,27 @@ class BillingPageState extends State<BillingPage>
         data: payload,
       );
 
-      showScaffold(
-        context: context,
-        message: 'Quotation created successfully!',
-      );
-      _clearCart();
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: 'Quotation created successfully!',
+        );
+        _clearCart();
+      }
     } catch (e) {
-      showScaffoldError(
-        context: context,
-        message: 'Failed to create quotation',
-      );
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to create quotation',
+        );
+      }
     } finally {
-      setState(() {
-        isLoadingSaveOrder = false;
-        isLoadingSaveOrderAndPrint = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoadingSaveOrder = false;
+          isLoadingSaveOrderAndPrint = false;
+        });
+      }
     }
   }
 
