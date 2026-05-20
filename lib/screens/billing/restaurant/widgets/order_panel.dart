@@ -40,6 +40,8 @@ import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.
 part 'order_panel_current_cart.dart';
 part 'order_panel_saved_order_item.dart';
 
+enum OrderPanelTab { cart, saved, ongoing }
+
 class OrderPanel extends StatefulWidget {
   final String? tableId;
   final bool isCompact;
@@ -103,6 +105,7 @@ class OrderPanelState extends State<OrderPanel> {
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
   bool _showSavedOrdersView = false;
   bool _forceCounterCartView = false;
+  OrderPanelTab _activeOrderPanelTab = OrderPanelTab.cart;
   int _lastObservedCartCount = 0;
 
   bool get _usesCounterOrderTabs =>
@@ -2388,6 +2391,26 @@ class OrderPanelState extends State<OrderPanel> {
           final hasCurrentCart = cartItems.isNotEmpty;
           final currentCartCount = cartItems.length;
 
+          if (_usesCounterOrderTabs) {
+            if (_activeOrderPanelTab != OrderPanelTab.cart &&
+                currentCartCount > _lastObservedCartCount) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                setState(() {
+                  _activeOrderPanelTab = OrderPanelTab.cart;
+                  _showSavedOrdersView = false;
+                  _forceCounterCartView = true;
+                });
+              });
+            }
+            _lastObservedCartCount = currentCartCount;
+
+            if (_activeOrderPanelTab == OrderPanelTab.cart) {
+              return _buildCurrentCartView(cartItems);
+            }
+            return _buildSavedOrdersList();
+          }
+
           // If user is on Saved Orders view and starts a fresh cart again,
           // auto-return to Current Order view.
           if (_showSavedOrdersView &&
@@ -2440,13 +2463,13 @@ class OrderPanelState extends State<OrderPanel> {
       ),
       child: Column(
         children: [
-          _buildPanelHeader(
-            'Cart',
-            Icons.shopping_cart,
-            const Color(0xFF059669),
-            trailing: _usesCounterOrderTabs
-                ? _buildCartOrdersSegmentedSwitch(showingOrders: false)
-                : Row(
+          _usesCounterOrderTabs
+              ? _buildOrderPanelTabsHeader()
+              : _buildPanelHeader(
+                  'Cart',
+                  Icons.shopping_cart,
+                  const Color(0xFF059669),
+                  trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TextButton.icon(
@@ -2477,7 +2500,7 @@ class OrderPanelState extends State<OrderPanel> {
                       ),
                     ],
                   ),
-          ),
+                ),
           Expanded(
             child: cartItems.isEmpty
                 ? Center(
@@ -2548,6 +2571,33 @@ class OrderPanelState extends State<OrderPanel> {
                 widget.preselectedDeliveryMethodId!.isNotEmpty) ||
             (widget.allowCounterBilling && widget.isCounterBillingMode));
 
+    if (_usesCounterOrderTabs) {
+      return Container(
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            _buildOrderPanelTabsHeader(),
+            Expanded(
+              child: _activeOrderPanelTab == OrderPanelTab.ongoing
+                  ? _buildOngoingOrdersContent()
+                  : _buildLocalDraftsContent(),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -2571,9 +2621,7 @@ class OrderPanelState extends State<OrderPanel> {
             setState(() => _showSavedOrdersView = false);
           },
               itemCount: _usesCounterOrderTabs ? null : _localDrafts.length,
-              trailing: _usesCounterOrderTabs
-                  ? _buildCartOrdersSegmentedSwitch(showingOrders: true)
-                  : null),
+              trailing: null),
           Flexible(
             flex: 1,
             child: RefreshIndicator(
@@ -2754,6 +2802,141 @@ class OrderPanelState extends State<OrderPanel> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildLocalDraftsContent() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        _refreshLocalDrafts();
+      },
+      child: _localDrafts.isEmpty
+          ? ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Text(
+                        'No saved orders',
+                        style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            widget.isCompact ? FontSize.s12 : FontSize.s13,
+                            0.21,
+                            const Color(0xFF64748B)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics()),
+                  padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                  itemCount: _localDrafts.length,
+                  separatorBuilder: (_, __) => Container(
+                    height: 1,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    color: Colors.grey.shade100,
+                  ),
+                  itemBuilder: (_, index) =>
+                      this._buildLocalDraftItem(_localDrafts[index]),
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildOngoingOrdersContent() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _fetchSavedOrders();
+        _refreshLocalDrafts();
+      },
+      child: _savedOrders.isEmpty
+          ? ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics()),
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                        child: Text(
+                          'No ongoing orders',
+                          textAlign: TextAlign.center,
+                          style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              widget.isCompact ? FontSize.s12 : FontSize.s13,
+                              0.21,
+                              const Color(0xFF64748B)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics()),
+                  padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                  itemCount: _savedOrders.length,
+                  separatorBuilder: (_, __) => Container(
+                    height: 1,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    color: Colors.grey.shade100,
+                  ),
+                  itemBuilder: (context, index) {
+                    final order = _savedOrders[index];
+                    return _buildOrderListItem(order);
+                  },
+                ),
+              ),
+            ),
     );
   }
 
@@ -3852,13 +4035,16 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
-  Widget _buildCartOrdersSegmentedSwitch({required bool showingOrders}) {
+  Widget _buildOrderPanelTabsHeader() {
     Widget segment({
       required String label,
       required IconData icon,
-      required bool selected,
+      required OrderPanelTab tab,
+      required int count,
       required VoidCallback onTap,
+      required bool showIcon,
     }) {
+      final selected = _activeOrderPanelTab == tab;
       final foreground = selected ? Colors.white : const Color(0xFF64748B);
       return Expanded(
         child: Material(
@@ -3878,8 +4064,10 @@ class OrderPanelState extends State<OrderPanel> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 15, color: foreground),
-                  const SizedBox(width: 5),
+                  if (showIcon) ...[
+                    Icon(icon, size: 15, color: foreground),
+                    const SizedBox(width: 5),
+                  ],
                   Flexible(
                     child: Text(
                       label,
@@ -3893,6 +4081,28 @@ class OrderPanelState extends State<OrderPanel> {
                       ),
                     ),
                   ),
+                  if (count > 0) ...[
+                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? Colors.white.withOpacity(0.18)
+                            : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        count.toString(),
+                        style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          FontSize.s10,
+                          0.21,
+                          selected ? Colors.white : const Color(0xFF2563EB),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -3901,42 +4111,88 @@ class OrderPanelState extends State<OrderPanel> {
       );
     }
 
-    return SizedBox(
-      width: widget.isCompact ? 150 : 172,
-      child: Container(
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Row(
-          children: [
-            segment(
-              label: 'Cart',
-              icon: Icons.shopping_cart_rounded,
-              selected: !showingOrders,
-              onTap: () => setState(() {
-                _showSavedOrdersView = false;
-                _forceCounterCartView = true;
-              }),
+    final cartCount = Provider.of<LocalProductProvider>(context, listen: false)
+        .cartItems
+        .length;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showIcon = constraints.maxWidth >= 370;
+
+        return Container(
+          padding: EdgeInsets.all(widget.isCompact ? 10.0 : 12.0),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF3B82F6).withOpacity(0.05),
+                Colors.transparent,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            segment(
-              label: 'Orders',
-              icon: Icons.receipt_long_rounded,
-              selected: showingOrders,
-              onTap: () {
-                _refreshLocalDrafts();
-                _fetchSavedOrders();
-                setState(() {
-                  _showSavedOrdersView = true;
-                  _forceCounterCartView = false;
-                });
-              },
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.grey.shade100,
+                width: 1,
+              ),
             ),
-          ],
-        ),
-      ),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                segment(
+                  label: 'Cart',
+                  icon: Icons.shopping_cart_rounded,
+                  tab: OrderPanelTab.cart,
+                  count: cartCount,
+                  showIcon: showIcon,
+                  onTap: () => setState(() {
+                    _activeOrderPanelTab = OrderPanelTab.cart;
+                    _showSavedOrdersView = false;
+                    _forceCounterCartView = true;
+                  }),
+                ),
+                segment(
+                  label: 'Saved',
+                  icon: Icons.receipt_long_rounded,
+                  tab: OrderPanelTab.saved,
+                  count: _localDrafts.length,
+                  showIcon: showIcon,
+                  onTap: () {
+                    _refreshLocalDrafts();
+                    setState(() {
+                      _activeOrderPanelTab = OrderPanelTab.saved;
+                      _showSavedOrdersView = true;
+                      _forceCounterCartView = false;
+                    });
+                  },
+                ),
+                segment(
+                  label: 'Ongoing',
+                  icon: Icons.fact_check_rounded,
+                  tab: OrderPanelTab.ongoing,
+                  count: _savedOrders.length,
+                  showIcon: showIcon,
+                  onTap: () {
+                    _fetchSavedOrders();
+                    setState(() {
+                      _activeOrderPanelTab = OrderPanelTab.ongoing;
+                      _showSavedOrdersView = true;
+                      _forceCounterCartView = false;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -6409,6 +6665,7 @@ class OrderPanelState extends State<OrderPanel> {
         _orderComment = '';
         _loadedLocalDraftId = null;
       }
+      _activeOrderPanelTab = OrderPanelTab.cart;
       _showSavedOrdersView = false;
       _forceCounterCartView = true;
     });

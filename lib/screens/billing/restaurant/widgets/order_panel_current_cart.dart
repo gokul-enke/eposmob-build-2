@@ -248,6 +248,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
+    final showSendToKitchen = widget.tableId != null;
+
     return SafeArea(
       top: false,
       child: Padding(
@@ -350,16 +352,18 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: _buildCurrentCartFooterButton(
-                      label: 'Send To Kitchen',
-                      color: const Color(0xFF059669),
-                      isDisabled: cartItems.isEmpty || widget.isLoadingPrint,
-                      isLoading: widget.isLoadingPrint,
-                      onTap: () => widget.onPrintOrder(),
+                  if (showSendToKitchen) ...[
+                    Expanded(
+                      flex: 2,
+                      child: _buildCurrentCartFooterButton(
+                        label: 'Send To Kitchen',
+                        color: const Color(0xFF059669),
+                        isDisabled: cartItems.isEmpty || widget.isLoadingPrint,
+                        isLoading: widget.isLoadingPrint,
+                        onTap: () => widget.onPrintOrder(),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
@@ -674,6 +678,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
       setState(() {
         _loadedLocalDraftId = null;
         _orderComment = '';
+        _activeOrderPanelTab = OrderPanelTab.saved;
         _showSavedOrdersView = true;
       });
       _refreshLocalDrafts();
