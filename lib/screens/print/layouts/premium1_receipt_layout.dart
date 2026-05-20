@@ -471,21 +471,21 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     }
 
     final customerLabel = _getLabel(displayConfig, 'showCustomerName', null,
-        isEnglish ? "Customer:" : "??????:");
+      isEnglish ? "Customer:" : "العميل:");
     final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
-        isEnglish ? "Phone:" : "??????:");
+      isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = _getLabel(displayConfig, paymentConfigKey, null,
-        isEnglish ? "Payment:" : "?????:");
+      isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = _getLabel(displayConfig, 'showCustomerAddress', null,
-        isEnglish ? "Address:" : "???????:");
+      isEnglish ? "Address:" : "العنوان:");
     final commentLabel = _getLabel(displayConfig, commentConfigKey, null,
-        isEnglish ? "Comment:" : "?????:");
+      isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
-        isEnglish ? "Delivery:" : "???????:");
+        isEnglish ? "Delivery:" : "التوصيل:");
     final customerVatLabel = _getLabel(displayConfig, 'showCustomerVatNumber',
-        null, isEnglish ? "Customer VAT:" : "????? ??????? ??????:");
+        null, isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
     final customerCrLabel = _getLabel(displayConfig, 'showCustomerCrNumber',
-        null, isEnglish ? "Customer CR:" : "????? ??????? ??????:");
+        null, isEnglish ? "Customer CR:" : "السجل التجاري للعميل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -1406,11 +1406,11 @@ class Premium1ReceiptLayout implements ReceiptLayout {
 
     // Labels
     final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,
-        isEnglish ? "NET TOTAL (Exc Tax)" : "???????");
+      isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
     final subtotalLabel = subtotalLabelBase;
 
     final discountLabelBase = _getLabel(
-        displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "?????");
+      displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "الخصم");
     final discountLabel = discountLabelBase;
 
     final taxLabelBase =
@@ -1418,12 +1418,12 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     final vatLabel = taxLabelBase;
 
     final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
-        isEnglish ? "GRAND TOTAL" : "?????? ????????");
+      isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
 
     final cashLabel =
-        _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "????");
+      _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
     final changeLabel = _getLabel(
-        displayConfig, 'showChange', null, isEnglish ? "CHANGE" : "?????");
+        displayConfig, 'showChange', null, isEnglish ? "CHANGE" : "متبقي");
     final changeLabelFull = changeLabel;
 
     // Prepare boxed items
@@ -1493,9 +1493,9 @@ class Premium1ReceiptLayout implements ReceiptLayout {
             // Map method code to label if possible
             String label = method;
             if (method == 'CASH')
-              label = isEnglish ? "Cash" : "????";
+              label = isEnglish ? "Cash" : "نقدي";
             else if (method == 'CARD')
-              label = isEnglish ? "Card" : "?????";
+              label = isEnglish ? "Card" : "بطاقة";
             else if (method == 'UPI') label = "UPI";
 
             boxedItems.add(BoxedLineItem(
@@ -1522,9 +1522,9 @@ class Premium1ReceiptLayout implements ReceiptLayout {
               if (amt > 0) {
                 String label = method;
                 if (method == 'CASH')
-                  label = isEnglish ? "Cash" : "????";
+                  label = isEnglish ? "Cash" : "نقدي";
                 else if (method == 'CARD')
-                  label = isEnglish ? "Card" : "?????";
+                  label = isEnglish ? "Card" : "بطاقة";
                 else if (method == 'UPI') label = "UPI";
 
                 boxedItems.add(BoxedLineItem(
@@ -1576,7 +1576,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
         final englishText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'en');
 
-        rows.add(TextRow('$arabicText ???.',
+        rows.add(TextRow('$arabicText فقط.',
             scale: is58mm ? 0.7 : 0.85, isBold: true));
         rows.add(TextRow('$englishText Only.',
             scale: is58mm ? 0.7 : 0.85,
@@ -1587,7 +1587,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
         final amountText = AmountHelper().convertNumberToWords(total,
             currency: currency, language: language);
-        final suffix = language == 'ar' ? ' ???.' : ' Only.';
+        final suffix = language == 'ar' ? ' فقط.' : ' Only.';
 
         rows.add(TextRow('$amountText$suffix',
             scale: is58mm ? 0.7 : 0.85, isBold: true));
@@ -1597,7 +1597,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     // You Saved
     if (displayConfig?['showSaved']?.visible == true && saved > 0) {
       final savedLabel = _getLabel(displayConfig, 'showSaved', null,
-          isEnglish ? "You Saved:" : "??? ????:");
+          isEnglish ? "You Saved:" : "لقد وفرت:");
       rows.add(SpacingRow(5));
       rows.add(TextRow(
         "$savedLabel ${saved.toStringAsFixed(2)}",
@@ -1648,26 +1648,26 @@ class Premium1ReceiptLayout implements ReceiptLayout {
         displayConfig,
         'showCustomerPrevBalance',
         null,
-        isEnglish ? "Previous Balance" : "?????? ??????");
+        isEnglish ? "Previous Balance" : "الرصيد السابق");
     final prevBalanceLabel = is58mm
-        ? (isEnglish ? "Previous Balance" : "??????")
+        ? (isEnglish ? "Previous Balance" : "السابق")
         : prevBalanceLabelBase;
 
     final paidAmountLabelBase = _getLabel(
         displayConfig,
         'showCustomerPaidAmount',
         null,
-        isEnglish ? "Paid Amount" : "?????? ???????");
+        isEnglish ? "Paid Amount" : "المبلغ المدفوع");
     final paidAmountLabel =
-        is58mm ? (isEnglish ? "Paid Amount" : "???????") : paidAmountLabelBase;
+        is58mm ? (isEnglish ? "Paid Amount" : "المدفوع") : paidAmountLabelBase;
 
     final currentBalanceLabelBase = _getLabel(
         displayConfig,
         'showCustomerCurrentBalance',
         null,
-        isEnglish ? "Current Balance" : "?????? ??????");
+      isEnglish ? "Current Balance" : "الرصيد الحالي");
     final currentBalanceLabel = is58mm
-        ? (isEnglish ? "Current Balance" : "??????")
+        ? (isEnglish ? "Current Balance" : "الحالي")
         : currentBalanceLabelBase;
 
     // Previous Balance
@@ -1735,7 +1735,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
           vatAmount: params.totalTax,
         );
 
-        qrMessage = isEnglish ? 'ZATCA E-Invoice QR' : '?????? ?????????';
+        qrMessage = isEnglish ? 'ZATCA E-Invoice QR' : 'فاتورة الكترونية';
 
         debugPrint('[PremiumLayout] ZATCA QR generated: ${qrData.isNotEmpty}');
       } else {
@@ -1777,7 +1777,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
         }
 
         qrMessage = displayConfig?['showQRCode']?.value as String? ??
-            (isEnglish ? 'Scan to Pay' : '???? ?????');
+            (isEnglish ? 'Scan to Pay' : 'امسح للدفع');
       }
 
       // Display QR code if data is available
@@ -1853,7 +1853,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
             displayConfig?['showInvoicePrefix']?.value,
         params.billDocumentConfig.numberPrefix ??
             displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? '??? ????????:' : 'INV NO:',
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
       rows.add(SpacingRow(3));
@@ -1886,7 +1886,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     // Thank You Message - Elegant
     if (displayConfig?['showThankYouMessage']?.visible == true) {
       final String defaultThankYou =
-          isEnglish ? 'Thank You for Your Visit!' : '????? ????????!';
+          isEnglish ? 'Thank You for Your Visit!' : 'شكراً لزيارتكم!';
       final message = (displayConfig?['showThankYouMessage']?.value as String?)
                   ?.isNotEmpty ==
               true
