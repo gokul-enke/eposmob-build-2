@@ -383,7 +383,7 @@ class _MenuPanelState extends State<MenuPanel> {
     final targetCardWidth = switch (cardMode) {
       MenuCardMode.compact => widget.isCompact ? 210.0 : 190.0,
       MenuCardMode.medium => 112.0,
-      MenuCardMode.large => 245.0,
+      MenuCardMode.large => 180.0,
     };
     final minColumns = widget.isCompact ? 1 : 2;
     final maxColumns = switch (cardMode) {
@@ -400,9 +400,9 @@ class _MenuPanelState extends State<MenuPanel> {
 
   double _resolveGridAspectRatio(MenuCardMode cardMode) {
     return switch (cardMode) {
-      MenuCardMode.compact => widget.isCompact ? 1.56 : 1.42,
+      MenuCardMode.compact => widget.isCompact ? 1.56 : 1.70,
       MenuCardMode.medium => 0.64,
-      MenuCardMode.large => 1.08,
+      MenuCardMode.large => 1.42,
     };
   }
 
@@ -897,8 +897,8 @@ class _MenuPanelState extends State<MenuPanel> {
                                             item,
                                             context,
                                             imageFlex: 6,
-                                            detailsFlex: 7,
-                                            titleLines: 1,
+                                            detailsFlex: 9,
+                                            titleLines: 2,
                                             showCategory: false,
                                           );
                                       }
@@ -1055,7 +1055,9 @@ class _MenuPanelState extends State<MenuPanel> {
                                     context, item, false),
                                 borderRadius: BorderRadius.circular(8),
                                 child: Container(
-                                  padding: const EdgeInsets.all(5),
+                                  width: 26,
+                                  height: 26,
+                                  alignment: Alignment.center,
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF2563EB)
                                         .withOpacity(0.1),

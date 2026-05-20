@@ -109,10 +109,14 @@ class OrderPanelState extends State<OrderPanel> {
   bool _showSavedOrdersView = false;
   bool _forceCounterCartView = false;
   OrderPanelTab _activeOrderPanelTab = OrderPanelTab.cart;
+  bool _hasOpenedOngoingOrdersTab = false;
   int _lastObservedCartCount = 0;
 
   bool get _usesCounterOrderTabs =>
       widget.allowCounterBilling && widget.isCounterBillingMode;
+
+  bool get isViewingCounterListTab =>
+      _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
 
   // Scroll + highlight for newly added items in edit-order view
   final ScrollController _editOrderScrollController = ScrollController();
@@ -223,7 +227,9 @@ class OrderPanelState extends State<OrderPanel> {
         if (widget.tableId != null ||
             (widget.preselectedDeliveryMethodId != null &&
                 widget.preselectedDeliveryMethodId!.isNotEmpty)) {
-          _fetchSavedOrders();
+          _fetchSavedOrders(
+            showFullPanelLoader: _activeOrderPanelTab != OrderPanelTab.ongoing,
+          );
         }
         _refreshLocalDrafts();
       });
@@ -259,7 +265,8 @@ class OrderPanelState extends State<OrderPanel> {
       }
 
       setState(() {
-        _showSavedOrdersView = false;
+        _showSavedOrdersView =
+            _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
       });
       if (widget.tableId != null ||
           (widget.preselectedDeliveryMethodId != null &&
@@ -268,7 +275,9 @@ class OrderPanelState extends State<OrderPanel> {
         if (widget.tableId != null ||
             (widget.preselectedDeliveryMethodId != null &&
                 widget.preselectedDeliveryMethodId!.isNotEmpty)) {
-          _fetchSavedOrders();
+          _fetchSavedOrders(
+            showFullPanelLoader: _activeOrderPanelTab != OrderPanelTab.ongoing,
+          );
         }
         _refreshLocalDrafts();
       } else {
@@ -349,7 +358,10 @@ class OrderPanelState extends State<OrderPanel> {
     widget.onOrderSelected(_selectedOrder);
   }
 
-  Future<void> _fetchSavedOrders({bool showFullPanelLoader = true}) async {
+  Future<void> _fetchSavedOrders({
+    bool showFullPanelLoader = true,
+    bool ignoreContextFilter = false,
+  }) async {
     setState(() {
       if (showFullPanelLoader) {
         _isLoadingOrders = true;
@@ -364,6 +376,10 @@ class OrderPanelState extends State<OrderPanel> {
 
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final tableFilter = ignoreContextFilter ? null : widget.tableId;
+    final deliveryMethodFilter = ignoreContextFilter
+        ? null
+        : (widget.tableId == null ? widget.preselectedDeliveryMethodId : null);
 
     debugPrint(
         'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _fetchSavedOrders: Sending request with tableId: ${widget.tableId}, deliveryMethodId: ${widget.preselectedDeliveryMethodId}');
@@ -372,9 +388,8 @@ class OrderPanelState extends State<OrderPanel> {
           'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.listSavedOrders');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
-        tableId: widget.tableId,
-        deliveryMethodId:
-            widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
+        tableId: tableFilter,
+        deliveryMethodId: deliveryMethodFilter,
       );
       debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
@@ -4264,12 +4279,17 @@ class OrderPanelState extends State<OrderPanel> {
                   count: _savedOrders.length,
                   showIcon: showIcon,
                   onTap: () {
+                    final shouldLoadAll = !_hasOpenedOngoingOrdersTab;
                     setState(() {
                       _activeOrderPanelTab = OrderPanelTab.ongoing;
+                      _hasOpenedOngoingOrdersTab = true;
                       _showSavedOrdersView = true;
                       _forceCounterCartView = false;
                     });
-                    _fetchSavedOrders(showFullPanelLoader: false);
+                    _fetchSavedOrders(
+                      showFullPanelLoader: false,
+                      ignoreContextFilter: shouldLoadAll,
+                    );
                   },
                 ),
               ],

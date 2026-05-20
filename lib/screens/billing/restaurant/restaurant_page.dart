@@ -771,9 +771,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _selectedDeliveryMethodId = null;
       _selectedDeliveryMethodName = null;
     });
-    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    final orderPanelState = _orderPanelKey.currentState;
+    orderPanelState?.resetPaymentModalFlag();
     if (!isEditingSelectedOrder) {
-      _orderPanelKey.currentState?.showCurrentOrderTab();
+      if (!(orderPanelState?.isViewingCounterListTab ?? false)) {
+        orderPanelState?.showCurrentOrderTab();
+      }
     }
   }
 
@@ -796,9 +799,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _activeTableId = null;
       _selectedTableName = null;
     });
-    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    final orderPanelState = _orderPanelKey.currentState;
+    orderPanelState?.resetPaymentModalFlag();
     if (!isEditingSelectedOrder) {
-      _orderPanelKey.currentState?.showCurrentOrderTab();
+      if (!(orderPanelState?.isViewingCounterListTab ?? false)) {
+        orderPanelState?.showCurrentOrderTab();
+      }
     }
   }
 
@@ -1474,8 +1480,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 _selectedTableName = null;
                 _currentMobileView = MobileView.orders;
               });
-              _orderPanelKey.currentState?.resetPaymentModalFlag();
-              _orderPanelKey.currentState?.showCurrentOrderTab();
+              final orderPanelState = _orderPanelKey.currentState;
+              orderPanelState?.resetPaymentModalFlag();
+              if (!(orderPanelState?.isViewingCounterListTab ?? false)) {
+                orderPanelState?.showCurrentOrderTab();
+              }
             },
             screenSize: screenSize,
           ),
