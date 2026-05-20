@@ -248,11 +248,16 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
+    final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
     final showClearSaveActions = !_usesCounterOrderTabs;
     final hasKitchenOrderContext = widget.tableId != null ||
         (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false);
-    final showSendToKitchen = hasKitchenOrderContext;
-    final showFooterButtons = showClearSaveActions || showSendToKitchen;
+    final showSendToKitchen = hasKitchenOrderContext && hasInternet;
+    final showOfflineSaveAndPrint = !hasInternet && !_usesCounterOrderTabs;
+    final hasOfflineOrderContext = hasKitchenOrderContext ||
+        (widget.allowCounterBilling && widget.isCounterBillingMode);
+    final showFooterButtons =
+        showClearSaveActions || showSendToKitchen || showOfflineSaveAndPrint;
 
     return SafeArea(
       top: false,
@@ -376,6 +381,24 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                               cartItems.isEmpty || widget.isLoadingPrint,
                           isLoading: widget.isLoadingPrint,
                           onTap: () => widget.onPrintOrder(),
+                        ),
+                      ),
+                    ],
+                    if ((showClearSaveActions || showSendToKitchen) &&
+                        showOfflineSaveAndPrint)
+                      const SizedBox(width: 8),
+                    if (showOfflineSaveAndPrint) ...[
+                      Expanded(
+                        flex: showClearSaveActions ? 2 : 1,
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Save & Print',
+                          color: const Color(0xFFF59E0B),
+                          isDisabled: cartItems.isEmpty ||
+                              !hasOfflineOrderContext ||
+                              _isLoadingConfirm,
+                          isLoading: _isLoadingConfirm,
+                          onTap: () =>
+                              showOfflineSaveAndPrintCheckoutFromParent(),
                         ),
                       ),
                     ],

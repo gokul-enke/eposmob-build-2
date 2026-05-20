@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -32,7 +34,9 @@ import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.
 import 'package:pos_machine/screens/billing/restaurant/widgets/tables_panel.dart';
 import 'package:pos_machine/screens/billing/restaurant/widgets/menu_panel.dart';
 import 'package:pos_machine/screens/billing/restaurant/widgets/order_panel.dart';
+import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
 import 'package:pos_machine/screens/billing/widgets/dining_selection_modal.dart';
+import 'package:pos_machine/services/cash_drawer_service.dart';
 
 class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
@@ -85,12 +89,197 @@ class _RestaurantPageState extends State<RestaurantPage> {
   void initState() {
     super.initState();
     _isCounterBillingMode = widget.defaultCounterBillingMode;
+    HardwareKeyboard.instance.addHandler(_onRestaurantHardwareKey);
     _loadTablesPanelPreference();
     _loadPanelWidthPreferences();
     // Initialize data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
     });
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onRestaurantHardwareKey);
+    super.dispose();
+  }
+
+  bool _isRestaurantShortcutKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.f1 ||
+        key == LogicalKeyboardKey.f2 ||
+        key == LogicalKeyboardKey.f3 ||
+        key == LogicalKeyboardKey.f4 ||
+        key == LogicalKeyboardKey.f5 ||
+        key == LogicalKeyboardKey.f6 ||
+        key == LogicalKeyboardKey.f7 ||
+        key == LogicalKeyboardKey.f8 ||
+        key == LogicalKeyboardKey.f9 ||
+        key == LogicalKeyboardKey.f10 ||
+        key == LogicalKeyboardKey.f12 ||
+        key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.escape;
+  }
+
+  bool _isRestaurantControlShortcut(LogicalKeyboardKey key) {
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+    return key == LogicalKeyboardKey.keyH ||
+        key == LogicalKeyboardKey.keyK ||
+        key == LogicalKeyboardKey.keyD ||
+        key == LogicalKeyboardKey.keyS ||
+        key == LogicalKeyboardKey.keyA;
+  }
+
+  bool _onRestaurantHardwareKey(KeyEvent event) {
+    if (!mounted || event is! KeyDownEvent) return false;
+
+    final route = ModalRoute.of(context);
+    final dialogIsOnTop = route != null && !route.isCurrent;
+    if (dialogIsOnTop) return false;
+
+    final key = event.logicalKey;
+    if (!_isRestaurantShortcutKey(key) && !_isRestaurantControlShortcut(key)) {
+      return false;
+    }
+
+    _handleRestaurantShortcut(event);
+    return true;
+  }
+
+  void _handleRestaurantShortcut(KeyDownEvent event) {
+    final key = event.logicalKey;
+    final orderPanelState = _orderPanelKey.currentState;
+    final hasInternet =
+        Provider.of<BillingProvider>(context, listen: false).hasInternet;
+
+    try {
+      if (key == LogicalKeyboardKey.escape) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        return;
+      }
+
+      if (HardwareKeyboard.instance.isControlPressed) {
+        if (key == LogicalKeyboardKey.keyH) {
+          KeyboardShortcutsHelpDialog.show(
+            context,
+            mode: KeyboardShortcutsHelpMode.restaurant,
+          );
+          return;
+        }
+        if (key == LogicalKeyboardKey.keyK) {
+          final keyboardProvider =
+              Provider.of<KeyboardProvider>(context, listen: false);
+          if (keyboardProvider.showKeyboardFeature) {
+            keyboardProvider.featureOff();
+            keyboardProvider.clear();
+          } else {
+            keyboardProvider.featureOn();
+          }
+          return;
+        }
+        if (key == LogicalKeyboardKey.keyD) {
+          setState(() {
+            _showTablesPanel = true;
+          });
+          _saveTablesPanelPreference(true);
+          orderPanelState?.showCurrentOrderTab(
+            preserveLoadedDraftMetadata: true,
+          );
+          return;
+        }
+        if (key == LogicalKeyboardKey.keyS) {
+          orderPanelState?.showCurrentOrderTab(
+            preserveLoadedDraftMetadata: true,
+          );
+          return;
+        }
+        if (key == LogicalKeyboardKey.keyA) {
+          setState(() {
+            _showTablesPanel = true;
+            if (MediaQuery.of(context).size.width < 900) {
+              _currentMobileView = MobileView.tables;
+            }
+          });
+          _saveTablesPanelPreference(true);
+          return;
+        }
+      }
+
+      if (!HardwareKeyboard.instance.isControlPressed &&
+          key == LogicalKeyboardKey.keyD) {
+        unawaited(const CashDrawerService().openDrawer(context));
+        return;
+      }
+
+      if (key == LogicalKeyboardKey.f12) {
+        setState(() {
+          _showTablesPanel = !_showTablesPanel;
+          if (MediaQuery.of(context).size.width < 900) {
+            _currentMobileView = _currentMobileView == MobileView.tables
+                ? MobileView.orders
+                : MobileView.tables;
+          }
+        });
+        _saveTablesPanelPreference(_showTablesPanel);
+        return;
+      }
+
+      if (key == LogicalKeyboardKey.f1) {
+        unawaited(orderPanelState?.clearCurrentCartFromParent() ??
+            Future<void>.value());
+      } else if (key == LogicalKeyboardKey.f2) {
+        if (hasInternet) {
+          orderPanelState?.showCheckoutFromParent();
+        } else {
+          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
+        }
+      } else if (key == LogicalKeyboardKey.f3) {
+        unawaited(orderPanelState?.showCustomerSelectionModal() ??
+            Future<void>.value());
+      } else if (key == LogicalKeyboardKey.f4) {
+        if (_isCounterBillingMode) {
+          unawaited(orderPanelState?.showDeliverySelectionModalFromParent() ??
+              Future<void>.value());
+        } else {
+          _showDiningSelectionModal();
+        }
+      } else if (key == LogicalKeyboardKey.f5) {
+        if (hasInternet) {
+          orderPanelState?.showCheckoutFromParent(initialStep: 3);
+        } else {
+          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent(
+            initialStep: 3,
+          );
+        }
+      } else if (key == LogicalKeyboardKey.f6) {
+        if (hasInternet) {
+          orderPanelState?.showCheckoutFromParent(initialStep: 3);
+        } else {
+          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
+        }
+      } else if (key == LogicalKeyboardKey.f7) {
+        _startNewCounterOrder();
+      } else if (key == LogicalKeyboardKey.f8) {
+        unawaited(orderPanelState?.saveCurrentCartFromParent() ??
+            Future<void>.value());
+      } else if (key == LogicalKeyboardKey.f9) {
+        if (hasInternet) {
+          unawaited(orderPanelState?.saveCurrentCartFromParent() ??
+              Future<void>.value());
+        } else {
+          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
+        }
+      } else if (key == LogicalKeyboardKey.f10) {
+        if (hasInternet) {
+          orderPanelState?.showCheckoutFromParent(initialStep: 2);
+        } else {
+          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent(
+            initialStep: 2,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error handling restaurant shortcut: $e');
+    }
   }
 
   Future<void> _loadPanelWidthPreferences() async {
@@ -630,6 +819,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, _) {
         final hasItems = localProductProvider.cartItems.isNotEmpty;
+        final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
         final canCheckout = hasItems;
         return SafeArea(
           top: false,
@@ -669,23 +859,33 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         ?.saveCurrentCartFromParent(),
                   ),
                   const SizedBox(width: 12),
-                  _buildCounterActionButton(
-                    text: 'Confirm and Print',
-                    shortcutLabel: 'F6',
-                    color: const Color(0xFF5B8DEF),
-                    isDisabled: !canCheckout,
-                    onPressed: () => _orderPanelKey.currentState
-                        ?.showCurrentCartCheckoutFromParent(),
-                  ),
-                  const SizedBox(width: 12),
-                  _buildCounterActionButton(
-                    text: 'Confirm Order',
-                    shortcutLabel: 'F2',
-                    color: const Color(0xFF08C63F),
-                    isDisabled: !canCheckout,
-                    onPressed: () => _orderPanelKey.currentState
-                        ?.showCurrentCartCheckoutFromParent(),
-                  ),
+                  if (hasInternet) ...[
+                    _buildCounterActionButton(
+                      text: 'Confirm and Print',
+                      shortcutLabel: 'F6',
+                      color: const Color(0xFF5B8DEF),
+                      isDisabled: !canCheckout,
+                      onPressed: () => _orderPanelKey.currentState
+                          ?.showCurrentCartCheckoutFromParent(),
+                    ),
+                    const SizedBox(width: 12),
+                    _buildCounterActionButton(
+                      text: 'Confirm Order',
+                      shortcutLabel: 'F2',
+                      color: const Color(0xFF08C63F),
+                      isDisabled: !canCheckout,
+                      onPressed: () => _orderPanelKey.currentState
+                          ?.showCurrentCartCheckoutFromParent(),
+                    ),
+                  ] else
+                    _buildCounterActionButton(
+                      text: 'Save & Print',
+                      shortcutLabel: 'F9',
+                      color: const Color(0xFFF59E0B),
+                      isDisabled: !canCheckout,
+                      onPressed: () => _orderPanelKey.currentState
+                          ?.showOfflineSaveAndPrintCheckoutFromParent(),
+                    ),
                 ],
               ),
             ),
