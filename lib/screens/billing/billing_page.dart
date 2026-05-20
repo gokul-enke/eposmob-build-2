@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -81,6 +82,8 @@ import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dial
 
 enum CheckoutActionMode { confirm, save, quotation }
 
+enum BillingPageMode { normal, quotation }
+
 class _CartUnitMenuOption {
   final String value;
   final String label;
@@ -92,7 +95,12 @@ class _CartUnitMenuOption {
 }
 
 class BillingPage extends StatefulWidget {
-  const BillingPage({super.key});
+  final BillingPageMode mode;
+
+  const BillingPage({
+    super.key,
+    this.mode = BillingPageMode.normal,
+  });
 
   @override
   State<BillingPage> createState() => BillingPageState();
@@ -100,6 +108,8 @@ class BillingPage extends StatefulWidget {
 
 class BillingPageState extends State<BillingPage>
     with AutomaticKeepAliveClientMixin {
+  bool get _isQuotationPage => widget.mode == BillingPageMode.quotation;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -396,6 +406,8 @@ class BillingPageState extends State<BillingPage>
 
     // Listen for sales executive changes to update default customer
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       final salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
       salesExecutiveProvider.addListener(_onSalesExecutiveChanged);
@@ -1117,41 +1129,65 @@ class BillingPageState extends State<BillingPage>
         _clearCart();
       } else if (event.logicalKey == LogicalKeyboardKey.f2) {
         debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
-        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+        _showCheckoutModal(
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm);
       } else if (event.logicalKey == LogicalKeyboardKey.f3) {
         debugPrint(
             "⌨️ [BillingPage] Handling F3 -> open checkout at Customer step");
         _showCheckoutModal(
-            actionMode: CheckoutActionMode.confirm, initialStep: 0);
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm,
+            initialStep: 0);
       } else if (event.logicalKey == LogicalKeyboardKey.f4) {
         debugPrint(
             "⌨️ [BillingPage] Handling F4 -> open checkout at Delivery step");
         _showCheckoutModal(
-            actionMode: CheckoutActionMode.confirm, initialStep: 1);
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm,
+            initialStep: 1);
       } else if (event.logicalKey == LogicalKeyboardKey.f5) {
         debugPrint(
             "⌨️ [BillingPage] Handling F5 -> open checkout at Payment step");
         _showCheckoutModal(
-            actionMode: CheckoutActionMode.confirm, initialStep: 3);
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm,
+            initialStep: 3);
       } else if (event.logicalKey == LogicalKeyboardKey.f6) {
         debugPrint(
             "⌨️ [BillingPage] Handling F6 -> open checkout confirm & print");
-        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+        _showCheckoutModal(
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm);
       } else if (event.logicalKey == LogicalKeyboardKey.f7) {
         debugPrint("⌨️ [BillingPage] Handling F7 -> create new order");
         _createNewOrder();
       } else if (event.logicalKey == LogicalKeyboardKey.f8) {
         debugPrint("⌨️ [BillingPage] Handling F8 -> open checkout save");
-        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+        _showCheckoutModal(
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f9) {
         debugPrint(
             "⌨️ [BillingPage] Handling F9 -> open checkout save & print");
-        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+        _showCheckoutModal(
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f10) {
         debugPrint(
             "⌨️ [BillingPage] Handling F10 -> open checkout at Discount step");
         _showCheckoutModal(
-            actionMode: CheckoutActionMode.confirm, initialStep: 2);
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm,
+            initialStep: 2);
       }
     } catch (e) {
       debugPrint("⌨️ [BillingPage] Error handling key press: $e");
@@ -5409,34 +5445,45 @@ class BillingPageState extends State<BillingPage>
                 shortcutLabel: 'F1',
               ),
             ),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(BillingFocusOrders.saveOrder),
-              child: _buildActionButton(
-                text: 'billing.save_order'.tr,
-                color: ColorManager.kButtonYellow,
-                onPressed: () =>
-                    _showCheckoutModal(actionMode: CheckoutActionMode.save),
-                isLoading: isLoadingSaveOrder,
-                isDisabled: disableActions && !isLoadingSaveOrder,
-                shortcutLabel: 'F8',
+            if (!_isQuotationPage)
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(BillingFocusOrders.saveOrder),
+                child: _buildActionButton(
+                  text: 'billing.save_order'.tr,
+                  color: ColorManager.kButtonYellow,
+                  onPressed: () =>
+                      _showCheckoutModal(actionMode: CheckoutActionMode.save),
+                  isLoading: isLoadingSaveOrder,
+                  isDisabled: disableActions && !isLoadingSaveOrder,
+                  shortcutLabel: 'F8',
+                ),
               ),
-            ),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(
-                  155.0), // Kept it unique from saveOrder
-              child: _buildActionButton(
-                text:
-                    'Create Quotation', // Removed .tr so it shows immediately without needing to update JSON
-                color: Colors.teal
-                    .shade500, // Used a distinct teal color so it doesn't match Save Order
-                onPressed: () => _showCheckoutModal(
-                    actionMode: CheckoutActionMode.quotation),
-                isLoading: isLoadingSaveOrder,
-                isDisabled: disableActions && !isLoadingSaveOrder,
-                //shortcutLabel: '',
+            if (_isQuotationPage) ...[
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(155.0),
+                child: _buildActionButton(
+                  text: 'Create Quotation',
+                  color: Colors.teal.shade500,
+                  onPressed: () => _showCheckoutModal(
+                      actionMode: CheckoutActionMode.quotation),
+                  isLoading: isLoadingSaveOrder,
+                  isDisabled: disableActions && !isLoadingSaveOrder,
+                ),
               ),
-            ),
-            if (_hasInternet) ...[
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(156.0),
+                child: _buildActionButton(
+                  text: 'Quotation List',
+                  color: ColorManager.kPrimaryColor,
+                  onPressed: () {
+                    Get.find<SideBarController>().index.value = 87;
+                  },
+                  isLoading: false,
+                  isDisabled: disableActions,
+                ),
+              ),
+            ],
+            if (!_isQuotationPage && _hasInternet) ...[
               FocusTraversalOrder(
                 order:
                     const NumericFocusOrder(BillingFocusOrders.confirmAndPrint),
@@ -5468,7 +5515,7 @@ class BillingPageState extends State<BillingPage>
                   ),
                 ),
             ],
-            if (!_hasInternet) ...[
+            if (!_isQuotationPage && !_hasInternet) ...[
               FocusTraversalOrder(
                 order: const NumericFocusOrder(BillingFocusOrders.saveAndPrint),
                 child: _buildActionButton(
@@ -7288,8 +7335,10 @@ class BillingPageState extends State<BillingPage>
         Provider.of<StoreSessionProvider>(context, listen: false);
 
     if (localProductProvider.cartItems.isEmpty) {
-      Get.snackbar('Empty Cart', 'Please add items to quote first.',
-          backgroundColor: Colors.white);
+      showScaffoldError(
+        context: context,
+        message: 'Please add items to quote first.',
+      );
       setState(() {
         isLoadingSaveOrder = false;
         isLoadingSaveOrderAndPrint = false;
@@ -7329,17 +7378,27 @@ class BillingPageState extends State<BillingPage>
         data: payload,
       );
 
-      Get.snackbar('Success', 'Quotation created successfully!',
-          backgroundColor: Colors.green.shade100);
-      _clearCart();
+      if (mounted) {
+        showScaffold(
+          context: context,
+          message: 'Quotation created successfully!',
+        );
+        _clearCart();
+      }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create quotation',
-          backgroundColor: Colors.red.shade100);
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to create quotation',
+        );
+      }
     } finally {
-      setState(() {
-        isLoadingSaveOrder = false;
-        isLoadingSaveOrderAndPrint = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoadingSaveOrder = false;
+          isLoadingSaveOrderAndPrint = false;
+        });
+      }
     }
   }
 
@@ -8520,6 +8579,7 @@ class BillingPageState extends State<BillingPage>
 
   // Function to handle sales executive changes
   void _onSalesExecutiveChanged() {
+    if (!mounted) return;
     debugPrint(
         "🔄 BILLING: Sales executive changed, updating default customer...");
 
@@ -8636,6 +8696,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _onUserSwitched() {
+    if (!mounted) return;
     debugPrint("🔄 BILLING: User switched, updating default customer...");
 
     // Check if auto-assign is enabled in app settings

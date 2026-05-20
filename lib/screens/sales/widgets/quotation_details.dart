@@ -9,10 +9,9 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 import 'build_quotation_details_widget.dart';
 
-
 class QuotationDetailsScreen extends StatefulWidget {
   final dynamic quotationId;
-  const QuotationDetailsScreen({Key? key, required this.quotationId}) : super(key: key);
+  const QuotationDetailsScreen({super.key, required this.quotationId});
 
   @override
   State<QuotationDetailsScreen> createState() => _QuotationDetailsScreenState();
@@ -31,10 +30,11 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     setState(() => _isLoading = true);
     try {
       final authProvider = Provider.of<AuthModel>(context, listen: false);
-      final quotationsProvider = Provider.of<QuotationsProvider>(context, listen: false);
-      
+      final quotationsProvider =
+          Provider.of<QuotationsProvider>(context, listen: false);
+
       final qId = widget.quotationId ?? quotationsProvider.selectedQuotationId;
-      
+
       if (qId != null) {
         await quotationsProvider.fetchQuotationDetails(
           accessToken: authProvider.token ?? '',
@@ -85,8 +85,8 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           CustomBackButton(
-            onPressed: () => Get.find<SideBarController>().index.value = 86,
-            text: 'Quotations List',
+            onPressed: () => Get.find<SideBarController>().index.value = 87,
+            text: 'Quotation List',
           ),
           BuildBoxShadowContainer(
             width: 32,
@@ -95,8 +95,9 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
             color: ColorManager.kPrimaryColor,
             child: IconButton(
               padding: EdgeInsets.zero,
-              onPressed: () => Get.find<SideBarController>().index.value = 86,
-              icon: const Icon(Icons.close_rounded, size: 20, color: Colors.white),
+              onPressed: () => Get.find<SideBarController>().index.value = 87,
+              icon: const Icon(Icons.close_rounded,
+                  size: 20, color: Colors.white),
             ),
           ),
         ],

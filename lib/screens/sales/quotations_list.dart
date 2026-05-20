@@ -28,10 +28,12 @@ class QuotationsListScreen extends StatefulWidget {
 
 class _QuotationsListScreenState extends State<QuotationsListScreen> {
   // ── Filter state ──────────────────────────────────────────────────────────
-  final TextEditingController _quotationNumberController = TextEditingController();
+  final TextEditingController _quotationNumberController =
+      TextEditingController();
   final TextEditingController _storeSearchController = TextEditingController();
-  final TextEditingController _customerSearchController = TextEditingController();
-  
+  final TextEditingController _customerSearchController =
+      TextEditingController();
+
   String? _selectedCustomerId;
   int? _selectedStoreId;
   String _selectedStatus = 'All';
@@ -132,7 +134,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Widget _buildStoreDropdown() {
     return Consumer<StoreSessionProvider>(builder: (context, prov, _) {
       final List<Store> list = prov.availableStores;
-      final Store? sel = list.firstWhereOrNull((s) => s.storeId == _selectedStoreId);
+      final Store? sel =
+          list.firstWhereOrNull((s) => s.storeId == _selectedStoreId);
       return BuildDropDownWithSearch<Store>(
         title: "Store",
         showName: true,
@@ -141,7 +144,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         items: list,
         onChanged: (v) {
           setState(() {
-             _selectedStoreId = v?.storeId;
+            _selectedStoreId = v?.storeId;
           });
           _fetchQuotations();
         },
@@ -154,7 +157,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   Widget _buildCustomerDropdown() {
     return Consumer<CustomerProvider>(builder: (context, prov, _) {
-      final CustomerListModelData? sel = prov.allCustomers?.firstWhereOrNull((s) => s.id.toString() == _selectedCustomerId);
+      final CustomerListModelData? sel = prov.allCustomers
+          ?.firstWhereOrNull((s) => s.id.toString() == _selectedCustomerId);
       return BuildDropDownWithSearch<CustomerListModelData>(
         title: "Customer",
         showName: true,
@@ -163,7 +167,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         items: prov.allCustomers ?? [],
         onChanged: (v) {
           setState(() {
-             _selectedCustomerId = v?.id?.toString();
+            _selectedCustomerId = v?.id?.toString();
           });
           _fetchQuotations();
         },
@@ -183,8 +187,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             onRefresh: _fetchQuotations,
             child: BuildBoxShadowContainer(
               circleRadius: 7,
-              margin:
-                  const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+              margin: const EdgeInsets.only(
+                  left: 10, top: 20, bottom: 0, right: 10),
               padding: const EdgeInsets.all(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
@@ -232,7 +236,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Quotations',
+          'Quotation List',
           style: buildCustomStyle(
             FontWeightManager.semiBold,
             FontSize.s20,
@@ -243,7 +247,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         CustomRoundButton(
           title: 'New Quotation',
           fct: () {
-            Get.find<SideBarController>().index.value = 46; // Change to Billing/POS Mode
+            Get.find<SideBarController>().index.value = 86;
           },
           fontSize: 12,
           height: 42,
@@ -495,10 +499,11 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                         5: FlexColumnWidth(1.4),
                         6: FlexColumnWidth(1.2),
                       },
-                      children: provider.quotations.asMap().entries.map((entry) {
-                         int idx = entry.key;
-                         Quotation q = entry.value;
-                         return _buildTableRow(q, idx);
+                      children:
+                          provider.quotations.asMap().entries.map((entry) {
+                        int idx = entry.key;
+                        Quotation q = entry.value;
+                        return _buildTableRow(q, idx);
                       }).toList(),
                     ),
                   ),
@@ -524,7 +529,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       ]
           .map(
             (title) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
               child: Text(
                 title,
                 textAlign: TextAlign.center,
@@ -546,19 +552,15 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
     return TableRow(
       decoration: BoxDecoration(
-        color: index % 2 == 0
-            ? Colors.white
-            : Colors.grey.withOpacity(0.1),
+        color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
       ),
       children: [
         _textCell(q.quotationNumber ?? '—'),
         _textCell(q.customer ?? '—'),
         _textCell(q.store ?? '—'),
-        _textCell(q.quotationDate != null
-            ? q.quotationDate!.split(' ').first
-            : '—'),
         _textCell(
-            q.expiryDate != null ? q.expiryDate!.split(' ').first : '—'),
+            q.quotationDate != null ? q.quotationDate!.split(' ').first : '—'),
+        _textCell(q.expiryDate != null ? q.expiryDate!.split(' ').first : '—'),
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
@@ -603,7 +605,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                           const BoxConstraints(minWidth: 32, minHeight: 32),
                       onPressed: () {
                         Get.find<SideBarController>().index.value = 88;
-                        context.read<QuotationsProvider>().setSelectedQuotationId(q.id);
+                        context
+                            .read<QuotationsProvider>()
+                            .setSelectedQuotationId(q.id);
                       },
                     ),
                   ),
@@ -620,7 +624,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                       onPressed: () {
                         // TODO: Implement navigation to Convert Quotation to Order screen
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Convert to Order screen coming next')),
+                          const SnackBar(
+                              content:
+                                  Text('Convert to Order screen coming next')),
                         );
                       },
                     ),
