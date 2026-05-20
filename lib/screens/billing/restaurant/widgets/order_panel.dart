@@ -2258,22 +2258,35 @@ class OrderPanelState extends State<OrderPanel> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: buildCustomStyle(
-              isBold ? FontWeightManager.semiBold : FontWeightManager.regular,
-              large ? FontSize.s18 : FontSize.s14,
-              0.21,
-              color,
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                isBold ? FontWeightManager.semiBold : FontWeightManager.regular,
+                large ? FontSize.s16 : FontSize.s14,
+                0.21,
+                color,
+              ),
             ),
           ),
-          Text(
-            amount,
-            style: buildCustomStyle(
-              isBold ? FontWeightManager.bold : FontWeightManager.semiBold,
-              large ? FontSize.s18 : FontSize.s14,
-              0.21,
-              color,
+          const SizedBox(width: 8),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                amount,
+                maxLines: 1,
+                textAlign: TextAlign.right,
+                style: buildCustomStyle(
+                  isBold ? FontWeightManager.bold : FontWeightManager.semiBold,
+                  large ? FontSize.s18 : FontSize.s14,
+                  0.21,
+                  color,
+                ),
+              ),
             ),
           ),
         ],

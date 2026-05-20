@@ -209,7 +209,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final screenWidth = screenSize.width;
 
     // Better responsive breakpoints
-    final isLargeScreen = screenWidth >= 1200;
+    final isLargeScreen = screenWidth >= 1024;
     final isSmallScreen = screenWidth < 900;
 
     return Scaffold(
@@ -747,7 +747,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
 
     final isEditingSelectedOrder = _selectedOrderFromOrderPanel != null;
-    if (!isEditingSelectedOrder) {
+    if (!_isCounterBillingMode && !isEditingSelectedOrder) {
       _autoSaveCurrentTableBeforeSwitch();
     }
     setState(() {
@@ -772,7 +772,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     }
 
     final isEditingSelectedOrder = _selectedOrderFromOrderPanel != null;
-    if (!isEditingSelectedOrder) {
+    if (!_isCounterBillingMode && !isEditingSelectedOrder) {
       _autoSaveCurrentTableBeforeSwitch();
     }
     setState(() {
@@ -1366,7 +1366,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
           child: TablesPanel(
             activeTableId: _activeTableId,
             onSelect: (id) {
-              _autoSaveCurrentTableBeforeSwitch();
+              if (!_isCounterBillingMode) {
+                _autoSaveCurrentTableBeforeSwitch();
+              }
               // Get table name from provider
               final tableProvider =
                   Provider.of<TableProvider>(context, listen: false);
@@ -1393,7 +1395,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 });
                 return;
               }
-              _autoSaveCurrentTableBeforeSwitch();
+              if (!_isCounterBillingMode) {
+                _autoSaveCurrentTableBeforeSwitch();
+              }
               setState(() {
                 _selectedDeliveryMethodId = id;
                 _selectedDeliveryMethodName = name;
@@ -1581,8 +1585,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
       );
       return;
     }
-
-    _autoSaveCurrentTableBeforeSwitch();
 
     if (!enabled) {
       setState(() {
