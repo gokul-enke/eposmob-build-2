@@ -248,7 +248,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
+    final showClearSaveActions = !_usesCounterOrderTabs;
     final showSendToKitchen = widget.tableId != null;
+    final showFooterButtons = showClearSaveActions || showSendToKitchen;
 
     return SafeArea(
       top: false,
@@ -257,10 +259,15 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           widget.isCompact ? 10.0 : 12.0,
           8,
           widget.isCompact ? 10.0 : 12.0,
-          widget.isCompact ? 10.0 : 12.0,
+          _usesCounterOrderTabs ? 6.0 : (widget.isCompact ? 10.0 : 12.0),
         ),
         child: Container(
-          padding: EdgeInsets.all(widget.isCompact ? 10.0 : 12.0),
+          padding: EdgeInsets.fromLTRB(
+            widget.isCompact ? 10.0 : 12.0,
+            widget.isCompact ? 10.0 : 12.0,
+            widget.isCompact ? 10.0 : 12.0,
+            _usesCounterOrderTabs ? 8.0 : (widget.isCompact ? 10.0 : 12.0),
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -328,44 +335,51 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildCurrentCartFooterButton(
-                      label: 'Clear',
-                      color: const Color(0xFFDC2626),
-                      isDisabled: cartItems.isEmpty,
-                      onTap: () => _clearCurrentCart(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildCurrentCartFooterButton(
-                      label: 'Save',
-                      color: const Color(0xFF2563EB),
-                      isDisabled: cartItems.isEmpty ||
-                          (widget.tableId == null &&
-                              (widget.preselectedDeliveryMethodId == null ||
-                                  widget.preselectedDeliveryMethodId!.isEmpty)),
-                      onTap: () => _saveCurrentCartAsPending(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (showSendToKitchen) ...[
-                    Expanded(
-                      flex: 2,
-                      child: _buildCurrentCartFooterButton(
-                        label: 'Send To Kitchen',
-                        color: const Color(0xFF059669),
-                        isDisabled: cartItems.isEmpty || widget.isLoadingPrint,
-                        isLoading: widget.isLoadingPrint,
-                        onTap: () => widget.onPrintOrder(),
+              if (showFooterButtons) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (showClearSaveActions) ...[
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Clear',
+                          color: const Color(0xFFDC2626),
+                          isDisabled: cartItems.isEmpty,
+                          onTap: () => _clearCurrentCart(),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Save',
+                          color: const Color(0xFF2563EB),
+                          isDisabled: cartItems.isEmpty ||
+                              (widget.tableId == null &&
+                                  (widget.preselectedDeliveryMethodId == null ||
+                                      widget.preselectedDeliveryMethodId!
+                                          .isEmpty)),
+                          onTap: () => _saveCurrentCartAsPending(),
+                        ),
+                      ),
+                    ],
+                    if (showClearSaveActions && showSendToKitchen)
+                      const SizedBox(width: 8),
+                    if (showSendToKitchen) ...[
+                      Expanded(
+                        flex: showClearSaveActions ? 2 : 1,
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Send To Kitchen',
+                          color: const Color(0xFF059669),
+                          isDisabled:
+                              cartItems.isEmpty || widget.isLoadingPrint,
+                          isLoading: widget.isLoadingPrint,
+                          onTap: () => widget.onPrintOrder(),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
+                ),
+              ],
             ],
           ),
         ),
