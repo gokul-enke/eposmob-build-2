@@ -844,6 +844,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
     });
   }
 
+  void _resetCounterOrderContextAfterKitchenSend() {
+    if (!_isCounterBillingMode) return;
+    _orderPanelKey.currentState?.resetActiveOrderContext();
+    _orderPanelKey.currentState?.showCurrentOrderTab();
+    _resetCounterOrderContextAfterSave();
+  }
+
   void _showDiningSelectionModal() {
     final tableProvider = Provider.of<TableProvider>(context, listen: false);
     showDialog(
@@ -1920,6 +1927,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
               const Duration(milliseconds: 1000)); // Wait for server to process
           _orderPanelKey.currentState?.refreshSavedOrders();
         }
+
+        _resetCounterOrderContextAfterKitchenSend();
       } else {
         showScaffoldError(
           context: context,
@@ -2180,6 +2189,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
             (_activeTableId != null || _selectedDeliveryMethodId != null)) {
           _orderPanelKey.currentState?.refreshSavedOrders();
         }
+
+        _resetCounterOrderContextAfterKitchenSend();
 
         // Check if KOT print is enabled in app settings
         final appSettingsProvider =
