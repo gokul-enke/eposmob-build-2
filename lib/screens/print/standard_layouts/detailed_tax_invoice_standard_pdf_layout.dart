@@ -974,10 +974,10 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (showSL) hdrs.add(hdr('S No', ''));
     if (showItems) hdrs.add(hdr('Description', 'البيان'));
     if (showQty) hdrs.add(hdr('Qty', 'كمية'));
-    if (showRate) hdrs.add(hdr('Rate', '?????'));
+    if (showRate) hdrs.add(hdr('Rate', 'مجموع'));
     if (showRateExcTax) hdrs.add(hdr('Rate Ex Tax', ''));
     if (showUnit) hdrs.add(hdr('Unit', ''));
-    if (showDiscount) hdrs.add(hdr('Discount', '???'));
+    if (showDiscount) hdrs.add(hdr('Discount', 'خصم'));
     // Taxable Amount always shown
     hdrs.add(hdr('Taxable Amt', 'المبلغ الخاضع'));
     if (showTax) hdrs.add(hdr('VAT (15%)', 'الضريبة'));

@@ -585,7 +585,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         displayConfig?['showInvoicePrefix']?.value,
         params.billDocumentConfig.numberPrefix ??
             displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? '??? ????????:' : 'Invoice No:',
+        lang == 'ar' ? 'رقم الفاتورة:' : 'Invoice No:',
       );
 
       final invoiceNumberText =
@@ -651,21 +651,21 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     }
 
     final customerLabel = _getLabel(displayConfig, 'showCustomerName', null,
-        isEnglish ? "Customer:" : "??????:");
+      isEnglish ? "Customer:" : "العميل:");
     final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
-        isEnglish ? "Phone:" : "??????:");
+      isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = _getLabel(displayConfig, paymentConfigKey, null,
-        isEnglish ? "Payment:" : "?????:");
+      isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = _getLabel(displayConfig, 'showCustomerAddress', null,
-        isEnglish ? "Address:" : "???????:");
+      isEnglish ? "Address:" : "العنوان:");
     final commentLabel = _getLabel(displayConfig, commentConfigKey, null,
-        isEnglish ? "Comment:" : "?????:");
+      isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
-        isEnglish ? "Delivery:" : "???????:");
+        isEnglish ? "Delivery:" : "التوصيل:");
     final customerVatLabel = _getLabel(displayConfig, 'showCustomerVatNumber',
-        null, isEnglish ? "Customer VAT:" : "????? ??????? ??????:");
+        null, isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
     final customerCrLabel = _getLabel(displayConfig, 'showCustomerCrNumber',
-        null, isEnglish ? "Customer CR:" : "????? ??????? ??????:");
+        null, isEnglish ? "Customer CR:" : "السجل التجاري للعميل:");
 
     if (isEnglish) {
       // English: Label: Value format (left aligned for both)
@@ -1409,19 +1409,19 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     debugPrint("=======================================");
 
     final subtotalLabel = _getLabel(displayConfig, 'showMRPTotal', null,
-        isEnglish ? "NET TOTAL (Exc Tax)" : "???????");
+      isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
 
     final discountLabel = _getLabel(
-        displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "?????");
+      displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "الخصم");
 
     final vatLabel = _getLabel(displayConfig, 'showTax', resolvedLabels?.tax,
-        isEnglish ? "VAT" : "???????");
+      isEnglish ? "VAT" : "الضريبة");
 
     final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
-        isEnglish ? "GRAND TOTAL" : "?????? ????????");
+      isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
 
     final cashLabel =
-        _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "????");
+      _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
 
     // Prepare boxed items
     List<StandardBoxedLineItem> boxedItems = [];
@@ -1492,12 +1492,12 @@ class SupermarketReceiptLayout implements ReceiptLayout {
             String label = method;
             if (method == 'CASH') {
               label = isDualLanguage
-                  ? "????   Cash"
-                  : (isEnglish ? "Cash" : "????");
+                  ? "نقدي   Cash"
+                  : (isEnglish ? "Cash" : "نقدي");
             } else if (method == 'CARD') {
               label = isDualLanguage
-                  ? "?????   Card"
-                  : (isEnglish ? "Card" : "?????");
+                  ? "بطاقة   Card"
+                  : (isEnglish ? "Card" : "بطاقة");
             } else if (method == 'UPI') {
               label = "UPI";
             }
@@ -1527,12 +1527,12 @@ class SupermarketReceiptLayout implements ReceiptLayout {
                 String label = method;
                 if (method == 'CASH') {
                   label = isDualLanguage
-                      ? "????   Cash"
-                      : (isEnglish ? "Cash" : "????");
+                      ? "نقدي   Cash"
+                      : (isEnglish ? "Cash" : "نقدي");
                 } else if (method == 'CARD') {
                   label = isDualLanguage
-                      ? "?????   Card"
-                      : (isEnglish ? "Card" : "?????");
+                      ? "بطاقة   Card"
+                      : (isEnglish ? "Card" : "بطاقة");
                 } else if (method == 'UPI') {
                   label = "UPI";
                 }
@@ -1586,7 +1586,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         final englishText = AmountHelper()
             .convertNumberToWords(total, currency: currency, language: 'en');
 
-        rows.add(TextRow('$arabicText ???.',
+        rows.add(TextRow('$arabicText فقط.',
             scale: is58mm ? 0.65 : 0.75, isBold: true));
         rows.add(TextRow('$englishText Only.',
             scale: is58mm ? 0.65 : 0.75,
@@ -1597,7 +1597,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
         final amountText = AmountHelper().convertNumberToWords(total,
             currency: currency, language: language);
-        final suffix = language == 'ar' ? ' ???.' : ' Only.';
+        final suffix = language == 'ar' ? ' فقط.' : ' Only.';
         rows.add(TextRow('$amountText$suffix',
             scale: is58mm ? 0.65 : 0.75, isBold: true));
       }
@@ -1608,7 +1608,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
       final itemsCountText = _getDisplayValue(
         displayConfig?['showItemsCount']?.value,
         null,
-        isEnglish ? 'Items' : '?????',
+        isEnglish ? 'Items' : 'العدد',
       );
 
       if (itemsCountText.isNotEmpty) {
@@ -1622,7 +1622,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
       final quantityCountText = _getDisplayValue(
         displayConfig?['showQuantityCount']?.value,
         null,
-        isEnglish ? 'Total Qty' : '?????? ??????',
+        isEnglish ? 'Total Qty' : 'إجمالي الكمية',
       );
 
       if (quantityCountText.isNotEmpty) {
@@ -1638,7 +1638,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     // You Saved
     if (displayConfig?['showSaved']?.visible == true && saved > 0) {
       final savedLabel = _getLabel(displayConfig, 'showSaved', null,
-          isEnglish ? "You Saved:" : "??? ????:");
+          isEnglish ? "You Saved:" : "لقد وفرت:");
       rows.add(SpacingRow(_itemGap));
       rows.add(TextRow(
         "$savedLabel ${saved.toStringAsFixed(2)}",
@@ -1687,16 +1687,16 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     final prevBalanceLabel = _getLabel(displayConfig, 'showCustomerPrevBalance',
-        null, isEnglish ? "Previous Balance" : "?????? ??????");
+        null, isEnglish ? "Previous Balance" : "الرصيد السابق");
 
     final paidAmountLabel = _getLabel(displayConfig, 'showCustomerPaidAmount',
-        null, isEnglish ? "Paid Amount" : "?????? ???????");
+      null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
 
     final currentBalanceLabel = _getLabel(
         displayConfig,
         'showCustomerCurrentBalance',
         null,
-        isEnglish ? "Current Balance" : "?????? ??????");
+      isEnglish ? "Current Balance" : "الرصيد الحالي");
 
     // Previous Balance
     if (displayConfig?['showCustomerPrevBalance']?.visible != false &&
@@ -1767,8 +1767,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         );
 
         qrMessage = isDualLanguage
-            ? '?????? ?????????\nZATCA E-Invoice QR'
-            : (isEnglish ? 'ZATCA E-Invoice QR' : '?????? ?????????');
+            ? 'فاتورة الكترونية\nZATCA E-Invoice QR'
+            : (isEnglish ? 'ZATCA E-Invoice QR' : 'فاتورة الكترونية');
 
         debugPrint('[StandardLayout] ZATCA QR generated: ${qrData.isNotEmpty}');
       } else {
@@ -1810,7 +1810,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         }
 
         qrMessage = displayConfig?['showQRCode']?.value as String? ??
-            (isEnglish ? 'Scan to Pay' : '???? ?????');
+            (isEnglish ? 'Scan to Pay' : 'امسح للدفع');
       }
 
       // Display QR code if data is available
@@ -1886,7 +1886,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
             displayConfig?['showInvoicePrefix']?.value,
         params.billDocumentConfig.numberPrefix ??
             displayConfig?['showInvoicePrefix']?.defaultValue,
-        lang == 'ar' ? '??? ????????:' : 'INV NO:',
+        lang == 'ar' ? 'رقم الفاتورة:' : 'INV NO:',
       );
 
       rows.add(SpacingRow(_itemGap));
@@ -1954,7 +1954,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
           } else {
             // Use default bilingual thank you message
             messageText = _getBilingualText(
-                arabic: '????? ????????!',
+                arabic: 'شكراً لزيارتكم!',
                 english: 'Thank You for Your Visit!');
           }
         } else {
@@ -1966,7 +1966,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
             displayConfig?['showThankYouMessage']?.value as String?;
         final docFooter = params.billDocumentConfig.footer ?? '';
         final defaultThankYou =
-            isEnglish ? 'Thank You for Your Visit!' : '????? ????????!';
+            isEnglish ? 'Thank You for Your Visit!' : 'شكراً لزيارتكم!';
 
         messageText = _getDisplayValue(
           configMessage,

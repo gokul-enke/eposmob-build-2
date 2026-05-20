@@ -334,27 +334,27 @@ class _SideMenuState extends State<SideMenu> {
           ),
 
           // 1. HOME (Index: 46)
-          Consumer<RoleProvider>(
-            builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider
-                  .currentUserHasPermissionSync('menu.restaurant.main.access');
+          // Consumer<RoleProvider>(
+          //   builder: (context, roleProvider, child) {
+          //     final hasPermission = roleProvider
+          //         .currentUserHasPermissionSync('menu.restaurant.main.access');
 
-              if (!hasPermission) {
-                return const SizedBox.shrink();
-              }
+          //     if (!hasPermission) {
+          //       return const SizedBox.shrink();
+          //     }
 
-              return Obx(
-                () => DrawerListTile(
-                  icon: fa.FontAwesomeIcons.home,
-                  title: 'Restaurant Legacy',
-                  onTap: () {
-                    sideBarController.index.value = 89;
-                  },
-                  selected: sideBarController.index.value == 89,
-                ),
-              );
-            },
-          ),
+          //     return Obx(
+          //       () => DrawerListTile(
+          //         icon: fa.FontAwesomeIcons.home,
+          //         title: 'Restaurant Legacy',
+          //         onTap: () {
+          //           sideBarController.index.value = 89;
+          //         },
+          //         selected: sideBarController.index.value == 89,
+          //       ),
+          //     );
+          //   },
+          // ),
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider

@@ -248,9 +248,16 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
+    final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
     final showClearSaveActions = !_usesCounterOrderTabs;
-    final showSendToKitchen = widget.tableId != null;
-    final showFooterButtons = showClearSaveActions || showSendToKitchen;
+    final hasKitchenOrderContext = widget.tableId != null ||
+        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false);
+    final showSendToKitchen = hasKitchenOrderContext && hasInternet;
+    final showOfflineSaveAndPrint = !hasInternet && !_usesCounterOrderTabs;
+    final hasOfflineOrderContext = hasKitchenOrderContext ||
+        (widget.allowCounterBilling && widget.isCounterBillingMode);
+    final showFooterButtons =
+        showClearSaveActions || showSendToKitchen || showOfflineSaveAndPrint;
 
     return SafeArea(
       top: false,
@@ -374,6 +381,24 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                               cartItems.isEmpty || widget.isLoadingPrint,
                           isLoading: widget.isLoadingPrint,
                           onTap: () => widget.onPrintOrder(),
+                        ),
+                      ),
+                    ],
+                    if ((showClearSaveActions || showSendToKitchen) &&
+                        showOfflineSaveAndPrint)
+                      const SizedBox(width: 8),
+                    if (showOfflineSaveAndPrint) ...[
+                      Expanded(
+                        flex: showClearSaveActions ? 2 : 1,
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Save & Print',
+                          color: const Color(0xFFF59E0B),
+                          isDisabled: cartItems.isEmpty ||
+                              !hasOfflineOrderContext ||
+                              _isLoadingConfirm,
+                          isLoading: _isLoadingConfirm,
+                          onTap: () =>
+                              showOfflineSaveAndPrintCheckoutFromParent(),
                         ),
                       ),
                     ],
@@ -593,14 +618,6 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   // Save current cart locally as a PENDING draft for the active table/delivery method
   Future<void> _saveCurrentCartAsPending() async {
-    if (widget.tableId == null &&
-        (widget.preselectedDeliveryMethodId == null ||
-            widget.preselectedDeliveryMethodId!.isEmpty)) {
-      showScaffoldError(
-          context: context, message: 'Select a table or delivery method first');
-      return;
-    }
-
     try {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -814,25 +831,27 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD97706).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: const Color(0xFFD97706).withOpacity(0.4)),
+                      if (!_usesCounterOrderTabs)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color:
+                                    const Color(0xFFD97706).withOpacity(0.4)),
+                          ),
+                          child: Text(
+                            'PENDING',
+                            style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                widget.isCompact ? FontSize.s10 : FontSize.s11,
+                                0.21,
+                                const Color(0xFFD97706)),
+                          ),
                         ),
-                        child: Text(
-                          'PENDING',
-                          style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              widget.isCompact ? FontSize.s10 : FontSize.s11,
-                              0.21,
-                              const Color(0xFFD97706)),
-                        ),
-                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),

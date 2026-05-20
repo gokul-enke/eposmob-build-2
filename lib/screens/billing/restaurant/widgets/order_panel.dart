@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -17,6 +18,7 @@ import 'package:pos_machine/models/cart_item_status.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import '../../../../components/build_container_box.dart';
 import '../../../../components/build_confirmation_dialog.dart';
 import '../../../../components/build_dialog_box.dart';
@@ -109,10 +111,14 @@ class OrderPanelState extends State<OrderPanel> {
   bool _showSavedOrdersView = false;
   bool _forceCounterCartView = false;
   OrderPanelTab _activeOrderPanelTab = OrderPanelTab.cart;
+  bool _hasOpenedOngoingOrdersTab = false;
   int _lastObservedCartCount = 0;
 
   bool get _usesCounterOrderTabs =>
       widget.allowCounterBilling && widget.isCounterBillingMode;
+
+  bool get isViewingCounterListTab =>
+      _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
 
   // Scroll + highlight for newly added items in edit-order view
   final ScrollController _editOrderScrollController = ScrollController();
@@ -223,7 +229,9 @@ class OrderPanelState extends State<OrderPanel> {
         if (widget.tableId != null ||
             (widget.preselectedDeliveryMethodId != null &&
                 widget.preselectedDeliveryMethodId!.isNotEmpty)) {
-          _fetchSavedOrders();
+          _fetchSavedOrders(
+            showFullPanelLoader: _activeOrderPanelTab != OrderPanelTab.ongoing,
+          );
         }
         _refreshLocalDrafts();
       });
@@ -259,7 +267,8 @@ class OrderPanelState extends State<OrderPanel> {
       }
 
       setState(() {
-        _showSavedOrdersView = false;
+        _showSavedOrdersView =
+            _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
       });
       if (widget.tableId != null ||
           (widget.preselectedDeliveryMethodId != null &&
@@ -268,7 +277,9 @@ class OrderPanelState extends State<OrderPanel> {
         if (widget.tableId != null ||
             (widget.preselectedDeliveryMethodId != null &&
                 widget.preselectedDeliveryMethodId!.isNotEmpty)) {
-          _fetchSavedOrders();
+          _fetchSavedOrders(
+            showFullPanelLoader: _activeOrderPanelTab != OrderPanelTab.ongoing,
+          );
         }
         _refreshLocalDrafts();
       } else {
@@ -349,7 +360,10 @@ class OrderPanelState extends State<OrderPanel> {
     widget.onOrderSelected(_selectedOrder);
   }
 
-  Future<void> _fetchSavedOrders({bool showFullPanelLoader = true}) async {
+  Future<void> _fetchSavedOrders({
+    bool showFullPanelLoader = true,
+    bool ignoreContextFilter = false,
+  }) async {
     setState(() {
       if (showFullPanelLoader) {
         _isLoadingOrders = true;
@@ -364,6 +378,10 @@ class OrderPanelState extends State<OrderPanel> {
 
     final authModel = Provider.of<AuthModel>(context, listen: false);
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final tableFilter = ignoreContextFilter ? null : widget.tableId;
+    final deliveryMethodFilter = ignoreContextFilter
+        ? null
+        : (widget.tableId == null ? widget.preselectedDeliveryMethodId : null);
 
     debugPrint(
         'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ _fetchSavedOrders: Sending request with tableId: ${widget.tableId}, deliveryMethodId: ${widget.preselectedDeliveryMethodId}');
@@ -372,9 +390,8 @@ class OrderPanelState extends State<OrderPanel> {
           'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.listSavedOrders');
       final response = await cartProvider.listSavedOrders(
         accessToken: authModel.token ?? '',
-        tableId: widget.tableId,
-        deliveryMethodId:
-            widget.tableId == null ? widget.preselectedDeliveryMethodId : null,
+        tableId: tableFilter,
+        deliveryMethodId: deliveryMethodFilter,
       );
       debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ listSavedOrders Response: $response');
       if (response['status'] == 'success') {
@@ -4264,12 +4281,17 @@ class OrderPanelState extends State<OrderPanel> {
                   count: _savedOrders.length,
                   showIcon: showIcon,
                   onTap: () {
+                    final shouldLoadAll = !_hasOpenedOngoingOrdersTab;
                     setState(() {
                       _activeOrderPanelTab = OrderPanelTab.ongoing;
+                      _hasOpenedOngoingOrdersTab = true;
                       _showSavedOrdersView = true;
                       _forceCounterCartView = false;
                     });
-                    _fetchSavedOrders(showFullPanelLoader: false);
+                    _fetchSavedOrders(
+                      showFullPanelLoader: false,
+                      ignoreContextFilter: shouldLoadAll,
+                    );
                   },
                 ),
               ],
@@ -4724,6 +4746,7 @@ class OrderPanelState extends State<OrderPanel> {
 
   Future<void> _showCheckoutModal({
     bool forCurrentCart = false,
+    bool offlineSaveAndPrint = false,
     CheckoutModalMode mode = CheckoutModalMode.checkout,
     int? initialStep,
     String? title,
@@ -4773,12 +4796,16 @@ class OrderPanelState extends State<OrderPanel> {
 
         return CheckoutModal(
           mode: mode,
-          title: title ?? 'Finalize Order',
+          title: title ??
+              (offlineSaveAndPrint ? 'Save Offline Order' : 'Finalize Order'),
           initialStep: initialStep,
           cartTotal: checkoutCartTotal,
           availableCustomers: _customers,
           selectedCustomer: _selectedCustomer,
           hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
+          confirmButtonTitle: offlineSaveAndPrint ? 'Save' : 'Confirm',
+          printButtonTitle:
+              offlineSaveAndPrint ? 'Save & Print' : 'Confirm & Print',
 
           // Delivery State
           enableDelivery: deliveryEnabled,
@@ -5022,7 +5049,9 @@ class OrderPanelState extends State<OrderPanel> {
             });
             Navigator.of(dialogContext).pop();
             try {
-              if (forCurrentCart) {
+              if (offlineSaveAndPrint) {
+                await _saveCurrentCartAsConfirmedAndPrint(printBill: false);
+              } else if (forCurrentCart) {
                 await _confirmCurrentCart(printBill: false);
               } else {
                 await _confirmOrder();
@@ -5043,7 +5072,9 @@ class OrderPanelState extends State<OrderPanel> {
             });
             Navigator.of(dialogContext).pop();
             try {
-              if (forCurrentCart) {
+              if (offlineSaveAndPrint) {
+                await _saveCurrentCartAsConfirmedAndPrint(printBill: true);
+              } else if (forCurrentCart) {
                 await _confirmCurrentCart(printBill: true);
               } else {
                 await _confirmOrderAndPrintBill();
@@ -6210,6 +6241,134 @@ class OrderPanelState extends State<OrderPanel> {
     return detailsData?.tokenNumber;
   }
 
+  Future<void> _printOfflineSavedOrderBill(SavedOrder savedOrder) async {
+    final cartItems = <Map<String, dynamic>>[];
+    double totalMrp = 0.0;
+    double netTotal = 0.0;
+    double totalTax = 0.0;
+
+    for (final item in savedOrder.items) {
+      final itemMrp = item.mrp ?? item.product.mrp ?? 0.0;
+      final itemPrice = item.price ?? item.product.price?.price ?? 0.0;
+      final itemTotalPrice = itemPrice * item.quantity;
+      final itemTax = (item.taxAmount ?? 0.0) * item.quantity;
+
+      totalMrp += itemMrp * item.quantity;
+      netTotal += itemTotalPrice;
+      totalTax += itemTax;
+
+      cartItems.add({
+        'productName': item.product.productName ?? 'Unknown',
+        'mrp': itemMrp.toString(),
+        'quantity': item.quantity.toString(),
+        'product_unit': item.product.unit ?? '',
+        'unitPrice': itemPrice.toString(),
+        'totalPrice': itemTotalPrice.toString(),
+        'tax_amount': itemTax.toString(),
+      });
+    }
+
+    final youSaved = math.max(0.0, totalMrp - netTotal);
+    final netExcTax = netTotal - totalTax;
+    final storeSession =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+    final storeName = storeSession.activeStore?.storeName ?? 'Store';
+    final parsedPayment =
+        PaymentHelper.parseLocalMultiPayment(context, savedOrder.paymentMethod);
+    final paidAmount = double.tryParse(savedOrder.paidAmount ?? '0') ?? 0.0;
+
+    Future<bool> printOnce() {
+      return _printOrderDetailsWithFallback(
+        storeName: storeName,
+        cartItems: cartItems,
+        formattedTotal: savedOrder.total.toString(),
+        savedTotal: youSaved.toString(),
+        discountAmount: ((savedOrder.flatDiscount ?? 0.0) +
+                ((savedOrder.percentageDiscount ?? 0.0) > 0
+                    ? (savedOrder.total *
+                        (savedOrder.percentageDiscount ?? 0.0) /
+                        100)
+                    : 0.0))
+            .toString(),
+        orderDate: savedOrder.createdAt,
+        orderNumber: savedOrder.orderNumber,
+        isFromLocalStorage: true,
+        customerName: savedOrder.customerName,
+        customerPhone: savedOrder.customerPhone,
+        customerAddress: savedOrder.address,
+        paymentMethod:
+            parsedPayment?.paymentMethodDisplay ?? savedOrder.paymentMethod,
+        paymentBreakdown: parsedPayment?.paymentBreakdown,
+        paidAmount: paidAmount > 0 ? paidAmount : null,
+        customerAlternatePhone: savedOrder.alternatePhone,
+        customerVatNumber: savedOrder.customerVatNumber,
+        customerCrNumber: savedOrder.customerCrNumber,
+        customerType: savedOrder.customerType,
+        orderComment: savedOrder.comment,
+        deliveryMethod: savedOrder.deliveryMethod ?? _deliveryMethod,
+        isDefaultCustomer: _isDefaultCustomerPhone(savedOrder.customerPhone),
+        netExcTax: netExcTax.toString(),
+      );
+    }
+
+    final autoPrintSuccess = await printOnce();
+    await _maybePrintCustomerCopy(
+      canPrompt: autoPrintSuccess,
+      printAction: printOnce,
+    );
+  }
+
+  Future<void> _printOfflineSavedOrderKot(SavedOrder savedOrder) async {
+    final printItems = savedOrder.items.map((item) {
+      return {
+        'productName': item.product.productName ?? '',
+        'quantity': item.quantity.toString(),
+        'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
+        'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
+        'mrp': item.mrp?.toStringAsFixed(2) ??
+            item.price?.toStringAsFixed(2) ??
+            '0.00',
+        if (item.comment != null && item.comment!.isNotEmpty)
+          'notes': item.comment,
+      };
+    }).toList();
+
+    final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
+    final tableName = widget.tableId != null
+        ? 'Table ${widget.tableId}'
+        : (savedOrder.deliveryMethod ??
+            widget.preselectedDeliveryMethodName ??
+            'Store Takeaway');
+    final showTableLabel = widget.tableId != null;
+    final comment = savedOrder.comment?.trim();
+
+    final success = await KotPrintPage.autoPrint(
+      context,
+      orderNumber: savedOrder.orderNumber,
+      tableName: tableName,
+      showTableLabel: showTableLabel,
+      orderTime: orderTime,
+      items: printItems,
+      comment: comment != null && comment.isNotEmpty ? comment : null,
+    );
+
+    if (!success && mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => KotPrintPage(
+            orderNumber: savedOrder.orderNumber,
+            tableName: tableName,
+            showTableLabel: showTableLabel,
+            orderTime: orderTime,
+            items: printItems,
+            comment: comment != null && comment.isNotEmpty ? comment : null,
+          ),
+        ),
+      );
+    }
+  }
+
   void _resetCurrentCartCheckoutState() {
     setState(() {
       _selectedCustomer = null;
@@ -6236,6 +6395,150 @@ class OrderPanelState extends State<OrderPanel> {
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
     _applyDefaultCustomer();
+  }
+
+  Future<bool> _saveCurrentCartAsConfirmedAndPrint({
+    required bool printBill,
+  }) async {
+    final hasOrderContext = widget.tableId != null ||
+        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false) ||
+        _deliveryMethodId.trim().isNotEmpty ||
+        (widget.allowCounterBilling && widget.isCounterBillingMode);
+    if (!hasOrderContext) {
+      showScaffoldError(
+        context: context,
+        message: 'Select a table or delivery method first',
+      );
+      return false;
+    }
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final cartItems = List<LocalCartItem>.from(localProductProvider.cartItems);
+    if (cartItems.isEmpty) {
+      showScaffoldError(context: context, message: 'No items in cart');
+      return false;
+    }
+
+    final customerPhone = _selectedCustomer?.phone ?? _selectedCustomerPhone;
+    if (_selectedCustomer == null &&
+        _selectedCustomerID == null &&
+        (customerPhone == null || customerPhone.isEmpty)) {
+      showScaffoldError(context: context, message: 'Please select a customer');
+      return false;
+    }
+
+    setState(() {
+      _isLoadingConfirm = true;
+    });
+
+    try {
+      localProductProvider.cartTotal; // Recalculate priceSummary/discounts.
+      _balanceAmount = _calculateBalanceAmount();
+      final paymentData = _getLocalDraftPaymentData();
+      final comment = widget.tableId != null
+          ? buildTaggedDraftComment(widget.tableId!)
+          : _orderComment.trim();
+
+      SavedOrder? orderToUse;
+      if (_loadedLocalDraftId != null) {
+        localProductProvider.updateSavedOrder(
+          _loadedLocalDraftId!,
+          customerName: selectedCustomerNameForDraft,
+          customerPhone: selectedCustomerPhoneForDraft,
+          comment: comment.isNotEmpty ? comment : null,
+          deliveryMethod: deliveryMethodForDraft,
+          customerId: selectedCustomerIdForDraft,
+          paymentMethod: paymentData['paymentMethod'],
+          paidAmount: paymentData['paidAmount'],
+          balanceAmount: balanceAmountForDraft,
+          transactionId: transactionNumberForDraft,
+          couponId: couponIdForDraft,
+          deliveryMethodId: deliveryMethodIdForDraft,
+          carNumber: carNumberForDraft,
+          status: 'saved',
+          deliveryDate: deliveryDateForDraft,
+          deliveryTime: deliveryTimeForDraft,
+          toCustomerCredit: toCustomerCreditForDraft,
+          context: context,
+          tableId: widget.tableId,
+          address: deliveryAddressForDraft,
+          deliveryCharge: deliveryChargeForDraft,
+          alternatePhone: selectedCustomerAlternatePhoneForDraft,
+          customerVatNumber: selectedCustomerVatNumberForDraft,
+          customerCrNumber: selectedCustomerCrNumberForDraft,
+          customerType: selectedCustomerTypeForDraft,
+        );
+        orderToUse =
+            localProductProvider.moveToConfirmedOrders(_loadedLocalDraftId!);
+      }
+
+      orderToUse ??= localProductProvider.saveCurrentCartAsConfirmedOrder(
+        customerName: selectedCustomerNameForDraft,
+        customerPhone: selectedCustomerPhoneForDraft,
+        comment: comment.isNotEmpty ? comment : null,
+        deliveryMethod: deliveryMethodForDraft,
+        customerId: selectedCustomerIdForDraft,
+        paymentMethod: paymentData['paymentMethod'],
+        paidAmount: paymentData['paidAmount'],
+        balanceAmount: balanceAmountForDraft,
+        transactionId: transactionNumberForDraft,
+        couponId: couponIdForDraft,
+        deliveryMethodId: deliveryMethodIdForDraft,
+        carNumber: carNumberForDraft,
+        status: 'confirmed',
+        deliveryDate: deliveryDateForDraft,
+        deliveryTime: deliveryTimeForDraft,
+        toCustomerCredit: toCustomerCreditForDraft,
+        context: context,
+        tableId: widget.tableId,
+        address: deliveryAddressForDraft,
+        deliveryCharge: deliveryChargeForDraft,
+        alternatePhone: selectedCustomerAlternatePhoneForDraft,
+        customerVatNumber: selectedCustomerVatNumberForDraft,
+        customerCrNumber: selectedCustomerCrNumberForDraft,
+        customerType: selectedCustomerTypeForDraft,
+      );
+
+      if (printBill) {
+        await _printOfflineSavedOrderBill(orderToUse);
+
+        final appSettingsProvider =
+            Provider.of<AppSettingsProvider>(context, listen: false);
+        if (appSettingsProvider.appSettings?.enableKOTPrint ?? true) {
+          await _printOfflineSavedOrderKot(orderToUse);
+        }
+      }
+
+      localProductProvider.clearCart();
+      _resetCurrentCartCheckoutState();
+      _refreshLocalDrafts();
+      if (_usesCounterOrderTabs) {
+        resetActiveOrderContext();
+        widget.onLocalDraftSaved?.call();
+      }
+
+      showScaffold(
+        context: context,
+        message: printBill
+            ? 'Offline order saved and printed'
+            : 'Offline order saved',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Error saving offline order: $e');
+      showScaffoldError(
+        context: context,
+        message: 'Failed to save offline order: ${e.toString()}',
+      );
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingConfirm = false;
+        });
+      }
+    }
   }
 
   Future<bool> _confirmCurrentCart({required bool printBill}) async {
@@ -6738,7 +7041,41 @@ class OrderPanelState extends State<OrderPanel> {
   Future<void> saveCurrentCartFromParent() => _saveCurrentCartAsPending();
 
   void showCurrentCartCheckoutFromParent() {
-    _showCheckoutModal(forCurrentCart: true);
+    showCheckoutFromParent(forCurrentCart: true);
+  }
+
+  void showOfflineSaveAndPrintCheckoutFromParent({int? initialStep}) {
+    _showCheckoutModal(
+      forCurrentCart: true,
+      offlineSaveAndPrint: true,
+      initialStep: initialStep ?? _resolveCurrentCartCheckoutInitialStep(),
+    );
+  }
+
+  void showCheckoutFromParent({
+    bool? forCurrentCart,
+    int? initialStep,
+  }) {
+    final useCurrentCart = forCurrentCart ?? _selectedOrder == null;
+    _showCheckoutModal(
+      forCurrentCart: useCurrentCart,
+      initialStep: initialStep ??
+          (useCurrentCart ? _resolveCurrentCartCheckoutInitialStep() : null),
+    );
+  }
+
+  int _resolveCurrentCartCheckoutInitialStep() {
+    final hasCustomer = _selectedCustomer != null ||
+        _selectedCustomerID != null ||
+        (_selectedCustomerPhone?.trim().isNotEmpty ?? false);
+    if (!hasCustomer) return 0;
+
+    final hasOrderContext = widget.tableId != null ||
+        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false) ||
+        _deliveryMethodId.trim().isNotEmpty;
+    if (!hasOrderContext) return 1;
+
+    return 3;
   }
 
   void showCurrentOrderTab({bool preserveLoadedDraftMetadata = false}) {

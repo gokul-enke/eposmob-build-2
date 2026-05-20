@@ -194,7 +194,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   // Customer grid uses 3 columns — kept in sync with the GridView delegate
   // below so arrow-key navigation maps cleanly to visual rows.
   static const int _customerGridColumns = 3;
-  final FocusNode _deliveryMethodFocusNode = FocusNode();
+  final Map<String, FocusNode> _deliveryMethodFocusNodes = {};
   final FocusNode _deliveryCarNumberFocusNode = FocusNode();
   final FocusNode _deliveryCommentFocusNode = FocusNode();
   final FocusNode _deliveryAddressFocusNode = FocusNode();
@@ -443,7 +443,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _customerSearchFocusNode.dispose();
     _customerSearchClearFocusNode.dispose();
     _customerListFocusNode.dispose();
-    _deliveryMethodFocusNode.dispose();
+    for (final focusNode in _deliveryMethodFocusNodes.values) {
+      focusNode.dispose();
+    }
+    _deliveryMethodFocusNodes.clear();
     _deliveryCarNumberFocusNode.dispose();
     _deliveryCommentFocusNode.dispose();
     _deliveryAddressFocusNode.dispose();
@@ -462,11 +465,42 @@ class _CheckoutModalState extends State<CheckoutModal> {
           break;
         case 1:
           if (widget.enableDelivery) {
-            _deliveryMethodFocusNode.requestFocus();
+            final focusNode = _selectedDeliveryMethodFocusNode();
+            if (focusNode != null) {
+              focusNode.requestFocus();
+            }
           }
           break;
       }
     });
+  }
+
+  String _deliveryMethodFocusKey(DeliveryMethod method) =>
+      method.id.isNotEmpty ? method.id : method.name;
+
+  FocusNode _deliveryMethodFocusNodeFor(DeliveryMethod method) {
+    final key = _deliveryMethodFocusKey(method);
+    return _deliveryMethodFocusNodes.putIfAbsent(key, () => FocusNode());
+  }
+
+  FocusNode? _selectedDeliveryMethodFocusNode() {
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      final matchesById =
+          _lDeliveryMethodId.isNotEmpty && method.id == _lDeliveryMethodId;
+      final matchesByName = method.name == _lDeliveryMethod;
+      if (matchesById || matchesByName) {
+        return _deliveryMethodFocusNodeFor(method);
+      }
+    }
+
+    if (deliveryMethodsProvider.deliveryMethods.isEmpty) {
+      return null;
+    }
+    return _deliveryMethodFocusNodeFor(
+        deliveryMethodsProvider.deliveryMethods.first);
   }
 
   bool _onHardwareKey(KeyEvent event) {
@@ -624,6 +658,47 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
 
     return _selectedDeliveryCharge ?? selectedMethod?.basePrice ?? 0.0;
+  }
+
+  void _selectDeliveryMethod(
+    DeliveryMethod method, {
+    required bool shouldApplyDeliveryCharge,
+  }) {
+    setState(() {
+      _lDeliveryMethod = method.name;
+      _lDeliveryMethodId = method.id;
+      if (method.prices.isEmpty) {
+        _selectedDeliveryPriceId = null;
+        _selectedDeliveryCharge = 0.0;
+      } else {
+        final existingById = method.prices
+            .where((p) => p.id == _selectedDeliveryPriceId)
+            .toList();
+        if (existingById.isNotEmpty) {
+          _selectedDeliveryCharge = existingById.first.price;
+        } else {
+          final existingByCharge = _selectedDeliveryCharge == null
+              ? <DeliveryPrice>[]
+              : method.prices
+                  .where(
+                      (p) => (p.price - _selectedDeliveryCharge!).abs() < 0.001)
+                  .toList();
+
+          if (existingByCharge.isNotEmpty) {
+            _selectedDeliveryPriceId = existingByCharge.first.id;
+            _selectedDeliveryCharge = existingByCharge.first.price;
+          } else {
+            _selectedDeliveryPriceId = method.prices.first.id;
+            _selectedDeliveryCharge = method.prices.first.price;
+          }
+        }
+      }
+
+      if (!shouldApplyDeliveryCharge) {
+        _selectedDeliveryCharge = 0.0;
+      }
+    });
+    _handleDeliveryUpdate();
   }
 
   void _handleDeliveryUpdate() {
@@ -1544,9 +1619,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                         color: Colors.transparent,
                                         borderRadius: BorderRadius.circular(10),
                                         child: InkWell(
-                                          focusNode: methodIndex == 0
-                                              ? _deliveryMethodFocusNode
-                                              : null,
+                                          focusNode:
+                                              _deliveryMethodFocusNodeFor(
+                                                  method),
                                           borderRadius:
                                               BorderRadius.circular(10),
                                           onFocusChange: (focused) {
@@ -1554,60 +1629,22 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               _focusedDeliveryMethodName =
                                                   focused ? method.name : null;
                                             });
+                                            if (focused &&
+                                                _lDeliveryMethod !=
+                                                    method.name) {
+                                              _selectDeliveryMethod(
+                                                method,
+                                                shouldApplyDeliveryCharge:
+                                                    shouldApplyDeliveryCharge,
+                                              );
+                                            }
                                           },
                                           onTap: () {
-                                            setState(() {
-                                              _lDeliveryMethod = method.name;
-                                              _lDeliveryMethodId = method.id;
-                                              if (method.prices.isEmpty) {
-                                                _selectedDeliveryPriceId = null;
-                                                _selectedDeliveryCharge = 0.0;
-                                              } else {
-                                                final existingById = method
-                                                    .prices
-                                                    .where((p) =>
-                                                        p.id ==
-                                                        _selectedDeliveryPriceId)
-                                                    .toList();
-                                                if (existingById.isNotEmpty) {
-                                                  _selectedDeliveryCharge =
-                                                      existingById.first.price;
-                                                } else {
-                                                  final existingByCharge =
-                                                      _selectedDeliveryCharge ==
-                                                              null
-                                                          ? <DeliveryPrice>[]
-                                                          : method.prices
-                                                              .where((p) =>
-                                                                  (p.price -
-                                                                          _selectedDeliveryCharge!)
-                                                                      .abs() <
-                                                                  0.001)
-                                                              .toList();
-
-                                                  if (existingByCharge
-                                                      .isNotEmpty) {
-                                                    _selectedDeliveryPriceId =
-                                                        existingByCharge
-                                                            .first.id;
-                                                    _selectedDeliveryCharge =
-                                                        existingByCharge
-                                                            .first.price;
-                                                  } else {
-                                                    _selectedDeliveryPriceId =
-                                                        method.prices.first.id;
-                                                    _selectedDeliveryCharge =
-                                                        method
-                                                            .prices.first.price;
-                                                  }
-                                                }
-                                              }
-
-                                              if (!shouldApplyDeliveryCharge) {
-                                                _selectedDeliveryCharge = 0.0;
-                                              }
-                                            });
-                                            _handleDeliveryUpdate();
+                                            _selectDeliveryMethod(
+                                              method,
+                                              shouldApplyDeliveryCharge:
+                                                  shouldApplyDeliveryCharge,
+                                            );
                                           },
                                           child: AnimatedContainer(
                                             duration: const Duration(
