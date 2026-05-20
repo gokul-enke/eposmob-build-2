@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -41,6 +42,8 @@ import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/providers/quotations_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -76,7 +79,7 @@ import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
 
-enum CheckoutActionMode { confirm, save }
+enum CheckoutActionMode { confirm, save, quotation }
 
 class _CartUnitMenuOption {
   final String value;
@@ -5418,6 +5421,21 @@ class BillingPageState extends State<BillingPage>
                 shortcutLabel: 'F8',
               ),
             ),
+            FocusTraversalOrder(
+              order: const NumericFocusOrder(
+                  155.0), // Kept it unique from saveOrder
+              child: _buildActionButton(
+                text:
+                    'Create Quotation', // Removed .tr so it shows immediately without needing to update JSON
+                color: Colors.teal
+                    .shade500, // Used a distinct teal color so it doesn't match Save Order
+                onPressed: () => _showCheckoutModal(
+                    actionMode: CheckoutActionMode.quotation),
+                isLoading: isLoadingSaveOrder,
+                isDisabled: disableActions && !isLoadingSaveOrder,
+                //shortcutLabel: '',
+              ),
+            ),
             if (_hasInternet) ...[
               FocusTraversalOrder(
                 order:
@@ -5730,7 +5748,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  Future<void> _saveOrder() async {
+  Future<void> _saveOrder({bool shouldPrint = false}) async {
     if (!_beginOrderAction()) {
       return;
     }
@@ -6868,6 +6886,7 @@ class BillingPageState extends State<BillingPage>
     int? initialStep,
   }) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
+    final isQuotationMode = actionMode == CheckoutActionMode.quotation;
     bool checkoutActionTriggered = false;
     debugPrint(
         "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
@@ -7031,10 +7050,13 @@ class BillingPageState extends State<BillingPage>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
-          confirmButtonTitle: isSaveMode ? 'billing.save_order'.tr : 'Confirm',
-          printButtonTitle:
-              isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
-          requireCheckoutCompletion: !isSaveMode,
+          confirmButtonTitle: isQuotationMode
+              ? 'Create Quotation'
+              : (isSaveMode ? 'billing.save_order'.tr : 'Confirm'),
+          printButtonTitle: isQuotationMode
+              ? 'Create & Print Quote'
+              : (isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print'),
+          requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -7200,7 +7222,7 @@ class BillingPageState extends State<BillingPage>
           onConfirmOrder: () async {
             checkoutActionTriggered = true;
             setState(() {
-              if (isSaveMode) {
+              if (isSaveMode || isQuotationMode) {
                 isLoadingSaveOrder = true;
               } else {
                 isLoadingConfirmOrder = true;
@@ -7209,7 +7231,9 @@ class BillingPageState extends State<BillingPage>
             });
             // Close modal after setting loading state
             if (mounted) Navigator.of(dialogContext).pop();
-            if (isSaveMode) {
+            if (isQuotationMode) {
+              await _createQuotationFromCheckout(shouldPrint: false);
+            } else if (isSaveMode) {
               await _saveOrder();
             } else {
               await _confirmOrder();
@@ -7218,7 +7242,7 @@ class BillingPageState extends State<BillingPage>
           onConfirmAndPrint: () async {
             checkoutActionTriggered = true;
             setState(() {
-              if (isSaveMode) {
+              if (isSaveMode || isQuotationMode) {
                 isLoadingSaveOrderAndPrint = true;
               } else {
                 isLoadingCreateOrder = true;
@@ -7227,7 +7251,9 @@ class BillingPageState extends State<BillingPage>
             });
             // Close modal after setting loading state
             if (mounted) Navigator.of(dialogContext).pop();
-            if (isSaveMode) {
+            if (isQuotationMode) {
+              await _createQuotationFromCheckout(shouldPrint: true);
+            } else if (isSaveMode) {
               await _saveOrderAndPrint();
             } else {
               await _createOrderAndPrint();
@@ -7248,6 +7274,73 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "⌨️ [BillingPage] Checkout modal closed | mode=$actionMode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
     _restoreShortcutFocus('checkout modal closed');
+  }
+
+  Future<void> _createQuotationFromCheckout({required bool shouldPrint}) async {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthModel>(context, listen: false);
+    final customerProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final quotationsProvider =
+        Provider.of<QuotationsProvider>(context, listen: false);
+    final storeProvider =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+
+    if (localProductProvider.cartItems.isEmpty) {
+      Get.snackbar('Empty Cart', 'Please add items to quote first.',
+          backgroundColor: Colors.white);
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+      return;
+    }
+
+    try {
+      final payload = {
+        'customer_id': customerProvider.selectedCustomerID,
+        'store_id': storeProvider.activeStore?.storeId,
+        'quotation_date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
+        'expiry_date': DateFormat('yyyy-MM-dd')
+            .format(DateTime.now().add(const Duration(days: 30))),
+        'comment': _commentController.text, // Reusing delivery comment as note
+        'tax_type': 'exclusive',
+        'sub_total': localProductProvider.priceSummary?.subTotal,
+        'total_tax': localProductProvider.priceSummary?.totalTax,
+        'grand_total': localProductProvider.priceSummary?.netPayable,
+        'total_discount': localProductProvider.priceSummary?.discount ?? 0.0,
+        'terms_conditions': '',
+        'items': localProductProvider.cartItems.map((item) {
+          return {
+            'product_id': item.product.productId,
+            'quantity': item.quantity,
+            'price': item.price,
+            'tax_id':
+                (item.product.taxes != null && item.product.taxes!.isNotEmpty)
+                    ? item.product.taxes!.first.id
+                    : null,
+          };
+        }).toList(),
+      };
+
+      await quotationsProvider.createQuotation(
+        accessToken: authProvider.token ?? '',
+        data: payload,
+      );
+
+      Get.snackbar('Success', 'Quotation created successfully!',
+          backgroundColor: Colors.green.shade100);
+      _clearCart();
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to create quotation',
+          backgroundColor: Colors.red.shade100);
+    } finally {
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+    }
   }
 
   // Multi-payment helper methods

@@ -243,7 +243,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         CustomRoundButton(
           title: 'New Quotation',
           fct: () {
-            Get.find<SideBarController>().index.value = 87; // Index for CreateQuotationScreen
+            Get.find<SideBarController>().index.value = 46; // Change to Billing/POS Mode
           },
           fontSize: 12,
           height: 42,
