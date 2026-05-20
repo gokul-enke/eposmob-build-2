@@ -1143,7 +1143,7 @@ class _MenuPanelState extends State<MenuPanel> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 5,
+                flex: 4,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
