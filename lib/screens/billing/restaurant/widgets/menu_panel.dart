@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -374,6 +375,37 @@ class _MenuPanelState extends State<MenuPanel> {
     });
   }
 
+  int _resolveGridColumnCount(MenuCardMode cardMode, double availableWidth) {
+    if (!availableWidth.isFinite || availableWidth <= 0) {
+      return widget.isCompact ? 1 : 2;
+    }
+
+    final targetCardWidth = switch (cardMode) {
+      MenuCardMode.compact => widget.isCompact ? 210.0 : 190.0,
+      MenuCardMode.medium => 112.0,
+      MenuCardMode.large => 245.0,
+    };
+    final minColumns = widget.isCompact ? 1 : 2;
+    final maxColumns = switch (cardMode) {
+      MenuCardMode.compact => widget.isCompact ? 2 : 7,
+      MenuCardMode.medium => 9,
+      MenuCardMode.large => 6,
+    };
+
+    return (availableWidth / targetCardWidth)
+        .floor()
+        .clamp(minColumns, maxColumns)
+        .toInt();
+  }
+
+  double _resolveGridAspectRatio(MenuCardMode cardMode) {
+    return switch (cardMode) {
+      MenuCardMode.compact => widget.isCompact ? 1.56 : 1.42,
+      MenuCardMode.medium => 0.64,
+      MenuCardMode.large => 1.08,
+    };
+  }
+
   Future<void> _resyncProductsFromEmptyState() async {
     if (_isResyncingProducts) return;
 
@@ -463,61 +495,6 @@ class _MenuPanelState extends State<MenuPanel> {
 
         final int fontLevel = fontProvider.fontSizeLevel;
         final cardMode = _resolveCardMode(fontLevel);
-
-        // Calculate responsive grid columns with better aspect ratios
-        int crossAxisCount;
-        double childAspectRatio;
-
-        if (cardMode == MenuCardMode.compact) {
-          // Small-font compact mode: keep cards dense (especially desktop).
-          if (widget.isCompact) {
-            if (widget.screenSize.width > 600) {
-              crossAxisCount = 2;
-              childAspectRatio = 1.48;
-            } else {
-              crossAxisCount = 1;
-              childAspectRatio = 1.62;
-            }
-          } else {
-            if (widget.screenSize.width > 1600) {
-              crossAxisCount = 5;
-              childAspectRatio = 1.48;
-            } else if (widget.screenSize.width > 1300) {
-              crossAxisCount = 4;
-              childAspectRatio = 1.45;
-            } else if (widget.screenSize.width > 1000) {
-              crossAxisCount = 3;
-              childAspectRatio = 1.4;
-            } else {
-              crossAxisCount = 2;
-              childAspectRatio = 1.36;
-            }
-          }
-        } else if (cardMode == MenuCardMode.medium) {
-          // Medium: image-enabled but still dense.
-          if (widget.screenSize.width > 1600) {
-            crossAxisCount = 5;
-            childAspectRatio = 1.16;
-          } else if (widget.screenSize.width > 1200) {
-            crossAxisCount = 4;
-            childAspectRatio = 1.12;
-          } else {
-            crossAxisCount = 3;
-            childAspectRatio = 1.06;
-          }
-        } else {
-          // Large: bigger image-focused cards.
-          if (widget.screenSize.width > 1000) {
-            crossAxisCount = 4;
-            childAspectRatio = 1.14;
-          } else if (widget.screenSize.width > 800) {
-            crossAxisCount = 3;
-            childAspectRatio = 1.08;
-          } else {
-            crossAxisCount = 2;
-            childAspectRatio = 1.02;
-          }
-        }
 
         return Container(
           margin: const EdgeInsets.all(8),
@@ -884,44 +861,51 @@ class _MenuPanelState extends State<MenuPanel> {
                                   PointerDeviceKind.trackpad,
                                 },
                               ),
-                              child: GridView.builder(
-                                padding:
-                                    EdgeInsets.all(widget.isCompact ? 6 : 8),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  mainAxisSpacing: widget.isCompact ? 6 : 8,
-                                  crossAxisSpacing: widget.isCompact ? 6 : 8,
-                                  childAspectRatio: childAspectRatio,
-                                ),
-                                itemCount: items.length,
-                                itemBuilder: (_, idx) {
-                                  final item = items[idx];
-                                  switch (cardMode) {
-                                    case MenuCardMode.compact:
-                                      return _buildMenuItem(
-                                          item, widget.isCompact, context);
-                                    case MenuCardMode.medium:
-                                      return _buildMenuItemRich(
-                                        item,
-                                        context,
-                                        imageFlex: 6,
-                                        detailsFlex: 7,
-                                        titleLines: 1,
-                                        showCategory: false,
-                                      );
-                                    case MenuCardMode.large:
-                                      return _buildMenuItemRich(
-                                        item,
-                                        context,
-                                        imageFlex: 7,
-                                        detailsFlex: 7,
-                                        titleLines: 1,
-                                        showCategory: true,
-                                      );
-                                  }
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final crossAxisCount =
+                                      _resolveGridColumnCount(
+                                    cardMode,
+                                    constraints.maxWidth,
+                                  );
+                                  final childAspectRatio =
+                                      _resolveGridAspectRatio(cardMode);
+
+                                  return GridView.builder(
+                                    padding: EdgeInsets.all(
+                                        widget.isCompact ? 6 : 8),
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      mainAxisSpacing: widget.isCompact ? 6 : 8,
+                                      crossAxisSpacing:
+                                          widget.isCompact ? 6 : 8,
+                                      childAspectRatio: childAspectRatio,
+                                    ),
+                                    itemCount: items.length,
+                                    itemBuilder: (_, idx) {
+                                      final item = items[idx];
+                                      switch (cardMode) {
+                                        case MenuCardMode.compact:
+                                          return _buildMenuItem(
+                                              item, widget.isCompact, context);
+                                        case MenuCardMode.medium:
+                                          return _buildLegacyImageMenuItem(
+                                              item, context);
+                                        case MenuCardMode.large:
+                                          return _buildMenuItemRich(
+                                            item,
+                                            context,
+                                            imageFlex: 6,
+                                            detailsFlex: 7,
+                                            titleLines: 1,
+                                            showCategory: false,
+                                          );
+                                      }
+                                    },
+                                    physics: const BouncingScrollPhysics(),
+                                  );
                                 },
-                                physics: const BouncingScrollPhysics(),
                               ),
                             ),
                           ),
@@ -1117,6 +1101,177 @@ class _MenuPanelState extends State<MenuPanel> {
         Icons.image_outlined,
         color: Colors.grey.shade400,
         size: 30,
+      ),
+    );
+  }
+
+  Widget _buildLegacyImageMenuItem(GetProduct item, BuildContext context) {
+    bool isAvailable = true;
+    if (item.stock != null && item.stock!.isNotEmpty) {
+      isAvailable = item.stock!.any((stock) => (stock.quantity ?? 0) > 0);
+    }
+
+    final imageUrl = _resolvePrimaryImage(item);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+    final rawPrice = item.price?.price;
+    final price = rawPrice is num
+        ? rawPrice.toStringAsFixed(2)
+        : (double.tryParse(rawPrice?.toString() ?? '')?.toStringAsFixed(2) ??
+            (rawPrice?.toString() ?? '0.00'));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isAvailable ? Colors.white : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isAvailable ? () => widget.onItemAdd(item, 1) : null,
+          borderRadius: BorderRadius.circular(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 5,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(8),
+                      ),
+                      child: Container(
+                        color: Colors.grey.shade50,
+                        child: imageUrl != null
+                            ? Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 32,
+                                  color: Colors.grey,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.inventory_2_outlined,
+                                size: 32,
+                                color: Colors.grey,
+                              ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: !isAvailable
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.92),
+                                borderRadius: BorderRadius.circular(6),
+                                border:
+                                    Border.all(color: const Color(0xFFCBD5E1)),
+                              ),
+                              child: Text(
+                                'No Stock',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s9,
+                                  0.21,
+                                  const Color(0xFF64748B),
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () =>
+                              _showProductInfoDialog(context, item, false),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.48),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.info_outline,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: ColorManager.kPrimaryColor.withOpacity(0.92),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          '$currency $price',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            FontSize.s11,
+                            0.21,
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 3,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(
+                    '${item.productName ?? 'Unknown Product'} / ${item.unit ?? ''}',
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s13,
+                      0.21,
+                      isAvailable
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

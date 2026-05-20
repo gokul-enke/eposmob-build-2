@@ -432,7 +432,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Order Context',
+                    'Order',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(

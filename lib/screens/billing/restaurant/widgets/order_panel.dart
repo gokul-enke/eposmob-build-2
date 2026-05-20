@@ -2428,7 +2428,7 @@ class OrderPanelState extends State<OrderPanel> {
       child: Column(
         children: [
           _buildPanelHeader(
-            'Current Order',
+            'Cart',
             Icons.shopping_cart,
             const Color(0xFF059669),
             trailing: _usesCounterOrderTabs
