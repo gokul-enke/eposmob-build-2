@@ -406,6 +406,8 @@ class BillingPageState extends State<BillingPage>
 
     // Listen for sales executive changes to update default customer
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       final salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
       salesExecutiveProvider.addListener(_onSalesExecutiveChanged);
@@ -8577,6 +8579,7 @@ class BillingPageState extends State<BillingPage>
 
   // Function to handle sales executive changes
   void _onSalesExecutiveChanged() {
+    if (!mounted) return;
     debugPrint(
         "🔄 BILLING: Sales executive changed, updating default customer...");
 
@@ -8693,6 +8696,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _onUserSwitched() {
+    if (!mounted) return;
     debugPrint("🔄 BILLING: User switched, updating default customer...");
 
     // Check if auto-assign is enabled in app settings
