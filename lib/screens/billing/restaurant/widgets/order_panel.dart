@@ -94,6 +94,7 @@ class OrderPanelState extends State<OrderPanel> {
   List<dynamic> _savedOrders = [];
   List<SavedOrder> _localDrafts = [];
   bool _isLoadingOrders = false;
+  bool _isLoadingOngoingOrders = false;
   bool _isLoadingOrderDetails = false;
   String? _error;
   final Set<String> _loadingCartItems =
@@ -346,9 +347,13 @@ class OrderPanelState extends State<OrderPanel> {
     widget.onOrderSelected(_selectedOrder);
   }
 
-  Future<void> _fetchSavedOrders() async {
+  Future<void> _fetchSavedOrders({bool showFullPanelLoader = true}) async {
     setState(() {
-      _isLoadingOrders = true;
+      if (showFullPanelLoader) {
+        _isLoadingOrders = true;
+      } else {
+        _isLoadingOngoingOrders = true;
+      }
       _savedOrders = [];
       _selectedOrder = null;
       _error = null;
@@ -385,7 +390,11 @@ class OrderPanelState extends State<OrderPanel> {
       });
     } finally {
       setState(() {
-        _isLoadingOrders = false;
+        if (showFullPanelLoader) {
+          _isLoadingOrders = false;
+        } else {
+          _isLoadingOngoingOrders = false;
+        }
       });
     }
   }
@@ -2925,9 +2934,15 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   Widget _buildOngoingOrdersContent() {
+    if (_isLoadingOngoingOrders) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: () async {
-        await _fetchSavedOrders();
+        await _fetchSavedOrders(showFullPanelLoader: false);
         _refreshLocalDrafts();
       },
       child: _savedOrders.isEmpty
@@ -4235,12 +4250,12 @@ class OrderPanelState extends State<OrderPanel> {
                   count: _savedOrders.length,
                   showIcon: showIcon,
                   onTap: () {
-                    _fetchSavedOrders();
                     setState(() {
                       _activeOrderPanelTab = OrderPanelTab.ongoing;
                       _showSavedOrdersView = true;
                       _forceCounterCartView = false;
                     });
+                    _fetchSavedOrders(showFullPanelLoader: false);
                   },
                 ),
               ],
