@@ -629,50 +629,61 @@ class _RestaurantPageState extends State<RestaurantPage> {
             _activeTableId != null || _selectedDeliveryMethodId != null;
         return SafeArea(
           top: false,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-            ),
-            child: Row(
-              children: [
-                _buildCounterActionButton(
-                  text: 'Clear Cart',
-                  shortcutLabel: 'F1',
-                  color: const Color(0xFFEF233C),
-                  isDisabled: !hasItems,
-                  onPressed: () =>
-                      _orderPanelKey.currentState?.clearCurrentCartFromParent(),
-                ),
-                const SizedBox(width: 12),
-                _buildCounterActionButton(
-                  text: 'Save Order',
-                  shortcutLabel: 'F8',
-                  color: const Color(0xFFF59E0B),
-                  isDisabled: !hasItems || !hasOrderContext,
-                  onPressed: () =>
-                      _orderPanelKey.currentState?.saveCurrentCartFromParent(),
-                ),
-                const SizedBox(width: 12),
-                _buildCounterActionButton(
-                  text: 'Confirm and Print',
-                  shortcutLabel: 'F6',
-                  color: const Color(0xFF5B8DEF),
-                  isDisabled: !hasItems || !hasOrderContext,
-                  onPressed: () => _orderPanelKey.currentState
-                      ?.showCurrentCartCheckoutFromParent(),
-                ),
-                const SizedBox(width: 12),
-                _buildCounterActionButton(
-                  text: 'Confirm Order',
-                  shortcutLabel: 'F2',
-                  color: const Color(0xFF08C63F),
-                  isDisabled: !hasItems || !hasOrderContext,
-                  onPressed: () => _orderPanelKey.currentState
-                      ?.showCurrentCartCheckoutFromParent(),
-                ),
-              ],
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  _buildCounterActionButton(
+                    text: 'Clear Cart',
+                    shortcutLabel: 'F1',
+                    color: const Color(0xFFEF233C),
+                    isDisabled: !hasItems,
+                    onPressed: () => _orderPanelKey.currentState
+                        ?.clearCurrentCartFromParent(),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCounterActionButton(
+                    text: 'Save Order',
+                    shortcutLabel: 'F8',
+                    color: const Color(0xFFF59E0B),
+                    isDisabled: !hasItems || !hasOrderContext,
+                    onPressed: () => _orderPanelKey.currentState
+                        ?.saveCurrentCartFromParent(),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCounterActionButton(
+                    text: 'Confirm and Print',
+                    shortcutLabel: 'F6',
+                    color: const Color(0xFF5B8DEF),
+                    isDisabled: !hasItems || !hasOrderContext,
+                    onPressed: () => _orderPanelKey.currentState
+                        ?.showCurrentCartCheckoutFromParent(),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCounterActionButton(
+                    text: 'Confirm Order',
+                    shortcutLabel: 'F2',
+                    color: const Color(0xFF08C63F),
+                    isDisabled: !hasItems || !hasOrderContext,
+                    onPressed: () => _orderPanelKey.currentState
+                        ?.showCurrentCartCheckoutFromParent(),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -906,25 +917,25 @@ class _RestaurantPageState extends State<RestaurantPage> {
               _saveTablesPanelPreference(nextValue);
             },
           ),
-          const SizedBox(width: 6),
-          Container(
-            padding: EdgeInsets.all(isCompact ? 7 : 9),
-            decoration: BoxDecoration(
-              color: isCounterEnabled
-                  ? const Color(0xFF059669).withOpacity(0.12)
-                  : const Color(0xFF2563EB).withOpacity(0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              isCounterEnabled
-                  ? Icons.point_of_sale_rounded
-                  : Icons.restaurant_menu_rounded,
-              color: isCounterEnabled
-                  ? const Color(0xFF059669)
-                  : const Color(0xFF2563EB),
-              size: isCompact ? 16 : 19,
-            ),
-          ),
+          // const SizedBox(width: 6),
+          // Container(
+          //   padding: EdgeInsets.all(isCompact ? 7 : 9),
+          //   decoration: BoxDecoration(
+          //     color: isCounterEnabled
+          //         ? const Color(0xFF059669).withOpacity(0.12)
+          //         : const Color(0xFF2563EB).withOpacity(0.10),
+          //     borderRadius: BorderRadius.circular(12),
+          //   ),
+          //   child: Icon(
+          //     isCounterEnabled
+          //         ? Icons.point_of_sale_rounded
+          //         : Icons.restaurant_menu_rounded,
+          //     color: isCounterEnabled
+          //         ? const Color(0xFF059669)
+          //         : const Color(0xFF2563EB),
+          //     size: isCompact ? 16 : 19,
+          //   ),
+          // ),
           const SizedBox(width: 10),
           Expanded(
             child: Wrap(

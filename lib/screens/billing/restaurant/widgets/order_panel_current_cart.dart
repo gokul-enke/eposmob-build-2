@@ -250,107 +250,120 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     return SafeArea(
       top: false,
-      child: Container(
-        padding: EdgeInsets.all(widget.isCompact ? 12.0 : 16.0),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey.shade100,
-              width: 1,
-            ),
-          ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          widget.isCompact ? 10.0 : 12.0,
+          8,
+          widget.isCompact ? 10.0 : 12.0,
+          widget.isCompact ? 10.0 : 12.0,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildCurrentCartSummaryCard(cartItems),
-            const SizedBox(height: 12),
-            // Top: Comment button (full width)
-            SizedBox(
-              width: double.infinity,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => _showCommentDialog(),
-                  borderRadius: BorderRadius.circular(12),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: widget.isCompact ? 44 : 48,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      border: Border.all(
-                        color: Colors.grey.shade300,
-                        width: 1.5,
+        child: Container(
+          padding: EdgeInsets.all(widget.isCompact ? 10.0 : 12.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildCurrentCartSummaryCard(cartItems),
+              const SizedBox(height: 12),
+              // Top: Comment button (full width)
+              SizedBox(
+                width: double.infinity,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _showCommentDialog(),
+                    borderRadius: BorderRadius.circular(12),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      height: widget.isCompact ? 44 : 48,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 1.5,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _orderComment.isNotEmpty
-                                ? Icons.check_circle
-                                : Icons.comment,
-                            color: _orderComment.isNotEmpty
-                                ? const Color(0xFF059669)
-                                : const Color(0xFF64748B),
-                            size: widget.isCompact ? 14 : 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Comment',
-                            style: buildCustomStyle(
-                                FontWeightManager.semiBold,
-                                widget.isCompact ? FontSize.s13 : FontSize.s14,
-                                0.21,
-                                const Color(0xFF64748B)),
-                          ),
-                        ],
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _orderComment.isNotEmpty
+                                  ? Icons.check_circle
+                                  : Icons.comment,
+                              color: _orderComment.isNotEmpty
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF64748B),
+                              size: widget.isCompact ? 14 : 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Comment',
+                              style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  widget.isCompact
+                                      ? FontSize.s13
+                                      : FontSize.s14,
+                                  0.21,
+                                  const Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCurrentCartFooterButton(
-                    label: 'Clear',
-                    color: const Color(0xFFDC2626),
-                    isDisabled: cartItems.isEmpty,
-                    onTap: () => _clearCurrentCart(),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCurrentCartFooterButton(
+                      label: 'Clear',
+                      color: const Color(0xFFDC2626),
+                      isDisabled: cartItems.isEmpty,
+                      onTap: () => _clearCurrentCart(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildCurrentCartFooterButton(
-                    label: 'Save',
-                    color: const Color(0xFF2563EB),
-                    isDisabled: cartItems.isEmpty ||
-                        (widget.tableId == null &&
-                            (widget.preselectedDeliveryMethodId == null ||
-                                widget.preselectedDeliveryMethodId!.isEmpty)),
-                    onTap: () => _saveCurrentCartAsPending(),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildCurrentCartFooterButton(
+                      label: 'Save',
+                      color: const Color(0xFF2563EB),
+                      isDisabled: cartItems.isEmpty ||
+                          (widget.tableId == null &&
+                              (widget.preselectedDeliveryMethodId == null ||
+                                  widget.preselectedDeliveryMethodId!.isEmpty)),
+                      onTap: () => _saveCurrentCartAsPending(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _buildCurrentCartFooterButton(
-                    label: 'Send To Kitchen',
-                    color: const Color(0xFF059669),
-                    isDisabled: cartItems.isEmpty || widget.isLoadingPrint,
-                    isLoading: widget.isLoadingPrint,
-                    onTap: () => widget.onPrintOrder(),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: _buildCurrentCartFooterButton(
+                      label: 'Send To Kitchen',
+                      color: const Color(0xFF059669),
+                      isDisabled: cartItems.isEmpty || widget.isLoadingPrint,
+                      isLoading: widget.isLoadingPrint,
+                      onTap: () => widget.onPrintOrder(),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -673,11 +686,13 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
   // Refresh local drafts from Hive filtered by table tag and pending status
   Future<void> _refreshLocalDrafts() async {
-    // Reset manual selection flag when table changes context or drafts are refreshed
-    _isCustomerManuallySelected = false;
-
-    // Apply default customer logic for the current table context
-    _applyDefaultCustomer();
+    final hasSelectedCustomer = _selectedCustomer != null ||
+        _selectedCustomerID != null ||
+        (_selectedCustomerPhone?.isNotEmpty ?? false);
+    if (!hasSelectedCustomer) {
+      _isCustomerManuallySelected = false;
+      _applyDefaultCustomer();
+    }
 
     try {
       final localProvider =
