@@ -704,6 +704,10 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
         _showSavedOrdersView = true;
       });
       _refreshLocalDrafts();
+      if (_usesCounterOrderTabs) {
+        resetActiveOrderContext();
+        widget.onLocalDraftSaved?.call();
+      }
     } catch (e) {
       showScaffoldError(
           context: context,

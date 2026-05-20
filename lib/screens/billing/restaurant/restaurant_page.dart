@@ -74,6 +74,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   // Mobile navigation state
   MobileView _currentMobileView = MobileView.tables;
   String? _selectedTableName; // Store selected table name for header
+  SavedOrder? _editingLocalDraft;
 
   // Delivery method selection (alternative to table selection)
   String? _selectedDeliveryMethodId;
@@ -322,6 +323,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                           if (mounted) {
                             setState(() {
                               _selectedOrderFromOrderPanel = order;
+                              if (order != null) {
+                                _editingLocalDraft = null;
+                              }
                             });
                           }
                         });
@@ -331,6 +335,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       isLoadingSendToKitchen: _isLoadingSendToKitchen,
                       isLoadingPrint: _isLoadingPrint,
                       onLocalDraftLoaded: _applyLocalDraftContext,
+                      onLocalDraftSaved: _resetCounterOrderContextAfterSave,
                     ),
                   ),
                 ],
@@ -811,6 +816,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     }
 
     setState(() {
+      _editingLocalDraft = order;
+      _selectedOrderFromOrderPanel = null;
       if (order.tableId != null && order.tableId!.isNotEmpty) {
         _activeTableId = order.tableId;
         _selectedTableName = tableName ?? order.tableId;
@@ -822,6 +829,19 @@ class _RestaurantPageState extends State<RestaurantPage> {
         _selectedDeliveryMethodId = order.deliveryMethodId;
         _selectedDeliveryMethodName = order.deliveryMethod;
       }
+    });
+  }
+
+  void _resetCounterOrderContextAfterSave() {
+    if (!_isCounterBillingMode) return;
+    setState(() {
+      _activeTableId = null;
+      _selectedTableName = null;
+      _selectedDeliveryMethodId = null;
+      _selectedDeliveryMethodName = null;
+      _selectedOrderFromOrderPanel = null;
+      _editingLocalDraft = null;
+      _refreshCounter = (_refreshCounter ?? 0) + 1;
     });
   }
 
@@ -874,7 +894,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         : isCounterEnabled
             ? (_selectedDeliveryMethodName ?? 'Choose Dining or Delivery')
             : (_selectedDeliveryMethodName ?? 'Select table or delivery');
-    const title = 'New Order';
+    final title = _topBarOrderTitle;
     final contextIcon = hasActiveTable
         ? Icons.table_restaurant_rounded
         : isCounterEnabled
@@ -1070,6 +1090,38 @@ class _RestaurantPageState extends State<RestaurantPage> {
         ],
       ),
     );
+  }
+
+  String get _topBarOrderTitle {
+    if (_editingLocalDraft != null) {
+      final orderNumber = _editingLocalDraft!.orderNumber.trim();
+      return orderNumber.isNotEmpty
+          ? 'Edit Draft - #$orderNumber'
+          : 'Edit Draft';
+    }
+
+    final selected = _selectedOrderFromOrderPanel;
+    if (selected is Map) {
+      final orderNumber = _firstNonEmptyTopBarValue([
+        selected['order_number'],
+        selected['display_order_id'],
+        selected['order_id'],
+        selected['id'],
+      ]);
+      return orderNumber != null ? 'Edit Order - #$orderNumber' : 'Edit Order';
+    }
+
+    return 'New Order';
+  }
+
+  String? _firstNonEmptyTopBarValue(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty && text.toLowerCase() != 'null') {
+        return text;
+      }
+    }
+    return null;
   }
 
   Widget _buildTopBarContextChip({
@@ -1500,6 +1552,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 if (mounted) {
                   setState(() {
                     _selectedOrderFromOrderPanel = order;
+                    if (order != null) {
+                      _editingLocalDraft = null;
+                    }
                   });
                 }
               });
@@ -1509,6 +1564,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             isLoadingSendToKitchen: _isLoadingSendToKitchen,
             isLoadingPrint: _isLoadingPrint,
             onLocalDraftLoaded: _applyLocalDraftContext,
+            onLocalDraftSaved: _resetCounterOrderContextAfterSave,
           ),
         ),
       ],
@@ -1617,18 +1673,20 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (!widget.allowCounterBillingFromAttender) return;
 
     _autoSaveCurrentTableBeforeSwitch();
+    Provider.of<LocalProductProvider>(context, listen: false).clearCart();
 
     setState(() {
       _isCounterBillingMode = true;
       _activeTableId = null;
       _selectedTableName = null;
       _selectedOrderFromOrderPanel = null;
+      _editingLocalDraft = null;
       _selectedDeliveryMethodId = null;
       _selectedDeliveryMethodName = null;
       _refreshCounter = (_refreshCounter ?? 0) + 1;
     });
 
-    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    _orderPanelKey.currentState?.resetActiveOrderContext();
     _orderPanelKey.currentState?.showCurrentOrderTab();
   }
 
@@ -1939,17 +1997,22 @@ class _RestaurantPageState extends State<RestaurantPage> {
       );
     }
 
-    // Deselect the active table
+    // Deselect active order context
     setState(() {
       _activeTableId = null;
+      _selectedTableName = null;
+      _selectedDeliveryMethodId = null;
+      _selectedDeliveryMethodName = null;
+      _selectedOrderFromOrderPanel = null;
+      _editingLocalDraft = null;
     });
 
-    // Reset payment modal flag in OrderPanel
-    _orderPanelKey.currentState?.resetPaymentModalFlag();
+    _orderPanelKey.currentState?.resetActiveOrderContext();
+    _orderPanelKey.currentState?.showCurrentOrderTab();
 
     showScaffold(
       context: context,
-      message: 'New order started. Cart cleared and table deselected.',
+      message: 'New order started. Cart and context cleared.',
     );
   }
 

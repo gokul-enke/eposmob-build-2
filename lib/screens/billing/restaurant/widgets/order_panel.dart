@@ -64,6 +64,7 @@ class OrderPanel extends StatefulWidget {
   final bool allowCounterBilling;
   final bool isCounterBillingMode;
   final ValueChanged<SavedOrder>? onLocalDraftLoaded;
+  final VoidCallback? onLocalDraftSaved;
 
   const OrderPanel({
     super.key, // Add key parameter
@@ -83,6 +84,7 @@ class OrderPanel extends StatefulWidget {
     this.allowCounterBilling = false,
     this.isCounterBillingMode = false,
     this.onLocalDraftLoaded,
+    this.onLocalDraftSaved,
   });
 
   @override
@@ -1511,6 +1513,18 @@ class OrderPanelState extends State<OrderPanel> {
   void resetPaymentModalFlag() {
     setState(() {
       _hasOpenedPaymentModalOnce = false;
+    });
+  }
+
+  void resetActiveOrderContext() {
+    _clearOrderEditingState();
+    if (!mounted) return;
+    setState(() {
+      _loadedLocalDraftId = null;
+      _activeOrderPanelTab =
+          _usesCounterOrderTabs ? OrderPanelTab.saved : _activeOrderPanelTab;
+      _showSavedOrdersView = _usesCounterOrderTabs || _showSavedOrdersView;
+      _forceCounterCartView = false;
     });
   }
 
