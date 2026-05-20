@@ -7333,8 +7333,10 @@ class BillingPageState extends State<BillingPage>
         Provider.of<StoreSessionProvider>(context, listen: false);
 
     if (localProductProvider.cartItems.isEmpty) {
-      Get.snackbar('Empty Cart', 'Please add items to quote first.',
-          backgroundColor: Colors.white);
+      showScaffoldError(
+        context: context,
+        message: 'Please add items to quote first.',
+      );
       setState(() {
         isLoadingSaveOrder = false;
         isLoadingSaveOrderAndPrint = false;
@@ -7374,12 +7376,16 @@ class BillingPageState extends State<BillingPage>
         data: payload,
       );
 
-      Get.snackbar('Success', 'Quotation created successfully!',
-          backgroundColor: Colors.green.shade100);
+      showScaffold(
+        context: context,
+        message: 'Quotation created successfully!',
+      );
       _clearCart();
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create quotation',
-          backgroundColor: Colors.red.shade100);
+      showScaffoldError(
+        context: context,
+        message: 'Failed to create quotation',
+      );
     } finally {
       setState(() {
         isLoadingSaveOrder = false;
