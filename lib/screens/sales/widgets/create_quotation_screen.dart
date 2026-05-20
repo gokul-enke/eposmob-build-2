@@ -229,7 +229,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       if (response['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Quotation created successfully')));
-        Get.find<SideBarController>().index.value = 86;
+        Get.find<SideBarController>().index.value = 87;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(response['message'] ?? 'Failed')));
@@ -302,7 +302,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Get.find<SideBarController>().index.value = 86,
+            onPressed: () => Get.find<SideBarController>().index.value = 87,
             icon: const Icon(Icons.arrow_back_ios_new,
                 color: ColorManager.kPrimaryColor, size: 20),
           ),
