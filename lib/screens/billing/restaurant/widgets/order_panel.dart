@@ -136,6 +136,7 @@ class OrderPanelState extends State<OrderPanel> {
   String _deliveryMethod = "Store Takeaway";
   String _deliveryMethodId = "";
   String _deliveryAddress = "";
+  String _carNumber = "";
   String? _deliveryDate;
   String? _deliveryTime;
   double? _selectedDeliveryCharge;
@@ -158,6 +159,8 @@ class OrderPanelState extends State<OrderPanel> {
   String? get deliveryTimeForDraft => _deliveryTime;
   String? get deliveryAddressForDraft =>
       _deliveryAddress.isNotEmpty ? _deliveryAddress : null;
+  String? get carNumberForDraft =>
+      _carNumber.trim().isNotEmpty ? _carNumber.trim() : null;
   double get deliveryChargeForDraft => _getDeliveryChargeForOrder();
   bool get toCustomerCreditForDraft => _toCustomerCreditEnabled;
   String? get transactionNumberForDraft =>
@@ -167,6 +170,12 @@ class OrderPanelState extends State<OrderPanel> {
   String? get paymentMethodForDraft =>
       _getLocalDraftPaymentData()['paymentMethod'];
   String? get paidAmountForDraft => _getLocalDraftPaymentData()['paidAmount'];
+  String? get selectedCustomerAlternatePhoneForDraft =>
+      _firstNonEmptyString([_selectedCustomer?.altPhone]);
+  String? get selectedCustomerVatNumberForDraft =>
+      _extractCustomerKycValue(_selectedCustomer, 'VAT NUMBER');
+  String? get selectedCustomerCrNumberForDraft =>
+      _extractCustomerKycValue(_selectedCustomer, 'CR NUMBER');
 
   // Customer Selection Variables
   CustomerListModelData? _selectedCustomer;
@@ -567,8 +576,49 @@ class OrderPanelState extends State<OrderPanel> {
     return null;
   }
 
+  CustomerListModelData? _buildDraftCustomerFallback(SavedOrder order) {
+    final hasCustomerData = order.customerId != null ||
+        (order.customerName?.trim().isNotEmpty ?? false) ||
+        (order.customerPhone?.trim().isNotEmpty ?? false);
+    if (!hasCustomerData) return null;
+
+    final kyc = <Kyc>[];
+    if (order.customerCrNumber?.trim().isNotEmpty ?? false) {
+      kyc.add(Kyc(key: 'CR NUMBER', value: order.customerCrNumber!.trim()));
+    }
+    if (order.customerVatNumber?.trim().isNotEmpty ?? false) {
+      kyc.add(Kyc(key: 'VAT NUMBER', value: order.customerVatNumber!.trim()));
+    }
+
+    return CustomerListModelData(
+      id: order.customerId,
+      name: order.customerName,
+      phone: order.customerPhone,
+      altPhone: order.alternatePhone,
+      customerType: order.customerType,
+      address: order.address,
+      kyc: kyc.isNotEmpty ? kyc : null,
+    );
+  }
+
+  String? _extractCustomerKycValue(
+    CustomerListModelData? customer,
+    String key,
+  ) {
+    if (customer?.kyc == null) return null;
+    final normalizedKey = key.trim().toUpperCase();
+    for (final item in customer!.kyc!) {
+      if ((item.key ?? '').trim().toUpperCase() == normalizedKey) {
+        final value = item.value?.trim();
+        if (value != null && value.isNotEmpty) return value;
+      }
+    }
+    return null;
+  }
+
   void _rehydrateLocalDraftMetadata(SavedOrder order) {
-    final matchedCustomer = _resolveDraftCustomer(order);
+    final matchedCustomer =
+        _resolveDraftCustomer(order) ?? _buildDraftCustomerFallback(order);
     final parsedPayment =
         PaymentHelper.parseLocalMultiPayment(context, order.paymentMethod);
     final paymentBreakdown = parsedPayment?.paymentBreakdown;
@@ -618,6 +668,7 @@ class OrderPanelState extends State<OrderPanel> {
       _deliveryMethodId =
           order.deliveryMethodId ?? _getDefaultDeliveryMethodId();
       _deliveryAddress = order.address ?? '';
+      _carNumber = order.carNumber ?? '';
       _deliveryDate = order.deliveryDate;
       _deliveryTime = order.deliveryTime;
       _selectedDeliveryCharge = order.deliveryCharge;
@@ -632,7 +683,7 @@ class OrderPanelState extends State<OrderPanel> {
       _transactionNumber = order.transactionId ?? '';
       _balanceAmount = double.tryParse(order.balanceAmount ?? '') ?? 0.0;
       _toCustomerCreditEnabled = order.toCustomerCredit ?? false;
-      _toCustomerCreditAmount = 0.0;
+      _toCustomerCreditAmount = _toCustomerCreditEnabled ? debitAmount : 0.0;
 
       _isCashSelected = cashAmount > 0;
       _cashAmount = cashAmount > 0 ? cashAmount.toStringAsFixed(2) : '';
@@ -1389,6 +1440,7 @@ class OrderPanelState extends State<OrderPanel> {
       _deliveryMethod = "Store Takeaway";
       _deliveryMethodId = "";
       _deliveryAddress = "";
+      _carNumber = "";
       _deliveryDate = null;
       _deliveryTime = null;
       _selectedDeliveryCharge = null;
@@ -1438,6 +1490,7 @@ class OrderPanelState extends State<OrderPanel> {
     _deliveryMethod = "Store Takeaway";
     _deliveryMethodId = "";
     _deliveryAddress = "";
+    _carNumber = "";
     _deliveryDate = null;
     _deliveryTime = null;
     _selectedDeliveryCharge = null;
@@ -1583,6 +1636,7 @@ class OrderPanelState extends State<OrderPanel> {
       final loadedDeliveryDate = order['delivery_date']?.toString();
       final loadedDeliveryTime = order['delivery_time']?.toString();
       final loadedDeliveryAddress = order['address']?.toString() ?? '';
+      final loadedCarNumber = order['car_number']?.toString() ?? '';
       final loadedDeliveryCharge =
           double.tryParse(order['delivery_charge']?.toString() ?? '');
 
@@ -1592,6 +1646,7 @@ class OrderPanelState extends State<OrderPanel> {
         _deliveryDate = loadedDeliveryDate;
         _deliveryTime = loadedDeliveryTime;
         _deliveryAddress = loadedDeliveryAddress;
+        _carNumber = loadedCarNumber;
         _selectedDeliveryCharge = loadedDeliveryCharge;
       });
 
@@ -4712,12 +4767,14 @@ class OrderPanelState extends State<OrderPanel> {
           deliveryAddress: _deliveryAddress,
           deliveryDate: _deliveryDate,
           deliveryTime: _deliveryTime,
+          carNumber: _carNumber,
           initialDeliveryCharge: _selectedDeliveryCharge ?? 0.0,
           onDeliveryUpdated:
               (method, methodId, carNo, comment, date, time, address) {
             setState(() {
               _deliveryMethod = method;
               _deliveryMethodId = methodId;
+              _carNumber = carNo;
               _orderComment = comment;
               _deliveryDate = date;
               _deliveryTime = time;

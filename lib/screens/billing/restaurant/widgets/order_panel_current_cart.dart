@@ -647,6 +647,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           transactionId: transactionNumberForDraft,
           couponId: couponIdForDraft,
           deliveryMethodId: deliveryMethodIdForDraft,
+          carNumber: carNumberForDraft,
           status: 'pending',
           deliveryDate: deliveryDateForDraft,
           deliveryTime: deliveryTimeForDraft,
@@ -655,6 +656,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           tableId: widget.tableId,
           address: deliveryAddressForDraft,
           deliveryCharge: deliveryChargeForDraft,
+          alternatePhone: selectedCustomerAlternatePhoneForDraft,
+          customerVatNumber: selectedCustomerVatNumberForDraft,
+          customerCrNumber: selectedCustomerCrNumberForDraft,
           customerType: selectedCustomerTypeForDraft,
         );
         showScaffold(context: context, message: 'Updated local draft');
@@ -672,6 +676,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           transactionId: transactionNumberForDraft,
           couponId: couponIdForDraft,
           deliveryMethodId: deliveryMethodIdForDraft,
+          carNumber: carNumberForDraft,
           status: 'pending',
           deliveryDate: deliveryDateForDraft,
           deliveryTime: deliveryTimeForDraft,
@@ -680,6 +685,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           tableId: widget.tableId,
           address: deliveryAddressForDraft,
           deliveryCharge: deliveryChargeForDraft,
+          alternatePhone: selectedCustomerAlternatePhoneForDraft,
+          customerVatNumber: selectedCustomerVatNumberForDraft,
+          customerCrNumber: selectedCustomerCrNumberForDraft,
           customerType: selectedCustomerTypeForDraft,
         );
         showScaffold(

@@ -2219,6 +2219,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         couponId: orderPanelState?.couponIdForDraft,
         deliveryMethodId: _selectedDeliveryMethodId ??
             orderPanelState?.deliveryMethodIdForDraft,
+        carNumber: orderPanelState?.carNumberForDraft,
         status: 'pending',
         deliveryDate: orderPanelState?.deliveryDateForDraft,
         deliveryTime: orderPanelState?.deliveryTimeForDraft,
@@ -2227,6 +2228,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
         tableId: _activeTableId,
         address: orderPanelState?.deliveryAddressForDraft,
         deliveryCharge: orderPanelState?.deliveryChargeForDraft,
+        alternatePhone: orderPanelState?.selectedCustomerAlternatePhoneForDraft,
+        customerVatNumber: orderPanelState?.selectedCustomerVatNumberForDraft,
+        customerCrNumber: orderPanelState?.selectedCustomerCrNumberForDraft,
+        customerType: orderPanelState?.selectedCustomerTypeForDraft,
       );
 
       debugPrint(
