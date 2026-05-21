@@ -260,6 +260,8 @@ class BillingPageState extends State<BillingPage>
   String? deliveryTime;
   String? deliveryAddress;
   double? _selectedDeliveryCharge;
+  DateTime _quotationDate = DateTime.now();
+  DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -7108,6 +7110,13 @@ class BillingPageState extends State<BillingPage>
               ? 'Create & Print Quote'
               : (isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print'),
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
+          isQuotationMode: isQuotationMode,
+          initialQuotationDate: _quotationDate,
+          initialQuotationExpiryDate: _quotationExpiryDate,
+          onQuotationDatesUpdated: (quotationDate, expiryDate) {
+            _quotationDate = quotationDate;
+            _quotationExpiryDate = expiryDate;
+          },
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -7349,45 +7358,77 @@ class BillingPageState extends State<BillingPage>
       });
       return;
     }
+    if (!customerProvider.hasSelectedCustomer ||
+        customerProvider.selectedCustomerID == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Please select a customer before creating quotation.',
+      );
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+      return;
+    }
+    if (_quotationExpiryDate.isBefore(_quotationDate)) {
+      showScaffoldError(
+        context: context,
+        message: 'Expiry date cannot be before quotation date.',
+      );
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+      return;
+    }
 
     try {
       final payload = {
         'customer_id': customerProvider.selectedCustomerID,
         'store_id': storeProvider.activeStore?.storeId,
-        'quotation_date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        'expiry_date': DateFormat('yyyy-MM-dd')
-            .format(DateTime.now().add(const Duration(days: 30))),
+        'quotation_date': DateFormat('yyyy-MM-dd').format(_quotationDate),
+        'expiry_date': DateFormat('yyyy-MM-dd').format(_quotationExpiryDate),
         'comment': _commentController.text, // Reusing delivery comment as note
-        'tax_type': 'exclusive',
-        'sub_total': localProductProvider.priceSummary?.subTotal,
-        'total_tax': localProductProvider.priceSummary?.totalTax,
-        'grand_total': localProductProvider.priceSummary?.netPayable,
-        'total_discount': localProductProvider.priceSummary?.discount ?? 0.0,
-        'terms_conditions': '',
         'items': localProductProvider.cartItems.map((item) {
-          return {
+          final itemMap = <String, dynamic>{
             'product_id': item.product.productId,
-            'quantity': item.quantity,
-            'price': item.price,
-            'tax_id':
-                (item.product.taxes != null && item.product.taxes!.isNotEmpty)
-                    ? item.product.taxes!.first.id
-                    : null,
+            'quantity': item.hasSaleUnit ? item.displayQuantity : item.quantity,
+            'price': item.hasSaleUnit ? item.displayPrice : item.price,
           };
+          if (item.saleUnitId != null) {
+            itemMap['product_sale_unit_id'] = item.saleUnitId;
+          }
+          return itemMap;
         }).toList(),
       };
 
-      await quotationsProvider.createQuotation(
+      final response = await quotationsProvider.createQuotation(
         accessToken: authProvider.token ?? '',
         data: payload,
       );
 
       if (mounted) {
-        showScaffold(
-          context: context,
-          message: 'Quotation created successfully!',
-        );
-        _clearCart();
+        if (response['status'] == 'success') {
+          showScaffold(
+            context: context,
+            message: 'Quotation created successfully!',
+          );
+          _clearCart();
+          final now = DateTime.now();
+          _quotationDate = now;
+          _quotationExpiryDate = now.add(const Duration(days: 30));
+          if (shouldPrint) {
+            showScaffold(
+              context: context,
+              message: 'Quotation print is not implemented yet.',
+            );
+          }
+        } else {
+          showScaffoldError(
+            context: context,
+            message: response['message'] ?? 'Failed to create quotation',
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

@@ -77,6 +77,9 @@ class CheckoutModal extends StatefulWidget {
   final String confirmButtonTitle;
   final String printButtonTitle;
   final bool requireCheckoutCompletion;
+  final bool isQuotationMode;
+  final DateTime? initialQuotationDate;
+  final DateTime? initialQuotationExpiryDate;
 
   // Callbacks
   final Function(CustomerListModelData) onCustomerSelected;
@@ -106,6 +109,8 @@ class CheckoutModal extends StatefulWidget {
       String? cardMethodId,
       String? upiMethodId,
       String? codMethodId}) onPaymentUpdated;
+  final Function(DateTime quotationDate, DateTime expiryDate)?
+      onQuotationDatesUpdated;
 
   final Future<void> Function() onConfirmOrder;
   final Future<void> Function() onConfirmAndPrint;
@@ -156,12 +161,16 @@ class CheckoutModal extends StatefulWidget {
     this.confirmButtonTitle = 'Confirm',
     this.printButtonTitle = 'Confirm & Print',
     this.requireCheckoutCompletion = true,
+    this.isQuotationMode = false,
+    this.initialQuotationDate,
+    this.initialQuotationExpiryDate,
     required this.onCustomerSelected,
     required this.onAddNewCustomer,
     required this.onDiscountApplied,
     this.onDeliveryUpdated,
     this.onDeliveryChargeUpdated,
     required this.onPaymentUpdated,
+    this.onQuotationDatesUpdated,
     required this.onConfirmOrder,
     required this.onConfirmAndPrint,
     this.initialStep,
@@ -236,6 +245,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   late String _lDebitAmount;
   late String _lTransactionNumber;
   late bool _lToCustomerCreditEnabled;
+  late DateTime _lQuotationDate;
+  late DateTime _lQuotationExpiryDate;
 
   String _initialForName(String? name) {
     final trimmed = name?.trim() ?? '';
@@ -324,6 +335,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _lDebitAmount = widget.debitAmount;
     _lTransactionNumber = widget.transactionNumber;
     _lToCustomerCreditEnabled = widget.toCustomerCreditEnabled;
+    _lQuotationDate = widget.initialQuotationDate ?? DateTime.now();
+    _lQuotationExpiryDate = widget.initialQuotationExpiryDate ??
+        _lQuotationDate.add(const Duration(days: 30));
+    if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
+      _lQuotationExpiryDate = _lQuotationDate.add(const Duration(days: 30));
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyDefaultPaymentMethod();
@@ -861,6 +878,27 @@ class _CheckoutModalState extends State<CheckoutModal> {
         codMethodId: codMethodId);
   }
 
+  void _handleQuotationDateUpdate({
+    DateTime? quotationDate,
+    DateTime? expiryDate,
+  }) {
+    setState(() {
+      if (quotationDate != null) {
+        _lQuotationDate = quotationDate;
+        if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
+          _lQuotationExpiryDate = _lQuotationDate.add(const Duration(days: 30));
+        }
+      }
+      if (expiryDate != null) {
+        _lQuotationExpiryDate = expiryDate;
+      }
+    });
+    widget.onQuotationDatesUpdated?.call(
+      _lQuotationDate,
+      _lQuotationExpiryDate,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -1258,6 +1296,159 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ],
       ),
     );
+  }
+
+  Widget _buildQuotationDatesPanel() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 12, bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.event_note,
+                    size: 18, color: Color(0xFF2563EB)),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Quotation Dates',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuotationDateField(
+                  label: 'Quotation Date',
+                  date: _lQuotationDate,
+                  firstDate: DateTime(2020),
+                  onDateSelected: (date) =>
+                      _handleQuotationDateUpdate(quotationDate: date),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildQuotationDateField(
+                  label: 'Expiry Date',
+                  date: _lQuotationExpiryDate,
+                  firstDate: _lQuotationDate,
+                  isExpiry: true,
+                  onDateSelected: (date) =>
+                      _handleQuotationDateUpdate(expiryDate: date),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotationDateField({
+    required String label,
+    required DateTime date,
+    required DateTime firstDate,
+    required ValueChanged<DateTime> onDateSelected,
+    bool isExpiry = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _pickQuotationDate(
+              initialDate: date,
+              firstDate: firstDate,
+              onDateSelected: onDateSelected,
+            ),
+            child: Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFDDE7F3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today_outlined,
+                      size: 18, color: Color(0xFF2563EB)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      MaterialLocalizations.of(context).formatMediumDate(date),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickQuotationDate({
+    required DateTime initialDate,
+    required DateTime firstDate,
+    required ValueChanged<DateTime> onDateSelected,
+  }) async {
+    final effectiveInitialDate =
+        initialDate.isBefore(firstDate) ? firstDate : initialDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: effectiveInitialDate,
+      firstDate: firstDate,
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      onDateSelected(picked);
+    }
   }
 
   Widget _buildCustomerList() {
@@ -2486,6 +2677,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // Check if Confirm button should be enabled
   bool get _canConfirmOrPrint {
+    if (widget.isQuotationMode) {
+      return _localSelectedCustomer != null &&
+          !_lQuotationExpiryDate.isBefore(_lQuotationDate);
+    }
+
     if (!widget.requireCheckoutCompletion) {
       return true;
     }
@@ -2497,9 +2693,28 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // Check if Print button should be enabled (always requires payment tab visited)
   bool get _canPrint {
+    if (widget.isQuotationMode) {
+      return _canConfirmOrPrint;
+    }
+
     return _localSelectedCustomer != null &&
         _hasOpenedPaymentModalOnce &&
         _hasPaymentMethod();
+  }
+
+  String _disabledActionMessage() {
+    if (widget.isQuotationMode) {
+      if (_localSelectedCustomer == null) {
+        return 'Please select a customer before creating quotation';
+      }
+      if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
+        return 'Expiry date cannot be before quotation date';
+      }
+      return 'Unable to create quotation';
+    }
+    return widget.requireCheckoutCompletion
+        ? 'Please configure payment before confirm'
+        : 'Unable to proceed';
   }
 
   String? _selectedCustomerSupportingText() {
@@ -2635,125 +2850,134 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onConfirm,
   }) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
-      child: Row(
+      padding: EdgeInsets.fromLTRB(12, widget.isQuotationMode ? 0 : 12, 12, 0),
+      color: Colors.white,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (onBack != null) ...[
-            Expanded(
-              child: CustomRoundButtonWithIconAdvanced(
-                title: 'Back',
-                fct: onBack,
-                size: MediaQuery.of(context).size,
-                icon:
-                    const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                height: 48,
-                width: double.infinity,
-                fontSize: FontSize.s14,
-                boxColor: const Color(0xFF64748B),
-                borderColor: const Color(0xFF64748B),
-                radius: 12,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-          // Confirm button (optional)
-          if (onConfirm != null)
-            Expanded(
-              child: Opacity(
-                opacity: _canConfirmOrPrint ? 1.0 : 0.5,
-                child: CustomRoundButtonWithIconAdvanced(
-                  title: widget.confirmButtonTitle,
-                  isLoading: _isConfirming,
-                  shortcutLabel: 'F2',
-                  fct: _canConfirmOrPrint
-                      ? onConfirm
-                      : () {
-                          // Auto-navigate to payment tab and show feedback
-                          _goToStep(3);
-                          showScaffoldError(
-                            context: context,
-                            message: widget.requireCheckoutCompletion
-                                ? 'Please configure payment before confirm'
-                                : 'Unable to proceed',
-                          );
-                        },
-                  size: MediaQuery.of(context).size,
-                  icon: const Icon(Icons.check_circle,
-                      color: Colors.white, size: 20),
-                  height: 48,
-                  width: double.infinity,
-                  fontSize: FontSize.s14,
-                  boxColor: _canConfirmOrPrint
-                      ? const Color(0xFF2563EB)
-                      : Colors.grey.shade400,
-                  borderColor: _canConfirmOrPrint
-                      ? const Color(0xFF2563EB)
-                      : Colors.grey.shade400,
-                  radius: 12,
+          if (widget.isQuotationMode) _buildQuotationDatesPanel(),
+          Row(
+            children: [
+              if (onBack != null) ...[
+                Expanded(
+                  child: CustomRoundButtonWithIconAdvanced(
+                    title: 'Back',
+                    fct: onBack,
+                    size: MediaQuery.of(context).size,
+                    icon: const Icon(Icons.arrow_back,
+                        color: Colors.white, size: 20),
+                    height: 48,
+                    width: double.infinity,
+                    fontSize: FontSize.s14,
+                    boxColor: const Color(0xFF64748B),
+                    borderColor: const Color(0xFF64748B),
+                    radius: 12,
+                  ),
                 ),
-              ),
-            ),
-          if (onConfirm != null && onPrint != null) const SizedBox(width: 12),
-          // Print Bill button (optional)
-          if (onPrint != null)
-            Expanded(
-              child: Opacity(
-                opacity: _canPrint ? 1.0 : 0.5,
-                child: CustomRoundButtonWithIconAdvanced(
-                  title: widget.printButtonTitle,
-                  isLoading: _isPrinting,
-                  shortcutLabel: 'F6',
-                  fct: _canPrint
-                      ? onPrint
-                      : () {
-                          // Auto-navigate to payment tab and show feedback
-                          _goToStep(3);
-                          showScaffoldError(
-                            context: context,
-                            message: 'Please configure payment before printing',
-                          );
-                        },
-                  size: MediaQuery.of(context).size,
-                  icon: const Icon(Icons.print, color: Colors.white, size: 20),
-                  height: 48,
-                  width: double.infinity,
-                  fontSize: FontSize.s14,
-                  boxColor: _canPrint
-                      ? const Color(0xFF059669)
-                      : Colors.grey.shade400,
-                  borderColor: _canPrint
-                      ? const Color(0xFF059669)
-                      : Colors.grey.shade400,
-                  textColor: Colors.white,
-                  radius: 12,
+                const SizedBox(width: 12),
+              ],
+              // Confirm button (optional)
+              if (onConfirm != null)
+                Expanded(
+                  child: Opacity(
+                    opacity: _canConfirmOrPrint ? 1.0 : 0.5,
+                    child: CustomRoundButtonWithIconAdvanced(
+                      title: widget.confirmButtonTitle,
+                      isLoading: _isConfirming,
+                      shortcutLabel: 'F2',
+                      fct: _canConfirmOrPrint
+                          ? onConfirm
+                          : () {
+                              // Auto-navigate to payment tab and show feedback
+                              if (!widget.isQuotationMode) {
+                                _goToStep(3);
+                              }
+                              showScaffoldError(
+                                context: context,
+                                message: _disabledActionMessage(),
+                              );
+                            },
+                      size: MediaQuery.of(context).size,
+                      icon: const Icon(Icons.check_circle,
+                          color: Colors.white, size: 20),
+                      height: 48,
+                      width: double.infinity,
+                      fontSize: FontSize.s14,
+                      boxColor: _canConfirmOrPrint
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade400,
+                      borderColor: _canConfirmOrPrint
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade400,
+                      radius: 12,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          // Next button (optional)
-          if (onNext != null)
-            Expanded(
-              child: CustomRoundButtonWithIconAdvanced(
-                title: nextLabel,
-                fct: isNextEnabled ? onNext : () {},
-                size: MediaQuery.of(context).size,
-                icon: const Icon(Icons.arrow_forward,
-                    color: Colors.white, size: 20),
-                height: 48,
-                width: double.infinity,
-                fontSize: FontSize.s14,
-                boxColor: isNextEnabled
-                    ? const Color(0xFF2563EB)
-                    : Colors.grey.shade400,
-                borderColor: isNextEnabled
-                    ? const Color(0xFF2563EB)
-                    : Colors.grey.shade400,
-                radius: 12,
-              ),
-            ),
+              if (onConfirm != null && onPrint != null)
+                const SizedBox(width: 12),
+              // Print Bill button (optional)
+              if (onPrint != null)
+                Expanded(
+                  child: Opacity(
+                    opacity: _canPrint ? 1.0 : 0.5,
+                    child: CustomRoundButtonWithIconAdvanced(
+                      title: widget.printButtonTitle,
+                      isLoading: _isPrinting,
+                      shortcutLabel: 'F6',
+                      fct: _canPrint
+                          ? onPrint
+                          : () {
+                              // Auto-navigate to payment tab and show feedback
+                              if (!widget.isQuotationMode) {
+                                _goToStep(3);
+                              }
+                              showScaffoldError(
+                                context: context,
+                                message: widget.isQuotationMode
+                                    ? _disabledActionMessage()
+                                    : 'Please configure payment before printing',
+                              );
+                            },
+                      size: MediaQuery.of(context).size,
+                      icon: const Icon(Icons.print,
+                          color: Colors.white, size: 20),
+                      height: 48,
+                      width: double.infinity,
+                      fontSize: FontSize.s14,
+                      boxColor: _canPrint
+                          ? const Color(0xFF059669)
+                          : Colors.grey.shade400,
+                      borderColor: _canPrint
+                          ? const Color(0xFF059669)
+                          : Colors.grey.shade400,
+                      textColor: Colors.white,
+                      radius: 12,
+                    ),
+                  ),
+                ),
+              // Next button (optional)
+              if (onNext != null)
+                Expanded(
+                  child: CustomRoundButtonWithIconAdvanced(
+                    title: nextLabel,
+                    fct: isNextEnabled ? onNext : () {},
+                    size: MediaQuery.of(context).size,
+                    icon: const Icon(Icons.arrow_forward,
+                        color: Colors.white, size: 20),
+                    height: 48,
+                    width: double.infinity,
+                    fontSize: FontSize.s14,
+                    boxColor: isNextEnabled
+                        ? const Color(0xFF2563EB)
+                        : Colors.grey.shade400,
+                    borderColor: isNextEnabled
+                        ? const Color(0xFF2563EB)
+                        : Colors.grey.shade400,
+                    radius: 12,
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
