@@ -63,6 +63,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _refreshCounter; // Counter to trigger refreshes without creating new objects
   final GlobalKey<OrderPanelState> _orderPanelKey =
       GlobalKey<OrderPanelState>(); // Key to access OrderPanel methods
+  final GlobalKey<MenuPanelState> _menuPanelKey = GlobalKey<MenuPanelState>();
   bool _isLoadingSendToKitchen =
       false; // Loading state for Send to Kitchen button
   bool _isLoadingPrint = false; // Loading state for Print button
@@ -187,9 +188,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           return;
         }
         if (key == LogicalKeyboardKey.keyS) {
-          orderPanelState?.showCurrentOrderTab(
-            preserveLoadedDraftMetadata: true,
-          );
+          _menuPanelKey.currentState?.focusSearch();
           return;
         }
         if (key == LogicalKeyboardKey.keyA) {
@@ -200,6 +199,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             }
           });
           _saveTablesPanelPreference(true);
+          _menuPanelKey.currentState?.focusCategories();
           return;
         }
       }
@@ -553,6 +553,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Widget _buildMenuArea(Size screenSize) {
     final menuPanel = MenuPanel(
+      key: _menuPanelKey,
       onCategoryChanged: (cid) => setState(() => _activeCategoryId = cid),
       activeCategoryId: _activeCategoryId,
       onItemAdd: _handleItemAdd,
@@ -1415,6 +1416,19 @@ class _RestaurantPageState extends State<RestaurantPage> {
               },
             );
           },
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          icon: Icon(
+            Icons.help_outline,
+            color: Colors.grey.shade600,
+          ),
+          tooltip: 'Keyboard Shortcuts (Ctrl+H)',
+          onPressed: () => KeyboardShortcutsHelpDialog.show(
+            context,
+            mode: KeyboardShortcutsHelpMode.restaurant,
+          ),
         ),
         Consumer<AppFontProvider>(
           builder: (context, fontProvider, child) {

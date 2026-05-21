@@ -1,9 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -35,13 +37,42 @@ class MenuPanel extends StatefulWidget {
   });
 
   @override
-  State<MenuPanel> createState() => _MenuPanelState();
+  State<MenuPanel> createState() => MenuPanelState();
 }
 
-class _MenuPanelState extends State<MenuPanel> {
+class MenuPanelState extends State<MenuPanel> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _gridFocusNode = FocusNode();
+  final ScrollController _categoryScrollController = ScrollController();
+  final ScrollController _gridScrollController = ScrollController();
   String _searchQuery = '';
   bool _isResyncingProducts = false;
+  int _focusedCategoryIndex = 0;
+  int _focusedMenuItemIndex = 0;
+  int _gridColumnCount = 1;
+  double _gridRowExtent = 120;
+
+  bool get _focusOutlineEnabled {
+    try {
+      return context.watch<KeyboardFocusHighlightProvider>().enabled;
+    } on ProviderNotFoundException {
+      return true;
+    }
+  }
+
+  void focusSearch() {
+    _searchFocusNode.requestFocus();
+  }
+
+  void focusCategories() {
+    _categoryFocusNode.requestFocus();
+  }
+
+  void focusMenuGrid() {
+    _gridFocusNode.requestFocus();
+  }
 
   MenuCardMode _resolveCardMode(int fontLevel) {
     if (widget.isCompact) return MenuCardMode.compact;
@@ -359,6 +390,11 @@ class _MenuPanelState extends State<MenuPanel> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
+    _categoryFocusNode.dispose();
+    _gridFocusNode.dispose();
+    _categoryScrollController.dispose();
+    _gridScrollController.dispose();
     super.dispose();
   }
 
@@ -372,7 +408,170 @@ class _MenuPanelState extends State<MenuPanel> {
     setState(() {
       _searchQuery = '';
       _searchController.clear();
+      _focusedMenuItemIndex = 0;
     });
+  }
+
+  KeyEventResult _handleSearchKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      focusMenuGrid();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      focusCategories();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleCategoryKey(
+    KeyEvent event,
+    List<dynamic> categories,
+    LocalProductProvider productProvider,
+  ) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final totalCategories = categories.length + 1;
+    if (totalCategories <= 0) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      setState(() {
+        _focusedCategoryIndex =
+            (_focusedCategoryIndex + 1).clamp(0, totalCategories - 1);
+      });
+      _scrollFocusedCategoryIntoView();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      setState(() {
+        _focusedCategoryIndex =
+            (_focusedCategoryIndex - 1).clamp(0, totalCategories - 1);
+      });
+      _scrollFocusedCategoryIntoView();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      focusSearch();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      _selectFocusedCategory(categories, productProvider);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleGridKey(KeyEvent event, List<GetProduct> items) {
+    if (event is! KeyDownEvent || items.isEmpty) return KeyEventResult.ignored;
+    final maxIndex = items.length - 1;
+    int? nextIndex;
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      nextIndex = (_focusedMenuItemIndex + 1).clamp(0, maxIndex);
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      nextIndex = (_focusedMenuItemIndex - 1).clamp(0, maxIndex);
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      nextIndex = (_focusedMenuItemIndex + _gridColumnCount).clamp(0, maxIndex);
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (_focusedMenuItemIndex < _gridColumnCount) {
+        focusSearch();
+        return KeyEventResult.handled;
+      }
+      nextIndex = (_focusedMenuItemIndex - _gridColumnCount).clamp(0, maxIndex);
+    } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      widget.onItemAdd(items[_focusedMenuItemIndex.clamp(0, maxIndex)], 1);
+      return KeyEventResult.handled;
+    }
+
+    if (nextIndex != null) {
+      setState(() => _focusedMenuItemIndex = nextIndex!);
+      _scrollFocusedMenuItemIntoView();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _selectFocusedCategory(
+    List<dynamic> categories,
+    LocalProductProvider productProvider,
+  ) {
+    setState(() => _focusedMenuItemIndex = 0);
+    if (_focusedCategoryIndex == 0) {
+      widget.onCategoryChanged(0);
+      productProvider.refreshProducts();
+      return;
+    }
+
+    final category = categories[_focusedCategoryIndex - 1];
+    final categoryId = category.categoryId as int?;
+    widget.onCategoryChanged(categoryId);
+    if (categoryId == 0) {
+      productProvider.refreshProducts();
+    } else {
+      productProvider.listAllProducts(categoryId: categoryId);
+    }
+  }
+
+  void _scrollFocusedCategoryIntoView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_categoryScrollController.hasClients) return;
+      final target = (_focusedCategoryIndex * 150.0).clamp(
+        0.0,
+        _categoryScrollController.position.maxScrollExtent,
+      );
+      _categoryScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _scrollFocusedMenuItemIntoView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_gridScrollController.hasClients) return;
+      final row = (_focusedMenuItemIndex / _gridColumnCount).floor();
+      final target = (row * _gridRowExtent).clamp(
+        0.0,
+        _gridScrollController.position.maxScrollExtent,
+      );
+      _gridScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  Widget _withKeyboardOutline({
+    required Widget child,
+    required bool focused,
+    required BorderRadius borderRadius,
+  }) {
+    final shouldOutline = _focusOutlineEnabled && focused;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        border: Border.all(
+          color: shouldOutline ? const Color(0xFFF59E0B) : Colors.transparent,
+          width: shouldOutline ? 3 : 0,
+        ),
+        boxShadow: shouldOutline
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFF59E0B).withOpacity(0.22),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: child,
+    );
   }
 
   int _resolveGridColumnCount(MenuCardMode cardMode, double availableWidth) {
@@ -589,31 +788,57 @@ class _MenuPanelState extends State<MenuPanel> {
                         },
                       ),
                       child: ListView.separated(
+                        controller: _categoryScrollController,
                         physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.symmetric(
                             horizontal: widget.isCompact ? 12 : 16),
                         scrollDirection: Axis.horizontal,
                         itemCount: categories.length + 1,
                         itemBuilder: (_, idx) {
-                          // Handle "All" category at index 0
-                          if (idx == 0) {
-                            final active = selectedCategoryId == 0;
-                            return AnimatedContainer(
+                          final isAll = idx == 0;
+                          final category = isAll ? null : categories[idx - 1];
+                          final categoryId = isAll ? 0 : category!.categoryId;
+                          final categoryName = isAll
+                              ? 'All'
+                              : category!.categoryName ?? 'Unknown';
+                          final active = isAll
+                              ? selectedCategoryId == 0
+                              : categoryId == selectedCategoryId;
+                          final isKeyboardFocused =
+                              _categoryFocusNode.hasFocus &&
+                                  _focusedCategoryIndex == idx;
+                          final chip = _withKeyboardOutline(
+                            focused: isKeyboardFocused,
+                            borderRadius: BorderRadius.circular(26),
+                            child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
                                   onTap: () {
-                                    widget.onCategoryChanged(0);
-                                    // Update products for "All" category
-                                    productProvider.refreshProducts();
+                                    setState(() {
+                                      _focusedCategoryIndex = idx;
+                                      _focusedMenuItemIndex = 0;
+                                    });
+                                    if (isAll) {
+                                      widget.onCategoryChanged(0);
+                                      productProvider.refreshProducts();
+                                    } else if (categoryId == 0) {
+                                      widget.onCategoryChanged(categoryId);
+                                      productProvider.refreshProducts();
+                                    } else {
+                                      widget.onCategoryChanged(categoryId);
+                                      productProvider.listAllProducts(
+                                          categoryId: categoryId);
+                                    }
                                   },
                                   borderRadius: BorderRadius.circular(24),
                                   child: AnimatedContainer(
                                     duration: const Duration(milliseconds: 200),
                                     padding: EdgeInsets.symmetric(
-                                        horizontal: widget.isCompact ? 16 : 20,
-                                        vertical: widget.isCompact ? 8 : 10),
+                                      horizontal: widget.isCompact ? 16 : 20,
+                                      vertical: widget.isCompact ? 8 : 10,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: active
                                           ? const Color(0xFF2563EB)
@@ -638,76 +863,8 @@ class _MenuPanelState extends State<MenuPanel> {
                                     ),
                                     child: Center(
                                       child: Text(
-                                        'All',
+                                        categoryName,
                                         style: buildCustomStyle(
-                                            FontWeightManager.semiBold,
-                                            widget.isCompact
-                                                ? FontSize.s12
-                                                : FontSize.s13,
-                                            0.21,
-                                            active
-                                                ? Colors.white
-                                                : const Color(0xFF64748B)),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-
-                          // Handle regular categories (index offset by 1)
-                          final c = categories[idx - 1];
-                          final active = c.categoryId == selectedCategoryId;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  widget.onCategoryChanged(c.categoryId);
-                                  // Update products for selected category
-                                  if (c.categoryId == 0) {
-                                    // Should not happen for regular categories but kept for safety
-                                    productProvider.refreshProducts();
-                                  } else {
-                                    // Specific category
-                                    productProvider.listAllProducts(
-                                        categoryId: c.categoryId);
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(24),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: widget.isCompact ? 16 : 20,
-                                      vertical: widget.isCompact ? 8 : 10),
-                                  decoration: BoxDecoration(
-                                    color: active
-                                        ? const Color(0xFF2563EB)
-                                        : Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(
-                                      color: active
-                                          ? const Color(0xFF2563EB)
-                                          : Colors.grey.shade200,
-                                      width: 1,
-                                    ),
-                                    boxShadow: active
-                                        ? [
-                                            BoxShadow(
-                                              color: const Color(0xFF2563EB)
-                                                  .withOpacity(0.3),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ]
-                                        : [],
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      c.categoryName ?? 'Unknown',
-                                      style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
                                               ? FontSize.s12
@@ -715,12 +872,25 @@ class _MenuPanelState extends State<MenuPanel> {
                                           0.21,
                                           active
                                               ? Colors.white
-                                              : const Color(0xFF64748B)),
+                                              : const Color(0xFF64748B),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
+                          );
+                          if (idx != 0) return chip;
+
+                          return Focus(
+                            focusNode: _categoryFocusNode,
+                            onKeyEvent: (node, event) => _handleCategoryKey(
+                              event,
+                              categories,
+                              productProvider,
+                            ),
+                            child: chip,
                           );
                         },
                         separatorBuilder: (_, __) => const SizedBox(width: 12),
@@ -743,43 +913,50 @@ class _MenuPanelState extends State<MenuPanel> {
                       width: 1,
                     ),
                   ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    decoration: InputDecoration(
-                      hintText: 'Search menu items...',
-                      hintStyle: buildCustomStyle(
+                  child: Focus(
+                    onKeyEvent: (node, event) => _handleSearchKey(event),
+                    child: TextField(
+                      focusNode: _searchFocusNode,
+                      controller: _searchController,
+                      onTap: focusSearch,
+                      onSubmitted: (_) => focusMenuGrid(),
+                      onEditingComplete: focusMenuGrid,
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText: 'Search menu items...',
+                        hintStyle: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s14,
+                          0.21,
+                          Colors.grey.shade500,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.grey.shade500,
+                          size: widget.isCompact ? 18 : 20,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: Colors.grey.shade500,
+                                  size: widget.isCompact ? 18 : 20,
+                                ),
+                                onPressed: _clearSearch,
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: widget.isCompact ? 12 : 16,
+                          vertical: widget.isCompact ? 12 : 16,
+                        ),
+                      ),
+                      style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s14,
                         0.21,
-                        Colors.grey.shade500,
+                        const Color(0xFF1E293B),
                       ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: Colors.grey.shade500,
-                        size: widget.isCompact ? 18 : 20,
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                color: Colors.grey.shade500,
-                                size: widget.isCompact ? 18 : 20,
-                              ),
-                              onPressed: _clearSearch,
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: widget.isCompact ? 12 : 16,
-                        vertical: widget.isCompact ? 12 : 16,
-                      ),
-                    ),
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s14,
-                      0.21,
-                      const Color(0xFF1E293B),
                     ),
                   ),
                 ),
@@ -870,40 +1047,71 @@ class _MenuPanelState extends State<MenuPanel> {
                                   );
                                   final childAspectRatio =
                                       _resolveGridAspectRatio(cardMode);
+                                  _gridColumnCount = crossAxisCount;
+                                  final itemWidth = (constraints.maxWidth -
+                                          (widget.isCompact ? 12 : 16) -
+                                          ((crossAxisCount - 1) *
+                                              (widget.isCompact ? 6 : 8))) /
+                                      crossAxisCount;
+                                  _gridRowExtent =
+                                      (itemWidth / childAspectRatio) +
+                                          (widget.isCompact ? 6 : 8);
+                                  if (_focusedMenuItemIndex >= items.length) {
+                                    _focusedMenuItemIndex = items.length - 1;
+                                  }
 
-                                  return GridView.builder(
-                                    padding: EdgeInsets.all(
-                                        widget.isCompact ? 6 : 8),
-                                    gridDelegate:
-                                        SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: crossAxisCount,
-                                      mainAxisSpacing: widget.isCompact ? 6 : 8,
-                                      crossAxisSpacing:
-                                          widget.isCompact ? 6 : 8,
-                                      childAspectRatio: childAspectRatio,
+                                  return Focus(
+                                    focusNode: _gridFocusNode,
+                                    onKeyEvent: (node, event) =>
+                                        _handleGridKey(event, items),
+                                    child: GridView.builder(
+                                      controller: _gridScrollController,
+                                      padding: EdgeInsets.all(
+                                          widget.isCompact ? 6 : 8),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        mainAxisSpacing:
+                                            widget.isCompact ? 6 : 8,
+                                        crossAxisSpacing:
+                                            widget.isCompact ? 6 : 8,
+                                        childAspectRatio: childAspectRatio,
+                                      ),
+                                      itemCount: items.length,
+                                      itemBuilder: (_, idx) {
+                                        final item = items[idx];
+                                        final isKeyboardFocused =
+                                            _gridFocusNode.hasFocus &&
+                                                _focusedMenuItemIndex == idx;
+                                        Widget card;
+                                        switch (cardMode) {
+                                          case MenuCardMode.compact:
+                                            card = _buildMenuItem(item,
+                                                widget.isCompact, context);
+                                            break;
+                                          case MenuCardMode.medium:
+                                            card = _buildLegacyImageMenuItem(
+                                                item, context);
+                                            break;
+                                          case MenuCardMode.large:
+                                            card = _buildMenuItemRich(
+                                              item,
+                                              context,
+                                              imageFlex: 6,
+                                              detailsFlex: 9,
+                                              titleLines: 2,
+                                              showCategory: false,
+                                            );
+                                        }
+                                        return _withKeyboardOutline(
+                                          focused: isKeyboardFocused,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          child: card,
+                                        );
+                                      },
+                                      physics: const BouncingScrollPhysics(),
                                     ),
-                                    itemCount: items.length,
-                                    itemBuilder: (_, idx) {
-                                      final item = items[idx];
-                                      switch (cardMode) {
-                                        case MenuCardMode.compact:
-                                          return _buildMenuItem(
-                                              item, widget.isCompact, context);
-                                        case MenuCardMode.medium:
-                                          return _buildLegacyImageMenuItem(
-                                              item, context);
-                                        case MenuCardMode.large:
-                                          return _buildMenuItemRich(
-                                            item,
-                                            context,
-                                            imageFlex: 6,
-                                            detailsFlex: 9,
-                                            titleLines: 2,
-                                            showCategory: false,
-                                          );
-                                      }
-                                    },
-                                    physics: const BouncingScrollPhysics(),
                                   );
                                 },
                               ),
