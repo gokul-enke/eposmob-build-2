@@ -25,6 +25,7 @@ import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/models/quotation_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -7406,6 +7407,8 @@ class BillingPageState extends State<BillingPage>
         accessToken: authProvider.token ?? '',
         data: payload,
       );
+      debugPrint(
+          '🧾 BILLING QUOTATION CREATE RESPONSE: ${json.encode(response)}');
 
       if (mounted) {
         if (response['status'] == 'success') {
@@ -7413,16 +7416,44 @@ class BillingPageState extends State<BillingPage>
             context: context,
             message: 'Quotation created successfully!',
           );
-          _clearCart();
           final now = DateTime.now();
           _quotationDate = now;
           _quotationExpiryDate = now.add(const Duration(days: 30));
           if (shouldPrint) {
-            showScaffold(
-              context: context,
-              message: 'Quotation print is not implemented yet.',
-            );
+            final quotationId = _extractCreatedQuotationId(response);
+            debugPrint(
+                '🧾 BILLING QUOTATION EXTRACTED ID FOR PRINT: $quotationId');
+            if (quotationId == null) {
+              showScaffoldError(
+                context: context,
+                message:
+                    'Quotation created, but print failed because the API response did not include quotation id.',
+              );
+            } else {
+              final details = await quotationsProvider.fetchQuotationDetails(
+                accessToken: authProvider.token ?? '',
+                quotationId: quotationId,
+              );
+              debugPrint(
+                  '🧾 BILLING QUOTATION DETAILS FOR PRINT: ${_quotationDetailsDebugJson(details)}');
+              if (!mounted) return;
+              if (details == null) {
+                showScaffoldError(
+                  context: context,
+                  message:
+                      'Quotation created, but details could not be loaded for printing.',
+                );
+              } else {
+                Future<bool> printOnce() => _printQuotationDetails(details);
+                final autoPrintSuccess = await printOnce();
+                await _maybePrintCustomerCopy(
+                  canPrompt: autoPrintSuccess,
+                  printAction: printOnce,
+                );
+              }
+            }
           }
+          _clearCart();
         } else {
           showScaffoldError(
             context: context,
@@ -7445,6 +7476,156 @@ class BillingPageState extends State<BillingPage>
         });
       }
     }
+  }
+
+  dynamic _extractCreatedQuotationId(Map<String, dynamic> response) {
+    dynamic readPath(dynamic source, List<String> path) {
+      dynamic current = source;
+      for (final key in path) {
+        if (current is! Map) return null;
+        current = current[key];
+      }
+      return current;
+    }
+
+    final candidates = <dynamic>[
+      response['quotation_id'],
+      response['id'],
+      readPath(response, ['data', 'quotation_id']),
+      readPath(response, ['data', 'id']),
+      readPath(response, ['data', 'quotation', 'id']),
+      readPath(response, ['quotation', 'id']),
+    ];
+
+    final data = response['data'];
+    if (data is int || data is String) {
+      candidates.add(data);
+    }
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final value = candidate.toString().trim();
+      if (value.isNotEmpty) return candidate;
+    }
+    return null;
+  }
+
+  Future<bool> _printQuotationDetails(QuotationDetailsData details) {
+    final cartItems = (details.items ?? [])
+        .map((item) => {
+              'productName': item.productName ?? 'NA',
+              'product_name': item.productName ?? 'NA',
+              'quantity': item.quantity ?? '0',
+              'productUnit': item.unit ?? '',
+              'product_unit': item.unit ?? '',
+              'unit': item.unit ?? '',
+              'unitPrice': item.unitPrice ?? '0',
+              'unit_price': item.unitPrice ?? '0',
+              'tax_amount': item.taxAmount ?? '0',
+              'taxAmount': item.taxAmount ?? '0',
+              'totalPrice': item.totalPrice ?? '0',
+              'total_price': item.totalPrice ?? '0',
+            })
+        .toList();
+
+    final quotationNumber = details.quotationNumber?.trim().isNotEmpty == true
+        ? details.quotationNumber!.trim()
+        : 'Quotation-${details.id ?? ''}';
+    final quotationDate = details.quotationDate?.trim().isNotEmpty == true
+        ? details.quotationDate!.trim()
+        : DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final paymentData = _getPaymentMethodData();
+    final paidMethods = _getPaidMethods();
+    final paymentBreakdown = <String, dynamic>{};
+    for (final method in paidMethods) {
+      final methodName = method['method']?.toString();
+      if (methodName == null || methodName.isEmpty) continue;
+      paymentBreakdown[methodName] = method['amount'] ?? 0;
+    }
+    final totalPaid = _getTotalPaidAmount();
+    debugPrint('🧾 BILLING QUOTATION PRINT PAYLOAD: ${json.encode({
+          'cartItems': cartItems,
+          'formattedTotal': details.grandTotal ?? '0.00',
+          'discountAmount': details.discount ?? '0.00',
+          'orderDate': quotationDate,
+          'orderNumber': quotationNumber,
+          'storeName': details.store?.name,
+          'customerName': details.customer?.name,
+          'customerPhone': details.customer?.phone,
+          'paidAmount': totalPaid > 0 ? totalPaid : null,
+          'paymentMethod': paymentData['paymentMethod'],
+          'paymentBreakdown':
+              paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+          'customerType': selectedCustomer?.customerType,
+          'deliveryMethod': deliveryMethod,
+          'netExcTax': details.subTotal,
+        })}');
+
+    return _printOrderDetailsWithFallback(
+      cartItems: cartItems,
+      formattedTotal: details.grandTotal ?? '0.00',
+      discountAmount: details.discount ?? '0.00',
+      orderDate: quotationDate,
+      orderNumber: quotationNumber,
+      isFromLocalStorage: true,
+      storeName: details.store?.name,
+      customerName: details.customer?.name,
+      customerPhone: details.customer?.phone,
+      customerOldBalance: selectedCustomer?.balance,
+      paidAmount: totalPaid > 0 ? totalPaid : null,
+      paymentMethod: paymentData['paymentMethod'],
+      paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+      customerType: selectedCustomer?.customerType,
+      orderComment: details.expiryDate?.trim().isNotEmpty == true
+          ? 'Valid until: ${details.expiryDate}'
+          : null,
+      deliveryMethod: deliveryMethod,
+      isDefaultCustomer:
+          Provider.of<CustomerSelectionProvider>(context, listen: false)
+              .isDefaultCustomer,
+      netExcTax: details.subTotal,
+    );
+  }
+
+  Map<String, dynamic>? _quotationDetailsDebugJson(
+      QuotationDetailsData? details) {
+    if (details == null) return null;
+    return {
+      'id': details.id,
+      'quotation_number': details.quotationNumber,
+      'status': details.status,
+      'customer': {
+        'id': details.customer?.id,
+        'name': details.customer?.name,
+        'phone': details.customer?.phone,
+      },
+      'store': {
+        'id': details.store?.id,
+        'name': details.store?.name,
+      },
+      'quotation_date': details.quotationDate,
+      'expiry_date': details.expiryDate,
+      'sub_total': details.subTotal,
+      'discount': details.discount,
+      'tax': details.tax,
+      'grand_total': details.grandTotal,
+      'invoice_id': details.invoiceId,
+      'items': (details.items ?? [])
+          .map((item) => {
+                'id': item.id,
+                'product_id': item.productId,
+                'product_name': item.productName,
+                'category_id': item.categoryId,
+                'category_name': item.categoryName,
+                'unit': item.unit,
+                'unit_price': item.unitPrice,
+                'quantity': item.quantity,
+                'tax_rate': item.taxRate,
+                'tax_amount': item.taxAmount,
+                'total_price': item.totalPrice,
+              })
+          .toList(),
+    };
   }
 
   // Multi-payment helper methods
