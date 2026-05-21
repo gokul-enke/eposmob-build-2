@@ -96,8 +96,8 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
     _ShortcutItem(
       keyLabel: 'Ctrl + D',
-      action: 'Current Cart',
-      description: 'Return the order panel to Cart',
+      action: 'Focus Order Tabs',
+      description: 'Focus right panel tabs: Cart, Saved, Ongoing',
     ),
     _ShortcutItem(
       keyLabel: 'Alt + D',

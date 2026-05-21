@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -113,6 +114,8 @@ class OrderPanelState extends State<OrderPanel> {
   OrderPanelTab _activeOrderPanelTab = OrderPanelTab.cart;
   bool _hasOpenedOngoingOrdersTab = false;
   int _lastObservedCartCount = 0;
+  final FocusNode _orderPanelTabsFocusNode = FocusNode();
+  int _focusedOrderPanelTabIndex = 0;
 
   bool get _usesCounterOrderTabs =>
       widget.allowCounterBilling && widget.isCounterBillingMode;
@@ -244,6 +247,7 @@ class OrderPanelState extends State<OrderPanel> {
 
   @override
   void dispose() {
+    _orderPanelTabsFocusNode.dispose();
     _editOrderScrollController.dispose();
     super.dispose();
   }
@@ -432,6 +436,92 @@ class OrderPanelState extends State<OrderPanel> {
       }
       _refreshLocalDrafts();
     }
+  }
+
+  void focusOrderPanelTabs() {
+    _focusedOrderPanelTabIndex = _tabIndexFor(_activeOrderPanelTab);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _orderPanelTabsFocusNode.requestFocus();
+      setState(() {});
+    });
+  }
+
+  int _tabIndexFor(OrderPanelTab tab) {
+    return switch (tab) {
+      OrderPanelTab.cart => 0,
+      OrderPanelTab.saved => 1,
+      OrderPanelTab.ongoing => 2,
+    };
+  }
+
+  OrderPanelTab _tabForIndex(int index) {
+    return switch (index.clamp(0, 2)) {
+      0 => OrderPanelTab.cart,
+      1 => OrderPanelTab.saved,
+      _ => OrderPanelTab.ongoing,
+    };
+  }
+
+  KeyEventResult _handleOrderPanelTabsKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      setState(() {
+        _focusedOrderPanelTabIndex =
+            (_focusedOrderPanelTabIndex + 1).clamp(0, 2);
+      });
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      setState(() {
+        _focusedOrderPanelTabIndex =
+            (_focusedOrderPanelTabIndex - 1).clamp(0, 2);
+      });
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      _selectOrderPanelTab(_tabForIndex(_focusedOrderPanelTabIndex));
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _selectOrderPanelTab(OrderPanelTab tab) {
+    if (tab == OrderPanelTab.cart) {
+      setState(() {
+        _activeOrderPanelTab = OrderPanelTab.cart;
+        _focusedOrderPanelTabIndex = 0;
+        _showSavedOrdersView = false;
+        _forceCounterCartView = true;
+      });
+      return;
+    }
+
+    if (tab == OrderPanelTab.saved) {
+      _refreshLocalDrafts();
+      setState(() {
+        _activeOrderPanelTab = OrderPanelTab.saved;
+        _focusedOrderPanelTabIndex = 1;
+        _showSavedOrdersView = true;
+        _forceCounterCartView = false;
+      });
+      return;
+    }
+
+    final shouldLoadAll = !_hasOpenedOngoingOrdersTab;
+    setState(() {
+      _activeOrderPanelTab = OrderPanelTab.ongoing;
+      _focusedOrderPanelTabIndex = 2;
+      _hasOpenedOngoingOrdersTab = true;
+      _showSavedOrdersView = true;
+      _forceCounterCartView = false;
+    });
+    _fetchSavedOrders(
+      showFullPanelLoader: false,
+      ignoreContextFilter: shouldLoadAll,
+    );
   }
 
   // Public method to refresh saved orders silently (no loading spinner)
@@ -4142,16 +4232,17 @@ class OrderPanelState extends State<OrderPanel> {
       required IconData icon,
       required OrderPanelTab tab,
       required int count,
-      required VoidCallback onTap,
       required bool showIcon,
     }) {
       final selected = _activeOrderPanelTab == tab;
+      final focused = _orderPanelTabsFocusNode.hasFocus &&
+          _focusedOrderPanelTabIndex == _tabIndexFor(tab);
       final foreground = selected ? Colors.white : const Color(0xFF64748B);
       return Expanded(
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: selected ? null : onTap,
+            onTap: selected ? null : () => _selectOrderPanelTab(tab),
             borderRadius: BorderRadius.circular(8),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
@@ -4160,6 +4251,19 @@ class OrderPanelState extends State<OrderPanel> {
               decoration: BoxDecoration(
                 color: selected ? const Color(0xFF3B82F6) : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: focused ? const Color(0xFFF59E0B) : Colors.transparent,
+                  width: focused ? 2 : 0,
+                ),
+                boxShadow: focused
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFFF59E0B).withOpacity(0.22),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -4245,56 +4349,34 @@ class OrderPanelState extends State<OrderPanel> {
               borderRadius: BorderRadius.circular(11),
               border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
-            child: Row(
-              children: [
-                segment(
-                  label: 'Cart',
-                  icon: Icons.shopping_cart_rounded,
-                  tab: OrderPanelTab.cart,
-                  count: cartCount,
-                  showIcon: showIcon,
-                  onTap: () => setState(() {
-                    _activeOrderPanelTab = OrderPanelTab.cart;
-                    _showSavedOrdersView = false;
-                    _forceCounterCartView = true;
-                  }),
-                ),
-                segment(
-                  label: 'Saved',
-                  icon: Icons.receipt_long_rounded,
-                  tab: OrderPanelTab.saved,
-                  count: _localDrafts.length,
-                  showIcon: showIcon,
-                  onTap: () {
-                    _refreshLocalDrafts();
-                    setState(() {
-                      _activeOrderPanelTab = OrderPanelTab.saved;
-                      _showSavedOrdersView = true;
-                      _forceCounterCartView = false;
-                    });
-                  },
-                ),
-                segment(
-                  label: 'Ongoing',
-                  icon: Icons.fact_check_rounded,
-                  tab: OrderPanelTab.ongoing,
-                  count: _savedOrders.length,
-                  showIcon: showIcon,
-                  onTap: () {
-                    final shouldLoadAll = !_hasOpenedOngoingOrdersTab;
-                    setState(() {
-                      _activeOrderPanelTab = OrderPanelTab.ongoing;
-                      _hasOpenedOngoingOrdersTab = true;
-                      _showSavedOrdersView = true;
-                      _forceCounterCartView = false;
-                    });
-                    _fetchSavedOrders(
-                      showFullPanelLoader: false,
-                      ignoreContextFilter: shouldLoadAll,
-                    );
-                  },
-                ),
-              ],
+            child: Focus(
+              focusNode: _orderPanelTabsFocusNode,
+              onKeyEvent: (node, event) => _handleOrderPanelTabsKey(event),
+              child: Row(
+                children: [
+                  segment(
+                    label: 'Cart',
+                    icon: Icons.shopping_cart_rounded,
+                    tab: OrderPanelTab.cart,
+                    count: cartCount,
+                    showIcon: showIcon,
+                  ),
+                  segment(
+                    label: 'Saved',
+                    icon: Icons.receipt_long_rounded,
+                    tab: OrderPanelTab.saved,
+                    count: _localDrafts.length,
+                    showIcon: showIcon,
+                  ),
+                  segment(
+                    label: 'Ongoing',
+                    icon: Icons.fact_check_rounded,
+                    tab: OrderPanelTab.ongoing,
+                    count: _savedOrders.length,
+                    showIcon: showIcon,
+                  ),
+                ],
+              ),
             ),
           ),
         );

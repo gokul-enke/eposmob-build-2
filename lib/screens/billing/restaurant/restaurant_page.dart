@@ -182,13 +182,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           return;
         }
         if (key == LogicalKeyboardKey.keyD) {
-          setState(() {
-            _showTablesPanel = true;
-          });
-          _saveTablesPanelPreference(true);
-          orderPanelState?.showCurrentOrderTab(
-            preserveLoadedDraftMetadata: true,
-          );
+          orderPanelState?.focusOrderPanelTabs();
           return;
         }
         if (key == LogicalKeyboardKey.keyS) {
