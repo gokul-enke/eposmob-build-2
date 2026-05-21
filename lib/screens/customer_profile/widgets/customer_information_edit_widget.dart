@@ -468,8 +468,7 @@ class _CustomerInformationEditWidgetState
         accessToken,
         customerId,
         context,
-        // Backend requires phone on customer edit even when unchanged.
-        phone: phoneController.text.trim(),
+        phone: changedPhone,
         name: changedName,
         email: changedEmail,
         altPhone: changedAltPhone,
