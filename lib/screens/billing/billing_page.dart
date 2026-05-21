@@ -54,6 +54,7 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/billing/utils/billing_focus_orders.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 import 'package:pos_machine/services/print_service.dart';
+import 'package:pos_machine/services/quotation_print_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
@@ -7511,29 +7512,6 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<bool> _printQuotationDetails(QuotationDetailsData details) {
-    final cartItems = (details.items ?? [])
-        .map((item) => {
-              'productName': item.productName ?? 'NA',
-              'product_name': item.productName ?? 'NA',
-              'quantity': item.quantity ?? '0',
-              'productUnit': item.unit ?? '',
-              'product_unit': item.unit ?? '',
-              'unit': item.unit ?? '',
-              'unitPrice': item.unitPrice ?? '0',
-              'unit_price': item.unitPrice ?? '0',
-              'tax_amount': item.taxAmount ?? '0',
-              'taxAmount': item.taxAmount ?? '0',
-              'totalPrice': item.totalPrice ?? '0',
-              'total_price': item.totalPrice ?? '0',
-            })
-        .toList();
-
-    final quotationNumber = details.quotationNumber?.trim().isNotEmpty == true
-        ? details.quotationNumber!.trim()
-        : 'Quotation-${details.id ?? ''}';
-    final quotationDate = details.quotationDate?.trim().isNotEmpty == true
-        ? details.quotationDate!.trim()
-        : DateFormat('yyyy-MM-dd').format(DateTime.now());
     final paymentData = _getPaymentMethodData();
     final paidMethods = _getPaidMethods();
     final paymentBreakdown = <String, dynamic>{};
@@ -7543,47 +7521,19 @@ class BillingPageState extends State<BillingPage>
       paymentBreakdown[methodName] = method['amount'] ?? 0;
     }
     final totalPaid = _getTotalPaidAmount();
-    debugPrint('🧾 BILLING QUOTATION PRINT PAYLOAD: ${json.encode({
-          'cartItems': cartItems,
-          'formattedTotal': details.grandTotal ?? '0.00',
-          'discountAmount': details.discount ?? '0.00',
-          'orderDate': quotationDate,
-          'orderNumber': quotationNumber,
-          'storeName': details.store?.name,
-          'customerName': details.customer?.name,
-          'customerPhone': details.customer?.phone,
-          'paidAmount': totalPaid > 0 ? totalPaid : null,
-          'paymentMethod': paymentData['paymentMethod'],
-          'paymentBreakdown':
-              paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
-          'customerType': selectedCustomer?.customerType,
-          'deliveryMethod': deliveryMethod,
-          'netExcTax': details.subTotal,
-        })}');
 
-    return _printOrderDetailsWithFallback(
-      cartItems: cartItems,
-      formattedTotal: details.grandTotal ?? '0.00',
-      discountAmount: details.discount ?? '0.00',
-      orderDate: quotationDate,
-      orderNumber: quotationNumber,
-      isFromLocalStorage: true,
-      storeName: details.store?.name,
-      customerName: details.customer?.name,
-      customerPhone: details.customer?.phone,
+    return const QuotationPrintService().printQuotationDetails(
+      context,
+      details,
       customerOldBalance: selectedCustomer?.balance,
       paidAmount: totalPaid > 0 ? totalPaid : null,
       paymentMethod: paymentData['paymentMethod'],
       paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
       customerType: selectedCustomer?.customerType,
-      orderComment: details.expiryDate?.trim().isNotEmpty == true
-          ? 'Valid until: ${details.expiryDate}'
-          : null,
       deliveryMethod: deliveryMethod,
       isDefaultCustomer:
           Provider.of<CustomerSelectionProvider>(context, listen: false)
               .isDefaultCustomer,
-      netExcTax: details.subTotal,
     );
   }
 
