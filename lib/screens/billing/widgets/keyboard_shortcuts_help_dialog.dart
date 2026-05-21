@@ -247,20 +247,34 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
 
   static const List<_ShortcutItem> _restaurantCartShortcuts = [
     _ShortcutItem(
-      keyLabel: 'Tab / Shift + Tab',
-      action: 'Move through cart controls',
-      description:
-          'Cycle through price, quantity, comment, remove, and footer buttons',
+      keyLabel: 'Ctrl + D',
+      action: 'Focus Order Tabs',
+      description: 'Focus Cart, Saved, Ongoing tab strip',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Left / Right',
+      action: 'Move Tabs',
+      description: 'Move across Cart, Saved, and Ongoing',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Down',
+      action: 'Focus Cart Items',
+      description: 'From Cart tab, move into current cart items',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Up / Down',
+      action: 'Move Cart Item',
+      description: 'Move through current cart item cards',
+    ),
+    _ShortcutItem(
+      keyLabel: '+ / - / Delete',
+      action: 'Edit Cart Item',
+      description: 'Increase, decrease, or remove focused cart item',
     ),
     _ShortcutItem(
       keyLabel: 'Enter / Space',
-      action: 'Activate focused control',
-      description: 'Press the focused cart button or footer action',
-    ),
-    _ShortcutItem(
-      keyLabel: 'F1 / F8 / F2 / F6',
-      action: 'Footer actions',
-      description: 'Clear, Save, Confirm, or Confirm and Print',
+      action: 'Comment Item',
+      description: 'Open comment dialog for focused cart item',
     ),
   ];
 

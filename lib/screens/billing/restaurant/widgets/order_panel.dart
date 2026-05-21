@@ -115,7 +115,10 @@ class OrderPanelState extends State<OrderPanel> {
   bool _hasOpenedOngoingOrdersTab = false;
   int _lastObservedCartCount = 0;
   final FocusNode _orderPanelTabsFocusNode = FocusNode();
+  final FocusNode _currentCartItemsFocusNode = FocusNode();
+  final ScrollController _currentCartItemsScrollController = ScrollController();
   int _focusedOrderPanelTabIndex = 0;
+  int? _focusedCurrentCartItemIndex;
 
   bool get _usesCounterOrderTabs =>
       widget.allowCounterBilling && widget.isCounterBillingMode;
@@ -248,6 +251,8 @@ class OrderPanelState extends State<OrderPanel> {
   @override
   void dispose() {
     _orderPanelTabsFocusNode.dispose();
+    _currentCartItemsFocusNode.dispose();
+    _currentCartItemsScrollController.dispose();
     _editOrderScrollController.dispose();
     super.dispose();
   }
@@ -447,6 +452,19 @@ class OrderPanelState extends State<OrderPanel> {
     });
   }
 
+  void _focusCurrentCartItems(List<LocalCartItem> cartItems) {
+    if (cartItems.isEmpty) return;
+    setState(() {
+      _focusedCurrentCartItemIndex =
+          (_focusedCurrentCartItemIndex ?? 0).clamp(0, cartItems.length - 1);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _currentCartItemsFocusNode.requestFocus();
+      _scrollFocusedCurrentCartItemIntoView();
+    });
+  }
+
   int _tabIndexFor(OrderPanelTab tab) {
     return switch (tab) {
       OrderPanelTab.cart => 0,
@@ -485,7 +503,90 @@ class OrderPanelState extends State<OrderPanel> {
       _selectOrderPanelTab(_tabForIndex(_focusedOrderPanelTabIndex));
       return KeyEventResult.handled;
     }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown &&
+        _tabForIndex(_focusedOrderPanelTabIndex) == OrderPanelTab.cart) {
+      final cartItems = Provider.of<LocalProductProvider>(
+        context,
+        listen: false,
+      ).getCartItems();
+      _selectOrderPanelTab(OrderPanelTab.cart);
+      _focusCurrentCartItems(cartItems);
+      return KeyEventResult.handled;
+    }
     return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleCurrentCartItemsKey(
+    KeyEvent event,
+    List<LocalCartItem> cartItems,
+  ) {
+    if (event is! KeyDownEvent || cartItems.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+    final maxIndex = cartItems.length - 1;
+    final currentIndex = (_focusedCurrentCartItemIndex ?? 0).clamp(0, maxIndex);
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      setState(() {
+        _focusedCurrentCartItemIndex = (currentIndex + 1).clamp(0, maxIndex);
+      });
+      _scrollFocusedCurrentCartItemIntoView();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (currentIndex == 0) {
+        focusOrderPanelTabs();
+        return KeyEventResult.handled;
+      }
+      setState(() {
+        _focusedCurrentCartItemIndex = (currentIndex - 1).clamp(0, maxIndex);
+      });
+      _scrollFocusedCurrentCartItemIntoView();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.add ||
+        event.logicalKey == LogicalKeyboardKey.numpadAdd ||
+        event.character == '+') {
+      final item = cartItems[currentIndex];
+      _updateCurrentCartItemQuantity(item, item.quantity + 1);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.minus ||
+        event.logicalKey == LogicalKeyboardKey.numpadSubtract ||
+        event.character == '-') {
+      final item = cartItems[currentIndex];
+      _updateCurrentCartItemQuantity(item, item.quantity - 1);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.delete) {
+      _removeCurrentCartItem(cartItems[currentIndex]);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      _showItemCommentDialog(cartItems[currentIndex], isLocal: true);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  void _scrollFocusedCurrentCartItemIntoView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_currentCartItemsScrollController.hasClients ||
+          _focusedCurrentCartItemIndex == null) {
+        return;
+      }
+      final target = (_focusedCurrentCartItemIndex! * 150.0).clamp(
+        0.0,
+        _currentCartItemsScrollController.position.maxScrollExtent,
+      );
+      _currentCartItemsScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _selectOrderPanelTab(OrderPanelTab tab) {
@@ -2632,6 +2733,11 @@ class OrderPanelState extends State<OrderPanel> {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final total = localProductProvider.cartTotal;
+    if (cartItems.isEmpty) {
+      _focusedCurrentCartItemIndex = null;
+    } else if ((_focusedCurrentCartItemIndex ?? 0) >= cartItems.length) {
+      _focusedCurrentCartItemIndex = cartItems.length - 1;
+    }
 
     return Container(
       margin: const EdgeInsets.all(8),
@@ -2727,19 +2833,25 @@ class OrderPanelState extends State<OrderPanel> {
                           PointerDeviceKind.trackpad,
                         },
                       ),
-                      child: ListView.separated(
-                        physics: const BouncingScrollPhysics(),
-                        padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-                        itemCount: cartItems.length,
-                        separatorBuilder: (_, __) => Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          color: Colors.grey.shade100,
+                      child: Focus(
+                        focusNode: _currentCartItemsFocusNode,
+                        onKeyEvent: (node, event) =>
+                            _handleCurrentCartItemsKey(event, cartItems),
+                        child: ListView.separated(
+                          controller: _currentCartItemsScrollController,
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
+                          itemCount: cartItems.length,
+                          separatorBuilder: (_, __) => Container(
+                            height: 1,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            color: Colors.grey.shade100,
+                          ),
+                          itemBuilder: (_, idx) {
+                            final item = cartItems[idx];
+                            return this._buildCurrentCartItem(item, idx);
+                          },
                         ),
-                        itemBuilder: (_, idx) {
-                          final item = cartItems[idx];
-                          return this._buildCurrentCartItem(item, idx);
-                        },
                       ),
                     ),
                   ),
