@@ -951,7 +951,6 @@ class BillingPageState extends State<BillingPage>
         key == LogicalKeyboardKey.f10 ||
         key == LogicalKeyboardKey.f11 ||
         key == LogicalKeyboardKey.f12 ||
-        key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.insert ||
         key == LogicalKeyboardKey.escape;
   }
@@ -1013,7 +1012,7 @@ class BillingPageState extends State<BillingPage>
     }
 
     if (event.logicalKey == LogicalKeyboardKey.tab &&
-        !HardwareKeyboard.instance.isShiftPressed &&
+        !HardwareKeyboard.instance.isAltPressed &&
         _barcodeNode.hasFocus) {
       debugPrint(
           "⌨️ [BillingPage] Handling Tab from Barcode -> Search Product | ${_focusDebugSummary()}");
@@ -1021,8 +1020,12 @@ class BillingPageState extends State<BillingPage>
       return true;
     }
 
+    final isAltCashDrawerShortcut = HardwareKeyboard.instance.isAltPressed &&
+        !HardwareKeyboard.instance.isControlPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyD;
     if (!_isBillingShortcutKey(event.logicalKey) &&
-        !_isBillingControlShortcut(event.logicalKey)) {
+        !_isBillingControlShortcut(event.logicalKey) &&
+        !isAltCashDrawerShortcut) {
       return false;
     }
     debugPrint(
@@ -1117,9 +1120,10 @@ class BillingPageState extends State<BillingPage>
         }
       }
 
-      if (!HardwareKeyboard.instance.isControlPressed &&
+      if (HardwareKeyboard.instance.isAltPressed &&
+          !HardwareKeyboard.instance.isControlPressed &&
           event.logicalKey == LogicalKeyboardKey.keyD) {
-        debugPrint("⌨️ [BillingPage] Handling D -> open cash drawer");
+        debugPrint("Handling Alt+D -> open cash drawer");
         unawaited(_openCashDrawerFromShortcut());
         return;
       }
@@ -1215,7 +1219,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  /// Opens the cash drawer through [CashDrawerService]. Triggered by Ctrl+D.
+  /// Opens the cash drawer through [CashDrawerService]. Triggered by Alt+D.
   Future<void> _openCashDrawerFromShortcut() async {
     if (!mounted) return;
     try {
@@ -3895,11 +3899,11 @@ class BillingPageState extends State<BillingPage>
 
   KeyEventResult _handleCartTableTabKey(int cartLength) {
     const int lastCellIndex = 4;
-    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final isAltPressed = HardwareKeyboard.instance.isAltPressed;
     final rowIndex = (_cartTableFocusedRowIndex ?? 0).clamp(0, cartLength - 1);
     final cellIndex = _cartTableFocusedCellIndex;
 
-    if (isShiftPressed) {
+    if (isAltPressed) {
       if (cellIndex == null) {
         return KeyEventResult.ignored;
       }

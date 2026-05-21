@@ -66,7 +66,7 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       description: 'Focus cart on first row Item Name cell',
     ),
     _ShortcutItem(
-      keyLabel: 'D',
+      keyLabel: 'Alt + D',
       action: 'Open Cash Drawer',
       description: 'Trigger printer to open the cash drawer',
     ),
@@ -97,17 +97,17 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     _ShortcutItem(
       keyLabel: 'Ctrl + D',
       action: 'Current Cart',
-      description: 'Show tables panel and return the order panel to Cart',
+      description: 'Return the order panel to Cart',
     ),
     _ShortcutItem(
-      keyLabel: 'D',
+      keyLabel: 'Alt + D',
       action: 'Open Cash Drawer',
       description: 'Trigger printer to open the cash drawer',
     ),
     _ShortcutItem(
       keyLabel: 'Ctrl + A',
       action: 'Focus Categories',
-      description: 'Show tables panel and focus the menu category row',
+      description: 'Focus the menu category row',
     ),
     _ShortcutItem(
       keyLabel: 'Ctrl + S',

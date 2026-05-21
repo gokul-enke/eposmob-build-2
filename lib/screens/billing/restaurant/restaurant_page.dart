@@ -117,7 +117,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
         key == LogicalKeyboardKey.f9 ||
         key == LogicalKeyboardKey.f10 ||
         key == LogicalKeyboardKey.f12 ||
-        key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.escape;
   }
 
@@ -138,7 +137,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (dialogIsOnTop) return false;
 
     final key = event.logicalKey;
-    if (!_isRestaurantShortcutKey(key) && !_isRestaurantControlShortcut(key)) {
+    final isAltCashDrawerShortcut = HardwareKeyboard.instance.isAltPressed &&
+        !HardwareKeyboard.instance.isControlPressed &&
+        key == LogicalKeyboardKey.keyD;
+    if (!_isRestaurantShortcutKey(key) &&
+        !_isRestaurantControlShortcut(key) &&
+        !isAltCashDrawerShortcut) {
       return false;
     }
 
@@ -192,19 +196,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
           return;
         }
         if (key == LogicalKeyboardKey.keyA) {
-          setState(() {
-            _showTablesPanel = true;
-            if (MediaQuery.of(context).size.width < 900) {
-              _currentMobileView = MobileView.tables;
-            }
-          });
-          _saveTablesPanelPreference(true);
           _menuPanelKey.currentState?.focusCategories();
           return;
         }
       }
 
-      if (!HardwareKeyboard.instance.isControlPressed &&
+      if (HardwareKeyboard.instance.isAltPressed &&
+          !HardwareKeyboard.instance.isControlPressed &&
           key == LogicalKeyboardKey.keyD) {
         unawaited(const CashDrawerService().openDrawer(context));
         return;

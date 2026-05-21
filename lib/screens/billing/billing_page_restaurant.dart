@@ -1021,7 +1021,6 @@ class BillingPageState extends State<BillingPageRestaurant>
         key == LogicalKeyboardKey.f9 ||
         key == LogicalKeyboardKey.f10 ||
         key == LogicalKeyboardKey.f12 ||
-        key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.escape;
   }
 
@@ -1042,14 +1041,18 @@ class BillingPageState extends State<BillingPageRestaurant>
     if (dialogIsOnTop) return false;
 
     if (event.logicalKey == LogicalKeyboardKey.tab &&
-        !HardwareKeyboard.instance.isShiftPressed &&
+        !HardwareKeyboard.instance.isAltPressed &&
         _barcodeNode.hasFocus) {
       _focusSearchProductField();
       return true;
     }
 
+    final isAltCashDrawerShortcut = HardwareKeyboard.instance.isAltPressed &&
+        !HardwareKeyboard.instance.isControlPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyD;
     if (!_isBillingShortcutKey(event.logicalKey) &&
-        !_isBillingControlShortcut(event.logicalKey)) {
+        !_isBillingControlShortcut(event.logicalKey) &&
+        !isAltCashDrawerShortcut) {
       return false;
     }
 
@@ -1107,7 +1110,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         }
       }
 
-      if (!HardwareKeyboard.instance.isControlPressed &&
+      if (HardwareKeyboard.instance.isAltPressed &&
+          !HardwareKeyboard.instance.isControlPressed &&
           event.logicalKey == LogicalKeyboardKey.keyD) {
         unawaited(const CashDrawerService().openDrawer(context));
         return;
@@ -1334,7 +1338,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         _focusedMainCategoryIndex.clamp(0, categories.length - 1).toInt();
 
     if (key == LogicalKeyboardKey.tab &&
-        !HardwareKeyboard.instance.isShiftPressed) {
+        !HardwareKeyboard.instance.isAltPressed) {
       _focusSearchProductField();
       return KeyEventResult.handled;
     }
@@ -1382,7 +1386,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
 
     if (event.logicalKey == LogicalKeyboardKey.tab) {
-      if (HardwareKeyboard.instance.isShiftPressed) {
+      if (HardwareKeyboard.instance.isAltPressed) {
         _focusMainCategoryRow();
       } else {
         _focusMainProductGrid();
@@ -1411,7 +1415,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         _focusedMainProductIndex.clamp(0, products.length - 1).toInt();
 
     if (key == LogicalKeyboardKey.tab) {
-      if (HardwareKeyboard.instance.isShiftPressed) {
+      if (HardwareKeyboard.instance.isAltPressed) {
         _focusSearchProductField();
       } else {
         _focusCompactCartSidebar();
