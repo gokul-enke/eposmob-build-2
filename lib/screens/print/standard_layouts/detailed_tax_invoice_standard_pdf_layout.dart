@@ -13,12 +13,10 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pos_machine/resources/app_url.dart';
+import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 
 /// Detailed Tax Invoice PDF layout — enhanced ZATCA-compliant bilingual template.
 ///
@@ -73,37 +71,8 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   }
 
   Future<pw.MemoryImage?> _fetchNetworkPdfImage(String? url) async {
-    if (url == null || url.isEmpty) return null;
-    String fullUrl;
-    if (url.startsWith('http')) {
-      fullUrl = url;
-    } else if (url.startsWith('logos/')) {
-      fullUrl = '${APPUrl.baseURL}/storage/$url';
-    } else {
-      fullUrl = url.startsWith('/')
-          ? '${APPUrl.baseURL}$url'
-          : '${APPUrl.baseURL}/$url';
-    }
-    try {
-      final uri = Uri.parse(fullUrl);
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      final Map<String, String> queryParams =
-          Map<String, String>.from(uri.queryParameters);
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-      final urlWithStore = uri.replace(queryParameters: queryParams);
-
-      final response = await http.get(urlWithStore);
-      if (response.statusCode == 200) {
-        return pw.MemoryImage(response.bodyBytes);
-      }
-    } catch (e) {
-      debugPrint('[DetailedTaxInvoice] Error fetching logo: $e');
-    }
-    return null;
+    return PrintLogoLoader.loadPdfLogo(url,
+        tag: '[detailed_tax_invoice_standard_pdf_layout]');
   }
 
   // ── Public interface ────────────────────────────────────────────────

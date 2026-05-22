@@ -2,10 +2,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'receipt_layout_params.dart';
 
 /// Abstract base class for receipt layouts.
-/// 
+///
 /// Each theme (classic, modern, minimal, etc.) implements this interface
 /// to provide its own visual layout while using the same data.
-/// 
+///
 /// Usage:
 /// ```dart
 /// final layout = ReceiptLayoutFactory.getLayout(billDocumentConfig.activeTheme);
@@ -20,7 +20,7 @@ abstract class ReceiptLayout {
   String get displayName;
 
   /// Build and print a thermal receipt (58mm or 80mm)
-  /// 
+  ///
   /// This method handles the complete printing process including:
   /// - Connecting to printer
   /// - Generating receipt content (text or image-based)
@@ -29,13 +29,13 @@ abstract class ReceiptLayout {
   Future<void> printThermal(ReceiptLayoutParams params);
 
   /// Build a PDF document for standard printing (A4, A5)
-  /// 
+  ///
   /// Returns the PDF document. The caller is responsible for
   /// saving/opening/sharing the PDF.
   Future<pw.Document> buildPdf(ReceiptLayoutParams params);
 
   /// Build and print using text-based ESC/POS commands (for non-Arabic receipts)
-  /// 
+  ///
   /// This is an optional method for layouts that support native ESC/POS printing.
   /// Default implementation delegates to printThermal.
   Future<void> printThermalNative(ReceiptLayoutParams params) async {

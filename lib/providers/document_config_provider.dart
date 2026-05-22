@@ -3,20 +3,21 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../models/document_configurations.dart';
 import '../models/local_models.dart';
 import '../resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DocumentConfigProvider extends ChangeNotifier {
-  static const String _docConfigSnapshotKey =
-      'document_configs_snapshot_json';
+  static const String _docConfigSnapshotKey = 'document_configs_snapshot_json';
   static const String _docConfigSnapshotUpdatedAtKey =
       'document_configs_snapshot_updated_at';
 
   bool isLoading = false;
   DocumentConfigurationsModel? _documentConfigurations;
   String? _errorMessage;
+  static const String _logoFileMapKey = 'document_config_logo_file_map';
 
   // Hive box for persistent caching
   Box<HiveDocumentConfig>? _docConfigBox;
@@ -78,7 +79,8 @@ class DocumentConfigProvider extends ChangeNotifier {
 
       _documentConfigurations = null;
       _errorMessage = null;
-      debugPrint('🗑️ [DocConfig] Cleared Hive + SharedPreferences snapshot caches');
+      debugPrint(
+          '🗑️ [DocConfig] Cleared Hive + SharedPreferences snapshot caches');
       notifyListeners();
     } catch (e) {
       debugPrint('❌ [DocConfig] Error clearing all caches: $e');
@@ -98,8 +100,8 @@ class DocumentConfigProvider extends ChangeNotifier {
         final hiveConfig = _docConfigBox!.get(key);
         if (hiveConfig != null && hiveConfig.serializedData != null) {
           try {
-            final configData = json.decode(hiveConfig.serializedData!)
-                as Map<String, dynamic>;
+            final configData =
+                json.decode(hiveConfig.serializedData!) as Map<String, dynamic>;
             configsMap[key] = DocumentConfig.fromJson(configData);
             debugPrint('📦 [DocConfig] Loaded config: $key');
           } catch (e) {
@@ -113,7 +115,8 @@ class DocumentConfigProvider extends ChangeNotifier {
           status: 'cached',
           documentConfigurations: configsMap,
         );
-        debugPrint('✅ [DocConfig] Loaded ${configsMap.length} configs from Hive');
+        debugPrint(
+            '✅ [DocConfig] Loaded ${configsMap.length} configs from Hive');
         notifyListeners();
       }
     } catch (e) {
@@ -126,13 +129,13 @@ class DocumentConfigProvider extends ChangeNotifier {
       Map<String, dynamic> snapshotJson) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-          _docConfigSnapshotKey, json.encode(snapshotJson));
+      await prefs.setString(_docConfigSnapshotKey, json.encode(snapshotJson));
       await prefs.setString(
           _docConfigSnapshotUpdatedAtKey, DateTime.now().toIso8601String());
       debugPrint('💾 [DocConfig] Snapshot saved to SharedPreferences backup');
     } catch (e) {
-      debugPrint('❌ [DocConfig] Error saving snapshot to SharedPreferences: $e');
+      debugPrint(
+          '❌ [DocConfig] Error saving snapshot to SharedPreferences: $e');
     }
   }
 
@@ -231,6 +234,7 @@ class DocumentConfigProvider extends ChangeNotifier {
             await _saveToHive(key, value.toJson());
           });
         }
+        await cacheDocumentLogosLocally();
 
         isLoading = false;
         notifyListeners();
@@ -287,7 +291,8 @@ class DocumentConfigProvider extends ChangeNotifier {
       queryParams['store_id'] = activeStoreId.toString();
     }
     final baseUrl = Uri.parse(urlString);
-    final url = baseUrl.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    final url = baseUrl.replace(
+        queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
     try {
       final response = await http.get(
@@ -356,8 +361,8 @@ class DocumentConfigProvider extends ChangeNotifier {
       final hiveConfig = _docConfigBox!.get(type);
       if (hiveConfig != null && hiveConfig.serializedData != null) {
         try {
-          final configData = json.decode(hiveConfig.serializedData!)
-              as Map<String, dynamic>;
+          final configData =
+              json.decode(hiveConfig.serializedData!) as Map<String, dynamic>;
           final config = DocumentConfig.fromJson(configData);
           debugPrint('📦 [DocConfig] Retrieved $type from Hive cache');
           return config;
@@ -377,10 +382,116 @@ class DocumentConfigProvider extends ChangeNotifier {
     return getDocumentConfig(type);
   }
 
+  Future<void> cacheDocumentLogosLocally() async {
+    try {
+      final configs = _documentConfigurations?.documentConfigurations;
+      if (configs == null || configs.isEmpty) return;
+
+      final prefs = await SharedPreferences.getInstance();
+      final currentMapRaw = prefs.getString(_logoFileMapKey);
+      final Map<String, dynamic> logoFileMap =
+          currentMapRaw != null && currentMapRaw.isNotEmpty
+              ? (json.decode(currentMapRaw) as Map<String, dynamic>)
+              : <String, dynamic>{};
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final logoDir = Directory('${appDir.path}/epos/document_logos');
+      if (!await logoDir.exists()) {
+        await logoDir.create(recursive: true);
+      }
+
+      for (final entry in configs.entries) {
+        final logoValue = entry.value.logo?.toString();
+        if (logoValue == null || logoValue.trim().isEmpty) continue;
+        final resolvedUrl = _resolveLogoUrl(logoValue.trim());
+        try {
+          final isSvg = resolvedUrl.toLowerCase().endsWith('.svg');
+          final pngFallbackUrl = isSvg
+              ? resolvedUrl.replaceFirst(
+                  RegExp(r'\.svg$', caseSensitive: false),
+                  '.png',
+                )
+              : null;
+          http.Response response;
+          String cachedUrl = resolvedUrl;
+          String extensionUrl = resolvedUrl;
+
+          if (pngFallbackUrl != null) {
+            final pngResponse = await http.get(Uri.parse(pngFallbackUrl));
+            if (pngResponse.statusCode == 200 &&
+                pngResponse.bodyBytes.isNotEmpty) {
+              response = pngResponse;
+              cachedUrl = resolvedUrl;
+              extensionUrl = pngFallbackUrl;
+            } else {
+              response = await http.get(Uri.parse(resolvedUrl));
+            }
+          } else {
+            response = await http.get(Uri.parse(resolvedUrl));
+          }
+
+          if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+            continue;
+          }
+          final ext = _extractExtension(extensionUrl);
+          final safeName =
+              entry.key.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+          final file = File('${logoDir.path}/${safeName}_logo$ext');
+          await file.writeAsBytes(response.bodyBytes, flush: true);
+          logoFileMap[cachedUrl] = file.path;
+          if (extensionUrl != cachedUrl) {
+            logoFileMap[extensionUrl] = file.path;
+          }
+          debugPrint('[DocConfig] Cached logo for ${entry.key}: ${file.path}');
+        } catch (e) {
+          debugPrint('[DocConfig] Failed caching logo for ${entry.key}: $e');
+        }
+      }
+
+      await prefs.setString(_logoFileMapKey, json.encode(logoFileMap));
+    } catch (e) {
+      debugPrint('[DocConfig] Error during logo cache sync: $e');
+    }
+  }
+
+  static Future<String?> getCachedLogoFilePath(String logoUrl) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_logoFileMapKey);
+      if (raw == null || raw.isEmpty) return null;
+      final map = json.decode(raw) as Map<String, dynamic>;
+      final path = map[logoUrl]?.toString();
+      if (path == null || path.isEmpty) return null;
+      final file = File(path);
+      return await file.exists() ? file.path : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _resolveLogoUrl(String url) {
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('logos/')) return '${APPUrl.baseURL}/storage/$url';
+    return url.startsWith('/')
+        ? '${APPUrl.baseURL}$url'
+        : '${APPUrl.baseURL}/$url';
+  }
+
+  String _extractExtension(String url) {
+    final uri = Uri.tryParse(url);
+    final path = uri?.path.toLowerCase() ?? url.toLowerCase();
+    if (path.endsWith('.svg')) return '.svg';
+    if (path.endsWith('.png')) return '.png';
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return '.jpg';
+    if (path.endsWith('.webp')) return '.webp';
+    return '.bin';
+  }
+
   /// Check if config exists in cache (Hive or memory)
   bool hasCachedConfig(String type) {
     // Check memory
-    if (_documentConfigurations?.documentConfigurations?.containsKey(type) ?? false) {
+    if (_documentConfigurations?.documentConfigurations?.containsKey(type) ??
+        false) {
       return true;
     }
     // Check Hive

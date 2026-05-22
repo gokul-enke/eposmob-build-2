@@ -10,9 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
 import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -26,12 +23,12 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/resources/app_url.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
 import '../thermal/printer_utils.dart';
 import '../thermal/debug_image_saver.dart';
+import '../logo_loader.dart';
 
 /// Premium receipt layout - Modern & Clean design.
 ///
@@ -1975,50 +1972,7 @@ class Premium2ReceiptLayout implements ReceiptLayout {
   }
 
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
-    if (url == null || url.isEmpty) return null;
-
-    String fullUrl;
-    if (url.startsWith('http')) {
-      fullUrl = url;
-    } else if (url.startsWith('logos/')) {
-      fullUrl = '${APPUrl.baseURL}/storage/$url';
-    } else {
-      fullUrl = url.startsWith('/')
-          ? '${APPUrl.baseURL}$url'
-          : '${APPUrl.baseURL}/$url';
-    }
-    debugPrint("[PREMIUM][LOGO] Resolved logo URL: $fullUrl");
-
-    try {
-      final uri = Uri.parse(fullUrl);
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      final Map<String, String> queryParams =
-          Map<String, String>.from(uri.queryParameters);
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-      final urlWithStore = uri.replace(queryParameters: queryParams);
-      debugPrint(
-          "[PREMIUM][LOGO] Fetching logo: $urlWithStore (store_id=$activeStoreId)");
-
-      final response = await http.get(urlWithStore);
-      debugPrint(
-          "[PREMIUM][LOGO] Logo HTTP status=${response.statusCode}, bytes=${response.bodyBytes.length}");
-      if (response.statusCode == 200) {
-        final codec = await ui.instantiateImageCodec(response.bodyBytes);
-        final fi = await codec.getNextFrame();
-        debugPrint(
-            "[PREMIUM][LOGO] Decoded logo image: ${fi.image.width}x${fi.image.height}");
-        return fi.image;
-      }
-      debugPrint(
-          "[PREMIUM][LOGO] Non-200 response while loading logo. URL=$urlWithStore");
-    } catch (e) {
-      debugPrint("[PremiumReceiptLayout] Error fetching image: $e");
-    }
-    return null;
+    return PrintLogoLoader.loadUiLogo(url, tag: '[premium2_receipt_layout]');
   }
 
   /// Load an image from Flutter assets
