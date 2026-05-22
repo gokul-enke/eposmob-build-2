@@ -899,13 +899,23 @@ class _CheckoutModalState extends State<CheckoutModal> {
     );
   }
 
+  bool get _isDenseCheckout {
+    final size = MediaQuery.sizeOf(context);
+    return size.width <= 1100 || size.height <= 800;
+  }
+
+  double get _checkoutPadding => _isDenseCheckout ? 16.0 : 24.0;
+  double get _checkoutGap => _isDenseCheckout ? 14.0 : 24.0;
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final dialogWidth =
-        (screenSize.width * 0.94).clamp(320.0, 1300.0).toDouble();
-    final dialogHeight =
-        (screenSize.height * 0.92).clamp(520.0, 850.0).toDouble();
+    final dialogWidth = (screenSize.width * (_isDenseCheckout ? 0.965 : 0.94))
+        .clamp(320.0, 1300.0)
+        .toDouble();
+    final dialogHeight = (screenSize.height * (_isDenseCheckout ? 0.90 : 0.92))
+        .clamp(520.0, 850.0)
+        .toDouble();
 
     return Focus(
       autofocus: true,
@@ -914,7 +924,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         elevation: 8,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: _isDenseCheckout ? 8 : 16,
+          vertical: _isDenseCheckout ? 12 : 16,
+        ),
         child: Stack(
           children: [
             Container(
@@ -964,7 +977,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   Widget _buildTitleHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
+      padding: EdgeInsets.symmetric(
+        vertical: _isDenseCheckout ? 6 : 10,
+        horizontal: _isDenseCheckout ? 18 : 24,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -978,7 +994,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             widget.title,
             style: buildCustomStyle(
               FontWeightManager.bold,
-              FontSize.s20,
+              _isDenseCheckout ? FontSize.s18 : FontSize.s20,
               0.25,
               Colors.black87,
             ),
@@ -1169,7 +1185,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.all(_checkoutPadding),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1264,9 +1280,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   const VerticalDivider(width: 1),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   // Right: Summary only (no customer card)
                   Expanded(
                     flex: 2,
@@ -1492,11 +1508,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
       onKeyEvent: (node, event) =>
           _handleCustomerListKey(event, displayCustomers),
       child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: _customerGridColumns,
-          mainAxisSpacing: 6,
-          crossAxisSpacing: 6,
-          childAspectRatio: 3.6,
+          mainAxisSpacing: _isDenseCheckout ? 5 : 6,
+          crossAxisSpacing: _isDenseCheckout ? 5 : 6,
+          childAspectRatio: _isDenseCheckout ? 3.95 : 3.6,
         ),
         itemCount: displayCustomers.length,
         itemBuilder: (context, index) {
@@ -1515,7 +1531,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
               borderRadius: BorderRadius.circular(10),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isDenseCheckout ? 7 : 8,
+                  vertical: _isDenseCheckout ? 3 : 4,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFF2563EB).withOpacity(0.1)
@@ -1533,8 +1552,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 child: Row(
                   children: [
                     Container(
-                      width: 28,
-                      height: 28,
+                      width: _isDenseCheckout ? 24 : 28,
+                      height: _isDenseCheckout ? 24 : 28,
                       decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFF2563EB)
@@ -1552,7 +1571,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: _isDenseCheckout ? 6 : 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1563,8 +1582,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               Expanded(
                                 child: Text(
                                   customer.name ?? 'Unknown',
-                                  style: const TextStyle(
-                                    fontSize: 11,
+                                  style: TextStyle(
+                                    fontSize: _isDenseCheckout ? 10 : 11,
                                     fontWeight: FontWeight.w600,
                                   ),
                                   maxLines: 1,
@@ -1587,7 +1606,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   child: Text(
                                     customer.phone!,
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: _isDenseCheckout ? 9 : 10,
                                         color: Colors.grey.shade600),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -1618,7 +1637,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ),
                     ),
                     if (isSelected)
-                      const Icon(Icons.check_circle, color: Color(0xFF2563EB)),
+                      Icon(
+                        Icons.check_circle,
+                        color: const Color(0xFF2563EB),
+                        size: _isDenseCheckout ? 18 : 24,
+                      ),
                   ],
                 ),
               ),
@@ -1728,7 +1751,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(_checkoutPadding),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2313,9 +2336,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   const VerticalDivider(width: 1),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   // Right: Summary
                   Expanded(
                     flex: 2,
@@ -2359,7 +2382,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(_checkoutPadding),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2434,9 +2457,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   const VerticalDivider(width: 1),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   // Right: Summary
                   Expanded(
                     flex: 2,
@@ -2498,7 +2521,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(_checkoutPadding),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2569,9 +2592,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   const VerticalDivider(width: 1),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   // Right: Summary
                   Expanded(
                     flex: 2,
@@ -2626,14 +2649,18 @@ class _CheckoutModalState extends State<CheckoutModal> {
         Text(label,
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              fontSize: large ? 16 : 14,
+              fontSize: large
+                  ? (_isDenseCheckout ? 15 : 16)
+                  : (_isDenseCheckout ? 13 : 14),
               color: labelColor ?? (isBold ? Colors.black : Colors.black87),
             )),
         Text(
             '${amount < 0 ? "-" : ""}$currency ${amount.abs().toStringAsFixed(2)}',
             style: TextStyle(
                 fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-                fontSize: large ? 18 : 14,
+                fontSize: large
+                    ? (_isDenseCheckout ? 17 : 18)
+                    : (_isDenseCheckout ? 13 : 14),
                 color: color)),
       ],
     );
@@ -2653,13 +2680,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
         Text('Delivery Charge',
             style: TextStyle(
               fontWeight: FontWeight.w500,
-              fontSize: 14,
+              fontSize: _isDenseCheckout ? 13 : 14,
               color: Colors.black87,
             )),
         Text('$currency ${effectiveDeliveryCharge.toStringAsFixed(2)}',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 14,
+                fontSize: _isDenseCheckout ? 13 : 14,
                 color: effectiveDeliveryCharge > 0
                     ? const Color(0xFF8B5CF6)
                     : const Color(0xFF059669))),
@@ -2850,7 +2877,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onConfirm,
   }) {
     return Container(
-      padding: EdgeInsets.fromLTRB(12, widget.isQuotationMode ? 0 : 12, 12, 0),
+      padding: EdgeInsets.fromLTRB(
+        _isDenseCheckout ? 8 : 12,
+        widget.isQuotationMode ? 0 : (_isDenseCheckout ? 8 : 12),
+        _isDenseCheckout ? 8 : 12,
+        0,
+      ),
       color: Colors.white,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2866,9 +2898,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     size: MediaQuery.of(context).size,
                     icon: const Icon(Icons.arrow_back,
                         color: Colors.white, size: 20),
-                    height: 48,
+                    height: _isDenseCheckout ? 44 : 48,
                     width: double.infinity,
-                    fontSize: FontSize.s14,
+                    fontSize: _isDenseCheckout ? FontSize.s12 : FontSize.s14,
                     boxColor: const Color(0xFF64748B),
                     borderColor: const Color(0xFF64748B),
                     radius: 12,
@@ -2900,9 +2932,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       size: MediaQuery.of(context).size,
                       icon: const Icon(Icons.check_circle,
                           color: Colors.white, size: 20),
-                      height: 48,
+                      height: _isDenseCheckout ? 44 : 48,
                       width: double.infinity,
-                      fontSize: FontSize.s14,
+                      fontSize: _isDenseCheckout ? FontSize.s12 : FontSize.s14,
                       boxColor: _canConfirmOrPrint
                           ? const Color(0xFF2563EB)
                           : Colors.grey.shade400,
@@ -2941,9 +2973,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       size: MediaQuery.of(context).size,
                       icon: const Icon(Icons.print,
                           color: Colors.white, size: 20),
-                      height: 48,
+                      height: _isDenseCheckout ? 44 : 48,
                       width: double.infinity,
-                      fontSize: FontSize.s14,
+                      fontSize: _isDenseCheckout ? FontSize.s12 : FontSize.s14,
                       boxColor: _canPrint
                           ? const Color(0xFF059669)
                           : Colors.grey.shade400,
@@ -2964,9 +2996,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     size: MediaQuery.of(context).size,
                     icon: const Icon(Icons.arrow_forward,
                         color: Colors.white, size: 20),
-                    height: 48,
+                    height: _isDenseCheckout ? 44 : 48,
                     width: double.infinity,
-                    fontSize: FontSize.s14,
+                    fontSize: _isDenseCheckout ? FontSize.s12 : FontSize.s14,
                     boxColor: isNextEnabled
                         ? const Color(0xFF2563EB)
                         : Colors.grey.shade400,
@@ -3036,67 +3068,68 @@ class _CheckoutModalState extends State<CheckoutModal> {
           children: [
             // Status Checklist (clickable to navigate)
             LayoutBuilder(builder: (context, constraints) {
-              final itemWidth = (constraints.maxWidth - 12) / 2;
+              final tileSpacing = _isDenseCheckout ? 8.0 : 10.0;
+              final tileWidth = (constraints.maxWidth - tileSpacing) / 2;
+              final tileHeight = _isDenseCheckout ? 72.0 : 92.0;
+              final tiles = <Widget>[
+                _buildClickableCheckItem(
+                  'Customer',
+                  _localSelectedCustomer?.name ?? 'Not Selected',
+                  hasCustomer,
+                  Icons.person_outline,
+                  0,
+                  customer: _localSelectedCustomer,
+                ),
+                if (widget.enableDelivery)
+                  _buildClickableCheckItem(
+                    'Delivery',
+                    _lDeliveryMethod,
+                    hasDelivery,
+                    Icons.local_shipping_outlined,
+                    1,
+                  ),
+                _buildClickableCheckItem(
+                  'Discount',
+                  hasDiscount
+                      ? (_localPercentageDiscount > 0
+                          ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
+                          : _localFlatDiscount.toStringAsFixed(2))
+                      : 'Not Applied',
+                  hasDiscount,
+                  Icons.discount_outlined,
+                  2,
+                ),
+                _buildClickableCheckItem(
+                  'Payment',
+                  _hasPaymentMethod() ? 'Configured' : 'Not Configured',
+                  hasPayment,
+                  Icons.payment_outlined,
+                  3,
+                ),
+              ];
+
               return Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  // Show Customer item in all tabs
-                  SizedBox(
-                    width: itemWidth,
-                    child: _buildClickableCheckItem(
-                      'Customer',
-                      _localSelectedCustomer?.name ?? 'Not Selected',
-                      hasCustomer,
-                      Icons.person_outline,
-                      0,
-                      customer: _localSelectedCustomer,
-                    ),
-                  ),
-                  if (widget.enableDelivery)
-                    SizedBox(
-                      width: itemWidth,
-                      child: _buildClickableCheckItem(
-                        'Delivery',
-                        _lDeliveryMethod,
-                        hasDelivery,
-                        Icons.local_shipping_outlined,
-                        1,
+                spacing: tileSpacing,
+                runSpacing: tileSpacing,
+                children: tiles
+                    .map(
+                      (tile) => SizedBox(
+                        width: tileWidth,
+                        height: tileHeight,
+                        child: tile,
                       ),
-                    ),
-                  SizedBox(
-                    width: itemWidth,
-                    child: _buildClickableCheckItem(
-                      'Discount',
-                      hasDiscount
-                          ? (_localPercentageDiscount > 0
-                              ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
-                              : _localFlatDiscount.toStringAsFixed(2))
-                          : 'Not Applied',
-                      hasDiscount,
-                      Icons.discount_outlined,
-                      2,
-                    ),
-                  ),
-                  SizedBox(
-                    width: itemWidth,
-                    child: _buildClickableCheckItem(
-                      'Payment',
-                      _hasPaymentMethod() ? 'Configured' : 'Not Configured',
-                      hasPayment,
-                      Icons.payment_outlined,
-                      3,
-                    ),
-                  ),
-                ],
+                    )
+                    .toList(),
               );
             }),
-            const SizedBox(height: 16),
+            SizedBox(height: _isDenseCheckout ? 10 : 16),
             // Order Summary
             Expanded(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isDenseCheckout ? 14 : 20,
+                  vertical: _isDenseCheckout ? 14 : 20,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -3119,31 +3152,32 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'Order Summary',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: _isDenseCheckout ? 16 : 18,
                             fontWeight: FontWeight.w800,
                             color: Color(0xFF0F172A),
                             letterSpacing: 0.5,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: _isDenseCheckout ? 8 : 12),
                         _buildSummaryRow('Net Amount', subTotal, Colors.black),
-                        const SizedBox(height: 10),
+                        SizedBox(height: _isDenseCheckout ? 7 : 10),
                         _buildSummaryRow('Discount', -discountAmount,
                             const Color(0xFFEF4444),
                             labelColor: const Color(0xFFEF4444)),
-                        const SizedBox(height: 10),
+                        SizedBox(height: _isDenseCheckout ? 7 : 10),
                         _buildSummaryRow(
                             'Tax', taxAmount, const Color(0xFF64748B),
                             labelColor: const Color(0xFF64748B)),
                         if (hasDelivery && _isfreeDeliveryMinimumAmount()) ...[
-                          const SizedBox(height: 10),
+                          SizedBox(height: _isDenseCheckout ? 7 : 10),
                           _buildDeliveryChargeRow(),
                         ],
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                              vertical: _isDenseCheckout ? 10 : 16),
                           child: Divider(
                               height: 1,
                               thickness: 1.5,
@@ -3155,7 +3189,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             large: true,
                             labelColor: const Color(0xFF2563EB)),
                         if (_localSelectedCustomer != null) ...[
-                          const SizedBox(height: 10),
+                          SizedBox(height: _isDenseCheckout ? 7 : 10),
                           _buildSummaryRow(
                               'Cust. Prev. Balance',
                               prevBalance,
@@ -3166,9 +3200,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   ? const Color(0xFF059669)
                                   : const Color(0xFFDC2626)),
                         ],
-                        const SizedBox(height: 10),
+                        SizedBox(height: _isDenseCheckout ? 7 : 10),
                         _buildSummaryRow('Total Paid', totalPaid, Colors.black),
-                        const SizedBox(height: 10),
+                        SizedBox(height: _isDenseCheckout ? 7 : 10),
                         _buildSummaryRow(
                             'Balance', displayBalance, const Color(0xFF059669),
                             labelColor: const Color(0xFF059669)),
@@ -3200,7 +3234,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         : const Color(0xFFDC2626);
     final customerNameLength = customer?.name?.trim().length ?? subtitle.length;
     final customerTitleFontSize = customer == null
-        ? 14.0
+        ? (_isDenseCheckout ? 12.0 : 14.0)
         : customerNameLength > 24
             ? 10.5
             : customerNameLength > 18
@@ -3245,13 +3279,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
           onTap: () => _goToStep(stepIndex),
           borderRadius: BorderRadius.circular(11),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            height: double.infinity,
+            padding: EdgeInsets.symmetric(
+              vertical: _isDenseCheckout ? 7 : 12,
+              horizontal: _isDenseCheckout ? 10 : 16,
+            ),
             child: Row(
               children: [
                 if (customer == null) ...[
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: _isDenseCheckout ? 28 : 36,
+                    height: _isDenseCheckout ? 28 : 36,
                     decoration: BoxDecoration(
                       color: isCurrentStep
                           ? Colors.white.withOpacity(0.15)
@@ -3267,10 +3305,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           : isCompleted
                               ? const Color(0xFF166534)
                               : const Color(0xFF64748B),
-                      size: 20,
+                      size: _isDenseCheckout ? 17 : 20,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: _isDenseCheckout ? 10 : 14),
                 ],
                 Expanded(
                   child: Column(
@@ -3292,7 +3330,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         Text(
                           subtitle,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: _isDenseCheckout ? 10 : 12,
                             color: isCurrentStep
                                 ? Colors.white.withOpacity(0.85)
                                 : isCompleted
@@ -3348,10 +3386,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   ),
                 ),
                 if (shortcutLabel.isNotEmpty) ...[
-                  const SizedBox(width: 8),
+                  SizedBox(width: _isDenseCheckout ? 5 : 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _isDenseCheckout ? 6 : 8,
+                      vertical: _isDenseCheckout ? 3 : 4,
+                    ),
                     decoration: BoxDecoration(
                       color: isCurrentStep
                           ? Colors.white.withOpacity(0.18)
@@ -3366,7 +3406,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: Text(
                       shortcutLabel,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: _isDenseCheckout ? 10 : 11,
                         fontWeight: FontWeight.w800,
                         color: isCurrentStep
                             ? Colors.white

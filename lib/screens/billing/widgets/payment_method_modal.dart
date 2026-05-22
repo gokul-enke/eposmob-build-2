@@ -1079,6 +1079,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     Size size = MediaQuery.of(context).size;
     final currency =
         context.watch<AppSettingsProvider>().appSettings?.currency ?? 'INR';
+    final isDenseEmbedded =
+        widget.fullWidth && (size.width <= 1100 || size.height <= 800);
 
     // Calculate width: 85% of screen width, clamped between 550 and 900
     double modalWidth = size.width * 0.85;
@@ -1090,7 +1092,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       circleRadius: 12,
       color: Colors.white,
       showShadow: widget.showShadow,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isDenseEmbedded ? 16 : 20),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1116,7 +1118,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   ),
               ],
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: isDenseEmbedded ? 14 : 20),
 
             // Two-Column Layout
             Row(
@@ -1169,7 +1171,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 shortcutLabel: _shortcutForPaymentType('cash'),
                               ),
                             ),
-                            const SizedBox(height: 15),
+                            SizedBox(height: isDenseEmbedded ? 10 : 15),
                           ],
 
                           // Card Payment
@@ -1188,7 +1190,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 shortcutLabel: _shortcutForPaymentType('card'),
                               ),
                             ),
-                            const SizedBox(height: 15),
+                            SizedBox(height: isDenseEmbedded ? 10 : 15),
                           ],
 
                           // UPI Payment
@@ -1207,7 +1209,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 shortcutLabel: _shortcutForPaymentType('upi'),
                               ),
                             ),
-                            const SizedBox(height: 15),
+                            SizedBox(height: isDenseEmbedded ? 10 : 15),
                           ],
 
                           // COD Payment
@@ -1226,7 +1228,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 shortcutLabel: _shortcutForPaymentType('cod'),
                               ),
                             ),
-                            const SizedBox(height: 15),
+                            SizedBox(height: isDenseEmbedded ? 10 : 15),
                           ],
 
                           // Credit Payment (visual only)
@@ -1243,7 +1245,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               onToggle: () => _togglePaymentMethod('credit'),
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          SizedBox(height: isDenseEmbedded ? 10 : 15),
                         ],
 
                         // Transaction Reference Field
@@ -1298,7 +1300,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   ),
                 ),
 
-                const SizedBox(width: 30),
+                SizedBox(width: isDenseEmbedded ? 18 : 30),
 
                 // --- RIGHT COLUMN: Summary & Actions ---
                 Expanded(
@@ -1381,22 +1383,29 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         order: const NumericFocusOrder(70),
                         child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  'billing.to_customer_credit'.tr,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.bold,
-                                    FontSize.s14,
-                                    0.20,
-                                    ColorManager.kPrimaryColor,
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      'billing.to_customer_credit'.tr,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.bold,
+                                        isDenseEmbedded
+                                            ? FontSize.s12
+                                            : FontSize.s14,
+                                        0.20,
+                                        ColorManager.kPrimaryColor,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildShortcutHint('C+7'),
-                              ],
+                                  const SizedBox(width: 8),
+                                  _buildShortcutHint('C+7'),
+                                ],
+                              ),
                             ),
-                            const Spacer(),
                             Switch(
                               value: toCustomerCreditEnabled,
                               activeColor: ColorManager.kPrimaryColor,
@@ -1597,6 +1606,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     String? shortcutLabel,
   }) {
     final bool isFocused = _focusedPaymentKey == type;
+    final isDenseEmbedded =
+        widget.fullWidth && (size.width <= 1100 || size.height <= 800);
     return Row(
       children: [
         // Payment method tile — clickable for selection/deselection.
@@ -1619,11 +1630,16 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   : isSelected
                       ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
                       : Border.all(color: Colors.grey.shade300),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding: EdgeInsets.symmetric(
+                horizontal: isDenseEmbedded ? 6 : 8,
+                vertical: isDenseEmbedded ? 5 : 6,
+              ),
               blurRadius: isFocused ? 8 : 4,
               circleRadius: 5,
               height: size.height * .06, // Match text field height
-              width: 132, // Wider to avoid shortcut badge overflow
+              width: isDenseEmbedded
+                  ? 118
+                  : 132, // Wider to avoid shortcut badge overflow
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1636,18 +1652,20 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         BlendMode.srcIn),
                     fit: BoxFit.none,
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: isDenseEmbedded ? 4 : 6),
                   Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
                       FontWeightManager.medium,
-                      FontSize.s11,
+                      isDenseEmbedded ? FontSize.s10 : FontSize.s11,
                       0.12,
                       isSelected ? ColorManager.kPrimaryColor : Colors.grey,
                     ),
                   ),
                   if (shortcutLabel != null) ...[
-                    const SizedBox(width: 6),
+                    SizedBox(width: isDenseEmbedded ? 4 : 6),
                     _buildShortcutHint(shortcutLabel),
                   ],
                 ],
@@ -1656,7 +1674,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           ),
         ),
 
-        const SizedBox(width: 15),
+        SizedBox(width: isDenseEmbedded ? 10 : 15),
 
         // Amount input field - always visible
         Expanded(
