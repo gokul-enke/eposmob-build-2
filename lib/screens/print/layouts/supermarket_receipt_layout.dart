@@ -1354,6 +1354,9 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    final String? currencySymbol =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : null;
+    final ui.Image? currencyIcon = currencySymbol == null ? sarSymbol : null;
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1431,7 +1434,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         value: subtotal.toStringAsFixed(2),
         isBold: true,
         scale: 0.75,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1442,7 +1446,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         value: discountAmountValue.toStringAsFixed(2),
         isBold: true,
         scale: 0.75,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1453,7 +1458,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         value: taxAmount.toStringAsFixed(2),
         isBold: true,
         scale: 0.75,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1464,7 +1470,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         value: total.toStringAsFixed(2),
         isBold: true,
         scale: 0.9,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1504,7 +1511,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
               value: amt.toStringAsFixed(2),
               isBold: true,
               scale: totalsScale,
-              icon: sarSymbol,
+              icon: currencyIcon,
+              currencySymbol: currencySymbol,
             ));
           }
         });
@@ -1539,7 +1547,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
                   value: amt.toStringAsFixed(2),
                   isBold: true,
                   scale: totalsScale,
-                  icon: sarSymbol,
+                  icon: currencyIcon,
+                  currencySymbol: currencySymbol,
                 ));
               }
             });
@@ -1565,7 +1574,8 @@ class SupermarketReceiptLayout implements ReceiptLayout {
           value: params.paidAmount!.toStringAsFixed(2),
           isBold: true,
           scale: totalsScale,
-          icon: sarSymbol,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
     }
@@ -2277,40 +2287,54 @@ class StandardBoxedTotalsRow extends ReceiptRow {
             TextDirection.ltr,
           );
 
-          // Value on Right, then Icon to the left of value
+          // Value on Right, then currency mark to the left of value.
           double rightEdge = width - padding;
-          double iconSpace = 0;
+          double currencyMarkSpace = 0;
+          TextPainter? symbolPainter;
           if (item.icon != null) {
             final double iconSize = itemFontSize * 1.0;
-            iconSpace = iconSize + 4;
-          }
-
-          // Draw value text right-aligned, leaving room for icon
-          _drawScaledText(
-            canvas,
-            item.value,
-            Offset(rightEdge, currentY),
-            width * 0.40 - iconSpace,
-            itemFontSize,
-            item.isBold,
-            TextAlign.right,
-            TextDirection.ltr,
-          );
-
-          // Draw icon to the left of the value text
-          if (item.icon != null) {
-            final double iconSize = itemFontSize * 1.0;
-            // Measure value text width to position icon just before it
-            final valuePainter = TextPainter(
+            currencyMarkSpace = iconSize + 4;
+          } else if (item.currencySymbol != null &&
+              item.currencySymbol!.isNotEmpty) {
+            symbolPainter = TextPainter(
               text: TextSpan(
-                text: item.value,
+                text: item.currencySymbol!,
                 style: TextStyle(
+                  color: Colors.black,
                   fontSize: itemFontSize,
                   fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
               textDirection: TextDirection.ltr,
             )..layout();
+            currencyMarkSpace = symbolPainter.width + 4;
+          }
+
+          // Draw value text right-aligned, leaving room for the currency mark.
+          _drawScaledText(
+            canvas,
+            item.value,
+            Offset(rightEdge, currentY),
+            width * 0.40 - currencyMarkSpace,
+            itemFontSize,
+            item.isBold,
+            TextAlign.right,
+            TextDirection.ltr,
+          );
+
+          final valuePainter = TextPainter(
+            text: TextSpan(
+              text: item.value,
+              style: TextStyle(
+                fontSize: itemFontSize,
+                fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+
+          if (item.icon != null) {
+            final double iconSize = itemFontSize * 1.0;
             final double iconX = rightEdge - valuePainter.width - iconSize - 4;
             final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
                 item.icon!.height.toDouble());
@@ -2322,6 +2346,10 @@ class StandardBoxedTotalsRow extends ReceiptRow {
                 iconSize,
                 iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
+          } else if (symbolPainter != null) {
+            final double symbolX =
+                rightEdge - valuePainter.width - symbolPainter.width - 4;
+            symbolPainter.paint(canvas, Offset(symbolX, currentY));
           }
         } else {
           // Arabic: Value + Icon on Left, Label on Right
@@ -2339,6 +2367,21 @@ class StandardBoxedTotalsRow extends ReceiptRow {
                 iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
             valueOffsetX += iconSize + 4;
+          } else if (item.currencySymbol != null &&
+              item.currencySymbol!.isNotEmpty) {
+            final symbolPainter = TextPainter(
+              text: TextSpan(
+                text: item.currencySymbol!,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: itemFontSize,
+                  fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              textDirection: TextDirection.ltr,
+            )..layout();
+            symbolPainter.paint(canvas, Offset(valueOffsetX, currentY));
+            valueOffsetX += symbolPainter.width + 4;
           }
 
           // Value on Left
@@ -2445,6 +2488,7 @@ class StandardBoxedLineItem {
   final double scale;
   final bool isSeparator;
   final ui.Image? icon;
+  final String? currencySymbol;
 
   StandardBoxedLineItem({
     this.label = '',
@@ -2453,6 +2497,7 @@ class StandardBoxedLineItem {
     this.scale = 1.0,
     this.isSeparator = false,
     this.icon,
+    this.currencySymbol,
   });
 }
 

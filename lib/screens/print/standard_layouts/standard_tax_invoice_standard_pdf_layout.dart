@@ -76,6 +76,13 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   }
 
   // ── Public interface ────────────────────────────────────────────────
+  String _formatMoney(String currency, num amount) {
+    final currencyPrefix =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : currency.trim();
+    if (currencyPrefix.isEmpty) return amount.toStringAsFixed(2);
+    return '$currencyPrefix ${amount.toStringAsFixed(2)}';
+  }
+
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
     final pdf = await buildPdfDocument(params);
@@ -652,13 +659,13 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       if (_cfgVisible('showCustomerPaidAmount') &&
                           params.paidAmount != null)
                         pw.Text(
-                            '${_cfgVal('showCustomerPaidAmount', isRtl ? 'المبلغ المدفوع' : 'Paid Amt')}: ${params.paidAmount!.toStringAsFixed(2)}',
+                            '${_cfgVal('showCustomerPaidAmount', isRtl ? 'المبلغ المدفوع' : 'Paid Amt')}: ${_formatMoney(currency, params.paidAmount!)}',
                             style: footerStyle),
                       // Customer Current Balance
                       if (_cfgVisible('showCustomerCurrentBalance') &&
                           params.customerCurrentBalance != null)
                         pw.Text(
-                            '${_cfgVal('showCustomerCurrentBalance', isRtl ? 'الرصيد الحالي' : 'Cur Bal')}: ${params.customerCurrentBalance!.toStringAsFixed(2)}',
+                            '${_cfgVal('showCustomerCurrentBalance', isRtl ? 'الرصيد الحالي' : 'Cur Bal')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
                             style: footerStyle),
                     ],
                   ),
@@ -671,19 +678,19 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     children: [
                       if (dc?['showMRPTotal']?.visible != false)
                         _totalsRow('Total (Exc VAT)',
-                            totalExclTax.toStringAsFixed(2), footerStyle),
+                            _formatMoney(currency, totalExclTax), footerStyle),
                       if (dc?['showDiscount']?.visible != false &&
                           discountAmountValue > 0)
                         _totalsRow(
                             'Discount',
-                            discountAmountValue.toStringAsFixed(2),
+                            _formatMoney(currency, discountAmountValue),
                             footerStyle),
                       if (dc?['showTax']?.visible != false)
-                        _totalsRow('Total VAT', totalTax.toStringAsFixed(2),
-                            footerStyle),
+                        _totalsRow('Total VAT',
+                            _formatMoney(currency, totalTax), footerStyle),
                       if (dc?['showNetAmount']?.visible != false)
                         _totalsRow('Total (Inc VAT)',
-                            totalAmount.toStringAsFixed(2), footerBold),
+                            _formatMoney(currency, totalAmount), footerBold),
                     ],
                   ),
                 ),
@@ -710,7 +717,7 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // ═══════════════════════════════════════════════════════
             if (_cfgVisible('showSaved') && saved > 0)
               pw.Text(
-                '${_cfgVal('showSaved', isRtl ? 'لقد وفرت:' : 'You Saved:')} ${saved.toStringAsFixed(2)}',
+                '${_cfgVal('showSaved', isRtl ? 'لقد وفرت:' : 'You Saved:')} ${_formatMoney(currency, saved)}',
                 style: footerBold,
               ),
 

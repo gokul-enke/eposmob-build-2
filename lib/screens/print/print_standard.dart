@@ -2527,8 +2527,10 @@ class StandardPrinter {
             ? displayConfig!['showCartTotal']!.value as String
             : (isRtl ? 'الإجمالي:' : 'TOTAL:');
 
-    // Use currency symbol from app settings, fallback to empty string
-    final currencySymbol = currency.isNotEmpty ? '$currency ' : '';
+    // Use INR symbol when app currency is INR; otherwise keep configured code.
+    final currencySymbol = currency.trim().toUpperCase() == 'INR'
+        ? '\u20B9 '
+        : (currency.isNotEmpty ? '$currency ' : '');
 
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),

@@ -1338,6 +1338,11 @@ class ClassicReceiptLayout implements ReceiptLayout {
   ) {
     // Get currency from appSettings
     final String currency = appSettings?.currency ?? 'INR';
+    final String currencyPrefix =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : currency.trim();
+    String money(num amount) => currencyPrefix.isEmpty
+        ? amount.toStringAsFixed(2)
+        : '$currencyPrefix ${amount.toStringAsFixed(2)}';
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
@@ -1395,10 +1400,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
         if (showDiscount) {
           summaryRow.add(ReceiptTableColumn(discountLabel,
               weight: 0.25, align: TextAlign.right));
-          summaryRow.add(ReceiptTableColumn(
-              discountAmountValue.toStringAsFixed(2),
-              weight: 0.20,
-              align: TextAlign.right));
+          summaryRow.add(ReceiptTableColumn(money(discountAmountValue),
+              weight: 0.20, align: TextAlign.right));
         } else {
           summaryRow.add(ReceiptTableColumn("", weight: 0.45));
         }
@@ -1428,7 +1431,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         if (showTax) {
           qtyTaxRow.add(ReceiptTableColumn(taxLabel,
               weight: 0.25, align: TextAlign.right));
-          qtyTaxRow.add(ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+          qtyTaxRow.add(ReceiptTableColumn(money(taxAmount),
               weight: 0.20, align: TextAlign.right));
         } else {
           qtyTaxRow.add(ReceiptTableColumn("", weight: 0.45));
@@ -1441,7 +1444,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(mrpTotalLabel,
               weight: 0.25, align: TextAlign.left),
-          ReceiptTableColumn(totalMrp.toStringAsFixed(2),
+          ReceiptTableColumn(money(totalMrp),
               weight: 0.25, align: TextAlign.left),
           ReceiptTableColumn(" ", weight: 0.50),
         ]));
@@ -1454,7 +1457,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(netAmountLabel,
               weight: 0.5, align: TextAlign.center, isBold: true),
-          ReceiptTableColumn(total.toStringAsFixed(2),
+          ReceiptTableColumn(money(total),
               weight: 0.5, align: TextAlign.center, isBold: true),
         ]));
       }
@@ -1489,7 +1492,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       // Subtotal
       if (showMRPTotal) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(subtotal.toStringAsFixed(2),
+          ReceiptTableColumn(money(subtotal),
               weight: 0.35, align: TextAlign.left),
           ReceiptTableColumn(subtotalLabel,
               weight: 0.65, align: TextAlign.right),
@@ -1499,7 +1502,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       // Discounts
       if (showDiscount && totalDiscountAmount > 0) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(totalDiscountAmount.toStringAsFixed(2),
+          ReceiptTableColumn(money(totalDiscountAmount),
               weight: 0.35, align: TextAlign.left),
           ReceiptTableColumn(discountLabel,
               weight: 0.65, align: TextAlign.right),
@@ -1509,7 +1512,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       // Tax
       if (showTax) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+          ReceiptTableColumn(money(taxAmount),
               weight: 0.35, align: TextAlign.left),
           ReceiptTableColumn(taxLabelArabic,
               weight: 0.65, align: TextAlign.right),
@@ -1521,7 +1524,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       // Net Total
       if (showNetAmount) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(total.toStringAsFixed(2),
+          ReceiptTableColumn(money(total),
               weight: 0.35, align: TextAlign.left, isBold: true),
           ReceiptTableColumn(netTotalLabel,
               weight: 0.65, align: TextAlign.right, isBold: true),
@@ -1549,12 +1552,12 @@ class ClassicReceiptLayout implements ReceiptLayout {
             if (isEnglish) {
               rows.add(ReceiptTableRow([
                 ReceiptTableColumn(label, weight: 0.5, align: TextAlign.left),
-                ReceiptTableColumn(amt.toStringAsFixed(2),
+                ReceiptTableColumn(money(amt),
                     weight: 0.5, align: TextAlign.right),
               ]));
             } else {
               rows.add(ReceiptTableRow([
-                ReceiptTableColumn(amt.toStringAsFixed(2),
+                ReceiptTableColumn(money(amt),
                     weight: 0.5, align: TextAlign.left),
                 ReceiptTableColumn(label, weight: 0.5, align: TextAlign.right),
               ]));
@@ -1570,7 +1573,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
           isEnglish ? "You Saved:" : "لقد وفرت:");
       rows.add(SpacingRow(5));
       rows.add(TextRow(
-        "$savedLabel ${saved.toStringAsFixed(2)}",
+        "$savedLabel ${money(saved)}",
         isBold: true,
         scale: 0.9,
       ));

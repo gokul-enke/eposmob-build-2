@@ -830,6 +830,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
       builder: (context, localProductProvider, _) {
         final hasItems = localProductProvider.cartItems.isNotEmpty;
         final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
+        final showConfirmAndPrintButton =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings
+                    ?.showConfirmOrderButton ??
+                true;
         final canCheckout = hasItems;
         return SafeArea(
           top: false,
@@ -870,15 +875,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ),
                   const SizedBox(width: 12),
                   if (hasInternet) ...[
-                    _buildCounterActionButton(
-                      text: 'Confirm and Print',
-                      shortcutLabel: 'F6',
-                      color: const Color(0xFF5B8DEF),
-                      isDisabled: !canCheckout,
-                      onPressed: () => _orderPanelKey.currentState
-                          ?.showCurrentCartCheckoutFromParent(),
-                    ),
-                    const SizedBox(width: 12),
+                    if (showConfirmAndPrintButton) ...[
+                      _buildCounterActionButton(
+                        text: 'Confirm and Print',
+                        shortcutLabel: 'F6',
+                        color: const Color(0xFF5B8DEF),
+                        isDisabled: !canCheckout,
+                        onPressed: () => _orderPanelKey.currentState
+                            ?.showCurrentCartCheckoutFromParent(),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                     _buildCounterActionButton(
                       text: 'Confirm Order',
                       shortcutLabel: 'F2',

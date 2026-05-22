@@ -91,17 +91,24 @@ class Premium2ReceiptLayout implements ReceiptLayout {
       List<ReceiptRow> part1Rows = [];
       List<ReceiptRow> part2Rows = [];
 
-      // ========== LOAD SAR SYMBOL ==========
+      // ========== LOAD CURRENCY SYMBOL ==========
+      final String currencyCode =
+          (appSettings?.currency.toString() ?? '').trim().toUpperCase();
+      final bool useTextCurrencySymbol = currencyCode == 'INR';
       ui.Image? sarSymbol;
-      try {
-        sarSymbol =
-            await _loadAssetImage('assets/images/saudi_riyal_symbol.png');
-        if (sarSymbol != null) {
-          debugPrint(
-              "[PREMIUM] SAR symbol loaded: ${sarSymbol.width}x${sarSymbol.height}");
+      if (!useTextCurrencySymbol) {
+        try {
+          sarSymbol =
+              await _loadAssetImage('assets/images/saudi_riyal_symbol.png');
+          if (sarSymbol != null) {
+            debugPrint(
+                "[PREMIUM] SAR symbol loaded: ${sarSymbol.width}x${sarSymbol.height}");
+          }
+        } catch (e) {
+          debugPrint("[PREMIUM] Error loading SAR symbol: $e");
         }
-      } catch (e) {
-        debugPrint("[PREMIUM] Error loading SAR symbol: $e");
+      } else {
+        debugPrint("[PREMIUM] Using INR text currency symbol for totals");
       }
 
       // ========== LOGO SECTION ==========
@@ -1386,6 +1393,9 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
     // Get currency from appSettings
     final String currency = appSettings?.currency ?? 'INR';
+    final String? currencySymbol =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : null;
+    final ui.Image? currencyIcon = currencySymbol == null ? sarSymbol : null;
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1469,7 +1479,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         value: subtotal.toStringAsFixed(2),
         isBold: true,
         scale: 1.1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1480,7 +1491,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         value: discountAmountValue.toStringAsFixed(2),
         isBold: true,
         scale: 1.1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1491,7 +1503,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         value: taxAmount.toStringAsFixed(2),
         isBold: true,
         scale: 1.1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1502,7 +1515,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         value: total.toStringAsFixed(2),
         isBold: true,
         scale: 1.1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1536,7 +1550,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
               value: amt.toStringAsFixed(2),
               isBold: true,
               scale: 1.1,
-              icon: sarSymbol,
+              icon: currencyIcon,
+              currencySymbol: currencySymbol,
             ));
           }
         });
@@ -1565,7 +1580,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
                   value: amt.toStringAsFixed(2),
                   isBold: true,
                   scale: 1.1,
-                  icon: sarSymbol,
+                  icon: currencyIcon,
+                  currencySymbol: currencySymbol,
                 ));
               }
             });
@@ -1591,7 +1607,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
           value: params.paidAmount!.toStringAsFixed(2),
           isBold: true,
           scale: 1.1,
-          icon: sarSymbol,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
     }
@@ -2117,6 +2134,21 @@ class BoxedTotalsRow extends ReceiptRow {
               iconSize);
           canvas.drawImageRect(item.icon!, src, dst, Paint());
           valueOffsetX += iconSize + 4; // Space after icon
+        } else if (item.currencySymbol != null &&
+            item.currencySymbol!.isNotEmpty) {
+          final symbolPainter = TextPainter(
+            text: TextSpan(
+              text: item.currencySymbol!,
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: itemFontSize,
+                fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          symbolPainter.paint(canvas, Offset(valueOffsetX, currentY));
+          valueOffsetX += symbolPainter.width + 4;
         }
 
         // Value on Left (after icon)
@@ -2222,6 +2254,7 @@ class BoxedLineItem {
   final double scale;
   final bool isSeparator;
   final ui.Image? icon;
+  final String? currencySymbol;
 
   BoxedLineItem({
     this.label = '',
@@ -2230,5 +2263,6 @@ class BoxedLineItem {
     this.scale = 1.0,
     this.isSeparator = false,
     this.icon,
+    this.currencySymbol,
   });
 }
