@@ -199,5 +199,6 @@ class SideBarController extends GetxController {
     QuotationDetailsScreen(
         quotationId: null), // 88 Quotation Details (ID from Provider)
     BillingPageRestaurant(), // 89 Restaurant Billing Page
+    BillingPage(), // 90 Supermarket Billing Page (direct)
   ];
 }

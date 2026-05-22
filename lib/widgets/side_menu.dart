@@ -310,6 +310,29 @@ class _SideMenuState extends State<SideMenu> {
             },
           ),
 
+          // 1.5. SUPERMARKET (Index: 90)
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              final hasPermission = roleProvider.currentUserHasPermissionSync(
+                  'menu.supermarket.main.access');
+
+              if (!hasPermission) {
+                return const SizedBox.shrink();
+              }
+
+              return Obx(
+                () => DrawerListTile(
+                  icon: fa.FontAwesomeIcons.store,
+                  title: 'Supermarket',
+                  onTap: () {
+                    sideBarController.index.value = 90;
+                  },
+                  selected: sideBarController.index.value == 90,
+                ),
+              );
+            },
+          ),
+
           // 2. DASHBOARD (Index: 1)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
@@ -438,7 +461,7 @@ class _SideMenuState extends State<SideMenu> {
                       'menu.sales.day_closing.access');
               final hasQuotationPermission =
                   roleProvider.currentUserHasPermissionSync(
-                          'menu.sales.quotations.access') ||
+                          'menu.quotations.main.access') ||
                       userRole.isNotEmpty;
               final isCompanyAdmin = userRole == 'company_admin';
 
@@ -518,7 +541,7 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider.currentUserHasPermissionSync(
-                      'menu.sales.quotations.access') ||
+                      'menu.quotations.main.access') ||
                   userRole.isNotEmpty;
 
               if (!hasPermission) {
