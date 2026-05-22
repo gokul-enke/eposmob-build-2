@@ -7004,8 +7004,10 @@ class BillingPageState extends State<BillingPage>
         (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
         (double.tryParse(_debitAmountController.text) ?? 0) > 0;
 
-    // Apply default payment method only when no existing/rehydrated payment state exists
-    if (!hasExistingPaymentState) {
+    // Apply default payment method only when no existing/rehydrated payment state exists.
+    // Quotations are estimates, so payment must stay unconfigured unless a future
+    // explicit advance-payment flow is added.
+    if (!isQuotationMode && !hasExistingPaymentState) {
       _applyDefaultPaymentMethod();
     }
 
@@ -7045,7 +7047,8 @@ class BillingPageState extends State<BillingPage>
               localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
           selectedCustomer: checkoutSelectedCustomer,
-          hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
+          hasOpenedPaymentModalOnce:
+              isQuotationMode ? false : _hasOpenedPaymentModalOnce,
 
           // Delivery State
           enableDelivery: deliveryEnabled,
@@ -7078,20 +7081,23 @@ class BillingPageState extends State<BillingPage>
           },
 
           // Payment State
-          isCashSelected: _isCashSelected,
-          isCardSelected: _isCardSelected,
-          isUpiSelected: _isUpiSelected,
-          isCodSelected: _isCodSelected,
-          isDebitSelected: _isDebitSelected,
-          cashAmount: _cashAmountController.text,
-          cardAmount: _cardAmountController.text,
-          upiAmount: _upiAmountController.text,
-          codAmount: _codAmountController.text,
-          debitAmount: _debitAmountController.text,
-          transactionNumber: _transactionNumberController.text,
-          toCustomerCreditEnabled: _toCustomerCreditEnabled,
-          toCustomerCreditAmount:
-              double.tryParse(_debitAmountController.text) ?? 0.0,
+          isCashSelected: isQuotationMode ? false : _isCashSelected,
+          isCardSelected: isQuotationMode ? false : _isCardSelected,
+          isUpiSelected: isQuotationMode ? false : _isUpiSelected,
+          isCodSelected: isQuotationMode ? false : _isCodSelected,
+          isDebitSelected: isQuotationMode ? false : _isDebitSelected,
+          cashAmount: isQuotationMode ? '' : _cashAmountController.text,
+          cardAmount: isQuotationMode ? '' : _cardAmountController.text,
+          upiAmount: isQuotationMode ? '' : _upiAmountController.text,
+          codAmount: isQuotationMode ? '' : _codAmountController.text,
+          debitAmount: isQuotationMode ? '' : _debitAmountController.text,
+          transactionNumber:
+              isQuotationMode ? '' : _transactionNumberController.text,
+          toCustomerCreditEnabled:
+              isQuotationMode ? false : _toCustomerCreditEnabled,
+          toCustomerCreditAmount: isQuotationMode
+              ? 0.0
+              : double.tryParse(_debitAmountController.text) ?? 0.0,
           cashMethodId: billingProvider.cashPaymentMethodId,
           cardMethodId: billingProvider.cardPaymentMethodId,
           upiMethodId: billingProvider.upiPaymentMethodId,
@@ -7512,23 +7518,13 @@ class BillingPageState extends State<BillingPage>
   }
 
   Future<bool> _printQuotationDetails(QuotationDetailsData details) {
-    final paymentData = _getPaymentMethodData();
-    final paidMethods = _getPaidMethods();
-    final paymentBreakdown = <String, dynamic>{};
-    for (final method in paidMethods) {
-      final methodName = method['method']?.toString();
-      if (methodName == null || methodName.isEmpty) continue;
-      paymentBreakdown[methodName] = method['amount'] ?? 0;
-    }
-    final totalPaid = _getTotalPaidAmount();
-
     return const QuotationPrintService().printQuotationDetails(
       context,
       details,
       customerOldBalance: selectedCustomer?.balance,
-      paidAmount: totalPaid > 0 ? totalPaid : null,
-      paymentMethod: paymentData['paymentMethod'],
-      paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+      paidAmount: null,
+      paymentMethod: null,
+      paymentBreakdown: null,
       customerType: selectedCustomer?.customerType,
       deliveryMethod: deliveryMethod,
       isDefaultCustomer:
@@ -8981,6 +8977,10 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _initializePaymentMethod() {
+    if (_isQuotationPage) {
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
@@ -8999,6 +8999,10 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _applyDefaultPaymentMethod() {
+    if (_isQuotationPage) {
+      return;
+    }
+
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 

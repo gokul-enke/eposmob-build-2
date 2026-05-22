@@ -360,6 +360,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (requested == null) return 0;
     if (requested < 0 || requested > 3) return 0;
     if (requested == 1 && !widget.enableDelivery) return 0;
+    if (widget.isQuotationMode && requested == 3) return 0;
     return requested;
   }
 
@@ -379,7 +380,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
 
     _hasEvaluatedSkipCustomerSelection = true;
-    if (appSettings.skipCustomerSelection && mounted && _currentStep != 3) {
+    if (appSettings.skipCustomerSelection &&
+        !widget.isQuotationMode &&
+        mounted &&
+        _currentStep != 3) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         setState(() {
@@ -425,6 +429,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   void _applyDefaultPaymentMethod() {
+    if (widget.isQuotationMode) {
+      return;
+    }
+
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 
@@ -553,7 +561,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     if (event.logicalKey == LogicalKeyboardKey.f5) {
       debugPrint("⌨️ [CheckoutModal] Handling F5 -> payment step");
-      _goToStep(3);
+      if (!widget.isQuotationMode) {
+        _goToStep(3);
+      }
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.f6) {
@@ -586,11 +596,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
       next = 2; // Skip delivery
     }
 
+    final maxStep = widget.isQuotationMode ? 2 : 3;
+
     // Max steps logic: 0(Cust) -> 1(Del) -> 2(Disc) -> 3(Pay)
     // If delivery disabled: 0(Cust) -> 2(Disc) -> 3(Pay)
 
     // Original was 0,1,2,3. Now expanding.
-    if (next <= 3) {
+    if (next <= maxStep) {
       setState(() {
         _currentStep = next;
       });
@@ -615,6 +627,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (_isAddingCustomer) return;
     if (_isSelectionOnly && step != _currentStep) return;
     if (!widget.enableDelivery && step == 1) return;
+    if (widget.isQuotationMode && step == 3) return;
     if (step >= 0 && step <= 3) {
       setState(() {
         _currentStep = step;
@@ -788,8 +801,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
     });
     widget.onCustomerSelected(customer);
     if (!_isSelectionOnly) {
-      // Auto-move to payment tab after customer selection
-      _goToStep(3);
+      if (widget.isQuotationMode) {
+        _goToStep(widget.enableDelivery ? 1 : 2);
+      } else {
+        // Auto-move to payment tab after customer selection
+        _goToStep(3);
+      }
     }
   }
 
@@ -1066,9 +1083,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     isActive: _currentStep > (widget.enableDelivery ? 1 : 0)),
                 _buildStepIndicator(2, 'Discount', Icons.discount,
                     isActive: _currentStep == 2, isCompleted: hasDiscount),
-                _buildStepConnector(isActive: _currentStep > 2),
-                _buildStepIndicator(3, 'Payment', Icons.payment,
-                    isActive: _currentStep == 3, isCompleted: hasPayment),
+                if (!widget.isQuotationMode) ...[
+                  _buildStepConnector(isActive: _currentStep > 2),
+                  _buildStepIndicator(3, 'Payment', Icons.payment,
+                      isActive: _currentStep == 3, isCompleted: hasPayment),
+                ],
               ],
             ),
           ),
@@ -2396,7 +2415,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       initialPercentageDiscount: _localPercentageDiscount,
                       isCouponApplied: _localIsCouponApplied,
                       showAsDialog: false,
-                      showSkipButton: true,
+                      showSkipButton: !widget.isQuotationMode,
                       onSkip: () => _goToStep(3),
                       showShadow: false,
                       fullWidth: true,
@@ -3058,7 +3077,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         final displayBalance = rawBalance < 0 ? 0.0 : rawBalance;
 
         final bool hasCustomer = _localSelectedCustomer != null;
-        final bool hasPayment = _hasPaymentMethod();
+        final bool hasPayment = !widget.isQuotationMode && _hasPaymentMethod();
         final bool hasDiscount = _localIsCouponApplied ||
             _localFlatDiscount > 0 ||
             _localPercentageDiscount > 0;
@@ -3099,13 +3118,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   Icons.discount_outlined,
                   2,
                 ),
-                _buildClickableCheckItem(
-                  'Payment',
-                  _hasPaymentMethod() ? 'Configured' : 'Not Configured',
-                  hasPayment,
-                  Icons.payment_outlined,
-                  3,
-                ),
+                if (!widget.isQuotationMode)
+                  _buildClickableCheckItem(
+                    'Payment',
+                    _hasPaymentMethod() ? 'Configured' : 'Not Configured',
+                    hasPayment,
+                    Icons.payment_outlined,
+                    3,
+                  ),
               ];
 
               return Wrap(
@@ -3200,12 +3220,15 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   ? const Color(0xFF059669)
                                   : const Color(0xFFDC2626)),
                         ],
-                        SizedBox(height: _isDenseCheckout ? 7 : 10),
-                        _buildSummaryRow('Total Paid', totalPaid, Colors.black),
-                        SizedBox(height: _isDenseCheckout ? 7 : 10),
-                        _buildSummaryRow(
-                            'Balance', displayBalance, const Color(0xFF059669),
-                            labelColor: const Color(0xFF059669)),
+                        if (!widget.isQuotationMode) ...[
+                          SizedBox(height: _isDenseCheckout ? 7 : 10),
+                          _buildSummaryRow(
+                              'Total Paid', totalPaid, Colors.black),
+                          SizedBox(height: _isDenseCheckout ? 7 : 10),
+                          _buildSummaryRow('Balance', displayBalance,
+                              const Color(0xFF059669),
+                              labelColor: const Color(0xFF059669)),
+                        ],
                       ],
                     ),
                   ),

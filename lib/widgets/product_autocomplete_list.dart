@@ -51,7 +51,8 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
   FocusNode? _fieldFocusNode;
 
   void requestFieldFocus() {
-    debugPrint("⌨️ [ProductAutocomplete] requestFieldFocus called | hasFieldNode=${_fieldFocusNode != null}");
+    debugPrint(
+        "⌨️ [ProductAutocomplete] requestFieldFocus called | hasFieldNode=${_fieldFocusNode != null}");
     _fieldFocusNode?.requestFocus();
   }
 
@@ -112,18 +113,35 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
     final lowerQuery = query.toLowerCase();
 
     // Search through only sellable products for billing autocomplete
-    return productProvider.sellableProducts.where((product) {
+    final results = productProvider.sellableProducts.where((product) {
       final nameMatch =
           (product.productName ?? '').toLowerCase().contains(lowerQuery);
       if (nameMatch) return true;
       if (itemCodeEnabled) {
         final itemCode = product.itemCode ?? '';
-        if (itemCode.isNotEmpty && itemCode.toLowerCase().contains(lowerQuery)) {
+        if (itemCode.isNotEmpty &&
+            itemCode.toLowerCase().contains(lowerQuery)) {
           return true;
         }
       }
       return false;
     }).toList();
+
+    final indexedResults = results.indexed.toList();
+    indexedResults.sort((first, second) {
+      final rankCompare = _productSearchRank(first.$2, lowerQuery)
+          .compareTo(_productSearchRank(second.$2, lowerQuery));
+      if (rankCompare != 0) return rankCompare;
+      return first.$1.compareTo(second.$1);
+    });
+
+    return indexedResults.map((entry) => entry.$2).toList();
+  }
+
+  int _productSearchRank(GetProduct product, String lowerQuery) {
+    final productName = product.productName?.trim().toLowerCase() ?? '';
+    if (productName.startsWith(lowerQuery)) return 0;
+    return 1;
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
@@ -190,8 +208,8 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
               SystemKeyboardPolicy.shouldSuppressForContext(
             context: context,
             fieldWantsVirtualKeyboardOnly:
-              widget.suppressSystemKeyboardOnAndroid,
-            );
+                widget.suppressSystemKeyboardOnAndroid,
+          );
           // Make sure the autocomplete keeps focus while typing via virtual keyboard
           void _ensureFocus() {
             if (!focusNode.hasFocus) {

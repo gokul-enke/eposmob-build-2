@@ -416,7 +416,32 @@ class MenuPanelState extends State<MenuPanel> {
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query.toLowerCase();
+      _focusedMenuItemIndex = 0;
     });
+  }
+
+  List<GetProduct> _rankSearchMatches(
+    List<GetProduct> products,
+    String query,
+  ) {
+    if (query.isEmpty) return products;
+
+    final normalizedQuery = query.trim().toLowerCase();
+    final indexedProducts = products.indexed.toList();
+
+    int matchRank(GetProduct product) {
+      final productName = product.productName?.trim().toLowerCase() ?? '';
+      if (productName.startsWith(normalizedQuery)) return 0;
+      return 1;
+    }
+
+    indexedProducts.sort((first, second) {
+      final rankCompare = matchRank(first.$2).compareTo(matchRank(second.$2));
+      if (rankCompare != 0) return rankCompare;
+      return first.$1.compareTo(second.$1);
+    });
+
+    return indexedProducts.map((entry) => entry.$2).toList();
   }
 
   void _clearSearch() {
@@ -734,6 +759,7 @@ class MenuPanelState extends State<MenuPanel> {
             return product.productName?.toLowerCase().contains(_searchQuery) ??
                 false;
           }).toList();
+          items = _rankSearchMatches(items, _searchQuery);
         }
 
         final int fontLevel = fontProvider.fontSizeLevel;
