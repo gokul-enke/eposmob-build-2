@@ -11,24 +11,6 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
     if (_loadedLocalDraftId != null) {
       localProductProvider.deleteSavedOrder(_loadedLocalDraftId!);
       _loadedLocalDraftId = null;
-    } else {
-      // Fallback: clean up any pending drafts for the current context
-      // (handles auto-saved drafts that were never tracked by _loadedLocalDraftId)
-      final staleDrafts = localProductProvider.savedOrders.where((o) {
-        if ((o.status ?? '').toLowerCase() != 'pending') return false;
-        if (widget.tableId != null) {
-          return o.tableId == widget.tableId;
-        }
-        if (widget.preselectedDeliveryMethodId != null &&
-            widget.preselectedDeliveryMethodId!.isNotEmpty) {
-          return o.tableId == null &&
-              o.deliveryMethodId == widget.preselectedDeliveryMethodId;
-        }
-        return false;
-      }).toList();
-      for (final draft in staleDrafts) {
-        localProductProvider.deleteSavedOrder(draft.id);
-      }
     }
 
     _refreshLocalDrafts();

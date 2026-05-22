@@ -612,6 +612,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
         // Use LocalProductProvider to clear the cart
         localProductProvider.clearCart();
+        localProductProvider.clearCurrentOrder();
         setState(() {
           _orderComment = '';
           _loadedLocalDraftId = null;
@@ -663,10 +664,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
       debugPrint('📝 paymentData: $paymentData');
 
       // If a local draft is loaded, update it instead of creating a new one
-      if (_loadedLocalDraftId != null) {
+      final targetDraftId =
+          _loadedLocalDraftId ?? localProductProvider.currentOrder?.id;
+      final shouldUpdateExistingDraft = targetDraftId != null &&
+          localProductProvider.findOrderById(targetDraftId) != null;
+      if (shouldUpdateExistingDraft) {
         debugPrint('📝 Updating existing local draft $_loadedLocalDraftId');
         localProductProvider.updateSavedOrder(
-          _loadedLocalDraftId!,
+          targetDraftId,
           customerName: selectedCustomerNameForDraft,
           customerPhone: selectedCustomerPhoneForDraft,
           comment: draftComment.isNotEmpty ? draftComment : null,
@@ -728,6 +733,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
 
       // Clear cart and refresh local drafts
       localProductProvider.clearCart();
+      localProductProvider.clearCurrentOrder();
       setState(() {
         _loadedLocalDraftId = null;
         _orderComment = '';
@@ -735,9 +741,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
         _showSavedOrdersView = true;
       });
       _refreshLocalDrafts();
+      widget.onLocalDraftSaved?.call();
       if (_usesCounterOrderTabs) {
         resetActiveOrderContext();
-        widget.onLocalDraftSaved?.call();
       }
     } catch (e) {
       showScaffoldError(
