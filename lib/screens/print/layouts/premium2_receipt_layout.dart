@@ -71,6 +71,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
+    debugPrint(
+        "[PREMIUM][LOGO] Config: showLogo=${billDocumentConfig.showLogo}, logo='${billDocumentConfig.logo}', layout=$layoutId, order=${params.orderNumber}");
 
     try {
       debugPrint("Connecting to printer...");
@@ -108,21 +110,36 @@ class Premium2ReceiptLayout implements ReceiptLayout {
       // ========== LOGO SECTION ==========
       if (billDocumentConfig.showLogo == 1) {
         try {
+          debugPrint(
+              "[PREMIUM][LOGO] Logo section enabled. Attempting logo load...");
           ui.Image? logo;
           if (billDocumentConfig.logo != null &&
               billDocumentConfig.logo.toString().isNotEmpty) {
+            debugPrint(
+                "[PREMIUM][LOGO] Raw logo value: '${billDocumentConfig.logo}'");
             logo =
                 await _fetchNetworkUiImage(billDocumentConfig.logo.toString());
+          } else {
+            debugPrint(
+                "[PREMIUM][LOGO] Logo path is empty/null in billDocumentConfig.");
           }
 
           if (logo != null) {
             debugPrint("[PREMIUM] Logo loaded: ${logo.width}x${logo.height}");
             part1Rows.add(ImageRow(logo, width: printWidth * 0.6));
             part1Rows.add(SpacingRow(_headerGap));
+            debugPrint(
+                "[PREMIUM][LOGO] Logo row added to receipt with width=${(printWidth * 0.6).toStringAsFixed(1)}");
+          } else {
+            debugPrint(
+                "[PREMIUM][LOGO] Logo image is null after fetch; row not added.");
           }
         } catch (e) {
           debugPrint("[PREMIUM] Error loading logo: $e");
         }
+      } else {
+        debugPrint(
+            "[PREMIUM][LOGO] Logo section skipped because showLogo != 1.");
       }
 
       // ========== HEADER SECTION (Modern & Clean) ==========
@@ -1970,6 +1987,7 @@ class Premium2ReceiptLayout implements ReceiptLayout {
           ? '${APPUrl.baseURL}$url'
           : '${APPUrl.baseURL}/$url';
     }
+    debugPrint("[PREMIUM][LOGO] Resolved logo URL: $fullUrl");
 
     try {
       final uri = Uri.parse(fullUrl);
@@ -1982,13 +2000,21 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
+      debugPrint(
+          "[PREMIUM][LOGO] Fetching logo: $urlWithStore (store_id=$activeStoreId)");
 
       final response = await http.get(urlWithStore);
+      debugPrint(
+          "[PREMIUM][LOGO] Logo HTTP status=${response.statusCode}, bytes=${response.bodyBytes.length}");
       if (response.statusCode == 200) {
         final codec = await ui.instantiateImageCodec(response.bodyBytes);
         final fi = await codec.getNextFrame();
+        debugPrint(
+            "[PREMIUM][LOGO] Decoded logo image: ${fi.image.width}x${fi.image.height}");
         return fi.image;
       }
+      debugPrint(
+          "[PREMIUM][LOGO] Non-200 response while loading logo. URL=$urlWithStore");
     } catch (e) {
       debugPrint("[PremiumReceiptLayout] Error fetching image: $e");
     }
