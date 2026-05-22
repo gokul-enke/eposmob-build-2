@@ -36,6 +36,7 @@ class ReceiptLayoutParams {
   final String? customerVatNumber;
   final String? customerCrNumber;
   final String? customerType;
+  final String? documentTitleOverride;
   final Map<String, dynamic>?
       paymentBreakdown; // Added for multi-payment support
   // ZATCA fields for Saudi Arabia e-invoicing
@@ -78,6 +79,7 @@ class ReceiptLayoutParams {
     this.customerVatNumber,
     this.customerCrNumber,
     this.customerType,
+    this.documentTitleOverride,
     this.paymentBreakdown,
     this.zatcaVatNumber,
     this.zatcaCompanyName,
@@ -91,13 +93,23 @@ class ReceiptLayoutParams {
   Map<String, DisplayOption>? get displayConfig {
     final options = billDocumentConfig.displayConfiguration?.options;
     if (options == null) return null;
+    final titleOverride = documentTitleOverride?.trim();
 
     final normalizedType = customerType?.trim().toUpperCase();
     final hasKycDetails = (customerVatNumber?.trim().isNotEmpty ?? false) ||
         (customerCrNumber?.trim().isNotEmpty ?? false);
     final isB2B = normalizedType == 'B2B' ||
         ((normalizedType == null || normalizedType.isEmpty) && hasKycDetails);
-    if (!isB2B) return options;
+    if (!isB2B) {
+      if (titleOverride == null || titleOverride.isEmpty) return options;
+      final merged = Map<String, DisplayOption>.from(options);
+      merged['showInvoiceTitle'] = DisplayOption(
+        visible: true,
+        value: titleOverride,
+        defaultValue: options['showInvoiceTitle']?.defaultValue,
+      );
+      return merged;
+    }
 
     final b2bInvoiceTitle =
         options['showInvoiceTitleB2B'] ?? options['showInvoiceTitleB2b'];
@@ -112,11 +124,27 @@ class ReceiptLayoutParams {
     if (b2bInvoiceTitle == null ||
         (b2bInvoiceTitle.visible != true &&
             (b2bTitleValue == null || b2bTitleValue.isEmpty))) {
+      if (titleOverride != null && titleOverride.isNotEmpty) {
+        final merged = Map<String, DisplayOption>.from(options);
+        merged['showInvoiceTitle'] = DisplayOption(
+          visible: true,
+          value: titleOverride,
+          defaultValue: options['showInvoiceTitle']?.defaultValue,
+        );
+        return merged;
+      }
       return options;
     }
 
     final merged = Map<String, DisplayOption>.from(options);
-    merged['showInvoiceTitle'] = b2bInvoiceTitle;
+    merged['showInvoiceTitle'] =
+        titleOverride != null && titleOverride.isNotEmpty
+            ? DisplayOption(
+                visible: true,
+                value: titleOverride,
+                defaultValue: b2bInvoiceTitle.defaultValue,
+              )
+            : b2bInvoiceTitle;
     return merged;
   }
 

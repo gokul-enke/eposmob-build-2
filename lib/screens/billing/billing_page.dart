@@ -25,6 +25,7 @@ import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/models/quotation_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -53,6 +54,7 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/billing/utils/billing_focus_orders.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 import 'package:pos_machine/services/print_service.dart';
+import 'package:pos_machine/services/quotation_print_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
@@ -260,6 +262,8 @@ class BillingPageState extends State<BillingPage>
   String? deliveryTime;
   String? deliveryAddress;
   double? _selectedDeliveryCharge;
+  DateTime _quotationDate = DateTime.now();
+  DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -951,7 +955,6 @@ class BillingPageState extends State<BillingPage>
         key == LogicalKeyboardKey.f10 ||
         key == LogicalKeyboardKey.f11 ||
         key == LogicalKeyboardKey.f12 ||
-        key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.insert ||
         key == LogicalKeyboardKey.escape;
   }
@@ -1013,7 +1016,7 @@ class BillingPageState extends State<BillingPage>
     }
 
     if (event.logicalKey == LogicalKeyboardKey.tab &&
-        !HardwareKeyboard.instance.isShiftPressed &&
+        !HardwareKeyboard.instance.isAltPressed &&
         _barcodeNode.hasFocus) {
       debugPrint(
           "⌨️ [BillingPage] Handling Tab from Barcode -> Search Product | ${_focusDebugSummary()}");
@@ -1021,8 +1024,12 @@ class BillingPageState extends State<BillingPage>
       return true;
     }
 
+    final isAltCashDrawerShortcut = HardwareKeyboard.instance.isAltPressed &&
+        !HardwareKeyboard.instance.isControlPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyD;
     if (!_isBillingShortcutKey(event.logicalKey) &&
-        !_isBillingControlShortcut(event.logicalKey)) {
+        !_isBillingControlShortcut(event.logicalKey) &&
+        !isAltCashDrawerShortcut) {
       return false;
     }
     debugPrint(
@@ -1117,9 +1124,10 @@ class BillingPageState extends State<BillingPage>
         }
       }
 
-      if (!HardwareKeyboard.instance.isControlPressed &&
+      if (HardwareKeyboard.instance.isAltPressed &&
+          !HardwareKeyboard.instance.isControlPressed &&
           event.logicalKey == LogicalKeyboardKey.keyD) {
-        debugPrint("⌨️ [BillingPage] Handling D -> open cash drawer");
+        debugPrint("Handling Alt+D -> open cash drawer");
         unawaited(_openCashDrawerFromShortcut());
         return;
       }
@@ -1215,7 +1223,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  /// Opens the cash drawer through [CashDrawerService]. Triggered by Ctrl+D.
+  /// Opens the cash drawer through [CashDrawerService]. Triggered by Alt+D.
   Future<void> _openCashDrawerFromShortcut() async {
     if (!mounted) return;
     try {
@@ -3895,11 +3903,11 @@ class BillingPageState extends State<BillingPage>
 
   KeyEventResult _handleCartTableTabKey(int cartLength) {
     const int lastCellIndex = 4;
-    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final isAltPressed = HardwareKeyboard.instance.isAltPressed;
     final rowIndex = (_cartTableFocusedRowIndex ?? 0).clamp(0, cartLength - 1);
     final cellIndex = _cartTableFocusedCellIndex;
 
-    if (isShiftPressed) {
+    if (isAltPressed) {
       if (cellIndex == null) {
         return KeyEventResult.ignored;
       }
@@ -7104,6 +7112,13 @@ class BillingPageState extends State<BillingPage>
               ? 'Create & Print Quote'
               : (isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print'),
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
+          isQuotationMode: isQuotationMode,
+          initialQuotationDate: _quotationDate,
+          initialQuotationExpiryDate: _quotationExpiryDate,
+          onQuotationDatesUpdated: (quotationDate, expiryDate) {
+            _quotationDate = quotationDate;
+            _quotationExpiryDate = expiryDate;
+          },
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -7345,45 +7360,107 @@ class BillingPageState extends State<BillingPage>
       });
       return;
     }
+    if (!customerProvider.hasSelectedCustomer ||
+        customerProvider.selectedCustomerID == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Please select a customer before creating quotation.',
+      );
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+      return;
+    }
+    if (_quotationExpiryDate.isBefore(_quotationDate)) {
+      showScaffoldError(
+        context: context,
+        message: 'Expiry date cannot be before quotation date.',
+      );
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+      return;
+    }
 
     try {
       final payload = {
         'customer_id': customerProvider.selectedCustomerID,
         'store_id': storeProvider.activeStore?.storeId,
-        'quotation_date': DateFormat('yyyy-MM-dd').format(DateTime.now()),
-        'expiry_date': DateFormat('yyyy-MM-dd')
-            .format(DateTime.now().add(const Duration(days: 30))),
+        'quotation_date': DateFormat('yyyy-MM-dd').format(_quotationDate),
+        'expiry_date': DateFormat('yyyy-MM-dd').format(_quotationExpiryDate),
         'comment': _commentController.text, // Reusing delivery comment as note
-        'tax_type': 'exclusive',
-        'sub_total': localProductProvider.priceSummary?.subTotal,
-        'total_tax': localProductProvider.priceSummary?.totalTax,
-        'grand_total': localProductProvider.priceSummary?.netPayable,
-        'total_discount': localProductProvider.priceSummary?.discount ?? 0.0,
-        'terms_conditions': '',
         'items': localProductProvider.cartItems.map((item) {
-          return {
+          final itemMap = <String, dynamic>{
             'product_id': item.product.productId,
-            'quantity': item.quantity,
-            'price': item.price,
-            'tax_id':
-                (item.product.taxes != null && item.product.taxes!.isNotEmpty)
-                    ? item.product.taxes!.first.id
-                    : null,
+            'quantity': item.hasSaleUnit ? item.displayQuantity : item.quantity,
+            'price': item.hasSaleUnit ? item.displayPrice : item.price,
           };
+          if (item.saleUnitId != null) {
+            itemMap['product_sale_unit_id'] = item.saleUnitId;
+          }
+          return itemMap;
         }).toList(),
       };
 
-      await quotationsProvider.createQuotation(
+      final response = await quotationsProvider.createQuotation(
         accessToken: authProvider.token ?? '',
         data: payload,
       );
+      debugPrint(
+          '🧾 BILLING QUOTATION CREATE RESPONSE: ${json.encode(response)}');
 
       if (mounted) {
-        showScaffold(
-          context: context,
-          message: 'Quotation created successfully!',
-        );
-        _clearCart();
+        if (response['status'] == 'success') {
+          showScaffold(
+            context: context,
+            message: 'Quotation created successfully!',
+          );
+          final now = DateTime.now();
+          _quotationDate = now;
+          _quotationExpiryDate = now.add(const Duration(days: 30));
+          if (shouldPrint) {
+            final quotationId = _extractCreatedQuotationId(response);
+            debugPrint(
+                '🧾 BILLING QUOTATION EXTRACTED ID FOR PRINT: $quotationId');
+            if (quotationId == null) {
+              showScaffoldError(
+                context: context,
+                message:
+                    'Quotation created, but print failed because the API response did not include quotation id.',
+              );
+            } else {
+              final details = await quotationsProvider.fetchQuotationDetails(
+                accessToken: authProvider.token ?? '',
+                quotationId: quotationId,
+              );
+              debugPrint(
+                  '🧾 BILLING QUOTATION DETAILS FOR PRINT: ${_quotationDetailsDebugJson(details)}');
+              if (!mounted) return;
+              if (details == null) {
+                showScaffoldError(
+                  context: context,
+                  message:
+                      'Quotation created, but details could not be loaded for printing.',
+                );
+              } else {
+                Future<bool> printOnce() => _printQuotationDetails(details);
+                final autoPrintSuccess = await printOnce();
+                await _maybePrintCustomerCopy(
+                  canPrompt: autoPrintSuccess,
+                  printAction: printOnce,
+                );
+              }
+            }
+          }
+          _clearCart();
+        } else {
+          showScaffoldError(
+            context: context,
+            message: response['message'] ?? 'Failed to create quotation',
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -7400,6 +7477,105 @@ class BillingPageState extends State<BillingPage>
         });
       }
     }
+  }
+
+  dynamic _extractCreatedQuotationId(Map<String, dynamic> response) {
+    dynamic readPath(dynamic source, List<String> path) {
+      dynamic current = source;
+      for (final key in path) {
+        if (current is! Map) return null;
+        current = current[key];
+      }
+      return current;
+    }
+
+    final candidates = <dynamic>[
+      response['quotation_id'],
+      response['id'],
+      readPath(response, ['data', 'quotation_id']),
+      readPath(response, ['data', 'id']),
+      readPath(response, ['data', 'quotation', 'id']),
+      readPath(response, ['quotation', 'id']),
+    ];
+
+    final data = response['data'];
+    if (data is int || data is String) {
+      candidates.add(data);
+    }
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final value = candidate.toString().trim();
+      if (value.isNotEmpty) return candidate;
+    }
+    return null;
+  }
+
+  Future<bool> _printQuotationDetails(QuotationDetailsData details) {
+    final paymentData = _getPaymentMethodData();
+    final paidMethods = _getPaidMethods();
+    final paymentBreakdown = <String, dynamic>{};
+    for (final method in paidMethods) {
+      final methodName = method['method']?.toString();
+      if (methodName == null || methodName.isEmpty) continue;
+      paymentBreakdown[methodName] = method['amount'] ?? 0;
+    }
+    final totalPaid = _getTotalPaidAmount();
+
+    return const QuotationPrintService().printQuotationDetails(
+      context,
+      details,
+      customerOldBalance: selectedCustomer?.balance,
+      paidAmount: totalPaid > 0 ? totalPaid : null,
+      paymentMethod: paymentData['paymentMethod'],
+      paymentBreakdown: paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
+      customerType: selectedCustomer?.customerType,
+      deliveryMethod: deliveryMethod,
+      isDefaultCustomer:
+          Provider.of<CustomerSelectionProvider>(context, listen: false)
+              .isDefaultCustomer,
+    );
+  }
+
+  Map<String, dynamic>? _quotationDetailsDebugJson(
+      QuotationDetailsData? details) {
+    if (details == null) return null;
+    return {
+      'id': details.id,
+      'quotation_number': details.quotationNumber,
+      'status': details.status,
+      'customer': {
+        'id': details.customer?.id,
+        'name': details.customer?.name,
+        'phone': details.customer?.phone,
+      },
+      'store': {
+        'id': details.store?.id,
+        'name': details.store?.name,
+      },
+      'quotation_date': details.quotationDate,
+      'expiry_date': details.expiryDate,
+      'sub_total': details.subTotal,
+      'discount': details.discount,
+      'tax': details.tax,
+      'grand_total': details.grandTotal,
+      'invoice_id': details.invoiceId,
+      'items': (details.items ?? [])
+          .map((item) => {
+                'id': item.id,
+                'product_id': item.productId,
+                'product_name': item.productName,
+                'category_id': item.categoryId,
+                'category_name': item.categoryName,
+                'unit': item.unit,
+                'unit_price': item.unitPrice,
+                'quantity': item.quantity,
+                'tax_rate': item.taxRate,
+                'tax_amount': item.taxAmount,
+                'total_price': item.totalPrice,
+              })
+          .toList(),
+    };
   }
 
   // Multi-payment helper methods

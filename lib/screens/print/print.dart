@@ -47,6 +47,7 @@ class PrintPage extends StatefulWidget {
   final String? customerVatNumber;
   final String? customerCrNumber;
   final String? customerType;
+  final String? documentTitleOverride;
   final Map<String, dynamic>?
       paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
@@ -78,6 +79,7 @@ class PrintPage extends StatefulWidget {
     this.customerVatNumber,
     this.customerCrNumber,
     this.customerType,
+    this.documentTitleOverride,
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
     this.netExcTax,
@@ -114,6 +116,7 @@ class PrintPage extends StatefulWidget {
     String? customerVatNumber,
     String? customerCrNumber,
     String? customerType,
+    String? documentTitleOverride,
     Map<String, dynamic>? paymentBreakdown,
     bool isDefaultCustomer = false,
     String? netExcTax,
@@ -234,6 +237,7 @@ class PrintPage extends StatefulWidget {
         customerVatNumber: customerVatNumber,
         customerCrNumber: customerCrNumber,
         customerType: customerType,
+        documentTitleOverride: documentTitleOverride,
         paymentBreakdown: paymentBreakdown,
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
@@ -244,7 +248,7 @@ class PrintPage extends StatefulWidget {
       );
       final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
       debugPrint(
-          '[PrintPage.autoPrint] resolved showInvoiceTitle visible=${invoiceTitleConfig?.visible}, value=${invoiceTitleConfig?.value}');
+          '[PrintPage.autoPrint] documentTitleOverride=${documentTitleOverride ?? 'null'}, resolved showInvoiceTitle visible=${invoiceTitleConfig?.visible}, value=${invoiceTitleConfig?.value}');
 
       // Print
       if (paperSize == '112mm' || paperSize == '80mm' || paperSize == '58mm') {
@@ -759,6 +763,7 @@ class _PrintPageState extends State<PrintPage> {
       customerVatNumber: widget.customerVatNumber,
       customerCrNumber: widget.customerCrNumber,
       customerType: widget.customerType,
+      documentTitleOverride: widget.documentTitleOverride,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
@@ -856,6 +861,7 @@ class _PrintPageState extends State<PrintPage> {
       customerVatNumber: widget.customerVatNumber,
       customerCrNumber: widget.customerCrNumber,
       customerType: widget.customerType,
+      documentTitleOverride: widget.documentTitleOverride,
       paymentBreakdown: widget.paymentBreakdown,
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,

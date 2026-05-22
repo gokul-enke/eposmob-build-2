@@ -1,9 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -21,6 +23,7 @@ class MenuPanel extends StatefulWidget {
   final int? activeCategoryId;
   final Function(GetProduct product, int quantity) onItemAdd;
   final bool isCompact;
+  final bool useFontCardModeInCompact;
   final Size screenSize;
   final dynamic selectedOrder; // New parameter to receive selected order
 
@@ -30,21 +33,59 @@ class MenuPanel extends StatefulWidget {
     required this.activeCategoryId,
     required this.onItemAdd,
     this.isCompact = false,
+    this.useFontCardModeInCompact = false,
     required this.screenSize,
     this.selectedOrder, // Make it optional for now, as it might be null
   });
 
   @override
-  State<MenuPanel> createState() => _MenuPanelState();
+  State<MenuPanel> createState() => MenuPanelState();
 }
 
-class _MenuPanelState extends State<MenuPanel> {
+class MenuPanelState extends State<MenuPanel> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _gridFocusNode = FocusNode();
+  final ScrollController _categoryScrollController = ScrollController();
+  final ScrollController _gridScrollController = ScrollController();
+  final List<GlobalKey> _categoryItemKeys = [];
   String _searchQuery = '';
   bool _isResyncingProducts = false;
+  int _focusedCategoryIndex = 0;
+  int _focusedMenuItemIndex = 0;
+  int _gridColumnCount = 1;
+  double _gridRowExtent = 120;
+
+  bool get _focusOutlineEnabled {
+    try {
+      return context.watch<KeyboardFocusHighlightProvider>().enabled;
+    } on ProviderNotFoundException {
+      return true;
+    }
+  }
+
+  void focusSearch() {
+    _searchFocusNode.requestFocus();
+  }
+
+  void focusCategories() {
+    _categoryFocusNode.requestFocus();
+    _scrollFocusedCategoryIntoView();
+  }
+
+  void focusMenuGrid() {
+    _gridFocusNode.requestFocus();
+  }
+
+  bool get _isConstrainedDesktop =>
+      widget.screenSize.width >= 900 &&
+      (widget.screenSize.width < 1180 || widget.screenSize.height <= 800);
 
   MenuCardMode _resolveCardMode(int fontLevel) {
-    if (widget.isCompact) return MenuCardMode.compact;
+    if (widget.isCompact && !widget.useFontCardModeInCompact) {
+      return MenuCardMode.compact;
+    }
     if (fontLevel <= 0) return MenuCardMode.compact;
     if (fontLevel == 1) return MenuCardMode.medium;
     return MenuCardMode.large;
@@ -58,6 +99,11 @@ class _MenuPanelState extends State<MenuPanel> {
       }
     }
     return product.attachment!.first.filePath;
+  }
+
+  String _formatMenuPrice(dynamic value) {
+    final parsed = value is num ? value.toDouble() : double.tryParse('$value');
+    return parsed?.toStringAsFixed(2) ?? '0.00';
   }
 
   void _showProductInfoDialog(
@@ -359,6 +405,11 @@ class _MenuPanelState extends State<MenuPanel> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
+    _categoryFocusNode.dispose();
+    _gridFocusNode.dispose();
+    _categoryScrollController.dispose();
+    _gridScrollController.dispose();
     super.dispose();
   }
 
@@ -372,7 +423,196 @@ class _MenuPanelState extends State<MenuPanel> {
     setState(() {
       _searchQuery = '';
       _searchController.clear();
+      _focusedMenuItemIndex = 0;
     });
+  }
+
+  void _ensureCategoryItemKeys(int count) {
+    while (_categoryItemKeys.length < count) {
+      _categoryItemKeys.add(GlobalKey());
+    }
+    if (_categoryItemKeys.length > count) {
+      _categoryItemKeys.removeRange(count, _categoryItemKeys.length);
+    }
+  }
+
+  KeyEventResult _handleSearchKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      focusMenuGrid();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      focusCategories();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleCategoryKey(
+    KeyEvent event,
+    List<dynamic> categories,
+    LocalProductProvider productProvider,
+  ) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final totalCategories = categories.length + 1;
+    if (totalCategories <= 0) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      setState(() {
+        _focusedCategoryIndex =
+            (_focusedCategoryIndex + 1).clamp(0, totalCategories - 1);
+      });
+      _scrollFocusedCategoryIntoView();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      setState(() {
+        _focusedCategoryIndex =
+            (_focusedCategoryIndex - 1).clamp(0, totalCategories - 1);
+      });
+      _scrollFocusedCategoryIntoView();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      focusSearch();
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      _selectFocusedCategory(categories, productProvider);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleGridKey(KeyEvent event, List<GetProduct> items) {
+    if (event is! KeyDownEvent || items.isEmpty) return KeyEventResult.ignored;
+    final maxIndex = items.length - 1;
+    int? nextIndex;
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      nextIndex = (_focusedMenuItemIndex + 1).clamp(0, maxIndex);
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      nextIndex = (_focusedMenuItemIndex - 1).clamp(0, maxIndex);
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      nextIndex = (_focusedMenuItemIndex + _gridColumnCount).clamp(0, maxIndex);
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (_focusedMenuItemIndex < _gridColumnCount) {
+        focusSearch();
+        return KeyEventResult.handled;
+      }
+      nextIndex = (_focusedMenuItemIndex - _gridColumnCount).clamp(0, maxIndex);
+    } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      widget.onItemAdd(items[_focusedMenuItemIndex.clamp(0, maxIndex)], 1);
+      return KeyEventResult.handled;
+    }
+
+    if (nextIndex != null) {
+      setState(() => _focusedMenuItemIndex = nextIndex!);
+      _scrollFocusedMenuItemIntoView();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _selectFocusedCategory(
+    List<dynamic> categories,
+    LocalProductProvider productProvider,
+  ) {
+    setState(() => _focusedMenuItemIndex = 0);
+    if (_focusedCategoryIndex == 0) {
+      widget.onCategoryChanged(0);
+      productProvider.refreshProducts();
+      return;
+    }
+
+    final category = categories[_focusedCategoryIndex - 1];
+    final categoryId = category.categoryId;
+    widget.onCategoryChanged(categoryId);
+    if (categoryId == 0) {
+      productProvider.refreshProducts();
+    } else {
+      productProvider.listAllProducts(categoryId: categoryId);
+    }
+  }
+
+  void _scrollFocusedCategoryIntoView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_categoryScrollController.hasClients) return;
+      if (_focusedCategoryIndex >= 0 &&
+          _focusedCategoryIndex < _categoryItemKeys.length) {
+        final keyContext =
+            _categoryItemKeys[_focusedCategoryIndex].currentContext;
+        if (keyContext != null) {
+          Scrollable.ensureVisible(
+            keyContext,
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            alignment: 0.5,
+          );
+          return;
+        }
+      }
+      final viewportWidth =
+          _categoryScrollController.position.viewportDimension;
+      final target =
+          (_focusedCategoryIndex * 150.0 - viewportWidth / 2 + 75).clamp(
+        0.0,
+        _categoryScrollController.position.maxScrollExtent,
+      );
+      _categoryScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _scrollFocusedMenuItemIntoView() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_gridScrollController.hasClients) return;
+      final row = (_focusedMenuItemIndex / _gridColumnCount).floor();
+      final target = (row * _gridRowExtent).clamp(
+        0.0,
+        _gridScrollController.position.maxScrollExtent,
+      );
+      _gridScrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  Widget _withKeyboardOutline({
+    required Widget child,
+    required bool focused,
+    required BorderRadius borderRadius,
+  }) {
+    final shouldOutline = _focusOutlineEnabled && focused;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        border: Border.all(
+          color: shouldOutline ? const Color(0xFFF59E0B) : Colors.transparent,
+          width: shouldOutline ? 3 : 0,
+        ),
+        boxShadow: shouldOutline
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFF59E0B).withOpacity(0.22),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: child,
+    );
   }
 
   int _resolveGridColumnCount(MenuCardMode cardMode, double availableWidth) {
@@ -381,15 +621,17 @@ class _MenuPanelState extends State<MenuPanel> {
     }
 
     final targetCardWidth = switch (cardMode) {
-      MenuCardMode.compact => widget.isCompact ? 210.0 : 190.0,
-      MenuCardMode.medium => 112.0,
-      MenuCardMode.large => 180.0,
+      MenuCardMode.compact =>
+        widget.isCompact ? (_isConstrainedDesktop ? 96.0 : 136.0) : 190.0,
+      MenuCardMode.medium => _isConstrainedDesktop ? 88.0 : 112.0,
+      MenuCardMode.large => _isConstrainedDesktop ? 146.0 : 180.0,
     };
     final minColumns = widget.isCompact ? 1 : 2;
     final maxColumns = switch (cardMode) {
-      MenuCardMode.compact => widget.isCompact ? 2 : 7,
-      MenuCardMode.medium => 9,
-      MenuCardMode.large => 6,
+      MenuCardMode.compact =>
+        widget.isCompact ? (_isConstrainedDesktop ? 6 : 5) : 7,
+      MenuCardMode.medium => _isConstrainedDesktop ? 7 : 9,
+      MenuCardMode.large => _isConstrainedDesktop ? 4 : 6,
     };
 
     return (availableWidth / targetCardWidth)
@@ -400,9 +642,10 @@ class _MenuPanelState extends State<MenuPanel> {
 
   double _resolveGridAspectRatio(MenuCardMode cardMode) {
     return switch (cardMode) {
-      MenuCardMode.compact => widget.isCompact ? 1.56 : 1.70,
-      MenuCardMode.medium => 0.64,
-      MenuCardMode.large => 1.42,
+      MenuCardMode.compact =>
+        widget.isCompact ? (_isConstrainedDesktop ? 1.24 : 1.56) : 1.70,
+      MenuCardMode.medium => _isConstrainedDesktop ? 0.90 : 0.64,
+      MenuCardMode.large => _isConstrainedDesktop ? 1.18 : 1.42,
     };
   }
 
@@ -495,6 +738,7 @@ class _MenuPanelState extends State<MenuPanel> {
 
         final int fontLevel = fontProvider.fontSizeLevel;
         final cardMode = _resolveCardMode(fontLevel);
+        _ensureCategoryItemKeys(categories.length + 1);
 
         return Container(
           margin: const EdgeInsets.all(8),
@@ -588,142 +832,119 @@ class _MenuPanelState extends State<MenuPanel> {
                           PointerDeviceKind.trackpad,
                         },
                       ),
-                      child: ListView.separated(
-                        physics: const BouncingScrollPhysics(),
-                        padding: EdgeInsets.symmetric(
-                            horizontal: widget.isCompact ? 12 : 16),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: categories.length + 1,
-                        itemBuilder: (_, idx) {
-                          // Handle "All" category at index 0
-                          if (idx == 0) {
-                            final active = selectedCategoryId == 0;
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    widget.onCategoryChanged(0);
-                                    // Update products for "All" category
-                                    productProvider.refreshProducts();
-                                  },
-                                  borderRadius: BorderRadius.circular(24),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: widget.isCompact ? 16 : 20,
-                                        vertical: widget.isCompact ? 8 : 10),
-                                    decoration: BoxDecoration(
-                                      color: active
-                                          ? const Color(0xFF2563EB)
-                                          : Colors.grey.shade50,
+                      child: Focus(
+                        focusNode: _categoryFocusNode,
+                        onKeyEvent: (node, event) => _handleCategoryKey(
+                          event,
+                          categories,
+                          productProvider,
+                        ),
+                        child: ListView.separated(
+                          controller: _categoryScrollController,
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: widget.isCompact ? 12 : 16),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: categories.length + 1,
+                          itemBuilder: (_, idx) {
+                            final isAll = idx == 0;
+                            final category = isAll ? null : categories[idx - 1];
+                            final categoryId = isAll ? 0 : category!.categoryId;
+                            final categoryName = isAll
+                                ? 'All'
+                                : category!.categoryName ?? 'Unknown';
+                            final active = isAll
+                                ? selectedCategoryId == 0
+                                : categoryId == selectedCategoryId;
+                            final isKeyboardFocused =
+                                _categoryFocusNode.hasFocus &&
+                                    _focusedCategoryIndex == idx;
+                            final chip = KeyedSubtree(
+                              key: _categoryItemKeys[idx],
+                              child: _withKeyboardOutline(
+                                focused: isKeyboardFocused,
+                                borderRadius: BorderRadius.circular(26),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          _focusedCategoryIndex = idx;
+                                          _focusedMenuItemIndex = 0;
+                                        });
+                                        if (isAll) {
+                                          widget.onCategoryChanged(0);
+                                          productProvider.refreshProducts();
+                                        } else if (categoryId == 0) {
+                                          widget.onCategoryChanged(categoryId);
+                                          productProvider.refreshProducts();
+                                        } else {
+                                          widget.onCategoryChanged(categoryId);
+                                          productProvider.listAllProducts(
+                                              categoryId: categoryId);
+                                        }
+                                      },
                                       borderRadius: BorderRadius.circular(24),
-                                      border: Border.all(
-                                        color: active
-                                            ? const Color(0xFF2563EB)
-                                            : Colors.grey.shade200,
-                                        width: 1,
-                                      ),
-                                      boxShadow: active
-                                          ? [
-                                              BoxShadow(
-                                                color: const Color(0xFF2563EB)
-                                                    .withOpacity(0.3),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ]
-                                          : [],
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        'All',
-                                        style: buildCustomStyle(
-                                            FontWeightManager.semiBold,
-                                            widget.isCompact
-                                                ? FontSize.s12
-                                                : FontSize.s13,
-                                            0.21,
-                                            active
-                                                ? Colors.white
-                                                : const Color(0xFF64748B)),
+                                      child: AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal:
+                                              widget.isCompact ? 16 : 20,
+                                          vertical: widget.isCompact ? 8 : 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: active
+                                              ? const Color(0xFF2563EB)
+                                              : Colors.grey.shade50,
+                                          borderRadius:
+                                              BorderRadius.circular(24),
+                                          border: Border.all(
+                                            color: active
+                                                ? const Color(0xFF2563EB)
+                                                : Colors.grey.shade200,
+                                            width: 1,
+                                          ),
+                                          boxShadow: active
+                                              ? [
+                                                  BoxShadow(
+                                                    color:
+                                                        const Color(0xFF2563EB)
+                                                            .withOpacity(0.3),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ]
+                                              : [],
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            categoryName,
+                                            style: buildCustomStyle(
+                                              FontWeightManager.semiBold,
+                                              widget.isCompact
+                                                  ? FontSize.s12
+                                                  : FontSize.s13,
+                                              0.21,
+                                              active
+                                                  ? Colors.white
+                                                  : const Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
                             );
-                          }
-
-                          // Handle regular categories (index offset by 1)
-                          final c = categories[idx - 1];
-                          final active = c.categoryId == selectedCategoryId;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  widget.onCategoryChanged(c.categoryId);
-                                  // Update products for selected category
-                                  if (c.categoryId == 0) {
-                                    // Should not happen for regular categories but kept for safety
-                                    productProvider.refreshProducts();
-                                  } else {
-                                    // Specific category
-                                    productProvider.listAllProducts(
-                                        categoryId: c.categoryId);
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(24),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: widget.isCompact ? 16 : 20,
-                                      vertical: widget.isCompact ? 8 : 10),
-                                  decoration: BoxDecoration(
-                                    color: active
-                                        ? const Color(0xFF2563EB)
-                                        : Colors.grey.shade50,
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(
-                                      color: active
-                                          ? const Color(0xFF2563EB)
-                                          : Colors.grey.shade200,
-                                      width: 1,
-                                    ),
-                                    boxShadow: active
-                                        ? [
-                                            BoxShadow(
-                                              color: const Color(0xFF2563EB)
-                                                  .withOpacity(0.3),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ]
-                                        : [],
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      c.categoryName ?? 'Unknown',
-                                      style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s12
-                                              : FontSize.s13,
-                                          0.21,
-                                          active
-                                              ? Colors.white
-                                              : const Color(0xFF64748B)),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                            return chip;
+                          },
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 12),
+                        ),
                       ),
                     ),
                   ),
@@ -743,43 +964,50 @@ class _MenuPanelState extends State<MenuPanel> {
                       width: 1,
                     ),
                   ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    decoration: InputDecoration(
-                      hintText: 'Search menu items...',
-                      hintStyle: buildCustomStyle(
+                  child: Focus(
+                    onKeyEvent: (node, event) => _handleSearchKey(event),
+                    child: TextField(
+                      focusNode: _searchFocusNode,
+                      controller: _searchController,
+                      onTap: focusSearch,
+                      onSubmitted: (_) => focusMenuGrid(),
+                      onEditingComplete: focusMenuGrid,
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText: 'Search menu items...',
+                        hintStyle: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s14,
+                          0.21,
+                          Colors.grey.shade500,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Colors.grey.shade500,
+                          size: widget.isCompact ? 18 : 20,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: Colors.grey.shade500,
+                                  size: widget.isCompact ? 18 : 20,
+                                ),
+                                onPressed: _clearSearch,
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: widget.isCompact ? 12 : 16,
+                          vertical: widget.isCompact ? 12 : 16,
+                        ),
+                      ),
+                      style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s14,
                         0.21,
-                        Colors.grey.shade500,
+                        const Color(0xFF1E293B),
                       ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: Colors.grey.shade500,
-                        size: widget.isCompact ? 18 : 20,
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: Icon(
-                                Icons.clear,
-                                color: Colors.grey.shade500,
-                                size: widget.isCompact ? 18 : 20,
-                              ),
-                              onPressed: _clearSearch,
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: widget.isCompact ? 12 : 16,
-                        vertical: widget.isCompact ? 12 : 16,
-                      ),
-                    ),
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s14,
-                      0.21,
-                      const Color(0xFF1E293B),
                     ),
                   ),
                 ),
@@ -870,40 +1098,76 @@ class _MenuPanelState extends State<MenuPanel> {
                                   );
                                   final childAspectRatio =
                                       _resolveGridAspectRatio(cardMode);
+                                  final gridSpacing =
+                                      widget.isCompact && _isConstrainedDesktop
+                                          ? 4.0
+                                          : (widget.isCompact ? 6.0 : 8.0);
+                                  final gridPadding =
+                                      widget.isCompact && _isConstrainedDesktop
+                                          ? 4.0
+                                          : (widget.isCompact ? 6.0 : 8.0);
+                                  _gridColumnCount = crossAxisCount;
+                                  final itemWidth = (constraints.maxWidth -
+                                          (gridPadding * 2) -
+                                          ((crossAxisCount - 1) *
+                                              gridSpacing)) /
+                                      crossAxisCount;
+                                  _gridRowExtent =
+                                      (itemWidth / childAspectRatio) +
+                                          gridSpacing;
+                                  if (_focusedMenuItemIndex >= items.length) {
+                                    _focusedMenuItemIndex = items.length - 1;
+                                  }
 
-                                  return GridView.builder(
-                                    padding: EdgeInsets.all(
-                                        widget.isCompact ? 6 : 8),
-                                    gridDelegate:
-                                        SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: crossAxisCount,
-                                      mainAxisSpacing: widget.isCompact ? 6 : 8,
-                                      crossAxisSpacing:
-                                          widget.isCompact ? 6 : 8,
-                                      childAspectRatio: childAspectRatio,
+                                  return Focus(
+                                    focusNode: _gridFocusNode,
+                                    onKeyEvent: (node, event) =>
+                                        _handleGridKey(event, items),
+                                    child: GridView.builder(
+                                      controller: _gridScrollController,
+                                      padding: EdgeInsets.all(gridPadding),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossAxisCount,
+                                        mainAxisSpacing: gridSpacing,
+                                        crossAxisSpacing: gridSpacing,
+                                        childAspectRatio: childAspectRatio,
+                                      ),
+                                      itemCount: items.length,
+                                      itemBuilder: (_, idx) {
+                                        final item = items[idx];
+                                        final isKeyboardFocused =
+                                            _gridFocusNode.hasFocus &&
+                                                _focusedMenuItemIndex == idx;
+                                        Widget card;
+                                        switch (cardMode) {
+                                          case MenuCardMode.compact:
+                                            card = _buildMenuItem(item,
+                                                widget.isCompact, context);
+                                            break;
+                                          case MenuCardMode.medium:
+                                            card = _buildLegacyImageMenuItem(
+                                                item, context);
+                                            break;
+                                          case MenuCardMode.large:
+                                            card = _buildMenuItemRich(
+                                              item,
+                                              context,
+                                              imageFlex: 6,
+                                              detailsFlex: 9,
+                                              titleLines: 2,
+                                              showCategory: false,
+                                            );
+                                        }
+                                        return _withKeyboardOutline(
+                                          focused: isKeyboardFocused,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          child: card,
+                                        );
+                                      },
+                                      physics: const BouncingScrollPhysics(),
                                     ),
-                                    itemCount: items.length,
-                                    itemBuilder: (_, idx) {
-                                      final item = items[idx];
-                                      switch (cardMode) {
-                                        case MenuCardMode.compact:
-                                          return _buildMenuItem(
-                                              item, widget.isCompact, context);
-                                        case MenuCardMode.medium:
-                                          return _buildLegacyImageMenuItem(
-                                              item, context);
-                                        case MenuCardMode.large:
-                                          return _buildMenuItemRich(
-                                            item,
-                                            context,
-                                            imageFlex: 6,
-                                            detailsFlex: 9,
-                                            titleLines: 2,
-                                            showCategory: false,
-                                          );
-                                      }
-                                    },
-                                    physics: const BouncingScrollPhysics(),
                                   );
                                 },
                               ),
@@ -1017,7 +1281,7 @@ class _MenuPanelState extends State<MenuPanel> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                '${item.price?.price ?? '0'}',
+                                _formatMenuPrice(item.price?.price),
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   denseMode ? FontSize.s11 : FontSize.s12,
@@ -1117,11 +1381,8 @@ class _MenuPanelState extends State<MenuPanel> {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-    final rawPrice = item.price?.price;
-    final price = rawPrice is num
-        ? rawPrice.toStringAsFixed(2)
-        : (double.tryParse(rawPrice?.toString() ?? '')?.toStringAsFixed(2) ??
-            (rawPrice?.toString() ?? '0.00'));
+    final price = _formatMenuPrice(item.price?.price);
+    final denseMode = _isConstrainedDesktop;
 
     return Container(
       decoration: BoxDecoration(
@@ -1145,7 +1406,7 @@ class _MenuPanelState extends State<MenuPanel> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 4,
+                flex: denseMode ? 3 : 4,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -1178,8 +1439,10 @@ class _MenuPanelState extends State<MenuPanel> {
                       left: 6,
                       child: !isAvailable
                           ? Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 3),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: denseMode ? 4 : 6,
+                                vertical: denseMode ? 2 : 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.92),
                                 borderRadius: BorderRadius.circular(6),
@@ -1192,7 +1455,7 @@ class _MenuPanelState extends State<MenuPanel> {
                                 overflow: TextOverflow.ellipsis,
                                 style: buildCustomStyle(
                                   FontWeightManager.semiBold,
-                                  FontSize.s9,
+                                  denseMode ? FontSize.s8 : FontSize.s9,
                                   0.21,
                                   const Color(0xFF64748B),
                                 ),
@@ -1210,15 +1473,15 @@ class _MenuPanelState extends State<MenuPanel> {
                               _showProductInfoDialog(context, item, false),
                           borderRadius: BorderRadius.circular(14),
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: EdgeInsets.all(denseMode ? 3 : 4),
                             decoration: BoxDecoration(
                               color: Colors.black.withOpacity(0.48),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.info_outline,
                               color: Colors.white,
-                              size: 16,
+                              size: denseMode ? 13 : 16,
                             ),
                           ),
                         ),
@@ -1228,8 +1491,10 @@ class _MenuPanelState extends State<MenuPanel> {
                       bottom: 0,
                       right: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: denseMode ? 5 : 7,
+                          vertical: denseMode ? 3 : 4,
+                        ),
                         decoration: BoxDecoration(
                           color: ColorManager.kPrimaryColor.withOpacity(0.92),
                           borderRadius: const BorderRadius.only(
@@ -1242,7 +1507,7 @@ class _MenuPanelState extends State<MenuPanel> {
                           overflow: TextOverflow.ellipsis,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
-                            FontSize.s11,
+                            denseMode ? FontSize.s9 : FontSize.s11,
                             0.21,
                             Colors.white,
                           ),
@@ -1253,16 +1518,16 @@ class _MenuPanelState extends State<MenuPanel> {
                 ),
               ),
               Expanded(
-                flex: 3,
+                flex: denseMode ? 2 : 3,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(denseMode ? 6 : 8),
                   child: Text(
                     '${item.productName ?? 'Unknown Product'} / ${item.unit ?? ''}',
-                    maxLines: 4,
+                    maxLines: denseMode ? 3 : 4,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
-                      FontSize.s13,
+                      denseMode ? FontSize.s11 : FontSize.s13,
                       0.21,
                       isAvailable
                           ? const Color(0xFF1E293B)
@@ -1285,20 +1550,21 @@ class _MenuPanelState extends State<MenuPanel> {
       // Check if any stock has quantity > 0
       isAvailable = item.stock!.any((stock) => (stock.quantity ?? 0) > 0);
     }
+    final extraDense = compact && _isConstrainedDesktop;
 
     return Container(
       decoration: BoxDecoration(
         color: isAvailable ? Colors.white : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(extraDense ? 8 : 12),
         border: Border.all(
           color: Colors.grey.shade200,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(extraDense ? 0.03 : 0.04),
+            blurRadius: extraDense ? 4 : 8,
+            offset: Offset(0, extraDense ? 1 : 2),
           ),
         ],
       ),
@@ -1310,9 +1576,9 @@ class _MenuPanelState extends State<MenuPanel> {
                   widget.onItemAdd(item, 1);
                 }
               : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(extraDense ? 8 : 12),
           child: Padding(
-            padding: EdgeInsets.all(compact ? 8.0 : 12.0),
+            padding: EdgeInsets.all(extraDense ? 6.0 : (compact ? 8.0 : 12.0)),
             child: SingleChildScrollView(
               physics: const NeverScrollableScrollPhysics(),
               child: Column(
@@ -1331,11 +1597,13 @@ class _MenuPanelState extends State<MenuPanel> {
                           Expanded(
                             child: Text(
                               item.productName ?? 'Unknown Product',
-                              maxLines: 1,
+                              maxLines: extraDense ? 3 : 1,
                               overflow: TextOverflow.ellipsis,
                               style: buildCustomStyle(
                                 FontWeightManager.bold,
-                                compact ? FontSize.s10 : FontSize.s12,
+                                extraDense
+                                    ? FontSize.s10
+                                    : (compact ? FontSize.s10 : FontSize.s12),
                                 0.21,
                                 isAvailable
                                     ? const Color(0xFF1E293B)
@@ -1343,21 +1611,24 @@ class _MenuPanelState extends State<MenuPanel> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: extraDense ? 3 : 6),
                           Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: compact ? 4 : 6,
-                              vertical: compact ? 2 : 3,
+                              horizontal: extraDense ? 3 : (compact ? 4 : 6),
+                              vertical: extraDense ? 2 : (compact ? 2 : 3),
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF059669).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius:
+                                  BorderRadius.circular(extraDense ? 5 : 6),
                             ),
                             child: Text(
-                              '${item.price?.price ?? '0'}',
+                              _formatMenuPrice(item.price?.price),
                               style: buildCustomStyle(
                                 FontWeightManager.bold,
-                                compact ? FontSize.s9 : FontSize.s11,
+                                extraDense
+                                    ? FontSize.s9
+                                    : (compact ? FontSize.s9 : FontSize.s11),
                                 0.23,
                                 isAvailable
                                     ? const Color(0xFF059669)
@@ -1367,9 +1638,9 @@ class _MenuPanelState extends State<MenuPanel> {
                           ),
                         ],
                       ),
-                      SizedBox(height: compact ? 2 : 4),
+                      SizedBox(height: extraDense ? 1 : (compact ? 2 : 4)),
                       // productName
-                      if (item.productName != null)
+                      if (!extraDense && item.productName != null)
                         Text(
                           item.productName.toString(),
                           maxLines: compact ? 1 : 1,
@@ -1388,9 +1659,11 @@ class _MenuPanelState extends State<MenuPanel> {
                   Column(
                     children: [
                       SizedBox(
-                          height: compact
-                              ? 4
-                              : 6), // Keep separation while avoiding tiny bottom overflow
+                          height: extraDense
+                              ? 3
+                              : compact
+                                  ? 4
+                                  : 6), // Keep separation while avoiding tiny bottom overflow
                       // Tags and add button
                       Row(
                         children: [
@@ -1400,14 +1673,16 @@ class _MenuPanelState extends State<MenuPanel> {
                               runSpacing: 2,
                               children: [
                                 // Check for FOOD_TYPE in product_props
-                                ...(_buildFoodTypeTags(item, compact)),
+                                if (!extraDense)
+                                  ...(_buildFoodTypeTags(item, compact)),
                                 // Show unit if no food type is available
-                                if (!_hasFoodType(item) && isAvailable)
+                                if ((extraDense || !_hasFoodType(item)) &&
+                                    isAvailable)
                                   _buildCompactTag('Available',
-                                      const Color(0xFF059669), compact),
+                                      const Color(0xFF059669), true),
                                 if (!isAvailable)
                                   _buildCompactTag('No Stock',
-                                      const Color(0xFF6B7280), compact),
+                                      const Color(0xFF6B7280), true),
                               ],
                             ),
                           ),
@@ -1419,7 +1694,8 @@ class _MenuPanelState extends State<MenuPanel> {
                                     context, item, compact),
                                 borderRadius: BorderRadius.circular(6),
                                 child: Container(
-                                  padding: EdgeInsets.all(compact ? 3 : 4),
+                                  padding: EdgeInsets.all(
+                                      extraDense ? 3 : (compact ? 3 : 4)),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF2563EB)
                                         .withOpacity(0.1),
@@ -1428,7 +1704,7 @@ class _MenuPanelState extends State<MenuPanel> {
                                   child: Icon(
                                     Icons.info_outline,
                                     color: const Color(0xFF2563EB),
-                                    size: compact ? 12 : 14,
+                                    size: extraDense ? 11 : (compact ? 12 : 14),
                                   ),
                                 ),
                               ),

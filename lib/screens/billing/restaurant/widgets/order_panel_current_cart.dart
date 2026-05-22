@@ -12,16 +12,30 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     final quantity = cartItem.quantity;
     final unitPrice = cartItem.price ?? 0.0;
     final totalPrice = quantity * unitPrice;
+    final isKeyboardFocused = _currentCartItemsFocusNode.hasFocus &&
+        _focusedCurrentCartItemIndex == index;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
       padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade200,
-          width: 1,
+          color: isKeyboardFocused
+              ? const Color(0xFFF59E0B)
+              : Colors.grey.shade200,
+          width: isKeyboardFocused ? 3 : 1,
         ),
+        boxShadow: isKeyboardFocused
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFF59E0B).withOpacity(0.22),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

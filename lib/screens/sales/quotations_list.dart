@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/components/build_title.dart';
@@ -17,6 +18,7 @@ import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/services/quotation_print_service.dart';
 import 'package:provider/provider.dart';
 
 class QuotationsListScreen extends StatefulWidget {
@@ -44,6 +46,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Key _expiryDateKey = UniqueKey();
 
   bool _isLoading = false;
+  bool _isPrintingQuotation = false;
 
   final List<String> _statusOptions = [
     'All',
@@ -128,6 +131,54 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         return Colors.orange;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _printQuotation(Quotation quotation) async {
+    final quotationId = quotation.id;
+    if (quotationId == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Quotation id not found',
+      );
+      return;
+    }
+    if (_isPrintingQuotation) return;
+
+    setState(() => _isPrintingQuotation = true);
+    try {
+      final authProvider = Provider.of<AuthModel>(context, listen: false);
+      final quotationsProvider =
+          Provider.of<QuotationsProvider>(context, listen: false);
+
+      final details = await quotationsProvider.fetchQuotationDetails(
+        accessToken: authProvider.token ?? '',
+        quotationId: quotationId,
+      );
+      if (!mounted) return;
+
+      if (details == null) {
+        showScaffoldError(
+          context: context,
+          message: 'Quotation details not found for printing',
+        );
+        return;
+      }
+
+      await const QuotationPrintService().printQuotationDetails(
+        context,
+        details,
+      );
+    } catch (e) {
+      debugPrint('Error printing quotation: $e');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to print quotation',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPrintingQuotation = false);
     }
   }
 
@@ -641,9 +692,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                       padding: EdgeInsets.zero,
                       constraints:
                           const BoxConstraints(minWidth: 32, minHeight: 32),
-                      onPressed: () {
-                        // TODO: Implement Quotation Print
-                      },
+                      onPressed: _isPrintingQuotation
+                          ? null
+                          : () => _printQuotation(q),
                     ),
                   ),
                 ],
