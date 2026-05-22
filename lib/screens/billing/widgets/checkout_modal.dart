@@ -3285,6 +3285,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
               horizontal: _isDenseCheckout ? 10 : 16,
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (customer == null) ...[
                   Container(
@@ -3312,6 +3313,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 ],
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
