@@ -310,6 +310,29 @@ class _SideMenuState extends State<SideMenu> {
             },
           ),
 
+          // 1.5. SUPERMARKET (Index: 90)
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              final hasPermission = roleProvider.currentUserHasPermissionSync(
+                  'menu.supermarket.main.access');
+
+              if (!hasPermission) {
+                return const SizedBox.shrink();
+              }
+
+              return Obx(
+                () => DrawerListTile(
+                  icon: fa.FontAwesomeIcons.store,
+                  title: 'Supermarket',
+                  onTap: () {
+                    sideBarController.index.value = 90;
+                  },
+                  selected: sideBarController.index.value == 90,
+                ),
+              );
+            },
+          ),
+
           // 2. DASHBOARD (Index: 1)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
@@ -438,7 +461,7 @@ class _SideMenuState extends State<SideMenu> {
                       'menu.sales.day_closing.access');
               final hasQuotationPermission =
                   roleProvider.currentUserHasPermissionSync(
-                          'menu.sales.quotations.access') ||
+                          'menu.quotations.main.access') ||
                       userRole.isNotEmpty;
               final isCompanyAdmin = userRole == 'company_admin';
 
@@ -518,7 +541,7 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider.currentUserHasPermissionSync(
-                      'menu.sales.quotations.access') ||
+                      'menu.quotations.main.access') ||
                   userRole.isNotEmpty;
 
               if (!hasPermission) {
@@ -1079,56 +1102,48 @@ class _SideMenuState extends State<SideMenu> {
               );
             },
           ),
-          // LOGOUT
-          Consumer<RoleProvider>(
-            builder: (context, roleProvider, child) {
-              if (!roleProvider
-                  .currentUserHasPermissionSync('menu.session.logout.access')) {
-                return const SizedBox.shrink();
-              }
-              return DrawerListTile(
-                icon: fa.FontAwesomeIcons.signOutAlt,
-                title: 'Logout',
-                onTap: () async {
-                  String token = authModel.token ?? '';
-                  showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) {
-                        return const Center(
-                          child: CircularProgressIndicator.adaptive(),
-                        );
-                      });
-                  await AuthenticationProvider()
-                      .logout(token, context)
-                      .then((value) async {
-                    if (value["status"] == "success") {
-                      await SessionResetService.resetAfterLogout(context);
-
-                      // debugPrint(" authmodel logout token ${authModel.token}");
-                      showScaffold(
-                        context: context,
-                        message: '${value["message"]}',
-                      );
-                      Navigator.pop(context);
-                      await Future.delayed(const Duration(seconds: 0)).then(
-                          (value) => Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const SignInScreen())));
-                    } else {
-                      Navigator.pop(context);
-                      showScaffoldError(
-                        context: context,
-                        message: '${value["message"]}',
-                      );
-                    }
+          // LOGOUT (always visible)
+          DrawerListTile(
+            icon: fa.FontAwesomeIcons.signOutAlt,
+            title: 'Logout',
+            onTap: () async {
+              String token = authModel.token ?? '';
+              showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) {
+                    return const Center(
+                      child: CircularProgressIndicator.adaptive(),
+                    );
                   });
-                  // debugPrint(" 'Logout',${sideBarController.index.value}");
-                },
-                selected: false,
-              );
+              await AuthenticationProvider()
+                  .logout(token, context)
+                  .then((value) async {
+                if (value["status"] == "success") {
+                  await SessionResetService.resetAfterLogout(context);
+
+                  // debugPrint(" authmodel logout token ${authModel.token}");
+                  showScaffold(
+                    context: context,
+                    message: '${value["message"]}',
+                  );
+                  Navigator.pop(context);
+                  await Future.delayed(const Duration(seconds: 0)).then(
+                      (value) => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SignInScreen())));
+                } else {
+                  Navigator.pop(context);
+                  showScaffoldError(
+                    context: context,
+                    message: '${value["message"]}',
+                  );
+                }
+              });
+              // debugPrint(" 'Logout',${sideBarController.index.value}");
             },
+            selected: false,
           ),
           const SizedBox(
             height: 10,

@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -1047,7 +1048,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   void _resetCounterOrderContextAfterSave() {
-    if (!_isCounterBillingMode) return;
+    if (!_isCounterBillingMode) {
+      setState(() {
+        _selectedOrderFromOrderPanel = null;
+        _editingLocalDraft = null;
+        _refreshCounter = (_refreshCounter ?? 0) + 1;
+      });
+      return;
+    }
+
     setState(() {
       _activeTableId = null;
       _selectedTableName = null;
@@ -2071,8 +2080,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
-      // Get cart data from the local provider instead of cart provider
-      final cartItems = localProductProvider.getCartItems();
+      final cartItems = _cartItemsForKitchenSync(localProductProvider);
       if (cartItems.isEmpty) {
         showScaffoldError(
           context: context,
@@ -2096,7 +2104,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       }
 
       // Get cart total from local provider (apply round-off when enabled)
-      final total = localProductProvider.getRoundedTotal(context);
+      final total = _totalForKitchenItems(cartItems);
 
       // Call the addToOrderAPI with status: "new"
       debugPrint('➡️ Calling CartProvider.addToOrderAPI');
@@ -2169,6 +2177,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         if (cartItems.isNotEmpty) {
           debugPrint('🗑️ Clearing local cart after successful kitchen order');
           localProductProvider.clearCart();
+          localProductProvider.clearCurrentOrder();
         }
         _orderPanelKey.currentState?.clearCurrentOrderComment();
 
@@ -2199,6 +2208,39 @@ class _RestaurantPageState extends State<RestaurantPage> {
         message: 'Failed to send order to kitchen: ${e.toString()}',
       );
     }
+  }
+
+  List<LocalCartItem> _cartItemsForKitchenSync(
+    LocalProductProvider localProductProvider,
+  ) {
+    final loadedDraftId = _orderPanelKey.currentState?.loadedLocalDraftId ??
+        _editingLocalDraft?.id;
+    if (loadedDraftId != null && loadedDraftId.isNotEmpty) {
+      if (localProductProvider.currentOrder?.id == loadedDraftId &&
+          localProductProvider.cartItems.isNotEmpty) {
+        return localProductProvider.getCartItems();
+      }
+
+      final draft = localProductProvider.findOrderById(loadedDraftId);
+      if (draft != null) {
+        return List<LocalCartItem>.from(draft.items);
+      }
+    }
+
+    return localProductProvider.getCartItems();
+  }
+
+  double _totalForKitchenItems(List<LocalCartItem> cartItems) {
+    final total = cartItems.fold<double>(
+      0,
+      (sum, item) => sum + ((item.price ?? 0) * item.quantity).toDouble(),
+    );
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    if (appSettingsProvider.appSettings?.priceRoundOff == true) {
+      return AmountHelper.roundOffAmount(total);
+    }
+    return total;
   }
 
   String? _extractTokenNumber(dynamic order) {
@@ -2248,6 +2290,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (localProductProvider.cartItems.isNotEmpty) {
       debugPrint('🗑️ Clearing local cart via LocalProductProvider');
       localProductProvider.clearCart();
+      localProductProvider.clearCurrentOrder();
     }
 
     // Clear the cart from API if it exists
@@ -2316,8 +2359,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
 
-      // Get cart data BEFORE sending (it will be cleared after)
-      final cartItems = localProductProvider.getCartItems();
+      // Get the selected draft/current cart data BEFORE sending.
+      final cartItems = _cartItemsForKitchenSync(localProductProvider);
 
       if (cartItems.isEmpty) {
         showScaffoldError(
@@ -2334,7 +2377,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           _selectedTableName != null && _selectedTableName!.trim().isNotEmpty;
       final currentComment = _orderPanelKey.currentState?.orderComment ?? "";
       final manualComment = currentComment.trim();
-      final total = localProductProvider.getRoundedTotal(context);
+      final total = _totalForKitchenItems(cartItems);
 
       // Build print items BEFORE clearing cart
       List<Map<String, dynamic>> printItems = [];
@@ -2436,6 +2479,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         // Clear the local cart after successful submission
         debugPrint('🗑️ Clearing local cart after successful kitchen order');
         localProductProvider.clearCart();
+        localProductProvider.clearCurrentOrder();
         _orderPanelKey.currentState?.clearCurrentOrderComment();
 
         // If a local draft was loaded, remove it after successful send
@@ -2567,6 +2611,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       debugPrint(
           '✅ Auto-saved pending draft for ${_activeTableId ?? _selectedDeliveryMethodName}');
       localProductProvider.clearCart();
+      localProductProvider.clearCurrentOrder();
     } catch (e) {
       debugPrint('❌ Error auto-saving cart: $e');
     }

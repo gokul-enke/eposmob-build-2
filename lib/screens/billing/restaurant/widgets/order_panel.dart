@@ -158,6 +158,7 @@ class OrderPanelState extends State<OrderPanel> {
 
   // Expose current comment to parent (RestaurantPage) for new order flow
   String get orderComment => _orderComment;
+  String? get loadedLocalDraftId => _loadedLocalDraftId;
   String? get selectedCustomerNameForDraft => _selectedCustomer?.name;
   int? get selectedCustomerIdForDraft =>
       _selectedCustomer?.id ?? _selectedCustomerID;
@@ -1741,7 +1742,6 @@ class OrderPanelState extends State<OrderPanel> {
     if (!mounted) return;
     setState(() {
       _orderComment = '';
-      _loadedLocalDraftId = null;
     });
   }
 

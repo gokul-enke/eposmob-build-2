@@ -1925,6 +1925,7 @@ class LocalProductProvider extends ChangeNotifier {
               .toLowerCase()
               .contains(filterName.toLowerCase()))
           .toList();
+      result = _rankProductNameMatches(result, filterName);
     }
 
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
@@ -1994,10 +1995,34 @@ class LocalProductProvider extends ChangeNotifier {
     if (query.isEmpty) {
       return _filteredProducts;
     }
-    return _filteredProducts
+    final matches = _filteredProducts
         .where((p) =>
             (p.productName ?? '').toLowerCase().contains(query.toLowerCase()))
         .toList();
+    return _rankProductNameMatches(matches, query);
+  }
+
+  List<GetProduct> _rankProductNameMatches(
+    List<GetProduct> products,
+    String query,
+  ) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return products;
+
+    final indexedProducts = products.indexed.toList();
+    indexedProducts.sort((first, second) {
+      final rankCompare = _productNameMatchRank(first.$2, normalizedQuery)
+          .compareTo(_productNameMatchRank(second.$2, normalizedQuery));
+      if (rankCompare != 0) return rankCompare;
+      return first.$1.compareTo(second.$1);
+    });
+    return indexedProducts.map((entry) => entry.$2).toList();
+  }
+
+  int _productNameMatchRank(GetProduct product, String normalizedQuery) {
+    final productName = product.productName?.trim().toLowerCase() ?? '';
+    if (productName.startsWith(normalizedQuery)) return 0;
+    return 1;
   }
 
   /// Adds a product to the local products list.
