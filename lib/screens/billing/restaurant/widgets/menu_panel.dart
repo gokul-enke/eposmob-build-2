@@ -23,6 +23,7 @@ class MenuPanel extends StatefulWidget {
   final int? activeCategoryId;
   final Function(GetProduct product, int quantity) onItemAdd;
   final bool isCompact;
+  final bool useFontCardModeInCompact;
   final Size screenSize;
   final dynamic selectedOrder; // New parameter to receive selected order
 
@@ -32,6 +33,7 @@ class MenuPanel extends StatefulWidget {
     required this.activeCategoryId,
     required this.onItemAdd,
     this.isCompact = false,
+    this.useFontCardModeInCompact = false,
     required this.screenSize,
     this.selectedOrder, // Make it optional for now, as it might be null
   });
@@ -76,8 +78,14 @@ class MenuPanelState extends State<MenuPanel> {
     _gridFocusNode.requestFocus();
   }
 
+  bool get _isConstrainedDesktop =>
+      widget.screenSize.width >= 900 &&
+      (widget.screenSize.width < 1180 || widget.screenSize.height <= 800);
+
   MenuCardMode _resolveCardMode(int fontLevel) {
-    if (widget.isCompact) return MenuCardMode.compact;
+    if (widget.isCompact && !widget.useFontCardModeInCompact) {
+      return MenuCardMode.compact;
+    }
     if (fontLevel <= 0) return MenuCardMode.compact;
     if (fontLevel == 1) return MenuCardMode.medium;
     return MenuCardMode.large;
@@ -91,6 +99,11 @@ class MenuPanelState extends State<MenuPanel> {
       }
     }
     return product.attachment!.first.filePath;
+  }
+
+  String _formatMenuPrice(dynamic value) {
+    final parsed = value is num ? value.toDouble() : double.tryParse('$value');
+    return parsed?.toStringAsFixed(2) ?? '0.00';
   }
 
   void _showProductInfoDialog(
@@ -608,15 +621,17 @@ class MenuPanelState extends State<MenuPanel> {
     }
 
     final targetCardWidth = switch (cardMode) {
-      MenuCardMode.compact => widget.isCompact ? 210.0 : 190.0,
-      MenuCardMode.medium => 112.0,
-      MenuCardMode.large => 180.0,
+      MenuCardMode.compact =>
+        widget.isCompact ? (_isConstrainedDesktop ? 96.0 : 136.0) : 190.0,
+      MenuCardMode.medium => _isConstrainedDesktop ? 88.0 : 112.0,
+      MenuCardMode.large => _isConstrainedDesktop ? 146.0 : 180.0,
     };
     final minColumns = widget.isCompact ? 1 : 2;
     final maxColumns = switch (cardMode) {
-      MenuCardMode.compact => widget.isCompact ? 2 : 7,
-      MenuCardMode.medium => 9,
-      MenuCardMode.large => 6,
+      MenuCardMode.compact =>
+        widget.isCompact ? (_isConstrainedDesktop ? 6 : 5) : 7,
+      MenuCardMode.medium => _isConstrainedDesktop ? 7 : 9,
+      MenuCardMode.large => _isConstrainedDesktop ? 4 : 6,
     };
 
     return (availableWidth / targetCardWidth)
@@ -627,9 +642,10 @@ class MenuPanelState extends State<MenuPanel> {
 
   double _resolveGridAspectRatio(MenuCardMode cardMode) {
     return switch (cardMode) {
-      MenuCardMode.compact => widget.isCompact ? 1.56 : 1.70,
-      MenuCardMode.medium => 0.64,
-      MenuCardMode.large => 1.42,
+      MenuCardMode.compact =>
+        widget.isCompact ? (_isConstrainedDesktop ? 1.24 : 1.56) : 1.70,
+      MenuCardMode.medium => _isConstrainedDesktop ? 0.90 : 0.64,
+      MenuCardMode.large => _isConstrainedDesktop ? 1.18 : 1.42,
     };
   }
 
@@ -1082,15 +1098,23 @@ class MenuPanelState extends State<MenuPanel> {
                                   );
                                   final childAspectRatio =
                                       _resolveGridAspectRatio(cardMode);
+                                  final gridSpacing =
+                                      widget.isCompact && _isConstrainedDesktop
+                                          ? 4.0
+                                          : (widget.isCompact ? 6.0 : 8.0);
+                                  final gridPadding =
+                                      widget.isCompact && _isConstrainedDesktop
+                                          ? 4.0
+                                          : (widget.isCompact ? 6.0 : 8.0);
                                   _gridColumnCount = crossAxisCount;
                                   final itemWidth = (constraints.maxWidth -
-                                          (widget.isCompact ? 12 : 16) -
+                                          (gridPadding * 2) -
                                           ((crossAxisCount - 1) *
-                                              (widget.isCompact ? 6 : 8))) /
+                                              gridSpacing)) /
                                       crossAxisCount;
                                   _gridRowExtent =
                                       (itemWidth / childAspectRatio) +
-                                          (widget.isCompact ? 6 : 8);
+                                          gridSpacing;
                                   if (_focusedMenuItemIndex >= items.length) {
                                     _focusedMenuItemIndex = items.length - 1;
                                   }
@@ -1101,15 +1125,12 @@ class MenuPanelState extends State<MenuPanel> {
                                         _handleGridKey(event, items),
                                     child: GridView.builder(
                                       controller: _gridScrollController,
-                                      padding: EdgeInsets.all(
-                                          widget.isCompact ? 6 : 8),
+                                      padding: EdgeInsets.all(gridPadding),
                                       gridDelegate:
                                           SliverGridDelegateWithFixedCrossAxisCount(
                                         crossAxisCount: crossAxisCount,
-                                        mainAxisSpacing:
-                                            widget.isCompact ? 6 : 8,
-                                        crossAxisSpacing:
-                                            widget.isCompact ? 6 : 8,
+                                        mainAxisSpacing: gridSpacing,
+                                        crossAxisSpacing: gridSpacing,
                                         childAspectRatio: childAspectRatio,
                                       ),
                                       itemCount: items.length,
@@ -1260,7 +1281,7 @@ class MenuPanelState extends State<MenuPanel> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                '${item.price?.price ?? '0'}',
+                                _formatMenuPrice(item.price?.price),
                                 style: buildCustomStyle(
                                   FontWeightManager.bold,
                                   denseMode ? FontSize.s11 : FontSize.s12,
@@ -1360,11 +1381,8 @@ class MenuPanelState extends State<MenuPanel> {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-    final rawPrice = item.price?.price;
-    final price = rawPrice is num
-        ? rawPrice.toStringAsFixed(2)
-        : (double.tryParse(rawPrice?.toString() ?? '')?.toStringAsFixed(2) ??
-            (rawPrice?.toString() ?? '0.00'));
+    final price = _formatMenuPrice(item.price?.price);
+    final denseMode = _isConstrainedDesktop;
 
     return Container(
       decoration: BoxDecoration(
@@ -1388,7 +1406,7 @@ class MenuPanelState extends State<MenuPanel> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 4,
+                flex: denseMode ? 3 : 4,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -1421,8 +1439,10 @@ class MenuPanelState extends State<MenuPanel> {
                       left: 6,
                       child: !isAvailable
                           ? Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 3),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: denseMode ? 4 : 6,
+                                vertical: denseMode ? 2 : 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.92),
                                 borderRadius: BorderRadius.circular(6),
@@ -1435,7 +1455,7 @@ class MenuPanelState extends State<MenuPanel> {
                                 overflow: TextOverflow.ellipsis,
                                 style: buildCustomStyle(
                                   FontWeightManager.semiBold,
-                                  FontSize.s9,
+                                  denseMode ? FontSize.s8 : FontSize.s9,
                                   0.21,
                                   const Color(0xFF64748B),
                                 ),
@@ -1453,15 +1473,15 @@ class MenuPanelState extends State<MenuPanel> {
                               _showProductInfoDialog(context, item, false),
                           borderRadius: BorderRadius.circular(14),
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: EdgeInsets.all(denseMode ? 3 : 4),
                             decoration: BoxDecoration(
                               color: Colors.black.withOpacity(0.48),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.info_outline,
                               color: Colors.white,
-                              size: 16,
+                              size: denseMode ? 13 : 16,
                             ),
                           ),
                         ),
@@ -1471,8 +1491,10 @@ class MenuPanelState extends State<MenuPanel> {
                       bottom: 0,
                       right: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: denseMode ? 5 : 7,
+                          vertical: denseMode ? 3 : 4,
+                        ),
                         decoration: BoxDecoration(
                           color: ColorManager.kPrimaryColor.withOpacity(0.92),
                           borderRadius: const BorderRadius.only(
@@ -1485,7 +1507,7 @@ class MenuPanelState extends State<MenuPanel> {
                           overflow: TextOverflow.ellipsis,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
-                            FontSize.s11,
+                            denseMode ? FontSize.s9 : FontSize.s11,
                             0.21,
                             Colors.white,
                           ),
@@ -1496,16 +1518,16 @@ class MenuPanelState extends State<MenuPanel> {
                 ),
               ),
               Expanded(
-                flex: 3,
+                flex: denseMode ? 2 : 3,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(denseMode ? 6 : 8),
                   child: Text(
                     '${item.productName ?? 'Unknown Product'} / ${item.unit ?? ''}',
-                    maxLines: 4,
+                    maxLines: denseMode ? 3 : 4,
                     overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
-                      FontSize.s13,
+                      denseMode ? FontSize.s11 : FontSize.s13,
                       0.21,
                       isAvailable
                           ? const Color(0xFF1E293B)
@@ -1528,20 +1550,21 @@ class MenuPanelState extends State<MenuPanel> {
       // Check if any stock has quantity > 0
       isAvailable = item.stock!.any((stock) => (stock.quantity ?? 0) > 0);
     }
+    final extraDense = compact && _isConstrainedDesktop;
 
     return Container(
       decoration: BoxDecoration(
         color: isAvailable ? Colors.white : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(extraDense ? 8 : 12),
         border: Border.all(
           color: Colors.grey.shade200,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(extraDense ? 0.03 : 0.04),
+            blurRadius: extraDense ? 4 : 8,
+            offset: Offset(0, extraDense ? 1 : 2),
           ),
         ],
       ),
@@ -1553,9 +1576,9 @@ class MenuPanelState extends State<MenuPanel> {
                   widget.onItemAdd(item, 1);
                 }
               : null,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(extraDense ? 8 : 12),
           child: Padding(
-            padding: EdgeInsets.all(compact ? 8.0 : 12.0),
+            padding: EdgeInsets.all(extraDense ? 6.0 : (compact ? 8.0 : 12.0)),
             child: SingleChildScrollView(
               physics: const NeverScrollableScrollPhysics(),
               child: Column(
@@ -1574,11 +1597,13 @@ class MenuPanelState extends State<MenuPanel> {
                           Expanded(
                             child: Text(
                               item.productName ?? 'Unknown Product',
-                              maxLines: 1,
+                              maxLines: extraDense ? 3 : 1,
                               overflow: TextOverflow.ellipsis,
                               style: buildCustomStyle(
                                 FontWeightManager.bold,
-                                compact ? FontSize.s10 : FontSize.s12,
+                                extraDense
+                                    ? FontSize.s10
+                                    : (compact ? FontSize.s10 : FontSize.s12),
                                 0.21,
                                 isAvailable
                                     ? const Color(0xFF1E293B)
@@ -1586,21 +1611,24 @@ class MenuPanelState extends State<MenuPanel> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: extraDense ? 3 : 6),
                           Container(
                             padding: EdgeInsets.symmetric(
-                              horizontal: compact ? 4 : 6,
-                              vertical: compact ? 2 : 3,
+                              horizontal: extraDense ? 3 : (compact ? 4 : 6),
+                              vertical: extraDense ? 2 : (compact ? 2 : 3),
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF059669).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius:
+                                  BorderRadius.circular(extraDense ? 5 : 6),
                             ),
                             child: Text(
-                              '${item.price?.price ?? '0'}',
+                              _formatMenuPrice(item.price?.price),
                               style: buildCustomStyle(
                                 FontWeightManager.bold,
-                                compact ? FontSize.s9 : FontSize.s11,
+                                extraDense
+                                    ? FontSize.s9
+                                    : (compact ? FontSize.s9 : FontSize.s11),
                                 0.23,
                                 isAvailable
                                     ? const Color(0xFF059669)
@@ -1610,9 +1638,9 @@ class MenuPanelState extends State<MenuPanel> {
                           ),
                         ],
                       ),
-                      SizedBox(height: compact ? 2 : 4),
+                      SizedBox(height: extraDense ? 1 : (compact ? 2 : 4)),
                       // productName
-                      if (item.productName != null)
+                      if (!extraDense && item.productName != null)
                         Text(
                           item.productName.toString(),
                           maxLines: compact ? 1 : 1,
@@ -1631,9 +1659,11 @@ class MenuPanelState extends State<MenuPanel> {
                   Column(
                     children: [
                       SizedBox(
-                          height: compact
-                              ? 4
-                              : 6), // Keep separation while avoiding tiny bottom overflow
+                          height: extraDense
+                              ? 3
+                              : compact
+                                  ? 4
+                                  : 6), // Keep separation while avoiding tiny bottom overflow
                       // Tags and add button
                       Row(
                         children: [
@@ -1643,14 +1673,16 @@ class MenuPanelState extends State<MenuPanel> {
                               runSpacing: 2,
                               children: [
                                 // Check for FOOD_TYPE in product_props
-                                ...(_buildFoodTypeTags(item, compact)),
+                                if (!extraDense)
+                                  ...(_buildFoodTypeTags(item, compact)),
                                 // Show unit if no food type is available
-                                if (!_hasFoodType(item) && isAvailable)
+                                if ((extraDense || !_hasFoodType(item)) &&
+                                    isAvailable)
                                   _buildCompactTag('Available',
-                                      const Color(0xFF059669), compact),
+                                      const Color(0xFF059669), true),
                                 if (!isAvailable)
                                   _buildCompactTag('No Stock',
-                                      const Color(0xFF6B7280), compact),
+                                      const Color(0xFF6B7280), true),
                               ],
                             ),
                           ),
@@ -1662,7 +1694,8 @@ class MenuPanelState extends State<MenuPanel> {
                                     context, item, compact),
                                 borderRadius: BorderRadius.circular(6),
                                 child: Container(
-                                  padding: EdgeInsets.all(compact ? 3 : 4),
+                                  padding: EdgeInsets.all(
+                                      extraDense ? 3 : (compact ? 3 : 4)),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF2563EB)
                                         .withOpacity(0.1),
@@ -1671,7 +1704,7 @@ class MenuPanelState extends State<MenuPanel> {
                                   child: Icon(
                                     Icons.info_outline,
                                     color: const Color(0xFF2563EB),
-                                    size: compact ? 12 : 14,
+                                    size: extraDense ? 11 : (compact ? 12 : 14),
                                   ),
                                 ),
                               ),

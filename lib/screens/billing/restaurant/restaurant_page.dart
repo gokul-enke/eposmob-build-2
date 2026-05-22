@@ -75,6 +75,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
   static const double _leftPanelMinWidth = 220;
   static const double _rightPanelMinWidth = 300;
   static const double _menuPanelMinWidth = 420;
+  static const double _denseLeftPanelMinWidth = 190;
+  static const double _denseRightPanelMinWidth = 280;
+  static const double _denseMenuPanelMinWidth = 360;
 
   // Mobile navigation state
   MobileView _currentMobileView = MobileView.tables;
@@ -412,9 +415,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
       return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
 
+    final isDenseDesktop = screenSize.width < 1180 || screenSize.height <= 800;
+
     return Column(
       children: [
-        _buildAttenderTopBar(isCompact: !isLargeScreen),
+        _buildAttenderTopBar(isCompact: isDenseDesktop || !isLargeScreen),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -423,17 +428,22 @@ class _RestaurantPageState extends State<RestaurantPage> {
               final totalSplitterWidth = splitterCount * _splitterWidth;
               final availableWidth =
                   math.max(0, totalWidth - totalSplitterWidth);
-              final leftMin = _showTablesPanel ? _leftPanelMinWidth : 0.0;
-              final leftMax = _showTablesPanel
-                  ? math.max(leftMin,
-                      availableWidth - _menuPanelMinWidth - _rightPanelMinWidth)
+              final leftMin = _showTablesPanel
+                  ? (isDenseDesktop
+                      ? _denseLeftPanelMinWidth
+                      : _leftPanelMinWidth)
                   : 0.0;
-              final rightMin = _rightPanelMinWidth;
+              final menuMin =
+                  isDenseDesktop ? _denseMenuPanelMinWidth : _menuPanelMinWidth;
+              final rightMin = isDenseDesktop
+                  ? _denseRightPanelMinWidth
+                  : _rightPanelMinWidth;
+              final leftMax = _showTablesPanel
+                  ? math.max(leftMin, availableWidth - menuMin - rightMin)
+                  : 0.0;
               final rightMax = math.max(
                 rightMin,
-                availableWidth -
-                    (_showTablesPanel ? leftMin : 0) -
-                    _menuPanelMinWidth,
+                availableWidth - (_showTablesPanel ? leftMin : 0) - menuMin,
               );
 
               final leftWidth = _showTablesPanel
@@ -445,7 +455,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   .clamp(rightMin, rightMax)
                   .toDouble();
               final menuWidth = math.max(
-                _menuPanelMinWidth,
+                menuMin,
                 availableWidth - leftWidth - rightWidth,
               );
 
@@ -470,7 +480,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     ),
                   SizedBox(
                     width: menuWidth,
-                    child: _buildMenuArea(screenSize),
+                    child: _buildMenuArea(
+                      screenSize,
+                      isCompact: isDenseDesktop,
+                    ),
                   ),
                   _buildHorizontalSplitter(
                     onDragUpdate: (dx) {
@@ -515,6 +528,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       refreshCounter: _refreshCounter,
                       isLoadingSendToKitchen: _isLoadingSendToKitchen,
                       isLoadingPrint: _isLoadingPrint,
+                      isCompact: isDenseDesktop,
                       onLocalDraftLoaded: _applyLocalDraftContext,
                       onLocalDraftSaved: _resetCounterOrderContextAfterSave,
                     ),
@@ -543,12 +557,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
-  Widget _buildMenuArea(Size screenSize) {
+  Widget _buildMenuArea(Size screenSize, {bool isCompact = false}) {
     final menuPanel = MenuPanel(
       key: _menuPanelKey,
       onCategoryChanged: (cid) => setState(() => _activeCategoryId = cid),
       activeCategoryId: _activeCategoryId,
       onItemAdd: _handleItemAdd,
+      isCompact: isCompact,
+      useFontCardModeInCompact: isCompact,
       screenSize: screenSize,
       selectedOrder: _selectedOrderFromOrderPanel,
     );
@@ -1107,10 +1123,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
             : Icons.delivery_dining_rounded;
 
     return Container(
-      margin: EdgeInsets.fromLTRB(8, isCompact ? 8 : 8, 8, 0),
+      margin: EdgeInsets.fromLTRB(8, isCompact ? 6 : 8, 8, 0),
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 12 : 16,
-        vertical: isCompact ? 8 : 10,
+        horizontal: isCompact ? 10 : 16,
+        vertical: isCompact ? 5 : 10,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1128,7 +1144,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
         children: [
           IconButton(
             visualDensity: VisualDensity.compact,
-            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+            constraints: BoxConstraints(
+              minWidth: isCompact ? 30 : 34,
+              minHeight: isCompact ? 30 : 34,
+            ),
             icon: Icon(
               _showTablesPanel ? Icons.menu_open_rounded : Icons.menu_rounded,
               color: const Color(0xFF2563EB),
@@ -1161,15 +1180,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
           //     size: isCompact ? 16 : 19,
           //   ),
           // ),
-          const SizedBox(width: 10),
+          SizedBox(width: isCompact ? 8 : 10),
           Expanded(
             child: Wrap(
-              spacing: 12,
-              runSpacing: 6,
+              spacing: isCompact ? 8 : 12,
+              runSpacing: isCompact ? 2 : 6,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
                     isCompact ? FontSize.s14 : FontSize.s16,
@@ -1177,13 +1198,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     const Color(0xFF1E293B),
                   ),
                 ),
-                if (!isCompact && isCounterEnabled) ...[
+                if (isCounterEnabled) ...[
                   _buildTopBarContextChip(
                     icon: Icons.restaurant_rounded,
                     label: _selectedTableName ?? 'Dining',
                     color: const Color(0xFF2563EB),
                     isSelected: _activeTableId != null,
                     onTap: _showDiningSelectionModal,
+                    isCompact: isCompact,
                   ),
                   _buildTopBarContextChip(
                     icon: Icons.person_rounded,
@@ -1196,6 +1218,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     isSelected: _orderPanelKey
                             .currentState?.selectedCustomerIdForDraft !=
                         null,
+                    isCompact: isCompact,
                     onTap: () async {
                       final state = _orderPanelKey.currentState;
                       if (state == null) {
@@ -1214,6 +1237,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     label: _selectedDeliveryMethodName ?? 'Delivery',
                     color: const Color(0xFF059669),
                     isSelected: _selectedDeliveryMethodId != null,
+                    isCompact: isCompact,
                     onTap: () async {
                       final state = _orderPanelKey.currentState;
                       if (state == null) {
@@ -1282,15 +1306,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
               ],
             ),
           ),
-          if (!isCompact) ...[
+          if (!isCompact || MediaQuery.sizeOf(context).width >= 1000) ...[
             if (widget.allowCounterBillingFromAttender) ...[
-              const SizedBox(width: 8),
-              _buildTopBarNewOrderButton(),
+              SizedBox(width: isCompact ? 6 : 8),
+              _buildTopBarNewOrderButton(isCompact: isCompact),
             ],
-            const SizedBox(width: 14),
-            _buildTopBarActions(),
-            const SizedBox(width: 6),
-            const LiveClock(),
+            SizedBox(width: isCompact ? 8 : 14),
+            _buildTopBarActions(isCompact: isCompact),
+            if (!isCompact) ...[
+              const SizedBox(width: 6),
+              const LiveClock(),
+            ],
           ],
         ],
       ),
@@ -1335,6 +1361,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     required Color color,
     required bool isSelected,
     required VoidCallback onTap,
+    bool isCompact = false,
   }) {
     return Material(
       color: Colors.transparent,
@@ -1342,8 +1369,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          constraints: BoxConstraints(maxWidth: isCompact ? 108 : 150),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 8 : 10,
+            vertical: isCompact ? 4 : 5,
+          ),
           decoration: BoxDecoration(
             color: isSelected ? color.withOpacity(0.10) : Colors.grey.shade50,
             borderRadius: BorderRadius.circular(999),
@@ -1356,8 +1386,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon,
-                  size: 14, color: isSelected ? color : Colors.grey.shade600),
-              const SizedBox(width: 6),
+                  size: isCompact ? 13 : 14,
+                  color: isSelected ? color : Colors.grey.shade600),
+              SizedBox(width: isCompact ? 5 : 6),
               Flexible(
                 child: Text(
                   label,
@@ -1365,7 +1396,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
-                    FontSize.s12,
+                    isCompact ? FontSize.s11 : FontSize.s12,
                     0.21,
                     isSelected ? color : const Color(0xFF64748B),
                   ),
@@ -1378,7 +1409,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
-  Widget _buildTopBarActions() {
+  Widget _buildTopBarActions({bool isCompact = false}) {
+    final buttonSize = isCompact ? 30.0 : 34.0;
+    final iconSize = isCompact ? 18.0 : 20.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1386,11 +1419,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
           builder: (context, keyboardProvider, child) {
             return IconButton(
               visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+              constraints:
+                  BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
               icon: Icon(
                 keyboardProvider.showKeyboardFeature
                     ? Icons.keyboard_hide
                     : Icons.keyboard,
+                size: iconSize,
                 color: keyboardProvider.showKeyboardFeature
                     ? const Color(0xFF2563EB)
                     : Colors.grey.shade600,
@@ -1411,9 +1446,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
         ),
         IconButton(
           visualDensity: VisualDensity.compact,
-          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          constraints:
+              BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
           icon: Icon(
             Icons.help_outline,
+            size: iconSize,
             color: Colors.grey.shade600,
           ),
           tooltip: 'Keyboard Shortcuts (Ctrl+H)',
@@ -1426,9 +1463,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
           builder: (context, fontProvider, child) {
             return IconButton(
               visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+              constraints:
+                  BoxConstraints(minWidth: buttonSize, minHeight: buttonSize),
               icon: Icon(
                 Icons.text_fields,
+                size: iconSize,
                 color: fontProvider.fontSizeLevel > 0
                     ? const Color(0xFF2563EB)
                     : Colors.grey.shade600,
@@ -1447,7 +1486,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
           builder: (context, billingProvider, child) {
             final hasInternet = billingProvider.hasInternet;
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact ? 3 : 4,
+                vertical: isCompact ? 3 : 4,
+              ),
               decoration: BoxDecoration(
                 color: hasInternet
                     ? Colors.green.withOpacity(0.1)
@@ -1460,7 +1502,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               ),
               child: Icon(
                 hasInternet ? Icons.wifi : Icons.wifi_off,
-                size: 16,
+                size: isCompact ? 14 : 16,
                 color: hasInternet ? Colors.green : Colors.red,
               ),
             );
@@ -1552,17 +1594,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
-  Widget _buildTopBarNewOrderButton() {
+  Widget _buildTopBarNewOrderButton({bool isCompact = false}) {
     return SizedBox(
-      height: 34,
+      height: isCompact ? 30 : 34,
       child: ElevatedButton.icon(
         onPressed: _startNewCounterOrder,
-        icon: const Icon(Icons.add_shopping_cart_rounded, size: 14),
+        icon: Icon(Icons.add_shopping_cart_rounded, size: isCompact ? 13 : 14),
         label: Text(
           'New Order',
           style: buildCustomStyle(
             FontWeightManager.bold,
-            FontSize.s11,
+            isCompact ? FontSize.s10 : FontSize.s11,
             0.21,
             Colors.white,
           ),
@@ -1571,7 +1613,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           backgroundColor: const Color(0xFF2563EB),
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 8 : 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),
