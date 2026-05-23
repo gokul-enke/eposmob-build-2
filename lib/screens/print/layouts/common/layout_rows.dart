@@ -129,6 +129,21 @@ class StandardBoxedTotalsRow extends ReceiptRow {
               iconSize);
           canvas.drawImageRect(item.icon!, src, dst, Paint());
           valueOffsetX += iconSize + 4;
+        } else if (item.currencySymbol != null &&
+            item.currencySymbol!.isNotEmpty) {
+          final symbolPainter = TextPainter(
+            text: TextSpan(
+              text: item.currencySymbol!,
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: itemFontSize,
+                fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          symbolPainter.paint(canvas, Offset(valueOffsetX, currentY));
+          valueOffsetX += symbolPainter.width + 4;
         }
 
         _drawScaledText(
@@ -229,6 +244,7 @@ class StandardBoxedLineItem {
   final double scale;
   final bool isSeparator;
   final ui.Image? icon;
+  final String? currencySymbol;
 
   StandardBoxedLineItem({
     this.label = '',
@@ -237,6 +253,7 @@ class StandardBoxedLineItem {
     this.scale = 1.0,
     this.isSeparator = false,
     this.icon,
+    this.currencySymbol,
   });
 }
 

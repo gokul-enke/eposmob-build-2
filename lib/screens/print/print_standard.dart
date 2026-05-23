@@ -13,7 +13,6 @@ import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -23,8 +22,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/localization_service.dart';
-import 'package:http/http.dart' as http;
-import 'package:pos_machine/resources/app_url.dart';
+import 'logo_loader.dart';
 
 class StandardPrinter {
   final BuildContext context;
@@ -2529,8 +2527,10 @@ class StandardPrinter {
             ? displayConfig!['showCartTotal']!.value as String
             : (isRtl ? 'الإجمالي:' : 'TOTAL:');
 
-    // Use currency symbol from app settings, fallback to empty string
-    final currencySymbol = currency.isNotEmpty ? '$currency ' : '';
+    // Use INR symbol when app currency is INR; otherwise keep configured code.
+    final currencySymbol = currency.trim().toUpperCase() == 'INR'
+        ? '\u20B9 '
+        : (currency.isNotEmpty ? '$currency ' : '');
 
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -3267,46 +3267,6 @@ class StandardPrinter {
 
   /// Fetches an image from a network URL and returns it as a pw.MemoryImage
   Future<pw.MemoryImage?> _fetchNetworkPdfImage(String? url) async {
-    if (url == null || url.isEmpty) {
-      debugPrint("[LOGO_DEBUG] No network logo URL provided for PDF");
-      return null;
-    }
-
-    String fullUrl;
-    if (url.startsWith('http')) {
-      fullUrl = url;
-    } else if (url.startsWith('logos/')) {
-      fullUrl = '${APPUrl.baseURL}/storage/$url';
-    } else {
-      fullUrl = url.startsWith('/')
-          ? '${APPUrl.baseURL}$url'
-          : '${APPUrl.baseURL}/$url';
-    }
-    debugPrint("[LOGO_DEBUG] Fetching network logo for PDF from: $fullUrl");
-
-    try {
-      final uri = Uri.parse(fullUrl);
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      final Map<String, String> queryParams =
-          Map<String, String>.from(uri.queryParameters);
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-      final urlWithStore = uri.replace(queryParameters: queryParams);
-
-      final response = await http.get(urlWithStore);
-      if (response.statusCode == 200) {
-        debugPrint("[LOGO_DEBUG] Network logo fetched successfully for PDF");
-        return pw.MemoryImage(response.bodyBytes);
-      } else {
-        debugPrint(
-            "[LOGO_DEBUG] Failed to fetch network logo for PDF. Status code: ${response.statusCode}");
-      }
-    } catch (e) {
-      debugPrint("[LOGO_DEBUG] Error fetching network logo for PDF: $e");
-    }
-    return null;
+    return PrintLogoLoader.loadPdfLogo(url, tag: '[print_standard]');
   }
 }

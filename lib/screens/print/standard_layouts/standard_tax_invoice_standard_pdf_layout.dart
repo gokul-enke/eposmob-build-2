@@ -13,12 +13,10 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pos_machine/resources/app_url.dart';
+import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 
 /// Standard Tax Invoice PDF layout — enhanced ZATCA-compliant bilingual template.
 ///
@@ -73,40 +71,18 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   }
 
   Future<pw.MemoryImage?> _fetchNetworkPdfImage(String? url) async {
-    if (url == null || url.isEmpty) return null;
-    String fullUrl;
-    if (url.startsWith('http')) {
-      fullUrl = url;
-    } else if (url.startsWith('logos/')) {
-      fullUrl = '${APPUrl.baseURL}/storage/$url';
-    } else {
-      fullUrl = url.startsWith('/')
-          ? '${APPUrl.baseURL}$url'
-          : '${APPUrl.baseURL}/$url';
-    }
-    try {
-      final uri = Uri.parse(fullUrl);
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      final Map<String, String> queryParams =
-          Map<String, String>.from(uri.queryParameters);
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-      final urlWithStore = uri.replace(queryParameters: queryParams);
-
-      final response = await http.get(urlWithStore);
-      if (response.statusCode == 200) {
-        return pw.MemoryImage(response.bodyBytes);
-      }
-    } catch (e) {
-      debugPrint('[DetailedTaxInvoice] Error fetching logo: $e');
-    }
-    return null;
+    return PrintLogoLoader.loadPdfLogo(url,
+        tag: '[standard_tax_invoice_standard_pdf_layout]');
   }
 
   // ── Public interface ────────────────────────────────────────────────
+  String _formatMoney(String currency, num amount) {
+    final currencyPrefix =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : currency.trim();
+    if (currencyPrefix.isEmpty) return amount.toStringAsFixed(2);
+    return '$currencyPrefix ${amount.toStringAsFixed(2)}';
+  }
+
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
     final pdf = await buildPdfDocument(params);
@@ -683,13 +659,13 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       if (_cfgVisible('showCustomerPaidAmount') &&
                           params.paidAmount != null)
                         pw.Text(
-                            '${_cfgVal('showCustomerPaidAmount', isRtl ? 'المبلغ المدفوع' : 'Paid Amt')}: ${params.paidAmount!.toStringAsFixed(2)}',
+                            '${_cfgVal('showCustomerPaidAmount', isRtl ? 'المبلغ المدفوع' : 'Paid Amt')}: ${_formatMoney(currency, params.paidAmount!)}',
                             style: footerStyle),
                       // Customer Current Balance
                       if (_cfgVisible('showCustomerCurrentBalance') &&
                           params.customerCurrentBalance != null)
                         pw.Text(
-                            '${_cfgVal('showCustomerCurrentBalance', isRtl ? 'الرصيد الحالي' : 'Cur Bal')}: ${params.customerCurrentBalance!.toStringAsFixed(2)}',
+                            '${_cfgVal('showCustomerCurrentBalance', isRtl ? 'الرصيد الحالي' : 'Cur Bal')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
                             style: footerStyle),
                     ],
                   ),
@@ -702,19 +678,19 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     children: [
                       if (dc?['showMRPTotal']?.visible != false)
                         _totalsRow('Total (Exc VAT)',
-                            totalExclTax.toStringAsFixed(2), footerStyle),
+                            _formatMoney(currency, totalExclTax), footerStyle),
                       if (dc?['showDiscount']?.visible != false &&
                           discountAmountValue > 0)
                         _totalsRow(
                             'Discount',
-                            discountAmountValue.toStringAsFixed(2),
+                            _formatMoney(currency, discountAmountValue),
                             footerStyle),
                       if (dc?['showTax']?.visible != false)
-                        _totalsRow('Total VAT', totalTax.toStringAsFixed(2),
-                            footerStyle),
+                        _totalsRow('Total VAT',
+                            _formatMoney(currency, totalTax), footerStyle),
                       if (dc?['showNetAmount']?.visible != false)
                         _totalsRow('Total (Inc VAT)',
-                            totalAmount.toStringAsFixed(2), footerBold),
+                            _formatMoney(currency, totalAmount), footerBold),
                     ],
                   ),
                 ),
@@ -741,7 +717,7 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // ═══════════════════════════════════════════════════════
             if (_cfgVisible('showSaved') && saved > 0)
               pw.Text(
-                '${_cfgVal('showSaved', isRtl ? 'لقد وفرت:' : 'You Saved:')} ${saved.toStringAsFixed(2)}',
+                '${_cfgVal('showSaved', isRtl ? 'لقد وفرت:' : 'You Saved:')} ${_formatMoney(currency, saved)}',
                 style: footerBold,
               ),
 

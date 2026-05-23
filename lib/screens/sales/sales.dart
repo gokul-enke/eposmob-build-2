@@ -1430,6 +1430,12 @@ Powered by CloudPOS''',
                 // Debug: Verify cart items before printing
                 final cartItemsForPrint = orderDetails.data?.cart?.cartItems ?? [];
                 debugPrint("===== SALES PRINT DEBUG =====");
+                debugPrint(
+                    "Order=${orderDetails.data?.orderNumber}, token=${orderDetails.data?.tokenNumber}, customer=$customerName");
+                debugPrint(
+                    "Totals: formattedTotal=$formattedTotal, savedTotal=$savedTotal, discountAmount=$discountAmount");
+                debugPrint(
+                    "Payment: method=$paymentMethod, breakdown=$paymentBreakdown, paidAmount=$paidAmount");
                 debugPrint("Cart items count: ${cartItemsForPrint.length}");
                 for (int i = 0; i < cartItemsForPrint.length; i++) {
                   final item = cartItemsForPrint[i];
@@ -1468,9 +1474,13 @@ Powered by CloudPOS''',
                   netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
                       ?.toString(),
                 );
+                debugPrint(
+                    "[SALES][PRINT] autoPrintSuccess=$autoPrintSuccess for order=${orderDetails.data?.orderNumber}");
 
                 // Only show print page if auto-print failed
                 if (!autoPrintSuccess && mounted) {
+                  debugPrint(
+                      "[SALES][PRINT] Opening PrintPage because auto print failed.");
                   Navigator.push(
                     context,
                     MaterialPageRoute(

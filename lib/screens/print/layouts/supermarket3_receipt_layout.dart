@@ -9,8 +9,6 @@ import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -22,10 +20,10 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/resources/app_url.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
+import '../logo_loader.dart';
 import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 // import 'thermal/printer_utils.dart';
 
@@ -643,15 +641,15 @@ class supermarket3ReciptLayout implements ReceiptLayout {
     }
 
     final customerLabel = _getLabel(displayConfig, 'showCustomerName', null,
-      isEnglish ? "Customer:" : "العميل:");
+        isEnglish ? "Customer:" : "العميل:");
     final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
-      isEnglish ? "Phone:" : "الهاتف:");
+        isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = _getLabel(displayConfig, paymentConfigKey, null,
-      isEnglish ? "Payment:" : "الدفع:");
+        isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = _getLabel(displayConfig, 'showCustomerAddress', null,
-      isEnglish ? "Address:" : "العنوان:");
+        isEnglish ? "Address:" : "العنوان:");
     final commentLabel = _getLabel(displayConfig, commentConfigKey, null,
-      isEnglish ? "Comment:" : "تعليق:");
+        isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
         isEnglish ? "Delivery:" : "التوصيل:");
     final customerVatLabel = _getLabel(displayConfig, 'showCustomerVatNumber',
@@ -1139,14 +1137,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
       List<ReceiptTableColumn> detailCols = [];
 
       // Barcode column (if visible)
-      String barcode = '';
-      if (!isFromLocalStorage &&
-          item.barcode != null &&
-          item.barcode.isNotEmpty) {
-        barcode = item.barcode;
-      } else if (isFromLocalStorage && item['barcode'] != null) {
-        barcode = item['barcode'];
-      }
+      final barcode = _getCartItemText(item, isFromLocalStorage, 'barcode');
 
       bool showBarcode = _isVisible(displayConfig, 'showBarcode');
       detailCols.add(ReceiptTableColumn(showBarcode ? barcode : "",
@@ -1164,12 +1155,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
           weight: 0.45, align: TextAlign.left, scale: 0.65));
 
       // GST%
-      String gstPerc = '';
-      if (!isFromLocalStorage && item.taxes != null && item.taxes!.isNotEmpty) {
-        gstPerc = item.taxes!.first.rate ?? '0';
-      } else {
-        gstPerc = '0';
-      }
+      final gstPerc = _getCartItemTaxRate(item, isFromLocalStorage);
       detailCols.add(ReceiptTableColumn('$gstPerc%',
           weight: 0.10, align: TextAlign.right, scale: 0.65));
 
@@ -1190,12 +1176,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
       }
 
       // HSN
-      String hsn = '';
-      if (!isFromLocalStorage && item.hsnCode != null) {
-        hsn = item.hsnCode;
-      } else if (isFromLocalStorage && item['hsn_code'] != null) {
-        hsn = item['hsn_code'];
-      }
+      final hsn = _getCartItemText(item, isFromLocalStorage, 'hsn_code');
       if (_isVisible(displayConfig, 'showHSNCode')) {
         subDetailCols.add(ReceiptTableColumn('HSN: $hsn',
             weight: 0.30, align: TextAlign.left, scale: 0.6));
@@ -1275,6 +1256,54 @@ class supermarket3ReciptLayout implements ReceiptLayout {
     }
   }
 
+  String _getCartItemText(
+    dynamic item,
+    bool isFromLocalStorage,
+    String key,
+  ) {
+    if (isFromLocalStorage || item is Map) {
+      if (key == 'hsn_code') {
+        return (item[key] ?? item['hsnCode'])?.toString() ?? '';
+      }
+      return item[key]?.toString() ?? '';
+    }
+
+    // Some API cart item types do not expose optional product metadata.
+    try {
+      return item.toJson()?[key]?.toString() ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _getCartItemTaxRate(dynamic item, bool isFromLocalStorage) {
+    dynamic taxes;
+    if (isFromLocalStorage || item is Map) {
+      taxes = item['taxes'];
+    } else {
+      try {
+        taxes = item.taxes;
+      } catch (_) {
+        return '0';
+      }
+    }
+
+    if (taxes is! List || taxes.isEmpty) {
+      return '0';
+    }
+
+    final firstTax = taxes.first;
+    if (firstTax is Map) {
+      return firstTax['rate']?.toString() ?? '0';
+    }
+
+    try {
+      return firstTax.rate?.toString() ?? '0';
+    } catch (_) {
+      return '0';
+    }
+  }
+
   // ==================== TOTALS SECTION (Boxed Style) ====================
 
   void _buildTotalsSection(
@@ -1289,6 +1318,9 @@ class supermarket3ReciptLayout implements ReceiptLayout {
 
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    final String? currencySymbol =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : null;
+    final ui.Image? currencyIcon = currencySymbol == null ? sarSymbol : null;
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1363,6 +1395,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
         value: subtotal.toStringAsFixed(2),
         isBold: true,
         scale: 0.75,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1373,6 +1407,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
         value: discountAmountValue.toStringAsFixed(2),
         isBold: true,
         scale: 0.75,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1382,6 +1418,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
       value: "0.00", // Placeholder for now
       isBold: true,
       scale: 0.75,
+      icon: currencyIcon,
+      currencySymbol: currencySymbol,
     ));
 
     // 4. Round Off
@@ -1396,6 +1434,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
       value: roundOff.toStringAsFixed(2),
       isBold: true,
       scale: 0.75,
+      icon: currencyIcon,
+      currencySymbol: currencySymbol,
     ));
 
     // 5. Grand Total (Bold)
@@ -1405,6 +1445,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
         value: total.toStringAsFixed(2),
         isBold: true,
         scale: 0.9,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1446,7 +1488,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
               value: amt.toStringAsFixed(2),
               isBold: true,
               scale: totalsScale,
-              icon: sarSymbol,
+              icon: currencyIcon,
+              currencySymbol: currencySymbol,
             ));
           }
         });
@@ -1481,7 +1524,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
                   value: amt.toStringAsFixed(2),
                   isBold: true,
                   scale: totalsScale,
-                  icon: sarSymbol,
+                  icon: currencyIcon,
+                  currencySymbol: currencySymbol,
                 ));
               }
             });
@@ -1507,7 +1551,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
           value: params.paidAmount!.toStringAsFixed(2),
           isBold: true,
           scale: totalsScale,
-          icon: sarSymbol,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
     }
@@ -1717,13 +1762,13 @@ class supermarket3ReciptLayout implements ReceiptLayout {
         null, isEnglish ? "Previous Balance" : "الرصيد السابق");
 
     final paidAmountLabel = _getLabel(displayConfig, 'showCustomerPaidAmount',
-      null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
+        null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
 
     final currentBalanceLabel = _getLabel(
         displayConfig,
         'showCustomerCurrentBalance',
         null,
-      isEnglish ? "Current Balance" : "الرصيد الحالي");
+        isEnglish ? "Current Balance" : "الرصيد الحالي");
 
     // Previous Balance
     if (displayConfig?['showCustomerPrevBalance']?.visible != false &&
@@ -2167,41 +2212,8 @@ class supermarket3ReciptLayout implements ReceiptLayout {
   }
 
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
-    if (url == null || url.isEmpty) return null;
-
-    String fullUrl;
-    if (url.startsWith('http')) {
-      fullUrl = url;
-    } else if (url.startsWith('logos/')) {
-      fullUrl = '${APPUrl.baseURL}/storage/$url';
-    } else {
-      fullUrl = url.startsWith('/')
-          ? '${APPUrl.baseURL}$url'
-          : '${APPUrl.baseURL}/$url';
-    }
-
-    try {
-      final uri = Uri.parse(fullUrl);
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      final Map<String, String> queryParams =
-          Map<String, String>.from(uri.queryParameters);
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-      final urlWithStore = uri.replace(queryParameters: queryParams);
-
-      final response = await http.get(urlWithStore);
-      if (response.statusCode == 200) {
-        final codec = await ui.instantiateImageCodec(response.bodyBytes);
-        final fi = await codec.getNextFrame();
-        return fi.image;
-      }
-    } catch (e) {
-      debugPrint("[Templet1Layout] Error fetching image: $e");
-    }
-    return null;
+    return PrintLogoLoader.loadUiLogo(url,
+        tag: '[supermarket3_receipt_layout]');
   }
 
   /// Load an image from Flutter assets
@@ -2376,40 +2388,54 @@ class StandardBoxedTotalsRow extends ReceiptRow {
             TextDirection.ltr,
           );
 
-          // Value on Right, then Icon to the left of value
+          // Value on Right, then currency mark to the left of value.
           double rightEdge = width - padding;
-          double iconSpace = 0;
+          double currencyMarkSpace = 0;
+          TextPainter? symbolPainter;
           if (item.icon != null) {
             final double iconSize = itemFontSize * 1.0;
-            iconSpace = iconSize + 4;
-          }
-
-          // Draw value text right-aligned, leaving room for icon
-          _drawScaledText(
-            canvas,
-            item.value,
-            Offset(rightEdge, currentY),
-            width * 0.40 - iconSpace,
-            itemFontSize,
-            item.isBold,
-            TextAlign.right,
-            TextDirection.ltr,
-          );
-
-          // Draw icon to the left of the value text
-          if (item.icon != null) {
-            final double iconSize = itemFontSize * 1.0;
-            // Measure value text width to position icon just before it
-            final valuePainter = TextPainter(
+            currencyMarkSpace = iconSize + 4;
+          } else if (item.currencySymbol != null &&
+              item.currencySymbol!.isNotEmpty) {
+            symbolPainter = TextPainter(
               text: TextSpan(
-                text: item.value,
+                text: item.currencySymbol!,
                 style: TextStyle(
+                  color: Colors.black,
                   fontSize: itemFontSize,
                   fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
               textDirection: TextDirection.ltr,
             )..layout();
+            currencyMarkSpace = symbolPainter.width + 4;
+          }
+
+          // Draw value text right-aligned, leaving room for the currency mark.
+          _drawScaledText(
+            canvas,
+            item.value,
+            Offset(rightEdge, currentY),
+            width * 0.40 - currencyMarkSpace,
+            itemFontSize,
+            item.isBold,
+            TextAlign.right,
+            TextDirection.ltr,
+          );
+
+          final valuePainter = TextPainter(
+            text: TextSpan(
+              text: item.value,
+              style: TextStyle(
+                fontSize: itemFontSize,
+                fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+
+          if (item.icon != null) {
+            final double iconSize = itemFontSize * 1.0;
             final double iconX = rightEdge - valuePainter.width - iconSize - 4;
             final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(),
                 item.icon!.height.toDouble());
@@ -2421,6 +2447,10 @@ class StandardBoxedTotalsRow extends ReceiptRow {
                 iconSize,
                 iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
+          } else if (symbolPainter != null) {
+            final double symbolX =
+                rightEdge - valuePainter.width - symbolPainter.width - 4;
+            symbolPainter.paint(canvas, Offset(symbolX, currentY));
           }
         } else {
           // Arabic: Value + Icon on Left, Label on Right
@@ -2438,6 +2468,21 @@ class StandardBoxedTotalsRow extends ReceiptRow {
                 iconSize);
             canvas.drawImageRect(item.icon!, src, dst, Paint());
             valueOffsetX += iconSize + 4;
+          } else if (item.currencySymbol != null &&
+              item.currencySymbol!.isNotEmpty) {
+            final symbolPainter = TextPainter(
+              text: TextSpan(
+                text: item.currencySymbol!,
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: itemFontSize,
+                  fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              textDirection: TextDirection.ltr,
+            )..layout();
+            symbolPainter.paint(canvas, Offset(valueOffsetX, currentY));
+            valueOffsetX += symbolPainter.width + 4;
           }
 
           // Value on Left
@@ -2544,6 +2589,7 @@ class StandardBoxedLineItem {
   final double scale;
   final bool isSeparator;
   final ui.Image? icon;
+  final String? currencySymbol;
 
   StandardBoxedLineItem({
     this.label = '',
@@ -2552,6 +2598,7 @@ class StandardBoxedLineItem {
     this.scale = 1.0,
     this.isSeparator = false,
     this.icon,
+    this.currencySymbol,
   });
 }
 

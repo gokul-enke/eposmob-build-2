@@ -824,7 +824,69 @@ class MenuPanelState extends State<MenuPanel> {
                           0.30,
                           const Color(0xFF1E293B)),
                     ),
-                    const Spacer(),
+                    SizedBox(width: widget.isCompact ? 10 : 14),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.92),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
+                        ),
+                        child: Focus(
+                          onKeyEvent: (node, event) => _handleSearchKey(event),
+                          child: TextField(
+                            focusNode: _searchFocusNode,
+                            controller: _searchController,
+                            onTap: focusSearch,
+                            onSubmitted: (_) => focusMenuGrid(),
+                            onEditingComplete: focusMenuGrid,
+                            onChanged: _onSearchChanged,
+                            decoration: InputDecoration(
+                              hintText: 'Search menu items...',
+                              hintStyle: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s13,
+                                0.21,
+                                Colors.grey.shade500,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color: Colors.grey.shade500,
+                                size: widget.isCompact ? 16 : 18,
+                              ),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear,
+                                        color: Colors.grey.shade500,
+                                        size: widget.isCompact ? 16 : 18,
+                                      ),
+                                      onPressed: _clearSearch,
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              isDense: true,
+                              alignLabelWithHint: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: widget.isCompact ? 10 : 12,
+                                vertical: widget.isCompact ? 10 : 12,
+                              ),
+                            ),
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s13,
+                              0.21,
+                              const Color(0xFF1E293B),
+                            ),
+                            textAlignVertical: TextAlignVertical.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: widget.isCompact ? 10 : 12),
                     if (items.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -975,69 +1037,6 @@ class MenuPanelState extends State<MenuPanel> {
                     ),
                   ),
                 ),
-              // Search bar
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: widget.isCompact ? 12 : 16,
-                  vertical: 8,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.grey.shade200,
-                      width: 1,
-                    ),
-                  ),
-                  child: Focus(
-                    onKeyEvent: (node, event) => _handleSearchKey(event),
-                    child: TextField(
-                      focusNode: _searchFocusNode,
-                      controller: _searchController,
-                      onTap: focusSearch,
-                      onSubmitted: (_) => focusMenuGrid(),
-                      onEditingComplete: focusMenuGrid,
-                      onChanged: _onSearchChanged,
-                      decoration: InputDecoration(
-                        hintText: 'Search menu items...',
-                        hintStyle: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s14,
-                          0.21,
-                          Colors.grey.shade500,
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: Colors.grey.shade500,
-                          size: widget.isCompact ? 18 : 20,
-                        ),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(
-                                  Icons.clear,
-                                  color: Colors.grey.shade500,
-                                  size: widget.isCompact ? 18 : 20,
-                                ),
-                                onPressed: _clearSearch,
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: widget.isCompact ? 12 : 16,
-                          vertical: widget.isCompact ? 12 : 16,
-                        ),
-                      ),
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s14,
-                        0.21,
-                        const Color(0xFF1E293B),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
               // Menu items
               Expanded(
                 child: isProductsLoading

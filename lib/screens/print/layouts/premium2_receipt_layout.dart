@@ -10,9 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
 import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -26,12 +23,12 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/resources/app_url.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
 import '../thermal/printer_utils.dart';
 import '../thermal/debug_image_saver.dart';
+import '../logo_loader.dart';
 
 /// Premium receipt layout - Modern & Clean design.
 ///
@@ -71,6 +68,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final appSettings = appSettingsProvider.appSettings;
+    debugPrint(
+        "[PREMIUM][LOGO] Config: showLogo=${billDocumentConfig.showLogo}, logo='${billDocumentConfig.logo}', layout=$layoutId, order=${params.orderNumber}");
 
     try {
       debugPrint("Connecting to printer...");
@@ -92,37 +91,59 @@ class Premium2ReceiptLayout implements ReceiptLayout {
       List<ReceiptRow> part1Rows = [];
       List<ReceiptRow> part2Rows = [];
 
-      // ========== LOAD SAR SYMBOL ==========
+      // ========== LOAD CURRENCY SYMBOL ==========
+      final String currencyCode =
+          (appSettings?.currency.toString() ?? '').trim().toUpperCase();
+      final bool useTextCurrencySymbol = currencyCode == 'INR';
       ui.Image? sarSymbol;
-      try {
-        sarSymbol =
-            await _loadAssetImage('assets/images/saudi_riyal_symbol.png');
-        if (sarSymbol != null) {
-          debugPrint(
-              "[PREMIUM] SAR symbol loaded: ${sarSymbol.width}x${sarSymbol.height}");
+      if (!useTextCurrencySymbol) {
+        try {
+          sarSymbol =
+              await _loadAssetImage('assets/images/saudi_riyal_symbol.png');
+          if (sarSymbol != null) {
+            debugPrint(
+                "[PREMIUM] SAR symbol loaded: ${sarSymbol.width}x${sarSymbol.height}");
+          }
+        } catch (e) {
+          debugPrint("[PREMIUM] Error loading SAR symbol: $e");
         }
-      } catch (e) {
-        debugPrint("[PREMIUM] Error loading SAR symbol: $e");
+      } else {
+        debugPrint("[PREMIUM] Using INR text currency symbol for totals");
       }
 
       // ========== LOGO SECTION ==========
       if (billDocumentConfig.showLogo == 1) {
         try {
+          debugPrint(
+              "[PREMIUM][LOGO] Logo section enabled. Attempting logo load...");
           ui.Image? logo;
           if (billDocumentConfig.logo != null &&
               billDocumentConfig.logo.toString().isNotEmpty) {
+            debugPrint(
+                "[PREMIUM][LOGO] Raw logo value: '${billDocumentConfig.logo}'");
             logo =
                 await _fetchNetworkUiImage(billDocumentConfig.logo.toString());
+          } else {
+            debugPrint(
+                "[PREMIUM][LOGO] Logo path is empty/null in billDocumentConfig.");
           }
 
           if (logo != null) {
             debugPrint("[PREMIUM] Logo loaded: ${logo.width}x${logo.height}");
             part1Rows.add(ImageRow(logo, width: printWidth * 0.6));
             part1Rows.add(SpacingRow(_headerGap));
+            debugPrint(
+                "[PREMIUM][LOGO] Logo row added to receipt with width=${(printWidth * 0.6).toStringAsFixed(1)}");
+          } else {
+            debugPrint(
+                "[PREMIUM][LOGO] Logo image is null after fetch; row not added.");
           }
         } catch (e) {
           debugPrint("[PREMIUM] Error loading logo: $e");
         }
+      } else {
+        debugPrint(
+            "[PREMIUM][LOGO] Logo section skipped because showLogo != 1.");
       }
 
       // ========== HEADER SECTION (Modern & Clean) ==========
@@ -1372,6 +1393,9 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
     // Get currency from appSettings
     final String currency = appSettings?.currency ?? 'INR';
+    final String? currencySymbol =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : null;
+    final ui.Image? currencyIcon = currencySymbol == null ? sarSymbol : null;
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1455,7 +1479,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         value: subtotal.toStringAsFixed(2),
         isBold: true,
         scale: 1.1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1466,7 +1491,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         value: discountAmountValue.toStringAsFixed(2),
         isBold: true,
         scale: 1.1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1477,7 +1503,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         value: taxAmount.toStringAsFixed(2),
         isBold: true,
         scale: 1.1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1488,7 +1515,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         value: total.toStringAsFixed(2),
         isBold: true,
         scale: 1.1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1522,7 +1550,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
               value: amt.toStringAsFixed(2),
               isBold: true,
               scale: 1.1,
-              icon: sarSymbol,
+              icon: currencyIcon,
+              currencySymbol: currencySymbol,
             ));
           }
         });
@@ -1551,7 +1580,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
                   value: amt.toStringAsFixed(2),
                   isBold: true,
                   scale: 1.1,
-                  icon: sarSymbol,
+                  icon: currencyIcon,
+                  currencySymbol: currencySymbol,
                 ));
               }
             });
@@ -1577,7 +1607,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
           value: params.paidAmount!.toStringAsFixed(2),
           isBold: true,
           scale: 1.1,
-          icon: sarSymbol,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
     }
@@ -1958,41 +1989,7 @@ class Premium2ReceiptLayout implements ReceiptLayout {
   }
 
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
-    if (url == null || url.isEmpty) return null;
-
-    String fullUrl;
-    if (url.startsWith('http')) {
-      fullUrl = url;
-    } else if (url.startsWith('logos/')) {
-      fullUrl = '${APPUrl.baseURL}/storage/$url';
-    } else {
-      fullUrl = url.startsWith('/')
-          ? '${APPUrl.baseURL}$url'
-          : '${APPUrl.baseURL}/$url';
-    }
-
-    try {
-      final uri = Uri.parse(fullUrl);
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      final Map<String, String> queryParams =
-          Map<String, String>.from(uri.queryParameters);
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-      final urlWithStore = uri.replace(queryParameters: queryParams);
-
-      final response = await http.get(urlWithStore);
-      if (response.statusCode == 200) {
-        final codec = await ui.instantiateImageCodec(response.bodyBytes);
-        final fi = await codec.getNextFrame();
-        return fi.image;
-      }
-    } catch (e) {
-      debugPrint("[PremiumReceiptLayout] Error fetching image: $e");
-    }
-    return null;
+    return PrintLogoLoader.loadUiLogo(url, tag: '[premium2_receipt_layout]');
   }
 
   /// Load an image from Flutter assets
@@ -2137,6 +2134,21 @@ class BoxedTotalsRow extends ReceiptRow {
               iconSize);
           canvas.drawImageRect(item.icon!, src, dst, Paint());
           valueOffsetX += iconSize + 4; // Space after icon
+        } else if (item.currencySymbol != null &&
+            item.currencySymbol!.isNotEmpty) {
+          final symbolPainter = TextPainter(
+            text: TextSpan(
+              text: item.currencySymbol!,
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: itemFontSize,
+                fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          symbolPainter.paint(canvas, Offset(valueOffsetX, currentY));
+          valueOffsetX += symbolPainter.width + 4;
         }
 
         // Value on Left (after icon)
@@ -2242,6 +2254,7 @@ class BoxedLineItem {
   final double scale;
   final bool isSeparator;
   final ui.Image? icon;
+  final String? currencySymbol;
 
   BoxedLineItem({
     this.label = '',
@@ -2250,5 +2263,6 @@ class BoxedLineItem {
     this.scale = 1.0,
     this.isSeparator = false,
     this.icon,
+    this.currencySymbol,
   });
 }

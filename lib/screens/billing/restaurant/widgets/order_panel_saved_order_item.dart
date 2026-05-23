@@ -4,12 +4,13 @@ part of 'order_panel.dart';
 
 extension OrderPanelSavedOrderItemExtension on OrderPanelState {
   // Public method called by parent after successful send
-  void deleteLoadedDraftIfAny() {
+  void deleteLoadedDraftIfAny({String? fallbackDraftId}) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
-    if (_loadedLocalDraftId != null) {
-      localProductProvider.deleteSavedOrder(_loadedLocalDraftId!);
+    final targetDraftId = _loadedLocalDraftId ?? fallbackDraftId;
+    if (targetDraftId != null && targetDraftId.isNotEmpty) {
+      localProductProvider.deleteSavedOrder(targetDraftId);
       _loadedLocalDraftId = null;
     }
 

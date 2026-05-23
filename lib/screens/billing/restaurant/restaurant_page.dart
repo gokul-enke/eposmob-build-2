@@ -830,6 +830,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
       builder: (context, localProductProvider, _) {
         final hasItems = localProductProvider.cartItems.isNotEmpty;
         final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
+        final showConfirmAndPrintButton =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings
+                    ?.showConfirmOrderButton ??
+                true;
         final canCheckout = hasItems;
         return SafeArea(
           top: false,
@@ -870,15 +875,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ),
                   const SizedBox(width: 12),
                   if (hasInternet) ...[
-                    _buildCounterActionButton(
-                      text: 'Confirm and Print',
-                      shortcutLabel: 'F6',
-                      color: const Color(0xFF5B8DEF),
-                      isDisabled: !canCheckout,
-                      onPressed: () => _orderPanelKey.currentState
-                          ?.showCurrentCartCheckoutFromParent(),
-                    ),
-                    const SizedBox(width: 12),
+                    if (showConfirmAndPrintButton) ...[
+                      _buildCounterActionButton(
+                        text: 'Confirm and Print',
+                        shortcutLabel: 'F6',
+                        color: const Color(0xFF5B8DEF),
+                        isDisabled: !canCheckout,
+                        onPressed: () => _orderPanelKey.currentState
+                            ?.showCurrentCartCheckoutFromParent(),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
                     _buildCounterActionButton(
                       text: 'Confirm Order',
                       shortcutLabel: 'F2',
@@ -2054,7 +2061,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
           );
           // Ensure the OrderPanel shows Current Order immediately
           setState(() {});
-          _orderPanelKey.currentState?.showCurrentOrderTab();
+          _orderPanelKey.currentState
+              ?.showCurrentOrderTab(preserveLoadedDraftMetadata: true);
         }
       }
     } catch (e) {
@@ -2088,6 +2096,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         );
         return;
       }
+      final loadedDraftIdForCleanup =
+          _loadedLocalDraftIdForKitchenSync(localProductProvider);
 
       // Convert local cart items to API format
       List<Map<String, dynamic>> items = [];
@@ -2182,7 +2192,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
         _orderPanelKey.currentState?.clearCurrentOrderComment();
 
         // If a local draft was loaded, remove it after successful send
-        _orderPanelKey.currentState?.deleteLoadedDraftIfAny();
+        _orderPanelKey.currentState
+            ?.deleteLoadedDraftIfAny(fallbackDraftId: loadedDraftIdForCleanup);
+        if (loadedDraftIdForCleanup != null &&
+            _editingLocalDraft?.id == loadedDraftIdForCleanup &&
+            mounted) {
+          setState(() {
+            _editingLocalDraft = null;
+          });
+        }
 
         // Refresh saved orders for the currently opened table/delivery method
         if (mounted &&
@@ -2228,6 +2246,26 @@ class _RestaurantPageState extends State<RestaurantPage> {
     }
 
     return localProductProvider.getCartItems();
+  }
+
+  String? _loadedLocalDraftIdForKitchenSync(
+    LocalProductProvider localProductProvider,
+  ) {
+    final candidateIds = <String?>[
+      _orderPanelKey.currentState?.loadedLocalDraftId,
+      _editingLocalDraft?.id,
+      localProductProvider.currentOrder?.id,
+    ];
+
+    for (final id in candidateIds) {
+      if (id != null &&
+          id.isNotEmpty &&
+          localProductProvider.findOrderById(id) != null) {
+        return id;
+      }
+    }
+
+    return null;
   }
 
   double _totalForKitchenItems(List<LocalCartItem> cartItems) {
@@ -2369,6 +2407,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         );
         return;
       }
+      final loadedDraftIdForCleanup =
+          _loadedLocalDraftIdForKitchenSync(localProductProvider);
 
       // Capture data for printing BEFORE clearing
       final tableName =
@@ -2483,7 +2523,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
         _orderPanelKey.currentState?.clearCurrentOrderComment();
 
         // If a local draft was loaded, remove it after successful send
-        _orderPanelKey.currentState?.deleteLoadedDraftIfAny();
+        _orderPanelKey.currentState
+            ?.deleteLoadedDraftIfAny(fallbackDraftId: loadedDraftIdForCleanup);
+        if (loadedDraftIdForCleanup != null &&
+            _editingLocalDraft?.id == loadedDraftIdForCleanup &&
+            mounted) {
+          setState(() {
+            _editingLocalDraft = null;
+          });
+        }
 
         // Refresh saved orders for both table and delivery-method contexts
         if (mounted &&

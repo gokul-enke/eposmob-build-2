@@ -11,9 +11,6 @@ import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
 import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -27,10 +24,10 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/resources/app_url.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
+import '../logo_loader.dart';
 import 'common/layout_rows.dart';
 import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 // import 'thermal/printer_utils.dart';
@@ -537,15 +534,15 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     }
 
     final customerLabel = _getLabel(displayConfig, 'showCustomerName', null,
-      isEnglish ? "Customer:" : "العميل:");
+        isEnglish ? "Customer:" : "العميل:");
     final phoneLabel = _getLabel(displayConfig, 'showCustomerPhone', null,
-      isEnglish ? "Phone:" : "الهاتف:");
+        isEnglish ? "Phone:" : "الهاتف:");
     final paymentLabel = _getLabel(displayConfig, paymentConfigKey, null,
-      isEnglish ? "Payment:" : "الدفع:");
+        isEnglish ? "Payment:" : "الدفع:");
     final addressLabel = _getLabel(displayConfig, 'showCustomerAddress', null,
-      isEnglish ? "Address:" : "العنوان:");
+        isEnglish ? "Address:" : "العنوان:");
     final commentLabel = _getLabel(displayConfig, commentConfigKey, null,
-      isEnglish ? "Comment:" : "تعليق:");
+        isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
         isEnglish ? "Delivery:" : "التوصيل:");
     final customerVatLabel = _getLabel(displayConfig, 'showCustomerVatNumber',
@@ -1244,6 +1241,9 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    final String? currencySymbol =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : null;
+    final ui.Image? currencyIcon = currencySymbol == null ? sarSymbol : null;
 
     // Paper size aware scaling
     final bool is58mm = params.is58mm;
@@ -1296,19 +1296,19 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     debugPrint("=======================================");
 
     final subtotalLabel = _getLabel(displayConfig, 'showMRPTotal', null,
-      isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
+        isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
 
     final discountLabel = _getLabel(
-      displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "الخصم");
+        displayConfig, 'showDiscount', null, isEnglish ? "DISCOUNTS" : "الخصم");
 
     final vatLabel = _getLabel(displayConfig, 'showTax', resolvedLabels?.tax,
-      isEnglish ? "VAT" : "الضريبة");
+        isEnglish ? "VAT" : "الضريبة");
 
     final grandTotalLabel = _getLabel(displayConfig, 'showNetAmount', null,
-      isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
+        isEnglish ? "GRAND TOTAL" : "المبلغ الاجمالي");
 
     final cashLabel =
-      _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
+        _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
     final changeLabel = _getLabel(
         displayConfig, 'showChange', null, isEnglish ? "CHANGE" : "متبقي");
 
@@ -1322,7 +1322,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         value: subtotal.toStringAsFixed(2),
         isBold: true,
         scale: 1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1333,7 +1334,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         value: discountAmountValue.toStringAsFixed(2),
         isBold: true,
         scale: 1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1344,7 +1346,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         value: taxAmount.toStringAsFixed(2),
         isBold: true,
         scale: 1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1355,7 +1358,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         value: total.toStringAsFixed(2),
         isBold: true,
         scale: 1,
-        icon: sarSymbol,
+        icon: currencyIcon,
+        currencySymbol: currencySymbol,
       ));
     }
 
@@ -1395,7 +1399,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
               value: amt.toStringAsFixed(2),
               isBold: true,
               scale: 1,
-              icon: sarSymbol,
+              icon: currencyIcon,
+              currencySymbol: currencySymbol,
             ));
           }
         });
@@ -1430,7 +1435,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
                   value: amt.toStringAsFixed(2),
                   isBold: true,
                   scale: 1,
-                  icon: sarSymbol,
+                  icon: currencyIcon,
+                  currencySymbol: currencySymbol,
                 ));
               }
             });
@@ -1456,7 +1462,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
           value: params.paidAmount!.toStringAsFixed(2),
           isBold: true,
           scale: 1.1,
-          icon: sarSymbol,
+          icon: currencyIcon,
+          currencySymbol: currencySymbol,
         ));
       }
     }
@@ -1579,13 +1586,13 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         null, isEnglish ? "Previous Balance" : "الرصيد السابق");
 
     final paidAmountLabel = _getLabel(displayConfig, 'showCustomerPaidAmount',
-      null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
+        null, isEnglish ? "Paid Amount" : "المبلغ المدفوع");
 
     final currentBalanceLabel = _getLabel(
         displayConfig,
         'showCustomerCurrentBalance',
         null,
-      isEnglish ? "Current Balance" : "الرصيد الحالي");
+        isEnglish ? "Current Balance" : "الرصيد الحالي");
 
     // Previous Balance
     if (displayConfig?['showCustomerPrevBalance']?.visible != false &&
@@ -1967,41 +1974,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
   }
 
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
-    if (url == null || url.isEmpty) return null;
-
-    String fullUrl;
-    if (url.startsWith('http')) {
-      fullUrl = url;
-    } else if (url.startsWith('logos/')) {
-      fullUrl = '${APPUrl.baseURL}/storage/$url';
-    } else {
-      fullUrl = url.startsWith('/')
-          ? '${APPUrl.baseURL}$url'
-          : '${APPUrl.baseURL}/$url';
-    }
-
-    try {
-      final uri = Uri.parse(fullUrl);
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      final Map<String, String> queryParams =
-          Map<String, String>.from(uri.queryParameters);
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-      final urlWithStore = uri.replace(queryParameters: queryParams);
-
-      final response = await http.get(urlWithStore);
-      if (response.statusCode == 200) {
-        final codec = await ui.instantiateImageCodec(response.bodyBytes);
-        final fi = await codec.getNextFrame();
-        return fi.image;
-      }
-    } catch (e) {
-      debugPrint("[ArabicAndEnglish3ReceiptLayout] Error fetching image: $e");
-    }
-    return null;
+    return PrintLogoLoader.loadUiLogo(url,
+        tag: '[arabic_and_english_3_receipt_layout]');
   }
 
   /// Load an image from Flutter assets
