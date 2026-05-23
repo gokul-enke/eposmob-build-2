@@ -299,7 +299,7 @@ class _SideMenuState extends State<SideMenu> {
 
               return Obx(
                 () => DrawerListTile(
-                  icon: fa.FontAwesomeIcons.home,
+                  icon: fa.FontAwesomeIcons.house,
                   title: 'Home',
                   onTap: () {
                     sideBarController.index.value = 46;
@@ -314,7 +314,8 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider.currentUserHasPermissionSync(
-                  'menu.supermarket.main.access');
+                'menu.supermarket.main.access',
+              );
 
               if (!hasPermission) {
                 return const SizedBox.shrink();
@@ -323,7 +324,7 @@ class _SideMenuState extends State<SideMenu> {
               return Obx(
                 () => DrawerListTile(
                   icon: fa.FontAwesomeIcons.store,
-                  title: 'Supermarket',
+                  title: 'Billing',
                   onTap: () {
                     sideBarController.index.value = 90;
                   },
@@ -389,7 +390,7 @@ class _SideMenuState extends State<SideMenu> {
 
               return Obx(
                 () => DrawerListTile(
-                  icon: fa.FontAwesomeIcons.home,
+                  icon: fa.FontAwesomeIcons.shop,
                   title: 'Restaurant',
                   onTap: () {
                     sideBarController.index.value = 46;
@@ -410,7 +411,7 @@ class _SideMenuState extends State<SideMenu> {
               }
               return Obx(
                 () => DrawerListTile(
-                  icon: fa.FontAwesomeIcons.utensils,
+                  icon: fa.FontAwesomeIcons.bellConcierge,
                   title: 'Attender',
                   onTap: () {
                     sideBarController.index.value = 55;
