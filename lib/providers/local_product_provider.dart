@@ -2991,6 +2991,59 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  GetProduct? updateStockDetailsLocallyByStockId({
+    required int stockId,
+    required String retailPrice,
+    required String mrp,
+    required String purchasePrice,
+    required String quantity,
+    required String rack,
+  }) {
+    final productIndex = _products.indexWhere(
+      (product) => product.stock?.any((stock) => stock.id == stockId) ?? false,
+    );
+
+    if (productIndex == -1) {
+      debugPrint(
+          "âš ï¸ [LocalStockUpdate] Product not found for stockId=$stockId");
+      return null;
+    }
+
+    final oldProduct = _products[productIndex];
+    final updatedStock = List<Stock>.from(oldProduct.stock ?? const <Stock>[]);
+    final stockIndex = updatedStock.indexWhere((stock) => stock.id == stockId);
+    if (stockIndex == -1) {
+      return null;
+    }
+
+    final existingStock = updatedStock[stockIndex];
+    updatedStock[stockIndex] = existingStock.copyWith(
+      quantity: num.tryParse(quantity) ?? existingStock.quantity,
+      price: retailPrice,
+      mrp: mrp,
+      purchasePrice: purchasePrice,
+      rack: rack,
+    );
+
+    final updatedProduct = oldProduct.copyWith(stock: updatedStock);
+    _products[productIndex] = updatedProduct;
+
+    final filteredIndex = _filteredProducts.indexWhere(
+      (product) => product.productId == updatedProduct.productId,
+    );
+    if (filteredIndex != -1) {
+      _filteredProducts[filteredIndex] = updatedProduct;
+    }
+
+    _rebuildBarcodeIndex();
+    _saveProductToHive(updatedProduct);
+    notifyListeners();
+
+    debugPrint(
+        "âœ… [LocalStockUpdate] Updated local product stock for stockId=$stockId");
+    return updatedProduct;
+  }
+
   /// Updates stock quantity for a specific stock entry
   /// Used when stock quantities change (e.g., after sales, returns, etc.)
   void updateStockQuantity({

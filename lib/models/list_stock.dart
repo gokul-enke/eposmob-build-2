@@ -84,6 +84,46 @@ class ListStockModelData {
     this.expiryDate,
   });
 
+  ListStockModelData copyWith({
+    int? stockId,
+    String? barCode,
+    String? productName,
+    String? categoryName,
+    String? supplierName,
+    String? orderDate,
+    double? qty,
+    String? retailPrice,
+    String? wholesalePrice,
+    String? purchaseRate,
+    String? mrp,
+    String? unit,
+    String? storeName,
+    String? rack,
+    String? reorderLevel,
+    String? stockStatus,
+    String? expiryDate,
+  }) {
+    return ListStockModelData(
+      stockId: stockId ?? this.stockId,
+      barCode: barCode ?? this.barCode,
+      productName: productName ?? this.productName,
+      categoryName: categoryName ?? this.categoryName,
+      supplierName: supplierName ?? this.supplierName,
+      orderDate: orderDate ?? this.orderDate,
+      qty: qty ?? this.qty,
+      retailPrice: retailPrice ?? this.retailPrice,
+      wholesalePrice: wholesalePrice ?? this.wholesalePrice,
+      purchaseRate: purchaseRate ?? this.purchaseRate,
+      mrp: mrp ?? this.mrp,
+      unit: unit ?? this.unit,
+      storeName: storeName ?? this.storeName,
+      rack: rack ?? this.rack,
+      reorderLevel: reorderLevel ?? this.reorderLevel,
+      stockStatus: stockStatus ?? this.stockStatus,
+      expiryDate: expiryDate ?? this.expiryDate,
+    );
+  }
+
   factory ListStockModelData.fromJson(Map<String, dynamic> json) =>
       ListStockModelData(
         stockId: json["id"],
