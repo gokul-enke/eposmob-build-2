@@ -195,9 +195,15 @@ class _CheckoutModalState extends State<CheckoutModal> {
   List<CustomerListModelData> _filteredCustomers = [];
   final TextEditingController _customerSearchController =
       TextEditingController();
+  final TextEditingController _quotationCustomerNameController =
+      TextEditingController();
+  final TextEditingController _quotationCustomerPhoneController =
+      TextEditingController();
   final FocusNode _customerSearchFocusNode = FocusNode();
   final FocusNode _customerSearchClearFocusNode =
       FocusNode(skipTraversal: true);
+  final FocusNode _quotationCustomerNameFocusNode = FocusNode();
+  final FocusNode _quotationCustomerPhoneFocusNode = FocusNode();
   final FocusNode _customerListFocusNode = FocusNode();
   int _focusedCustomerIndex = 0;
   // Customer grid uses 3 columns — kept in sync with the GridView delegate
@@ -465,8 +471,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
         "⌨️ [CheckoutModal] dispose | step=$_currentStep | paymentVisited=$_hasOpenedPaymentModalOnce");
     HardwareKeyboard.instance.removeHandler(_onHardwareKey);
     _customerSearchController.dispose();
+    _quotationCustomerNameController.dispose();
+    _quotationCustomerPhoneController.dispose();
     _customerSearchFocusNode.dispose();
     _customerSearchClearFocusNode.dispose();
+    _quotationCustomerNameFocusNode.dispose();
+    _quotationCustomerPhoneFocusNode.dispose();
     _customerListFocusNode.dispose();
     for (final focusNode in _deliveryMethodFocusNodes.values) {
       focusNode.dispose();
@@ -798,6 +808,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   void _handleCustomerSelection(CustomerListModelData customer) {
     setState(() {
       _localSelectedCustomer = customer;
+      _quotationCustomerNameController.clear();
+      _quotationCustomerPhoneController.clear();
     });
     widget.onCustomerSelected(customer);
     if (!_isSelectionOnly) {
@@ -1353,29 +1365,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.event_note,
-                    size: 18, color: Color(0xFF2563EB)),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Quotation Dates',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ],
-          ),
+          _buildQuotationInlineCustomerFields(),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -1403,6 +1393,105 @@ class _CheckoutModalState extends State<CheckoutModal> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildQuotationInlineCustomerFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuotationInputField(
+                label: 'Customer Name',
+                controller: _quotationCustomerNameController,
+                focusNode: _quotationCustomerNameFocusNode,
+                hintText: 'Customer name',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildQuotationInputField(
+                label: 'Customer Phone',
+                controller: _quotationCustomerPhoneController,
+                focusNode: _quotationCustomerPhoneFocusNode,
+                hintText: 'Customer phone',
+                keyboardType: TextInputType.phone,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _handleQuotationInlineCustomerChanged() {
+    if (_quotationCustomerNameController.text.trim().isNotEmpty ||
+        _quotationCustomerPhoneController.text.trim().isNotEmpty) {
+      _localSelectedCustomer = null;
+    }
+    setState(() {});
+  }
+
+  Widget _buildQuotationInputField({
+    required String label,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required String hintText,
+    TextInputType? keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF64748B),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 46,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFDDE7F3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          alignment: Alignment.centerLeft,
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: keyboardType,
+            onChanged: (_) => _handleQuotationInlineCustomerChanged(),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              hintText: hintText,
+              hintStyle: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF9CA3AF),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2638,6 +2727,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   void _handleConfirm() async {
     if (_isConfirming) return;
+    _syncQuotationInlineCustomer();
     setState(() => _isConfirming = true);
     try {
       await widget.onConfirmOrder();
@@ -2648,12 +2738,29 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   void _handlePrint() async {
     if (_isPrinting) return;
+    _syncQuotationInlineCustomer();
     setState(() => _isPrinting = true);
     try {
       await widget.onConfirmAndPrint();
     } finally {
       if (mounted) setState(() => _isPrinting = false);
     }
+  }
+
+  void _syncQuotationInlineCustomer() {
+    if (!widget.isQuotationMode) return;
+    final name = _quotationCustomerNameController.text.trim();
+    final phone = _quotationCustomerPhoneController.text.trim();
+    if (name.isEmpty) return;
+
+    final inlineCustomer = CustomerListModelData(
+      name: name,
+      phone: phone.isEmpty ? null : phone,
+      customerType: 'new',
+      balance: 0,
+    );
+    _localSelectedCustomer = inlineCustomer;
+    widget.onCustomerSelected(inlineCustomer);
   }
 
   Widget _buildSummaryRow(String label, double amount, Color color,
@@ -2724,7 +2831,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   // Check if Confirm button should be enabled
   bool get _canConfirmOrPrint {
     if (widget.isQuotationMode) {
-      return _localSelectedCustomer != null &&
+      return _hasQuotationCustomer &&
           !_lQuotationExpiryDate.isBefore(_lQuotationDate);
     }
 
@@ -2750,7 +2857,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   String _disabledActionMessage() {
     if (widget.isQuotationMode) {
-      if (_localSelectedCustomer == null) {
+      if (!_hasQuotationCustomer) {
         return 'Please select a customer before creating quotation';
       }
       if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
@@ -2761,6 +2868,23 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return widget.requireCheckoutCompletion
         ? 'Please configure payment before confirm'
         : 'Unable to proceed';
+  }
+
+  bool get _hasQuotationCustomer {
+    final customer = _localSelectedCustomer;
+    if (customer?.id != null) return true;
+    return _hasInlineQuotationCustomer;
+  }
+
+  bool get _hasInlineQuotationCustomer {
+    return _quotationCustomerNameController.text.trim().isNotEmpty;
+  }
+
+  String get _quotationCustomerDisplayName {
+    if (_hasInlineQuotationCustomer) {
+      return _quotationCustomerNameController.text.trim();
+    }
+    return _localSelectedCustomer?.name ?? 'Not Selected';
   }
 
   String? _selectedCustomerSupportingText() {
@@ -2906,7 +3030,6 @@ class _CheckoutModalState extends State<CheckoutModal> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (widget.isQuotationMode) _buildQuotationDatesPanel(),
           Row(
             children: [
               if (onBack != null) ...[
@@ -3076,7 +3199,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
         final displayBalance = rawBalance < 0 ? 0.0 : rawBalance;
 
-        final bool hasCustomer = _localSelectedCustomer != null;
+        final bool hasCustomer = widget.isQuotationMode
+            ? _hasQuotationCustomer
+            : _localSelectedCustomer != null;
         final bool hasPayment = !widget.isQuotationMode && _hasPaymentMethod();
         final bool hasDiscount = _localIsCouponApplied ||
             _localFlatDiscount > 0 ||
@@ -3093,7 +3218,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
               final tiles = <Widget>[
                 _buildClickableCheckItem(
                   'Customer',
-                  _localSelectedCustomer?.name ?? 'Not Selected',
+                  widget.isQuotationMode
+                      ? _quotationCustomerDisplayName
+                      : (_localSelectedCustomer?.name ?? 'Not Selected'),
                   hasCustomer,
                   Icons.person_outline,
                   0,
@@ -3144,95 +3271,107 @@ class _CheckoutModalState extends State<CheckoutModal> {
             }),
             SizedBox(height: _isDenseCheckout ? 10 : 16),
             // Order Summary
-            Expanded(
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: _isDenseCheckout ? 14 : 20,
-                  vertical: _isDenseCheckout ? 14 : 20,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border:
-                      Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+            Flexible(
+              fit: widget.isQuotationMode ? FlexFit.loose : FlexFit.tight,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: _isDenseCheckout ? 14 : 20,
+                      vertical: _isDenseCheckout ? 14 : 20,
                     ),
-                  ],
-                ),
-                child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context)
-                      .copyWith(scrollbars: false),
-                  child: SingleChildScrollView(
-                    primary: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Order Summary',
-                          style: TextStyle(
-                            fontSize: _isDenseCheckout ? 16 : 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
-                            letterSpacing: 0.5,
-                          ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: const Color(0xFFE2E8F0), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
-                        SizedBox(height: _isDenseCheckout ? 8 : 12),
-                        _buildSummaryRow('Net Amount', subTotal, Colors.black),
-                        SizedBox(height: _isDenseCheckout ? 7 : 10),
-                        _buildSummaryRow('Discount', -discountAmount,
-                            const Color(0xFFEF4444),
-                            labelColor: const Color(0xFFEF4444)),
-                        SizedBox(height: _isDenseCheckout ? 7 : 10),
-                        _buildSummaryRow(
-                            'Tax', taxAmount, const Color(0xFF64748B),
-                            labelColor: const Color(0xFF64748B)),
-                        if (hasDelivery && _isfreeDeliveryMinimumAmount()) ...[
-                          SizedBox(height: _isDenseCheckout ? 7 : 10),
-                          _buildDeliveryChargeRow(),
-                        ],
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                              vertical: _isDenseCheckout ? 10 : 16),
-                          child: Divider(
-                              height: 1,
-                              thickness: 1.5,
-                              color: Color(0xFFF1F5F9)),
-                        ),
-                        _buildSummaryRow('Total Payable', effectiveTotal,
-                            const Color(0xFF2563EB),
-                            isBold: true,
-                            large: true,
-                            labelColor: const Color(0xFF2563EB)),
-                        if (_localSelectedCustomer != null) ...[
-                          SizedBox(height: _isDenseCheckout ? 7 : 10),
-                          _buildSummaryRow(
-                              'Cust. Prev. Balance',
-                              prevBalance,
-                              prevBalance >= 0
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFFDC2626),
-                              labelColor: prevBalance >= 0
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFFDC2626)),
-                        ],
-                        if (!widget.isQuotationMode) ...[
-                          SizedBox(height: _isDenseCheckout ? 7 : 10),
-                          _buildSummaryRow(
-                              'Total Paid', totalPaid, Colors.black),
-                          SizedBox(height: _isDenseCheckout ? 7 : 10),
-                          _buildSummaryRow('Balance', displayBalance,
-                              const Color(0xFF059669),
-                              labelColor: const Color(0xFF059669)),
-                        ],
                       ],
                     ),
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context)
+                          .copyWith(scrollbars: false),
+                      child: SingleChildScrollView(
+                        primary: false,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Order Summary',
+                              style: TextStyle(
+                                fontSize: _isDenseCheckout ? 16 : 18,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            SizedBox(height: _isDenseCheckout ? 8 : 12),
+                            _buildSummaryRow(
+                                'Net Amount', subTotal, Colors.black),
+                            SizedBox(height: _isDenseCheckout ? 7 : 10),
+                            _buildSummaryRow('Discount', -discountAmount,
+                                const Color(0xFFEF4444),
+                                labelColor: const Color(0xFFEF4444)),
+                            SizedBox(height: _isDenseCheckout ? 7 : 10),
+                            _buildSummaryRow(
+                                'Tax', taxAmount, const Color(0xFF64748B),
+                                labelColor: const Color(0xFF64748B)),
+                            if (hasDelivery &&
+                                _isfreeDeliveryMinimumAmount()) ...[
+                              SizedBox(height: _isDenseCheckout ? 7 : 10),
+                              _buildDeliveryChargeRow(),
+                            ],
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                  vertical: _isDenseCheckout ? 10 : 16),
+                              child: Divider(
+                                  height: 1,
+                                  thickness: 1.5,
+                                  color: Color(0xFFF1F5F9)),
+                            ),
+                            _buildSummaryRow('Total Payable', effectiveTotal,
+                                const Color(0xFF2563EB),
+                                isBold: true,
+                                large: true,
+                                labelColor: const Color(0xFF2563EB)),
+                            if (_localSelectedCustomer != null) ...[
+                              SizedBox(height: _isDenseCheckout ? 7 : 10),
+                              _buildSummaryRow(
+                                  'Cust. Prev. Balance',
+                                  prevBalance,
+                                  prevBalance >= 0
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFFDC2626),
+                                  labelColor: prevBalance >= 0
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFFDC2626)),
+                            ],
+                            if (!widget.isQuotationMode) ...[
+                              SizedBox(height: _isDenseCheckout ? 7 : 10),
+                              _buildSummaryRow(
+                                  'Total Paid', totalPaid, Colors.black),
+                              SizedBox(height: _isDenseCheckout ? 7 : 10),
+                              _buildSummaryRow('Balance', displayBalance,
+                                  const Color(0xFF059669),
+                                  labelColor: const Color(0xFF059669)),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  if (widget.isQuotationMode) ...[
+                    SizedBox(height: _isDenseCheckout ? 10 : 16),
+                    _buildQuotationDatesPanel(),
+                  ],
+                ],
               ),
             ),
           ],

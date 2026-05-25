@@ -47,12 +47,13 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   bool _isLoading = false;
   bool _isPrintingQuotation = false;
+  bool _isConvertingQuotation = false;
 
   final List<String> _statusOptions = [
     'All',
     'Pending',
-    'Order Created',
-    'Cancel',
+    'Confirmed',
+    'Cancelled',
   ];
 
   @override
@@ -123,6 +124,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
       case 'order created':
+      case 'confirmed':
         return Colors.green;
       case 'cancel':
       case 'cancelled':
@@ -131,6 +133,81 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         return Colors.orange;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _convertQuotationToOrder(Quotation quotation) async {
+    final quotationId = quotation.id;
+    if (quotationId == null) {
+      showScaffoldError(
+        context: context,
+        message: 'Quotation id not found',
+      );
+      return;
+    }
+    if (_isConvertingQuotation) return;
+
+    final shouldConvert = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Convert Quotation'),
+          content: Text(
+            'Convert ${quotation.quotationNumber ?? 'this quotation'} to an order?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Convert'),
+            ),
+          ],
+        );
+      },
+    );
+    if (shouldConvert != true) return;
+    if (!mounted) return;
+
+    setState(() => _isConvertingQuotation = true);
+    try {
+      // ignore: use_build_context_synchronously
+      final authProvider = Provider.of<AuthModel>(context, listen: false);
+      // ignore: use_build_context_synchronously
+      final quotationsProvider =
+          Provider.of<QuotationsProvider>(context, listen: false);
+      final response = await quotationsProvider.convertQuotationToOrder(
+        accessToken: authProvider.token ?? '',
+        quotationId: quotationId,
+      );
+      if (!context.mounted) return;
+      if (response['success'] == true || response['status'] == 'success') {
+        // ignore: use_build_context_synchronously
+        showScaffold(
+          context: context,
+          message: response['message'] ?? 'Quotation converted to order',
+        );
+        await _fetchQuotations();
+      } else {
+        // ignore: use_build_context_synchronously
+        showScaffoldError(
+          context: context,
+          message: response['message'] ?? 'Failed to convert quotation',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error converting quotation: $e');
+      if (context.mounted) {
+        // ignore: use_build_context_synchronously
+        showScaffoldError(
+          context: context,
+          message: 'Failed to convert quotation',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isConvertingQuotation = false);
     }
   }
 
@@ -672,14 +749,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                       padding: EdgeInsets.zero,
                       constraints:
                           const BoxConstraints(minWidth: 32, minHeight: 32),
-                      onPressed: () {
-                        // TODO: Implement navigation to Convert Quotation to Order screen
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content:
-                                  Text('Convert to Order screen coming next')),
-                        );
-                      },
+                      onPressed: _isConvertingQuotation
+                          ? null
+                          : () => _convertQuotationToOrder(q),
                     ),
                   ),
                   BuildBoxShadowContainer(

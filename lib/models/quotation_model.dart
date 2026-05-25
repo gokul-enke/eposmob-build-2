@@ -1,15 +1,19 @@
 class QuotationListResponse {
   final String? status;
+  final bool? success;
   final String? message;
   final QuotationDataWrapper? data;
 
-  QuotationListResponse({this.status, this.message, this.data});
+  QuotationListResponse({this.status, this.success, this.message, this.data});
 
   factory QuotationListResponse.fromJson(Map<String, dynamic> json) {
     return QuotationListResponse(
       status: json['status']?.toString(),
+      success: json['success'] == true,
       message: json['message']?.toString(),
-      data: json['data'] != null ? QuotationDataWrapper.fromJson(json['data']) : null,
+      data: json['data'] != null
+          ? QuotationDataWrapper.fromJson(json['data'])
+          : null,
     );
   }
 }
@@ -33,7 +37,8 @@ class QuotationDataWrapper {
 
   factory QuotationDataWrapper.fromJson(Map<String, dynamic> json) {
     var list = json['data'] as List?;
-    List<Quotation>? quotationList = list?.map((i) => Quotation.fromJson(i)).toList();
+    List<Quotation>? quotationList =
+        list?.map((i) => Quotation.fromJson(i)).toList();
 
     return QuotationDataWrapper(
       currentPage: json['current_page'],
@@ -49,6 +54,7 @@ class QuotationDataWrapper {
 class Quotation {
   final int? id;
   final String? quotationNumber;
+  final int? customerId;
   final String? customer;
   final String? customerPhone;
   final String? store;
@@ -64,6 +70,7 @@ class Quotation {
   Quotation({
     this.id,
     this.quotationNumber,
+    this.customerId,
     this.customer,
     this.customerPhone,
     this.store,
@@ -81,6 +88,7 @@ class Quotation {
     return Quotation(
       id: json['id'],
       quotationNumber: json['quotation_number']?.toString(),
+      customerId: _parseInt(json['customer_id']),
       customer: json['customer']?.toString(),
       customerPhone: json['customer_phone']?.toString(),
       store: json['store']?.toString(),
@@ -98,16 +106,21 @@ class Quotation {
 
 class QuotationDetailsResponse {
   final String? status;
+  final bool? success;
   final String? message;
   final QuotationDetailsData? data;
 
-  QuotationDetailsResponse({this.status, this.message, this.data});
+  QuotationDetailsResponse(
+      {this.status, this.success, this.message, this.data});
 
   factory QuotationDetailsResponse.fromJson(Map<String, dynamic> json) {
     return QuotationDetailsResponse(
       status: json['status']?.toString(),
+      success: json['success'] == true,
       message: json['message']?.toString(),
-      data: json['data'] != null ? QuotationDetailsData.fromJson(json['data']) : null,
+      data: json['data'] != null
+          ? QuotationDetailsData.fromJson(json['data'])
+          : null,
     );
   }
 }
@@ -152,8 +165,11 @@ class QuotationDetailsData {
       id: json['id'],
       quotationNumber: json['quotation_number']?.toString(),
       status: json['status']?.toString(),
-      customer: json['customer'] != null ? QuotationCustomer.fromJson(json['customer']) : null,
-      store: json['store'] != null ? QuotationStore.fromJson(json['store']) : null,
+      customer: json['customer'] != null
+          ? QuotationCustomer.fromJson(json['customer'])
+          : null,
+      store:
+          json['store'] != null ? QuotationStore.fromJson(json['store']) : null,
       address: json['address'],
       quotationDate: json['quotation_date']?.toString(),
       expiryDate: json['expiry_date']?.toString(),
@@ -171,14 +187,16 @@ class QuotationCustomer {
   final int? id;
   final String? name;
   final String? phone;
+  final bool isInline;
 
-  QuotationCustomer({this.id, this.name, this.phone});
+  QuotationCustomer({this.id, this.name, this.phone, this.isInline = false});
 
   factory QuotationCustomer.fromJson(Map<String, dynamic> json) {
     return QuotationCustomer(
-      id: json['id'],
+      id: _parseInt(json['id']),
       name: json['name']?.toString(),
       phone: json['phone']?.toString(),
+      isInline: json['is_inline'] == true,
     );
   }
 }
@@ -195,6 +213,12 @@ class QuotationStore {
       name: json['name']?.toString(),
     );
   }
+}
+
+int? _parseInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  return int.tryParse(value.toString());
 }
 
 class QuotationItem {

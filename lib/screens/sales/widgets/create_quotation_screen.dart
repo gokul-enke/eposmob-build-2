@@ -69,6 +69,11 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       TextEditingController();
   final TextEditingController _customerSearchController =
       TextEditingController();
+  final TextEditingController _inlineCustomerNameController =
+      TextEditingController();
+  final TextEditingController _inlineCustomerPhoneController =
+      TextEditingController();
+  bool _useInlineCustomer = false;
 
   DateTime _quotationDate = DateTime.now();
   DateTime _expiryDate = DateTime.now().add(const Duration(days: 30));
@@ -106,6 +111,8 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
     _storeSearchController.dispose();
     _productSearchController.dispose();
     _customerSearchController.dispose();
+    _inlineCustomerNameController.dispose();
+    _inlineCustomerPhoneController.dispose();
     _quotationDateController.dispose();
     _expiryDateController.dispose();
     _quotationNoController.dispose();
@@ -179,9 +186,17 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
     debugPrint('   - Active Store ID: ${storeProvider.activeStore?.storeId}');
     debugPrint('   - Items Count: ${_items.length}');
 
-    if (!customerProvider.hasSelectedCustomer) {
+    final hasInlineCustomer =
+        _inlineCustomerNameController.text.trim().isNotEmpty &&
+            _inlineCustomerPhoneController.text.trim().isNotEmpty;
+    if (!_useInlineCustomer && !customerProvider.hasSelectedCustomer) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a customer')));
+      return;
+    }
+    if (_useInlineCustomer && !hasInlineCustomer) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please enter customer name and phone')));
       return;
     }
     if (_items.isEmpty) {
@@ -192,7 +207,14 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
 
     setState(() => _isSaving = true);
     final payload = {
-      'customer_id': customerProvider.selectedCustomerID,
+      if (_useInlineCustomer) ...{
+        'customer_type': 'new',
+        'customer_name': _inlineCustomerNameController.text.trim(),
+        'customer_phone': _inlineCustomerPhoneController.text.trim(),
+      } else ...{
+        'customer_type': 'existing',
+        'customer_id': customerProvider.selectedCustomerID,
+      },
       'store_id': storeProvider.activeStore?.storeId,
       'quotation_date': DateFormat('yyyy-MM-dd').format(_quotationDate),
       'expiry_date': DateFormat('yyyy-MM-dd').format(_expiryDate),
@@ -226,7 +248,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
       debugPrint('📥 QUOTATION API RESPONSE: $response');
 
       if (!mounted) return;
-      if (response['status'] == 'success') {
+      if (response['success'] == true || response['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Quotation created successfully')));
         Get.find<SideBarController>().index.value = 87;
@@ -361,7 +383,7 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
                 children: [
                   Expanded(
                       child: _buildFieldColumn(
-                          'Customer*', _buildCustomerDropdown())),
+                          'Customer*', _buildCustomerSelector())),
                   const Expanded(
                       flex: 3,
                       child: SizedBox()), // Fill remaining 3/4 of the row
@@ -371,6 +393,46 @@ class _CreateQuotationScreenState extends State<CreateQuotationScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCustomerSelector() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Switch(
+              value: _useInlineCustomer,
+              onChanged: (value) {
+                setState(() => _useInlineCustomer = value);
+                if (value) {
+                  Provider.of<CustomerSelectionProvider>(context, listen: false)
+                      .clearSelectedCustomer();
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _useInlineCustomer ? 'Quote-only customer' : 'Existing customer',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_useInlineCustomer) ...[
+          _simpleEntryField(
+            controller: _inlineCustomerNameController,
+            hint: 'Customer name',
+          ),
+          const SizedBox(height: 8),
+          _simpleEntryField(
+            controller: _inlineCustomerPhoneController,
+            hint: 'Customer phone',
+            type: TextInputType.phone,
+          ),
+        ] else
+          _buildCustomerDropdown(),
+      ],
     );
   }
 
