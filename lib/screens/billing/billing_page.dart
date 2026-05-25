@@ -621,7 +621,9 @@ class BillingPageState extends State<BillingPage>
         // Check if there is any customer data to restore
         if (currentOrder.customerId != null ||
             (currentOrder.customerPhone != null &&
-                currentOrder.customerPhone!.isNotEmpty)) {
+                currentOrder.customerPhone!.isNotEmpty) ||
+            (currentOrder.customerName != null &&
+                currentOrder.customerName!.isNotEmpty)) {
           selectedCustomerID = currentOrder.customerId;
           selectedCustomerPhone = currentOrder.customerPhone;
 
@@ -650,9 +652,8 @@ class BillingPageState extends State<BillingPage>
               .setSelectedCustomer(selectedCustomer!);
 
           // **FIX**: Properly restore customer display based on whether it's a phone-only order
-          if (selectedCustomer!.id != null &&
-              (selectedCustomer!.name != null &&
-                  selectedCustomer!.name!.isNotEmpty)) {
+          if (selectedCustomer!.name != null &&
+              selectedCustomer!.name!.isNotEmpty) {
             // Customer from list - show name and phone
             String name = selectedCustomer!.name ?? '';
             String phone = selectedCustomer!.phone ?? '';
@@ -6358,6 +6359,7 @@ class BillingPageState extends State<BillingPage>
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
         debugPrint(
@@ -6719,6 +6721,7 @@ class BillingPageState extends State<BillingPage>
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");

@@ -132,12 +132,17 @@ class QuotationDetailsData {
   final QuotationCustomer? customer;
   final QuotationStore? store;
   final dynamic address;
+  final int? addressId;
   final String? quotationDate;
   final String? expiryDate;
   final String? subTotal;
   final String? discount;
   final String? tax;
   final String? grandTotal;
+  final String? deliveryMethodId;
+  final String? deliveryMethod;
+  final String? deliveryCharge;
+  final String? comment;
   final int? invoiceId;
   final List<QuotationItem>? items;
 
@@ -148,12 +153,17 @@ class QuotationDetailsData {
     this.customer,
     this.store,
     this.address,
+    this.addressId,
     this.quotationDate,
     this.expiryDate,
     this.subTotal,
     this.discount,
     this.tax,
     this.grandTotal,
+    this.deliveryMethodId,
+    this.deliveryMethod,
+    this.deliveryCharge,
+    this.comment,
     this.invoiceId,
     this.items,
   });
@@ -161,6 +171,9 @@ class QuotationDetailsData {
   factory QuotationDetailsData.fromJson(Map<String, dynamic> json) {
     var itemList = json['items'] as List?;
     var parsedItems = itemList?.map((i) => QuotationItem.fromJson(i)).toList();
+    final dynamic deliveryMethodData = json['delivery_method'];
+    final Map<String, dynamic>? deliveryMethodMap =
+        deliveryMethodData is Map<String, dynamic> ? deliveryMethodData : null;
     return QuotationDetailsData(
       id: json['id'],
       quotationNumber: json['quotation_number']?.toString(),
@@ -171,12 +184,24 @@ class QuotationDetailsData {
       store:
           json['store'] != null ? QuotationStore.fromJson(json['store']) : null,
       address: json['address'],
+      addressId: _parseInt(json['address_id']),
       quotationDate: json['quotation_date']?.toString(),
       expiryDate: json['expiry_date']?.toString(),
       subTotal: json['sub_total']?.toString(),
       discount: json['discount']?.toString(),
       tax: json['tax']?.toString(),
       grandTotal: json['grand_total']?.toString(),
+      deliveryMethodId: (json['delivery_method_id'] ??
+              deliveryMethodMap?['id'] ??
+              json['shipping_method_id'])
+          ?.toString(),
+      deliveryMethod: (json['delivery_method_name'] ??
+              deliveryMethodMap?['name'] ??
+              (deliveryMethodData is String ? deliveryMethodData : null))
+          ?.toString(),
+      deliveryCharge:
+          (json['delivery_charge'] ?? json['shipping_cost'])?.toString(),
+      comment: (json['comment'] ?? json['note'])?.toString(),
       invoiceId: json['invoice_id'],
       items: parsedItems,
     );
@@ -233,6 +258,11 @@ class QuotationItem {
   final String? taxRate;
   final String? taxAmount;
   final String? totalPrice;
+  final int? productStockId;
+  final int? productSaleUnitId;
+  final String? saleUnitName;
+  final String? saleUnitConversionRate;
+  final String? comment;
 
   QuotationItem({
     this.id,
@@ -246,14 +276,19 @@ class QuotationItem {
     this.taxRate,
     this.taxAmount,
     this.totalPrice,
+    this.productStockId,
+    this.productSaleUnitId,
+    this.saleUnitName,
+    this.saleUnitConversionRate,
+    this.comment,
   });
 
   factory QuotationItem.fromJson(Map<String, dynamic> json) {
     return QuotationItem(
       id: json['id'],
-      productId: json['product_id'],
+      productId: _parseInt(json['product_id']),
       productName: json['product_name']?.toString(),
-      categoryId: json['category_id'],
+      categoryId: _parseInt(json['category_id']),
       categoryName: json['category_name']?.toString(),
       unit: json['unit']?.toString(),
       unitPrice: json['unit_price']?.toString(),
@@ -261,6 +296,15 @@ class QuotationItem {
       taxRate: json['tax_rate']?.toString(),
       taxAmount: json['tax_amount']?.toString(),
       totalPrice: json['total_price']?.toString(),
+      productStockId: _parseInt(json['product_stock_id'] ?? json['stock_id']),
+      productSaleUnitId:
+          _parseInt(json['product_sale_unit_id'] ?? json['sale_unit_id']),
+      saleUnitName: (json['sale_unit_name'] ?? json['product_sale_unit_name'])
+          ?.toString(),
+      saleUnitConversionRate: (json['sale_unit_conversion_rate'] ??
+              json['product_sale_unit_conversion_rate'])
+          ?.toString(),
+      comment: (json['comment'] ?? json['note'])?.toString(),
     );
   }
 }

@@ -213,6 +213,8 @@ class SavedOrder {
   final String? customerVatNumber;
   final String? customerCrNumber;
   final String? customerType;
+  final int? quotationId;
+  final String? quotationNumber;
 
   SavedOrder({
     required this.id,
@@ -246,6 +248,8 @@ class SavedOrder {
     this.customerVatNumber,
     this.customerCrNumber,
     this.customerType,
+    this.quotationId,
+    this.quotationNumber,
   });
 }
 
@@ -3448,6 +3452,39 @@ class LocalProductProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint("Error loading order: $e");
+    }
+  }
+
+  /// Loads a quotation as an editable billing draft without saving it as a
+  /// normal local order. The final order API will receive quotationId later.
+  void loadQuotationDraftForEditing(SavedOrder draft) {
+    try {
+      _flatDiscount = draft.flatDiscount ?? 0.0;
+      _percentageDiscount = draft.percentageDiscount ?? 0.0;
+
+      if (isStockEnabled) {
+        for (final cartItem in _cartItems) {
+          if (cartItem.stockDeducted > 0) {
+            _restoreStockReservations(
+              cartItem,
+              cartItem.stockDeducted,
+              "LOAD_QUOTATION_RELEASE",
+            );
+          }
+        }
+        _saveProductsToHive();
+      }
+
+      _cartItems.clear();
+      _cartItems.addAll(draft.items.map(_cloneLocalCartItem));
+      _currentOrder = draft;
+
+      cartTotal;
+      _saveCartToHive();
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error loading quotation draft: $e");
+      rethrow;
     }
   }
 
