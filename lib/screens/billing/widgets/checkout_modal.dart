@@ -79,6 +79,10 @@ class CheckoutModal extends StatefulWidget {
   final bool requireCheckoutCompletion;
   final bool isQuotationMode;
   final bool requireSavedCustomer;
+  final int? quotationCustomerId;
+  final bool quotationCustomerIsDefault;
+  final String? quotationCustomerName;
+  final String? quotationCustomerPhone;
   final DateTime? initialQuotationDate;
   final DateTime? initialQuotationExpiryDate;
 
@@ -167,6 +171,10 @@ class CheckoutModal extends StatefulWidget {
     this.requireCheckoutCompletion = true,
     this.isQuotationMode = false,
     this.requireSavedCustomer = false,
+    this.quotationCustomerId,
+    this.quotationCustomerIsDefault = false,
+    this.quotationCustomerName,
+    this.quotationCustomerPhone,
     this.initialQuotationDate,
     this.initialQuotationExpiryDate,
     required this.onCustomerSelected,
@@ -193,6 +201,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   bool _hasOpenedPaymentModalOnce =
       false; // Track if payment step has been visited
   bool _isAddingCustomer = false;
+  bool _quotationCustomerSavedFromModal = false;
 
   // Local state for Customer Search
   String _customerSearchQuery = '';
@@ -838,12 +847,16 @@ class _CheckoutModalState extends State<CheckoutModal> {
     });
     try {
       final quoteOnlyCustomer = _quoteOnlyCustomerForCreation;
+      debugPrint(
+          '🧾 [CheckoutModal] Add customer requested. quoteOnly=${quoteOnlyCustomer != null}, name=${quoteOnlyCustomer?.name}, phone=${quoteOnlyCustomer?.phone}, search=$_customerSearchQuery');
       final newCustomer = await widget.onAddNewCustomer(
         _customerSearchQuery,
         initialName: quoteOnlyCustomer?.name,
         initialPhone: quoteOnlyCustomer?.phone,
       );
       if (newCustomer != null && mounted) {
+        debugPrint(
+            '✅ [CheckoutModal] New customer selected id=${newCustomer.id}, name=${newCustomer.name}, phone=${newCustomer.phone}');
         setState(() {
           _allCustomers.removeWhere((c) => c.id == newCustomer.id);
           _allCustomers.insert(0, newCustomer);
@@ -851,8 +864,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
           _localSelectedCustomer = newCustomer;
           _customerSearchController.clear();
           _customerSearchQuery = '';
+          _quotationCustomerSavedFromModal = true;
         });
         widget.onCustomerSelected(newCustomer);
+      } else {
+        debugPrint('⚠️ [CheckoutModal] Add customer returned no customer');
       }
     } finally {
       if (mounted) {
@@ -865,13 +881,29 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   CustomerListModelData? get _quoteOnlyCustomerForCreation {
     final customer = _localSelectedCustomer;
+    if (_quotationCustomerSavedFromModal) return null;
+    if (widget.quotationCustomerIsDefault) {
+      final name = widget.quotationCustomerName?.trim();
+      if (name == null || name.isEmpty) return null;
+      final phone = widget.quotationCustomerPhone?.trim();
+      debugPrint(
+          '🧾 [CheckoutModal] Default quotation customer requires save. name=$name, sourcePhone=$phone, prefillPhone=null');
+      return CustomerListModelData(
+        name: name,
+        phone: null,
+      );
+    }
     if (!widget.requireSavedCustomer ||
         customer == null ||
         customer.id != null) {
+      debugPrint(
+          '🧾 [CheckoutModal] Quote-only customer not required. requireSaved=${widget.requireSavedCustomer}, customerId=${customer?.id}, name=${customer?.name}');
       return null;
     }
     final name = customer.name?.trim();
     if (name == null || name.isEmpty) return null;
+    debugPrint(
+        '🧾 [CheckoutModal] Quote-only customer requires save. name=${customer.name}, phone=${customer.phone}');
     return customer;
   }
 

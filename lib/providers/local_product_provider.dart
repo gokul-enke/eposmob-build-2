@@ -3459,6 +3459,8 @@ class LocalProductProvider extends ChangeNotifier {
   /// normal local order. The final order API will receive quotationId later.
   void loadQuotationDraftForEditing(SavedOrder draft) {
     try {
+      debugPrint(
+          "🧾 [LocalProductProvider] Loading quotation draft id=${draft.quotationId}, number=${draft.quotationNumber}, customerId=${draft.customerId}, customerName=${draft.customerName}, customerPhone=${draft.customerPhone}, items=${draft.items.length}");
       _flatDiscount = draft.flatDiscount ?? 0.0;
       _percentageDiscount = draft.percentageDiscount ?? 0.0;
 
@@ -3482,6 +3484,8 @@ class LocalProductProvider extends ChangeNotifier {
       cartTotal;
       _saveCartToHive();
       notifyListeners();
+      debugPrint(
+          "✅ [LocalProductProvider] Quotation draft ready. cartItems=${_cartItems.length}, currentOrder=${_currentOrder?.id}, quotationId=${_currentOrder?.quotationId}");
     } catch (e) {
       debugPrint("Error loading quotation draft: $e");
       rethrow;

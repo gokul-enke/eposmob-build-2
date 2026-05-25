@@ -66,6 +66,7 @@ import 'package:pos_machine/screens/settings/whatsapp_settings.dart';
 import 'package:pos_machine/screens/settings/company_info.dart';
 import 'package:pos_machine/screens/support/support.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
+import 'package:pos_machine/screens/transactions/proforma_invoice_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_voucher.dart';
 import 'package:pos_machine/screens/transactions/transaction_list.dart';
@@ -200,5 +201,6 @@ class SideBarController extends GetxController {
         quotationId: null), // 88 Quotation Details (ID from Provider)
     BillingPageRestaurant(), // 89 Restaurant Billing Page
     BillingPage(), // 90 Supermarket Billing Page (direct)
+    ProformaInvoiceListScreen(), // 91 Proforma Invoice List
   ];
 }

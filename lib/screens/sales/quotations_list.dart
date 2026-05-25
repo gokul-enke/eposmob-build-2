@@ -171,6 +171,13 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         return;
       }
 
+      debugPrint(
+          '🧾 [QuotationConvert] Loading quotation #$quotationId (${details.quotationNumber ?? quotation.quotationNumber}) into billing draft');
+      debugPrint(
+          '🧾 [QuotationConvert] Customer id=${details.customer?.id}, inline=${details.customer?.isInline}, name="${details.customer?.name}", phone="${details.customer?.phone}"');
+      debugPrint(
+          '🧾 [QuotationConvert] Delivery id=${details.deliveryMethodId}, method="${details.deliveryMethod}", charge=${details.deliveryCharge}, items=${details.items?.length ?? 0}');
+
       final draftItems = <LocalCartItem>[];
       for (final quotationItem in details.items!) {
         final productId = quotationItem.productId;
@@ -241,6 +248,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             saleUnitConversionRate: effectiveSaleUnitRate,
           ),
         );
+        debugPrint(
+            '🧾 [QuotationConvert] Item product=$productId qty=${quotationItem.quantity} baseQty=$baseQuantity price=$price stock=${quotationItem.productStockId} saleUnit=$saleUnitId rate=$effectiveSaleUnitRate');
       }
 
       if (draftItems.isEmpty) {
@@ -252,6 +261,10 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
       }
 
       final customer = details.customer;
+      final quotationCustomerPhone =
+          (customer?.phone?.trim().isNotEmpty ?? false)
+              ? customer!.phone
+              : quotation.customerPhone;
       final deliveryCharge =
           _parseQuotationNumber(details.deliveryCharge)?.toDouble();
       localProductProvider.loadQuotationDraftForEditing(
@@ -263,7 +276,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           items: draftItems,
           customerId: customer?.isInline == true ? null : customer?.id,
           customerName: customer?.name ?? quotation.customer,
-          customerPhone: customer?.phone ?? quotation.customerPhone,
+          customerPhone: quotationCustomerPhone,
           createdAt: DateTime.now().toIso8601String(),
           total: _parseQuotationNumber(details.grandTotal)?.toDouble() ??
               _parseQuotationNumber(quotation.grandTotal)?.toDouble() ??
@@ -279,6 +292,8 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           quotationNumber: details.quotationNumber ?? quotation.quotationNumber,
         ),
       );
+      debugPrint(
+          '🧾 [QuotationConvert] Draft loaded. quotationId=$quotationId, cartItems=${draftItems.length}, route=46');
 
       Get.find<SideBarController>().index.value = 46;
       showScaffold(

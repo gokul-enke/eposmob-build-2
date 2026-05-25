@@ -470,6 +470,9 @@ class BuildDropDownStatic extends StatelessWidget {
   final String hintText;
   final String title;
   final void Function(String?)? onChanged;
+  final double? height;
+  final double? width;
+  final EdgeInsetsGeometry? margin;
 
   const BuildDropDownStatic(
       {super.key,
@@ -483,7 +486,10 @@ class BuildDropDownStatic extends StatelessWidget {
       required this.hintText,
       this.isStarRed,
       required this.onChanged,
-      required this.title});
+      required this.title,
+      this.height,
+      this.width,
+      this.margin});
 
   @override
   Widget build(BuildContext context) {
@@ -504,17 +510,18 @@ class BuildDropDownStatic extends StatelessWidget {
         BuildBoxShadowContainer(
           circleRadius: 7,
           alignment: Alignment.centerLeft,
-          margin: isLeft != null
-              ? const EdgeInsets.only(left: 20)
-              : const EdgeInsets.symmetric(horizontal: 05, vertical: 0),
+          margin: margin ??
+              (isLeft != null
+                  ? const EdgeInsets.only(left: 20)
+                  : const EdgeInsets.symmetric(horizontal: 05, vertical: 0)),
           padding: const EdgeInsets.only(left: 15),
-          height: size.height * .07,
-          width: isWidth == null ? size.width / 3 : size.width / 4.5,
+          height: height ?? size.height * .07,
+          width: width ?? (isWidth == null ? size.width / 3 : size.width / 4.5),
           child: DropdownButtonFormField<String>(
             decoration: const InputDecoration(
               border: InputBorder.none, // Remove the underline
             ),
-            value: selectedItem,
+            initialValue: selectedItem,
             hint: Text(
               hintText,
               style: buildCustomStyle(

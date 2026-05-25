@@ -25,6 +25,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     }
     return '${_restaurantTablesPanelVisibleKey}_$userId';
   }
+
   String _restaurantLeftPanelWidthPrefKey({int? userId}) {
     if (userId == null) {
       return _restaurantLeftPanelWidthKey;
@@ -261,6 +262,10 @@ class SharedPreferenceProvider extends ChangeNotifier {
     await prefs.remove('default_printer');
     await prefs.remove('default_paper_size');
     await prefs.remove('default_font_style');
+    await prefs.remove('quotation_printer');
+    await prefs.remove('quotation_paper_size');
+    await prefs.remove('quotation_font_style');
+    await prefs.remove('quotation_receipt_theme');
   }
 
   Future<void> saveServerTimeOffset(int offsetMilliseconds) async {

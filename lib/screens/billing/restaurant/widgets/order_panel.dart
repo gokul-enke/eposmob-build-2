@@ -5069,19 +5069,25 @@ class OrderPanelState extends State<OrderPanel> {
             Provider.of<CustomerSelectionProvider>(context, listen: false)
                 .setSelectedCustomer(customer);
           },
-          onAddNewCustomer: (String searchQuery) async {
+          onAddNewCustomer: (
+            String searchQuery, {
+            String? initialName,
+            String? initialPhone,
+          }) async {
             // NOTE: Do not close the checkout dialog here. We will return the result.
 
             // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
             final normalizedSearchQuery = searchQuery.trim();
-            if (normalizedSearchQuery.isNotEmpty &&
+            if ((initialPhone ?? '').trim().isNotEmpty) {
+              phoneToPreFill = initialPhone!.trim();
+            } else if (normalizedSearchQuery.isNotEmpty &&
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill);
+                mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];

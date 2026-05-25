@@ -5365,6 +5365,13 @@ class BillingPageState extends State<BillingPage>
       return false;
     }
 
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final isQuotationDraft =
+        localProductProvider.currentOrder?.quotationId != null;
+    debugPrint(
+        "🧾 [BillingCustomer] Balance check phone=${selectedCustomer?.phone}, quotationDraft=$isQuotationDraft");
+
     // Get app settings to check for default customer
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -5372,8 +5379,11 @@ class BillingPageState extends State<BillingPage>
         appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
 
     // Don't show balance if it's the default customer (by phone match)
-    if (defaultCustomerPhone.isNotEmpty &&
+    if (!isQuotationDraft &&
+        defaultCustomerPhone.isNotEmpty &&
         selectedCustomer!.phone == defaultCustomerPhone) {
+      debugPrint(
+          "🧾 [BillingCustomer] Hiding balance for automatic default phone=$defaultCustomerPhone");
       return false;
     }
 
@@ -6944,6 +6954,14 @@ class BillingPageState extends State<BillingPage>
   void _clearAutomaticDefaultCustomerForQuotation() {
     if (!mounted || _isCustomerManuallySelected) return;
 
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProductProvider.currentOrder?.quotationId != null) {
+      debugPrint(
+          "🧾 [BillingCustomer] Skip clearing customer: quotation draft ${localProductProvider.currentOrder?.quotationId}");
+      return;
+    }
+
     final customerSelectionProvider =
         Provider.of<CustomerSelectionProvider>(context, listen: false);
     final appSettingsProvider =
@@ -6956,6 +6974,8 @@ class BillingPageState extends State<BillingPage>
             (selectedCustomerPhone == defaultPhone ||
                 mobileNumberText == defaultPhone ||
                 salesExecutivemobileNumberText == defaultPhone));
+    debugPrint(
+        "🧾 [BillingCustomer] Auto-default clear check isAutoDefault=$isAutoDefault, defaultPhone=$defaultPhone, selectedPhone=$selectedCustomerPhone, mobile=$mobileNumberText");
     if (!isAutoDefault) return;
 
     customerSelectionProvider.clearSelectedCustomer();
@@ -7065,9 +7085,26 @@ class BillingPageState extends State<BillingPage>
     CustomerListModelData? checkoutSelectedCustomer =
         selectedCustomer ?? customerSelectionProvider.selectedCustomer;
     final currentOrder = localProductProvider.currentOrder;
+    final quotationCustomerPhoneForModal =
+        currentOrder?.customerPhone?.trim().isNotEmpty == true
+            ? currentOrder!.customerPhone
+            : checkoutSelectedCustomer?.phone;
+    final defaultCustomerPhone = Provider.of<AppSettingsProvider>(
+          context,
+          listen: false,
+        ).appSettings?.autoAssignDefaultCustomerPhone.trim() ??
+        '';
+    final quotationCustomerIsDefault = currentOrder?.quotationId != null &&
+        (customerSelectionProvider.isDefaultCustomer ||
+            (defaultCustomerPhone.isNotEmpty &&
+                quotationCustomerPhoneForModal?.trim() ==
+                    defaultCustomerPhone));
     final requiresSavedQuotationCustomer = currentOrder?.quotationId != null &&
-        checkoutSelectedCustomer?.id == null &&
-        (checkoutSelectedCustomer?.name?.trim().isNotEmpty ?? false);
+        (quotationCustomerIsDefault || checkoutSelectedCustomer?.id == null) &&
+        ((currentOrder?.customerName?.trim().isNotEmpty ?? false) ||
+            (checkoutSelectedCustomer?.name?.trim().isNotEmpty ?? false));
+    debugPrint(
+        "🧾 [CheckoutOpen] quotationId=${currentOrder?.quotationId}, customerId=${checkoutSelectedCustomer?.id}, customerName=${checkoutSelectedCustomer?.name}, customerPhone=${checkoutSelectedCustomer?.phone}, quotationPhone=$quotationCustomerPhoneForModal, quotationCustomerIsDefault=$quotationCustomerIsDefault, requireSavedCustomer=$requiresSavedQuotationCustomer");
 
     // Prefer richer customer data from loaded list when IDs match
     if (checkoutSelectedCustomer?.id != null && customerList != null) {
@@ -7166,6 +7203,16 @@ class BillingPageState extends State<BillingPage>
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
           isQuotationMode: isQuotationMode,
           requireSavedCustomer: requiresSavedQuotationCustomer,
+          quotationCustomerId: currentOrder?.quotationId == null
+              ? null
+              : currentOrder?.customerId,
+          quotationCustomerIsDefault: quotationCustomerIsDefault,
+          quotationCustomerName: currentOrder?.quotationId == null
+              ? null
+              : currentOrder?.customerName,
+          quotationCustomerPhone: currentOrder?.quotationId == null
+              ? null
+              : quotationCustomerPhoneForModal,
           initialQuotationDate: _quotationDate,
           initialQuotationExpiryDate: _quotationExpiryDate,
           onQuotationDatesUpdated: (quotationDate, expiryDate) {
@@ -7203,6 +7250,8 @@ class BillingPageState extends State<BillingPage>
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
+            debugPrint(
+                "🧾 [CheckoutCustomer] Opening add customer modal prefillName=$initialName, prefillPhone=$phoneToPreFill, search=$searchQuery");
 
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,
@@ -7251,6 +7300,8 @@ class BillingPageState extends State<BillingPage>
                           customer.phone == createdCustomer.phone));
                   customerList!.insert(0, createdCustomer);
                 });
+                debugPrint(
+                    "✅ [CheckoutCustomer] Created local customer id=${createdCustomer.id}, name=${createdCustomer.name}, phone=${createdCustomer.phone}");
 
                 return createdCustomer;
               }
@@ -7271,6 +7322,8 @@ class BillingPageState extends State<BillingPage>
                 if (byPhone.id != null) return byPhone;
               }
             }
+            debugPrint(
+                "⚠️ [CheckoutCustomer] Add customer finished without selectable customer");
             return null;
           },
           onDiscountApplied: (code, isApplied, flat, percent) {
@@ -8787,6 +8840,13 @@ class BillingPageState extends State<BillingPage>
   /// Helper method to check if a phone number matches the default customer phone from app settings
   bool _isDefaultCustomerPhone(String? phone) {
     if (phone == null || phone.isEmpty) return false;
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProductProvider.currentOrder?.quotationId != null) {
+      debugPrint(
+          "🧾 [BillingCustomer] Phone $phone is not treated as default because quotationId=${localProductProvider.currentOrder?.quotationId}");
+      return false;
+    }
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final defaultPhone =

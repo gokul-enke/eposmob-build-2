@@ -50,7 +50,7 @@ class QuotationPrintService {
       paymentBreakdown:
           printPayload['paymentBreakdown'] as Map<String, dynamic>?,
       customerType: printPayload['customerType'] as String?,
-      documentTitleOverride: printPayload['documentTitleOverride'] as String?,
+      documentConfigType: printPayload['documentConfigType'] as String?,
       orderComment: printPayload['orderComment'] as String?,
       deliveryMethod: printPayload['deliveryMethod'] as String?,
       isDefaultCustomer: printPayload['isDefaultCustomer'] == true,
@@ -77,8 +77,7 @@ class QuotationPrintService {
             paymentBreakdown:
                 printPayload['paymentBreakdown'] as Map<String, dynamic>?,
             customerType: printPayload['customerType'] as String?,
-            documentTitleOverride:
-                printPayload['documentTitleOverride'] as String?,
+            documentConfigType: printPayload['documentConfigType'] as String?,
             orderComment: printPayload['orderComment'] as String?,
             deliveryMethod: printPayload['deliveryMethod'] as String?,
             isDefaultCustomer: printPayload['isDefaultCustomer'] == true,
@@ -139,7 +138,7 @@ class QuotationPrintService {
       'paymentMethod': paymentMethod,
       'paymentBreakdown': paymentBreakdown,
       'customerType': customerType,
-      'documentTitleOverride': 'QUOTATION',
+      'documentConfigType': 'Quotation',
       'orderComment': details.expiryDate?.trim().isNotEmpty == true
           ? 'Valid until: ${details.expiryDate}'
           : null,

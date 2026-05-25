@@ -1,0 +1,2494 @@
+{
+    "status": "success",
+    "document_configurations": {
+        "Invoice": {
+            "id": 16,
+            "company_id": 2,
+            "type": "Invoice",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "INV-",
+            "discount_method": null,
+            "accent_color": "#5b5cff",
+            "font": null,
+            "template": "default",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Invoice",
+            "subheader": "Enke",
+            "terms": "Terms",
+            "footer": "All rights reserved",
+            "item_name": {
+                "option": "items"
+            },
+            "tax_name": {
+                "option": "tax"
+            },
+            "unit_name": {
+                "option": "quantity"
+            },
+            "price_name": {
+                "option": "price"
+            },
+            "amount_name": {
+                "option": "amount"
+            },
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "Enke Store"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "Descrption"
+                },
+                "showTel": {
+                    "visible": false,
+                    "value": "094595617"
+                },
+                "showEmail": {
+                    "visible": true,
+                    "value": "enkestore@gmail.com"
+                },
+                "showInvoiceNumber": {
+                    "visible": false,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": false,
+                    "value": null
+                },
+                "showStoreAddress": {
+                    "visible": false,
+                    "value": "kunnamangalam"
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "3523431232341"
+                },
+                "showSLNumber": {
+                    "visible": false,
+                    "value": null
+                },
+                "showParticulars": {
+                    "visible": false,
+                    "value": null
+                },
+                "showMRP": {
+                    "visible": false,
+                    "value": null
+                },
+                "showQty": {
+                    "visible": false,
+                    "value": null
+                },
+                "showRate": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTotal": {
+                    "visible": false,
+                    "value": null
+                },
+                "showDiscount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showNetAmount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showMRPTotal": {
+                    "visible": false,
+                    "value": null
+                },
+                "showSaved": {
+                    "visible": false,
+                    "value": null
+                },
+                "showAmountInWords": {
+                    "visible": false,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showThankYouMessage": {
+                    "visible": false,
+                    "value": null
+                },
+                "showQRCode": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTermsConditions": {
+                    "visible": false,
+                    "value": null
+                }
+            },
+            "resolved_labels": []
+        },
+        "Bill": {
+            "id": 17,
+            "company_id": 2,
+            "type": "Bill",
+            "logo": null,
+            "show_logo": 0,
+            "icon": "https://eposdemo.yougoit.in/storage/icons/free-delivery-banner-courier-on-260nw-2210055917.jpg",
+            "show_icon": 1,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "bill",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-05-19T05:37:55.000000Z",
+            "language": "en",
+            "header": "Invoice bill",
+            "subheader": null,
+            "terms": null,
+            "footer": null,
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "FUNZCART"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "MINI SUPER MARKET "
+                },
+                "showTel": {
+                    "visible": true,
+                    "value": "9999900000"
+                },
+                "showEmail": {
+                    "visible": false,
+                    "value": "supermaket@gmail.com"
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitleB2b": {
+                    "visible": true,
+                    "value": null
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "ADDRESS1,ADDRESS2 "
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "FSSAI : 00000000000000"
+                },
+                "showCustomerNameAndPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showExtraHeading1": {
+                    "visible": false,
+                    "value": null
+                },
+                "showExtraHeading2": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTokenNumber": {
+                    "visible": false,
+                    "value": "Token Number"
+                },
+                "showCustomerName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerAddress": {
+                    "visible": false,
+                    "value": null
+                },
+                "showPayment": {
+                    "visible": false,
+                    "value": null
+                },
+                "showComment": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerPhoneMasked": {
+                    "visible": false,
+                    "value": null
+                },
+                "showPaymentBreaked": {
+                    "visible": false,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": false,
+                    "value": null
+                },
+                "showDeliveryMethod": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerVatNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerCrNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSLNumber": {
+                    "visible": true,
+                    "value": "Sl#"
+                },
+                "showParticulars": {
+                    "visible": true,
+                    "value": "PRT"
+                },
+                "showMRP": {
+                    "visible": true,
+                    "value": "MRP"
+                },
+                "showQty": {
+                    "visible": true,
+                    "value": "QTY"
+                },
+                "showRate": {
+                    "visible": true,
+                    "value": "RATE"
+                },
+                "showRateExcTax": {
+                    "visible": true,
+                    "value": "RATE"
+                },
+                "showUnit": {
+                    "visible": true,
+                    "value": "UNIT"
+                },
+                "showTaxHeader": {
+                    "visible": true,
+                    "value": "TAX"
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "TOT"
+                },
+                "showDiscount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showNetAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showMRPTotal": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSaved": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAmountInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQuantityCount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTax": {
+                    "visible": true,
+                    "value": "Tax Amount"
+                },
+                "showSubTotal": {
+                    "visible": false,
+                    "value": null
+                },
+                "showOrderNumberInFooter": {
+                    "visible": false,
+                    "value": null
+                },
+                "showVATFooter": {
+                    "visible": false,
+                    "value": null
+                },
+                "showThankYouMessage": {
+                    "visible": true,
+                    "value": "*** THANK YOU FOR SHOPPING WITH US ***"
+                },
+                "showQRCode": {
+                    "visible": true,
+                    "value": "Scan this QR and Pay"
+                },
+                "showTermsConditions": {
+                    "visible": false,
+                    "value": "* No product will be Replaced\\/Return after 7 Days from The Date of Purchase\n* No product will be Replaced without bills \n* please Check Your Bill Before Leaving The Shop        \n                               "
+                },
+                "showCustomerBalance": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerPrevBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPaidAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerCurrentBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDeliveryPhone": {
+                    "visible": true,
+                    "value": "7777777777"
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl#",
+                "particulars": "PRT",
+                "mrp": "MRP",
+                "qty": "QTY",
+                "rate": "RATE",
+                "rate_exc_tax": "RATE",
+                "unit": "UNIT",
+                "total": "TOT",
+                "tax": "TAX"
+            }
+        },
+        "Receipt": {
+            "id": 18,
+            "company_id": 2,
+            "type": "Receipt",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "RCPT-",
+            "discount_method": null,
+            "accent_color": "#4F46E5",
+            "font": null,
+            "template": "receipt",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Receipt",
+            "subheader": "Payment Received",
+            "terms": "No returns after 7 days.",
+            "footer": "Thank you for your payment!",
+            "item_name": {
+                "option": "items"
+            },
+            "tax_name": null,
+            "unit_name": {
+                "option": "quantity"
+            },
+            "price_name": {
+                "option": "price"
+            },
+            "amount_name": {
+                "option": "amount"
+            },
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubheader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showLogo": {
+                    "visible": false,
+                    "value": null
+                },
+                "showReceiptNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCompanyDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTaxId": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerId": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReceiptDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPaymentDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQuantityDetails": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTaxDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDiscountDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQRCode": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTerms": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "particulars": "Particulars",
+                "qty": "Qty",
+                "rate": "Rate",
+                "amount": "Amount"
+            }
+        },
+        "Voucher": {
+            "id": 19,
+            "company_id": 2,
+            "type": "Voucher",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "VCH-",
+            "discount_method": null,
+            "accent_color": "#4F46E5",
+            "font": null,
+            "template": "voucher",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Voucher",
+            "subheader": "Payment Voucher",
+            "terms": "This is a computer-generated voucher and requires authorized signature to be valid.",
+            "footer": "Thank you for your business!",
+            "item_name": {
+                "option": "items"
+            },
+            "tax_name": null,
+            "unit_name": {
+                "option": "quantity"
+            },
+            "price_name": {
+                "option": "price"
+            },
+            "amount_name": {
+                "option": "amount"
+            },
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubheader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showLogo": {
+                    "visible": false,
+                    "value": null
+                },
+                "showVoucherNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCompanyDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showRecipientDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showVoucherType": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPaymentDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSignatureBoxes": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQRCode": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTerms": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "date": "Date",
+                "description": "Financial document",
+                "amount": "Amount"
+            }
+        },
+        "Payslip": {
+            "id": 20,
+            "company_id": 2,
+            "type": "Payslip",
+            "logo": null,
+            "show_logo": 1,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "PAY-",
+            "discount_method": null,
+            "accent_color": "#16a34a",
+            "font": null,
+            "template": "payslip",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Payslip",
+            "subheader": "Employee Payment Details",
+            "terms": "Confidential. For employee use only.",
+            "footer": "Generated by HRMS.",
+            "item_name": {
+                "option": "items"
+            },
+            "tax_name": null,
+            "unit_name": {
+                "option": "quantity"
+            },
+            "price_name": {
+                "option": "price"
+            },
+            "amount_name": {
+                "option": "amount"
+            },
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCompanyLogo": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubheader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCompanyContact": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPayslipTitle": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPayslipNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPayPeriod": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPaymentDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showEmployeeName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showEmployeeId": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDesignation": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDepartment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showJoiningDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBankDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showEarnings": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDeductions": {
+                    "visible": true,
+                    "value": null
+                },
+                "showGrossSalary": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalDeductions": {
+                    "visible": true,
+                    "value": null
+                },
+                "showNetSalary": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAmountInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showLeaveBalance": {
+                    "visible": false,
+                    "value": null
+                },
+                "showAttendanceSummary": {
+                    "visible": false,
+                    "value": null
+                },
+                "showSignature": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTerms": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "earning_type": "Earning Type",
+                "earning_amount": "Earning Amount",
+                "deduction_type": "Deduction Type",
+                "deduction_amount": "Deduction Amount"
+            }
+        },
+        "Email": {
+            "id": 21,
+            "company_id": 2,
+            "type": "Email",
+            "logo": null,
+            "show_logo": 1,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "EML-",
+            "discount_method": null,
+            "accent_color": "#4F46E5",
+            "font": null,
+            "template": "email",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Email Notification",
+            "subheader": "Important Information",
+            "terms": null,
+            "footer": "© 2025 Your Company. All rights reserved.",
+            "item_name": {
+                "option": "items"
+            },
+            "tax_name": null,
+            "unit_name": {
+                "option": "quantity"
+            },
+            "price_name": {
+                "option": "price"
+            },
+            "amount_name": {
+                "option": "amount"
+            },
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubheader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showLogo": {
+                    "visible": true,
+                    "value": null
+                },
+                "showEmailId": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCompanyDetails": {
+                    "visible": false,
+                    "value": null
+                },
+                "showRecipientDetails": {
+                    "visible": false,
+                    "value": null
+                },
+                "showSenderDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showEmailSubject": {
+                    "visible": true,
+                    "value": null
+                },
+                "showEmailBody": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAttachments": {
+                    "visible": false,
+                    "value": null
+                },
+                "showSignature": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSocialMedia": {
+                    "visible": false,
+                    "value": null
+                },
+                "showDisclaimer": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "subject": "Subject",
+                "date": "Date",
+                "sender": "Sender",
+                "recipient": "Recipient"
+            }
+        },
+        "Customer Statement": {
+            "id": 22,
+            "company_id": 2,
+            "type": "Customer Statement",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "customer_statement",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "FUNZCART",
+            "subheader": "Customer Transaction Report",
+            "terms": null,
+            "footer": null,
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubheader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerEmail": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDates": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalCredit": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalDebit": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSlNumberColumn": {
+                    "visible": true,
+                    "value": null
+                },
+                "showOrderNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTransactionType": {
+                    "visible": true,
+                    "value": null
+                },
+                "showType": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTax": {
+                    "visible": true,
+                    "value": "Tax"
+                },
+                "showStatus": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "date": "Date",
+                "order_number": "Reference",
+                "transaction_type": "Transaction Types",
+                "debit": "Debit",
+                "credit": "Credit",
+                "balance": "Balance",
+                "status": "Status",
+                "tax": "Tax"
+            }
+        },
+        "Delivery Note": {
+            "id": 23,
+            "company_id": 2,
+            "type": "Delivery Note",
+            "logo": "https://eposdemo.yougoit.in/storage/logos/01KPN6TZYKHN7AZ3DJKE15PTKQ.jfif",
+            "show_logo": 1,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "DN-",
+            "discount_method": null,
+            "accent_color": "#2563eb",
+            "font": null,
+            "template": "delivery_note",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-20T10:26:41.000000Z",
+            "language": "en",
+            "header": "Delivery Note",
+            "subheader": "Goods Dispatch Details",
+            "terms": "Goods once delivered will not be taken back.",
+            "footer": "Thank you for your business!",
+            "item_name": [],
+            "tax_name": [],
+            "unit_name": [],
+            "price_name": [],
+            "amount_name": [],
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showLogo": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDeliveryNoteNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showRemarks": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAuthorizedSignature": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "item": "Item",
+                "description": "Description",
+                "qty": "Qty",
+                "delivered": "Delivered"
+            }
+        },
+        "Supplier Statement": {
+            "id": 24,
+            "company_id": 2,
+            "type": "Supplier Statement",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "supplier_statement",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "FUNZCART",
+            "subheader": "Supplier Transaction Report",
+            "terms": null,
+            "footer": null,
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubheader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDates": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSupplierName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSupplierPhone": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSupplierEmail": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSupplierAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalCredit": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalDebit": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItem": {
+                    "visible": true,
+                    "value": null
+                },
+                "showType": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showStatus": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "date": "Date",
+                "item": "Item",
+                "debit": "Debit",
+                "credit": "Credit",
+                "status": "Status"
+            }
+        },
+        "Supplier Invoice": {
+            "id": 25,
+            "company_id": 2,
+            "type": "Supplier Invoice",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "SINV-",
+            "discount_method": null,
+            "accent_color": "#5b5cff",
+            "font": null,
+            "template": "supplier_invoice",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Invoice",
+            "subheader": "Enke",
+            "terms": "Terms",
+            "footer": "All rights reserved",
+            "item_name": {
+                "option": "items"
+            },
+            "tax_name": {
+                "option": "tax"
+            },
+            "unit_name": {
+                "option": "quantity"
+            },
+            "price_name": {
+                "option": "price"
+            },
+            "amount_name": {
+                "option": "amount"
+            },
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "Enke Store"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "Descrption"
+                },
+                "showTel": {
+                    "visible": false,
+                    "value": "094595617"
+                },
+                "showEmail": {
+                    "visible": true,
+                    "value": "enkestore@gmail.com"
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": false,
+                    "value": null
+                },
+                "showStoreAddress": {
+                    "visible": false,
+                    "value": "kunnamangalam"
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "3523431232341"
+                },
+                "showSLNumber": {
+                    "visible": false,
+                    "value": "Sl.No"
+                },
+                "showParticulars": {
+                    "visible": false,
+                    "value": null
+                },
+                "showMRP": {
+                    "visible": false,
+                    "value": null
+                },
+                "showQty": {
+                    "visible": false,
+                    "value": null
+                },
+                "showRate": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTotal": {
+                    "visible": false,
+                    "value": null
+                },
+                "showDiscount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showNetAmount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showMRPTotal": {
+                    "visible": false,
+                    "value": null
+                },
+                "showSaved": {
+                    "visible": false,
+                    "value": null
+                },
+                "showAmountInWords": {
+                    "visible": false,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showThankYouMessage": {
+                    "visible": false,
+                    "value": null
+                },
+                "showQRCode": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTermsConditions": {
+                    "visible": false,
+                    "value": null
+                },
+                "showSupplierTaxNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showStoreTaxNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceDate": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "date": "Date",
+                "invoice_number": "Invoice Number",
+                "description": "Descrption",
+                "amount": "Amount"
+            }
+        },
+        "Supplier Voucher": {
+            "id": 26,
+            "company_id": 2,
+            "type": "Supplier Voucher",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "SVCH-",
+            "discount_method": null,
+            "accent_color": "#4F46E5",
+            "font": null,
+            "template": "supplier_voucher",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Supplier Voucher",
+            "subheader": "Payment Voucher",
+            "terms": "This is a computer-generated voucher and requires authorized signature to be valid.",
+            "footer": "Thank you for your business!",
+            "item_name": {
+                "option": "items"
+            },
+            "tax_name": null,
+            "unit_name": {
+                "option": "quantity"
+            },
+            "price_name": {
+                "option": "price"
+            },
+            "amount_name": {
+                "option": "amount"
+            },
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubheader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showLogo": {
+                    "visible": false,
+                    "value": null
+                },
+                "showVoucherNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCompanyDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showRecipientDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showVoucherType": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPaymentDetails": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSignatureBoxes": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQRCode": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTerms": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "particulars": "Particulars",
+                "qty": "Qty",
+                "rate": "Rate",
+                "total": "Total"
+            }
+        },
+        "Sales and Return Bill": {
+            "id": 27,
+            "company_id": 2,
+            "type": "Sales and Return Bill",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "sales_and_return_bill",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": null,
+            "subheader": null,
+            "terms": null,
+            "footer": null,
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "SUPER MARKET"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "MINI SUPER MARKET "
+                },
+                "showTel": {
+                    "visible": true,
+                    "value": "9999900000"
+                },
+                "showEmail": {
+                    "visible": false,
+                    "value": "supermaket@gmail.com"
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": true,
+                    "value": null
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "ADDRESS1,ADDRESS2 "
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "FSSAI : 00000000000000"
+                },
+                "showSLNumber": {
+                    "visible": true,
+                    "value": "Sl#"
+                },
+                "showParticulars": {
+                    "visible": true,
+                    "value": "Description"
+                },
+                "showMRP": {
+                    "visible": true,
+                    "value": "Mrp"
+                },
+                "showQty": {
+                    "visible": true,
+                    "value": "Qty"
+                },
+                "showRate": {
+                    "visible": true,
+                    "value": "Rate"
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "Amount"
+                },
+                "showDiscount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showNetAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showMRPTotal": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSaved": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAmountInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showThankYouMessage": {
+                    "visible": true,
+                    "value": "*** THANK YOU FOR SHOPPING WITH US ***"
+                },
+                "showQRCode": {
+                    "visible": false,
+                    "value": "Scan this QR and Pay"
+                },
+                "showTermsConditions": {
+                    "visible": true,
+                    "value": "* No product will be Replaced\\/Return after 7 Days from The Date of Purchase\n* No product will be Replaced without bills \n* please Check Your Bill Before Leaving The Shop        \n                               "
+                },
+                "showReturnSLNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnParticulars": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnMRP": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnQty": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnRate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnTotal": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnNetAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnTotalAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnItemsCount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFinalNetAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFinalPurchase": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFinalReturn": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFinalAmountInWords": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl#",
+                "particulars": "Description",
+                "mrp": "Mrp",
+                "qty": "Qty",
+                "rate": "Rate",
+                "total": "Amount",
+                "return_sl_number": "Sl#",
+                "return_particulars": "DESCRIPTION",
+                "return_mrp": "MRP",
+                "return_qty": "QTY",
+                "return_rate": "RATE",
+                "return_total": "AMOUNT"
+            }
+        },
+        "Return Bill": {
+            "id": 28,
+            "company_id": 2,
+            "type": "Return Bill",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "return_bill",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": null,
+            "subheader": null,
+            "terms": null,
+            "footer": null,
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "SUPER MARKET"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "MINI SUPER MARKET "
+                },
+                "showTel": {
+                    "visible": true,
+                    "value": "9999900000"
+                },
+                "showEmail": {
+                    "visible": false,
+                    "value": "supermaket@gmail.com"
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": true,
+                    "value": null
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "ADDRESS1,ADDRESS2 "
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "FSSAI : 00000000000000"
+                },
+                "showThankYouMessage": {
+                    "visible": true,
+                    "value": "*** THANK YOU FOR SHOPPING WITH US ***"
+                },
+                "showQRCode": {
+                    "visible": false,
+                    "value": "Scan this QR and Pay"
+                },
+                "showTermsConditions": {
+                    "visible": true,
+                    "value": "* No product will be Replaced\\/Return after 7 Days from The Date of Purchase\n* No product will be Replaced without bills \n* please Check Your Bill Before Leaving The Shop        \n                               "
+                },
+                "showReturnSLNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnParticulars": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnMRP": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnQty": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnRate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnTotal": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnNetAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnTotalAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnItemsCount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showReturnAmountInWords": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "return_sl_number": "Si#",
+                "return_particulars": "DESCRIPTION",
+                "return_mrp": "MRP",
+                "return_qty": "QTY",
+                "return_rate": "RATE",
+                "return_total": "AMOUNT"
+            }
+        },
+        "ZATCA Invoice": {
+            "id": 29,
+            "company_id": 2,
+            "type": "ZATCA Invoice",
+            "logo": null,
+            "show_logo": 1,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "INV-",
+            "discount_method": null,
+            "accent_color": "#2c5aa0",
+            "font": null,
+            "template": "zatca_invoice",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Tax Invoice",
+            "subheader": "ZATCA Compliant Invoice",
+            "terms": "This is a computer-generated invoice and does not require a signature.",
+            "footer": "Thank you for your business!",
+            "item_name": {
+                "option": "services"
+            },
+            "tax_name": {
+                "option": "VAT"
+            },
+            "unit_name": {
+                "option": "hours"
+            },
+            "price_name": {
+                "option": "rate"
+            },
+            "amount_name": {
+                "option": "total"
+            },
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showLogo": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQRCode": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDueDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCompanyName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showVATNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCRNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCompanyAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerVAT": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showProjectName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showProjectNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showUnit": {
+                    "visible": true,
+                    "value": "Unit"
+                },
+                "showUnitPrice": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQuantity": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "Total (SAR)"
+                },
+                "showSubtotal": {
+                    "visible": true,
+                    "value": null
+                },
+                "showVATAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBankInfo": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBankName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showIBAN": {
+                    "visible": true,
+                    "value": null
+                },
+                "showNotes": {
+                    "visible": true,
+                    "value": null
+                },
+                "showFooter": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "particulars": "Particulars",
+                "qty": "Qty",
+                "rate": "Rate",
+                "total": "Total (SAR)"
+            }
+        },
+        "ZATCA Phase 2": {
+            "id": 30,
+            "company_id": 2,
+            "type": "ZATCA Phase 2",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": "INV-",
+            "discount_method": null,
+            "accent_color": "#000000",
+            "font": null,
+            "template": "zatca_phase_2",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2025-12-10T02:10:41.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": "Tax Invoice فاتورة ضريبية",
+            "subheader": "ZATCA Phase 2 Compliant Invoice",
+            "terms": "This is a computer-generated invoice and does not require a signature.",
+            "footer": "Thank you for your business!",
+            "item_name": [],
+            "tax_name": [],
+            "unit_name": [],
+            "price_name": [],
+            "amount_name": [],
+            "is_active": 1,
+            "display_configuration": {
+                "showHeader": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQRCode": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showIssueDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSupplyDate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSellerName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSellerVAT": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSellerCR": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSellerAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBuyerName": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBuyerVAT": {
+                    "visible": true,
+                    "value": null
+                },
+                "showBuyerAddress": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemDescription": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQuantity": {
+                    "visible": true,
+                    "value": null
+                },
+                "showUnitPrice": {
+                    "visible": true,
+                    "value": null
+                },
+                "showVATRate": {
+                    "visible": true,
+                    "value": null
+                },
+                "showVATAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubtotalExclusive": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSubtotalInclusive": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDiscountAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTaxableAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showTotalVAT": {
+                    "visible": true,
+                    "value": null
+                },
+                "showGrossTotal": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPayableAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSpecialTaxTreatment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showPaymentTerms": {
+                    "visible": true,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl.No",
+                "particulars": "Particulars",
+                "qty": "Qty",
+                "rate": "Rate",
+                "total": "Total"
+            }
+        },
+        "Kitchen Order": {
+            "id": 227,
+            "company_id": 2,
+            "type": "Kitchen Order",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "kitchen_order",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2026-01-07T08:33:35.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "language": "en",
+            "header": null,
+            "subheader": null,
+            "terms": null,
+            "footer": null,
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "SUPER MARKET"
+                },
+                "showTableNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showOrderNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDateTime": {
+                    "visible": true,
+                    "value": null
+                },
+                "showComment": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSLNumber": {
+                    "visible": true,
+                    "value": "Sl#"
+                },
+                "showParticulars": {
+                    "visible": true,
+                    "value": "Description"
+                },
+                "showMRP": {
+                    "visible": true,
+                    "value": "Mrp"
+                },
+                "showQty": {
+                    "visible": true,
+                    "value": "Qty"
+                },
+                "showRate": {
+                    "visible": true,
+                    "value": "Rate"
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "Amount"
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl#",
+                "particulars": "Description",
+                "mrp": "Mrp",
+                "qty": "Qty",
+                "rate": "Rate",
+                "total": "Amount"
+            }
+        },
+        "Purchase Order": {
+            "id": 544,
+            "company_id": 2,
+            "type": "Purchase Order",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "purchase_order",
+            "display_flags": {
+                "showStoreNameAndPhone": true,
+                "showSupplierNameAndPhone": true,
+                "showPurchaseOrderNumber": true,
+                "showStoreAddress": true,
+                "showNetAmount": true,
+                "showSLNumber": true,
+                "showParticulars": true,
+                "showQty": true,
+                "showRate": true,
+                "showTotal": true
+            },
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2026-04-01T06:27:21.000000Z",
+            "updated_at": "2026-04-01T06:27:21.000000Z",
+            "translations": []
+        },
+        "Barcode": {
+            "id": 545,
+            "company_id": 2,
+            "type": "Barcode",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "barcode",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2026-04-01T06:27:21.000000Z",
+            "updated_at": "2026-04-16T12:57:48.000000Z",
+            "language": "en",
+            "header": null,
+            "subheader": null,
+            "terms": null,
+            "footer": null,
+            "item_name": [],
+            "tax_name": [],
+            "unit_name": [],
+            "price_name": [],
+            "amount_name": [],
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "FUNZCART"
+                },
+                "showProductName": {
+                    "visible": true,
+                    "value": "ar"
+                },
+                "showPrice": {
+                    "visible": true,
+                    "value": "SR"
+                },
+                "showBarcodeNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showMfgDate": {
+                    "visible": true,
+                    "value": "P"
+                },
+                "showExpiryDate": {
+                    "visible": true,
+                    "value": "E"
+                }
+            },
+            "resolved_labels": {
+                "mfg_date": "P",
+                "exp_date": "E",
+                "price": "SR",
+                "date_format": "d/m/Y"
+            }
+        },
+        "Quotation": {
+            "id": 681,
+            "company_id": 2,
+            "type": "Quotation",
+            "logo": null,
+            "show_logo": 0,
+            "icon": null,
+            "show_icon": 0,
+            "number_prefix": null,
+            "discount_method": null,
+            "accent_color": null,
+            "font": null,
+            "template": "quotation",
+            "created_by": null,
+            "updated_by": null,
+            "created_at": "2026-05-25T06:57:08.000000Z",
+            "updated_at": "2026-05-25T10:48:52.000000Z",
+            "language": "en",
+            "header": null,
+            "subheader": null,
+            "terms": null,
+            "footer": null,
+            "item_name": null,
+            "tax_name": null,
+            "unit_name": null,
+            "price_name": null,
+            "amount_name": null,
+            "is_active": 1,
+            "display_configuration": {
+                "showStoreName": {
+                    "visible": true,
+                    "value": "SUPER MARKET"
+                },
+                "showDescription": {
+                    "visible": true,
+                    "value": "MINI SUPER MARKET "
+                },
+                "showTel": {
+                    "visible": true,
+                    "value": "9999900000"
+                },
+                "showEmail": {
+                    "visible": false,
+                    "value": "supermaket@gmail.com"
+                },
+                "showInvoiceNumber": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitle": {
+                    "visible": true,
+                    "value": null
+                },
+                "showInvoiceTitleB2b": {
+                    "visible": false,
+                    "value": null
+                },
+                "showStoreAddress": {
+                    "visible": true,
+                    "value": "ADDRESS1,ADDRESS2 "
+                },
+                "showFssaiInfo": {
+                    "visible": true,
+                    "value": "FSSAI : 00000000000000"
+                },
+                "showCustomerNameAndPhone": {
+                    "visible": false,
+                    "value": null
+                },
+                "showExtraHeading1": {
+                    "visible": false,
+                    "value": null
+                },
+                "showExtraHeading2": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTokenNumber": {
+                    "visible": true,
+                    "value": "Token Number"
+                },
+                "showCustomerName": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerPhone": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerAddress": {
+                    "visible": false,
+                    "value": null
+                },
+                "showPayment": {
+                    "visible": false,
+                    "value": null
+                },
+                "showComment": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerPhoneMasked": {
+                    "visible": false,
+                    "value": null
+                },
+                "showPaymentBreaked": {
+                    "visible": false,
+                    "value": null
+                },
+                "showDate": {
+                    "visible": false,
+                    "value": null
+                },
+                "showDeliveryMethod": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerVatNumber": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerCrNumber": {
+                    "visible": false,
+                    "value": null
+                },
+                "showSLNumber": {
+                    "visible": true,
+                    "value": "Sl#"
+                },
+                "showParticulars": {
+                    "visible": true,
+                    "value": "Description"
+                },
+                "showMRP": {
+                    "visible": true,
+                    "value": "Mrp"
+                },
+                "showQty": {
+                    "visible": true,
+                    "value": "Qty"
+                },
+                "showRate": {
+                    "visible": true,
+                    "value": "Rate"
+                },
+                "showRateExcTax": {
+                    "visible": false,
+                    "value": null
+                },
+                "showUnit": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTaxHeader": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTotal": {
+                    "visible": true,
+                    "value": "Amount"
+                },
+                "showDiscount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showNetAmount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showMRPTotal": {
+                    "visible": true,
+                    "value": null
+                },
+                "showSaved": {
+                    "visible": true,
+                    "value": null
+                },
+                "showAmountInWords": {
+                    "visible": true,
+                    "value": null
+                },
+                "showItemsCount": {
+                    "visible": true,
+                    "value": null
+                },
+                "showQuantityCount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showTax": {
+                    "visible": true,
+                    "value": "Tax Amount"
+                },
+                "showSubTotal": {
+                    "visible": false,
+                    "value": null
+                },
+                "showOrderNumberInFooter": {
+                    "visible": false,
+                    "value": null
+                },
+                "showVATFooter": {
+                    "visible": false,
+                    "value": null
+                },
+                "showThankYouMessage": {
+                    "visible": true,
+                    "value": "*** THANK YOU FOR SHOPPING WITH US ***"
+                },
+                "showQRCode": {
+                    "visible": false,
+                    "value": "Scan this QR and Pay"
+                },
+                "showTermsConditions": {
+                    "visible": true,
+                    "value": "* No product will be Replaced\\/Return after 7 Days from The Date of Purchase\n* No product will be Replaced without bills \n* please Check Your Bill Before Leaving The Shop        \n                               "
+                },
+                "showCustomerBalance": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerPrevBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showCustomerPaidAmount": {
+                    "visible": false,
+                    "value": null
+                },
+                "showCustomerCurrentBalance": {
+                    "visible": true,
+                    "value": null
+                },
+                "showDeliveryPhone": {
+                    "visible": false,
+                    "value": null
+                }
+            },
+            "resolved_labels": {
+                "sl_number": "Sl#",
+                "particulars": "Description",
+                "mrp": "Mrp",
+                "qty": "Qty",
+                "rate": "Rate",
+                "total": "Amount"
+            }
+        }
+    },
+    "options": {
+        "item_name_options": {
+            "items": "Items",
+            "products": "Products",
+            "services": "Services",
+            "other": "Other"
+        },
+        "unit_name_options": {
+            "quantity": "Quantity",
+            "hours": "Hours",
+            "other": "Other"
+        },
+        "price_name_options": {
+            "price": "Price",
+            "rate": "Rate",
+            "other": "Other"
+        },
+        "tax_name_options": {
+            "tax": "Tax",
+            "GST": "GST",
+            "VAT": "VAT",
+            "tax (%)": "Tax (%)",
+            "other": "Other"
+        },
+        "amount_name_options": {
+            "amount": "Amount",
+            "total": "Total",
+            "other": "Other"
+        },
+        "template_options": {
+            "default": "Default",
+            "bill": "Bill",
+            "quotation": "Quotation",
+            "sales_and_return_bill": "Sales Return Bill",
+            "return_bill": "Return Bill",
+            "receipt": "Receipt",
+            "voucher": "Voucher",
+            "payslip": "Payslip",
+            "email": "Email",
+            "supplier_invoice": "Supplier Invoice",
+            "delivery_note": "Delivery Note",
+            "customer_statement": "Customer Statement",
+            "supplier_statement": "Supplier Statement",
+            "kitchen_order": "Kitchen Order",
+            "barcode": "Barcode"
+        }
+    }
+}
