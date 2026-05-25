@@ -78,13 +78,17 @@ class CheckoutModal extends StatefulWidget {
   final String printButtonTitle;
   final bool requireCheckoutCompletion;
   final bool isQuotationMode;
+  final bool requireSavedCustomer;
   final DateTime? initialQuotationDate;
   final DateTime? initialQuotationExpiryDate;
 
   // Callbacks
   final Function(CustomerListModelData) onCustomerSelected;
-  final Future<CustomerListModelData?> Function(String searchQuery)
-      onAddNewCustomer;
+  final Future<CustomerListModelData?> Function(
+    String searchQuery, {
+    String? initialName,
+    String? initialPhone,
+  }) onAddNewCustomer;
   final Function(String couponCode, bool isApplied, double flatDiscount,
       double percentageDiscount) onDiscountApplied;
 
@@ -162,6 +166,7 @@ class CheckoutModal extends StatefulWidget {
     this.printButtonTitle = 'Confirm & Print',
     this.requireCheckoutCompletion = true,
     this.isQuotationMode = false,
+    this.requireSavedCustomer = false,
     this.initialQuotationDate,
     this.initialQuotationExpiryDate,
     required this.onCustomerSelected,
@@ -832,7 +837,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _isAddingCustomer = true;
     });
     try {
-      final newCustomer = await widget.onAddNewCustomer(_customerSearchQuery);
+      final quoteOnlyCustomer = _quoteOnlyCustomerForCreation;
+      final newCustomer = await widget.onAddNewCustomer(
+        _customerSearchQuery,
+        initialName: quoteOnlyCustomer?.name,
+        initialPhone: quoteOnlyCustomer?.phone,
+      );
       if (newCustomer != null && mounted) {
         setState(() {
           _allCustomers.removeWhere((c) => c.id == newCustomer.id);
@@ -852,6 +862,21 @@ class _CheckoutModalState extends State<CheckoutModal> {
       }
     }
   }
+
+  CustomerListModelData? get _quoteOnlyCustomerForCreation {
+    final customer = _localSelectedCustomer;
+    if (!widget.requireSavedCustomer ||
+        customer == null ||
+        customer.id != null) {
+      return null;
+    }
+    final name = customer.name?.trim();
+    if (name == null || name.isEmpty) return null;
+    return customer;
+  }
+
+  bool get _hasQuoteOnlyCustomerNeedingSave =>
+      _quoteOnlyCustomerForCreation != null;
 
   void _handleDiscountUpdate(
       String code, bool applied, double flat, double percent) {
@@ -1264,6 +1289,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           ),
                         ),
                         const SizedBox(height: 8),
+                        if (_hasQuoteOnlyCustomerNeedingSave) ...[
+                          _buildQuoteOnlyCustomerBanner(),
+                          const SizedBox(height: 8),
+                        ],
                         // List
                         Expanded(
                           child: FocusTraversalOrder(
@@ -1390,6 +1419,91 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuoteOnlyCustomerBanner() {
+    final customer = _quoteOnlyCustomerForCreation;
+    if (customer == null) return const SizedBox.shrink();
+
+    final phone = customer.phone?.trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFBBF24), width: 1.2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFEF3C7),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_add_alt_1,
+              color: Color(0xFFD97706),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Quotation customer is not saved',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    customer.name?.trim(),
+                    if (phone != null && phone.isNotEmpty) phone,
+                  ].whereType<String>().join(' | '),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF78350F),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton.icon(
+            onPressed: _isAddingCustomer ? null : _handleAddNewCustomer,
+            icon: _isAddingCustomer
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add, size: 16),
+            label: Text(_isAddingCustomer ? 'Creating...' : 'Create'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              textStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ],
       ),
@@ -2839,6 +2953,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
       return true;
     }
 
+    if (_hasQuoteOnlyCustomerNeedingSave) {
+      return false;
+    }
+
     return _localSelectedCustomer != null &&
         _hasOpenedPaymentModalOnce &&
         _hasPaymentMethod();
@@ -2848,6 +2966,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
   bool get _canPrint {
     if (widget.isQuotationMode) {
       return _canConfirmOrPrint;
+    }
+
+    if (_hasQuoteOnlyCustomerNeedingSave) {
+      return false;
     }
 
     return _localSelectedCustomer != null &&
@@ -2864,6 +2986,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
         return 'Expiry date cannot be before quotation date';
       }
       return 'Unable to create quotation';
+    }
+    if (_hasQuoteOnlyCustomerNeedingSave) {
+      return 'Create or select a saved customer before confirming';
     }
     return widget.requireCheckoutCompletion
         ? 'Please configure payment before confirm'
@@ -3201,7 +3326,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
         final bool hasCustomer = widget.isQuotationMode
             ? _hasQuotationCustomer
-            : _localSelectedCustomer != null;
+            : _localSelectedCustomer != null &&
+                !_hasQuoteOnlyCustomerNeedingSave;
         final bool hasPayment = !widget.isQuotationMode && _hasPaymentMethod();
         final bool hasDiscount = _localIsCouponApplied ||
             _localFlatDiscount > 0 ||
@@ -3218,9 +3344,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
               final tiles = <Widget>[
                 _buildClickableCheckItem(
                   'Customer',
-                  widget.isQuotationMode
-                      ? _quotationCustomerDisplayName
-                      : (_localSelectedCustomer?.name ?? 'Not Selected'),
+                  _hasQuoteOnlyCustomerNeedingSave
+                      ? 'Create customer'
+                      : widget.isQuotationMode
+                          ? _quotationCustomerDisplayName
+                          : (_localSelectedCustomer?.name ?? 'Not Selected'),
                   hasCustomer,
                   Icons.person_outline,
                   0,

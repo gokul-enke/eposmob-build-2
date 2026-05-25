@@ -7064,6 +7064,10 @@ class BillingPageState extends State<BillingPage>
 
     CustomerListModelData? checkoutSelectedCustomer =
         selectedCustomer ?? customerSelectionProvider.selectedCustomer;
+    final currentOrder = localProductProvider.currentOrder;
+    final requiresSavedQuotationCustomer = currentOrder?.quotationId != null &&
+        checkoutSelectedCustomer?.id == null &&
+        (checkoutSelectedCustomer?.name?.trim().isNotEmpty ?? false);
 
     // Prefer richer customer data from loaded list when IDs match
     if (checkoutSelectedCustomer?.id != null && customerList != null) {
@@ -7161,6 +7165,7 @@ class BillingPageState extends State<BillingPage>
               : (isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print'),
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
           isQuotationMode: isQuotationMode,
+          requireSavedCustomer: requiresSavedQuotationCustomer,
           initialQuotationDate: _quotationDate,
           initialQuotationExpiryDate: _quotationExpiryDate,
           onQuotationDatesUpdated: (quotationDate, expiryDate) {
@@ -7184,18 +7189,24 @@ class BillingPageState extends State<BillingPage>
               _isCustomerManuallySelected = true;
             });
           },
-          onAddNewCustomer: (String searchQuery) async {
+          onAddNewCustomer: (
+            String searchQuery, {
+            String? initialName,
+            String? initialPhone,
+          }) async {
             // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
             final normalizedSearchQuery = searchQuery.trim();
-            if (normalizedSearchQuery.isNotEmpty &&
+            if ((initialPhone ?? '').trim().isNotEmpty) {
+              phoneToPreFill = initialPhone!.trim();
+            } else if (normalizedSearchQuery.isNotEmpty &&
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
 
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill);
+                mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];

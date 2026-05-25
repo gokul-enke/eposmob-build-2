@@ -21,6 +21,7 @@ enum PaymentType { none, toPay, toReceive }
 
 class CustomCustomerForm extends StatefulWidget {
   final String? initialMobileNumber;
+  final String? initialCustomerName;
   final bool isModal;
   final VoidCallback? onSuccess;
   final VoidCallback? onCancel;
@@ -28,6 +29,7 @@ class CustomCustomerForm extends StatefulWidget {
   const CustomCustomerForm({
     Key? key,
     this.initialMobileNumber,
+    this.initialCustomerName,
     this.isModal = false,
     this.onSuccess,
     this.onCancel,
@@ -77,6 +79,14 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           widget.initialMobileNumber!.replaceAll(RegExp(r'\D'), '');
       _showPhoneValidationOnLoad =
           normalizedPhone.isNotEmpty && normalizedPhone.length < 10;
+    }
+    final initialName = widget.initialCustomerName?.trim();
+    if (initialName != null && initialName.isNotEmpty) {
+      final parts = initialName.split(RegExp(r'\s+'));
+      firstNameTextController.text = parts.first;
+      if (parts.length > 1) {
+        lastNameTextController.text = parts.skip(1).join(' ');
+      }
     }
     _prefillCountryFromLogin();
     WidgetsBinding.instance.addPostFrameCallback((_) {
