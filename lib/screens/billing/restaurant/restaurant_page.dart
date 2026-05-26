@@ -70,6 +70,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
   bool _isLoadingSendToKitchen =
       false; // Loading state for Send to Kitchen button
   bool _isLoadingPrint = false; // Loading state for Print button
+  bool _isLoadingCounterConfirmOrder = false;
+  bool _isLoadingCounterConfirmAndPrint = false;
   bool _showTablesPanel = true; // Desktop toggle for left tables panel
   bool _isTablesPanelPrefLoaded = false;
   double _leftPanelWidthFraction = 0.22;
@@ -561,6 +563,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       isCompact: isDenseDesktop,
                       onLocalDraftLoaded: _applyLocalDraftContext,
                       onLocalDraftSaved: _resetCounterOrderContextAfterSave,
+                      onCheckoutActionLoadingChanged:
+                          _setCounterCheckoutLoading,
                     ),
                   ),
                 ],
@@ -844,7 +848,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     ?.showConfirmOrderButton ??
                 true;
         final canCheckout = hasItems;
-        final disableCheckoutActions = _shouldDisableCounterCheckoutActions();
+        final isCheckoutActionLoading =
+            _isLoadingCounterConfirmOrder || _isLoadingCounterConfirmAndPrint;
+        final disableCheckoutActions =
+            _shouldDisableCounterCheckoutActions() || isCheckoutActionLoading;
+        final confirmOrderIsLoading = _isLoadingCounterConfirmOrder ||
+            (!showConfirmAndPrintButton && _isLoadingCounterConfirmAndPrint);
         return SafeArea(
           top: false,
           child: Padding(
@@ -869,7 +878,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     text: 'Clear Cart',
                     shortcutLabel: 'F1',
                     color: const Color(0xFFEF233C),
-                    isDisabled: !hasItems,
+                    isDisabled: !hasItems || isCheckoutActionLoading,
                     onPressed: () => _orderPanelKey.currentState
                         ?.clearCurrentCartFromParent(),
                   ),
@@ -890,6 +899,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         shortcutLabel: 'F6',
                         color: const Color(0xFF5B8DEF),
                         isDisabled: !canCheckout || disableCheckoutActions,
+                        isLoading: _isLoadingCounterConfirmAndPrint,
                         onPressed: () => _orderPanelKey.currentState
                             ?.showCurrentCartCheckoutFromParent(),
                       ),
@@ -900,6 +910,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       shortcutLabel: 'F2',
                       color: const Color(0xFF08C63F),
                       isDisabled: !canCheckout || disableCheckoutActions,
+                      isLoading: confirmOrderIsLoading,
                       onPressed: () => _orderPanelKey.currentState
                           ?.showCurrentCartCheckoutFromParent(),
                     ),
@@ -909,6 +920,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       shortcutLabel: 'F9',
                       color: const Color(0xFFF59E0B),
                       isDisabled: !canCheckout || disableCheckoutActions,
+                      isLoading: isCheckoutActionLoading,
                       onPressed: () => _orderPanelKey.currentState
                           ?.showOfflineSaveAndPrintCheckoutFromParent(),
                     ),
@@ -962,16 +974,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
     required Color color,
     required VoidCallback onPressed,
     bool isDisabled = false,
+    bool isLoading = false,
   }) {
-    final foregroundColor = isDisabled ? const Color(0xFF94A3B8) : Colors.white;
+    final disabled = isDisabled || isLoading;
+    final foregroundColor = disabled ? const Color(0xFF94A3B8) : Colors.white;
     final shortcutBackgroundColor =
-        isDisabled ? const Color(0xFFF8FAFC) : Colors.white.withOpacity(0.18);
+        disabled ? const Color(0xFFF8FAFC) : Colors.white.withOpacity(0.18);
     final shortcutBorderColor =
-        isDisabled ? const Color(0xFFE2E8F0) : Colors.white.withOpacity(0.35);
+        disabled ? const Color(0xFFE2E8F0) : Colors.white.withOpacity(0.35);
 
     return Expanded(
       child: ElevatedButton(
-        onPressed: isDisabled ? null : onPressed,
+        onPressed: disabled ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           disabledBackgroundColor: const Color(0xFFE5E7EB),
@@ -983,42 +997,66 @@ class _RestaurantPageState extends State<RestaurantPage> {
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                text,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: foregroundColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+        child: isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      text,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: foregroundColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: shortcutBackgroundColor,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: shortcutBorderColor),
+                    ),
+                    child: Text(
+                      shortcutLabel,
+                      style: TextStyle(
+                        color: foregroundColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-              decoration: BoxDecoration(
-                color: shortcutBackgroundColor,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: shortcutBorderColor),
-              ),
-              child: Text(
-                shortcutLabel,
-                style: TextStyle(
-                  color: foregroundColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
+  }
+
+  void _setCounterCheckoutLoading({
+    required bool isLoading,
+    required bool printBill,
+  }) {
+    if (!mounted) return;
+    setState(() {
+      if (printBill) {
+        _isLoadingCounterConfirmAndPrint = isLoading;
+      } else {
+        _isLoadingCounterConfirmOrder = isLoading;
+      }
+    });
   }
 
   void _selectDiningTable(String id) {
@@ -2251,6 +2289,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             isLoadingPrint: _isLoadingPrint,
             onLocalDraftLoaded: _applyLocalDraftContext,
             onLocalDraftSaved: _resetCounterOrderContextAfterSave,
+            onCheckoutActionLoadingChanged: _setCounterCheckoutLoading,
           ),
         ),
       ],

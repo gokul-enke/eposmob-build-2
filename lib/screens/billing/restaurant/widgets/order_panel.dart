@@ -68,6 +68,10 @@ class OrderPanel extends StatefulWidget {
   final bool isCounterBillingMode;
   final ValueChanged<SavedOrder>? onLocalDraftLoaded;
   final VoidCallback? onLocalDraftSaved;
+  final void Function({
+    required bool isLoading,
+    required bool printBill,
+  })? onCheckoutActionLoadingChanged;
 
   const OrderPanel({
     super.key, // Add key parameter
@@ -88,6 +92,7 @@ class OrderPanel extends StatefulWidget {
     this.isCounterBillingMode = false,
     this.onLocalDraftLoaded,
     this.onLocalDraftSaved,
+    this.onCheckoutActionLoadingChanged,
   });
 
   @override
@@ -5426,6 +5431,10 @@ class OrderPanelState extends State<OrderPanel> {
     int? initialStep,
     String? title,
   }) async {
+    if (mode == CheckoutModalMode.checkout && _isLoadingConfirm) {
+      return;
+    }
+
     // Release any current focus so checkout modal text fields receive input cleanly.
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -5459,6 +5468,8 @@ class OrderPanelState extends State<OrderPanel> {
         ? (localProductProvider.priceSummary?.subTotal ??
             localProductProvider.cartTotal)
         : _calculateOrderTotal();
+    final shouldNotifyParentCheckoutLoading =
+        forCurrentCart || offlineSaveAndPrint;
 
     await showDialog(
       context: context,
@@ -5733,6 +5744,12 @@ class OrderPanelState extends State<OrderPanel> {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
             });
+            if (shouldNotifyParentCheckoutLoading) {
+              widget.onCheckoutActionLoadingChanged?.call(
+                isLoading: true,
+                printBill: false,
+              );
+            }
             Navigator.of(dialogContext).pop();
             try {
               if (offlineSaveAndPrint) {
@@ -5743,6 +5760,12 @@ class OrderPanelState extends State<OrderPanel> {
                 await _confirmOrder();
               }
             } finally {
+              if (shouldNotifyParentCheckoutLoading) {
+                widget.onCheckoutActionLoadingChanged?.call(
+                  isLoading: false,
+                  printBill: false,
+                );
+              }
               if (mounted) {
                 setState(() {});
               }
@@ -5756,6 +5779,12 @@ class OrderPanelState extends State<OrderPanel> {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
             });
+            if (shouldNotifyParentCheckoutLoading) {
+              widget.onCheckoutActionLoadingChanged?.call(
+                isLoading: true,
+                printBill: true,
+              );
+            }
             Navigator.of(dialogContext).pop();
             try {
               if (offlineSaveAndPrint) {
@@ -5766,6 +5795,12 @@ class OrderPanelState extends State<OrderPanel> {
                 await _confirmOrderAndPrintBill();
               }
             } finally {
+              if (shouldNotifyParentCheckoutLoading) {
+                widget.onCheckoutActionLoadingChanged?.call(
+                  isLoading: false,
+                  printBill: true,
+                );
+              }
               if (mounted) {
                 setState(() {});
               }
@@ -7352,6 +7387,11 @@ class OrderPanelState extends State<OrderPanel> {
       this.deleteLoadedDraftIfAny();
       localProductProvider.clearCartAfterOrder();
       _resetCurrentCartCheckoutState();
+      _refreshLocalDrafts();
+      if (_usesCounterOrderTabs) {
+        resetActiveOrderContext();
+        widget.onLocalDraftSaved?.call();
+      }
       showScaffold(
         context: context,
         message: printBill
