@@ -1022,7 +1022,7 @@ class _PrintPageState extends State<PrintPage> {
           onPressed: () {
             Navigator.pop(context);
             SideBarController sideBarController = Get.put(SideBarController());
-            sideBarController.index.value = 46;
+            sideBarController.index.value = 90;
           },
         ),
         elevation: 0,

@@ -293,9 +293,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         ),
       );
       debugPrint(
-          '🧾 [QuotationConvert] Draft loaded. quotationId=$quotationId, cartItems=${draftItems.length}, route=46');
+          '🧾 [QuotationConvert] Draft loaded. quotationId=$quotationId, cartItems=${draftItems.length}, route=90');
 
-      Get.find<SideBarController>().index.value = 46;
+      Get.find<SideBarController>().index.value = 90;
       showScaffold(
         context: context,
         message: 'Quotation loaded in billing. Confirm the order when ready.',

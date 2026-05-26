@@ -170,7 +170,7 @@ class _SideMenuState extends State<SideMenu> {
 
   @override
   Widget build(BuildContext context) {
-    SideBarController sideBarController = Get.put(SideBarController());
+    SideBarController sideBarController = Get.find<SideBarController>();
     final authModel = Provider.of<AuthModel>(context);
     final isExpanded = _isExpanded;
 
@@ -287,7 +287,7 @@ class _SideMenuState extends State<SideMenu> {
           SizedBox(height: isExpanded ? 6 : 4),
           // ========== REORGANIZED MENU (Font Awesome Icons) ==========
 
-          // 1. HOME (Index: 46)
+          // 1. HOME (Index: 0)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
@@ -302,9 +302,9 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.house,
                   title: 'Home',
                   onTap: () {
-                    sideBarController.index.value = 46;
+                    sideBarController.index.value = 0;
                   },
-                  selected: sideBarController.index.value == 46,
+                  selected: sideBarController.index.value == 0,
                 ),
               );
             },
@@ -357,28 +357,7 @@ class _SideMenuState extends State<SideMenu> {
             },
           ),
 
-          // 1. HOME (Index: 46)
-          // Consumer<RoleProvider>(
-          //   builder: (context, roleProvider, child) {
-          //     final hasPermission = roleProvider
-          //         .currentUserHasPermissionSync('menu.restaurant.main.access');
-
-          //     if (!hasPermission) {
-          //       return const SizedBox.shrink();
-          //     }
-
-          //     return Obx(
-          //       () => DrawerListTile(
-          //         icon: fa.FontAwesomeIcons.home,
-          //         title: 'Restaurant Legacy',
-          //         onTap: () {
-          //           sideBarController.index.value = 89;
-          //         },
-          //         selected: sideBarController.index.value == 89,
-          //       ),
-          //     );
-          //   },
-          // ),
+          // 3. RESTAURANT (Index: 89)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
@@ -393,9 +372,9 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.shop,
                   title: 'Restaurant',
                   onTap: () {
-                    sideBarController.index.value = 46;
+                    sideBarController.index.value = 89;
                   },
-                  selected: sideBarController.index.value == 46,
+                  selected: sideBarController.index.value == 89,
                 ),
               );
             },

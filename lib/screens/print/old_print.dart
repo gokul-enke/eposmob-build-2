@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
@@ -203,7 +203,7 @@ class ThermalPrinter {
         showScaffold(context: context, message: "Print job sent successfully");
         Navigator.pop(context);
         SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        sideBarController.index.value = 90;
       }
     } catch (e) {
       debugPrint("ERROR printing receipt: ${e.toString()}");

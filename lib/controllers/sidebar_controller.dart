@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import 'package:pos_machine/screens/billing/billing_page.dart';
 import 'package:pos_machine/screens/billing/billing_page_responsive.dart';
-import 'package:pos_machine/screens/billing/billing_page_restaurant.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
 import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
@@ -14,10 +13,8 @@ import 'package:pos_machine/screens/customers/add_customers.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
 import 'package:pos_machine/screens/sales/widgets/quotation_details.dart';
-import 'package:pos_machine/screens/dashboard/company_admin.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
 
-import 'package:pos_machine/screens/dashboard/sales_exicutive_dahsboard.dart';
 import 'package:pos_machine/screens/edit_order/edit_order.dart';
 import 'package:pos_machine/screens/homenew/home_new.dart';
 
@@ -152,7 +149,7 @@ class SideBarController extends GetxController {
     LocationManagementScreen(), //43
     LocationManagementScreen(), //44
     CategoryList(), //45 Home Old
-    BillingPageResponsive(), //46 Billing Page
+    HomeNew(), //46 Legacy Home alias
     ReceiptListScreen(), //47 Receipt List
     ViewReceiptDetailsWidget(), //48 Receipt Details
     SalesReturnScreen(), //49 Sales Return
@@ -199,8 +196,11 @@ class SideBarController extends GetxController {
     QuotationsListScreen(), // 87 Quotation List
     QuotationDetailsScreen(
         quotationId: null), // 88 Quotation Details (ID from Provider)
-    BillingPageRestaurant(), // 89 Restaurant Billing Page
-    BillingPage(), // 90 Supermarket Billing Page (direct)
+    RestaurantPage(
+      allowCounterBillingFromAttender: true,
+      defaultCounterBillingMode: true,
+    ), // 89 Restaurant Billing Page
+    BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
   ];
 }

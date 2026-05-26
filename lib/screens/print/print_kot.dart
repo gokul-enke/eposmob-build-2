@@ -49,7 +49,8 @@ class KotPrintPage extends StatefulWidget {
 
   /// Auto-print KOT with default printer without showing UI
   /// Returns true if printing succeeded, false if no printer or failed
-  static Future<bool> autoPrint(BuildContext context, {
+  static Future<bool> autoPrint(
+    BuildContext context, {
     required String orderNumber,
     String? tokenNumber,
     required String tableName,
@@ -86,17 +87,19 @@ class KotPrintPage extends StatefulWidget {
         ),
       );
 
-      debugPrint('[KotPrintPage] Auto-printing KOT with printer: ${selectedPrinter.deviceName}');
+      debugPrint(
+          '[KotPrintPage] Auto-printing KOT with printer: ${selectedPrinter.deviceName}');
 
       // Load document config from cache (NO API CALL - instant!)
-      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
       final accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
       DocumentConfig? kotDocumentConfig;
 
       // Try multiple config name patterns to find cached config
       kotDocumentConfig = docConfigProvider.getCachedConfig("Kitchen Order") ??
-                         docConfigProvider.getCachedConfig("kitchen_order");
+          docConfigProvider.getCachedConfig("kitchen_order");
 
       if (kotDocumentConfig == null) {
         debugPrint('[KotPrintPage] Document config not loaded');
@@ -432,7 +435,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
 
       // Use cached config directly (NO API CALL - instant!)
       _kotDocumentConfig = docConfigProvider.getCachedConfig("Kitchen Order") ??
-                           docConfigProvider.getCachedConfig("kitchen_order");
+          docConfigProvider.getCachedConfig("kitchen_order");
 
       if (_kotDocumentConfig != null) {
         debugPrint("SUCCESS: KOT Document configuration loaded from cache");
@@ -538,7 +541,6 @@ class _KotPrintPageState extends State<KotPrintPage> {
       }
 
       if (mounted) {
-
         showScaffold(
           context: context,
           message: "KOT printed successfully!",
@@ -586,7 +588,6 @@ class _KotPrintPageState extends State<KotPrintPage> {
       }
 
       if (mounted) {
-
         showScaffold(
           context: context,
           message: "KOT PDF generated successfully!",
@@ -666,7 +667,7 @@ class _KotPrintPageState extends State<KotPrintPage> {
           onPressed: () {
             Navigator.pop(context, false);
             SideBarController sideBarController = Get.put(SideBarController());
-            sideBarController.index.value = 46;
+            sideBarController.index.value = 90;
           },
         ),
         elevation: 0,
