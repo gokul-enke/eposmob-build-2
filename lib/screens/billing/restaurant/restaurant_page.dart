@@ -232,10 +232,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
         return;
       }
 
+      final disableCounterCheckoutActions =
+          _shouldDisableCounterCheckoutActions();
       if (key == LogicalKeyboardKey.f1) {
         unawaited(orderPanelState?.clearCurrentCartFromParent() ??
             Future<void>.value());
       } else if (key == LogicalKeyboardKey.f2) {
+        if (disableCounterCheckoutActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent();
         } else {
@@ -252,6 +255,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           _showDiningSelectionModal();
         }
       } else if (key == LogicalKeyboardKey.f5) {
+        if (disableCounterCheckoutActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent(initialStep: 3);
         } else {
@@ -260,6 +264,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           );
         }
       } else if (key == LogicalKeyboardKey.f6) {
+        if (disableCounterCheckoutActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent(initialStep: 3);
         } else {
@@ -268,9 +273,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
       } else if (key == LogicalKeyboardKey.f7) {
         _startNewCounterOrder();
       } else if (key == LogicalKeyboardKey.f8) {
+        if (disableCounterCheckoutActions) return;
         unawaited(orderPanelState?.saveCurrentCartFromParent() ??
             Future<void>.value());
       } else if (key == LogicalKeyboardKey.f9) {
+        if (disableCounterCheckoutActions) return;
         if (hasInternet) {
           unawaited(orderPanelState?.saveCurrentCartFromParent() ??
               Future<void>.value());
@@ -278,6 +285,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
         }
       } else if (key == LogicalKeyboardKey.f10) {
+        if (disableCounterCheckoutActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent(initialStep: 2);
         } else {
@@ -847,6 +855,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     ?.showConfirmOrderButton ??
                 true;
         final canCheckout = hasItems;
+        final disableCheckoutActions = _shouldDisableCounterCheckoutActions();
         return SafeArea(
           top: false,
           child: Padding(
@@ -880,7 +889,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     text: 'Save Order',
                     shortcutLabel: 'F8',
                     color: const Color(0xFFF59E0B),
-                    isDisabled: !hasItems,
+                    isDisabled: !hasItems || disableCheckoutActions,
                     onPressed: () => _orderPanelKey.currentState
                         ?.saveCurrentCartFromParent(),
                   ),
@@ -891,7 +900,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         text: 'Confirm and Print',
                         shortcutLabel: 'F6',
                         color: const Color(0xFF5B8DEF),
-                        isDisabled: !canCheckout,
+                        isDisabled: !canCheckout || disableCheckoutActions,
                         onPressed: () => _orderPanelKey.currentState
                             ?.showCurrentCartCheckoutFromParent(),
                       ),
@@ -901,7 +910,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       text: 'Confirm Order',
                       shortcutLabel: 'F2',
                       color: const Color(0xFF08C63F),
-                      isDisabled: !canCheckout,
+                      isDisabled: !canCheckout || disableCheckoutActions,
                       onPressed: () => _orderPanelKey.currentState
                           ?.showCurrentCartCheckoutFromParent(),
                     ),
@@ -910,7 +919,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       text: 'Save & Print',
                       shortcutLabel: 'F9',
                       color: const Color(0xFFF59E0B),
-                      isDisabled: !canCheckout,
+                      isDisabled: !canCheckout || disableCheckoutActions,
                       onPressed: () => _orderPanelKey.currentState
                           ?.showOfflineSaveAndPrintCheckoutFromParent(),
                     ),
@@ -923,6 +932,41 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
+  bool _shouldDisableCounterCheckoutActions() {
+    if (!_isCounterBillingMode) return false;
+    return _activeTableId != null || _isSelectedDeliveryMethodDineIn();
+  }
+
+  bool _isSelectedDeliveryMethodDineIn() {
+    final selectedId = _selectedDeliveryMethodId?.trim();
+    final selectedName = _selectedDeliveryMethodName?.trim();
+    if ((selectedId == null || selectedId.isEmpty) &&
+        (selectedName == null || selectedName.isEmpty)) {
+      return false;
+    }
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    DeliveryMethod? selectedMethod;
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if (selectedId != null &&
+          selectedId.isNotEmpty &&
+          method.id == selectedId) {
+        selectedMethod = method;
+        break;
+      }
+    }
+
+    final code = selectedMethod?.code ?? '';
+    final name = selectedMethod?.name ?? selectedName ?? '';
+    return _normalizesAsDineIn(code) || _normalizesAsDineIn(name);
+  }
+
+  bool _normalizesAsDineIn(String value) {
+    final normalized = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return normalized == 'dinein';
+  }
+
   Widget _buildCounterActionButton({
     required String text,
     required String shortcutLabel,
@@ -930,14 +974,20 @@ class _RestaurantPageState extends State<RestaurantPage> {
     required VoidCallback onPressed,
     bool isDisabled = false,
   }) {
+    final foregroundColor = isDisabled ? const Color(0xFF94A3B8) : Colors.white;
+    final shortcutBackgroundColor =
+        isDisabled ? const Color(0xFFF8FAFC) : Colors.white.withOpacity(0.18);
+    final shortcutBorderColor =
+        isDisabled ? const Color(0xFFE2E8F0) : Colors.white.withOpacity(0.35);
+
     return Expanded(
       child: ElevatedButton(
         onPressed: isDisabled ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          disabledBackgroundColor: color.withOpacity(0.55),
-          foregroundColor: Colors.white,
-          disabledForegroundColor: Colors.white,
+          disabledBackgroundColor: const Color(0xFFE5E7EB),
+          foregroundColor: foregroundColor,
+          disabledForegroundColor: foregroundColor,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           shape: RoundedRectangleBorder(
@@ -952,8 +1002,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
               child: Text(
                 text,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: foregroundColor,
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                 ),
@@ -963,14 +1013,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.18),
+                color: shortcutBackgroundColor,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.white.withOpacity(0.35)),
+                border: Border.all(color: shortcutBorderColor),
               ),
               child: Text(
                 shortcutLabel,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: foregroundColor,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                 ),
