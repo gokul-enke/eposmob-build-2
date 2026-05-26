@@ -1170,6 +1170,240 @@ class OrderPanelState extends State<OrderPanel> {
     return null;
   }
 
+  Map<dynamic, dynamic>? _asOrderMap(dynamic value) {
+    return value is Map ? value : null;
+  }
+
+  dynamic _readOrderPath(dynamic source, List<String> path) {
+    dynamic current = source;
+    for (final key in path) {
+      final map = _asOrderMap(current);
+      if (map == null) return null;
+      current = map[key];
+    }
+    return current;
+  }
+
+  String? _cleanOrderText(dynamic value) {
+    final text = _firstNonEmptyString([value]);
+    if (text == null) return null;
+    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+      return text.substring(1, text.length - 1).trim();
+    }
+    return text;
+  }
+
+  int? _parseOrderInt(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(_cleanOrderText(value) ?? '');
+  }
+
+  String? _extractOrderPropValue(dynamic order, String propCode) {
+    final normalizedCode = propCode.trim().toUpperCase();
+    final propsMap = _readOrderPath(order, ['orderProps']);
+    if (propsMap is Map) {
+      for (final entry in propsMap.entries) {
+        if (entry.key.toString().trim().toUpperCase() == normalizedCode) {
+          return _cleanOrderText(entry.value);
+        }
+      }
+    }
+
+    final propsList = _readOrderPath(order, ['order_props']);
+    if (propsList is List) {
+      for (final prop in propsList) {
+        final propMap = _asOrderMap(prop);
+        if (propMap == null) continue;
+        final code = _cleanOrderText(propMap['props_code'] ?? propMap['code'])
+            ?.toUpperCase();
+        if (code != normalizedCode) continue;
+        return _cleanOrderText(propMap['props_value'] ?? propMap['value']);
+      }
+    }
+
+    return null;
+  }
+
+  int? _extractOrderCustomerId(dynamic order) {
+    return _parseOrderInt(_firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'customer_id']),
+      _readOrderPath(order, ['customer', 'customer_id']),
+      _readOrderPath(order, ['customer', 'id']),
+      _readOrderPath(order, ['cart', 'customer_id']),
+      _readOrderPath(order, ['order', 'customer_details', 'customer_id']),
+      _readOrderPath(order, ['order', 'customer_id']),
+      _readOrderPath(order, ['customer_id']),
+    ]));
+  }
+
+  String? _extractOrderCustomerPhone(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'phone']),
+      _readOrderPath(order, ['customer', 'phone']),
+      _readOrderPath(order, ['user', 'phone']),
+      _readOrderPath(order, ['cart', 'customer_phone']),
+      _readOrderPath(order, ['order', 'customer_details', 'phone']),
+      _readOrderPath(order, ['order', 'customer_phone']),
+      _readOrderPath(order, ['customer_phone']),
+      _readOrderPath(order, ['phone']),
+    ]);
+  }
+
+  String? _extractOrderCustomerName(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'name']),
+      _readOrderPath(order, ['customer', 'name']),
+      _readOrderPath(order, ['user', 'name']),
+      _readOrderPath(order, ['order', 'customer_details', 'name']),
+      _readOrderPath(order, ['order', 'customer_name']),
+      _readOrderPath(order, ['customer_name']),
+      _readOrderPath(order, ['name']),
+    ]);
+  }
+
+  String? _extractOrderCustomerType(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'customer_type']),
+      _readOrderPath(order, ['customer', 'customer_type']),
+      _readOrderPath(order, ['order', 'customer_details', 'customer_type']),
+      _readOrderPath(order, ['customer_type']),
+    ]);
+  }
+
+  String? _extractOrderCustomerAlternatePhone(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'alternate_phone']),
+      _readOrderPath(order, ['customer_details', 'alt_phone']),
+      _readOrderPath(order, ['customer', 'alternate_phone']),
+      _readOrderPath(order, ['customer', 'alt_phone']),
+      _readOrderPath(order, ['order', 'customer_details', 'alternate_phone']),
+      _readOrderPath(order, ['alternate_phone']),
+      _readOrderPath(order, ['alt_phone']),
+    ]);
+  }
+
+  String? _extractOrderCustomerAddress(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['address']),
+      _readOrderPath(order, ['delivery_address']),
+      _extractOrderPropValue(order, 'CUSTOMER_ADDRESS'),
+      _extractOrderPropValue(order, 'DELIVERY_ADDRESS'),
+    ]);
+  }
+
+  CustomerListModelData? _findOrderCustomerInCache({
+    required int? customerId,
+    required String? customerPhone,
+  }) {
+    for (final customer in _customers) {
+      if (customerId != null && customer.id == customerId) {
+        return customer;
+      }
+    }
+    for (final customer in _customers) {
+      if ((customerPhone?.isNotEmpty ?? false) &&
+          customer.phone == customerPhone) {
+        return customer;
+      }
+    }
+    return null;
+  }
+
+  CustomerListModelData _buildOrderCustomerFallback(dynamic order) {
+    final kyc = <Kyc>[];
+    final vatNumber = _firstNonEmptyString([
+      _readOrderPath(order, ['kyc_info', 'vat_number']),
+      _readOrderPath(order, ['customer', 'vat_number']),
+      _readOrderPath(order, ['vat_number']),
+    ]);
+    final crNumber = _firstNonEmptyString([
+      _readOrderPath(order, ['kyc_info', 'cr_number']),
+      _readOrderPath(order, ['customer', 'cr_number']),
+      _readOrderPath(order, ['cr_number']),
+    ]);
+    if (vatNumber != null) {
+      kyc.add(Kyc(key: 'VAT NUMBER', value: vatNumber));
+    }
+    if (crNumber != null) {
+      kyc.add(Kyc(key: 'CR NUMBER', value: crNumber));
+    }
+
+    return CustomerListModelData(
+      id: _extractOrderCustomerId(order),
+      name: _extractOrderCustomerName(order),
+      phone: _extractOrderCustomerPhone(order),
+      altPhone: _extractOrderCustomerAlternatePhone(order),
+      customerType: _extractOrderCustomerType(order),
+      address: _extractOrderCustomerAddress(order),
+      kyc: kyc.isNotEmpty ? kyc : null,
+    );
+  }
+
+  String? _extractOrderDeliveryMethodId(dynamic order) {
+    final deliveryMethodMap = _asOrderMap(_readOrderPath(order, [
+      'delivery_method',
+    ]));
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['delivery_method_id']),
+      deliveryMethodMap?['id'],
+      deliveryMethodMap?['delivery_method_id'],
+      _readOrderPath(order, ['order', 'delivery_method_id']),
+      _readOrderPath(order, ['cart', 'delivery_method_id']),
+    ]);
+  }
+
+  String? _extractOrderDeliveryMethodName(dynamic order) {
+    final deliveryMethodMap = _asOrderMap(_readOrderPath(order, [
+      'delivery_method',
+    ]));
+    final directDeliveryMethod = deliveryMethodMap == null
+        ? _readOrderPath(order, ['delivery_method'])
+        : null;
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['delivery_method_name']),
+      deliveryMethodMap?['name'],
+      deliveryMethodMap?['label'],
+      directDeliveryMethod,
+      _readOrderPath(order, ['order', 'delivery_method_name']),
+      _readOrderPath(order, ['cart', 'delivery_method_name']),
+    ]);
+  }
+
+  DeliveryMethod? _findDeliveryMethod({
+    String? id,
+    String? name,
+  }) {
+    final normalizedId = id?.trim();
+    final normalizedName = name?.trim().toLowerCase();
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if (normalizedId != null &&
+          normalizedId.isNotEmpty &&
+          method.id == normalizedId) {
+        return method;
+      }
+      if (normalizedName != null &&
+          normalizedName.isNotEmpty &&
+          (method.name.trim().toLowerCase() == normalizedName ||
+              method.code?.trim().toLowerCase() == normalizedName)) {
+        return method;
+      }
+    }
+    return null;
+  }
+
+  void _writeNormalizedOrderField(
+    dynamic order,
+    String key,
+    dynamic value,
+  ) {
+    final map = _asOrderMap(order);
+    if (map == null || value == null) return;
+    if (_cleanOrderText(map[key]) != null) return;
+    map[key] = value;
+  }
+
   String? _resolveCustomerPhone({
     dynamic order,
     OrderDetailsModelData? orderDetails,
@@ -1178,6 +1412,7 @@ class OrderPanelState extends State<OrderPanel> {
       orderDetails?.customerDetails?.phone,
       _selectedCustomer?.phone,
       _selectedCustomerPhone,
+      order != null ? _extractOrderCustomerPhone(order) : null,
       order is Map ? order['customer_phone'] : null,
       order is Map ? order['phone'] : null,
     ]);
@@ -1190,6 +1425,7 @@ class OrderPanelState extends State<OrderPanel> {
     return _firstNonEmptyString([
       orderDetails?.customerDetails?.name,
       _selectedCustomer?.name,
+      order != null ? _extractOrderCustomerName(order) : null,
       order is Map ? order['customer_name'] : null,
       order is Map ? order['name'] : null,
     ]);
@@ -1979,32 +2215,35 @@ class OrderPanelState extends State<OrderPanel> {
 
     try {
       // Load customer information if available
-      final customerId = order['customer_id'];
-      final customerPhone = order['customer_phone'] ?? order['phone'];
+      final customerId = _extractOrderCustomerId(order);
+      final customerPhone = _extractOrderCustomerPhone(order);
+      final customerName = _extractOrderCustomerName(order);
       final customerSelectionProvider =
           Provider.of<CustomerSelectionProvider>(context, listen: false);
 
-      if (customerId != null) {
-        // Find customer in the list
-        final customer = _customers.firstWhere(
-          (c) => c.id == customerId,
-          orElse: () => CustomerListModelData(
-            id: customerId,
-            phone: customerPhone,
-            name: order['customer_name'] ?? 'Unknown Customer',
-          ),
-        );
+      if (customerId != null ||
+          (customerPhone?.isNotEmpty ?? false) ||
+          (customerName?.isNotEmpty ?? false)) {
+        final customer = _findOrderCustomerInCache(
+              customerId: customerId,
+              customerPhone: customerPhone,
+            ) ??
+            _buildOrderCustomerFallback(order);
 
         setState(() {
           _selectedCustomer = customer;
-          _selectedCustomerID = customerId;
-          _selectedCustomerPhone = customerPhone;
+          _selectedCustomerID = customer.id ?? customerId;
+          _selectedCustomerPhone = customer.phone ?? customerPhone;
+          _isCustomerManuallySelected = true;
         });
 
         customerSelectionProvider.setSelectedCustomer(
           customer,
-          isDefault: _isDefaultCustomerPhone(customerPhone?.toString()),
+          isDefault: _isDefaultCustomerPhone(customer.phone ?? customerPhone),
         );
+        _writeNormalizedOrderField(order, 'customer_id', customer.id);
+        _writeNormalizedOrderField(order, 'customer_name', customer.name);
+        _writeNormalizedOrderField(order, 'customer_phone', customer.phone);
 
         debugPrint(
             'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded customer from order: ${customer.name} (${customer.phone})');
@@ -2072,14 +2311,23 @@ class OrderPanelState extends State<OrderPanel> {
       });
 
       // Load delivery information if available
-      final loadedDeliveryMethodId = order['delivery_method_id']?.toString() ??
+      final extractedDeliveryMethodId = _extractOrderDeliveryMethodId(order);
+      final extractedDeliveryMethodName =
+          _extractOrderDeliveryMethodName(order);
+      final matchedDeliveryMethod = _findDeliveryMethod(
+        id: extractedDeliveryMethodId,
+        name: extractedDeliveryMethodName,
+      );
+      final loadedDeliveryMethodId = extractedDeliveryMethodId ??
+          matchedDeliveryMethod?.id ??
           _getDefaultDeliveryMethodId();
 
-      // Try name from order first; fall back to looking up by ID in the provider
-      String loadedDeliveryMethodName =
-          order['delivery_method_name']?.toString() ??
-              order['delivery_method']?.toString() ??
-              '';
+      String loadedDeliveryMethodName = extractedDeliveryMethodName ??
+          matchedDeliveryMethod?.name ??
+          (extractedDeliveryMethodId?.isNotEmpty == true
+              ? extractedDeliveryMethodId!
+              : null) ??
+          _getDefaultDeliveryMethod().name;
       if (loadedDeliveryMethodName.isEmpty) {
         final deliveryMethodsProvider =
             Provider.of<DeliveryMethodsProvider>(context, listen: false);
@@ -2091,9 +2339,19 @@ class OrderPanelState extends State<OrderPanel> {
         debugPrint(
             'ÃƒÂ°Ã…Â¸Ã…Â¡Ã…Â¡ Resolved delivery method name from provider: $loadedDeliveryMethodName (id: $loadedDeliveryMethodId)');
       }
+      _writeNormalizedOrderField(
+        order,
+        'delivery_method_id',
+        loadedDeliveryMethodId,
+      );
+      _writeNormalizedOrderField(
+        order,
+        'delivery_method_name',
+        loadedDeliveryMethodName,
+      );
       final loadedDeliveryDate = order['delivery_date']?.toString();
       final loadedDeliveryTime = order['delivery_time']?.toString();
-      final loadedDeliveryAddress = order['address']?.toString() ?? '';
+      final loadedDeliveryAddress = _extractOrderCustomerAddress(order) ?? '';
       final loadedCarNumber = order['car_number']?.toString() ?? '';
       final loadedDeliveryCharge =
           double.tryParse(order['delivery_charge']?.toString() ?? '');
@@ -2133,6 +2391,8 @@ class OrderPanelState extends State<OrderPanel> {
 
       // Match billing_page.dart: balance is cash returned after customer credit.
       _balanceAmount = _calculateBalanceAmount();
+
+      widget.onOrderSelected(order);
 
       debugPrint(
           'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');

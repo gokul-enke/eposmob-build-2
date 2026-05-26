@@ -17,6 +17,7 @@ import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
+import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 
 import '../../../components/build_dialog_box.dart';
@@ -85,6 +86,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
   MobileView _currentMobileView = MobileView.tables;
   String? _selectedTableName; // Store selected table name for header
   SavedOrder? _editingLocalDraft;
+  String? _editingOrderCustomerLabel;
+  bool _editingOrderHasCustomer = false;
+  String? _editingOrderTableName;
+  bool _editingOrderHasTable = false;
+  String? _editingOrderDeliveryMethodId;
+  String? _editingOrderDeliveryMethodName;
 
   // Delivery method selection (alternative to table selection)
   String? _selectedDeliveryMethodId;
@@ -539,6 +546,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                               _selectedOrderFromOrderPanel = order;
                               if (order != null) {
                                 _editingLocalDraft = null;
+                                _captureEditingOrderDisplayContext(order);
+                              } else {
+                                _clearEditingOrderDisplayContext();
                               }
                             });
                           }
@@ -602,6 +612,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Widget _buildCounterSelectionPanel(Size screenSize) {
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context);
+
     return Container(
       margin: const EdgeInsets.all(8),
       padding: EdgeInsets.zero,
@@ -677,24 +690,21 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   _buildCounterSelectorButton(
                     icon: Icons.restaurant_rounded,
                     title: 'Dining',
-                    value: _selectedTableName ?? 'Select table',
+                    value: _counterDiningLabel(fallback: 'Select table'),
                     color: const Color(0xFF2563EB),
-                    isSelected: _activeTableId != null,
+                    isSelected: _hasCounterDiningSelection,
                     onTap: _showDiningSelectionModal,
                   ),
                   const SizedBox(height: 10),
                   _buildCounterSelectorButton(
                     icon: Icons.person_rounded,
                     title: 'Customer',
-                    value: _orderPanelKey
-                            .currentState?.selectedCustomerNameForDraft ??
-                        _orderPanelKey
-                            .currentState?.selectedCustomerPhoneForDraft ??
-                        'Select customer',
+                    value: _counterCustomerLabel(
+                      customerSelectionProvider,
+                      fallback: 'Select customer',
+                    ),
                     color: const Color(0xFF7C3AED),
-                    isSelected: _orderPanelKey
-                            .currentState?.selectedCustomerIdForDraft !=
-                        null,
+                    isSelected: _hasCounterCustomer(customerSelectionProvider),
                     onTap: () async {
                       final state = _orderPanelKey.currentState;
                       if (state == null) {
@@ -712,9 +722,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   _buildCounterSelectorButton(
                     icon: Icons.local_shipping_rounded,
                     title: 'Delivery',
-                    value: _selectedDeliveryMethodName ?? 'Select delivery',
+                    value: _counterDeliveryLabel(fallback: 'Select delivery'),
                     color: const Color(0xFF059669),
-                    isSelected: _selectedDeliveryMethodId != null,
+                    isSelected: _hasCounterDeliverySelection,
                     onTap: () async {
                       final state = _orderPanelKey.currentState;
                       if (state == null) {
@@ -1027,6 +1037,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _selectedTableName = selectedTable.name;
       _selectedDeliveryMethodId = null;
       _selectedDeliveryMethodName = null;
+      if (isEditingSelectedOrder) {
+        _editingOrderTableName = selectedTable.name;
+        _editingOrderHasTable = true;
+        _editingOrderDeliveryMethodId = null;
+        _editingOrderDeliveryMethodName = null;
+      }
     });
     final orderPanelState = _orderPanelKey.currentState;
     orderPanelState?.resetPaymentModalFlag();
@@ -1042,6 +1058,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       setState(() {
         _selectedDeliveryMethodId = null;
         _selectedDeliveryMethodName = null;
+        if (_selectedOrderFromOrderPanel != null) {
+          _editingOrderDeliveryMethodId = null;
+          _editingOrderDeliveryMethodName = null;
+        }
       });
       return;
     }
@@ -1055,6 +1075,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _selectedDeliveryMethodName = name;
       _activeTableId = null;
       _selectedTableName = null;
+      if (isEditingSelectedOrder) {
+        _editingOrderDeliveryMethodId = id;
+        _editingOrderDeliveryMethodName = name;
+        _editingOrderTableName = null;
+        _editingOrderHasTable = false;
+      }
     });
     final orderPanelState = _orderPanelKey.currentState;
     orderPanelState?.resetPaymentModalFlag();
@@ -1080,6 +1106,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     setState(() {
       _editingLocalDraft = order;
       _selectedOrderFromOrderPanel = null;
+      _clearEditingOrderDisplayContext();
       if (order.tableId != null && order.tableId!.isNotEmpty) {
         _activeTableId = order.tableId;
         _selectedTableName = tableName ?? order.tableId;
@@ -1099,6 +1126,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       setState(() {
         _selectedOrderFromOrderPanel = null;
         _editingLocalDraft = null;
+        _clearEditingOrderDisplayContext();
         _refreshCounter = (_refreshCounter ?? 0) + 1;
       });
       return;
@@ -1111,6 +1139,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _selectedDeliveryMethodName = null;
       _selectedOrderFromOrderPanel = null;
       _editingLocalDraft = null;
+      _clearEditingOrderDisplayContext();
       _refreshCounter = (_refreshCounter ?? 0) + 1;
     });
     _applyDefaultCounterDeliveryMethodContext();
@@ -1246,6 +1275,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Widget _buildAttenderTopBar({required bool isCompact}) {
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context);
     final isCounterEnabled =
         widget.allowCounterBillingFromAttender && _isCounterBillingMode;
     final hasActiveTable = _activeTableId != null;
@@ -1340,23 +1371,20 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 if (isCounterEnabled) ...[
                   _buildTopBarContextChip(
                     icon: Icons.restaurant_rounded,
-                    label: _selectedTableName ?? 'Dining',
+                    label: _counterDiningLabel(fallback: 'Dining'),
                     color: const Color(0xFF2563EB),
-                    isSelected: _activeTableId != null,
+                    isSelected: _hasCounterDiningSelection,
                     onTap: _showDiningSelectionModal,
                     isCompact: isCompact,
                   ),
                   _buildTopBarContextChip(
                     icon: Icons.person_rounded,
-                    label: _orderPanelKey
-                            .currentState?.selectedCustomerNameForDraft ??
-                        _orderPanelKey
-                            .currentState?.selectedCustomerPhoneForDraft ??
-                        'Customer',
+                    label: _counterCustomerLabel(
+                      customerSelectionProvider,
+                      fallback: 'Customer',
+                    ),
                     color: const Color(0xFF7C3AED),
-                    isSelected: _orderPanelKey
-                            .currentState?.selectedCustomerIdForDraft !=
-                        null,
+                    isSelected: _hasCounterCustomer(customerSelectionProvider),
                     isCompact: isCompact,
                     onTap: () async {
                       final state = _orderPanelKey.currentState;
@@ -1373,9 +1401,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ),
                   _buildTopBarContextChip(
                     icon: Icons.local_shipping_rounded,
-                    label: _selectedDeliveryMethodName ?? 'Delivery',
+                    label: _counterDeliveryLabel(fallback: 'Delivery'),
                     color: const Color(0xFF059669),
-                    isSelected: _selectedDeliveryMethodId != null,
+                    isSelected: _hasCounterDeliverySelection,
                     isCompact: isCompact,
                     onTap: () async {
                       final state = _orderPanelKey.currentState;
@@ -1492,6 +1520,259 @@ class _RestaurantPageState extends State<RestaurantPage> {
       }
     }
     return null;
+  }
+
+  Map<dynamic, dynamic>? _asMap(dynamic value) {
+    return value is Map ? value : null;
+  }
+
+  dynamic _readPath(dynamic source, List<String> path) {
+    dynamic current = source;
+    for (final key in path) {
+      final map = _asMap(current);
+      if (map == null) return null;
+      current = map[key];
+    }
+    return current;
+  }
+
+  String? _cleanContextText(dynamic value) {
+    final text = _firstNonEmptyTopBarValue([value]);
+    if (text == null) return null;
+    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+      return text.substring(1, text.length - 1).trim();
+    }
+    return text;
+  }
+
+  String? _orderPropValue(dynamic order, String propCode) {
+    final normalizedCode = propCode.trim().toUpperCase();
+    final propsMap = _readPath(order, ['orderProps']);
+    if (propsMap is Map) {
+      for (final entry in propsMap.entries) {
+        if (entry.key.toString().trim().toUpperCase() == normalizedCode) {
+          return _cleanContextText(entry.value);
+        }
+      }
+    }
+
+    final propsList = _readPath(order, ['order_props']);
+    if (propsList is List) {
+      for (final prop in propsList) {
+        final propMap = _asMap(prop);
+        if (propMap == null) continue;
+        final code = _cleanContextText(propMap['props_code'] ?? propMap['code'])
+            ?.toUpperCase();
+        if (code != normalizedCode) continue;
+        return _cleanContextText(propMap['props_value'] ?? propMap['value']);
+      }
+    }
+
+    return null;
+  }
+
+  String? _deliveryMethodNameForId(String? id) {
+    final normalizedId = id?.trim();
+    if (normalizedId == null || normalizedId.isEmpty) return null;
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if (method.id == normalizedId) return method.name;
+    }
+    return null;
+  }
+
+  String? _deliveryMethodIdForName(String? name) {
+    final normalizedName = name?.trim().toLowerCase();
+    if (normalizedName == null || normalizedName.isEmpty) return null;
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if (method.name.trim().toLowerCase() == normalizedName ||
+          (method.code?.trim().toLowerCase() == normalizedName)) {
+        return method.id;
+      }
+    }
+    return null;
+  }
+
+  String? _tableNameForValue(String? value) {
+    final normalizedValue = value?.trim();
+    if (normalizedValue == null || normalizedValue.isEmpty) return null;
+    final tableProvider = Provider.of<TableProvider>(context, listen: false);
+    for (final table in tableProvider.tables) {
+      if (table.id == normalizedValue || table.name == normalizedValue) {
+        return table.name;
+      }
+    }
+    return normalizedValue;
+  }
+
+  String? _editingOrderCustomerLabelFrom(dynamic order) {
+    return _firstNonEmptyTopBarValue([
+      _readPath(order, ['customer_details', 'name']),
+      _readPath(order, ['customer', 'name']),
+      _readPath(order, ['user', 'name']),
+      _readPath(order, ['order', 'customer_details', 'name']),
+      _readPath(order, ['order', 'customer_name']),
+      _readPath(order, ['customer_name']),
+      _readPath(order, ['name']),
+      _readPath(order, ['customer_details', 'phone']),
+      _readPath(order, ['customer', 'phone']),
+      _readPath(order, ['user', 'phone']),
+      _readPath(order, ['order', 'customer_details', 'phone']),
+      _readPath(order, ['order', 'customer_phone']),
+      _readPath(order, ['customer_phone']),
+      _readPath(order, ['phone']),
+    ]);
+  }
+
+  bool _editingOrderHasCustomerData(dynamic order) {
+    return _firstNonEmptyTopBarValue([
+          _readPath(order, ['customer_details', 'customer_id']),
+          _readPath(order, ['customer', 'customer_id']),
+          _readPath(order, ['customer', 'id']),
+          _readPath(order, ['cart', 'customer_id']),
+          _readPath(order, ['order', 'customer_id']),
+          _readPath(order, ['customer_id']),
+          _editingOrderCustomerLabelFrom(order),
+        ]) !=
+        null;
+  }
+
+  String? _editingOrderDeliveryMethodIdFrom(dynamic order) {
+    final deliveryMethodMap = _asMap(_readPath(order, ['delivery_method']));
+    return _firstNonEmptyTopBarValue([
+      _readPath(order, ['delivery_method_id']),
+      deliveryMethodMap?['id'],
+      deliveryMethodMap?['delivery_method_id'],
+      _readPath(order, ['order', 'delivery_method_id']),
+      _readPath(order, ['cart', 'delivery_method_id']),
+    ]);
+  }
+
+  String? _editingOrderDeliveryMethodNameFrom(dynamic order) {
+    final deliveryMethodMap = _asMap(_readPath(order, ['delivery_method']));
+    final directDeliveryMethod = deliveryMethodMap == null
+        ? _readPath(order, ['delivery_method'])
+        : null;
+    return _firstNonEmptyTopBarValue([
+          _readPath(order, ['delivery_method_name']),
+          deliveryMethodMap?['name'],
+          deliveryMethodMap?['label'],
+          directDeliveryMethod,
+          _readPath(order, ['order', 'delivery_method_name']),
+          _readPath(order, ['cart', 'delivery_method_name']),
+        ]) ??
+        _deliveryMethodNameForId(_editingOrderDeliveryMethodIdFrom(order));
+  }
+
+  String? _editingOrderTableNameFrom(dynamic order) {
+    final tableMap = _asMap(_readPath(order, ['table']));
+    final rawTable = _firstNonEmptyTopBarValue([
+      _readPath(order, ['table_name']),
+      tableMap?['name'],
+      tableMap?['value'],
+      _orderPropValue(order, 'TABLE'),
+      _readPath(order, ['table_id']),
+      tableMap?['id'],
+      _readPath(order, ['order', 'table_id']),
+    ]);
+    return _tableNameForValue(rawTable);
+  }
+
+  void _captureEditingOrderDisplayContext(dynamic order) {
+    if (order == null) {
+      _clearEditingOrderDisplayContext();
+      return;
+    }
+
+    final deliveryId = _editingOrderDeliveryMethodIdFrom(order);
+    final deliveryName = _editingOrderDeliveryMethodNameFrom(order);
+    _editingOrderCustomerLabel = _editingOrderCustomerLabelFrom(order);
+    _editingOrderHasCustomer = _editingOrderHasCustomerData(order);
+    _editingOrderTableName = _editingOrderTableNameFrom(order);
+    _editingOrderHasTable = _editingOrderTableName != null;
+    _editingOrderDeliveryMethodId =
+        deliveryId ?? _deliveryMethodIdForName(deliveryName);
+    _editingOrderDeliveryMethodName =
+        deliveryName ?? _deliveryMethodNameForId(deliveryId) ?? deliveryId;
+  }
+
+  void _clearEditingOrderDisplayContext() {
+    _editingOrderCustomerLabel = null;
+    _editingOrderHasCustomer = false;
+    _editingOrderTableName = null;
+    _editingOrderHasTable = false;
+    _editingOrderDeliveryMethodId = null;
+    _editingOrderDeliveryMethodName = null;
+  }
+
+  String _counterCustomerLabel(
+    CustomerSelectionProvider customerSelectionProvider, {
+    required String fallback,
+  }) {
+    final providerLabel = _firstNonEmptyTopBarValue([
+      customerSelectionProvider.selectedCustomerName,
+      customerSelectionProvider.selectedCustomerPhone,
+    ]);
+    final panelLabel = _firstNonEmptyTopBarValue([
+      _orderPanelKey.currentState?.selectedCustomerNameForDraft,
+      _orderPanelKey.currentState?.selectedCustomerPhoneForDraft,
+    ]);
+    final editLabel = _editingOrderCustomerLabel;
+
+    if (_selectedOrderFromOrderPanel != null &&
+        editLabel != null &&
+        (providerLabel == null ||
+            (customerSelectionProvider.isDefaultCustomer &&
+                providerLabel != editLabel))) {
+      return editLabel;
+    }
+
+    return providerLabel ?? panelLabel ?? editLabel ?? fallback;
+  }
+
+  bool _hasCounterCustomer(
+    CustomerSelectionProvider customerSelectionProvider,
+  ) {
+    return customerSelectionProvider.selectedCustomerID != null ||
+        (customerSelectionProvider.selectedCustomerPhone?.trim().isNotEmpty ??
+            false) ||
+        _orderPanelKey.currentState?.selectedCustomerIdForDraft != null ||
+        (_orderPanelKey.currentState?.selectedCustomerPhoneForDraft
+                ?.trim()
+                .isNotEmpty ??
+            false) ||
+        (_selectedOrderFromOrderPanel != null && _editingOrderHasCustomer);
+  }
+
+  String _counterDiningLabel({required String fallback}) {
+    if (_selectedOrderFromOrderPanel != null &&
+        (_editingOrderTableName?.isNotEmpty ?? false)) {
+      return _editingOrderTableName!;
+    }
+    return _selectedTableName ?? fallback;
+  }
+
+  bool get _hasCounterDiningSelection {
+    return _activeTableId != null ||
+        (_selectedOrderFromOrderPanel != null && _editingOrderHasTable);
+  }
+
+  String _counterDeliveryLabel({required String fallback}) {
+    if (_selectedOrderFromOrderPanel != null &&
+        (_editingOrderDeliveryMethodName?.isNotEmpty ?? false)) {
+      return _editingOrderDeliveryMethodName!;
+    }
+    return _selectedDeliveryMethodName ?? fallback;
+  }
+
+  bool get _hasCounterDeliverySelection {
+    return (_selectedDeliveryMethodId?.isNotEmpty ?? false) ||
+        (_selectedOrderFromOrderPanel != null &&
+            ((_editingOrderDeliveryMethodId?.isNotEmpty ?? false) ||
+                (_editingOrderDeliveryMethodName?.isNotEmpty ?? false)));
   }
 
   Widget _buildTopBarContextChip({
@@ -1956,6 +2237,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     _selectedOrderFromOrderPanel = order;
                     if (order != null) {
                       _editingLocalDraft = null;
+                      _captureEditingOrderDisplayContext(order);
+                    } else {
+                      _clearEditingOrderDisplayContext();
                     }
                   });
                 }
@@ -2086,6 +2370,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _editingLocalDraft = null;
       _selectedDeliveryMethodId = null;
       _selectedDeliveryMethodName = null;
+      _clearEditingOrderDisplayContext();
       _refreshCounter = (_refreshCounter ?? 0) + 1;
     });
 
@@ -2478,6 +2763,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _selectedDeliveryMethodName = null;
       _selectedOrderFromOrderPanel = null;
       _editingLocalDraft = null;
+      _clearEditingOrderDisplayContext();
     });
     _applyDefaultCounterDeliveryMethodContext();
 
