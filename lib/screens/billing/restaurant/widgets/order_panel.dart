@@ -658,6 +658,202 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
+  String? _normalizeOrderLookupValue(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') return null;
+    return text;
+  }
+
+  bool _orderMatchesLookup(
+    dynamic order,
+    String? orderId,
+    String? orderNumber,
+  ) {
+    if (order is! Map) return false;
+
+    if (orderId != null) {
+      final candidateIds = <dynamic>[
+        order['order_id'],
+        order['id'],
+      ];
+      final nestedOrder = order['order'];
+      if (nestedOrder is Map) {
+        candidateIds.add(nestedOrder['order_id']);
+        candidateIds.add(nestedOrder['id']);
+      }
+
+      for (final id in candidateIds) {
+        if (_normalizeOrderLookupValue(id) == orderId) return true;
+      }
+    }
+
+    if (orderNumber != null) {
+      final candidateNumbers = <dynamic>[
+        order['order_number'],
+        order['display_order_id'],
+      ];
+      final nestedOrder = order['order'];
+      if (nestedOrder is Map) {
+        candidateNumbers.add(nestedOrder['order_number']);
+        candidateNumbers.add(nestedOrder['display_order_id']);
+      }
+
+      for (final number in candidateNumbers) {
+        if (_normalizeOrderLookupValue(number) == orderNumber) return true;
+      }
+    }
+
+    return false;
+  }
+
+  dynamic _findSavedOrderByLookup(String? orderId, String? orderNumber) {
+    for (final order in _savedOrders) {
+      if (_orderMatchesLookup(order, orderId, orderNumber)) {
+        return order;
+      }
+    }
+    return null;
+  }
+
+  bool _orderHasEditableShape(dynamic order) {
+    if (order is! Map) return false;
+    if (order['cart_items'] is List) return true;
+    if (order['order_items'] is List) return true;
+    if (order['items'] is List) return true;
+
+    final cartItems = order['cart_items'];
+    if (cartItems is Map && cartItems['cart_items'] is List) return true;
+
+    final cart = order['cart'];
+    if (cart is Map && (cart['cart_items'] is List || cart['items'] is List)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<dynamic> _fetchOrderDetailsForLookup(
+    String? orderId,
+    String? orderNumber,
+  ) async {
+    final lookupOrderId = orderId ?? orderNumber;
+    if (lookupOrderId == null) return null;
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final response = await cartProvider.getListOrderDetails(
+        accessToken: authModel.token ?? '',
+        orderId: lookupOrderId,
+      );
+      if (!mounted) return null;
+
+      if ((response['status'] as String?)?.toLowerCase() != 'success') {
+        debugPrint(
+          '[Counter KOT] Order detail lookup failed: ${response['message']}',
+        );
+        return null;
+      }
+
+      final orderDetails = response['order_details'];
+      if (orderDetails is Map) {
+        setState(() {
+          _savedOrders = [
+            orderDetails,
+            ..._savedOrders.where(
+              (order) => !_orderMatchesLookup(order, orderId, orderNumber),
+            ),
+          ];
+        });
+        return orderDetails;
+      }
+    } catch (e) {
+      debugPrint('[Counter KOT] Order detail lookup error: $e');
+    }
+
+    return null;
+  }
+
+  Future<bool> openCreatedOrderForEditing({
+    String? orderId,
+    String? orderNumber,
+    dynamic seedOrder,
+  }) async {
+    final seedMap = seedOrder is Map ? seedOrder : null;
+    final targetOrderId = _normalizeOrderLookupValue(orderId) ??
+        _normalizeOrderLookupValue(seedMap?['order_id']) ??
+        _normalizeOrderLookupValue(seedMap?['id']);
+    final targetOrderNumber = _normalizeOrderLookupValue(orderNumber) ??
+        _normalizeOrderLookupValue(seedMap?['order_number']) ??
+        _normalizeOrderLookupValue(seedMap?['display_order_id']);
+
+    if (targetOrderId == null && targetOrderNumber == null) {
+      debugPrint(
+        '[Counter KOT] Cannot open created order: missing order id/number',
+      );
+      return false;
+    }
+
+    debugPrint(
+      '[Counter KOT] Opening created order id=$targetOrderId number=$targetOrderNumber',
+    );
+
+    if (!mounted) return false;
+    setState(() {
+      _activeOrderPanelTab = OrderPanelTab.ongoing;
+      _focusedOrderPanelTabIndex = 2;
+      _hasOpenedOngoingOrdersTab = true;
+      _showSavedOrdersView = true;
+      _forceCounterCartView = false;
+    });
+
+    dynamic orderToOpen =
+        _findSavedOrderByLookup(targetOrderId, targetOrderNumber);
+    const retryDelays = <Duration>[
+      Duration.zero,
+      Duration(milliseconds: 350),
+      Duration(milliseconds: 900),
+    ];
+
+    for (var attempt = 0; attempt < retryDelays.length; attempt++) {
+      if (orderToOpen != null) break;
+      if (attempt > 0) {
+        await Future.delayed(retryDelays[attempt]);
+      }
+      if (!mounted) return false;
+
+      await _fetchSavedOrders(
+        showFullPanelLoader: false,
+        ignoreContextFilter: _usesCounterOrderTabs,
+      );
+      if (!mounted) return false;
+
+      orderToOpen = _findSavedOrderByLookup(
+        targetOrderId,
+        targetOrderNumber,
+      );
+    }
+
+    orderToOpen ??= await _fetchOrderDetailsForLookup(
+      targetOrderId,
+      targetOrderNumber,
+    );
+    if (orderToOpen == null && _orderHasEditableShape(seedOrder)) {
+      orderToOpen = seedOrder;
+    }
+
+    if (orderToOpen == null) {
+      debugPrint(
+        '[Counter KOT] Created order was not found in ongoing orders',
+      );
+      return false;
+    }
+
+    await _fetchOrderDetails(orderToOpen);
+    return true;
+  }
+
   // Public method to refresh saved orders silently (no loading spinner)
   Future<void> refreshSavedOrdersSilently() async {
     if (widget.tableId != null ||

@@ -307,60 +307,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
             children: [
               _buildCurrentCartSummaryCard(cartItems),
               const SizedBox(height: 12),
-              // Top: Comment button (full width)
-              SizedBox(
-                width: double.infinity,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _showCommentDialog(),
-                    borderRadius: BorderRadius.circular(12),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      height: widget.isCompact ? 44 : 48,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _orderComment.isNotEmpty
-                                  ? Icons.check_circle
-                                  : Icons.comment,
-                              color: _orderComment.isNotEmpty
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFF64748B),
-                              size: widget.isCompact ? 14 : 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Comment',
-                              style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  widget.isCompact
-                                      ? FontSize.s13
-                                      : FontSize.s14,
-                                  0.21,
-                                  const Color(0xFF64748B)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (showFooterButtons) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
+              Row(
+                children: [
+                  if (showFooterButtons) ...[
                     if (showClearSaveActions) ...[
                       Expanded(
                         child: _buildCurrentCartFooterButton(
@@ -417,10 +366,44 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         ),
                       ),
                     ],
-                  ],
-                ),
-              ],
+                    const SizedBox(width: 12),
+                  ] else
+                    const Spacer(),
+                  _buildCurrentCartCommentIconButton(),
+                ],
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentCartCommentIconButton() {
+    final hasComment = _orderComment.trim().isNotEmpty;
+    final color =
+        hasComment ? const Color(0xFF059669) : const Color(0xFF64748B);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showCommentDialog(),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: widget.isCompact ? 44 : 48,
+          height: widget.isCompact ? 44 : 48,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasComment ? color : Colors.grey.shade300,
+              width: 1.2,
+            ),
+          ),
+          child: Icon(
+            Icons.chat_bubble_outline,
+            size: widget.isCompact ? 18 : 20,
+            color: color,
           ),
         ),
       ),

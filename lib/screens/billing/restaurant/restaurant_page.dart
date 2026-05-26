@@ -743,27 +743,6 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     },
                   ),
                   const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Text(
-                      _activeTableId != null
-                          ? 'Dining order: ${_selectedTableName ?? _activeTableId}'
-                          : _selectedDeliveryMethodId != null
-                              ? 'Delivery order: $_selectedDeliveryMethodName'
-                              : 'Choose Dining or Delivery before saving or confirming',
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.21,
-                        const Color(0xFF475569),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -1142,6 +1121,53 @@ class _RestaurantPageState extends State<RestaurantPage> {
     _orderPanelKey.currentState?.resetActiveOrderContext();
     _orderPanelKey.currentState?.showCurrentOrderTab();
     _resetCounterOrderContextAfterSave();
+  }
+
+  String? _normalizeOrderResponseValue(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') return null;
+    return text;
+  }
+
+  Future<bool> _openCounterKitchenOrderAfterSend(dynamic response) async {
+    if (!mounted ||
+        !_isCounterBillingMode ||
+        !widget.allowCounterBillingFromAttender ||
+        response is! Map) {
+      return false;
+    }
+
+    final orderId = _normalizeOrderResponseValue(
+      response['order_id'] ?? response['id'],
+    );
+    final orderNumber = _normalizeOrderResponseValue(
+      response['order_number'] ?? response['display_order_id'],
+    );
+
+    debugPrint(
+      '[Counter KOT] Send success; opening edit order for id=$orderId number=$orderNumber',
+    );
+
+    final orderPanelState = _orderPanelKey.currentState;
+    if (orderPanelState == null) {
+      debugPrint('[Counter KOT] Order panel state unavailable');
+      return false;
+    }
+
+    final opened = await orderPanelState.openCreatedOrderForEditing(
+      orderId: orderId,
+      orderNumber: orderNumber,
+      seedOrder: response,
+    );
+
+    if (!opened) {
+      debugPrint(
+        '[Counter KOT] Could not open created order automatically',
+      );
+    }
+
+    return opened;
   }
 
   DeliveryMethod? _resolveDefaultDeliveryMethod() {
@@ -2295,17 +2321,21 @@ class _RestaurantPageState extends State<RestaurantPage> {
           });
         }
 
-        // Refresh saved orders for the currently opened table/delivery method
-        if (mounted &&
-            (_activeTableId != null || _selectedDeliveryMethodId != null)) {
-          debugPrint(
-              '🔄 Refreshing saved orders after sending order to kitchen');
-          await Future.delayed(
-              const Duration(milliseconds: 1000)); // Wait for server to process
-          _orderPanelKey.currentState?.refreshSavedOrders();
-        }
+        final openedCreatedOrder =
+            await _openCounterKitchenOrderAfterSend(response);
+        if (!openedCreatedOrder) {
+          // Refresh saved orders for the currently opened table/delivery method
+          if (mounted &&
+              (_activeTableId != null || _selectedDeliveryMethodId != null)) {
+            debugPrint(
+                '🔄 Refreshing saved orders after sending order to kitchen');
+            await Future.delayed(const Duration(
+                milliseconds: 1000)); // Wait for server to process
+            _orderPanelKey.currentState?.refreshSavedOrders();
+          }
 
-        _resetCounterOrderContextAfterKitchenSend();
+          _resetCounterOrderContextAfterKitchenSend();
+        }
       } else {
         showScaffoldError(
           context: context,
@@ -2629,13 +2659,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
           });
         }
 
-        // Refresh saved orders for both table and delivery-method contexts
-        if (mounted &&
-            (_activeTableId != null || _selectedDeliveryMethodId != null)) {
-          _orderPanelKey.currentState?.refreshSavedOrders();
-        }
+        final openedCreatedOrder =
+            await _openCounterKitchenOrderAfterSend(response);
+        if (!openedCreatedOrder) {
+          // Refresh saved orders for both table and delivery-method contexts
+          if (mounted &&
+              (_activeTableId != null || _selectedDeliveryMethodId != null)) {
+            _orderPanelKey.currentState?.refreshSavedOrders();
+          }
 
-        _resetCounterOrderContextAfterKitchenSend();
+          _resetCounterOrderContextAfterKitchenSend();
+        }
 
         // Check if KOT print is enabled in app settings
         final appSettingsProvider =
