@@ -3444,37 +3444,37 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     widget.isQuotationMode ? 8 : (_isDenseCheckout ? 10 : 16)),
             // Order Summary
             Flexible(
-              fit: widget.isQuotationMode ? FlexFit.loose : FlexFit.tight,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: widget.isQuotationMode
-                          ? 14
-                          : (_isDenseCheckout ? 14 : 20),
-                      vertical: widget.isQuotationMode
-                          ? 12
-                          : (_isDenseCheckout ? 14 : 20),
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: const Color(0xFFE2E8F0), width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+              fit: FlexFit.tight,
+              child: ScrollConfiguration(
+                behavior:
+                    ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                child: SingleChildScrollView(
+                  primary: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: widget.isQuotationMode
+                              ? 14
+                              : (_isDenseCheckout ? 14 : 20),
+                          vertical: widget.isQuotationMode
+                              ? 12
+                              : (_isDenseCheckout ? 14 : 20),
                         ),
-                      ],
-                    ),
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context)
-                          .copyWith(scrollbars: false),
-                      child: SingleChildScrollView(
-                        primary: false,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: const Color(0xFFE2E8F0), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -3549,13 +3549,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           ],
                         ),
                       ),
-                    ),
+                      if (widget.isQuotationMode) ...[
+                        const SizedBox(height: 6),
+                        _buildQuotationDatesPanel(),
+                      ],
+                    ],
                   ),
-                  if (widget.isQuotationMode) ...[
-                    const SizedBox(height: 6),
-                    _buildQuotationDatesPanel(),
-                  ],
-                ],
+                ),
               ),
             ),
           ],
