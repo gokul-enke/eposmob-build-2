@@ -154,7 +154,7 @@ class CheckoutModal extends StatefulWidget {
     this.upiMethodId,
     this.codMethodId,
     this.enableDelivery = false,
-    this.deliveryMethod = "Store Takeaway",
+    this.deliveryMethod = "",
     this.deliveryMethodId = "",
     this.carNumber = "",
     this.deliveryComment = "",

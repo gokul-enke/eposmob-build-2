@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 
+import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
@@ -89,6 +90,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
   String? _selectedDeliveryMethodId;
   String? _selectedDeliveryMethodName;
   bool _isCounterBillingMode = false;
+  AppSettingsProvider? _appSettingsProviderForDefaults;
+  DeliveryMethodsProvider? _deliveryMethodsProviderForDefaults;
 
   @override
   void initState() {
@@ -99,12 +102,22 @@ class _RestaurantPageState extends State<RestaurantPage> {
     _loadPanelWidthPreferences();
     // Initialize data
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _appSettingsProviderForDefaults =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+            ..addListener(_applyDefaultCounterDeliveryMethodContext);
+      _deliveryMethodsProviderForDefaults =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false)
+            ..addListener(_applyDefaultCounterDeliveryMethodContext);
       _initializeData();
     });
   }
 
   @override
   void dispose() {
+    _appSettingsProviderForDefaults
+        ?.removeListener(_applyDefaultCounterDeliveryMethodContext);
+    _deliveryMethodsProviderForDefaults
+        ?.removeListener(_applyDefaultCounterDeliveryMethodContext);
     HardwareKeyboard.instance.removeHandler(_onRestaurantHardwareKey);
     super.dispose();
   }
@@ -375,8 +388,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (!deliveryMethodsProvider.hasMethods) {
       debugPrint(
           '🚚 [RestaurantPage] Delivery methods not in memory — triggering fetch (will use cache if available)');
-      deliveryMethodsProvider
-          .fetchDeliveryMethods(); // fire-and-forget, Consumer will rebuild
+      await deliveryMethodsProvider.fetchDeliveryMethods();
     } else {
       debugPrint(
           '🚚 [RestaurantPage] ✅ ${deliveryMethodsProvider.deliveryMethods.length} delivery methods already in provider memory — no API call needed');
@@ -385,8 +397,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     // Load tables from API
     await tableProvider.loadTables(accessToken: authModel.token);
 
-    // Counter mode starts without an implicit table/delivery context.
-    // The user can add items first, then choose Dining or Delivery explicitly.
+    _applyDefaultCounterDeliveryMethodContext();
   }
 
   @override
@@ -1073,6 +1084,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _editingLocalDraft = null;
       _refreshCounter = (_refreshCounter ?? 0) + 1;
     });
+    _applyDefaultCounterDeliveryMethodContext();
   }
 
   void _resetCounterOrderContextAfterKitchenSend() {
@@ -1080,6 +1092,41 @@ class _RestaurantPageState extends State<RestaurantPage> {
     _orderPanelKey.currentState?.resetActiveOrderContext();
     _orderPanelKey.currentState?.showCurrentOrderTab();
     _resetCounterOrderContextAfterSave();
+  }
+
+  DeliveryMethod? _resolveDefaultDeliveryMethod() {
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final appSettingsDefault =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.defaultDeliveryMethod
+            .trim();
+
+    return deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+      appSettingsDefault: appSettingsDefault,
+    );
+  }
+
+  void _applyDefaultCounterDeliveryMethodContext() {
+    if (!mounted ||
+        !_isCounterBillingMode ||
+        _activeTableId != null ||
+        (_selectedDeliveryMethodId?.isNotEmpty ?? false)) {
+      return;
+    }
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    if (!deliveryMethodsProvider.hasMethods) return;
+
+    final defaultMethod = _resolveDefaultDeliveryMethod();
+    if (defaultMethod == null || defaultMethod.id.isEmpty) return;
+
+    setState(() {
+      _selectedDeliveryMethodId = defaultMethod.id;
+      _selectedDeliveryMethodName = defaultMethod.name;
+    });
   }
 
   void _showDiningSelectionModal() {
@@ -1944,6 +1991,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     setState(() {
       _isCounterBillingMode = true;
     });
+    _applyDefaultCounterDeliveryMethodContext();
     _orderPanelKey.currentState?.resetPaymentModalFlag();
     _orderPanelKey.currentState?.showCurrentOrderTab();
   }
@@ -1965,6 +2013,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _refreshCounter = (_refreshCounter ?? 0) + 1;
     });
 
+    _applyDefaultCounterDeliveryMethodContext();
     _orderPanelKey.currentState?.resetActiveOrderContext();
     _orderPanelKey.currentState?.showCurrentOrderTab();
   }
@@ -2122,6 +2171,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       final manualComment = currentComment.trim();
       final resolvedCustomerId =
           _orderPanelKey.currentState?.selectedCustomerIdForDraft;
+      final resolvedDeliveryMethodId =
+          _selectedDeliveryMethodId ?? _resolveDefaultDeliveryMethodId();
       final sendToKitchenRequestBody = {
         'items': items,
         'cart_id': 0,
@@ -2135,11 +2186,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         'balance': '0',
         'coupon_id': null,
         'comment': manualComment.isNotEmpty ? manualComment : null,
-        'delivery_method_id': _selectedDeliveryMethodId ??
-            Provider.of<DeliveryMethodsProvider>(context, listen: false)
-                .defaultDeliveryMethod
-                ?.id ??
-            kFallbackDeliveryMethodId,
+        'delivery_method_id': resolvedDeliveryMethodId,
         'car_number': null,
         'status': 'new',
         'delivery_date': null,
@@ -2163,11 +2210,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         balanceAmount: "0", // Not applicable
         couponId: null, // Not applicable
         comment: manualComment.isNotEmpty ? manualComment : null,
-        deliveryMethodId: _selectedDeliveryMethodId ??
-            Provider.of<DeliveryMethodsProvider>(context, listen: false)
-                .defaultDeliveryMethod
-                ?.id ??
-            kFallbackDeliveryMethodId,
+        deliveryMethodId: resolvedDeliveryMethodId,
         carNumber: null, // Not applicable
         status: "new", // Set status to "new"
         deliveryDate: null, // Not applicable
@@ -2281,6 +2324,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
     return total;
   }
 
+  String _resolveDefaultDeliveryMethodId() {
+    return _resolveDefaultDeliveryMethod()?.id ?? kFallbackDeliveryMethodId;
+  }
+
   String? _extractTokenNumber(dynamic order) {
     if (order is! Map) return null;
 
@@ -2352,6 +2399,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _selectedOrderFromOrderPanel = null;
       _editingLocalDraft = null;
     });
+    _applyDefaultCounterDeliveryMethodContext();
 
     _orderPanelKey.currentState?.resetActiveOrderContext();
     _orderPanelKey.currentState?.showCurrentOrderTab();
@@ -2453,6 +2501,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
       debugPrint('➡️ Print: Calling CartProvider.addToOrderAPI');
       final resolvedCustomerId =
           _orderPanelKey.currentState?.selectedCustomerIdForDraft;
+      final resolvedDeliveryMethodId =
+          _selectedDeliveryMethodId ?? _resolveDefaultDeliveryMethodId();
       final response = await cartProvider.addToOrderAPI(
         items: items,
         cartIds: 0,
@@ -2468,11 +2518,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         balanceAmount: "0",
         couponId: null,
         comment: manualComment.isNotEmpty ? manualComment : null,
-        deliveryMethodId: _selectedDeliveryMethodId ??
-            Provider.of<DeliveryMethodsProvider>(context, listen: false)
-                .defaultDeliveryMethod
-                ?.id ??
-            kFallbackDeliveryMethodId,
+        deliveryMethodId: resolvedDeliveryMethodId,
         carNumber: null,
         status: "new",
         deliveryDate: null,

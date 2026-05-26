@@ -7184,8 +7184,20 @@ class BillingPageState extends State<BillingPageRestaurant>
     setState(() {
       // Clear payment and delivery states
       // iconColor = 1; // Default to cash
-      deliveryMethod = "Store Takeaway";
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      deliveryMethod = "";
+      try {
+        final deliveryMethodsProvider =
+            Provider.of<DeliveryMethodsProvider>(context, listen: false);
+        if (deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+          deliveryMethod = deliveryMethodsProvider.deliveryMethods
+              .firstWhere(
+                (m) => m.id == deliveryMethodId,
+                orElse: () => deliveryMethodsProvider.deliveryMethods.first,
+              )
+              .name;
+        }
+      } catch (_) {}
       _selectedDeliveryCharge = null;
 
       // Clear all controllers
@@ -7407,8 +7419,8 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   void _initializeDeliveryMethod() {
     // Set initial default values
-    deliveryMethod = "Store Takeaway";
-    deliveryMethodId = "11"; // Updated to match API response
+    deliveryMethod = "";
+    deliveryMethodId = "";
     _selectedDeliveryCharge = null;
 
     // Listen for delivery methods to be loaded and update default
@@ -7430,7 +7442,8 @@ class BillingPageState extends State<BillingPageRestaurant>
               final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
                 (m) =>
                     m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                    m.id == appSettingsDefault,
+                    m.id == appSettingsDefault ||
+                    (m.code?.toLowerCase() == appSettingsDefault.toLowerCase()),
               );
 
               // Only update if different to avoid unnecessary rebuilds
@@ -7527,22 +7540,12 @@ class BillingPageState extends State<BillingPageRestaurant>
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
 
-      // 1. Check AppSettings
       final appSettingsDefault =
           appSettingsProvider.appSettings?.defaultDeliveryMethod;
-      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
-        try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
-              (m) =>
-                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                  m.id == appSettingsDefault);
-          return match.id;
-        } catch (e) {
-          // Not found
-        }
-      }
-
-      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+      final defaultMethod =
+          deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+        appSettingsDefault: appSettingsDefault,
+      );
       return defaultMethod?.id ??
           "11"; // Fallback to Store Takeaway ID from API
     } catch (e) {

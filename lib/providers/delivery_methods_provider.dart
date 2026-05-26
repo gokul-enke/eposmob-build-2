@@ -6,8 +6,7 @@ import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DeliveryMethodsProvider with ChangeNotifier {
-  static const String _deliveryMethodsCacheKeyPrefix =
-      'delivery_methods_cache';
+  static const String _deliveryMethodsCacheKeyPrefix = 'delivery_methods_cache';
   static const String _tag = '🚚 [DeliveryMethodsProvider]';
 
   List<DeliveryMethod> _deliveryMethods = [];
@@ -34,6 +33,27 @@ class DeliveryMethodsProvider with ChangeNotifier {
           ? _deliveryMethods.first
           : DeliveryMethod(id: "11", name: "Store Takeaway");
     }
+  }
+
+  DeliveryMethod? resolveDefaultDeliveryMethod({String? appSettingsDefault}) {
+    final configuredDefault = appSettingsDefault?.trim();
+    if (configuredDefault != null && configuredDefault.isNotEmpty) {
+      for (final method in _deliveryMethods) {
+        final code = method.code?.trim();
+        if (method.id == configuredDefault ||
+            method.name.toLowerCase() == configuredDefault.toLowerCase() ||
+            (code != null &&
+                code.isNotEmpty &&
+                code.toLowerCase() == configuredDefault.toLowerCase())) {
+          return method;
+        }
+      }
+      debugPrint(
+        '$_tag Default delivery method "$configuredDefault" not found in delivery methods',
+      );
+    }
+
+    return defaultDeliveryMethod;
   }
 
   DeliveryMethodsProvider() {
@@ -107,13 +127,15 @@ class DeliveryMethodsProvider with ChangeNotifier {
   Future<void> fetchDeliveryMethods({bool forceRefresh = false}) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final int? activeStoreId = prefs.getInt('active_store_id');
-    debugPrint('$_tag Fetching delivery methods (forceRefresh=$forceRefresh, storeId=$activeStoreId)');
+    debugPrint(
+        '$_tag Fetching delivery methods (forceRefresh=$forceRefresh, storeId=$activeStoreId)');
 
     // ── 1. In-memory cache hit for the current store ──
     if (!forceRefresh &&
         _deliveryMethods.isNotEmpty &&
         _loadedStoreId == activeStoreId) {
-      debugPrint('$_tag ✅ Returning ${_deliveryMethods.length} methods from MEMORY for storeId=$activeStoreId (no API call)');
+      debugPrint(
+          '$_tag ✅ Returning ${_deliveryMethods.length} methods from MEMORY for storeId=$activeStoreId (no API call)');
       return;
     }
 
@@ -126,7 +148,8 @@ class DeliveryMethodsProvider with ChangeNotifier {
       if (cachedMethods.isNotEmpty) {
         _setDeliveryMethods(cachedMethods, activeStoreId);
         _hasFetchedOnce = true;
-        debugPrint('$_tag ✅ Loaded ${cachedMethods.length} methods from LOCAL CACHE (SharedPreferences)');
+        debugPrint(
+            '$_tag ✅ Loaded ${cachedMethods.length} methods from LOCAL CACHE (SharedPreferences)');
         notifyListeners();
         return;
       }
@@ -150,7 +173,8 @@ class DeliveryMethodsProvider with ChangeNotifier {
           ),
           activeStoreId,
         );
-        debugPrint('$_tag Fallback to local cache: ${_deliveryMethods.length} methods');
+        debugPrint(
+            '$_tag Fallback to local cache: ${_deliveryMethods.length} methods');
         return;
       }
 
@@ -170,7 +194,8 @@ class DeliveryMethodsProvider with ChangeNotifier {
         if (accessToken != null && accessToken.isNotEmpty)
           'Authorization': 'Bearer $accessToken',
       };
-      debugPrint('$_tag Headers: X-Tenant=${apiKey.substring(0, apiKey.length > 8 ? 8 : apiKey.length)}..., hasAuth=${accessToken != null && accessToken.isNotEmpty}');
+      debugPrint(
+          '$_tag Headers: X-Tenant=${apiKey.substring(0, apiKey.length > 8 ? 8 : apiKey.length)}..., hasAuth=${accessToken != null && accessToken.isNotEmpty}');
 
       final response = await http.get(url, headers: headers);
 
@@ -185,20 +210,24 @@ class DeliveryMethodsProvider with ChangeNotifier {
         final data = json.decode(response.body);
 
         if (data['status'] == 'success') {
-          _setDeliveryMethods(_parseDeliveryMethods(data['data']), activeStoreId);
+          _setDeliveryMethods(
+              _parseDeliveryMethods(data['data']), activeStoreId);
           _hasFetchedOnce = true;
           await _saveDeliveryMethodsToLocalCache(
             prefs,
             activeStoreId,
             _deliveryMethods,
           );
-          debugPrint('$_tag ✅ Fetched ${_deliveryMethods.length} methods from API and saved to cache');
+          debugPrint(
+              '$_tag ✅ Fetched ${_deliveryMethods.length} methods from API and saved to cache');
           for (final m in _deliveryMethods) {
-            debugPrint('$_tag   → [${m.id}] ${m.name} (${m.prices.length} prices)');
+            debugPrint(
+                '$_tag   → [${m.id}] ${m.name} (${m.prices.length} prices)');
           }
         } else {
           debugPrint('$_tag ❌ API returned non-success: ${data['message']}');
-          _fallbackToCache(prefs, activeStoreId, 'API returned non-success status');
+          _fallbackToCache(
+              prefs, activeStoreId, 'API returned non-success status');
         }
       } else {
         debugPrint('$_tag ❌ API HTTP error: ${response.statusCode}');
@@ -215,18 +244,23 @@ class DeliveryMethodsProvider with ChangeNotifier {
 
   /// Falls back to local cache after an API failure.
   /// If cache also empty and we had previous in-memory data, keep it.
-  void _fallbackToCache(SharedPreferences prefs, int? activeStoreId, String reason) {
-    final cachedMethods = _loadDeliveryMethodsFromLocalCache(prefs, activeStoreId);
+  void _fallbackToCache(
+      SharedPreferences prefs, int? activeStoreId, String reason) {
+    final cachedMethods =
+        _loadDeliveryMethodsFromLocalCache(prefs, activeStoreId);
     if (cachedMethods.isNotEmpty) {
       _setDeliveryMethods(cachedMethods, activeStoreId);
       _hasFetchedOnce = true;
-      debugPrint('$_tag 📦 Fallback: Using ${cachedMethods.length} methods from LOCAL CACHE (reason: $reason)');
+      debugPrint(
+          '$_tag 📦 Fallback: Using ${cachedMethods.length} methods from LOCAL CACHE (reason: $reason)');
     } else if (_deliveryMethods.isNotEmpty && _loadedStoreId == activeStoreId) {
       // Keep whatever was already in memory — don't wipe it
-      debugPrint('$_tag 📦 Fallback: Keeping ${_deliveryMethods.length} existing in-memory methods (reason: $reason)');
+      debugPrint(
+          '$_tag 📦 Fallback: Keeping ${_deliveryMethods.length} existing in-memory methods (reason: $reason)');
     } else {
       _setDeliveryMethods([], activeStoreId);
-      debugPrint('$_tag ⚠️ No cached or in-memory methods available (reason: $reason)');
+      debugPrint(
+          '$_tag ⚠️ No cached or in-memory methods available (reason: $reason)');
     }
   }
 
@@ -263,7 +297,8 @@ class DeliveryMethodsProvider with ChangeNotifier {
           )
           .where((item) => item.id.isNotEmpty && item.name.isNotEmpty)
           .toList();
-      debugPrint('$_tag SharedPreferences cache read: ${result.length} methods from key "$key"');
+      debugPrint(
+          '$_tag SharedPreferences cache read: ${result.length} methods from key "$key"');
       return result;
     } catch (error) {
       debugPrint('$_tag ❌ Failed to read cached delivery methods: $error');
@@ -282,7 +317,8 @@ class DeliveryMethodsProvider with ChangeNotifier {
         key,
         json.encode(methods.map((item) => item.toJson()).toList()),
       );
-      debugPrint('$_tag 💾 Saved ${methods.length} methods to SharedPreferences key "$key"');
+      debugPrint(
+          '$_tag 💾 Saved ${methods.length} methods to SharedPreferences key "$key"');
     } catch (error) {
       debugPrint('$_tag ❌ Failed to cache delivery methods locally: $error');
     }

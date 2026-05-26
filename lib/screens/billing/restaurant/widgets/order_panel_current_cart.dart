@@ -4,10 +4,6 @@ part of 'order_panel.dart';
 
 extension OrderPanelCurrentCartExtension on OrderPanelState {
   Widget _buildCurrentCartItem(LocalCartItem cartItem, int index) {
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-
     final productName = cartItem.product.productName ?? 'Unknown Product';
     final quantity = cartItem.quantity;
     final unitPrice = cartItem.price ?? 0.0;
@@ -40,76 +36,80 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Item name and price
+          // Item name, editable unit price, and line total
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  productName,
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s13 : FontSize.s15,
-                      0.21,
-                      const Color(0xFF1E293B)),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        productName,
+                        style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            widget.isCompact ? FontSize.s13 : FontSize.s15,
+                            0.21,
+                            const Color(0xFF1E293B)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () =>
+                            _showEditItemPriceDialog(cartItem, isLocal: true),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            unitPrice.toStringAsFixed(2),
+                            style: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s11,
+                              0.21,
+                              const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF059669).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$currency ${totalPrice.toStringAsFixed(2)}',
-                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s12,
-                      0.21, const Color(0xFF059669)),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Unit price and quantity info
-          Row(
-            children: [
-              // Editable Price Trigger for Local Items (Blue Box style)
               Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () =>
                       _showEditItemPriceDialog(cartItem, isLocal: true),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(4),
-                      color: Colors.blue.withOpacity(0.05),
+                      color: const Color(0xFF059669).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '$currency ${unitPrice.toStringAsFixed(2)}',
+                      totalPrice.toStringAsFixed(2),
                       style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          widget.isCompact ? FontSize.s11 : FontSize.s12,
-                          0.21,
-                          const Color(0xFF2563EB)),
+                        FontWeightManager.bold,
+                        widget.isCompact ? FontSize.s13 : FontSize.s14,
+                        0.21,
+                        const Color(0xFF059669),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Text(
-                ' × ${quantity.toStringAsFixed(0)}',
-                style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    widget.isCompact ? FontSize.s11 : FontSize.s12,
-                    0.21,
-                    const Color(0xFF64748B)),
               ),
             ],
           ),
@@ -264,8 +264,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
     final showClearSaveActions = !_usesCounterOrderTabs;
-    final hasKitchenOrderContext = widget.tableId != null ||
-        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false);
+    final hasSelectedTable = widget.tableId?.isNotEmpty ?? false;
+    final hasKitchenOrderContext = hasSelectedTable ||
+        (_usesCounterOrderTabs && _isSelectedDeliveryMethodDineIn);
     final showSendToKitchen = hasKitchenOrderContext && hasInternet;
     final showOfflineSaveAndPrint = !hasInternet && !_usesCounterOrderTabs;
     final hasOfflineOrderContext = hasKitchenOrderContext ||
@@ -804,7 +805,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     final int totalItems = order.items.length;
     final tableName = _localDraftTableName(order);
     final contextLabel = tableName != null
-        ? 'Dining: $tableName'
+        ? 'Dine In: $tableName'
         : ((order.deliveryMethod?.isNotEmpty ?? false)
             ? 'Delivery: ${order.deliveryMethod}'
             : 'No context');

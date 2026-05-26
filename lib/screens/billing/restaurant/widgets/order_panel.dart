@@ -123,6 +123,38 @@ class OrderPanelState extends State<OrderPanel> {
   bool get _usesCounterOrderTabs =>
       widget.allowCounterBilling && widget.isCounterBillingMode;
 
+  bool get _isSelectedDeliveryMethodDineIn {
+    final selectedId = widget.preselectedDeliveryMethodId?.trim();
+    final selectedName = widget.preselectedDeliveryMethodName?.trim();
+    if ((selectedId == null || selectedId.isEmpty) &&
+        (selectedName == null || selectedName.isEmpty)) {
+      return false;
+    }
+
+    final deliveryMethods =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false)
+            .deliveryMethods;
+
+    DeliveryMethod? selectedMethod;
+    for (final method in deliveryMethods) {
+      if (selectedId != null &&
+          selectedId.isNotEmpty &&
+          method.id == selectedId) {
+        selectedMethod = method;
+        break;
+      }
+    }
+
+    final code = selectedMethod?.code ?? '';
+    final name = selectedMethod?.name ?? selectedName ?? '';
+    return _normalizesAsDineIn(code) || _normalizesAsDineIn(name);
+  }
+
+  bool _normalizesAsDineIn(String value) {
+    final normalized = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return normalized == 'dinein';
+  }
+
   bool get isViewingCounterListTab =>
       _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
 
@@ -148,7 +180,7 @@ class OrderPanelState extends State<OrderPanel> {
   double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
   String _orderComment = "";
   bool _hasOpenedPaymentModalOnce = false;
-  String _deliveryMethod = "Store Takeaway";
+  String _deliveryMethod = "";
   String _deliveryMethodId = "";
   String _deliveryAddress = "";
   String _carNumber = "";
@@ -321,7 +353,7 @@ class OrderPanelState extends State<OrderPanel> {
         // Cleared: reset to default
         setState(() {
           _deliveryMethodId = '';
-          _deliveryMethod = 'Store Takeaway';
+          _deliveryMethod = '';
         });
       }
     }
@@ -339,7 +371,7 @@ class OrderPanelState extends State<OrderPanel> {
     setState(() {
       if (widget.tableId != null && widget.tableId!.isNotEmpty) {
         _deliveryMethodId = '';
-        _deliveryMethod = 'Store Takeaway';
+        _deliveryMethod = '';
         if (_selectedOrder is Map) {
           _selectedOrder['table_id'] = widget.tableId;
           _selectedOrder['delivery_method_id'] = null;
@@ -1657,7 +1689,7 @@ class OrderPanelState extends State<OrderPanel> {
       _hasOpenedPaymentModalOnce = false;
 
       // Reset delivery state
-      _deliveryMethod = "Store Takeaway";
+      _deliveryMethod = "";
       _deliveryMethodId = "";
       _deliveryAddress = "";
       _carNumber = "";
@@ -1707,7 +1739,7 @@ class OrderPanelState extends State<OrderPanel> {
     _hasOpenedPaymentModalOnce = false;
 
     // Reset delivery state
-    _deliveryMethod = "Store Takeaway";
+    _deliveryMethod = "";
     _deliveryMethodId = "";
     _deliveryAddress = "";
     _carNumber = "";
@@ -1857,8 +1889,7 @@ class OrderPanelState extends State<OrderPanel> {
             Provider.of<DeliveryMethodsProvider>(context, listen: false);
         final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
           (m) => m.id == loadedDeliveryMethodId,
-          orElse: () => DeliveryMethod(
-              id: loadedDeliveryMethodId, name: 'Store Takeaway'),
+          orElse: () => _getDefaultDeliveryMethod(),
         );
         loadedDeliveryMethodName = match.name;
         debugPrint(
@@ -2208,31 +2239,25 @@ class OrderPanelState extends State<OrderPanel> {
     });
   }
 
+  DeliveryMethod _getDefaultDeliveryMethod() {
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final appSettingsDefault =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.defaultDeliveryMethod
+            .trim();
+
+    return deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+          appSettingsDefault: appSettingsDefault,
+        ) ??
+        DeliveryMethod(id: kFallbackDeliveryMethodId, name: 'Store Takeaway');
+  }
+
   // Default Delivery Method (mirror of BillingPage)
   String _getDefaultDeliveryMethodId() {
     try {
-      final appSettingsProvider =
-          Provider.of<AppSettingsProvider>(context, listen: false);
-      final deliveryMethodsProvider =
-          Provider.of<DeliveryMethodsProvider>(context, listen: false);
-
-      // 1. Check AppSettings
-      final appSettingsDefault =
-          appSettingsProvider.appSettings?.defaultDeliveryMethod;
-      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
-        try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
-              (m) =>
-                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                  m.id == appSettingsDefault);
-          return match.id;
-        } catch (e) {
-          // Not found
-        }
-      }
-
-      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
-      return defaultMethod?.id ?? kFallbackDeliveryMethodId;
+      return _getDefaultDeliveryMethod().id;
     } catch (e) {
       return kFallbackDeliveryMethodId;
     }
@@ -4987,6 +5012,19 @@ class OrderPanelState extends State<OrderPanel> {
             Provider.of<DeliveryMethodsProvider>(context, listen: false);
         final deliveryEnabled =
             deliveryMethodsProvider.deliveryMethods.isNotEmpty;
+        final defaultDeliveryMethod = _getDefaultDeliveryMethod();
+        final shouldSeedDeliveryDefault = mode == CheckoutModalMode.checkout ||
+            (mode == CheckoutModalMode.selectionOnly && initialStep == 1);
+        final modalDeliveryMethod = _deliveryMethodId.isNotEmpty
+            ? _deliveryMethod
+            : shouldSeedDeliveryDefault
+                ? defaultDeliveryMethod.name
+                : "";
+        final modalDeliveryMethodId = _deliveryMethodId.isNotEmpty
+            ? _deliveryMethodId
+            : shouldSeedDeliveryDefault
+                ? defaultDeliveryMethod.id
+                : "";
 
         return CheckoutModal(
           mode: mode,
@@ -5003,16 +5041,8 @@ class OrderPanelState extends State<OrderPanel> {
 
           // Delivery State
           enableDelivery: deliveryEnabled,
-          deliveryMethod: _deliveryMethod.isNotEmpty
-              ? _deliveryMethod
-              : mode == CheckoutModalMode.checkout
-                  ? "Store Takeaway"
-                  : "",
-          deliveryMethodId: _deliveryMethodId.isNotEmpty
-              ? _deliveryMethodId
-              : mode == CheckoutModalMode.checkout
-                  ? _getDefaultDeliveryMethodId()
-                  : "",
+          deliveryMethod: modalDeliveryMethod,
+          deliveryMethodId: modalDeliveryMethodId,
           deliveryComment: _orderComment,
           deliveryAddress: _deliveryAddress,
           deliveryDate: _deliveryDate,
@@ -6331,7 +6361,8 @@ class OrderPanelState extends State<OrderPanel> {
     final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
     final tableName = _deliveryMethod.isNotEmpty
         ? _deliveryMethod
-        : (widget.preselectedDeliveryMethodName ?? 'Store Takeaway');
+        : (widget.preselectedDeliveryMethodName ??
+            _getDefaultDeliveryMethod().name);
 
     final success = await KotPrintPage.autoPrint(
       context,
@@ -6538,7 +6569,7 @@ class OrderPanelState extends State<OrderPanel> {
         ? 'Table ${widget.tableId}'
         : (savedOrder.deliveryMethod ??
             widget.preselectedDeliveryMethodName ??
-            'Store Takeaway');
+            _getDefaultDeliveryMethod().name);
     final showTableLabel = widget.tableId != null;
     final comment = savedOrder.comment?.trim();
 
