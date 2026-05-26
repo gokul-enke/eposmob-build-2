@@ -1407,10 +1407,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   Widget _buildQuotationDatesPanel() {
+    final compact = widget.isQuotationMode || _isDenseCheckout;
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 12, bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.only(
+        top: compact ? 6 : 12,
+        bottom: compact ? 6 : 12,
+      ),
+      padding: EdgeInsets.all(compact ? 10 : 14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(14),
@@ -1427,7 +1431,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildQuotationInlineCustomerFields(),
-          const SizedBox(height: 12),
+          SizedBox(height: compact ? 8 : 12),
           Row(
             children: [
               Expanded(
@@ -1587,21 +1591,22 @@ class _CheckoutModalState extends State<CheckoutModal> {
     required String hintText,
     TextInputType? keyboardType,
   }) {
+    final compact = widget.isQuotationMode || _isDenseCheckout;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF64748B),
+            color: const Color(0xFF64748B),
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: compact ? 4 : 6),
         Container(
-          height: 46,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          height: compact ? 40 : 46,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -1648,18 +1653,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
     required ValueChanged<DateTime> onDateSelected,
     bool isExpiry = false,
   }) {
+    final compact = widget.isQuotationMode || _isDenseCheckout;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF64748B),
+            color: const Color(0xFF64748B),
           ),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: compact ? 4 : 6),
         Material(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -1671,8 +1677,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
               onDateSelected: onDateSelected,
             ),
             child: Container(
-              height: 46,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              height: compact ? 40 : 46,
+              padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFDDE7F3)),
@@ -3176,6 +3182,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onPrint,
     VoidCallback? onConfirm,
   }) {
+    final compactFooter = widget.isQuotationMode || _isDenseCheckout;
     return Container(
       padding: EdgeInsets.fromLTRB(
         _isDenseCheckout ? 8 : 12,
@@ -3197,9 +3204,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     size: MediaQuery.of(context).size,
                     icon: const Icon(Icons.arrow_back,
                         color: Colors.white, size: 20),
-                    height: _isDenseCheckout ? 44 : 48,
+                    height: compactFooter ? 42 : 48,
                     width: double.infinity,
-                    fontSize: _isDenseCheckout ? FontSize.s12 : FontSize.s14,
+                    fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
                     boxColor: const Color(0xFF64748B),
                     borderColor: const Color(0xFF64748B),
                     radius: 12,
@@ -3231,9 +3238,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       size: MediaQuery.of(context).size,
                       icon: const Icon(Icons.check_circle,
                           color: Colors.white, size: 20),
-                      height: _isDenseCheckout ? 44 : 48,
+                      height: compactFooter ? 42 : 48,
                       width: double.infinity,
-                      fontSize: _isDenseCheckout ? FontSize.s12 : FontSize.s14,
+                      fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
                       boxColor: _canConfirmOrPrint
                           ? const Color(0xFF2563EB)
                           : Colors.grey.shade400,
@@ -3272,9 +3279,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       size: MediaQuery.of(context).size,
                       icon: const Icon(Icons.print,
                           color: Colors.white, size: 20),
-                      height: _isDenseCheckout ? 44 : 48,
+                      height: compactFooter ? 42 : 48,
                       width: double.infinity,
-                      fontSize: _isDenseCheckout ? FontSize.s12 : FontSize.s14,
+                      fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
                       boxColor: _canPrint
                           ? const Color(0xFF059669)
                           : Colors.grey.shade400,
@@ -3295,9 +3302,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     size: MediaQuery.of(context).size,
                     icon: const Icon(Icons.arrow_forward,
                         color: Colors.white, size: 20),
-                    height: _isDenseCheckout ? 44 : 48,
+                    height: compactFooter ? 42 : 48,
                     width: double.infinity,
-                    fontSize: _isDenseCheckout ? FontSize.s12 : FontSize.s14,
+                    fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
                     boxColor: isNextEnabled
                         ? const Color(0xFF2563EB)
                         : Colors.grey.shade400,
@@ -3370,9 +3377,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
           children: [
             // Status Checklist (clickable to navigate)
             LayoutBuilder(builder: (context, constraints) {
-              final tileSpacing = _isDenseCheckout ? 8.0 : 10.0;
+              final compactQuotation = widget.isQuotationMode;
+              final tileSpacing =
+                  compactQuotation || _isDenseCheckout ? 8.0 : 10.0;
               final tileWidth = (constraints.maxWidth - tileSpacing) / 2;
-              final tileHeight = _isDenseCheckout ? 72.0 : 92.0;
+              final tileHeight =
+                  compactQuotation ? 60.0 : (_isDenseCheckout ? 72.0 : 92.0);
               final tiles = <Widget>[
                 _buildClickableCheckItem(
                   'Customer',
@@ -3429,7 +3439,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     .toList(),
               );
             }),
-            SizedBox(height: _isDenseCheckout ? 10 : 16),
+            SizedBox(
+                height:
+                    widget.isQuotationMode ? 8 : (_isDenseCheckout ? 10 : 16)),
             // Order Summary
             Flexible(
               fit: widget.isQuotationMode ? FlexFit.loose : FlexFit.tight,
@@ -3438,8 +3450,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 children: [
                   Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: _isDenseCheckout ? 14 : 20,
-                      vertical: _isDenseCheckout ? 14 : 20,
+                      horizontal: widget.isQuotationMode
+                          ? 14
+                          : (_isDenseCheckout ? 14 : 20),
+                      vertical: widget.isQuotationMode
+                          ? 12
+                          : (_isDenseCheckout ? 14 : 20),
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -3475,11 +3491,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             SizedBox(height: _isDenseCheckout ? 8 : 12),
                             _buildSummaryRow(
                                 'Net Amount', subTotal, Colors.black),
-                            SizedBox(height: _isDenseCheckout ? 7 : 10),
+                            SizedBox(
+                                height: widget.isQuotationMode
+                                    ? 6
+                                    : (_isDenseCheckout ? 7 : 10)),
                             _buildSummaryRow('Discount', -discountAmount,
                                 const Color(0xFFEF4444),
                                 labelColor: const Color(0xFFEF4444)),
-                            SizedBox(height: _isDenseCheckout ? 7 : 10),
+                            SizedBox(
+                                height: widget.isQuotationMode
+                                    ? 6
+                                    : (_isDenseCheckout ? 7 : 10)),
                             _buildSummaryRow(
                                 'Tax', taxAmount, const Color(0xFF64748B),
                                 labelColor: const Color(0xFF64748B)),
@@ -3490,7 +3512,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             ],
                             Padding(
                               padding: EdgeInsets.symmetric(
-                                  vertical: _isDenseCheckout ? 10 : 16),
+                                  vertical: widget.isQuotationMode
+                                      ? 8
+                                      : (_isDenseCheckout ? 10 : 16)),
                               child: Divider(
                                   height: 1,
                                   thickness: 1.5,
@@ -3528,7 +3552,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     ),
                   ),
                   if (widget.isQuotationMode) ...[
-                    SizedBox(height: _isDenseCheckout ? 10 : 16),
+                    const SizedBox(height: 6),
                     _buildQuotationDatesPanel(),
                   ],
                 ],
@@ -3546,6 +3570,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       {CustomerListModelData? customer}) {
     final isCurrentStep = _currentStep == stepIndex;
     final shortcutLabel = _shortcutLabelForStep(stepIndex);
+    final compactTile = widget.isQuotationMode || _isDenseCheckout;
     final showCustomerType = Provider.of<AppSettingsProvider>(context)
             .appSettings
             ?.companyB2BEnabled ??
@@ -3556,7 +3581,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         : const Color(0xFFDC2626);
     final customerNameLength = customer?.name?.trim().length ?? subtitle.length;
     final customerTitleFontSize = customer == null
-        ? (_isDenseCheckout ? 12.0 : 14.0)
+        ? (compactTile ? 12.0 : 14.0)
         : customerNameLength > 24
             ? 10.5
             : customerNameLength > 18
@@ -3603,16 +3628,16 @@ class _CheckoutModalState extends State<CheckoutModal> {
           child: Container(
             height: double.infinity,
             padding: EdgeInsets.symmetric(
-              vertical: _isDenseCheckout ? 7 : 12,
-              horizontal: _isDenseCheckout ? 10 : 16,
+              vertical: compactTile ? 5 : 12,
+              horizontal: compactTile ? 10 : 16,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (customer == null) ...[
                   Container(
-                    width: _isDenseCheckout ? 28 : 36,
-                    height: _isDenseCheckout ? 28 : 36,
+                    width: compactTile ? 28 : 36,
+                    height: compactTile ? 28 : 36,
                     decoration: BoxDecoration(
                       color: isCurrentStep
                           ? Colors.white.withOpacity(0.15)
@@ -3628,10 +3653,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           : isCompleted
                               ? const Color(0xFF166534)
                               : const Color(0xFF64748B),
-                      size: _isDenseCheckout ? 17 : 20,
+                      size: compactTile ? 17 : 20,
                     ),
                   ),
-                  SizedBox(width: _isDenseCheckout ? 10 : 14),
+                  SizedBox(width: compactTile ? 10 : 14),
                 ],
                 Expanded(
                   child: Column(
@@ -3649,12 +3674,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               : const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: compactTile ? 1 : 2),
                       if (customer == null)
                         Text(
                           subtitle,
                           style: TextStyle(
-                            fontSize: _isDenseCheckout ? 10 : 12,
+                            fontSize: compactTile ? 10 : 12,
                             color: isCurrentStep
                                 ? Colors.white.withOpacity(0.85)
                                 : isCompleted
@@ -3668,7 +3693,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       if (customer != null) ...[
-                        const SizedBox(height: 4),
+                        SizedBox(height: compactTile ? 2 : 4),
                         Row(
                           children: [
                             if (showCustomerType) ...[
@@ -3680,8 +3705,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             ],
                             Flexible(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: compactTile ? 5 : 6,
+                                  vertical: compactTile ? 1 : 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isCurrentStep
                                       ? Colors.white24
@@ -3691,7 +3718,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 child: Text(
                                   'Bal: ${customerBalance.toStringAsFixed(2)}',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: compactTile ? 9 : 10,
                                     fontWeight: FontWeight.w600,
                                     color: isCurrentStep
                                         ? Colors.white
@@ -3710,11 +3737,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   ),
                 ),
                 if (shortcutLabel.isNotEmpty) ...[
-                  SizedBox(width: _isDenseCheckout ? 5 : 8),
+                  SizedBox(width: compactTile ? 5 : 8),
                   Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: _isDenseCheckout ? 6 : 8,
-                      vertical: _isDenseCheckout ? 3 : 4,
+                      horizontal: compactTile ? 6 : 8,
+                      vertical: compactTile ? 3 : 4,
                     ),
                     decoration: BoxDecoration(
                       color: isCurrentStep
@@ -3730,7 +3757,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: Text(
                       shortcutLabel,
                       style: TextStyle(
-                        fontSize: _isDenseCheckout ? 10 : 11,
+                        fontSize: compactTile ? 10 : 11,
                         fontWeight: FontWeight.w800,
                         color: isCurrentStep
                             ? Colors.white

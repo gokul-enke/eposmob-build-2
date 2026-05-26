@@ -1097,8 +1097,10 @@ class LocalProductProvider extends ChangeNotifier {
           'price': payloadPrice,
           'mrp': payloadMrp,
           'stock_id': reservation.stockId,
-          if (item.canUseSaleUnitPayloadFor(reservation.quantity))
+          if (item.canUseSaleUnitPayloadFor(reservation.quantity)) ...{
             'sale_unit_id': item.saleUnitId,
+            'product_sale_unit_id': item.saleUnitId,
+          },
         });
         reservedQuantity += reservation.quantity;
       }
@@ -1122,7 +1124,10 @@ class LocalProductProvider extends ChangeNotifier {
               canUseSaleUnitPayload ? item.toDisplayAmount(item.mrp) : item.mrp,
           'stock_id':
               item.stockReservations.isEmpty ? item.selectedStock?.id : null,
-          if (canUseSaleUnitPayload) 'sale_unit_id': item.saleUnitId,
+          if (canUseSaleUnitPayload) ...{
+            'sale_unit_id': item.saleUnitId,
+            'product_sale_unit_id': item.saleUnitId,
+          },
         });
       }
     }

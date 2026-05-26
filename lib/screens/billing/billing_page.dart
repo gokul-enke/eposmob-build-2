@@ -7514,6 +7514,8 @@ class BillingPageState extends State<BillingPage>
     try {
       final deliveryMethodIdValue = int.tryParse(deliveryMethodId);
       final deliveryChargeValue = _getDeliveryChargeForOrder();
+      final priceSummary = localProductProvider.priceSummary;
+      final discountValue = priceSummary?.discount ?? 0.0;
       final payload = <String, dynamic>{
         if (hasExistingCustomer) ...{
           'customer_type': 'existing',
@@ -7530,13 +7532,20 @@ class BillingPageState extends State<BillingPage>
         if (deliveryChargeValue > 0) 'shipping_cost': deliveryChargeValue,
         'quotation_date': DateFormat('yyyy-MM-dd').format(_quotationDate),
         'expiry_date': DateFormat('yyyy-MM-dd').format(_quotationExpiryDate),
+        if (discountValue > 0) 'discount': discountValue,
         'comment': _commentController.text, // Reusing delivery comment as note
         'items': localProductProvider.cartItems.map((item) {
+          final productStockId = item.stockGroupIds.length == 1
+              ? item.stockGroupIds.first
+              : item.selectedStock?.id;
           final itemMap = <String, dynamic>{
             'product_id': item.product.productId,
             'quantity': item.hasSaleUnit ? item.displayQuantity : item.quantity,
             'price': item.hasSaleUnit ? item.displayPrice : item.price,
           };
+          if (productStockId != null) {
+            itemMap['product_stock_id'] = productStockId;
+          }
           if (item.saleUnitId != null) {
             itemMap['product_sale_unit_id'] = item.saleUnitId;
           }
