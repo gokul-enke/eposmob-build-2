@@ -268,11 +268,15 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     final hasKitchenOrderContext = hasSelectedTable ||
         (_usesCounterOrderTabs && _isSelectedDeliveryMethodDineIn);
     final showSendToKitchen = hasKitchenOrderContext && hasInternet;
+    final showConfirmOrder =
+        _usesCounterOrderTabs && hasInternet && !hasKitchenOrderContext;
     final showOfflineSaveAndPrint = !hasInternet && !_usesCounterOrderTabs;
     final hasOfflineOrderContext = hasKitchenOrderContext ||
         (widget.allowCounterBilling && widget.isCounterBillingMode);
-    final showFooterButtons =
-        showClearSaveActions || showSendToKitchen || showOfflineSaveAndPrint;
+    final showFooterButtons = showClearSaveActions ||
+        showSendToKitchen ||
+        showConfirmOrder ||
+        showOfflineSaveAndPrint;
 
     return SafeArea(
       top: false,
@@ -349,6 +353,23 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                       ),
                     ],
                     if ((showClearSaveActions || showSendToKitchen) &&
+                        showConfirmOrder)
+                      const SizedBox(width: 8),
+                    if (showConfirmOrder) ...[
+                      Expanded(
+                        flex: showClearSaveActions ? 2 : 1,
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Confirm Order',
+                          color: const Color(0xFF08C63F),
+                          isDisabled: cartItems.isEmpty || _isLoadingConfirm,
+                          isLoading: _isLoadingConfirm,
+                          onTap: () => showCurrentCartCheckoutFromParent(),
+                        ),
+                      ),
+                    ],
+                    if ((showClearSaveActions ||
+                            showSendToKitchen ||
+                            showConfirmOrder) &&
                         showOfflineSaveAndPrint)
                       const SizedBox(width: 8),
                     if (showOfflineSaveAndPrint) ...[
