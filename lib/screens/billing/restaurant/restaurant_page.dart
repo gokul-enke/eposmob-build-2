@@ -852,6 +852,14 @@ class _RestaurantPageState extends State<RestaurantPage> {
             _isLoadingCounterConfirmOrder || _isLoadingCounterConfirmAndPrint;
         final disableCheckoutActions =
             _shouldDisableCounterCheckoutActions() || isCheckoutActionLoading;
+        final showCartPanelConfirmOrder =
+            widget.allowCounterBillingFromAttender &&
+                _isCounterBillingMode &&
+                hasInternet &&
+                !_shouldDisableCounterCheckoutActions();
+        final showFooterConfirmOrder = !showCartPanelConfirmOrder;
+        final hasFooterCheckoutAction =
+            !hasInternet || showConfirmAndPrintButton || showFooterConfirmOrder;
         final confirmOrderIsLoading = _isLoadingCounterConfirmOrder ||
             (!showConfirmAndPrintButton && _isLoadingCounterConfirmAndPrint);
         return SafeArea(
@@ -891,7 +899,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     onPressed: () => _orderPanelKey.currentState
                         ?.saveCurrentCartFromParent(),
                   ),
-                  const SizedBox(width: 12),
+                  if (hasFooterCheckoutAction) const SizedBox(width: 12),
                   if (hasInternet) ...[
                     if (showConfirmAndPrintButton) ...[
                       _buildCounterActionButton(
@@ -903,17 +911,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         onPressed: () => _orderPanelKey.currentState
                             ?.showCurrentCartCheckoutFromParent(),
                       ),
-                      const SizedBox(width: 12),
+                      if (showFooterConfirmOrder) const SizedBox(width: 12),
                     ],
-                    _buildCounterActionButton(
-                      text: 'Confirm Order',
-                      shortcutLabel: 'F2',
-                      color: const Color(0xFF08C63F),
-                      isDisabled: !canCheckout || disableCheckoutActions,
-                      isLoading: confirmOrderIsLoading,
-                      onPressed: () => _orderPanelKey.currentState
-                          ?.showCurrentCartCheckoutFromParent(),
-                    ),
+                    if (showFooterConfirmOrder)
+                      _buildCounterActionButton(
+                        text: 'Confirm Order',
+                        shortcutLabel: 'F2',
+                        color: const Color(0xFF08C63F),
+                        isDisabled: !canCheckout || disableCheckoutActions,
+                        isLoading: confirmOrderIsLoading,
+                        onPressed: () => _orderPanelKey.currentState
+                            ?.showCurrentCartCheckoutFromParent(),
+                      ),
                   ] else
                     _buildCounterActionButton(
                       text: 'Save & Print',

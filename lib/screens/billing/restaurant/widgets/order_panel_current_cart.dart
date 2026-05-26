@@ -360,6 +360,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         flex: showClearSaveActions ? 2 : 1,
                         child: _buildCurrentCartFooterButton(
                           label: 'Confirm Order',
+                          shortcutLabel: 'F2',
                           color: const Color(0xFF08C63F),
                           isDisabled: cartItems.isEmpty || _isLoadingConfirm,
                           isLoading: _isLoadingConfirm,
@@ -488,10 +489,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     required String label,
     required Color color,
     required VoidCallback onTap,
+    String? shortcutLabel,
     bool isDisabled = false,
     bool isLoading = false,
   }) {
     final disabled = isDisabled || isLoading;
+    final foregroundColor = Colors.white;
+    final shortcutBackgroundColor = Colors.white.withOpacity(0.18);
+    final shortcutBorderColor = Colors.white.withOpacity(0.35);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -534,11 +539,33 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                             FontWeightManager.semiBold,
                             widget.isCompact ? FontSize.s12 : FontSize.s13,
                             0.21,
-                            Colors.white,
+                            foregroundColor,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (shortcutLabel != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: shortcutBackgroundColor,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: shortcutBorderColor),
+                          ),
+                          child: Text(
+                            shortcutLabel,
+                            style: TextStyle(
+                              color: foregroundColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
           ),
