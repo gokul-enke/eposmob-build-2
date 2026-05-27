@@ -345,8 +345,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         child: _buildCurrentCartFooterButton(
                           label: 'Send To Kitchen',
                           color: const Color(0xFF059669),
-                          isDisabled:
-                              cartItems.isEmpty || widget.isLoadingPrint,
+                          isDisabled: cartItems.isEmpty ||
+                              widget.isLoadingPrint ||
+                              widget.tableId == null,
                           isLoading: widget.isLoadingPrint,
                           onTap: () => widget.onPrintOrder(),
                         ),
