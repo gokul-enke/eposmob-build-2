@@ -106,8 +106,27 @@ class MenuPanelState extends State<MenuPanel> {
     return parsed?.toStringAsFixed(2) ?? '0.00';
   }
 
+  bool _hasPositiveStock(GetProduct product) {
+    return product.stock?.any((stock) => (stock.quantity ?? 0) > 0) ?? false;
+  }
+
+  bool _isOutOfStock(GetProduct product, bool stockEnabled) {
+    if (!stockEnabled) return false;
+    final stock = product.stock;
+    return stock != null && stock.isNotEmpty && !_hasPositiveStock(product);
+  }
+
+  bool _isMenuItemAvailable(GetProduct product, bool stockEnabled) {
+    return !_isOutOfStock(product, stockEnabled);
+  }
+
   void _showProductInfoDialog(
       BuildContext context, GetProduct product, bool compact) {
+    final stockEnabled =
+        Provider.of<LocalProductProvider>(context, listen: false)
+            .isStockEnabled;
+    final isOutOfStock = _isOutOfStock(product, stockEnabled);
+
     // Resolve primary image
     String? primaryImage;
     if (product.attachment != null && product.attachment!.isNotEmpty) {
@@ -226,7 +245,7 @@ class MenuPanelState extends State<MenuPanel> {
                             clipBehavior: Clip.antiAlias,
                             child: primaryImage != null
                                 ? Image.network(
-                                    primaryImage!,
+                                    primaryImage,
                                     fit: BoxFit.cover,
                                     errorBuilder:
                                         (context, error, stackTrace) => Icon(
@@ -246,10 +265,7 @@ class MenuPanelState extends State<MenuPanel> {
                             runSpacing: 4,
                             children: [
                               ..._buildFoodTypeTags(product, compact),
-                              if (!(product.stock != null &&
-                                  product.stock!.isNotEmpty &&
-                                  product.stock!
-                                      .any((s) => (s.quantity ?? 0) > 0)))
+                              if (isOutOfStock)
                                 _buildCompactTag('No Stock',
                                     const Color(0xFF6B7280), compact),
                             ],
@@ -272,7 +288,8 @@ class MenuPanelState extends State<MenuPanel> {
                               (product.barcode ?? '').toString().isNotEmpty)
                             _buildKeyValueRow(
                                 'Barcode', product.barcode.toString()),
-                          if (product.stock != null &&
+                          if (stockEnabled &&
+                              product.stock != null &&
                               product.stock!.isNotEmpty)
                             _buildKeyValueRow(
                               'Stock Qty',
@@ -531,7 +548,13 @@ class MenuPanelState extends State<MenuPanel> {
       nextIndex = (_focusedMenuItemIndex - _gridColumnCount).clamp(0, maxIndex);
     } else if (event.logicalKey == LogicalKeyboardKey.enter ||
         event.logicalKey == LogicalKeyboardKey.space) {
-      widget.onItemAdd(items[_focusedMenuItemIndex.clamp(0, maxIndex)], 1);
+      final item = items[_focusedMenuItemIndex.clamp(0, maxIndex)];
+      final stockEnabled =
+          Provider.of<LocalProductProvider>(context, listen: false)
+              .isStockEnabled;
+      if (_isMenuItemAvailable(item, stockEnabled)) {
+        widget.onItemAdd(item, 1);
+      }
       return KeyEventResult.handled;
     }
 
@@ -1214,10 +1237,10 @@ class MenuPanelState extends State<MenuPanel> {
     required int titleLines,
     required bool showCategory,
   }) {
-    bool isAvailable = true;
-    if (item.stock != null && item.stock!.isNotEmpty) {
-      isAvailable = item.stock!.any((stock) => (stock.quantity ?? 0) > 0);
-    }
+    final stockEnabled =
+        Provider.of<LocalProductProvider>(context, listen: false)
+            .isStockEnabled;
+    final isAvailable = _isMenuItemAvailable(item, stockEnabled);
     final imageUrl = _resolvePrimaryImage(item);
     final denseMode = !showCategory;
 
@@ -1397,10 +1420,10 @@ class MenuPanelState extends State<MenuPanel> {
   }
 
   Widget _buildLegacyImageMenuItem(GetProduct item, BuildContext context) {
-    bool isAvailable = true;
-    if (item.stock != null && item.stock!.isNotEmpty) {
-      isAvailable = item.stock!.any((stock) => (stock.quantity ?? 0) > 0);
-    }
+    final stockEnabled =
+        Provider.of<LocalProductProvider>(context, listen: false)
+            .isStockEnabled;
+    final isAvailable = _isMenuItemAvailable(item, stockEnabled);
 
     final imageUrl = _resolvePrimaryImage(item);
     final appSettingsProvider =
@@ -1569,12 +1592,10 @@ class MenuPanelState extends State<MenuPanel> {
   }
 
   Widget _buildMenuItem(GetProduct item, bool compact, BuildContext context) {
-    // Check if product is available (has stock or stock management is disabled)
-    bool isAvailable = true;
-    if (item.stock != null && item.stock!.isNotEmpty) {
-      // Check if any stock has quantity > 0
-      isAvailable = item.stock!.any((stock) => (stock.quantity ?? 0) > 0);
-    }
+    final stockEnabled =
+        Provider.of<LocalProductProvider>(context, listen: false)
+            .isStockEnabled;
+    final isAvailable = _isMenuItemAvailable(item, stockEnabled);
     final extraDense = compact && _isConstrainedDesktop;
 
     return Container(
