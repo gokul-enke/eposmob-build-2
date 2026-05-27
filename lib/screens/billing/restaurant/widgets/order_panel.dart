@@ -3135,6 +3135,15 @@ class OrderPanelState extends State<OrderPanel> {
       if (_error!.toLowerCase().contains('no init status orders found') ||
           _error!.toLowerCase().contains('no orders found') ||
           _error!.toLowerCase().contains('no saved orders')) {
+        if (_usesCounterOrderTabs &&
+            _activeOrderPanelTab == OrderPanelTab.cart) {
+          return Consumer<LocalProductProvider>(
+            builder: (context, localProductProvider, _) {
+              final cartItems = localProductProvider.getCartItems();
+              return _buildCurrentCartView(cartItems);
+            },
+          );
+        }
         if (_showSavedOrdersView) {
           return _buildSavedOrdersList();
         }
