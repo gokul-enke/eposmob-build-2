@@ -103,7 +103,7 @@ class SideBarController extends GetxController {
   }
 
   var screens = const [
-    HomeNew(), //0
+    BillingPageResponsive(), //0
     DashboardScreen(), //1 - Using the role-based dashboard
     SalesScreen(), //2
     CartScreen(), //3
@@ -200,7 +200,7 @@ class SideBarController extends GetxController {
       allowCounterBillingFromAttender: true,
       defaultCounterBillingMode: true,
     ), // 89 Restaurant Billing Page
-    BillingPageResponsive(), // 90 Supermarket Billing Page
+    BillingPage(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
   ];
 }
