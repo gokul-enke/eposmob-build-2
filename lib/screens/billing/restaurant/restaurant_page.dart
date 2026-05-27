@@ -241,13 +241,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
         return;
       }
 
-      final disableCounterCheckoutActions =
+      final disableCounterConfirmActions =
           _shouldDisableCounterCheckoutActions();
       if (key == LogicalKeyboardKey.f1) {
         unawaited(orderPanelState?.clearCurrentCartFromParent() ??
             Future<void>.value());
       } else if (key == LogicalKeyboardKey.f2) {
-        if (disableCounterCheckoutActions) return;
+        if (disableCounterConfirmActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent();
         } else {
@@ -264,7 +264,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           _showDiningSelectionModal();
         }
       } else if (key == LogicalKeyboardKey.f5) {
-        if (disableCounterCheckoutActions) return;
+        if (disableCounterConfirmActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent(initialStep: 3);
         } else {
@@ -273,7 +273,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           );
         }
       } else if (key == LogicalKeyboardKey.f6) {
-        if (disableCounterCheckoutActions) return;
+        if (disableCounterConfirmActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent(initialStep: 3);
         } else {
@@ -282,19 +282,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
       } else if (key == LogicalKeyboardKey.f7) {
         _startNewCounterOrder();
       } else if (key == LogicalKeyboardKey.f8) {
-        if (disableCounterCheckoutActions) return;
         unawaited(orderPanelState?.saveCurrentCartFromParent() ??
             Future<void>.value());
       } else if (key == LogicalKeyboardKey.f9) {
-        if (disableCounterCheckoutActions) return;
         if (hasInternet) {
           unawaited(orderPanelState?.saveCurrentCartFromParent() ??
               Future<void>.value());
         } else {
+          if (disableCounterConfirmActions) return;
           orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
         }
       } else if (key == LogicalKeyboardKey.f10) {
-        if (disableCounterCheckoutActions) return;
+        if (disableCounterConfirmActions) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent(initialStep: 2);
         } else {
@@ -850,7 +849,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         final canCheckout = hasItems;
         final isCheckoutActionLoading =
             _isLoadingCounterConfirmOrder || _isLoadingCounterConfirmAndPrint;
-        final disableCheckoutActions =
+        final disableConfirmActions =
             _shouldDisableCounterCheckoutActions() || isCheckoutActionLoading;
         final showCartPanelConfirmOrder =
             widget.allowCounterBillingFromAttender &&
@@ -895,7 +894,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     text: 'Save Order',
                     shortcutLabel: 'F8',
                     color: const Color(0xFFF59E0B),
-                    isDisabled: !hasItems || disableCheckoutActions,
+                    isDisabled: !hasItems || isCheckoutActionLoading,
                     onPressed: () => _orderPanelKey.currentState
                         ?.saveCurrentCartFromParent(),
                   ),
@@ -906,7 +905,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         text: 'Confirm and Print',
                         shortcutLabel: 'F6',
                         color: const Color(0xFF5B8DEF),
-                        isDisabled: !canCheckout || disableCheckoutActions,
+                        isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: _isLoadingCounterConfirmAndPrint,
                         onPressed: () => _orderPanelKey.currentState
                             ?.showCurrentCartCheckoutFromParent(),
@@ -918,7 +917,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         text: 'Confirm Order',
                         shortcutLabel: 'F2',
                         color: const Color(0xFF08C63F),
-                        isDisabled: !canCheckout || disableCheckoutActions,
+                        isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: confirmOrderIsLoading,
                         onPressed: () => _orderPanelKey.currentState
                             ?.showCurrentCartCheckoutFromParent(),
@@ -928,7 +927,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       text: 'Save & Print',
                       shortcutLabel: 'F9',
                       color: const Color(0xFFF59E0B),
-                      isDisabled: !canCheckout || disableCheckoutActions,
+                      isDisabled: !canCheckout || disableConfirmActions,
                       isLoading: isCheckoutActionLoading,
                       onPressed: () => _orderPanelKey.currentState
                           ?.showOfflineSaveAndPrintCheckoutFromParent(),
