@@ -4,10 +4,6 @@ part of 'order_panel.dart';
 
 extension OrderPanelCurrentCartExtension on OrderPanelState {
   Widget _buildCurrentCartItem(LocalCartItem cartItem, int index) {
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-
     final productName = cartItem.product.productName ?? 'Unknown Product';
     final quantity = cartItem.quantity;
     final unitPrice = cartItem.price ?? 0.0;
@@ -40,76 +36,80 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Item name and price
+          // Item name, editable unit price, and line total
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  productName,
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s13 : FontSize.s15,
-                      0.21,
-                      const Color(0xFF1E293B)),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        productName,
+                        style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            widget.isCompact ? FontSize.s13 : FontSize.s15,
+                            0.21,
+                            const Color(0xFF1E293B)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () =>
+                            _showEditItemPriceDialog(cartItem, isLocal: true),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            unitPrice.toStringAsFixed(2),
+                            style: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s11,
+                              0.21,
+                              const Color(0xFF2563EB),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF059669).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '$currency ${totalPrice.toStringAsFixed(2)}',
-                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s12,
-                      0.21, const Color(0xFF059669)),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Unit price and quantity info
-          Row(
-            children: [
-              // Editable Price Trigger for Local Items (Blue Box style)
               Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () =>
                       _showEditItemPriceDialog(cartItem, isLocal: true),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(8),
                   child: Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(4),
-                      color: Colors.blue.withOpacity(0.05),
+                      color: const Color(0xFF059669).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '$currency ${unitPrice.toStringAsFixed(2)}',
+                      totalPrice.toStringAsFixed(2),
                       style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          widget.isCompact ? FontSize.s11 : FontSize.s12,
-                          0.21,
-                          const Color(0xFF2563EB)),
+                        FontWeightManager.bold,
+                        widget.isCompact ? FontSize.s13 : FontSize.s14,
+                        0.21,
+                        const Color(0xFF059669),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Text(
-                ' × ${quantity.toStringAsFixed(0)}',
-                style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    widget.isCompact ? FontSize.s11 : FontSize.s12,
-                    0.21,
-                    const Color(0xFF64748B)),
               ),
             ],
           ),
@@ -264,14 +264,19 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
     final showClearSaveActions = !_usesCounterOrderTabs;
-    final hasKitchenOrderContext = widget.tableId != null ||
-        (widget.preselectedDeliveryMethodId?.isNotEmpty ?? false);
+    final hasSelectedTable = widget.tableId?.isNotEmpty ?? false;
+    final hasKitchenOrderContext = hasSelectedTable ||
+        (_usesCounterOrderTabs && _isSelectedDeliveryMethodDineIn);
     final showSendToKitchen = hasKitchenOrderContext && hasInternet;
+    final showConfirmOrder =
+        _usesCounterOrderTabs && hasInternet && !hasKitchenOrderContext;
     final showOfflineSaveAndPrint = !hasInternet && !_usesCounterOrderTabs;
     final hasOfflineOrderContext = hasKitchenOrderContext ||
         (widget.allowCounterBilling && widget.isCounterBillingMode);
-    final showFooterButtons =
-        showClearSaveActions || showSendToKitchen || showOfflineSaveAndPrint;
+    final showFooterButtons = showClearSaveActions ||
+        showSendToKitchen ||
+        showConfirmOrder ||
+        showOfflineSaveAndPrint;
 
     return SafeArea(
       top: false,
@@ -306,60 +311,9 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
             children: [
               _buildCurrentCartSummaryCard(cartItems),
               const SizedBox(height: 12),
-              // Top: Comment button (full width)
-              SizedBox(
-                width: double.infinity,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _showCommentDialog(),
-                    borderRadius: BorderRadius.circular(12),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      height: widget.isCompact ? 44 : 48,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _orderComment.isNotEmpty
-                                  ? Icons.check_circle
-                                  : Icons.comment,
-                              color: _orderComment.isNotEmpty
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFF64748B),
-                              size: widget.isCompact ? 14 : 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Comment',
-                              style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  widget.isCompact
-                                      ? FontSize.s13
-                                      : FontSize.s14,
-                                  0.21,
-                                  const Color(0xFF64748B)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (showFooterButtons) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
+              Row(
+                children: [
+                  if (showFooterButtons) ...[
                     if (showClearSaveActions) ...[
                       Expanded(
                         child: _buildCurrentCartFooterButton(
@@ -399,6 +353,24 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                       ),
                     ],
                     if ((showClearSaveActions || showSendToKitchen) &&
+                        showConfirmOrder)
+                      const SizedBox(width: 8),
+                    if (showConfirmOrder) ...[
+                      Expanded(
+                        flex: showClearSaveActions ? 2 : 1,
+                        child: _buildCurrentCartFooterButton(
+                          label: 'Confirm Order',
+                          shortcutLabel: 'F2',
+                          color: const Color(0xFF08C63F),
+                          isDisabled: cartItems.isEmpty || _isLoadingConfirm,
+                          isLoading: _isLoadingConfirm,
+                          onTap: () => showCurrentCartCheckoutFromParent(),
+                        ),
+                      ),
+                    ],
+                    if ((showClearSaveActions ||
+                            showSendToKitchen ||
+                            showConfirmOrder) &&
                         showOfflineSaveAndPrint)
                       const SizedBox(width: 8),
                     if (showOfflineSaveAndPrint) ...[
@@ -416,10 +388,44 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         ),
                       ),
                     ],
-                  ],
-                ),
-              ],
+                    const SizedBox(width: 12),
+                  ] else
+                    const Spacer(),
+                  _buildCurrentCartCommentIconButton(),
+                ],
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentCartCommentIconButton() {
+    final hasComment = _orderComment.trim().isNotEmpty;
+    final color =
+        hasComment ? const Color(0xFF059669) : const Color(0xFF64748B);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showCommentDialog(),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: widget.isCompact ? 44 : 48,
+          height: widget.isCompact ? 44 : 48,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasComment ? color : Colors.grey.shade300,
+              width: 1.2,
+            ),
+          ),
+          child: Icon(
+            Icons.chat_bubble_outline,
+            size: widget.isCompact ? 18 : 20,
+            color: color,
           ),
         ),
       ),
@@ -483,10 +489,14 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     required String label,
     required Color color,
     required VoidCallback onTap,
+    String? shortcutLabel,
     bool isDisabled = false,
     bool isLoading = false,
   }) {
     final disabled = isDisabled || isLoading;
+    final foregroundColor = Colors.white;
+    final shortcutBackgroundColor = Colors.white.withOpacity(0.18);
+    final shortcutBorderColor = Colors.white.withOpacity(0.35);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -529,11 +539,33 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                             FontWeightManager.semiBold,
                             widget.isCompact ? FontSize.s12 : FontSize.s13,
                             0.21,
-                            Colors.white,
+                            foregroundColor,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (shortcutLabel != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: shortcutBackgroundColor,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: shortcutBorderColor),
+                          ),
+                          child: Text(
+                            shortcutLabel,
+                            style: TextStyle(
+                              color: foregroundColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
           ),
@@ -804,7 +836,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     final int totalItems = order.items.length;
     final tableName = _localDraftTableName(order);
     final contextLabel = tableName != null
-        ? 'Dining: $tableName'
+        ? 'Dine In: $tableName'
         : ((order.deliveryMethod?.isNotEmpty ?? false)
             ? 'Delivery: ${order.deliveryMethod}'
             : 'No context');

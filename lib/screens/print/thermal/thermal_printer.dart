@@ -1,4 +1,4 @@
-﻿/// Thermal Printing Module
+/// Thermal Printing Module
 ///
 /// This module provides thermal receipt printing functionality with support for:
 /// - Text-based printing (standard receipts)
@@ -134,7 +134,8 @@ class ThermalPrinter {
 
     final displayConfig = billDocumentConfig.displayConfiguration?.options;
     _printerUtils.debugPrintTemplateSettings(displayConfig);
-    final normalizedLanguage = (billDocumentConfig.language ?? '').toLowerCase();
+    final normalizedLanguage =
+        (billDocumentConfig.language ?? '').toLowerCase();
     final bool isArabicLanguage = normalizedLanguage == 'ar';
 
     // Template selection
@@ -398,7 +399,7 @@ class ThermalPrinter {
         showScaffold(context: context, message: "Print job sent successfully");
         Navigator.pop(context);
         SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        sideBarController.index.value = 90;
       }
     } catch (e) {
       debugPrint("ERROR printing receipt: ${e.toString()}");
@@ -474,11 +475,11 @@ class ThermalPrinter {
           "Language: ${isEnglish ? 'English' : 'Arabic'} (Source: ${configLanguage != null ? 'Config' : 'App Locale'}) ($textDirection)");
 
       // Setup print parameters
-        final double printWidth = selectedPaperSize == '58mm'
+      final double printWidth = selectedPaperSize == '58mm'
           ? 384.0
           : selectedPaperSize == '112mm'
-            ? 832.0
-            : 576.0;
+              ? 832.0
+              : 576.0;
       // Dynamic font size: larger for 80mm to maintain proportional appearance
       final double baseFontSize = selectedPaperSize == '80mm' ? 28.0 : 20.0;
 
@@ -1514,7 +1515,7 @@ class ThermalPrinter {
         showScaffold(context: context, message: "Print job sent successfully");
         Navigator.pop(context);
         SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        sideBarController.index.value = 90;
       }
     } catch (e, stacktrace) {
       debugPrint("ERROR in Image-Based Print: $e");
@@ -1553,13 +1554,14 @@ class ThermalPrinter {
       final uri = Uri.parse(fullUrl);
       final prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
-      
-      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
-      
+
       final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final image = img.decodeImage(response.bodyBytes);
@@ -1600,13 +1602,14 @@ class ThermalPrinter {
       final uri = Uri.parse(fullUrl);
       final prefs = await SharedPreferences.getInstance();
       final int? activeStoreId = prefs.getInt('active_store_id');
-      
-      final Map<String, String> queryParams = Map<String, String>.from(uri.queryParameters);
+
+      final Map<String, String> queryParams =
+          Map<String, String>.from(uri.queryParameters);
       if (activeStoreId != null) {
         queryParams['store_id'] = activeStoreId.toString();
       }
       final urlWithStore = uri.replace(queryParameters: queryParams);
-      
+
       final response = await http.get(urlWithStore);
       if (response.statusCode == 200) {
         final Uint8List bytes = response.bodyBytes;

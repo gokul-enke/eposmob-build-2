@@ -57,7 +57,8 @@ Future<bool> showEditStockDialog({
   Future<void> loadRacks(StateSetter setDialogState) async {
     final purchaseProvider =
         Provider.of<PurchaseProvider>(parentContext, listen: false);
-    final accessToken = Provider.of<AuthModel>(parentContext, listen: false).token;
+    final accessToken =
+        Provider.of<AuthModel>(parentContext, listen: false).token;
 
     if (accessToken != null && accessToken.isNotEmpty) {
       await purchaseProvider.listMasterDataValues(accessToken, 'RACKS');
@@ -268,10 +269,10 @@ Future<bool> showEditStockDialog({
                               debugPrint(
                                   '🛠️ [EditStockDialog] Update tapped for stockId=$stockId');
 
-                              final accessToken =
-                                  Provider.of<AuthModel>(parentContext,
-                                          listen: false)
-                                      .token;
+                              final accessToken = Provider.of<AuthModel>(
+                                      parentContext,
+                                      listen: false)
+                                  .token;
                               if (accessToken == null || accessToken.isEmpty) {
                                 showScaffoldError(
                                   context: parentContext,
@@ -288,16 +289,16 @@ Future<bool> showEditStockDialog({
                                       selectedRackId!.trim().isNotEmpty)
                                   ? selectedRackId!.trim()
                                   : rackController.text.trim();
-                                final quantityInput =
+                              final quantityInput =
                                   quantityController.text.trim();
-                                final initialQuantityNormalized =
+                              final initialQuantityNormalized =
                                   initialQuantity.trim();
-                                final String? payloadQuantity =
+                              final String? payloadQuantity =
                                   (quantityInput.isEmpty ||
-                                      quantityInput ==
-                                        initialQuantityNormalized)
-                                    ? null
-                                    : quantityInput;
+                                          quantityInput ==
+                                              initialQuantityNormalized)
+                                      ? null
+                                      : quantityInput;
 
                               debugPrint(
                                   '🛠️ [EditStockDialog] Payload summary: retail=${retailPriceController.text.trim()}, mrp=${mrpController.text.trim()}, purchase=${purchasePriceController.text.trim()}, qtyIncluded=${payloadQuantity != null}, qtyValue=${payloadQuantity ?? "<omitted>"}, rack=$payloadRack');
@@ -327,46 +328,41 @@ Future<bool> showEditStockDialog({
                                 );
 
                                 debugPrint(
-                                    '🔄 [EditStockDialog] Stock update succeeded. Refreshing products with refresh=true...');
-                                await localProductProvider.fetchProductsFromAPI(
-                                  refresh: true,
+                                    '🔄 [EditStockDialog] Stock update succeeded. Updating local product stock...');
+                                final refreshedProduct = localProductProvider
+                                    .updateStockDetailsLocallyByStockId(
+                                  stockId: stockId,
+                                  retailPrice:
+                                      retailPriceController.text.trim(),
+                                  mrp: mrpController.text.trim(),
+                                  purchasePrice:
+                                      purchasePriceController.text.trim(),
+                                  quantity: quantityController.text.trim(),
+                                  rack: payloadRack,
                                 );
                                 debugPrint(
-                                    '✅ [EditStockDialog] Product refresh completed after stock update for stockId=$stockId');
+                                    '✅ [EditStockDialog] Local product stock update completed for stockId=$stockId');
 
-                                GetProduct? refreshedProduct;
                                 Stock? refreshedStock;
 
-                                for (final product
-                                    in localProductProvider.products) {
-                                  final stocks = product.stock;
-                                  if (stocks == null || stocks.isEmpty) {
-                                    continue;
-                                  }
-                                  for (final stock in stocks) {
-                                    if (stock.id == stockId) {
-                                      refreshedProduct = product;
-                                      refreshedStock = stock;
-                                      break;
-                                    }
-                                  }
-                                  if (refreshedStock != null) {
+                                for (final stock in refreshedProduct?.stock ??
+                                    const <Stock>[]) {
+                                  if (stock.id == stockId) {
+                                    refreshedStock = stock;
                                     break;
                                   }
                                 }
 
-                                final double reconciledPrice =
-                                    double.tryParse(
-                                          refreshedStock?.price ??
-                                              retailPriceController.text.trim(),
-                                        ) ??
-                                        0.0;
-                                final double reconciledMrp =
-                                    double.tryParse(
-                                          refreshedStock?.mrp ??
-                                              mrpController.text.trim(),
-                                        ) ??
-                                        0.0;
+                                final double reconciledPrice = double.tryParse(
+                                      refreshedStock?.price ??
+                                          retailPriceController.text.trim(),
+                                    ) ??
+                                    0.0;
+                                final double reconciledMrp = double.tryParse(
+                                      refreshedStock?.mrp ??
+                                          mrpController.text.trim(),
+                                    ) ??
+                                    0.0;
 
                                 debugPrint(
                                     '🧩 [EditStockDialog] Reconcile source: productFound=${refreshedProduct != null}, stockFound=${refreshedStock != null}, price=$reconciledPrice, mrp=$reconciledMrp');
@@ -401,10 +397,12 @@ Future<bool> showEditStockDialog({
                                   Navigator.pop(dialogContext, true);
                                 }
 
-                                showScaffold(
-                                  context: parentContext,
-                                  message: 'Stock updated successfully',
-                                );
+                                if (parentContext.mounted) {
+                                  showScaffold(
+                                    context: parentContext,
+                                    message: 'Stock updated successfully',
+                                  );
+                                }
                                 debugPrint(
                                     '🏁 [EditStockDialog] Stock update flow completed for stockId=$stockId');
                                 return;

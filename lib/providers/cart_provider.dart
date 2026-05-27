@@ -880,6 +880,7 @@ class CartProvider with ChangeNotifier {
     bool? toCustomerCredit,
     String? address,
     double? deliveryCharge,
+    int? quotationId,
   }) async {
     debugPrint("📤 ADD TO ORDER API - Starting request");
     debugPrint("📦 Order items count: ${items?.length ?? 0}");
@@ -952,6 +953,7 @@ class CartProvider with ChangeNotifier {
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
         if (address != null) "address": address,
+        if (quotationId != null) "quotation_id": quotationId,
         "delivery_charge": deliveryCharge ?? 0.0,
       };
     } else {
@@ -982,6 +984,7 @@ class CartProvider with ChangeNotifier {
         if (discountAmount != null) "discount_amount": discountAmount,
         if (toCustomerCredit != null) 'to_customer_credit': toCustomerCredit,
         if (address != null) "address": address,
+        if (quotationId != null) "quotation_id": quotationId,
         "delivery_charge": deliveryCharge ?? 0.0,
       };
     }
@@ -1202,6 +1205,7 @@ class CartProvider with ChangeNotifier {
     String? comment,
     String? deliveryMethodId,
     String? carNumber,
+    int? quotationId,
   }) async {
     debugPrint("📤 CONFIRM ORDER API - Starting request");
     DateTime now = DateTime.now();
@@ -1232,6 +1236,7 @@ class CartProvider with ChangeNotifier {
         if (comment != null) "comment": comment,
         if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
         if (carNumber != null) "car_number": carNumber,
+        if (quotationId != null) "quotation_id": quotationId,
       };
     } else {
       // Fallback to single payment method format
@@ -1248,6 +1253,7 @@ class CartProvider with ChangeNotifier {
         if (comment != null) "comment": comment,
         if (deliveryMethodId != null) "delivery_method_id": deliveryMethodId,
         if (carNumber != null) "car_number": carNumber,
+        if (quotationId != null) "quotation_id": quotationId,
       };
     }
 

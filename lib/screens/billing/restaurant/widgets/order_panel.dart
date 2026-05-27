@@ -68,6 +68,10 @@ class OrderPanel extends StatefulWidget {
   final bool isCounterBillingMode;
   final ValueChanged<SavedOrder>? onLocalDraftLoaded;
   final VoidCallback? onLocalDraftSaved;
+  final void Function({
+    required bool isLoading,
+    required bool printBill,
+  })? onCheckoutActionLoadingChanged;
 
   const OrderPanel({
     super.key, // Add key parameter
@@ -88,6 +92,7 @@ class OrderPanel extends StatefulWidget {
     this.isCounterBillingMode = false,
     this.onLocalDraftLoaded,
     this.onLocalDraftSaved,
+    this.onCheckoutActionLoadingChanged,
   });
 
   @override
@@ -123,6 +128,38 @@ class OrderPanelState extends State<OrderPanel> {
   bool get _usesCounterOrderTabs =>
       widget.allowCounterBilling && widget.isCounterBillingMode;
 
+  bool get _isSelectedDeliveryMethodDineIn {
+    final selectedId = widget.preselectedDeliveryMethodId?.trim();
+    final selectedName = widget.preselectedDeliveryMethodName?.trim();
+    if ((selectedId == null || selectedId.isEmpty) &&
+        (selectedName == null || selectedName.isEmpty)) {
+      return false;
+    }
+
+    final deliveryMethods =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false)
+            .deliveryMethods;
+
+    DeliveryMethod? selectedMethod;
+    for (final method in deliveryMethods) {
+      if (selectedId != null &&
+          selectedId.isNotEmpty &&
+          method.id == selectedId) {
+        selectedMethod = method;
+        break;
+      }
+    }
+
+    final code = selectedMethod?.code ?? '';
+    final name = selectedMethod?.name ?? selectedName ?? '';
+    return _normalizesAsDineIn(code) || _normalizesAsDineIn(name);
+  }
+
+  bool _normalizesAsDineIn(String value) {
+    final normalized = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    return normalized == 'dinein';
+  }
+
   bool get isViewingCounterListTab =>
       _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
 
@@ -148,7 +185,7 @@ class OrderPanelState extends State<OrderPanel> {
   double _toCustomerCreditAmount = 0.0; // Store the actual credit amount
   String _orderComment = "";
   bool _hasOpenedPaymentModalOnce = false;
-  String _deliveryMethod = "Store Takeaway";
+  String _deliveryMethod = "";
   String _deliveryMethodId = "";
   String _deliveryAddress = "";
   String _carNumber = "";
@@ -321,7 +358,7 @@ class OrderPanelState extends State<OrderPanel> {
         // Cleared: reset to default
         setState(() {
           _deliveryMethodId = '';
-          _deliveryMethod = 'Store Takeaway';
+          _deliveryMethod = '';
         });
       }
     }
@@ -339,7 +376,7 @@ class OrderPanelState extends State<OrderPanel> {
     setState(() {
       if (widget.tableId != null && widget.tableId!.isNotEmpty) {
         _deliveryMethodId = '';
-        _deliveryMethod = 'Store Takeaway';
+        _deliveryMethod = '';
         if (_selectedOrder is Map) {
           _selectedOrder['table_id'] = widget.tableId;
           _selectedOrder['delivery_method_id'] = null;
@@ -624,6 +661,202 @@ class OrderPanelState extends State<OrderPanel> {
       showFullPanelLoader: false,
       ignoreContextFilter: shouldLoadAll,
     );
+  }
+
+  String? _normalizeOrderLookupValue(dynamic value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') return null;
+    return text;
+  }
+
+  bool _orderMatchesLookup(
+    dynamic order,
+    String? orderId,
+    String? orderNumber,
+  ) {
+    if (order is! Map) return false;
+
+    if (orderId != null) {
+      final candidateIds = <dynamic>[
+        order['order_id'],
+        order['id'],
+      ];
+      final nestedOrder = order['order'];
+      if (nestedOrder is Map) {
+        candidateIds.add(nestedOrder['order_id']);
+        candidateIds.add(nestedOrder['id']);
+      }
+
+      for (final id in candidateIds) {
+        if (_normalizeOrderLookupValue(id) == orderId) return true;
+      }
+    }
+
+    if (orderNumber != null) {
+      final candidateNumbers = <dynamic>[
+        order['order_number'],
+        order['display_order_id'],
+      ];
+      final nestedOrder = order['order'];
+      if (nestedOrder is Map) {
+        candidateNumbers.add(nestedOrder['order_number']);
+        candidateNumbers.add(nestedOrder['display_order_id']);
+      }
+
+      for (final number in candidateNumbers) {
+        if (_normalizeOrderLookupValue(number) == orderNumber) return true;
+      }
+    }
+
+    return false;
+  }
+
+  dynamic _findSavedOrderByLookup(String? orderId, String? orderNumber) {
+    for (final order in _savedOrders) {
+      if (_orderMatchesLookup(order, orderId, orderNumber)) {
+        return order;
+      }
+    }
+    return null;
+  }
+
+  bool _orderHasEditableShape(dynamic order) {
+    if (order is! Map) return false;
+    if (order['cart_items'] is List) return true;
+    if (order['order_items'] is List) return true;
+    if (order['items'] is List) return true;
+
+    final cartItems = order['cart_items'];
+    if (cartItems is Map && cartItems['cart_items'] is List) return true;
+
+    final cart = order['cart'];
+    if (cart is Map && (cart['cart_items'] is List || cart['items'] is List)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<dynamic> _fetchOrderDetailsForLookup(
+    String? orderId,
+    String? orderNumber,
+  ) async {
+    final lookupOrderId = orderId ?? orderNumber;
+    if (lookupOrderId == null) return null;
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      final response = await cartProvider.getListOrderDetails(
+        accessToken: authModel.token ?? '',
+        orderId: lookupOrderId,
+      );
+      if (!mounted) return null;
+
+      if ((response['status'] as String?)?.toLowerCase() != 'success') {
+        debugPrint(
+          '[Counter KOT] Order detail lookup failed: ${response['message']}',
+        );
+        return null;
+      }
+
+      final orderDetails = response['order_details'];
+      if (orderDetails is Map) {
+        setState(() {
+          _savedOrders = [
+            orderDetails,
+            ..._savedOrders.where(
+              (order) => !_orderMatchesLookup(order, orderId, orderNumber),
+            ),
+          ];
+        });
+        return orderDetails;
+      }
+    } catch (e) {
+      debugPrint('[Counter KOT] Order detail lookup error: $e');
+    }
+
+    return null;
+  }
+
+  Future<bool> openCreatedOrderForEditing({
+    String? orderId,
+    String? orderNumber,
+    dynamic seedOrder,
+  }) async {
+    final seedMap = seedOrder is Map ? seedOrder : null;
+    final targetOrderId = _normalizeOrderLookupValue(orderId) ??
+        _normalizeOrderLookupValue(seedMap?['order_id']) ??
+        _normalizeOrderLookupValue(seedMap?['id']);
+    final targetOrderNumber = _normalizeOrderLookupValue(orderNumber) ??
+        _normalizeOrderLookupValue(seedMap?['order_number']) ??
+        _normalizeOrderLookupValue(seedMap?['display_order_id']);
+
+    if (targetOrderId == null && targetOrderNumber == null) {
+      debugPrint(
+        '[Counter KOT] Cannot open created order: missing order id/number',
+      );
+      return false;
+    }
+
+    debugPrint(
+      '[Counter KOT] Opening created order id=$targetOrderId number=$targetOrderNumber',
+    );
+
+    if (!mounted) return false;
+    setState(() {
+      _activeOrderPanelTab = OrderPanelTab.ongoing;
+      _focusedOrderPanelTabIndex = 2;
+      _hasOpenedOngoingOrdersTab = true;
+      _showSavedOrdersView = true;
+      _forceCounterCartView = false;
+    });
+
+    dynamic orderToOpen =
+        _findSavedOrderByLookup(targetOrderId, targetOrderNumber);
+    const retryDelays = <Duration>[
+      Duration.zero,
+      Duration(milliseconds: 350),
+      Duration(milliseconds: 900),
+    ];
+
+    for (var attempt = 0; attempt < retryDelays.length; attempt++) {
+      if (orderToOpen != null) break;
+      if (attempt > 0) {
+        await Future.delayed(retryDelays[attempt]);
+      }
+      if (!mounted) return false;
+
+      await _fetchSavedOrders(
+        showFullPanelLoader: false,
+        ignoreContextFilter: _usesCounterOrderTabs,
+      );
+      if (!mounted) return false;
+
+      orderToOpen = _findSavedOrderByLookup(
+        targetOrderId,
+        targetOrderNumber,
+      );
+    }
+
+    orderToOpen ??= await _fetchOrderDetailsForLookup(
+      targetOrderId,
+      targetOrderNumber,
+    );
+    if (orderToOpen == null && _orderHasEditableShape(seedOrder)) {
+      orderToOpen = seedOrder;
+    }
+
+    if (orderToOpen == null) {
+      debugPrint(
+        '[Counter KOT] Created order was not found in ongoing orders',
+      );
+      return false;
+    }
+
+    await _fetchOrderDetails(orderToOpen);
+    return true;
   }
 
   // Public method to refresh saved orders silently (no loading spinner)
@@ -942,6 +1175,240 @@ class OrderPanelState extends State<OrderPanel> {
     return null;
   }
 
+  Map<dynamic, dynamic>? _asOrderMap(dynamic value) {
+    return value is Map ? value : null;
+  }
+
+  dynamic _readOrderPath(dynamic source, List<String> path) {
+    dynamic current = source;
+    for (final key in path) {
+      final map = _asOrderMap(current);
+      if (map == null) return null;
+      current = map[key];
+    }
+    return current;
+  }
+
+  String? _cleanOrderText(dynamic value) {
+    final text = _firstNonEmptyString([value]);
+    if (text == null) return null;
+    if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+      return text.substring(1, text.length - 1).trim();
+    }
+    return text;
+  }
+
+  int? _parseOrderInt(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(_cleanOrderText(value) ?? '');
+  }
+
+  String? _extractOrderPropValue(dynamic order, String propCode) {
+    final normalizedCode = propCode.trim().toUpperCase();
+    final propsMap = _readOrderPath(order, ['orderProps']);
+    if (propsMap is Map) {
+      for (final entry in propsMap.entries) {
+        if (entry.key.toString().trim().toUpperCase() == normalizedCode) {
+          return _cleanOrderText(entry.value);
+        }
+      }
+    }
+
+    final propsList = _readOrderPath(order, ['order_props']);
+    if (propsList is List) {
+      for (final prop in propsList) {
+        final propMap = _asOrderMap(prop);
+        if (propMap == null) continue;
+        final code = _cleanOrderText(propMap['props_code'] ?? propMap['code'])
+            ?.toUpperCase();
+        if (code != normalizedCode) continue;
+        return _cleanOrderText(propMap['props_value'] ?? propMap['value']);
+      }
+    }
+
+    return null;
+  }
+
+  int? _extractOrderCustomerId(dynamic order) {
+    return _parseOrderInt(_firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'customer_id']),
+      _readOrderPath(order, ['customer', 'customer_id']),
+      _readOrderPath(order, ['customer', 'id']),
+      _readOrderPath(order, ['cart', 'customer_id']),
+      _readOrderPath(order, ['order', 'customer_details', 'customer_id']),
+      _readOrderPath(order, ['order', 'customer_id']),
+      _readOrderPath(order, ['customer_id']),
+    ]));
+  }
+
+  String? _extractOrderCustomerPhone(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'phone']),
+      _readOrderPath(order, ['customer', 'phone']),
+      _readOrderPath(order, ['user', 'phone']),
+      _readOrderPath(order, ['cart', 'customer_phone']),
+      _readOrderPath(order, ['order', 'customer_details', 'phone']),
+      _readOrderPath(order, ['order', 'customer_phone']),
+      _readOrderPath(order, ['customer_phone']),
+      _readOrderPath(order, ['phone']),
+    ]);
+  }
+
+  String? _extractOrderCustomerName(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'name']),
+      _readOrderPath(order, ['customer', 'name']),
+      _readOrderPath(order, ['user', 'name']),
+      _readOrderPath(order, ['order', 'customer_details', 'name']),
+      _readOrderPath(order, ['order', 'customer_name']),
+      _readOrderPath(order, ['customer_name']),
+      _readOrderPath(order, ['name']),
+    ]);
+  }
+
+  String? _extractOrderCustomerType(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'customer_type']),
+      _readOrderPath(order, ['customer', 'customer_type']),
+      _readOrderPath(order, ['order', 'customer_details', 'customer_type']),
+      _readOrderPath(order, ['customer_type']),
+    ]);
+  }
+
+  String? _extractOrderCustomerAlternatePhone(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['customer_details', 'alternate_phone']),
+      _readOrderPath(order, ['customer_details', 'alt_phone']),
+      _readOrderPath(order, ['customer', 'alternate_phone']),
+      _readOrderPath(order, ['customer', 'alt_phone']),
+      _readOrderPath(order, ['order', 'customer_details', 'alternate_phone']),
+      _readOrderPath(order, ['alternate_phone']),
+      _readOrderPath(order, ['alt_phone']),
+    ]);
+  }
+
+  String? _extractOrderCustomerAddress(dynamic order) {
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['address']),
+      _readOrderPath(order, ['delivery_address']),
+      _extractOrderPropValue(order, 'CUSTOMER_ADDRESS'),
+      _extractOrderPropValue(order, 'DELIVERY_ADDRESS'),
+    ]);
+  }
+
+  CustomerListModelData? _findOrderCustomerInCache({
+    required int? customerId,
+    required String? customerPhone,
+  }) {
+    for (final customer in _customers) {
+      if (customerId != null && customer.id == customerId) {
+        return customer;
+      }
+    }
+    for (final customer in _customers) {
+      if ((customerPhone?.isNotEmpty ?? false) &&
+          customer.phone == customerPhone) {
+        return customer;
+      }
+    }
+    return null;
+  }
+
+  CustomerListModelData _buildOrderCustomerFallback(dynamic order) {
+    final kyc = <Kyc>[];
+    final vatNumber = _firstNonEmptyString([
+      _readOrderPath(order, ['kyc_info', 'vat_number']),
+      _readOrderPath(order, ['customer', 'vat_number']),
+      _readOrderPath(order, ['vat_number']),
+    ]);
+    final crNumber = _firstNonEmptyString([
+      _readOrderPath(order, ['kyc_info', 'cr_number']),
+      _readOrderPath(order, ['customer', 'cr_number']),
+      _readOrderPath(order, ['cr_number']),
+    ]);
+    if (vatNumber != null) {
+      kyc.add(Kyc(key: 'VAT NUMBER', value: vatNumber));
+    }
+    if (crNumber != null) {
+      kyc.add(Kyc(key: 'CR NUMBER', value: crNumber));
+    }
+
+    return CustomerListModelData(
+      id: _extractOrderCustomerId(order),
+      name: _extractOrderCustomerName(order),
+      phone: _extractOrderCustomerPhone(order),
+      altPhone: _extractOrderCustomerAlternatePhone(order),
+      customerType: _extractOrderCustomerType(order),
+      address: _extractOrderCustomerAddress(order),
+      kyc: kyc.isNotEmpty ? kyc : null,
+    );
+  }
+
+  String? _extractOrderDeliveryMethodId(dynamic order) {
+    final deliveryMethodMap = _asOrderMap(_readOrderPath(order, [
+      'delivery_method',
+    ]));
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['delivery_method_id']),
+      deliveryMethodMap?['id'],
+      deliveryMethodMap?['delivery_method_id'],
+      _readOrderPath(order, ['order', 'delivery_method_id']),
+      _readOrderPath(order, ['cart', 'delivery_method_id']),
+    ]);
+  }
+
+  String? _extractOrderDeliveryMethodName(dynamic order) {
+    final deliveryMethodMap = _asOrderMap(_readOrderPath(order, [
+      'delivery_method',
+    ]));
+    final directDeliveryMethod = deliveryMethodMap == null
+        ? _readOrderPath(order, ['delivery_method'])
+        : null;
+    return _firstNonEmptyString([
+      _readOrderPath(order, ['delivery_method_name']),
+      deliveryMethodMap?['name'],
+      deliveryMethodMap?['label'],
+      directDeliveryMethod,
+      _readOrderPath(order, ['order', 'delivery_method_name']),
+      _readOrderPath(order, ['cart', 'delivery_method_name']),
+    ]);
+  }
+
+  DeliveryMethod? _findDeliveryMethod({
+    String? id,
+    String? name,
+  }) {
+    final normalizedId = id?.trim();
+    final normalizedName = name?.trim().toLowerCase();
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if (normalizedId != null &&
+          normalizedId.isNotEmpty &&
+          method.id == normalizedId) {
+        return method;
+      }
+      if (normalizedName != null &&
+          normalizedName.isNotEmpty &&
+          (method.name.trim().toLowerCase() == normalizedName ||
+              method.code?.trim().toLowerCase() == normalizedName)) {
+        return method;
+      }
+    }
+    return null;
+  }
+
+  void _writeNormalizedOrderField(
+    dynamic order,
+    String key,
+    dynamic value,
+  ) {
+    final map = _asOrderMap(order);
+    if (map == null || value == null) return;
+    if (_cleanOrderText(map[key]) != null) return;
+    map[key] = value;
+  }
+
   String? _resolveCustomerPhone({
     dynamic order,
     OrderDetailsModelData? orderDetails,
@@ -950,6 +1417,7 @@ class OrderPanelState extends State<OrderPanel> {
       orderDetails?.customerDetails?.phone,
       _selectedCustomer?.phone,
       _selectedCustomerPhone,
+      order != null ? _extractOrderCustomerPhone(order) : null,
       order is Map ? order['customer_phone'] : null,
       order is Map ? order['phone'] : null,
     ]);
@@ -962,6 +1430,7 @@ class OrderPanelState extends State<OrderPanel> {
     return _firstNonEmptyString([
       orderDetails?.customerDetails?.name,
       _selectedCustomer?.name,
+      order != null ? _extractOrderCustomerName(order) : null,
       order is Map ? order['customer_name'] : null,
       order is Map ? order['name'] : null,
     ]);
@@ -1657,7 +2126,7 @@ class OrderPanelState extends State<OrderPanel> {
       _hasOpenedPaymentModalOnce = false;
 
       // Reset delivery state
-      _deliveryMethod = "Store Takeaway";
+      _deliveryMethod = "";
       _deliveryMethodId = "";
       _deliveryAddress = "";
       _carNumber = "";
@@ -1707,7 +2176,7 @@ class OrderPanelState extends State<OrderPanel> {
     _hasOpenedPaymentModalOnce = false;
 
     // Reset delivery state
-    _deliveryMethod = "Store Takeaway";
+    _deliveryMethod = "";
     _deliveryMethodId = "";
     _deliveryAddress = "";
     _carNumber = "";
@@ -1751,32 +2220,35 @@ class OrderPanelState extends State<OrderPanel> {
 
     try {
       // Load customer information if available
-      final customerId = order['customer_id'];
-      final customerPhone = order['customer_phone'] ?? order['phone'];
+      final customerId = _extractOrderCustomerId(order);
+      final customerPhone = _extractOrderCustomerPhone(order);
+      final customerName = _extractOrderCustomerName(order);
       final customerSelectionProvider =
           Provider.of<CustomerSelectionProvider>(context, listen: false);
 
-      if (customerId != null) {
-        // Find customer in the list
-        final customer = _customers.firstWhere(
-          (c) => c.id == customerId,
-          orElse: () => CustomerListModelData(
-            id: customerId,
-            phone: customerPhone,
-            name: order['customer_name'] ?? 'Unknown Customer',
-          ),
-        );
+      if (customerId != null ||
+          (customerPhone?.isNotEmpty ?? false) ||
+          (customerName?.isNotEmpty ?? false)) {
+        final customer = _findOrderCustomerInCache(
+              customerId: customerId,
+              customerPhone: customerPhone,
+            ) ??
+            _buildOrderCustomerFallback(order);
 
         setState(() {
           _selectedCustomer = customer;
-          _selectedCustomerID = customerId;
-          _selectedCustomerPhone = customerPhone;
+          _selectedCustomerID = customer.id ?? customerId;
+          _selectedCustomerPhone = customer.phone ?? customerPhone;
+          _isCustomerManuallySelected = true;
         });
 
         customerSelectionProvider.setSelectedCustomer(
           customer,
-          isDefault: _isDefaultCustomerPhone(customerPhone?.toString()),
+          isDefault: _isDefaultCustomerPhone(customer.phone ?? customerPhone),
         );
+        _writeNormalizedOrderField(order, 'customer_id', customer.id);
+        _writeNormalizedOrderField(order, 'customer_name', customer.name);
+        _writeNormalizedOrderField(order, 'customer_phone', customer.phone);
 
         debugPrint(
             'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Loaded customer from order: ${customer.name} (${customer.phone})');
@@ -1844,29 +2316,47 @@ class OrderPanelState extends State<OrderPanel> {
       });
 
       // Load delivery information if available
-      final loadedDeliveryMethodId = order['delivery_method_id']?.toString() ??
+      final extractedDeliveryMethodId = _extractOrderDeliveryMethodId(order);
+      final extractedDeliveryMethodName =
+          _extractOrderDeliveryMethodName(order);
+      final matchedDeliveryMethod = _findDeliveryMethod(
+        id: extractedDeliveryMethodId,
+        name: extractedDeliveryMethodName,
+      );
+      final loadedDeliveryMethodId = extractedDeliveryMethodId ??
+          matchedDeliveryMethod?.id ??
           _getDefaultDeliveryMethodId();
 
-      // Try name from order first; fall back to looking up by ID in the provider
-      String loadedDeliveryMethodName =
-          order['delivery_method_name']?.toString() ??
-              order['delivery_method']?.toString() ??
-              '';
+      String loadedDeliveryMethodName = extractedDeliveryMethodName ??
+          matchedDeliveryMethod?.name ??
+          (extractedDeliveryMethodId?.isNotEmpty == true
+              ? extractedDeliveryMethodId!
+              : null) ??
+          _getDefaultDeliveryMethod().name;
       if (loadedDeliveryMethodName.isEmpty) {
         final deliveryMethodsProvider =
             Provider.of<DeliveryMethodsProvider>(context, listen: false);
         final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
           (m) => m.id == loadedDeliveryMethodId,
-          orElse: () => DeliveryMethod(
-              id: loadedDeliveryMethodId, name: 'Store Takeaway'),
+          orElse: () => _getDefaultDeliveryMethod(),
         );
         loadedDeliveryMethodName = match.name;
         debugPrint(
             'ÃƒÂ°Ã…Â¸Ã…Â¡Ã…Â¡ Resolved delivery method name from provider: $loadedDeliveryMethodName (id: $loadedDeliveryMethodId)');
       }
+      _writeNormalizedOrderField(
+        order,
+        'delivery_method_id',
+        loadedDeliveryMethodId,
+      );
+      _writeNormalizedOrderField(
+        order,
+        'delivery_method_name',
+        loadedDeliveryMethodName,
+      );
       final loadedDeliveryDate = order['delivery_date']?.toString();
       final loadedDeliveryTime = order['delivery_time']?.toString();
-      final loadedDeliveryAddress = order['address']?.toString() ?? '';
+      final loadedDeliveryAddress = _extractOrderCustomerAddress(order) ?? '';
       final loadedCarNumber = order['car_number']?.toString() ?? '';
       final loadedDeliveryCharge =
           double.tryParse(order['delivery_charge']?.toString() ?? '');
@@ -1906,6 +2396,8 @@ class OrderPanelState extends State<OrderPanel> {
 
       // Match billing_page.dart: balance is cash returned after customer credit.
       _balanceAmount = _calculateBalanceAmount();
+
+      widget.onOrderSelected(order);
 
       debugPrint(
           'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Calculated balance: ${_balanceAmount.toStringAsFixed(2)}');
@@ -2208,31 +2700,25 @@ class OrderPanelState extends State<OrderPanel> {
     });
   }
 
+  DeliveryMethod _getDefaultDeliveryMethod() {
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final appSettingsDefault =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.defaultDeliveryMethod
+            .trim();
+
+    return deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+          appSettingsDefault: appSettingsDefault,
+        ) ??
+        DeliveryMethod(id: kFallbackDeliveryMethodId, name: 'Store Takeaway');
+  }
+
   // Default Delivery Method (mirror of BillingPage)
   String _getDefaultDeliveryMethodId() {
     try {
-      final appSettingsProvider =
-          Provider.of<AppSettingsProvider>(context, listen: false);
-      final deliveryMethodsProvider =
-          Provider.of<DeliveryMethodsProvider>(context, listen: false);
-
-      // 1. Check AppSettings
-      final appSettingsDefault =
-          appSettingsProvider.appSettings?.defaultDeliveryMethod;
-      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
-        try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
-              (m) =>
-                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                  m.id == appSettingsDefault);
-          return match.id;
-        } catch (e) {
-          // Not found
-        }
-      }
-
-      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
-      return defaultMethod?.id ?? kFallbackDeliveryMethodId;
+      return _getDefaultDeliveryMethod().id;
     } catch (e) {
       return kFallbackDeliveryMethodId;
     }
@@ -4945,6 +5431,10 @@ class OrderPanelState extends State<OrderPanel> {
     int? initialStep,
     String? title,
   }) async {
+    if (mode == CheckoutModalMode.checkout && _isLoadingConfirm) {
+      return;
+    }
+
     // Release any current focus so checkout modal text fields receive input cleanly.
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -4978,6 +5468,8 @@ class OrderPanelState extends State<OrderPanel> {
         ? (localProductProvider.priceSummary?.subTotal ??
             localProductProvider.cartTotal)
         : _calculateOrderTotal();
+    final shouldNotifyParentCheckoutLoading =
+        forCurrentCart || offlineSaveAndPrint;
 
     await showDialog(
       context: context,
@@ -4987,6 +5479,19 @@ class OrderPanelState extends State<OrderPanel> {
             Provider.of<DeliveryMethodsProvider>(context, listen: false);
         final deliveryEnabled =
             deliveryMethodsProvider.deliveryMethods.isNotEmpty;
+        final defaultDeliveryMethod = _getDefaultDeliveryMethod();
+        final shouldSeedDeliveryDefault = mode == CheckoutModalMode.checkout ||
+            (mode == CheckoutModalMode.selectionOnly && initialStep == 1);
+        final modalDeliveryMethod = _deliveryMethodId.isNotEmpty
+            ? _deliveryMethod
+            : shouldSeedDeliveryDefault
+                ? defaultDeliveryMethod.name
+                : "";
+        final modalDeliveryMethodId = _deliveryMethodId.isNotEmpty
+            ? _deliveryMethodId
+            : shouldSeedDeliveryDefault
+                ? defaultDeliveryMethod.id
+                : "";
 
         return CheckoutModal(
           mode: mode,
@@ -5003,16 +5508,8 @@ class OrderPanelState extends State<OrderPanel> {
 
           // Delivery State
           enableDelivery: deliveryEnabled,
-          deliveryMethod: _deliveryMethod.isNotEmpty
-              ? _deliveryMethod
-              : mode == CheckoutModalMode.checkout
-                  ? "Store Takeaway"
-                  : "",
-          deliveryMethodId: _deliveryMethodId.isNotEmpty
-              ? _deliveryMethodId
-              : mode == CheckoutModalMode.checkout
-                  ? _getDefaultDeliveryMethodId()
-                  : "",
+          deliveryMethod: modalDeliveryMethod,
+          deliveryMethodId: modalDeliveryMethodId,
           deliveryComment: _orderComment,
           deliveryAddress: _deliveryAddress,
           deliveryDate: _deliveryDate,
@@ -5069,19 +5566,25 @@ class OrderPanelState extends State<OrderPanel> {
             Provider.of<CustomerSelectionProvider>(context, listen: false)
                 .setSelectedCustomer(customer);
           },
-          onAddNewCustomer: (String searchQuery) async {
+          onAddNewCustomer: (
+            String searchQuery, {
+            String? initialName,
+            String? initialPhone,
+          }) async {
             // NOTE: Do not close the checkout dialog here. We will return the result.
 
             // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
             final normalizedSearchQuery = searchQuery.trim();
-            if (normalizedSearchQuery.isNotEmpty &&
+            if ((initialPhone ?? '').trim().isNotEmpty) {
+              phoneToPreFill = initialPhone!.trim();
+            } else if (normalizedSearchQuery.isNotEmpty &&
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill);
+                mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];
@@ -5241,6 +5744,12 @@ class OrderPanelState extends State<OrderPanel> {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
             });
+            if (shouldNotifyParentCheckoutLoading) {
+              widget.onCheckoutActionLoadingChanged?.call(
+                isLoading: true,
+                printBill: false,
+              );
+            }
             Navigator.of(dialogContext).pop();
             try {
               if (offlineSaveAndPrint) {
@@ -5251,6 +5760,12 @@ class OrderPanelState extends State<OrderPanel> {
                 await _confirmOrder();
               }
             } finally {
+              if (shouldNotifyParentCheckoutLoading) {
+                widget.onCheckoutActionLoadingChanged?.call(
+                  isLoading: false,
+                  printBill: false,
+                );
+              }
               if (mounted) {
                 setState(() {});
               }
@@ -5264,6 +5779,12 @@ class OrderPanelState extends State<OrderPanel> {
             setState(() {
               _hasOpenedPaymentModalOnce = true;
             });
+            if (shouldNotifyParentCheckoutLoading) {
+              widget.onCheckoutActionLoadingChanged?.call(
+                isLoading: true,
+                printBill: true,
+              );
+            }
             Navigator.of(dialogContext).pop();
             try {
               if (offlineSaveAndPrint) {
@@ -5274,6 +5795,12 @@ class OrderPanelState extends State<OrderPanel> {
                 await _confirmOrderAndPrintBill();
               }
             } finally {
+              if (shouldNotifyParentCheckoutLoading) {
+                widget.onCheckoutActionLoadingChanged?.call(
+                  isLoading: false,
+                  printBill: true,
+                );
+              }
               if (mounted) {
                 setState(() {});
               }
@@ -6325,7 +6852,8 @@ class OrderPanelState extends State<OrderPanel> {
     final orderTime = DateHelper.getCurrentFormattedTimeWithAMPM();
     final tableName = _deliveryMethod.isNotEmpty
         ? _deliveryMethod
-        : (widget.preselectedDeliveryMethodName ?? 'Store Takeaway');
+        : (widget.preselectedDeliveryMethodName ??
+            _getDefaultDeliveryMethod().name);
 
     final success = await KotPrintPage.autoPrint(
       context,
@@ -6532,7 +7060,7 @@ class OrderPanelState extends State<OrderPanel> {
         ? 'Table ${widget.tableId}'
         : (savedOrder.deliveryMethod ??
             widget.preselectedDeliveryMethodName ??
-            'Store Takeaway');
+            _getDefaultDeliveryMethod().name);
     final showTableLabel = widget.tableId != null;
     final comment = savedOrder.comment?.trim();
 
@@ -6859,6 +7387,11 @@ class OrderPanelState extends State<OrderPanel> {
       this.deleteLoadedDraftIfAny();
       localProductProvider.clearCartAfterOrder();
       _resetCurrentCartCheckoutState();
+      _refreshLocalDrafts();
+      if (_usesCounterOrderTabs) {
+        resetActiveOrderContext();
+        widget.onLocalDraftSaved?.call();
+      }
       showScaffold(
         context: context,
         message: printBill

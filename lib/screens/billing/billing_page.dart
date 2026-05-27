@@ -621,7 +621,9 @@ class BillingPageState extends State<BillingPage>
         // Check if there is any customer data to restore
         if (currentOrder.customerId != null ||
             (currentOrder.customerPhone != null &&
-                currentOrder.customerPhone!.isNotEmpty)) {
+                currentOrder.customerPhone!.isNotEmpty) ||
+            (currentOrder.customerName != null &&
+                currentOrder.customerName!.isNotEmpty)) {
           selectedCustomerID = currentOrder.customerId;
           selectedCustomerPhone = currentOrder.customerPhone;
 
@@ -650,9 +652,8 @@ class BillingPageState extends State<BillingPage>
               .setSelectedCustomer(selectedCustomer!);
 
           // **FIX**: Properly restore customer display based on whether it's a phone-only order
-          if (selectedCustomer!.id != null &&
-              (selectedCustomer!.name != null &&
-                  selectedCustomer!.name!.isNotEmpty)) {
+          if (selectedCustomer!.name != null &&
+              selectedCustomer!.name!.isNotEmpty) {
             // Customer from list - show name and phone
             String name = selectedCustomer!.name ?? '';
             String phone = selectedCustomer!.phone ?? '';
@@ -5364,6 +5365,13 @@ class BillingPageState extends State<BillingPage>
       return false;
     }
 
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final isQuotationDraft =
+        localProductProvider.currentOrder?.quotationId != null;
+    debugPrint(
+        "🧾 [BillingCustomer] Balance check phone=${selectedCustomer?.phone}, quotationDraft=$isQuotationDraft");
+
     // Get app settings to check for default customer
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -5371,8 +5379,11 @@ class BillingPageState extends State<BillingPage>
         appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
 
     // Don't show balance if it's the default customer (by phone match)
-    if (defaultCustomerPhone.isNotEmpty &&
+    if (!isQuotationDraft &&
+        defaultCustomerPhone.isNotEmpty &&
         selectedCustomer!.phone == defaultCustomerPhone) {
+      debugPrint(
+          "🧾 [BillingCustomer] Hiding balance for automatic default phone=$defaultCustomerPhone");
       return false;
     }
 
@@ -6358,6 +6369,7 @@ class BillingPageState extends State<BillingPage>
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
         debugPrint(
@@ -6719,6 +6731,7 @@ class BillingPageState extends State<BillingPage>
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -6847,7 +6860,9 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  void _hydrateCustomerListFromProviderCache() {
+  void _hydrateCustomerListFromProviderCache({
+    bool applyDefaultCustomer = true,
+  }) {
     try {
       final customerProvider =
           Provider.of<CustomerProvider>(context, listen: false);
@@ -6859,7 +6874,9 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         customerList = List<CustomerListModelData>.from(cachedCustomers);
       });
-      _applyDefaultCustomerFromCacheIfNeeded();
+      if (applyDefaultCustomer) {
+        _applyDefaultCustomerFromCacheIfNeeded();
+      }
       debugPrint(
           "📦 Hydrated customer cache from provider: ${cachedCustomers.length} customers");
     } catch (error) {
@@ -6934,6 +6951,45 @@ class BillingPageState extends State<BillingPage>
         .clearSelectedCustomer();
   }
 
+  void _clearAutomaticDefaultCustomerForQuotation() {
+    if (!mounted || _isCustomerManuallySelected) return;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProductProvider.currentOrder?.quotationId != null) {
+      debugPrint(
+          "🧾 [BillingCustomer] Skip clearing customer: quotation draft ${localProductProvider.currentOrder?.quotationId}");
+      return;
+    }
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? '';
+
+    final isAutoDefault = customerSelectionProvider.isDefaultCustomer ||
+        (defaultPhone.isNotEmpty &&
+            (selectedCustomerPhone == defaultPhone ||
+                mobileNumberText == defaultPhone ||
+                salesExecutivemobileNumberText == defaultPhone));
+    debugPrint(
+        "🧾 [BillingCustomer] Auto-default clear check isAutoDefault=$isAutoDefault, defaultPhone=$defaultPhone, selectedPhone=$selectedCustomerPhone, mobile=$mobileNumberText");
+    if (!isAutoDefault) return;
+
+    customerSelectionProvider.clearSelectedCustomer();
+    setState(() {
+      selectedCustomer = null;
+      selectedCustomerID = null;
+      selectedCustomerPhone = null;
+      mobileNumberText = '';
+      salesExecutivemobileNumberText = '';
+      mobileNumberTextController.clear();
+      _autocompletePhoneKey = GlobalKey();
+    });
+  }
+
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
   /// This is called when clicking Confirm Order or Confirm & Print buttons
   void _showCheckoutModal({
@@ -6959,9 +7015,15 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "⌨️ [BillingPage] Focus released before checkout modal | ${_focusDebugSummary()}");
 
-    // Ensure default customer is resolved from cached list before opening checkout.
-    _hydrateCustomerListFromProviderCache();
-    _applyDefaultCustomerFromCacheIfNeeded();
+    // Quotations should not silently inherit the billing default customer.
+    _hydrateCustomerListFromProviderCache(
+      applyDefaultCustomer: !isQuotationMode,
+    );
+    if (isQuotationMode) {
+      _clearAutomaticDefaultCustomerForQuotation();
+    } else {
+      _applyDefaultCustomerFromCacheIfNeeded();
+    }
 
     // Reload payment methods
     final masterDataProvider =
@@ -7022,6 +7084,27 @@ class BillingPageState extends State<BillingPage>
 
     CustomerListModelData? checkoutSelectedCustomer =
         selectedCustomer ?? customerSelectionProvider.selectedCustomer;
+    final currentOrder = localProductProvider.currentOrder;
+    final quotationCustomerPhoneForModal =
+        currentOrder?.customerPhone?.trim().isNotEmpty == true
+            ? currentOrder!.customerPhone
+            : checkoutSelectedCustomer?.phone;
+    final defaultCustomerPhone = Provider.of<AppSettingsProvider>(
+          context,
+          listen: false,
+        ).appSettings?.autoAssignDefaultCustomerPhone.trim() ??
+        '';
+    final quotationCustomerIsDefault = currentOrder?.quotationId != null &&
+        (customerSelectionProvider.isDefaultCustomer ||
+            (defaultCustomerPhone.isNotEmpty &&
+                quotationCustomerPhoneForModal?.trim() ==
+                    defaultCustomerPhone));
+    final requiresSavedQuotationCustomer = currentOrder?.quotationId != null &&
+        (quotationCustomerIsDefault || checkoutSelectedCustomer?.id == null) &&
+        ((currentOrder?.customerName?.trim().isNotEmpty ?? false) ||
+            (checkoutSelectedCustomer?.name?.trim().isNotEmpty ?? false));
+    debugPrint(
+        "🧾 [CheckoutOpen] quotationId=${currentOrder?.quotationId}, customerId=${checkoutSelectedCustomer?.id}, customerName=${checkoutSelectedCustomer?.name}, customerPhone=${checkoutSelectedCustomer?.phone}, quotationPhone=$quotationCustomerPhoneForModal, quotationCustomerIsDefault=$quotationCustomerIsDefault, requireSavedCustomer=$requiresSavedQuotationCustomer");
 
     // Prefer richer customer data from loaded list when IDs match
     if (checkoutSelectedCustomer?.id != null && customerList != null) {
@@ -7119,6 +7202,17 @@ class BillingPageState extends State<BillingPage>
               : (isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print'),
           requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
           isQuotationMode: isQuotationMode,
+          requireSavedCustomer: requiresSavedQuotationCustomer,
+          quotationCustomerId: currentOrder?.quotationId == null
+              ? null
+              : currentOrder?.customerId,
+          quotationCustomerIsDefault: quotationCustomerIsDefault,
+          quotationCustomerName: currentOrder?.quotationId == null
+              ? null
+              : currentOrder?.customerName,
+          quotationCustomerPhone: currentOrder?.quotationId == null
+              ? null
+              : quotationCustomerPhoneForModal,
           initialQuotationDate: _quotationDate,
           initialQuotationExpiryDate: _quotationExpiryDate,
           onQuotationDatesUpdated: (quotationDate, expiryDate) {
@@ -7142,18 +7236,26 @@ class BillingPageState extends State<BillingPage>
               _isCustomerManuallySelected = true;
             });
           },
-          onAddNewCustomer: (String searchQuery) async {
+          onAddNewCustomer: (
+            String searchQuery, {
+            String? initialName,
+            String? initialPhone,
+          }) async {
             // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
             final normalizedSearchQuery = searchQuery.trim();
-            if (normalizedSearchQuery.isNotEmpty &&
+            if ((initialPhone ?? '').trim().isNotEmpty) {
+              phoneToPreFill = initialPhone!.trim();
+            } else if (normalizedSearchQuery.isNotEmpty &&
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
+            debugPrint(
+                "🧾 [CheckoutCustomer] Opening add customer modal prefillName=$initialName, prefillPhone=$phoneToPreFill, search=$searchQuery");
 
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill);
+                mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];
@@ -7198,6 +7300,8 @@ class BillingPageState extends State<BillingPage>
                           customer.phone == createdCustomer.phone));
                   customerList!.insert(0, createdCustomer);
                 });
+                debugPrint(
+                    "✅ [CheckoutCustomer] Created local customer id=${createdCustomer.id}, name=${createdCustomer.name}, phone=${createdCustomer.phone}");
 
                 return createdCustomer;
               }
@@ -7218,6 +7322,8 @@ class BillingPageState extends State<BillingPage>
                 if (byPhone.id != null) return byPhone;
               }
             }
+            debugPrint(
+                "⚠️ [CheckoutCustomer] Add customer finished without selectable customer");
             return null;
           },
           onDiscountApplied: (code, isApplied, flat, percent) {
@@ -7366,11 +7472,26 @@ class BillingPageState extends State<BillingPage>
       });
       return;
     }
-    if (!customerProvider.hasSelectedCustomer ||
-        customerProvider.selectedCustomerID == null) {
+    final quoteCustomer = customerProvider.selectedCustomer ?? selectedCustomer;
+    final quoteCustomerId = customerProvider.selectedCustomerID ??
+        selectedCustomerID ??
+        quoteCustomer?.id;
+    final quoteCustomerName = quoteCustomer?.name?.trim();
+    final quoteCustomerPhone =
+        (customerProvider.selectedCustomerPhone ?? selectedCustomerPhone)
+                    ?.trim()
+                    .isNotEmpty ==
+                true
+            ? (customerProvider.selectedCustomerPhone ?? selectedCustomerPhone)
+                ?.trim()
+            : quoteCustomer?.phone?.trim();
+    final hasExistingCustomer = quoteCustomerId != null;
+    final hasInlineCustomer = quoteCustomerName?.isNotEmpty ?? false;
+
+    if (!hasExistingCustomer && !hasInlineCustomer) {
       showScaffoldError(
         context: context,
-        message: 'Please select a customer before creating quotation.',
+        message: 'Please select or enter a customer before creating quotation.',
       );
       setState(() {
         isLoadingSaveOrder = false;
@@ -7391,18 +7512,40 @@ class BillingPageState extends State<BillingPage>
     }
 
     try {
-      final payload = {
-        'customer_id': customerProvider.selectedCustomerID,
+      final deliveryMethodIdValue = int.tryParse(deliveryMethodId);
+      final deliveryChargeValue = _getDeliveryChargeForOrder();
+      final priceSummary = localProductProvider.priceSummary;
+      final discountValue = priceSummary?.discount ?? 0.0;
+      final payload = <String, dynamic>{
+        if (hasExistingCustomer) ...{
+          'customer_type': 'existing',
+          'customer_id': quoteCustomerId,
+        } else ...{
+          'customer_type': 'new',
+          'customer_name': quoteCustomerName,
+          if (quoteCustomerPhone?.isNotEmpty ?? false)
+            'customer_phone': quoteCustomerPhone,
+        },
         'store_id': storeProvider.activeStore?.storeId,
+        if (deliveryMethodIdValue != null)
+          'delivery_method_id': deliveryMethodIdValue,
+        if (deliveryChargeValue > 0) 'shipping_cost': deliveryChargeValue,
         'quotation_date': DateFormat('yyyy-MM-dd').format(_quotationDate),
         'expiry_date': DateFormat('yyyy-MM-dd').format(_quotationExpiryDate),
+        if (discountValue > 0) 'discount': discountValue,
         'comment': _commentController.text, // Reusing delivery comment as note
         'items': localProductProvider.cartItems.map((item) {
+          final productStockId = item.stockGroupIds.length == 1
+              ? item.stockGroupIds.first
+              : item.selectedStock?.id;
           final itemMap = <String, dynamic>{
             'product_id': item.product.productId,
             'quantity': item.hasSaleUnit ? item.displayQuantity : item.quantity,
             'price': item.hasSaleUnit ? item.displayPrice : item.price,
           };
+          if (productStockId != null) {
+            itemMap['product_stock_id'] = productStockId;
+          }
           if (item.saleUnitId != null) {
             itemMap['product_sale_unit_id'] = item.saleUnitId;
           }
@@ -7418,7 +7561,7 @@ class BillingPageState extends State<BillingPage>
           '🧾 BILLING QUOTATION CREATE RESPONSE: ${json.encode(response)}');
 
       if (mounted) {
-        if (response['status'] == 'success') {
+        if (response['success'] == true || response['status'] == 'success') {
           showScaffold(
             context: context,
             message: 'Quotation created successfully!',
@@ -8706,6 +8849,13 @@ class BillingPageState extends State<BillingPage>
   /// Helper method to check if a phone number matches the default customer phone from app settings
   bool _isDefaultCustomerPhone(String? phone) {
     if (phone == null || phone.isEmpty) return false;
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProductProvider.currentOrder?.quotationId != null) {
+      debugPrint(
+          "🧾 [BillingCustomer] Phone $phone is not treated as default because quotationId=${localProductProvider.currentOrder?.quotationId}");
+      return false;
+    }
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final defaultPhone =
@@ -8811,8 +8961,20 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       // Clear payment and delivery states
       // iconColor = 1; // Default to cash
-      deliveryMethod = "Store Takeaway";
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      deliveryMethod = "";
+      try {
+        final deliveryMethodsProvider =
+            Provider.of<DeliveryMethodsProvider>(context, listen: false);
+        if (deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+          deliveryMethod = deliveryMethodsProvider.deliveryMethods
+              .firstWhere(
+                (m) => m.id == deliveryMethodId,
+                orElse: () => deliveryMethodsProvider.deliveryMethods.first,
+              )
+              .name;
+        }
+      } catch (_) {}
       _selectedDeliveryCharge = null;
 
       // Clear all controllers
@@ -8905,8 +9067,8 @@ class BillingPageState extends State<BillingPage>
 
   void _initializeDeliveryMethod() {
     // Set initial default values
-    deliveryMethod = "Store Takeaway";
-    deliveryMethodId = "11"; // Updated to match API response
+    deliveryMethod = "";
+    deliveryMethodId = "";
     _selectedDeliveryCharge = null;
 
     // Listen for delivery methods to be loaded and update default
@@ -8928,7 +9090,8 @@ class BillingPageState extends State<BillingPage>
               final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
                 (m) =>
                     m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                    m.id == appSettingsDefault,
+                    m.id == appSettingsDefault ||
+                    (m.code?.toLowerCase() == appSettingsDefault.toLowerCase()),
               );
 
               // Only update if different to avoid unnecessary rebuilds
@@ -9033,22 +9196,12 @@ class BillingPageState extends State<BillingPage>
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
 
-      // 1. Check AppSettings
       final appSettingsDefault =
           appSettingsProvider.appSettings?.defaultDeliveryMethod;
-      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
-        try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
-              (m) =>
-                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                  m.id == appSettingsDefault);
-          return match.id;
-        } catch (e) {
-          // Not found
-        }
-      }
-
-      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+      final defaultMethod =
+          deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+        appSettingsDefault: appSettingsDefault,
+      );
       return defaultMethod?.id ??
           "11"; // Fallback to Store Takeaway ID from API
     } catch (e) {

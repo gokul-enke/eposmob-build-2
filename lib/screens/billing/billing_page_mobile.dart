@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
@@ -186,6 +187,22 @@ class BillingPageMobileState extends State<BillingPageMobile>
     super.dispose();
   }
 
+  void _setDefaultDeliveryMethod(BillingProvider billingProvider) {
+    final appSettingsDefault =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.defaultDeliveryMethod;
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final defaultMethod = deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+      appSettingsDefault: appSettingsDefault,
+    );
+    billingProvider.setDeliveryMethod(
+      defaultMethod?.name ?? "Store Takeaway",
+      defaultMethod?.id ?? billingProvider.getDefaultDeliveryMethodId(),
+    );
+  }
+
   // Rehydrate UI state from provider (same logic as original)
   void _rehydrateFromProvider() {
     final localProductProvider =
@@ -328,11 +345,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
                 amounts.containsKey('COD') ||
                 amounts.containsKey(billingProvider.codPaymentMethodId)) {
               billingProvider.setPaymentMethod('COD', true);
-              billingProvider.codAmountController.text =
-                  (amounts['COD'] ??
-                          amounts[billingProvider.codPaymentMethodId] ??
-                          '0')
-                      .toString();
+              billingProvider.codAmountController.text = (amounts['COD'] ??
+                      amounts[billingProvider.codPaymentMethodId] ??
+                      '0')
+                  .toString();
             }
             if (methods.contains('ONLINE') || amounts.containsKey('ONLINE')) {
               billingProvider.setPaymentMethod('ONLINE', true);
@@ -388,10 +404,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
         currentOrder.paidAmount ?? "0.0";
     billingProvider.transactionNumberController.text =
         currentOrder.transactionId ?? "";
-    billingProvider.setDeliveryMethod(
-        currentOrder.deliveryMethod ?? "Store Takeaway",
-        currentOrder.deliveryMethodId ??
-            billingProvider.getDefaultDeliveryMethodId());
+    if (currentOrder.deliveryMethodId != null ||
+        currentOrder.deliveryMethod != null) {
+      billingProvider.setDeliveryMethod(
+          currentOrder.deliveryMethod ?? "Store Takeaway",
+          currentOrder.deliveryMethodId ??
+              billingProvider.getDefaultDeliveryMethodId());
+    } else {
+      _setDefaultDeliveryMethod(billingProvider);
+    }
     billingProvider.commentController.text = currentOrder.comment ?? "";
     billingProvider.carNumberController.text = currentOrder.carNumber ?? "";
 

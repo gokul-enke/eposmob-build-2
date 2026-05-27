@@ -51,6 +51,9 @@ import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/components/build_dialog_box.dart' as dialog_box;
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart'
+    as custom_dialog_box;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'controllers/sidebar_controller.dart';
@@ -72,6 +75,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await _initializeBaseUrlFromPreferences();
+  await _initializeNotificationPosition();
 
   if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     await _requestPermissions();
@@ -124,6 +128,13 @@ void main() async {
   Get.put(CategoryProvider());
   HttpOverrides.global = MyHttpOverrides();
   runApp(const MyApp());
+}
+
+Future<void> _initializeNotificationPosition() async {
+  final prefs = SharedPreferenceProvider();
+  final position = await prefs.getNotificationPosition();
+  dialog_box.setNotificationPosition(position);
+  custom_dialog_box.setNotificationPosition(position);
 }
 
 Future<void> _initializeBaseUrlFromPreferences() async {

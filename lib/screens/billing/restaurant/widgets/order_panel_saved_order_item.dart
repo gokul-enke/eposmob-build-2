@@ -257,10 +257,6 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
   }
 
   Widget _buildSavedOrderItem(dynamic cartItem, int index) {
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-
     final productName = cartItem['product']?['name'] ??
         cartItem['product_name'] ??
         cartItem['names']?[0]?['name'] ??
@@ -304,40 +300,103 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Item name and price
+          // Item name, editable unit price, line total, and status
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  productName,
-                  style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      widget.isCompact ? FontSize.s13 : FontSize.s15,
-                      0.21,
-                      const Color(0xFF1E293B)),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        productName,
+                        style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            widget.isCompact ? FontSize.s13 : FontSize.s15,
+                            0.21,
+                            const Color(0xFF1E293B)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _loadingCartItems
+                                .contains('${cartItem['id']}_price')
+                            ? null
+                            : () => _showEditItemPriceDialog(
+                                  cartItem,
+                                  isLocal: false,
+                                ),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: _loadingCartItems
+                                  .contains('${cartItem['id']}_price')
+                              ? SizedBox(
+                                  width: widget.isCompact ? 14 : 16,
+                                  height: widget.isCompact ? 14 : 16,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  unitPrice.toStringAsFixed(2),
+                                  style: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    FontSize.s11,
+                                    0.21,
+                                    const Color(0xFF2563EB),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF059669).withOpacity(0.1),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap:
+                          _loadingCartItems.contains('${cartItem['id']}_price')
+                              ? null
+                              : () => _showEditItemPriceDialog(
+                                    cartItem,
+                                    isLocal: false,
+                                  ),
                       borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$currency ${totalPrice.toStringAsFixed(2)}',
-                      style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          widget.isCompact ? FontSize.s12 : FontSize.s14,
-                          0.21,
-                          const Color(0xFF059669)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          totalPrice.toStringAsFixed(2),
+                          style: buildCustomStyle(
+                              FontWeightManager.bold,
+                              widget.isCompact ? FontSize.s13 : FontSize.s14,
+                              0.21,
+                              const Color(0xFF059669)),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -361,61 +420,6 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Unit price and quantity info
-          Row(
-            children: [
-              // Editable Price for Saved Items (Tap to edit)
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _loadingCartItems.contains('${cartItem['id']}_price')
-                      ? null
-                      : () =>
-                          _showEditItemPriceDialog(cartItem, isLocal: false),
-                  borderRadius: BorderRadius.circular(4),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                      borderRadius: BorderRadius.circular(4),
-                      color: Colors.blue.withOpacity(0.05),
-                    ),
-                    child: _loadingCartItems.contains('${cartItem['id']}_price')
-                        ? SizedBox(
-                            width: widget.isCompact ? 16 : 18,
-                            height: widget.isCompact ? 16 : 18,
-                            child: const CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF2563EB),
-                              ),
-                            ),
-                          )
-                        : Text(
-                            '$currency ${unitPrice.toStringAsFixed(2)}',
-                            style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                widget.isCompact ? FontSize.s11 : FontSize.s12,
-                                0.21,
-                                const Color(0xFF2563EB)),
-                          ),
-                  ),
-                ),
-              ),
-              Text(
-                ' × ${quantity.toStringAsFixed(0)}',
-                style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    widget.isCompact ? FontSize.s11 : FontSize.s12,
-                    0.21,
-                    const Color(0xFF64748B)),
               ),
             ],
           ),

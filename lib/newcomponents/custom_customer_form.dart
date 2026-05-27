@@ -21,6 +21,7 @@ enum PaymentType { none, toPay, toReceive }
 
 class CustomCustomerForm extends StatefulWidget {
   final String? initialMobileNumber;
+  final String? initialCustomerName;
   final bool isModal;
   final VoidCallback? onSuccess;
   final VoidCallback? onCancel;
@@ -28,6 +29,7 @@ class CustomCustomerForm extends StatefulWidget {
   const CustomCustomerForm({
     Key? key,
     this.initialMobileNumber,
+    this.initialCustomerName,
     this.isModal = false,
     this.onSuccess,
     this.onCancel,
@@ -78,6 +80,14 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       _showPhoneValidationOnLoad =
           normalizedPhone.isNotEmpty && normalizedPhone.length < 10;
     }
+    final initialName = widget.initialCustomerName?.trim();
+    if (initialName != null && initialName.isNotEmpty) {
+      final parts = initialName.split(RegExp(r'\s+'));
+      firstNameTextController.text = parts.first;
+      if (parts.length > 1) {
+        lastNameTextController.text = parts.skip(1).join(' ');
+      }
+    }
     _prefillCountryFromLogin();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && widget.isModal) {
@@ -117,7 +127,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-    final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
+    final bool isCompanyB2BEnabled = appSettings?.companyB2BEnabled ?? false;
 
     return Form(
       key: _formKey,
@@ -244,8 +254,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           ),
           const SizedBox(height: 20),
 
-          // Row 5: Customer Type, CR Number, VAT Number (shown only when ZATCA Phase 1 is enabled)
-          if (isZatcaPhase1Enabled)
+          // Row 5: Customer Type, CR Number, VAT Number (shown only when B2B is enabled)
+          if (isCompanyB2BEnabled)
             Row(
               children: [
                 Expanded(
@@ -855,18 +865,18 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         final String storeId =
             (storeProvider.activeStore?.storeId ?? 1).toString();
 
-        // ZATCA Phase 1 handling: if disabled, force B2C and clear CR/VAT
+        // B2B setting handling: if disabled, force B2C and clear CR/VAT
         final appSettings =
             Provider.of<AppSettingsProvider>(context, listen: false)
                 .appSettings;
-        final bool isZatcaPhase1Enabled =
-            appSettings?.zatcaPhase1Enabled ?? false;
+        final bool isCompanyB2BEnabled =
+            appSettings?.companyB2BEnabled ?? false;
         final String customerTypeToSend =
-            isZatcaPhase1Enabled ? selectedCustomerType : 'B2C';
+            isCompanyB2BEnabled ? selectedCustomerType : 'B2C';
         final String crToSend =
-            isZatcaPhase1Enabled ? crNumberController.text.trim() : '';
+            isCompanyB2BEnabled ? crNumberController.text.trim() : '';
         final String vatToSend =
-            isZatcaPhase1Enabled ? vatNumberController.text.trim() : '';
+            isCompanyB2BEnabled ? vatNumberController.text.trim() : '';
 
         await CustomerProvider()
             .addCustomer(

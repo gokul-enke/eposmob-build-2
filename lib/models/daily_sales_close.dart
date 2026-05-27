@@ -4,7 +4,8 @@ class DailySalesCloseModel {
   List<DailySalesCloseData>? data;
   Pagination? pagination;
 
-  DailySalesCloseModel({this.success, this.message, this.data, this.pagination});
+  DailySalesCloseModel(
+      {this.success, this.message, this.data, this.pagination});
 
   DailySalesCloseModel.fromJson(Map<String, dynamic> json) {
     success = json['success'];
@@ -194,9 +195,23 @@ class DailySalesCloseSummaryResponse {
   DailySalesCloseSummaryResponse.fromJson(Map<String, dynamic> json) {
     success = json['success'];
     message = json['message'];
-    data = json['data'] != null
-        ? DailySalesCloseSummary.fromJson(json['data'])
-        : null;
+    final responseData = json['data'];
+    if (responseData is Map<String, dynamic>) {
+      data = DailySalesCloseSummary.fromJson(responseData);
+    } else if (responseData is Map) {
+      data = DailySalesCloseSummary.fromJson(
+        Map<String, dynamic>.from(responseData),
+      );
+    } else if (responseData is List && responseData.isNotEmpty) {
+      final firstSummary = responseData.first;
+      if (firstSummary is Map<String, dynamic>) {
+        data = DailySalesCloseSummary.fromJson(firstSummary);
+      } else if (firstSummary is Map) {
+        data = DailySalesCloseSummary.fromJson(
+          Map<String, dynamic>.from(firstSummary),
+        );
+      }
+    }
   }
 }
 
@@ -238,22 +253,30 @@ class DailySalesCloseSummary {
   });
 
   DailySalesCloseSummary.fromJson(Map<String, dynamic> json) {
-    userName = json['user_name'];
-    storeId = json['store_id'];
-    openingDate = json['opening_date'];
-    openingTime = json['opening_time'];
-    closingDate = json['closing_date'];
-    closingTime = json['closing_time'];
-    totalOrders = json['total_orders'];
-    totalSales = json['total_sales'];
-    paymentReceived = json['payment_received'];
-    collectedOnSale = json['collected_on_sale'];
-    cashSales = json['cash_sales'];
-    onlineSales = json['online_sales'];
-    creditAmount = json['credit_amount'];
-    creditCollected = json['credit_collected'];
-    totalReturns = json['total_returns'];
-    totalRefunds = json['total_refunds'];
+    userName = _stringValue(json['user_name']);
+    storeId = _intValue(json['store_id']);
+    openingDate = _stringValue(json['opening_date']);
+    openingTime = _stringValue(json['opening_time']);
+    closingDate = _stringValue(json['closing_date']);
+    closingTime = _stringValue(json['closing_time']);
+    totalOrders = _intValue(json['total_orders']);
+    totalSales = _stringValue(json['total_sales']);
+    paymentReceived = _stringValue(json['payment_received']);
+    collectedOnSale = _stringValue(json['collected_on_sale']);
+    cashSales = _stringValue(json['cash_sales']);
+    onlineSales = _stringValue(json['online_sales']);
+    creditAmount = _stringValue(json['credit_amount']);
+    creditCollected = _stringValue(json['credit_collected']);
+    totalReturns = _stringValue(json['total_returns']);
+    totalRefunds = _stringValue(json['total_refunds']);
+  }
+
+  static String? _stringValue(dynamic value) => value?.toString();
+
+  static int? _intValue(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 }
 
@@ -287,8 +310,12 @@ class ProductSummary {
         items!.add(ProductSummaryItem.fromJson(v));
       });
     }
-    grandTotalQty = json['grand_total_qty'] is num ? (json['grand_total_qty'] as num).toInt() : int.tryParse(json['grand_total_qty']?.toString() ?? '0');
-    grandTotalAmount = json['grand_total_amount'] is num ? json['grand_total_amount'] : num.tryParse(json['grand_total_amount']?.toString() ?? '0');
+    grandTotalQty = json['grand_total_qty'] is num
+        ? (json['grand_total_qty'] as num).toInt()
+        : int.tryParse(json['grand_total_qty']?.toString() ?? '0');
+    grandTotalAmount = json['grand_total_amount'] is num
+        ? json['grand_total_amount']
+        : num.tryParse(json['grand_total_amount']?.toString() ?? '0');
   }
 }
 
@@ -308,10 +335,18 @@ class ProductSummaryItem {
   });
 
   ProductSummaryItem.fromJson(Map<String, dynamic> json) {
-    productId = json['product_id'] is int ? json['product_id'] : int.tryParse(json['product_id']?.toString() ?? '0');
+    productId = json['product_id'] is int
+        ? json['product_id']
+        : int.tryParse(json['product_id']?.toString() ?? '0');
     productName = json['product_name'];
-    unitPrice = json['unit_price'] is num ? json['unit_price'] : num.tryParse(json['unit_price']?.toString() ?? '0');
-    totalQty = json['total_qty'] is int ? json['total_qty'] : int.tryParse(json['total_qty']?.toString() ?? '0');
-    totalAmount = json['total_amount'] is num ? json['total_amount'] : num.tryParse(json['total_amount']?.toString() ?? '0');
+    unitPrice = json['unit_price'] is num
+        ? json['unit_price']
+        : num.tryParse(json['unit_price']?.toString() ?? '0');
+    totalQty = json['total_qty'] is int
+        ? json['total_qty']
+        : int.tryParse(json['total_qty']?.toString() ?? '0');
+    totalAmount = json['total_amount'] is num
+        ? json['total_amount']
+        : num.tryParse(json['total_amount']?.toString() ?? '0');
   }
 }

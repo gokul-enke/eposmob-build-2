@@ -19,6 +19,8 @@ import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart'
+    as custom_dialog_box;
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -201,6 +203,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _showNotificationPositionPicker() async {
+    final prefs = SharedPreferenceProvider();
+    final current = await prefs.getNotificationPosition();
+    if (!mounted) return;
+
+    String selected = current;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Notification Position'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Left'),
+                value: 'left',
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
+              ),
+              RadioListTile<String>(
+                title: const Text('Center'),
+                value: 'center',
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
+              ),
+              RadioListTile<String>(
+                title: const Text('Right'),
+                value: 'right',
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(selected),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null) return;
+
+    await prefs.saveNotificationPosition(result);
+    setNotificationPosition(result);
+    custom_dialog_box.setNotificationPosition(result);
+    if (!mounted) return;
+    setState(() {});
+    showScaffold(context: context, message: 'Notification position updated');
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -247,7 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         crossAxisSpacing: 14,
                         childAspectRatio: 1.08,
                       ),
-                      itemCount: kDebugMode ? 8 : 7,
+                      itemCount: kDebugMode ? 9 : 8,
                       itemBuilder: (context, index) {
                         switch (index) {
                           case 0:
@@ -342,6 +402,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               },
                             );
                           case 6:
+                            return FutureBuilder<String>(
+                              future: SharedPreferenceProvider()
+                                  .getNotificationPosition(),
+                              builder: (context, snapshot) {
+                                final current = snapshot.data ?? 'right';
+                                final label = current[0].toUpperCase() +
+                                    current.substring(1);
+                                return _SettingsInfoCard(
+                                  title: 'Notification Position',
+                                  subtitle: label,
+                                  icon: Icons.view_week,
+                                  backgroundColor: const Color(0xFFE3F2FD),
+                                  iconColor: const Color(0xFF1565C0),
+                                  onTap: () async {
+                                    await _showNotificationPositionPicker();
+                                  },
+                                );
+                              },
+                            );
+                          case 7:
                             return _SettingsCardWithIcon(
                               title: 'Clear Local Storage',
                               icon: FontAwesomeIcons.trashCan,
@@ -351,7 +431,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 await _clearLocalStorageAndLogout();
                               },
                             );
-                          case 7:
+                          case 8:
                             if (!kDebugMode) return const SizedBox.shrink();
                             return _SettingsCardWithIcon(
                               title: 'Clear Product Cache (Debug)',

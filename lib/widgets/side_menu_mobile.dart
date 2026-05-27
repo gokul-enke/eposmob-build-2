@@ -11,7 +11,6 @@ import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/widgets/drawer_list_tile_expandable.dart';
 import 'package:provider/provider.dart';
-import 'package:websafe_svg/websafe_svg.dart';
 
 import '../controllers/sidebar_controller.dart';
 import '../resources/color_manager.dart';
@@ -35,7 +34,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     super.initState();
     _loadUserRole();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint("🟡 [SideMenuMobile] initState postFrame: userRole='$userRole'");
+      debugPrint(
+          "🟡 [SideMenuMobile] initState postFrame: userRole='$userRole'");
     });
   }
 
@@ -111,8 +111,15 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 Obx(() => DrawerListTile(
                       iconPath: ImageAssets.homeIcon,
                       title: 'Home',
-                      onTap: () => navigate(46),
-                      selected: sideBarController.index.value == 46,
+                      onTap: () => navigate(0),
+                      selected: sideBarController.index.value == 0,
+                    )),
+              if (_hasRole('sales_executive'))
+                Obx(() => DrawerListTile(
+                      iconPath: ImageAssets.barcodeIcon,
+                      title: 'Billing',
+                      onTap: () => navigate(90),
+                      selected: sideBarController.index.value == 90,
                     )),
               if (_hasAnyRole(['attender']))
                 Obx(() => DrawerListTile(
@@ -187,8 +194,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                             accessToken: accessToken ?? '', storeId: 1);
                         navigate(2);
                       },
-                      selected: [2, 54, 84]
-                          .contains(sideBarController.index.value),
+                      selected:
+                          [2, 54, 84].contains(sideBarController.index.value),
                     )),
               if (_hasRole('company_admin'))
                 Obx(() => DrawerListTileExpandableColumn(

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferenceProvider extends ChangeNotifier {
+  static const String _notificationPositionKey = 'notification_position';
   static const String _billingSidebarWidthKey =
       'billing_sidebar_width_fraction';
   static const String _restaurantTablesPanelVisibleKey =
@@ -25,6 +26,7 @@ class SharedPreferenceProvider extends ChangeNotifier {
     }
     return '${_restaurantTablesPanelVisibleKey}_$userId';
   }
+
   String _restaurantLeftPanelWidthPrefKey({int? userId}) {
     if (userId == null) {
       return _restaurantLeftPanelWidthKey;
@@ -261,6 +263,10 @@ class SharedPreferenceProvider extends ChangeNotifier {
     await prefs.remove('default_printer');
     await prefs.remove('default_paper_size');
     await prefs.remove('default_font_style');
+    await prefs.remove('quotation_printer');
+    await prefs.remove('quotation_paper_size');
+    await prefs.remove('quotation_font_style');
+    await prefs.remove('quotation_receipt_theme');
   }
 
   Future<void> saveServerTimeOffset(int offsetMilliseconds) async {
@@ -301,6 +307,16 @@ class SharedPreferenceProvider extends ChangeNotifier {
   Future<void> clearManualOfflineMode() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('manual_offline_mode');
+  }
+
+  Future<void> saveNotificationPosition(String position) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_notificationPositionKey, position);
+  }
+
+  Future<String> getNotificationPosition() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_notificationPositionKey) ?? 'left';
   }
 
   Future<void> saveBillingSidebarWidthFraction(

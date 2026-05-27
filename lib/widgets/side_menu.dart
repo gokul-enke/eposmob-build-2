@@ -170,7 +170,7 @@ class _SideMenuState extends State<SideMenu> {
 
   @override
   Widget build(BuildContext context) {
-    SideBarController sideBarController = Get.put(SideBarController());
+    SideBarController sideBarController = Get.find<SideBarController>();
     final authModel = Provider.of<AuthModel>(context);
     final isExpanded = _isExpanded;
 
@@ -287,13 +287,13 @@ class _SideMenuState extends State<SideMenu> {
           SizedBox(height: isExpanded ? 6 : 4),
           // ========== REORGANIZED MENU (Font Awesome Icons) ==========
 
-          // 1. HOME (Index: 46)
+          // 1. HOME (Index: 0)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.home.main.access');
 
-              if (!hasPermission) {
+              if (hasPermission) {
                 return const SizedBox.shrink();
               }
 
@@ -302,9 +302,9 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.house,
                   title: 'Home',
                   onTap: () {
-                    sideBarController.index.value = 46;
+                    sideBarController.index.value = 0;
                   },
-                  selected: sideBarController.index.value == 46,
+                  selected: sideBarController.index.value == 0,
                 ),
               );
             },
@@ -357,28 +357,7 @@ class _SideMenuState extends State<SideMenu> {
             },
           ),
 
-          // 1. HOME (Index: 46)
-          // Consumer<RoleProvider>(
-          //   builder: (context, roleProvider, child) {
-          //     final hasPermission = roleProvider
-          //         .currentUserHasPermissionSync('menu.restaurant.main.access');
-
-          //     if (!hasPermission) {
-          //       return const SizedBox.shrink();
-          //     }
-
-          //     return Obx(
-          //       () => DrawerListTile(
-          //         icon: fa.FontAwesomeIcons.home,
-          //         title: 'Restaurant Legacy',
-          //         onTap: () {
-          //           sideBarController.index.value = 89;
-          //         },
-          //         selected: sideBarController.index.value == 89,
-          //       ),
-          //     );
-          //   },
-          // ),
+          // 3. RESTAURANT (Index: 89)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
@@ -393,9 +372,9 @@ class _SideMenuState extends State<SideMenu> {
                   icon: fa.FontAwesomeIcons.shop,
                   title: 'Restaurant',
                   onTap: () {
-                    sideBarController.index.value = 46;
+                    sideBarController.index.value = 89;
                   },
-                  selected: sideBarController.index.value == 46,
+                  selected: sideBarController.index.value == 89,
                 ),
               );
             },
@@ -460,10 +439,6 @@ class _SideMenuState extends State<SideMenu> {
               final hasDayClosingPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.sales.day_closing.access');
-              final hasQuotationPermission =
-                  roleProvider.currentUserHasPermissionSync(
-                          'menu.quotations.main.access') ||
-                      userRole.isNotEmpty;
               final isCompanyAdmin = userRole == 'company_admin';
 
               // Only show the expandable menu if user has at least one permission
@@ -471,7 +446,7 @@ class _SideMenuState extends State<SideMenu> {
                   !hasSalesPermission &&
                   !hasConfirmedOrdersPermission &&
                   !hasSalesReturnPermission &&
-                  !hasQuotationPermission) {
+                  !hasDayClosingPermission) {
                 return const SizedBox.shrink();
               }
 
@@ -492,15 +467,11 @@ class _SideMenuState extends State<SideMenu> {
                   onTapTitle5: () {
                     sideBarController.index.value = 84;
                   },
-                  onTapTitle6: () {
-                    sideBarController.index.value = 87;
-                  },
                   listTitle1: "Sales",
                   listTitle2: "Confirmed Orders",
                   listTitle3: "Sales Return",
                   listTitle4: "Day Sale Closing",
                   listTitle5: "Admin Day Sale records",
-                  listTitle6: "Quotation List",
 
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
@@ -508,7 +479,6 @@ class _SideMenuState extends State<SideMenu> {
                   showTitle3: hasSalesReturnPermission && !isCompanyAdmin,
                   showTitle4: hasDayClosingPermission && !isCompanyAdmin,
                   showTitle5: isCompanyAdmin && hasDayClosingPermission,
-                  showTitle6: hasQuotationPermission,
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'Sales',
                   onTap: () {
@@ -530,9 +500,7 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 54 ||
                       sideBarController.index.value == 78 ||
                       sideBarController.index.value == 79 ||
-                      sideBarController.index.value == 84 ||
-                      sideBarController.index.value == 87 ||
-                      sideBarController.index.value == 88,
+                      sideBarController.index.value == 84,
                 ),
               );
             },
@@ -550,13 +518,23 @@ class _SideMenuState extends State<SideMenu> {
               }
 
               return Obx(
-                () => DrawerListTile(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () {
+                    sideBarController.index.value = 86;
+                  },
+                  onTapTitle2: () {
+                    sideBarController.index.value = 87;
+                  },
+                  listTitle1: "Quotations",
+                  listTitle2: "Quotation List",
                   icon: fa.FontAwesomeIcons.fileInvoice,
                   title: 'Quotations',
                   onTap: () {
                     sideBarController.index.value = 86;
                   },
-                  selected: sideBarController.index.value == 86,
+                  selected: sideBarController.index.value == 86 ||
+                      sideBarController.index.value == 87 ||
+                      sideBarController.index.value == 88,
                 ),
               );
             },
@@ -840,15 +818,20 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle4: () {
                       sideBarController.index.value = 75;
                     },
+                    onTapTitle5: () {
+                      sideBarController.index.value = 91;
+                    },
                     listTitle1: "Invoice",
                     listTitle2: "Receipts",
                     listTitle3: "Customer Voucher",
                     listTitle4: "Supplier Voucher (Purchase Entry)",
+                    listTitle5: "Proforma Invoice",
                     // Permission-based visibility
                     showTitle1: hasInvoicePermission,
                     showTitle2: hasReceiptsPermission,
                     showTitle3: hasCustomerVouchersPermission,
                     showTitle4: hasSupplierVouchersPermission,
+                    showTitle5: hasInvoicePermission,
                     icon: fa.FontAwesomeIcons.exchange,
                     title: 'Transactions',
                     onTap: () {
@@ -863,6 +846,7 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 71 ||
                         sideBarController.index.value == 75 ||
                         sideBarController.index.value == 76 ||
+                        sideBarController.index.value == 91 ||
                         sideBarController.index.value == 30),
               );
             },

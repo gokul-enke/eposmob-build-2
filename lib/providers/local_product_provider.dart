@@ -213,6 +213,8 @@ class SavedOrder {
   final String? customerVatNumber;
   final String? customerCrNumber;
   final String? customerType;
+  final int? quotationId;
+  final String? quotationNumber;
 
   SavedOrder({
     required this.id,
@@ -246,6 +248,8 @@ class SavedOrder {
     this.customerVatNumber,
     this.customerCrNumber,
     this.customerType,
+    this.quotationId,
+    this.quotationNumber,
   });
 }
 
@@ -1093,8 +1097,10 @@ class LocalProductProvider extends ChangeNotifier {
           'price': payloadPrice,
           'mrp': payloadMrp,
           'stock_id': reservation.stockId,
-          if (item.canUseSaleUnitPayloadFor(reservation.quantity))
+          if (item.canUseSaleUnitPayloadFor(reservation.quantity)) ...{
             'sale_unit_id': item.saleUnitId,
+            'product_sale_unit_id': item.saleUnitId,
+          },
         });
         reservedQuantity += reservation.quantity;
       }
@@ -1118,7 +1124,10 @@ class LocalProductProvider extends ChangeNotifier {
               canUseSaleUnitPayload ? item.toDisplayAmount(item.mrp) : item.mrp,
           'stock_id':
               item.stockReservations.isEmpty ? item.selectedStock?.id : null,
-          if (canUseSaleUnitPayload) 'sale_unit_id': item.saleUnitId,
+          if (canUseSaleUnitPayload) ...{
+            'sale_unit_id': item.saleUnitId,
+            'product_sale_unit_id': item.saleUnitId,
+          },
         });
       }
     }
@@ -2987,6 +2996,59 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  GetProduct? updateStockDetailsLocallyByStockId({
+    required int stockId,
+    required String retailPrice,
+    required String mrp,
+    required String purchasePrice,
+    required String quantity,
+    required String rack,
+  }) {
+    final productIndex = _products.indexWhere(
+      (product) => product.stock?.any((stock) => stock.id == stockId) ?? false,
+    );
+
+    if (productIndex == -1) {
+      debugPrint(
+          "âš ï¸ [LocalStockUpdate] Product not found for stockId=$stockId");
+      return null;
+    }
+
+    final oldProduct = _products[productIndex];
+    final updatedStock = List<Stock>.from(oldProduct.stock ?? const <Stock>[]);
+    final stockIndex = updatedStock.indexWhere((stock) => stock.id == stockId);
+    if (stockIndex == -1) {
+      return null;
+    }
+
+    final existingStock = updatedStock[stockIndex];
+    updatedStock[stockIndex] = existingStock.copyWith(
+      quantity: num.tryParse(quantity) ?? existingStock.quantity,
+      price: retailPrice,
+      mrp: mrp,
+      purchasePrice: purchasePrice,
+      rack: rack,
+    );
+
+    final updatedProduct = oldProduct.copyWith(stock: updatedStock);
+    _products[productIndex] = updatedProduct;
+
+    final filteredIndex = _filteredProducts.indexWhere(
+      (product) => product.productId == updatedProduct.productId,
+    );
+    if (filteredIndex != -1) {
+      _filteredProducts[filteredIndex] = updatedProduct;
+    }
+
+    _rebuildBarcodeIndex();
+    _saveProductToHive(updatedProduct);
+    notifyListeners();
+
+    debugPrint(
+        "âœ… [LocalStockUpdate] Updated local product stock for stockId=$stockId");
+    return updatedProduct;
+  }
+
   /// Updates stock quantity for a specific stock entry
   /// Used when stock quantities change (e.g., after sales, returns, etc.)
   void updateStockQuantity({
@@ -3448,6 +3510,43 @@ class LocalProductProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint("Error loading order: $e");
+    }
+  }
+
+  /// Loads a quotation as an editable billing draft without saving it as a
+  /// normal local order. The final order API will receive quotationId later.
+  void loadQuotationDraftForEditing(SavedOrder draft) {
+    try {
+      debugPrint(
+          "🧾 [LocalProductProvider] Loading quotation draft id=${draft.quotationId}, number=${draft.quotationNumber}, customerId=${draft.customerId}, customerName=${draft.customerName}, customerPhone=${draft.customerPhone}, items=${draft.items.length}");
+      _flatDiscount = draft.flatDiscount ?? 0.0;
+      _percentageDiscount = draft.percentageDiscount ?? 0.0;
+
+      if (isStockEnabled) {
+        for (final cartItem in _cartItems) {
+          if (cartItem.stockDeducted > 0) {
+            _restoreStockReservations(
+              cartItem,
+              cartItem.stockDeducted,
+              "LOAD_QUOTATION_RELEASE",
+            );
+          }
+        }
+        _saveProductsToHive();
+      }
+
+      _cartItems.clear();
+      _cartItems.addAll(draft.items.map(_cloneLocalCartItem));
+      _currentOrder = draft;
+
+      cartTotal;
+      _saveCartToHive();
+      notifyListeners();
+      debugPrint(
+          "✅ [LocalProductProvider] Quotation draft ready. cartItems=${_cartItems.length}, currentOrder=${_currentOrder?.id}, quotationId=${_currentOrder?.quotationId}");
+    } catch (e) {
+      debugPrint("Error loading quotation draft: $e");
+      rethrow;
     }
   }
 
