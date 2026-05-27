@@ -14,7 +14,7 @@ class SupplierVoucherProvider extends ChangeNotifier {
   // Pagination properties
   int _currentPage = 1;
   int _totalPages = 1;
-  int _itemsPerPage = 20;
+  final int _itemsPerPage = 20;
 
   // Filter properties
   int? _filterSupplierId;
@@ -198,7 +198,7 @@ class SupplierVoucherProvider extends ChangeNotifier {
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
 
-    final queryParams = {
+    final queryParams = <String, String>{
       'page': '1',
       'per_page': '1000',
     };
@@ -215,13 +215,12 @@ class SupplierVoucherProvider extends ChangeNotifier {
     }
 
     try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'X-Tenant': apiKey,
-        },
-      );
+      final headers = {
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey,
+      };
+
+      final response = await http.get(uri, headers: headers);
 
       debugPrint("Response status: ${response.statusCode}");
 
@@ -229,8 +228,38 @@ class SupplierVoucherProvider extends ChangeNotifier {
         final jsonData = json.decode(response.body);
         SupplierVoucherModel supplierVoucherModel =
             SupplierVoucherModel.fromJson(jsonData);
+        final vouchers = [...supplierVoucherModel.data];
 
-        _allVouchers = supplierVoucherModel.data;
+        if (supplierVoucherModel.lastPage > supplierVoucherModel.currentPage) {
+          for (int page = supplierVoucherModel.currentPage + 1;
+              page <= supplierVoucherModel.lastPage;
+              page++) {
+            final pageUri = Uri.parse(APPUrl.listSupplierVouchers).replace(
+              queryParameters: {
+                ...queryParams,
+                'page': page.toString(),
+              },
+            );
+            debugPrint("Fetching vouchers page $page from: $pageUri");
+
+            final pageResponse = await http.get(pageUri, headers: headers);
+            debugPrint(
+                "Response status for page $page: ${pageResponse.statusCode}");
+
+            if (pageResponse.statusCode != 200) {
+              debugPrint(
+                  "Error loading page $page: ${pageResponse.statusCode} - ${pageResponse.body}");
+              continue;
+            }
+
+            final pageJsonData = json.decode(pageResponse.body);
+            final pageVoucherModel =
+                SupplierVoucherModel.fromJson(pageJsonData);
+            vouchers.addAll(pageVoucherModel.data);
+          }
+        }
+
+        _allVouchers = vouchers;
         debugPrint("Loaded ${_allVouchers?.length ?? 0} vouchers");
 
         // Apply initial filters

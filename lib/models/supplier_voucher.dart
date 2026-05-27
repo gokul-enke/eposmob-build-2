@@ -99,21 +99,47 @@ class SupplierVoucherModel {
   final String status;
   final String message;
   final List<SupplierVoucher> data;
+  final int currentPage;
+  final int lastPage;
 
   SupplierVoucherModel({
     required this.status,
     required this.message,
     required this.data,
+    required this.currentPage,
+    required this.lastPage,
   });
 
   factory SupplierVoucherModel.fromJson(Map<String, dynamic> json) {
+    final responseData = json['data'];
+    final List<dynamic> voucherData;
+    int currentPage = 1;
+    int lastPage = 1;
+
+    if (responseData is List) {
+      voucherData = responseData;
+    } else if (responseData is Map<String, dynamic>) {
+      voucherData = responseData['data'] is List ? responseData['data'] : [];
+      currentPage = _parseInt(responseData['current_page'], fallback: 1);
+      lastPage = _parseInt(responseData['last_page'], fallback: currentPage);
+    } else {
+      voucherData = [];
+    }
+
     return SupplierVoucherModel(
       status: json['status'] ?? '',
       message: json['message'] ?? '',
-      data: (json['data'] as List?)
-              ?.map((item) => SupplierVoucher.fromJson(item))
-              .toList() ??
-          [],
+      data: voucherData
+          .whereType<Map<String, dynamic>>()
+          .map((item) => SupplierVoucher.fromJson(item))
+          .toList(),
+      currentPage: currentPage,
+      lastPage: lastPage,
     );
+  }
+
+  static int _parseInt(dynamic value, {required int fallback}) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
 }
