@@ -577,6 +577,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       isCompact: isDenseDesktop,
                       onLocalDraftLoaded: _applyLocalDraftContext,
                       onLocalDraftSaved: _resetCounterOrderContextAfterSave,
+                      onEditedOrderConfirmed:
+                          _resetCounterOrderContextAfterSave,
                       onCheckoutActionLoadingChanged:
                           _setCounterCheckoutLoading,
                     ),
@@ -2312,6 +2314,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             isLoadingPrint: _isLoadingPrint,
             onLocalDraftLoaded: _applyLocalDraftContext,
             onLocalDraftSaved: _resetCounterOrderContextAfterSave,
+            onEditedOrderConfirmed: _resetCounterOrderContextAfterSave,
             onCheckoutActionLoadingChanged: _setCounterCheckoutLoading,
           ),
         ),
