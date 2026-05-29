@@ -1087,57 +1087,46 @@ class _SideMenuState extends State<SideMenu> {
               );
             },
           ),
-          // LOGOUT
-          Consumer<RoleProvider>(
-            builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync(
-                  'menu.session.logout.access');
-
-              if (!hasPermission) {
-                return const SizedBox.shrink();
-              }
-
-              return DrawerListTile(
-                icon: fa.FontAwesomeIcons.signOutAlt,
-                title: 'Logout',
-                onTap: () async {
-                  String token = authModel.token ?? '';
-                  showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) {
-                        return const Center(
-                          child: CircularProgressIndicator.adaptive(),
-                        );
-                      });
-                  await AuthenticationProvider()
-                      .logout(token, context)
-                      .then((value) async {
-                    if (value["status"] == "success") {
-                      await SessionResetService.resetAfterLogout(context);
-
-                      showScaffold(
-                        context: context,
-                        message: '${value["message"]}',
-                      );
-                      Navigator.pop(context);
-                      await Future.delayed(const Duration(seconds: 0)).then(
-                          (value) => Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const SignInScreen())));
-                    } else {
-                      Navigator.pop(context);
-                      showScaffoldError(
-                        context: context,
-                        message: '${value["message"]}',
-                      );
-                    }
+          // LOGOUT (always visible)
+          DrawerListTile(
+            icon: fa.FontAwesomeIcons.signOutAlt,
+            title: 'Logout',
+            onTap: () async {
+              String token = authModel.token ?? '';
+              showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) {
+                    return const Center(
+                      child: CircularProgressIndicator.adaptive(),
+                    );
                   });
-                },
-                selected: false,
-              );
+              await AuthenticationProvider()
+                  .logout(token, context)
+                  .then((value) async {
+                if (value["status"] == "success") {
+                  await SessionResetService.resetAfterLogout(context);
+
+                  showScaffold(
+                    context: context,
+                    message: '${value["message"]}',
+                  );
+                  Navigator.pop(context);
+                  await Future.delayed(const Duration(seconds: 0)).then(
+                      (value) => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SignInScreen())));
+                } else {
+                  Navigator.pop(context);
+                  showScaffoldError(
+                    context: context,
+                    message: '${value["message"]}',
+                  );
+                }
+              });
             },
+            selected: false,
           ),
           const SizedBox(
             height: 10,
