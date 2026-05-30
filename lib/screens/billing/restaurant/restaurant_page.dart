@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -101,6 +102,15 @@ class _RestaurantPageState extends State<RestaurantPage> {
   bool _isCounterBillingMode = false;
   AppSettingsProvider? _appSettingsProviderForDefaults;
   DeliveryMethodsProvider? _deliveryMethodsProviderForDefaults;
+  GeneralSettingsProvider? _generalSettingsProviderForStock;
+
+  void _syncStockEnabledSetting() {
+    final stockEnabled =
+        _generalSettingsProviderForStock?.generalSettings?.stockEnabled ??
+            false;
+    Provider.of<LocalProductProvider>(context, listen: false)
+        .setStockEnabled(stockEnabled);
+  }
 
   @override
   void initState() {
@@ -117,6 +127,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       _deliveryMethodsProviderForDefaults =
           Provider.of<DeliveryMethodsProvider>(context, listen: false)
             ..addListener(_applyDefaultCounterDeliveryMethodContext);
+      _generalSettingsProviderForStock =
+          Provider.of<GeneralSettingsProvider>(context, listen: false)
+            ..addListener(_syncStockEnabledSetting);
+      _syncStockEnabledSetting();
       _initializeData();
     });
   }
@@ -127,6 +141,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         ?.removeListener(_applyDefaultCounterDeliveryMethodContext);
     _deliveryMethodsProviderForDefaults
         ?.removeListener(_applyDefaultCounterDeliveryMethodContext);
+    _generalSettingsProviderForStock?.removeListener(_syncStockEnabledSetting);
     HardwareKeyboard.instance.removeHandler(_onRestaurantHardwareKey);
     super.dispose();
   }
@@ -562,6 +577,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       isCompact: isDenseDesktop,
                       onLocalDraftLoaded: _applyLocalDraftContext,
                       onLocalDraftSaved: _resetCounterOrderContextAfterSave,
+                      onEditedOrderConfirmed:
+                          _resetCounterOrderContextAfterSave,
                       onCheckoutActionLoadingChanged:
                           _setCounterCheckoutLoading,
                     ),
@@ -2297,6 +2314,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             isLoadingPrint: _isLoadingPrint,
             onLocalDraftLoaded: _applyLocalDraftContext,
             onLocalDraftSaved: _resetCounterOrderContextAfterSave,
+            onEditedOrderConfirmed: _resetCounterOrderContextAfterSave,
             onCheckoutActionLoadingChanged: _setCounterCheckoutLoading,
           ),
         ),

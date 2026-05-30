@@ -293,7 +293,7 @@ class _SideMenuState extends State<SideMenu> {
               final hasPermission = roleProvider
                   .currentUserHasPermissionSync('menu.home.main.access');
 
-              if (hasPermission) {
+              if (!hasPermission) {
                 return const SizedBox.shrink();
               }
 
@@ -475,9 +475,9 @@ class _SideMenuState extends State<SideMenu> {
 
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
-                  showTitle2: hasConfirmedOrdersPermission && !isCompanyAdmin,
-                  showTitle3: hasSalesReturnPermission && !isCompanyAdmin,
-                  showTitle4: hasDayClosingPermission && !isCompanyAdmin,
+                  showTitle2: hasConfirmedOrdersPermission,
+                  showTitle3: hasSalesReturnPermission,
+                  showTitle4: hasDayClosingPermission,
                   showTitle5: isCompanyAdmin && hasDayClosingPermission,
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'Sales',
@@ -510,8 +510,7 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider.currentUserHasPermissionSync(
-                      'menu.quotations.main.access') ||
-                  userRole.isNotEmpty;
+                  'menu.quotation.main.access');
 
               if (!hasPermission) {
                 return const SizedBox.shrink();
@@ -730,8 +729,7 @@ class _SideMenuState extends State<SideMenu> {
                     listTitle5: "Non-Stock Report",
                     listTitle6: "Consumed Stocks Report",
                     // Permission-based visibility
-                    showTitle1:
-                        hasSalesExecutiveReportsPermission && !isCompanyAdmin,
+                    showTitle1: hasSalesExecutiveReportsPermission,
                     showTitle2: isCompanyAdmin || hasExecutiveSummaryPermission,
                     showTitle3: hasCustomerTransactionsPermission,
                     showTitle4: hasSupplierTransactionsPermission,
@@ -762,17 +760,18 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               if (!roleProvider.currentUserHasPermissionSync(
-                  'menu.transactions.invoice.access')) {
+                      'menu.transactions.invoice.access') &&
+                  !roleProvider.currentUserHasPermissionSync(
+                      'page_ProformaInvoices')) {
                 return const SizedBox.shrink();
               }
               // Check permissions for each sub-item
-              // final hasInvoicePermission =
-              //     roleProvider.currentUserHasPermissionSync('page_Invoices') ||
-              //         roleProvider.currentUserHasPermissionSync(
-              //             'menu.transactions.invoice.access');
               final hasInvoicePermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.invoice.access');
+              final hasProformaPermission =
+                  roleProvider.currentUserHasPermissionSync(
+                      'page_ProformaInvoices');
 
               // final hasReceiptsPermission =
               //     roleProvider.currentUserHasPermissionSync('page_Receipts') ||
@@ -800,7 +799,8 @@ class _SideMenuState extends State<SideMenu> {
               if (!hasInvoicePermission &&
                   !hasReceiptsPermission &&
                   !hasCustomerVouchersPermission &&
-                  !hasSupplierVouchersPermission) {
+                  !hasSupplierVouchersPermission &&
+                  !hasProformaPermission) {
                 return const SizedBox.shrink();
               }
 
@@ -831,7 +831,7 @@ class _SideMenuState extends State<SideMenu> {
                     showTitle2: hasReceiptsPermission,
                     showTitle3: hasCustomerVouchersPermission,
                     showTitle4: hasSupplierVouchersPermission,
-                    showTitle5: hasInvoicePermission,
+                    showTitle5: hasProformaPermission,
                     icon: fa.FontAwesomeIcons.exchange,
                     title: 'Transactions',
                     onTap: () {
@@ -1107,7 +1107,6 @@ class _SideMenuState extends State<SideMenu> {
                 if (value["status"] == "success") {
                   await SessionResetService.resetAfterLogout(context);
 
-                  // debugPrint(" authmodel logout token ${authModel.token}");
                   showScaffold(
                     context: context,
                     message: '${value["message"]}',
@@ -1126,7 +1125,6 @@ class _SideMenuState extends State<SideMenu> {
                   );
                 }
               });
-              // debugPrint(" 'Logout',${sideBarController.index.value}");
             },
             selected: false,
           ),

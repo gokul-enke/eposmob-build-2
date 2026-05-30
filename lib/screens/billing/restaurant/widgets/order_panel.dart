@@ -68,6 +68,7 @@ class OrderPanel extends StatefulWidget {
   final bool isCounterBillingMode;
   final ValueChanged<SavedOrder>? onLocalDraftLoaded;
   final VoidCallback? onLocalDraftSaved;
+  final VoidCallback? onEditedOrderConfirmed;
   final void Function({
     required bool isLoading,
     required bool printBill,
@@ -92,6 +93,7 @@ class OrderPanel extends StatefulWidget {
     this.isCounterBillingMode = false,
     this.onLocalDraftLoaded,
     this.onLocalDraftSaved,
+    this.onEditedOrderConfirmed,
     this.onCheckoutActionLoadingChanged,
   });
 
@@ -3135,6 +3137,15 @@ class OrderPanelState extends State<OrderPanel> {
       if (_error!.toLowerCase().contains('no init status orders found') ||
           _error!.toLowerCase().contains('no orders found') ||
           _error!.toLowerCase().contains('no saved orders')) {
+        if (_usesCounterOrderTabs &&
+            _activeOrderPanelTab == OrderPanelTab.cart) {
+          return Consumer<LocalProductProvider>(
+            builder: (context, localProductProvider, _) {
+              final cartItems = localProductProvider.getCartItems();
+              return _buildCurrentCartView(cartItems);
+            },
+          );
+        }
         if (_showSavedOrdersView) {
           return _buildSavedOrdersList();
         }
@@ -7119,6 +7130,25 @@ class OrderPanelState extends State<OrderPanel> {
     _applyDefaultCustomer();
   }
 
+  void _resetConfirmedEditOrderContext() {
+    _clearOrderEditingState();
+    if (!mounted) return;
+    setState(() {
+      _blockReselectAfterPlace = true;
+      _selectedOrder = null;
+      _loadedLocalDraftId = null;
+      if (_usesCounterOrderTabs) {
+        _activeOrderPanelTab = OrderPanelTab.ongoing;
+        _focusedOrderPanelTabIndex = _tabIndexFor(OrderPanelTab.ongoing);
+        _showSavedOrdersView = true;
+        _forceCounterCartView = false;
+      }
+    });
+    _applyDefaultCustomer();
+    widget.onOrderSelected(null);
+    widget.onEditedOrderConfirmed?.call();
+  }
+
   Future<bool> _saveCurrentCartAsConfirmedAndPrint({
     required bool printBill,
   }) async {
@@ -7687,14 +7717,7 @@ class OrderPanelState extends State<OrderPanel> {
         // Clear the cart to prevent auto-save from recreating a draft on table switch
         Provider.of<LocalProductProvider>(context, listen: false).clearCart();
 
-        if (closeOnSuccess) {
-          // Go back to orders list
-          setState(() {
-            _blockReselectAfterPlace = true;
-            _selectedOrder = null;
-          });
-          widget.onOrderSelected(null);
-        }
+        _resetConfirmedEditOrderContext();
         return true;
       } else {
         showScaffoldError(

@@ -8,8 +8,16 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
 
-    final targetDraftId = _loadedLocalDraftId ?? fallbackDraftId;
-    if (targetDraftId != null && targetDraftId.isNotEmpty) {
+    // Check multiple sources for the draft ID to ensure cleanup in all flows:
+    // 1. _loadedLocalDraftId (set when a local draft is loaded into cart)
+    // 2. fallbackDraftId (passed explicitly by caller, e.g., kitchen send)
+    // 3. localProductProvider.currentOrder?.id (set by loadOrderForEditing)
+    final targetDraftId = _loadedLocalDraftId ??
+        fallbackDraftId ??
+        localProductProvider.currentOrder?.id;
+    if (targetDraftId != null &&
+        targetDraftId.isNotEmpty &&
+        localProductProvider.findOrderById(targetDraftId) != null) {
       localProductProvider.deleteSavedOrder(targetDraftId);
       _loadedLocalDraftId = null;
     }
