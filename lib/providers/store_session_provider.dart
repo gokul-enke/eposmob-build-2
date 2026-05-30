@@ -174,6 +174,13 @@ class StoreSessionProvider extends ChangeNotifier {
         debugPrint('Warning: Failed to refresh checkout payment methods: $e');
       }
 
+      await _updateStatus('Loading stock grouping configuration...');
+      try {
+        await masterDataProvider.fetchStockGroupingFields(forceRefresh: true);
+      } catch (e) {
+        debugPrint('Warning: Failed to load stock grouping fields: $e');
+      }
+
       await _updateStatus('Fetching voucher types...');
       await invoiceProvider.listVoucherAccountType(accessToken);
 

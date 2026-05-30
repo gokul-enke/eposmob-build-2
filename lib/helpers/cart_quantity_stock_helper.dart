@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:provider/provider.dart';
@@ -229,7 +230,12 @@ class CartQuantityStockHelper {
     required GetProduct product,
     required List<Stock> stockOptions,
   }) async {
-    final groups = groupStocksByPricing(stockOptions);
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+    final groups = groupStocksByPricing(
+      stockOptions,
+      activeFields: masterDataProvider.activeStockGroupingFields,
+    );
     if (groups.isEmpty) {
       return null;
     }
