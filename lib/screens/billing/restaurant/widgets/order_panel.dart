@@ -1159,12 +1159,34 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   bool _isDefaultCustomerPhone(String? phone) {
-    if (phone == null || phone.isEmpty) return false;
+    final customerPhone = phone?.trim() ?? '';
+    if (customerPhone.isEmpty) return false;
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? '';
-    return defaultPhone.isNotEmpty && phone == defaultPhone;
+    final defaultPhone = appSettingsProvider
+            .appSettings?.autoAssignDefaultCustomerPhone
+            .trim() ??
+        '';
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
+
+  bool _isDefaultCustomer(CustomerListModelData? customer) {
+    if (customer == null) return false;
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final selectedCustomer = customerSelectionProvider.selectedCustomer;
+    final customerPhone = customer.phone?.trim();
+    final selectedPhone = selectedCustomer?.phone?.trim();
+
+    if (customerSelectionProvider.isDefaultCustomer &&
+        ((customer.id != null && selectedCustomer?.id == customer.id) ||
+            (customerPhone?.isNotEmpty == true &&
+                selectedPhone == customerPhone))) {
+      return true;
+    }
+
+    return _isDefaultCustomerPhone(customer.phone);
   }
 
   String? _firstNonEmptyString(List<dynamic> values) {
@@ -1676,7 +1698,9 @@ class OrderPanelState extends State<OrderPanel> {
     debugPrint(
         'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Payment Modal - Cart items count: ${cartItems.length}, Discount: ${totalDiscountAmount.toStringAsFixed(2)}, Final Order Total: ${orderTotal.toStringAsFixed(2)}');
 
-    final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
+    final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
+    final customerPrevBalance =
+        isDefaultCustomer ? 0.0 : (_selectedCustomer?.balance ?? 0.0);
 
     // Auto-fill cash amount if no payment methods are currently selected
     String autoFillCashAmount = _cashAmount;
@@ -1764,9 +1788,7 @@ class OrderPanelState extends State<OrderPanel> {
         initialTransactionNumber: _transactionNumber,
         cartTotal: orderTotal,
         customerPrevBalance: customerPrevBalance,
-        isDefaultCustomer:
-            Provider.of<CustomerSelectionProvider>(context, listen: false)
-                .isDefaultCustomer,
+        isDefaultCustomer: isDefaultCustomer,
         onAfterApply: onAfterApply,
         onPaymentMethodSelected: (
           isCash,
@@ -2831,7 +2853,9 @@ class OrderPanelState extends State<OrderPanel> {
     debugPrint(
         'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Payment Summary - Cart items count: ${cartItems.length}, Order Total: ${orderTotal.toStringAsFixed(2)}');
 
-    final customerBalance = _selectedCustomer?.balance ?? 0.0;
+    final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
+    final customerBalance =
+        isDefaultCustomer ? 0.0 : (_selectedCustomer?.balance ?? 0.0);
     final cashAmount = double.tryParse(_cashAmount) ?? 0.0;
     final cardAmount = double.tryParse(_cardAmount) ?? 0.0;
     final upiAmount = double.tryParse(_upiAmount) ?? 0.0;
@@ -2863,7 +2887,9 @@ class OrderPanelState extends State<OrderPanel> {
     // Calculate balance using the same logic as billing_page.dart
     double cashBalance = 0.0;
 
-    if (_toCustomerCreditEnabled && _selectedCustomer != null) {
+    if (_toCustomerCreditEnabled &&
+        _selectedCustomer != null &&
+        !isDefaultCustomer) {
       debugPrint(
           'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Âº RESTAURANT PAGE: Toggle is ON - Calculating with customer credit consideration');
 
@@ -6561,7 +6587,9 @@ class OrderPanelState extends State<OrderPanel> {
           }
 
           // Calculate customer balance for print
-          double? oldBalance = _selectedCustomer?.balance;
+          final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
+          double? oldBalance =
+              isDefaultCustomer ? null : _selectedCustomer?.balance;
           double totalPaid = 0.0;
           if (_isCashSelected) totalPaid += double.tryParse(_cashAmount) ?? 0.0;
           if (_isCardSelected) totalPaid += double.tryParse(_cardAmount) ?? 0.0;
@@ -6601,7 +6629,8 @@ class OrderPanelState extends State<OrderPanel> {
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
                 deliveryMethod: orderDetails.data?.deliveryMethodName,
-                isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
+                isDefaultCustomer:
+                    isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
                     ?.toString(),
               );
@@ -6785,13 +6814,17 @@ class OrderPanelState extends State<OrderPanel> {
   double _calculateBalanceAmount() {
     final totalPaid = _getTotalPaidAmountFromState();
     final payableTotal = _getEffectiveOrderTotal();
-    final customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
+    final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
+    final customerPrevBalance =
+        isDefaultCustomer ? 0.0 : (_selectedCustomer?.balance ?? 0.0);
     final requestedCustomerCredit = _toCustomerCreditEnabled
         ? (double.tryParse(_debitAmount) ?? _toCustomerCreditAmount)
         : 0.0;
 
     double cashBalance = 0.0;
-    if (_toCustomerCreditEnabled && _selectedCustomer != null) {
+    if (_toCustomerCreditEnabled &&
+        _selectedCustomer != null &&
+        !isDefaultCustomer) {
       if (customerPrevBalance < 0) {
         final transactionExcess = totalPaid - payableTotal;
         if (transactionExcess > 0) {
@@ -6923,7 +6956,8 @@ class OrderPanelState extends State<OrderPanel> {
         _getEffectiveOrderTotal().toStringAsFixed(2);
     final savedTotal = cart?.priceSummary?.savedTotal.toString();
     final totalPaid = _getTotalPaidAmountFromState();
-    final oldBalance = _selectedCustomer?.balance;
+    final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer);
+    final oldBalance = isDefaultCustomer ? null : _selectedCustomer?.balance;
     double? currentBalance;
     if (oldBalance != null) {
       final cartTotal = double.tryParse(formattedTotal) ?? 0.0;
@@ -6958,9 +6992,10 @@ class OrderPanelState extends State<OrderPanel> {
         paymentBreakdown: detailsData?.payments,
         orderComment: _orderComment.isNotEmpty ? _orderComment : null,
         deliveryMethod: detailsData?.deliveryMethodName ?? _deliveryMethod,
-        isDefaultCustomer: _isDefaultCustomerPhone(
-          detailsData?.customerDetails?.phone ?? _selectedCustomerPhone,
-        ),
+        isDefaultCustomer: isDefaultCustomer ||
+            _isDefaultCustomerPhone(
+              detailsData?.customerDetails?.phone ?? _selectedCustomerPhone,
+            ),
         netExcTax: cart?.priceSummary?.netExcTax?.toString(),
       );
     }
