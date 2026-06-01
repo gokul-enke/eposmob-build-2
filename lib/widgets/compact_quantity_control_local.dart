@@ -65,7 +65,13 @@ class _CompactQuantityControlLocalState
 
   // Handle controller text changes (including from virtual keyboard)
   void _onControllerChanged() {
-    final parsed = num.tryParse(_controller.text);
+    final text = _controller.text.trim();
+    if (_isEditingQuantityText &&
+        (text.isEmpty || text == '0' || text == '0.')) {
+      return;
+    }
+
+    final parsed = num.tryParse(text);
     if (parsed != null && parsed != _currentQuantity) {
       _handleQuantityChange(parsed);
     }
@@ -351,6 +357,29 @@ class _CompactQuantityControlLocalState
     return double.parse(value.toStringAsFixed(3));
   }
 
+  bool _allowsDecimalQuantity() {
+    const decimalQuantityUnits = {
+      'KG',
+      'KGS',
+      'G',
+      'GM',
+      'GMS',
+      'GRAM',
+      'GRAMS',
+      'LT',
+      'LTR',
+      'L',
+      'ML',
+      'CRT',
+      'CTN',
+      'CARTON',
+      'CARTOON',
+    };
+
+    final unit = widget.productUnit?.trim().toUpperCase();
+    return decimalQuantityUnits.contains(unit);
+  }
+
   void _syncControllerTextAfterBuild({
     required num displayQuantity,
     required String reason,
@@ -419,13 +448,9 @@ class _CompactQuantityControlLocalState
             focusNode: _focusNode,
             style: const TextStyle(fontSize: 11),
             inputFormatters: [
-              if (widget.productUnit == 'KG' ||
-                  widget.productUnit == 'KGS' ||
-                  widget.productUnit == 'LT')
+              if (_allowsDecimalQuantity())
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-              if (widget.productUnit != 'LT' &&
-                  widget.productUnit != 'KG' &&
-                  widget.productUnit != 'KGS')
+              if (!_allowsDecimalQuantity())
                 FilteringTextInputFormatter.digitsOnly,
             ],
             textAlign: TextAlign.center,
