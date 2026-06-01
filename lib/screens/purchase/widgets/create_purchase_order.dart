@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:get/get.dart';
@@ -23,6 +24,7 @@ import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -1123,9 +1125,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           "tax_amount_retail": i.calculatedTaxData?['retailTaxAmount'],
           "tax_amount_wholesale": i.calculatedTaxData?['wholesaleTaxAmount'],
           "tax_amount_purchase": i.calculatedTaxData?['purchaseTaxAmount'],
-          "retail_price_tax": i.calculatedTaxData?['price_including_tax_retail'],
-          "wholesale_price_tax": i.calculatedTaxData?['price_including_tax_wholesale'],
-          "purchase_price_tax": i.calculatedTaxData?['price_including_tax_purchase'],
+          "retail_price_tax":
+              i.calculatedTaxData?['price_including_tax_retail'],
+          "wholesale_price_tax":
+              i.calculatedTaxData?['price_including_tax_wholesale'],
+          "purchase_price_tax":
+              i.calculatedTaxData?['price_including_tax_purchase'],
         };
 
         final selectedRack =
@@ -1173,9 +1178,12 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           "tax_amount_retail": i.calculatedTaxData?['retailTaxAmount'],
           "tax_amount_wholesale": i.calculatedTaxData?['wholesaleTaxAmount'],
           "tax_amount_purchase": i.calculatedTaxData?['purchaseTaxAmount'],
-          "retail_price_tax": i.calculatedTaxData?['price_including_tax_retail'],
-          "wholesale_price_tax": i.calculatedTaxData?['price_including_tax_wholesale'],
-          "purchase_price_tax": i.calculatedTaxData?['price_including_tax_purchase'],
+          "retail_price_tax":
+              i.calculatedTaxData?['price_including_tax_retail'],
+          "wholesale_price_tax":
+              i.calculatedTaxData?['price_including_tax_wholesale'],
+          "purchase_price_tax":
+              i.calculatedTaxData?['price_including_tax_purchase'],
         });
       }
 
@@ -1551,7 +1559,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 width: 70,
                 child: _buildInlineField(quantityController, "1",
                     (v) => setState(() => item.quantity = v),
-                    isNumber: true, focusNode: quantityFocusNode),
+                    isNumber: true,
+                    focusNode: quantityFocusNode,
+                    inputFormatters: quantityInputFormattersForUnit(item.unit)),
               ),
               const SizedBox(width: 8),
               InkWell(
@@ -1634,12 +1644,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   flex: 3,
                   child: _buildFieldColumn(
                     "Purchase Rate",
-                    _buildInlineField(rateController, "0",
-                        (v) {
-                          setState(() => item.purchaseRate = v);
-                          _triggerTaxRecalculation();
-                        },
-                        isNumber: true, prefixText: '$_currency '),
+                    _buildInlineField(rateController, "0", (v) {
+                      setState(() => item.purchaseRate = v);
+                      _triggerTaxRecalculation();
+                    }, isNumber: true, prefixText: '$_currency '),
                     isRequired: true,
                   ),
                 ),
@@ -1711,7 +1719,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                         wholesaleMinUnitController,
                         "Enter minimum wholesale units",
                         (v) => item.wholesaleMinUnit = v,
-                        isNumber: true),
+                        isNumber: true,
+                        inputFormatters:
+                            quantityInputFormattersForUnit(item.unit)),
                   ),
                 ),
                 const SizedBox(width: 15),
@@ -1738,6 +1748,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       ValueChanged<String>? onSubmitted,
       TextInputAction textInputAction = TextInputAction.next,
       FocusNode? focusNode,
+      List<TextInputFormatter>? inputFormatters,
       bool readOnly = false}) {
     return BuildBoxShadowContainer(
       circleRadius: 7,
@@ -1756,6 +1767,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           onSubmitted: onSubmitted,
           textInputAction: textInputAction,
           keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          inputFormatters: inputFormatters,
           textAlignVertical: TextAlignVertical.center,
           decoration: InputDecoration(
             hintText: hint,
@@ -1896,9 +1908,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     }
 
     try {
-      final taxData =
-          await Provider.of<StockProvider>(context, listen: false)
-              .calculateTaxAPI(
+      final taxData = await Provider.of<StockProvider>(context, listen: false)
+          .calculateTaxAPI(
         accessToken: accessToken,
         price: priceToCalculate,
         productId: item.productData!.productId!,
@@ -1973,7 +1984,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         }
       }
     } catch (e) {
-      debugPrint('💥 [PurchaseTax] Exception | type=$calculationType | error=$e');
+      debugPrint(
+          '💥 [PurchaseTax] Exception | type=$calculationType | error=$e');
       if (mounted) {
         setState(() {
           item.calculatedTaxData ??= {};
@@ -2011,37 +2023,37 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   Widget _buildTaxDetails() {
     final item = currentItem;
     final retailInclusive =
-      (item.calculatedTaxData?['price_including_tax_retail'] as num?)
-          ?.toDouble() ??
-        0.0;
+        (item.calculatedTaxData?['price_including_tax_retail'] as num?)
+                ?.toDouble() ??
+            0.0;
     final retailExclusive =
-      (item.calculatedTaxData?['price_excluding_tax_retail'] as num?)
-          ?.toDouble() ??
-        0.0;
+        (item.calculatedTaxData?['price_excluding_tax_retail'] as num?)
+                ?.toDouble() ??
+            0.0;
     final retailTax =
-      (item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble() ?? 0.0;
+        (item.calculatedTaxData?['retailTaxAmount'] as num?)?.toDouble() ?? 0.0;
     final wholesaleInclusive =
-      (item.calculatedTaxData?['price_including_tax_wholesale'] as num?)
-          ?.toDouble() ??
-        0.0;
+        (item.calculatedTaxData?['price_including_tax_wholesale'] as num?)
+                ?.toDouble() ??
+            0.0;
     final wholesaleExclusive =
-      (item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)
-          ?.toDouble() ??
-        0.0;
+        (item.calculatedTaxData?['price_excluding_tax_wholesale'] as num?)
+                ?.toDouble() ??
+            0.0;
     final wholesaleTax =
-      (item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble() ??
-        0.0;
+        (item.calculatedTaxData?['wholesaleTaxAmount'] as num?)?.toDouble() ??
+            0.0;
     final purchaseInclusive =
-      (item.calculatedTaxData?['price_including_tax_purchase'] as num?)
-          ?.toDouble() ??
-        0.0;
+        (item.calculatedTaxData?['price_including_tax_purchase'] as num?)
+                ?.toDouble() ??
+            0.0;
     final purchaseExclusive =
-      (item.calculatedTaxData?['price_excluding_tax_purchase'] as num?)
-          ?.toDouble() ??
-        0.0;
+        (item.calculatedTaxData?['price_excluding_tax_purchase'] as num?)
+                ?.toDouble() ??
+            0.0;
     final purchaseTax =
-      (item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble() ??
-        0.0;
+        (item.calculatedTaxData?['purchaseTaxAmount'] as num?)?.toDouble() ??
+            0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2281,7 +2293,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   Widget _buildTableTextField(
       TextEditingController controller, Function(String) onChanged,
-      {double width = 80}) {
+      {double width = 80, List<TextInputFormatter>? inputFormatters}) {
     return Container(
       width: width,
       height: 40, // Changed from 35 to 40 for consistency
@@ -2295,6 +2307,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         child: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: inputFormatters,
           onChanged: (value) {
             onChanged(value);
             _saveDraftToHive();
@@ -2340,7 +2353,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           item.quantity = v;
           _syncPaidAmount();
         });
-      }, width: 60),
+      }, width: 60, inputFormatters: quantityInputFormattersForUnit(item.unit)),
       const SizedBox(width: 5),
       InkWell(
         onTap: () {

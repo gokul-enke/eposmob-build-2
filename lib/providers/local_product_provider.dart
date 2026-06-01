@@ -2242,8 +2242,11 @@ class LocalProductProvider extends ChangeNotifier {
           cartQuantity; // Increment by the specified quantity
 
       if (price != null) {
-        existingItem.price = price;
-        existingItem.isManualPriceOverride = markPriceAsManualOverride;
+        if (markPriceAsManualOverride || !existingItem.isManualPriceOverride) {
+          existingItem.price = price;
+        }
+        existingItem.isManualPriceOverride =
+            existingItem.isManualPriceOverride || markPriceAsManualOverride;
         debugPrint("💰 Using explicit price: $price");
       }
 

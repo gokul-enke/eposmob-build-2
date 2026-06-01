@@ -125,6 +125,7 @@ class CartQuantityStockHelper {
         quantity: quantityOnCurrentSelection,
         price: cartItem.price,
         mrp: cartItem.mrp,
+        markPriceAsManualOverride: cartItem.isManualPriceOverride,
         isIncreamentUsingCompactQuantityControl: true,
         selectedStock: cartItem.selectedStock,
         stockGroupIds: cartItem.stockGroupIds,
@@ -193,6 +194,9 @@ class CartQuantityStockHelper {
       provider.addToCart(
         product: refreshedProduct,
         quantity: quantityForSelection,
+        price: cartItem.price,
+        mrp: cartItem.mrp,
+        markPriceAsManualOverride: cartItem.isManualPriceOverride,
         isIncreamentUsingCompactQuantityControl: true,
         selectedStock: selection.selectedStock,
         stockGroupIds: selection.stockGroupIds,

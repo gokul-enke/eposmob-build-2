@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
+import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
@@ -357,29 +358,6 @@ class _CompactQuantityControlLocalState
     return double.parse(value.toStringAsFixed(3));
   }
 
-  bool _allowsDecimalQuantity() {
-    const decimalQuantityUnits = {
-      'KG',
-      'KGS',
-      'G',
-      'GM',
-      'GMS',
-      'GRAM',
-      'GRAMS',
-      'LT',
-      'LTR',
-      'L',
-      'ML',
-      'CRT',
-      'CTN',
-      'CARTON',
-      'CARTOON',
-    };
-
-    final unit = widget.productUnit?.trim().toUpperCase();
-    return decimalQuantityUnits.contains(unit);
-  }
-
   void _syncControllerTextAfterBuild({
     required num displayQuantity,
     required String reason,
@@ -447,12 +425,7 @@ class _CompactQuantityControlLocalState
             keyboardType: TextInputType.number,
             focusNode: _focusNode,
             style: const TextStyle(fontSize: 11),
-            inputFormatters: [
-              if (_allowsDecimalQuantity())
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-              if (!_allowsDecimalQuantity())
-                FilteringTextInputFormatter.digitsOnly,
-            ],
+            inputFormatters: quantityInputFormattersForUnit(widget.productUnit),
             textAlign: TextAlign.center,
             decoration: const InputDecoration(
               border: InputBorder.none,
