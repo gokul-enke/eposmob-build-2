@@ -923,10 +923,14 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
-  Widget _buildStockStatusRow(GetProduct product) {
+  Widget _buildStockStatusRow(
+    GetProduct product, {
+    required bool stockEnabled,
+  }) {
     final availableQuantity = _availableQuantity(product);
     final reorderLevel = product.reorderLevel;
-    final isLowStock = _isLowStockQuantity(availableQuantity, reorderLevel);
+    final isLowStock =
+        stockEnabled && _isLowStockQuantity(availableQuantity, reorderLevel);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1164,9 +1168,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   Widget _buildViewTab(GetProduct product) {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: true);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: true);
     final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
     final itemCodeEnabled =
         appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
+    final stockEnabled = localProductProvider.isStockEnabled;
     return SelectionArea(
       child: ListView(
         shrinkWrap: true,
@@ -1238,7 +1245,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 child: Column(
                   children: [
                     _buildDetailRow('Rating', product.rating ?? 'N/A'),
-                    _buildStockStatusRow(product),
+                    _buildStockStatusRow(
+                      product,
+                      stockEnabled: stockEnabled,
+                    ),
                     _buildDetailRow('Reorder Level',
                         product.reorderLevel?.toString() ?? 'N/A'),
                     _buildDetailRow('Location',
@@ -1419,10 +1429,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     final stock = originalStock.id != null
                         ? (_editedStockRows[originalStock.id!] ?? originalStock)
                         : originalStock;
-                    final isLowStock = _isLowStockQuantity(
-                      stock.quantity,
-                      product.reorderLevel,
-                    );
+                    final isLowStock = stockEnabled &&
+                        _isLowStockQuantity(
+                          stock.quantity,
+                          product.reorderLevel,
+                        );
                     return Container(
                       decoration: BoxDecoration(
                         color: isLowStock

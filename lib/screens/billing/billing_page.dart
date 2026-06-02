@@ -3178,37 +3178,6 @@ class BillingPageState extends State<BillingPage>
     return quantity <= reorderLevel;
   }
 
-  Widget _buildCartLowStockBadge(GetProduct product) {
-    final quantity = _summedProductStockQuantity(product);
-    final reorderLevel = product.reorderLevel;
-    final atReorderLevel =
-        quantity != null && reorderLevel != null && quantity == reorderLevel;
-    final color =
-        atReorderLevel ? ColorManager.kButtonYellow : ColorManager.kOrange;
-
-    return Tooltip(
-      message: atReorderLevel ? 'At reorder level' : 'Low stock',
-      waitDuration: const Duration(milliseconds: 400),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withValues(alpha: 0.7)),
-        ),
-        child: Text(
-          atReorderLevel ? 'Reorder' : 'Low',
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s10,
-            0.18,
-            atReorderLevel ? Colors.black87 : ColorManager.kOrange,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildCartItemsTable(Size size) {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
@@ -3317,7 +3286,8 @@ class BillingPageState extends State<BillingPage>
                                 itemBuilder: (context, index) {
                                   final item = cartItems[index];
                                   final bool isLowStock =
-                                      _isLowStockProduct(item.product);
+                                      localProductProvider.isStockEnabled &&
+                                          _isLowStockProduct(item.product);
                                   final bool isFocusedRow =
                                       isCartTableFocused &&
                                           _cartTableFocusedRowIndex == index;
@@ -3392,15 +3362,11 @@ class BillingPageState extends State<BillingPage>
                                                       ),
                                                     ),
                                                   ),
-                                                  if (isLowStock) ...[
-                                                    const SizedBox(width: 6),
-                                                    _buildCartLowStockBadge(
-                                                        item.product),
-                                                  ],
                                                   const SizedBox(width: 6),
                                                   Tooltip(
-                                                    message:
-                                                        'billing.view_details'
+                                                    message: isLowStock
+                                                        ? 'Low stock'
+                                                        : 'billing.view_details'
                                                             .tr,
                                                     waitDuration:
                                                         const Duration(
@@ -3412,11 +3378,14 @@ class BillingPageState extends State<BillingPage>
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               16),
-                                                      child: const Icon(
+                                                      child: Icon(
                                                         Icons.info_outline,
                                                         size: 16,
-                                                        color: ColorManager
-                                                            .kPrimaryColor,
+                                                        color: isLowStock
+                                                            ? ColorManager
+                                                                .kOrange
+                                                            : ColorManager
+                                                                .kPrimaryColor,
                                                       ),
                                                     ),
                                                   ),
