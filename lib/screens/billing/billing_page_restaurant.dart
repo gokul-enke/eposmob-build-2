@@ -4292,15 +4292,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       return false;
     }
 
-    // Get app settings to check for default customer
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultCustomerPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
-
     // Don't show balance if it's the default customer (by phone match)
-    if (defaultCustomerPhone.isNotEmpty &&
-        selectedCustomer!.phone == defaultCustomerPhone) {
+    if (_isDefaultCustomer(selectedCustomer)) {
       return false;
     }
 
@@ -5494,7 +5487,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                 orderDetails.data?.getCustomerAddressForDisplay();
 
             // Calculate customer balance for print
-            double? oldBalance = selectedCustomer?.balance;
+            final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+            double? oldBalance =
+                isDefaultCustomer ? null : selectedCustomer?.balance;
             double totalPaid = _getTotalPaidAmount();
             double? currentBalance;
             if (oldBalance != null) {
@@ -5541,10 +5536,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                 orderComment: orderComment,
                 deliveryMethod:
                     orderDetails.data?.deliveryMethodName ?? deliveryMethod,
-                isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                        context,
-                        listen: false)
-                    .isDefaultCustomer,
+                isDefaultCustomer:
+                    isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
                     ?.toString(),
               );
@@ -5942,7 +5935,9 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     double balance = 0.0;
 
-    if (_toCustomerCreditEnabled) {
+    final isDefaultSelectedCustomer = _isDefaultCustomer(selectedCustomer);
+
+    if (_toCustomerCreditEnabled && !isDefaultSelectedCustomer) {
       debugPrint(
           '🔛 BILLING PAGE: Toggle is ON - Calculating with customer credit consideration');
 
@@ -6557,6 +6552,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
     }
 
+    final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
@@ -6572,7 +6569,9 @@ class BillingPageState extends State<BillingPageRestaurant>
         initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: effectiveTotal,
-        customerPrevBalance: selectedCustomer?.balance ?? 0.0,
+        customerPrevBalance:
+            isDefaultCustomer ? 0.0 : (selectedCustomer?.balance ?? 0.0),
+        isDefaultCustomer: isDefaultCustomer,
         onAfterApply: onAfterApply,
         customButtonTitle: customButtonTitle,
         onPaymentMethodSelected: (
@@ -6966,12 +6965,32 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   /// Helper method to check if a phone number matches the default customer phone from app settings
   bool _isDefaultCustomerPhone(String? phone) {
-    if (phone == null || phone.isEmpty) return false;
+    final customerPhone = phone?.trim() ?? '';
+    if (customerPhone.isEmpty) return false;
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
-    return defaultPhone.isNotEmpty && phone == defaultPhone;
+    final defaultPhone = appSettingsProvider
+            .appSettings?.autoAssignDefaultCustomerPhone
+            .trim() ??
+        "";
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
+
+  bool _isDefaultCustomer(CustomerListModelData? customer) {
+    if (customer == null) return false;
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final selectedCustomer = customerSelectionProvider.selectedCustomer;
+    if (customerSelectionProvider.isDefaultCustomer &&
+        ((selectedCustomer?.id != null &&
+                selectedCustomer?.id == customer.id) ||
+            (selectedCustomer?.phone?.trim().isNotEmpty == true &&
+                selectedCustomer?.phone?.trim() == customer.phone?.trim()))) {
+      return true;
+    }
+
+    return _isDefaultCustomerPhone(customer.phone);
   }
 
   Future<void> printFromSavedOrder(SavedOrder savedOrder) async {

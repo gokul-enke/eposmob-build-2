@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -1620,13 +1622,12 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         'categoryId': item.categoryData?.categoryId,
         'quantity': item.quantity,
         // Only include purchaseQty for multi-unit products
-        if (_hasPurchaseUnits(item))
-          ...{
-            'purchaseQty': item.purchaseQty,
-            'purchaseUnitId': item.selectedPurchaseUnit,
-            'purchaseUnitName': item.purchaseUnitName,
-            'purchaseConversionRate': item.purchaseConversionRate,
-          },
+        if (_hasPurchaseUnits(item)) ...{
+          'purchaseQty': item.purchaseQty,
+          'purchaseUnitId': item.selectedPurchaseUnit,
+          'purchaseUnitName': item.purchaseUnitName,
+          'purchaseConversionRate': item.purchaseConversionRate,
+        },
         'retailPrice': item.salePrice,
         'purchaseRate': item.purchaseRate,
         'mrp': item.mrp.isNotEmpty ? item.mrp : item.salePrice,
@@ -2758,7 +2759,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           product: item.productData!,
           unitPrice: double.tryParse(item.salePrice) ?? 0.0,
           mrp: double.tryParse(item.mrp) ?? 0.0,
-          quantity: int.tryParse(item.quantity) ?? 1,
+          quantity: num.tryParse(item.quantity) ?? 1,
           selectedStock: null, // Stock items don't have selectedStock
           isCompact: false,
           currency: currency,
@@ -3314,6 +3315,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         child: _InlineEditableField(
                           value: item.quantity,
                           hintText: 'Qty',
+                          inputFormatters:
+                              quantityInputFormattersForUnit(item.unit),
                           onChanged: (val) => _updateStockItemFieldInline(
                               originalIndex, 'quantity', val),
                         ),
@@ -3567,7 +3570,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     // Calculate totals for successfully added items
     double totalPurchaseAmount = 0.0;
     int totalItems = 0;
-    int totalQuantity = 0;
+    double totalQuantity = 0.0;
 
     for (StockItem item in stockItems) {
       if (item.isSuccessfullyAdded && !item.isHidden) {
@@ -3587,7 +3590,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         totalPurchaseAmount += itemTotal;
         totalItems++;
-        totalQuantity += quantity.toInt();
+        totalQuantity += quantity;
       }
     }
 
@@ -3677,7 +3680,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               Expanded(
                 child: _buildSummaryCard(
                   'Total Quantity',
-                  totalQuantity.toString(),
+                  _formatNumber(totalQuantity),
                   Icons.format_list_numbered_outlined,
                   Colors.orange.shade600,
                 ),
@@ -4142,6 +4145,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                         controller: _getQuantityController(index),
                         focusNode: _getQuantityFocusNode(index),
                         keyboardType: TextInputType.number,
+                        inputFormatters:
+                            quantityInputFormattersForUnit(item.unit),
                         textAlign: TextAlign.right, // Right-aligned text
                         decoration: const InputDecoration(
                           hintText: 'Qty',
@@ -4177,8 +4182,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                               fallback: 1.0,
                             );
                             if (baseQuantity > 0 && conversionRate > 0) {
-                              stockItems[index].purchaseQty = _formatNumber(
-                                  baseQuantity / conversionRate);
+                              stockItems[index].purchaseQty =
+                                  _formatNumber(baseQuantity / conversionRate);
                               _getPurchaseQtyController(index).text =
                                   stockItems[index].purchaseQty;
                             }
@@ -4186,8 +4191,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
                           // Debounce the heavy operations
                           _quantityDebounceTimer?.cancel();
-                          _quantityDebounceTimer = Timer(
-                              const Duration(milliseconds: 300), () {
+                          _quantityDebounceTimer =
+                              Timer(const Duration(milliseconds: 300), () {
                             if (mounted) {
                               setState(() {
                                 // Update pending item if already added
@@ -4943,6 +4948,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     Function(String) onChanged, {
     bool isRequired = false,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
     TextEditingController? controller,
     double inputFontSize = FontSize.s11,
   }) {
@@ -4980,6 +4986,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           child: TextFormField(
             controller: controller ?? TextEditingController(text: value),
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
             style: buildCustomStyle(
               FontWeightManager.regular,
               inputFontSize,
@@ -5514,6 +5521,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         _updatePendingStockItem(index);
       },
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters:
+          quantityInputFormattersForUnit(item.purchaseUnitName ?? item.unit),
       controller: _getPurchaseQtyController(index),
     );
   }
@@ -6389,12 +6398,14 @@ class _InlineEditableField extends StatefulWidget {
   final String value;
   final Function(String) onChanged;
   final String hintText;
+  final List<TextInputFormatter>? inputFormatters;
 
   const _InlineEditableField({
     super.key,
     required this.value,
     required this.onChanged,
     this.hintText = '',
+    this.inputFormatters,
   });
 
   @override
@@ -6433,6 +6444,7 @@ class _InlineEditableFieldState extends State<_InlineEditableField> {
       controller: _controller,
       focusNode: _focusNode,
       keyboardType: TextInputType.number,
+      inputFormatters: widget.inputFormatters,
       textAlign: TextAlign.start,
       style: buildCustomStyle(
         FontWeightManager.regular,

@@ -1778,6 +1778,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         itemBuilder: (context, index) {
           final customer = displayCustomers[index];
           final isSelected = _localSelectedCustomer?.id == customer.id;
+          final isDefaultCustomer = _isDefaultCustomer(customer);
           final isKeyboardFocused =
               _customerListFocusNode.hasFocus && index == clampedIndex;
           final balance = customer.balance ?? 0.0;
@@ -1872,7 +1873,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (isSelected) ...[
+                                if (isSelected && !isDefaultCustomer) ...[
                                   const SizedBox(width: 4),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -2814,11 +2815,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       initialTransactionNumber: _lTransactionNumber,
                       cartTotal: effectiveTotal,
                       customerPrevBalance:
-                          _localSelectedCustomer?.balance ?? 0.0,
-                      isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                              context,
-                              listen: false)
-                          .isDefaultCustomer,
+                          _isDefaultCustomer(_localSelectedCustomer)
+                              ? 0.0
+                              : (_localSelectedCustomer?.balance ?? 0.0),
+                      isDefaultCustomer:
+                          _isDefaultCustomer(_localSelectedCustomer),
                       customButtonTitle: "Confirm Payment Selection",
                       closeOnApply: false,
                       showConfirmButton: false,
@@ -3050,6 +3051,29 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return _localSelectedCustomer?.name ?? 'Not Selected';
   }
 
+  bool _isDefaultCustomer(CustomerListModelData? customer) {
+    if (customer == null) return false;
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final selectedCustomer = customerSelectionProvider.selectedCustomer;
+    if (customerSelectionProvider.isDefaultCustomer &&
+        ((selectedCustomer?.id != null &&
+                selectedCustomer?.id == customer.id) ||
+            (selectedCustomer?.phone?.trim().isNotEmpty == true &&
+                selectedCustomer?.phone?.trim() == customer.phone?.trim()))) {
+      return true;
+    }
+
+    final defaultPhone = Provider.of<AppSettingsProvider>(
+          context,
+          listen: false,
+        ).appSettings?.autoAssignDefaultCustomerPhone.trim() ??
+        '';
+    final customerPhone = customer.phone?.trim() ?? '';
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
+
   String? _selectedCustomerSupportingText() {
     final customer = _localSelectedCustomer;
     if (customer == null) return null;
@@ -3064,8 +3088,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (phone != null && phone.isNotEmpty) {
       lines.add(phone);
     }
-    lines.add(
-        'Balance: $currency ${(customer.balance ?? 0.0).toStringAsFixed(2)}');
+    if (!_isDefaultCustomer(customer)) {
+      lines.add(
+          'Balance: $currency ${(customer.balance ?? 0.0).toStringAsFixed(2)}');
+    }
 
     return lines.join('\n');
   }
@@ -3346,7 +3372,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
             (double.tryParse(_lUpiAmount) ?? 0) +
             (double.tryParse(_lCodAmount) ?? 0);
 
-        final prevBalance = _localSelectedCustomer?.balance ?? 0.0;
+        final isDefaultCustomer = _isDefaultCustomer(_localSelectedCustomer);
+        final prevBalance =
+            isDefaultCustomer ? 0.0 : (_localSelectedCustomer?.balance ?? 0.0);
         final creditAmount = double.tryParse(_lDebitAmount) ?? 0.0;
 
         // Match PaymentMethodModal logic for change calculation
@@ -3525,7 +3553,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 isBold: true,
                                 large: true,
                                 labelColor: const Color(0xFF2563EB)),
-                            if (_localSelectedCustomer != null) ...[
+                            if (_localSelectedCustomer != null &&
+                                !isDefaultCustomer) ...[
                               SizedBox(height: _isDenseCheckout ? 7 : 10),
                               _buildSummaryRow(
                                   'Cust. Prev. Balance',
@@ -3575,6 +3604,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
             .appSettings
             ?.companyB2BEnabled ??
         false;
+    final isDefaultCustomer = _isDefaultCustomer(customer);
     final customerBalance = customer?.balance ?? 0.0;
     final customerBalanceColor = customerBalance >= 0
         ? const Color(0xFF059669)
@@ -3703,33 +3733,34 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               ),
                               const SizedBox(width: 2),
                             ],
-                            Flexible(
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: compactTile ? 5 : 6,
-                                  vertical: compactTile ? 1 : 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isCurrentStep
-                                      ? Colors.white24
-                                      : customerBalanceColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Bal: ${customerBalance.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: compactTile ? 9 : 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: isCurrentStep
-                                        ? Colors.white
-                                        : customerBalanceColor,
+                            if (!isDefaultCustomer)
+                              Flexible(
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: compactTile ? 5 : 6,
+                                    vertical: compactTile ? 1 : 2,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.visible,
-                                  softWrap: false,
+                                  decoration: BoxDecoration(
+                                    color: isCurrentStep
+                                        ? Colors.white24
+                                        : customerBalanceColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Bal: ${customerBalance.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: compactTile ? 9 : 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: isCurrentStep
+                                          ? Colors.white
+                                          : customerBalanceColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.visible,
+                                    softWrap: false,
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                       ],

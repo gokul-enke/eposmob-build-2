@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
+import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
@@ -65,7 +66,13 @@ class _CompactQuantityControlLocalState
 
   // Handle controller text changes (including from virtual keyboard)
   void _onControllerChanged() {
-    final parsed = num.tryParse(_controller.text);
+    final text = _controller.text.trim();
+    if (_isEditingQuantityText &&
+        (text.isEmpty || text == '0' || text == '0.')) {
+      return;
+    }
+
+    final parsed = num.tryParse(text);
     if (parsed != null && parsed != _currentQuantity) {
       _handleQuantityChange(parsed);
     }
@@ -418,16 +425,7 @@ class _CompactQuantityControlLocalState
             keyboardType: TextInputType.number,
             focusNode: _focusNode,
             style: const TextStyle(fontSize: 11),
-            inputFormatters: [
-              if (widget.productUnit == 'KG' ||
-                  widget.productUnit == 'KGS' ||
-                  widget.productUnit == 'LT')
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-              if (widget.productUnit != 'LT' &&
-                  widget.productUnit != 'KG' &&
-                  widget.productUnit != 'KGS')
-                FilteringTextInputFormatter.digitsOnly,
-            ],
+            inputFormatters: quantityInputFormattersForUnit(widget.productUnit),
             textAlign: TextAlign.center,
             decoration: const InputDecoration(
               border: InputBorder.none,

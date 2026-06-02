@@ -19,6 +19,31 @@ class MasterDataProvider with ChangeNotifier {
   int? _paymentMethodsStoreId;
   bool _isLoadingPaymentMethods = false;
 
+  // Stock grouping fields cache
+  Set<String>? _stockGroupingFields;
+  int? _stockGroupingFieldsStoreId;
+  bool _isLoadingStockGroupingFields = false;
+
+  /// Maps API master data values (UPPERCASE) to Stock model field names (camelCase)
+  static const Map<String, String> stockFieldMapping = {
+    'PRICE': 'price',
+    'MRP': 'mrp',
+    'PURCHASE_PRICE': 'purchasePrice',
+    'UNIT': 'unit',
+    'HSN_CODE': 'hsnCode',
+    'TAX_RATE': 'taxRate',
+    'WHOLESALE_PRICE': 'wholesalePrice',
+    'WHOLESALE_MIN_UNIT': 'wholesaleMinUnit',
+  };
+
+  /// Default stock grouping fields used when master data is unavailable.
+  /// Only price and unit are checked — stocks with the same selling price
+  /// and unit are grouped together regardless of other attribute differences.
+  static const Set<String> defaultStockGroupingFields = {
+    'price',
+    'unit',
+  };
+
   MasterData? get masterData => _masterData;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -26,6 +51,15 @@ class MasterDataProvider with ChangeNotifier {
   // Payment methods getters
   List<MasterDataValue>? get paymentMethods => _paymentMethods;
   bool get isLoadingPaymentMethods => _isLoadingPaymentMethods;
+
+  // Stock grouping fields getters
+  Set<String>? get stockGroupingFields => _stockGroupingFields;
+  bool get isLoadingStockGroupingFields => _isLoadingStockGroupingFields;
+
+  /// Returns the active stock grouping fields, falling back to price+unit
+  /// if master data hasn't been fetched yet.
+  Set<String> get activeStockGroupingFields =>
+      _stockGroupingFields ?? defaultStockGroupingFields;
 
   /// Get payment method ID by its value (e.g., "CASH" -> 3200)
   int? getPaymentMethodId(String? value) {
@@ -219,6 +253,71 @@ class MasterDataProvider with ChangeNotifier {
   /// Clears payment methods cache to force re-fetch
   void clearPaymentMethodsCache() {
     _setPaymentMethods(null, null);
+    notifyListeners();
+  }
+
+  /// Fetches stock grouping fields from master data API.
+  /// Only fields present in the response are used for stock grouping.
+  /// Falls back to all fields if the API call fails or returns empty.
+  Future<Set<String>> fetchStockGroupingFields({
+    bool forceRefresh = false,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    // Return cached in-memory data if it belongs to the active store
+    if (!forceRefresh &&
+        _stockGroupingFields != null &&
+        _stockGroupingFields!.isNotEmpty &&
+        _stockGroupingFieldsStoreId == activeStoreId) {
+      return _stockGroupingFields!;
+    }
+
+    _isLoadingStockGroupingFields = true;
+    notifyListeners();
+
+    try {
+      final result = await fetchMasterData('STOCK_GROUPING_FIELDS');
+      if (result != null && result.data.isNotEmpty) {
+        final mappedFields = <String>{};
+        for (final item in result.data) {
+          final mapped = stockFieldMapping[item.value.toUpperCase()];
+          if (mapped != null) {
+            mappedFields.add(mapped);
+          } else {
+            debugPrint(
+                '⚠️ Unknown stock grouping field from API: ${item.value}');
+          }
+        }
+        if (mappedFields.isNotEmpty) {
+          _stockGroupingFields = mappedFields;
+          _stockGroupingFieldsStoreId = activeStoreId;
+          debugPrint(
+              '📦 Stock grouping fields loaded: $_stockGroupingFields');
+          return _stockGroupingFields!;
+        }
+      }
+      // Fallback to default fields (price + unit)
+      _stockGroupingFields = defaultStockGroupingFields;
+      _stockGroupingFieldsStoreId = activeStoreId;
+      debugPrint(
+          '📦 Stock grouping fields fallback to default: $_stockGroupingFields');
+      return _stockGroupingFields!;
+    } catch (e) {
+      debugPrint('⚠️ Failed to fetch stock grouping fields: $e');
+      _stockGroupingFields = defaultStockGroupingFields;
+      _stockGroupingFieldsStoreId = activeStoreId;
+      return _stockGroupingFields!;
+    } finally {
+      _isLoadingStockGroupingFields = false;
+      notifyListeners();
+    }
+  }
+
+  /// Clears stock grouping fields cache to force re-fetch
+  void clearStockGroupingFieldsCache() {
+    _stockGroupingFields = null;
+    _stockGroupingFieldsStoreId = null;
     notifyListeners();
   }
 

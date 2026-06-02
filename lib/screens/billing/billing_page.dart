@@ -2245,8 +2245,7 @@ class BillingPageState extends State<BillingPage>
         currentOrder?.customerPhone;
     final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
     final bool showHeaderCustomerBalance = selectedHeaderCustomer != null &&
-        !customerSelectionProvider.isDefaultCustomer &&
-        !_isDefaultCustomerPhone(selectedHeaderCustomer.phone);
+        !_isDefaultCustomer(selectedHeaderCustomer);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -5379,9 +5378,7 @@ class BillingPageState extends State<BillingPage>
         appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
 
     // Don't show balance if it's the default customer (by phone match)
-    if (!isQuotationDraft &&
-        defaultCustomerPhone.isNotEmpty &&
-        selectedCustomer!.phone == defaultCustomerPhone) {
+    if (!isQuotationDraft && _isDefaultCustomer(selectedCustomer)) {
       debugPrint(
           "🧾 [BillingCustomer] Hiding balance for automatic default phone=$defaultCustomerPhone");
       return false;
@@ -6447,7 +6444,9 @@ class BillingPageState extends State<BillingPage>
                 orderDetails.data?.getCustomerAddressForDisplay();
 
             // Calculate customer balance for print
-            double? oldBalance = selectedCustomer?.balance;
+            final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+            double? oldBalance =
+                isDefaultCustomer ? null : selectedCustomer?.balance;
             double totalPaid = _getTotalPaidAmount();
             double? currentBalance;
             if (oldBalance != null) {
@@ -6491,10 +6490,8 @@ class BillingPageState extends State<BillingPage>
                 orderComment: orderComment,
                 deliveryMethod:
                     orderDetails.data?.deliveryMethodName ?? deliveryMethod,
-                isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                        context,
-                        listen: false)
-                    .isDefaultCustomer,
+                isDefaultCustomer:
+                    isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
                     ?.toString(),
               );
@@ -7664,15 +7661,15 @@ class BillingPageState extends State<BillingPage>
     return const QuotationPrintService().printQuotationDetails(
       context,
       details,
-      customerOldBalance: selectedCustomer?.balance,
+      customerOldBalance: _isDefaultCustomer(selectedCustomer)
+          ? null
+          : selectedCustomer?.balance,
       paidAmount: null,
       paymentMethod: null,
       paymentBreakdown: null,
       customerType: selectedCustomer?.customerType,
       deliveryMethod: deliveryMethod,
-      isDefaultCustomer:
-          Provider.of<CustomerSelectionProvider>(context, listen: false)
-              .isDefaultCustomer,
+      isDefaultCustomer: _isDefaultCustomer(selectedCustomer),
     );
   }
 
@@ -7795,7 +7792,9 @@ class BillingPageState extends State<BillingPage>
 
     double balance = 0.0;
 
-    if (_toCustomerCreditEnabled) {
+    final isDefaultSelectedCustomer = _isDefaultCustomer(selectedCustomer);
+
+    if (_toCustomerCreditEnabled && !isDefaultSelectedCustomer) {
       debugPrint(
           '🔛 BILLING PAGE: Toggle is ON - Calculating with customer credit consideration');
 
@@ -8303,6 +8302,8 @@ class BillingPageState extends State<BillingPage>
       }
     }
 
+    final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
@@ -8318,7 +8319,9 @@ class BillingPageState extends State<BillingPage>
         initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: effectiveTotal,
-        customerPrevBalance: selectedCustomer?.balance ?? 0.0,
+        customerPrevBalance:
+            isDefaultCustomer ? 0.0 : (selectedCustomer?.balance ?? 0.0),
+        isDefaultCustomer: isDefaultCustomer,
         onAfterApply: onAfterApply,
         customButtonTitle: customButtonTitle,
         onPaymentMethodSelected: (
@@ -8848,7 +8851,8 @@ class BillingPageState extends State<BillingPage>
 
   /// Helper method to check if a phone number matches the default customer phone from app settings
   bool _isDefaultCustomerPhone(String? phone) {
-    if (phone == null || phone.isEmpty) return false;
+    final customerPhone = phone?.trim() ?? '';
+    if (customerPhone.isEmpty) return false;
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     if (localProductProvider.currentOrder?.quotationId != null) {
@@ -8858,9 +8862,28 @@ class BillingPageState extends State<BillingPage>
     }
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
-    return defaultPhone.isNotEmpty && phone == defaultPhone;
+    final defaultPhone = appSettingsProvider
+            .appSettings?.autoAssignDefaultCustomerPhone
+            .trim() ??
+        "";
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
+
+  bool _isDefaultCustomer(CustomerListModelData? customer) {
+    if (customer == null) return false;
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final selectedCustomer = customerSelectionProvider.selectedCustomer;
+    if (customerSelectionProvider.isDefaultCustomer &&
+        ((selectedCustomer?.id != null &&
+                selectedCustomer?.id == customer.id) ||
+            (selectedCustomer?.phone?.trim().isNotEmpty == true &&
+                selectedCustomer?.phone?.trim() == customer.phone?.trim()))) {
+      return true;
+    }
+
+    return _isDefaultCustomerPhone(customer.phone);
   }
 
   // Function to scroll to the highlighted customer in the dropdown
