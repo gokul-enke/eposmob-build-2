@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Restaurant Billing Flow Notes</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --panel: #ffffff;
+      --bg: #f6f8fb;
+      --blue: #2563eb;
+      --green: #059669;
+      --amber: #d97706;
+      --violet: #7c3aed;
+      --red: #dc2626;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.45;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    header {
+      padding: 22px 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-bottom: 18px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 20px; margin-bottom: 12px; }
+    h3 { font-size: 16px; margin-bottom: 8px; }
+    p { color: var(--muted); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 0;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 10px;
+      background: #f8fafc;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .tag {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .counter { background: var(--violet); }
+    .waiter { background: var(--blue); }
+    .kitchen { background: var(--green); }
+    .risk { background: var(--red); }
+    .manual { background: var(--amber); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    th {
+      background: #edf3ff;
+      color: #23324d;
+      font-size: 13px;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .section {
+      margin-top: 18px;
+    }
+
+    .note {
+      border-left: 4px solid var(--violet);
+      background: #f5f1ff;
+      padding: 12px 14px;
+      border-radius: 6px;
+      color: #3f2a75;
+      font-weight: 700;
+    }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      main { width: min(100% - 20px, 1180px); padding-top: 18px; }
+      header, .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Restaurant Billing Flow Notes</h1>
+      <p>
+        This document explains where a <strong>KOT + Bill</strong> action fits
+        across common restaurant and counter-kitchen workflows.
+      </p>
+    </header>
+
+    <section class="grid">
+      <article class="card">
+        <span class="tag counter">Counter Kitchen</span>
+        <h2>Theater, mall, food court, quick-service counter</h2>
+        <p>
+          The cashier takes the order, sends it to kitchen, gives a running bill
+          or token copy, then the salesman completes payment later.
+        </p>
+        <div class="flow">
+          <span class="step">Send to order</span>
+          <span class="step">Mark served</span>
+          <span class="step">Print running bill</span>
+          <span class="step">Open checkout</span>
+          <span class="step">Manual confirm</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <span class="tag waiter">Waiter Table Service</span>
+        <h2>Classic dine-in restaurant</h2>
+        <p>
+          The waiter can print a table bill before payment, but serving state
+          should normally reflect the actual kitchen/table lifecycle.
+        </p>
+        <div class="flow">
+          <span class="step">Send KOT</span>
+          <span class="step">Kitchen prepares</span>
+          <span class="step">Optional table bill</span>
+          <span class="step">Payment</span>
+          <span class="step">Confirm final bill</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <span class="tag kitchen">Token Pickup</span>
+        <h2>Customer pays or receives token and waits</h2>
+        <p>
+          Marking served can be acceptable when it means the kitchen queue has
+          accepted or released the order, not that dining is complete.
+        </p>
+        <div class="flow">
+          <span class="step">Create order</span>
+          <span class="step">Print KOT/token</span>
+          <span class="step">Serve status update</span>
+          <span class="step">Checkout remains manual</span>
+        </div>
+      </article>
+
+      <article class="card">
+        <span class="tag manual">Manual Finalization</span>
+        <h2>Why final confirm stays manual</h2>
+        <p>
+          Customer, discount, credit, payment split, delivery charge, and final
+          receipt copy are billing decisions. The system should not finalize
+          those automatically from the KOT button.
+        </p>
+        <div class="flow">
+          <span class="step">Review checkout</span>
+          <span class="step">Choose payment</span>
+          <span class="step">Confirm</span>
+          <span class="step">Confirm &amp; Print</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="section">
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Auto send order</th>
+            <th>Auto mark served</th>
+            <th>Print type</th>
+            <th>Final confirm</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Counter kitchen</td>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>Running bill / ongoing order details</td>
+            <td>Manual</td>
+          </tr>
+          <tr>
+            <td>Mall or theater counter</td>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>Running bill / token-style bill</td>
+            <td>Manual</td>
+          </tr>
+          <tr>
+            <td>Waiter table service</td>
+            <td>Yes</td>
+            <td>Usually no</td>
+            <td>Table bill / pre-bill</td>
+            <td>Manual</td>
+          </tr>
+          <tr>
+            <td>Takeaway with immediate payment</td>
+            <td>Optional</td>
+            <td>Optional</td>
+            <td>Final bill after payment</td>
+            <td>Manual or fast-confirm setting</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section card">
+      <span class="tag risk">Current recommendation</span>
+      <h2>KOT + Bill button behavior</h2>
+      <p class="note">
+        For now, enable the button only in billing counter mode. The button
+        should send the order, mark it served, print ongoing order details, and
+        open checkout. It should not confirm the sale automatically.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
