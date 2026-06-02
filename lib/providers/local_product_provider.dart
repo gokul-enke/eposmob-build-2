@@ -618,6 +618,16 @@ class LocalProductProvider extends ChangeNotifier {
     );
   }
 
+  num _normalizeCartQuantity(num value) {
+    if (value is double) {
+      final roundedValue = value.roundToDouble();
+      if ((value - roundedValue).abs() < 0.0001) {
+        return roundedValue.toInt();
+      }
+    }
+    return value;
+  }
+
   List<StockReservation> _legacyStockReservations(
       Stock? selectedStock, num stockDeducted) {
     if (selectedStock?.id == null || stockDeducted <= 0) {
@@ -2373,6 +2383,37 @@ class LocalProductProvider extends ChangeNotifier {
       return false;
     }
 
+    final sourceDisplayQuantity = sourceItem.displayQuantity;
+    final targetBaseQuantity = targetSaleUnitRate == null
+        ? _normalizeCartQuantity(sourceDisplayQuantity)
+        : _normalizeCartQuantity(sourceDisplayQuantity * targetSaleUnitRate);
+    final quantityDifference = targetBaseQuantity - sourceItem.quantity;
+    var didMutateStock = false;
+
+    if (isStockEnabled &&
+        sourceItem.selectedStock != null &&
+        quantityDifference != 0) {
+      if (quantityDifference > 0) {
+        final reservationDeltas = _reserveStockForSelection(
+          product: sourceItem.product,
+          quantity: quantityDifference,
+          selectedStock: sourceItem.selectedStock,
+          stockGroupIds: sourceItem.stockGroupIds,
+          operation: "CHANGE_CART_ITEM_SALE_UNIT_INCREASE",
+        );
+        _mergeReservationDeltas(sourceItem, reservationDeltas);
+      } else {
+        _restoreStockReservations(
+          sourceItem,
+          quantityDifference.abs(),
+          "CHANGE_CART_ITEM_SALE_UNIT_DECREASE",
+        );
+      }
+      didMutateStock = true;
+    }
+
+    sourceItem.quantity = targetBaseQuantity;
+
     final targetIndex = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
@@ -2383,7 +2424,6 @@ class LocalProductProvider extends ChangeNotifier {
     if (targetIndex != -1 && targetIndex != currentIndex) {
       final targetItem = _cartItems[targetIndex];
       targetItem.quantity += sourceItem.quantity;
-      targetItem.stockDeducted += sourceItem.stockDeducted;
       _mergeReservationDeltas(targetItem, sourceItem.stockReservations);
       targetItem.comment ??= sourceItem.comment;
       _refreshCartItemPricing(targetItem);
@@ -2408,8 +2448,12 @@ class LocalProductProvider extends ChangeNotifier {
         saleUnitName: targetSaleUnitName,
         saleUnitConversionRate: targetSaleUnitRate,
       );
+      _refreshCartItemPricing(_cartItems[currentIndex]);
     }
 
+    if (didMutateStock) {
+      _saveProductsToHive();
+    }
     _saveCartToHive();
     notifyListeners();
     return true;
