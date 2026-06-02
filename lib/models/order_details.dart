@@ -454,6 +454,9 @@ class OrderDetailsModelDataCartItem {
   final String? totalPrice; // Changed to int
   final String? currency;
   final String? taxAmount; // Added tax_amount field
+  final int? saleUnitId;
+  final int? productSaleUnitId;
+  final String? saleUnitName;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final Names? names; // Add bilingual names support
@@ -472,6 +475,9 @@ class OrderDetailsModelDataCartItem {
     this.totalPrice,
     this.currency,
     this.taxAmount, // Added tax_amount field
+    this.saleUnitId,
+    this.productSaleUnitId,
+    this.saleUnitName,
     this.createdAt,
     this.updatedAt,
     this.names, // Add to constructor
@@ -496,6 +502,13 @@ class OrderDetailsModelDataCartItem {
         totalPrice: json["total_price"].toString(),
         currency: json["currency"],
         taxAmount: json["tax_amount"]?.toString(), // Added tax_amount parsing
+        saleUnitId: _parseNullableInt(json["sale_unit_id"]),
+        productSaleUnitId: _parseNullableInt(json["product_sale_unit_id"]),
+        saleUnitName: (json["sale_unit_name"] ??
+                json["product_sale_unit_name"] ??
+                json["product_sale_unit"]?["unit_name"] ??
+                json["sale_unit"]?["unit_name"])
+            ?.toString(),
         createdAt: json["created_at"] == null
             ? null
             : DateTime.parse(json["created_at"]),
@@ -527,10 +540,19 @@ class OrderDetailsModelDataCartItem {
         "total_price": totalPrice,
         "currency": currency,
         "tax_amount": taxAmount, // Added tax_amount serialization
+        "sale_unit_id": saleUnitId,
+        "product_sale_unit_id": productSaleUnitId,
+        "sale_unit_name": saleUnitName,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
         "names": names?.toJson(), // Add names to serialization
       };
+
+  static int? _parseNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
 }
 
 class OrderDetailsModelDataProductAttachment {
