@@ -1096,19 +1096,6 @@ class StandardPrinter {
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.center;
       columnWidths.add(1.1);
     }
-    if (displayConfig?['showTotal']?.visible == true) {
-      // Use displayConfig value first, then fallback to resolved_labels, then default
-      final label =
-          (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
-              ? displayConfig!['showTotal']!.value as String
-              : (billDocumentConfig?.resolvedLabels?.total?.isNotEmpty == true
-                  ? billDocumentConfig!.resolvedLabels!.total!
-                  : 'TOTAL');
-      tableHeaders.add(label.toUpperCase());
-      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
-      columnWidths.add(1.5); // Slightly larger for total values
-    }
-
     // Add Tax column header - only if showTax is visible
     if (displayConfig?['showTax']?.visible == true) {
       final taxLabel =
@@ -1120,6 +1107,18 @@ class StandardPrinter {
       tableHeaders.add(taxLabel.toUpperCase());
       cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
       columnWidths.add(1.5); // Same width as other price columns
+    }
+    if (displayConfig?['showTotal']?.visible == true) {
+      // Use displayConfig value first, then fallback to resolved_labels, then default
+      final label =
+          (displayConfig?['showTotal']?.value as String?)?.isNotEmpty == true
+              ? displayConfig!['showTotal']!.value as String
+              : (billDocumentConfig?.resolvedLabels?.total?.isNotEmpty == true
+                  ? billDocumentConfig!.resolvedLabels!.total!
+                  : 'TOTAL');
+      tableHeaders.add(label.toUpperCase());
+      cellAlignmentsMap[visibleColIndex++] = pw.Alignment.centerRight;
+      columnWidths.add(1.5); // Slightly larger for total values
     }
 
     // Create table data based on visibility with smart product name handling
@@ -1267,12 +1266,12 @@ class StandardPrinter {
       if (displayConfig?['showUnit']?.visible == true) {
         rowData.add(unitName);
       }
-      if (displayConfig?['showTotal']?.visible == true) {
-        rowData.add(totalPrice);
-      }
       // Add tax amount only if showTax is visible
       if (displayConfig?['showTax']?.visible == true) {
         rowData.add(itemTaxAmount);
+      }
+      if (displayConfig?['showTotal']?.visible == true) {
+        rowData.add(totalPrice);
       }
 
       tableData.add(rowData);
