@@ -872,6 +872,108 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
+  num? _availableQuantity(GetProduct product) {
+    final stocks = product.stock;
+    if (stocks == null) return null;
+    if (stocks.isEmpty) return 0;
+
+    num total = 0;
+    var hasQuantity = false;
+    for (final stock in stocks) {
+      if (stock.quantity != null) {
+        total += stock.quantity!;
+        hasQuantity = true;
+      }
+    }
+    return hasQuantity ? total : null;
+  }
+
+  bool _isLowStockQuantity(num? quantity, int? reorderLevel) {
+    if (quantity == null || reorderLevel == null) return false;
+    return quantity <= reorderLevel;
+  }
+
+  String _formatStockNumber(num value) {
+    if (value is int || value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toString();
+  }
+
+  Widget _buildLowStockBadge({required bool atReorderLevel}) {
+    final color =
+        atReorderLevel ? ColorManager.kButtonYellow : ColorManager.kOrange;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.7)),
+      ),
+      child: Text(
+        atReorderLevel ? 'At Reorder Level' : 'Low Stock',
+        style: buildCustomStyle(
+          FontWeightManager.semiBold,
+          FontSize.s11,
+          0.18,
+          atReorderLevel ? Colors.black87 : ColorManager.kOrange,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStockStatusRow(GetProduct product) {
+    final availableQuantity = _availableQuantity(product);
+    final reorderLevel = product.reorderLevel;
+    final isLowStock = _isLowStockQuantity(availableQuantity, reorderLevel);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              'Available Qty:',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s14,
+                0.20,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SelectableText(
+                  availableQuantity == null
+                      ? 'N/A'
+                      : _formatStockNumber(availableQuantity),
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s14,
+                    0.20,
+                    isLowStock ? ColorManager.kOrange : ColorManager.textColor,
+                  ),
+                ),
+                if (isLowStock)
+                  _buildLowStockBadge(
+                    atReorderLevel: availableQuantity == reorderLevel,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1136,8 +1238,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 child: Column(
                   children: [
                     _buildDetailRow('Rating', product.rating ?? 'N/A'),
-                    _buildDetailRow('Available Qty',
-                        product.numberOfProductsAvailable ?? 'N/A'),
+                    _buildStockStatusRow(product),
+                    _buildDetailRow('Reorder Level',
+                        product.reorderLevel?.toString() ?? 'N/A'),
                     _buildDetailRow('Location',
                         product.productLocation?.toString() ?? 'N/A'),
                     if (product.weightInfo != null) ...[
@@ -1316,11 +1419,17 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     final stock = originalStock.id != null
                         ? (_editedStockRows[originalStock.id!] ?? originalStock)
                         : originalStock;
+                    final isLowStock = _isLowStockQuantity(
+                      stock.quantity,
+                      product.reorderLevel,
+                    );
                     return Container(
                       decoration: BoxDecoration(
-                        color: index % 2 == 0
-                            ? Colors.white
-                            : Colors.grey.withOpacity(0.05),
+                        color: isLowStock
+                            ? ColorManager.kOrange.withValues(alpha: 0.06)
+                            : index % 2 == 0
+                                ? Colors.white
+                                : Colors.grey.withValues(alpha: 0.05),
                       ),
                       child: Table(
                         columnWidths: const {
@@ -1345,7 +1454,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             children: [
                               _buildStockTableCell('${index + 1}'),
                               _buildStockTableCell(
-                                  stock.quantity?.toString() ?? 'N/A'),
+                                stock.quantity?.toString() ?? 'N/A',
+                                textColor:
+                                    isLowStock ? Colors.white : Colors.black,
+                                bgColor: isLowStock
+                                    ? ColorManager.kOrange
+                                    : Colors.transparent,
+                              ),
                               _buildStockTableCell(
                                   stock.price != null && stock.price!.isNotEmpty
                                       ? '$currency ${stock.price}'
@@ -1729,19 +1844,32 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
-  Widget _buildStockTableCell(String text) {
+  Widget _buildStockTableCell(
+    String text, {
+    Color textColor = Colors.black,
+    Color bgColor = Colors.transparent,
+  }) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
         child: Center(
-          child: SelectableText(
-            text,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s13,
-              0.18,
-              Colors.black,
+          child: Container(
+            padding: bgColor == Colors.transparent
+                ? EdgeInsets.zero
+                : const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: SelectableText(
+              text,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s13,
+                0.18,
+                textColor,
+              ),
             ),
           ),
         ),

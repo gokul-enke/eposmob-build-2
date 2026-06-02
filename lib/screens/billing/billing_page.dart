@@ -3155,6 +3155,60 @@ class BillingPageState extends State<BillingPage>
     );
   }
 
+  num? _summedProductStockQuantity(GetProduct product) {
+    final stocks = product.stock;
+    if (stocks == null) return null;
+    if (stocks.isEmpty) return 0;
+
+    num total = 0;
+    var hasQuantity = false;
+    for (final stock in stocks) {
+      if (stock.quantity != null) {
+        total += stock.quantity!;
+        hasQuantity = true;
+      }
+    }
+    return hasQuantity ? total : null;
+  }
+
+  bool _isLowStockProduct(GetProduct product) {
+    final quantity = _summedProductStockQuantity(product);
+    final reorderLevel = product.reorderLevel;
+    if (quantity == null || reorderLevel == null) return false;
+    return quantity <= reorderLevel;
+  }
+
+  Widget _buildCartLowStockBadge(GetProduct product) {
+    final quantity = _summedProductStockQuantity(product);
+    final reorderLevel = product.reorderLevel;
+    final atReorderLevel =
+        quantity != null && reorderLevel != null && quantity == reorderLevel;
+    final color =
+        atReorderLevel ? ColorManager.kButtonYellow : ColorManager.kOrange;
+
+    return Tooltip(
+      message: atReorderLevel ? 'At reorder level' : 'Low stock',
+      waitDuration: const Duration(milliseconds: 400),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withValues(alpha: 0.7)),
+        ),
+        child: Text(
+          atReorderLevel ? 'Reorder' : 'Low',
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s10,
+            0.18,
+            atReorderLevel ? Colors.black87 : ColorManager.kOrange,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCartItemsTable(Size size) {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
@@ -3262,15 +3316,20 @@ class BillingPageState extends State<BillingPage>
                                 itemCount: cartItems.length,
                                 itemBuilder: (context, index) {
                                   final item = cartItems[index];
+                                  final bool isLowStock =
+                                      _isLowStockProduct(item.product);
                                   final bool isFocusedRow =
                                       isCartTableFocused &&
                                           _cartTableFocusedRowIndex == index;
                                   return Container(
                                     color: isFocusedRow
-                                        ? Colors.orange.withOpacity(0.06)
-                                        : index % 2 == 0
-                                            ? Colors.white
-                                            : Colors.grey.shade50,
+                                        ? Colors.orange.withValues(alpha: 0.06)
+                                        : isLowStock
+                                            ? ColorManager.kOrange
+                                                .withValues(alpha: 0.06)
+                                            : index % 2 == 0
+                                                ? Colors.white
+                                                : Colors.grey.shade50,
                                     child: Row(
                                       children: [
                                         // Index Number
@@ -3333,6 +3392,11 @@ class BillingPageState extends State<BillingPage>
                                                       ),
                                                     ),
                                                   ),
+                                                  if (isLowStock) ...[
+                                                    const SizedBox(width: 6),
+                                                    _buildCartLowStockBadge(
+                                                        item.product),
+                                                  ],
                                                   const SizedBox(width: 6),
                                                   Tooltip(
                                                     message:
