@@ -111,14 +111,22 @@ class _SalesScreenState extends State<SalesScreen> {
 
   @override
   void initState() {
-    loadInitData();
     super.initState();
+    loadInitData();
     // Ensure filters are shown by default on desktop
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final isMobile = MediaQuery.of(context).size.width < 768;
       Provider.of<SalesProvider>(context, listen: false)
           .setFiltersVisibility(!isMobile);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant SalesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isOnlineSales != widget.isOnlineSales) {
+      resetSearch();
+    }
   }
 
   @override
@@ -1914,6 +1922,8 @@ Powered by CloudPOS''',
                                       salesProvider.fetchOrders(
                                         accessToken: authModel.token ?? "",
                                         page: salesProvider.currentPage,
+                                        filterOnlineSales:
+                                            widget.isOnlineSales ? true : null,
                                       );
                                     }
                                   } catch (e) {
@@ -2665,12 +2675,7 @@ Powered by CloudPOS''',
                         return const Center(child: CircularProgressIndicator());
                       }
 
-                      // Frontend filtering for online sales
-                      final displayedOrders = widget.isOnlineSales
-                          ? orderProvider.orders
-                              .where((order) => order.isOnline == true)
-                              .toList()
-                          : orderProvider.orders;
+                      final displayedOrders = orderProvider.orders;
 
                       if (displayedOrders.isEmpty) {
                         // Pass displayedOrders to empty state for correct message
