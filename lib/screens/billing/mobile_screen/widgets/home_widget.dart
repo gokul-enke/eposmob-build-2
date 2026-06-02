@@ -594,7 +594,7 @@ class _HomeWidgetState extends State<HomeWidget> {
           customerName: null,
           customerPhone: null,
           comment: "",
-          deliveryMethod: "Store Takeaway",
+          deliveryMethod: context.read<BillingProvider>().deliveryMethod,
         );
 
         showScaffold(

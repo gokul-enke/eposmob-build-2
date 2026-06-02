@@ -8,8 +8,12 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 
-Future<dynamic> showAddCustomerModal(BuildContext context, Size size,
-    {required String mobileNumber}) {
+Future<dynamic> showAddCustomerModal(
+  BuildContext context,
+  Size size, {
+  required String mobileNumber,
+  String? customerName,
+}) {
   // Clear any focused field behind the dialog to avoid multiple cursors.
   FocusManager.instance.primaryFocus?.unfocus();
   return showDialog(
@@ -45,7 +49,9 @@ Future<dynamic> showAddCustomerModal(BuildContext context, Size size,
             ),
             padding: const EdgeInsets.all(20),
             child: AddCustomersModal(
-                mobileNumber: mobileNumber), // Pass mobile number
+              mobileNumber: mobileNumber,
+              customerName: customerName,
+            ),
           ),
         ),
       );
@@ -55,9 +61,13 @@ Future<dynamic> showAddCustomerModal(BuildContext context, Size size,
 
 class AddCustomersModal extends StatefulWidget {
   final String mobileNumber;
+  final String? customerName;
 
-  const AddCustomersModal({Key? key, required this.mobileNumber})
-      : super(key: key);
+  const AddCustomersModal({
+    Key? key,
+    required this.mobileNumber,
+    this.customerName,
+  }) : super(key: key);
 
   @override
   State<AddCustomersModal> createState() => _AddCustomersModalState();
@@ -88,6 +98,7 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
           // Use the unified form
           CustomCustomerForm(
             initialMobileNumber: widget.mobileNumber,
+            initialCustomerName: widget.customerName,
             isModal: true,
             onSuccess: () {
               // Form handles success internally for modal
@@ -101,4 +112,3 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
     );
   }
 }
-

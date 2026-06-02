@@ -35,6 +35,8 @@ class ReceiptLayoutParams {
   final String? paymentMethod;
   final String? customerVatNumber;
   final String? customerCrNumber;
+  final String? customerType;
+  final String? documentTitleOverride;
   final Map<String, dynamic>?
       paymentBreakdown; // Added for multi-payment support
   // ZATCA fields for Saudi Arabia e-invoicing
@@ -76,6 +78,8 @@ class ReceiptLayoutParams {
     this.paymentMethod,
     this.customerVatNumber,
     this.customerCrNumber,
+    this.customerType,
+    this.documentTitleOverride,
     this.paymentBreakdown,
     this.zatcaVatNumber,
     this.zatcaCompanyName,
@@ -86,8 +90,63 @@ class ReceiptLayoutParams {
   });
 
   /// Get the display configuration options from the document config
-  Map<String, DisplayOption>? get displayConfig =>
-      billDocumentConfig.displayConfiguration?.options;
+  Map<String, DisplayOption>? get displayConfig {
+    final options = billDocumentConfig.displayConfiguration?.options;
+    if (options == null) return null;
+    final titleOverride = documentTitleOverride?.trim();
+
+    final normalizedType = customerType?.trim().toUpperCase();
+    final hasKycDetails = (customerVatNumber?.trim().isNotEmpty ?? false) ||
+        (customerCrNumber?.trim().isNotEmpty ?? false);
+    final isB2B = normalizedType == 'B2B' ||
+        ((normalizedType == null || normalizedType.isEmpty) && hasKycDetails);
+    if (!isB2B) {
+      if (titleOverride == null || titleOverride.isEmpty) return options;
+      final merged = Map<String, DisplayOption>.from(options);
+      merged['showInvoiceTitle'] = DisplayOption(
+        visible: true,
+        value: titleOverride,
+        defaultValue: options['showInvoiceTitle']?.defaultValue,
+      );
+      return merged;
+    }
+
+    final b2bInvoiceTitle =
+        options['showInvoiceTitleB2B'] ?? options['showInvoiceTitleB2b'];
+    final b2bTitleKey = options.containsKey('showInvoiceTitleB2B')
+        ? 'showInvoiceTitleB2B'
+        : (options.containsKey('showInvoiceTitleB2b')
+            ? 'showInvoiceTitleB2b'
+            : 'missing');
+    final b2bTitleValue = b2bInvoiceTitle?.value?.toString().trim();
+    debugPrint(
+        '[ReceiptLayoutParams] B2B title check: customerType=${customerType ?? 'null'}, hasCustomerKyc=$hasKycDetails, key=$b2bTitleKey, visible=${b2bInvoiceTitle?.visible}, value=${b2bInvoiceTitle?.value}');
+    if (b2bInvoiceTitle == null ||
+        (b2bInvoiceTitle.visible != true &&
+            (b2bTitleValue == null || b2bTitleValue.isEmpty))) {
+      if (titleOverride != null && titleOverride.isNotEmpty) {
+        final merged = Map<String, DisplayOption>.from(options);
+        merged['showInvoiceTitle'] = DisplayOption(
+          visible: true,
+          value: titleOverride,
+          defaultValue: options['showInvoiceTitle']?.defaultValue,
+        );
+        return merged;
+      }
+      return options;
+    }
+
+    final merged = Map<String, DisplayOption>.from(options);
+    merged['showInvoiceTitle'] =
+        titleOverride != null && titleOverride.isNotEmpty
+            ? DisplayOption(
+                visible: true,
+                value: titleOverride,
+                defaultValue: b2bInvoiceTitle.defaultValue,
+              )
+            : b2bInvoiceTitle;
+    return merged;
+  }
 
   /// Check if the document is configured for RTL (Arabic)
   bool get isRtl {

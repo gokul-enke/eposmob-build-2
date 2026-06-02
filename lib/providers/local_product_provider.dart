@@ -212,6 +212,9 @@ class SavedOrder {
   final double? deliveryCharge;
   final String? customerVatNumber;
   final String? customerCrNumber;
+  final String? customerType;
+  final int? quotationId;
+  final String? quotationNumber;
 
   SavedOrder({
     required this.id,
@@ -244,6 +247,9 @@ class SavedOrder {
     this.deliveryCharge,
     this.customerVatNumber,
     this.customerCrNumber,
+    this.customerType,
+    this.quotationId,
+    this.quotationNumber,
   });
 }
 
@@ -1091,8 +1097,10 @@ class LocalProductProvider extends ChangeNotifier {
           'price': payloadPrice,
           'mrp': payloadMrp,
           'stock_id': reservation.stockId,
-          if (item.canUseSaleUnitPayloadFor(reservation.quantity))
+          if (item.canUseSaleUnitPayloadFor(reservation.quantity)) ...{
             'sale_unit_id': item.saleUnitId,
+            'product_sale_unit_id': item.saleUnitId,
+          },
         });
         reservedQuantity += reservation.quantity;
       }
@@ -1116,7 +1124,10 @@ class LocalProductProvider extends ChangeNotifier {
               canUseSaleUnitPayload ? item.toDisplayAmount(item.mrp) : item.mrp,
           'stock_id':
               item.stockReservations.isEmpty ? item.selectedStock?.id : null,
-          if (canUseSaleUnitPayload) 'sale_unit_id': item.saleUnitId,
+          if (canUseSaleUnitPayload) ...{
+            'sale_unit_id': item.saleUnitId,
+            'product_sale_unit_id': item.saleUnitId,
+          },
         });
       }
     }
@@ -1216,6 +1227,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryCharge: hiveSavedOrder.deliveryCharge,
           customerVatNumber: hiveSavedOrder.customerVatNumber,
           customerCrNumber: hiveSavedOrder.customerCrNumber,
+          customerType: hiveSavedOrder.customerType,
         ));
       }
       notifyListeners();
@@ -1270,6 +1282,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryCharge: order.deliveryCharge,
           customerVatNumber: order.customerVatNumber,
           customerCrNumber: order.customerCrNumber,
+          customerType: order.customerType,
         );
 
         _confirmedOrdersBox.add(hiveSavedOrder);
@@ -1351,6 +1364,7 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryCharge: hiveSavedOrder.deliveryCharge,
         customerVatNumber: hiveSavedOrder.customerVatNumber,
         customerCrNumber: hiveSavedOrder.customerCrNumber,
+        customerType: hiveSavedOrder.customerType,
       );
       _savedOrders.add(savedOrder);
       debugPrint(
@@ -1483,6 +1497,7 @@ class LocalProductProvider extends ChangeNotifier {
         deliveryCharge: order.deliveryCharge,
         customerVatNumber: order.customerVatNumber,
         customerCrNumber: order.customerCrNumber,
+        customerType: order.customerType,
       );
 
       _savedOrdersBox.add(hiveSavedOrder);
@@ -1792,6 +1807,59 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  /// Delete a product via API and update local state
+  Future<bool> deleteProductAPI(int productId) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+      String? accessToken = prefs.getString('access_token');
+
+      if (apiKey == null || accessToken == null) {
+        throw const HttpException(
+            "Authentication details missing. Please login again.");
+      }
+
+      final url = Uri.parse(APPUrl.deleteProductUrl);
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: json.encode({"product_id": productId.toString()}),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        if (jsonData['status'] == true ||
+            jsonData['status'] == 'success' ||
+            jsonData['success'] == true) {
+          // Remove from local list
+          _products.removeWhere((p) => p.productId == productId);
+          _filteredProducts.removeWhere((p) => p.productId == productId);
+
+          // Rebuild barcode index and update pagination
+          _rebuildBarcodeIndex();
+          _updatePagination();
+
+          // Save updated list to Hive
+          _saveProductsToHive();
+
+          notifyListeners();
+          return true;
+        }
+      }
+
+      debugPrint(
+          "❌ [API] Delete product failed: ${response.statusCode} - ${response.body}");
+      return false;
+    } catch (e) {
+      debugPrint("❌ [API] Error deleting product: $e");
+      return false;
+    }
+  }
+
   /// Updates pagination info based on filtered products
   void _updatePagination() {
     _totalPages = (_filteredProducts.length / _itemsPerPage).ceil();
@@ -1866,6 +1934,7 @@ class LocalProductProvider extends ChangeNotifier {
               .toLowerCase()
               .contains(filterName.toLowerCase()))
           .toList();
+      result = _rankProductNameMatches(result, filterName);
     }
 
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
@@ -1935,10 +2004,34 @@ class LocalProductProvider extends ChangeNotifier {
     if (query.isEmpty) {
       return _filteredProducts;
     }
-    return _filteredProducts
+    final matches = _filteredProducts
         .where((p) =>
             (p.productName ?? '').toLowerCase().contains(query.toLowerCase()))
         .toList();
+    return _rankProductNameMatches(matches, query);
+  }
+
+  List<GetProduct> _rankProductNameMatches(
+    List<GetProduct> products,
+    String query,
+  ) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return products;
+
+    final indexedProducts = products.indexed.toList();
+    indexedProducts.sort((first, second) {
+      final rankCompare = _productNameMatchRank(first.$2, normalizedQuery)
+          .compareTo(_productNameMatchRank(second.$2, normalizedQuery));
+      if (rankCompare != 0) return rankCompare;
+      return first.$1.compareTo(second.$1);
+    });
+    return indexedProducts.map((entry) => entry.$2).toList();
+  }
+
+  int _productNameMatchRank(GetProduct product, String normalizedQuery) {
+    final productName = product.productName?.trim().toLowerCase() ?? '';
+    if (productName.startsWith(normalizedQuery)) return 0;
+    return 1;
   }
 
   /// Adds a product to the local products list.
@@ -2149,8 +2242,11 @@ class LocalProductProvider extends ChangeNotifier {
           cartQuantity; // Increment by the specified quantity
 
       if (price != null) {
-        existingItem.price = price;
-        existingItem.isManualPriceOverride = markPriceAsManualOverride;
+        if (markPriceAsManualOverride || !existingItem.isManualPriceOverride) {
+          existingItem.price = price;
+        }
+        existingItem.isManualPriceOverride =
+            existingItem.isManualPriceOverride || markPriceAsManualOverride;
         debugPrint("💰 Using explicit price: $price");
       }
 
@@ -2903,6 +2999,59 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  GetProduct? updateStockDetailsLocallyByStockId({
+    required int stockId,
+    required String retailPrice,
+    required String mrp,
+    required String purchasePrice,
+    required String quantity,
+    required String rack,
+  }) {
+    final productIndex = _products.indexWhere(
+      (product) => product.stock?.any((stock) => stock.id == stockId) ?? false,
+    );
+
+    if (productIndex == -1) {
+      debugPrint(
+          "âš ï¸ [LocalStockUpdate] Product not found for stockId=$stockId");
+      return null;
+    }
+
+    final oldProduct = _products[productIndex];
+    final updatedStock = List<Stock>.from(oldProduct.stock ?? const <Stock>[]);
+    final stockIndex = updatedStock.indexWhere((stock) => stock.id == stockId);
+    if (stockIndex == -1) {
+      return null;
+    }
+
+    final existingStock = updatedStock[stockIndex];
+    updatedStock[stockIndex] = existingStock.copyWith(
+      quantity: num.tryParse(quantity) ?? existingStock.quantity,
+      price: retailPrice,
+      mrp: mrp,
+      purchasePrice: purchasePrice,
+      rack: rack,
+    );
+
+    final updatedProduct = oldProduct.copyWith(stock: updatedStock);
+    _products[productIndex] = updatedProduct;
+
+    final filteredIndex = _filteredProducts.indexWhere(
+      (product) => product.productId == updatedProduct.productId,
+    );
+    if (filteredIndex != -1) {
+      _filteredProducts[filteredIndex] = updatedProduct;
+    }
+
+    _rebuildBarcodeIndex();
+    _saveProductToHive(updatedProduct);
+    notifyListeners();
+
+    debugPrint(
+        "âœ… [LocalStockUpdate] Updated local product stock for stockId=$stockId");
+    return updatedProduct;
+  }
+
   /// Updates stock quantity for a specific stock entry
   /// Used when stock quantities change (e.g., after sales, returns, etc.)
   void updateStockQuantity({
@@ -3019,6 +3168,7 @@ class LocalProductProvider extends ChangeNotifier {
     double? deliveryCharge,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
   }) {
     if (_cartItems.isEmpty) {
       throw Exception("Cannot save an empty cart as confirmed order");
@@ -3068,6 +3218,7 @@ class LocalProductProvider extends ChangeNotifier {
       deliveryCharge: deliveryCharge,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
     );
 
     // Add to confirmed orders list
@@ -3120,6 +3271,7 @@ class LocalProductProvider extends ChangeNotifier {
           deliveryCharge: order.deliveryCharge,
           customerVatNumber: order.customerVatNumber,
           customerCrNumber: order.customerCrNumber,
+          customerType: order.customerType,
         );
 
         // Add to confirmed orders
@@ -3201,8 +3353,10 @@ class LocalProductProvider extends ChangeNotifier {
     String? tableId,
     String? address,
     double? deliveryCharge,
+    String? alternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
   }) {
     debugPrint("💾 LOCAL PROVIDER - saveCurrentCartAsOrder called");
     debugPrint("  - Customer Phone parameter: '$customerPhone'");
@@ -3255,12 +3409,13 @@ class LocalProductProvider extends ChangeNotifier {
       percentageDiscount: _percentageDiscount,
       toCustomerCredit: toCustomerCredit,
       tableId: tableId,
-      alternatePhone: null, // Add if needed
+      alternatePhone: alternatePhone,
       address:
           address, // Pass address if available, or update if passed as param
       deliveryCharge: deliveryCharge,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
     );
 
     // Add to saved orders list
@@ -3361,6 +3516,43 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  /// Loads a quotation as an editable billing draft without saving it as a
+  /// normal local order. The final order API will receive quotationId later.
+  void loadQuotationDraftForEditing(SavedOrder draft) {
+    try {
+      debugPrint(
+          "🧾 [LocalProductProvider] Loading quotation draft id=${draft.quotationId}, number=${draft.quotationNumber}, customerId=${draft.customerId}, customerName=${draft.customerName}, customerPhone=${draft.customerPhone}, items=${draft.items.length}");
+      _flatDiscount = draft.flatDiscount ?? 0.0;
+      _percentageDiscount = draft.percentageDiscount ?? 0.0;
+
+      if (isStockEnabled) {
+        for (final cartItem in _cartItems) {
+          if (cartItem.stockDeducted > 0) {
+            _restoreStockReservations(
+              cartItem,
+              cartItem.stockDeducted,
+              "LOAD_QUOTATION_RELEASE",
+            );
+          }
+        }
+        _saveProductsToHive();
+      }
+
+      _cartItems.clear();
+      _cartItems.addAll(draft.items.map(_cloneLocalCartItem));
+      _currentOrder = draft;
+
+      cartTotal;
+      _saveCartToHive();
+      notifyListeners();
+      debugPrint(
+          "✅ [LocalProductProvider] Quotation draft ready. cartItems=${_cartItems.length}, currentOrder=${_currentOrder?.id}, quotationId=${_currentOrder?.quotationId}");
+    } catch (e) {
+      debugPrint("Error loading quotation draft: $e");
+      rethrow;
+    }
+  }
+
   /// Updates an existing saved order
   void updateSavedOrder(
     String orderId, {
@@ -3385,8 +3577,10 @@ class LocalProductProvider extends ChangeNotifier {
     String? tableId,
     String? address,
     double? deliveryCharge,
+    String? alternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
   }) {
     debugPrint("💾 LOCAL PROVIDER - updateSavedOrder called");
     debugPrint("  - Order ID: $orderId");
@@ -3441,13 +3635,14 @@ class LocalProductProvider extends ChangeNotifier {
         toCustomerCredit:
             toCustomerCredit ?? _savedOrders[index].toCustomerCredit,
         tableId: tableId ?? _savedOrders[index].tableId,
-        alternatePhone: _savedOrders[index].alternatePhone,
+        alternatePhone: alternatePhone ?? _savedOrders[index].alternatePhone,
         address: address ?? _savedOrders[index].address,
         deliveryCharge: deliveryCharge ?? _savedOrders[index].deliveryCharge,
         customerVatNumber:
             customerVatNumber ?? _savedOrders[index].customerVatNumber,
         customerCrNumber:
             customerCrNumber ?? _savedOrders[index].customerCrNumber,
+        customerType: customerType ?? _savedOrders[index].customerType,
       );
 
       // Update in list

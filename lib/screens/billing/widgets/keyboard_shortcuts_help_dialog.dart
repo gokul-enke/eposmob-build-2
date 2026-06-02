@@ -66,7 +66,7 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       description: 'Focus cart on first row Item Name cell',
     ),
     _ShortcutItem(
-      keyLabel: 'D',
+      keyLabel: 'Alt + D',
       action: 'Open Cash Drawer',
       description: 'Trigger printer to open the cash drawer',
     ),
@@ -83,6 +83,39 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
   ];
 
+  static const List<_ShortcutItem> _restaurantGlobalShortcuts = [
+    _ShortcutItem(
+      keyLabel: 'Ctrl + H',
+      action: 'Open this Help',
+      description: 'Show the keyboard shortcuts dialog',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + K',
+      action: 'Toggle Virtual Keyboard',
+      description: 'Show/hide the on-screen keyboard panel',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + D',
+      action: 'Focus Order Tabs',
+      description: 'Focus right panel tabs: Cart, Saved, Ongoing',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Alt + D',
+      action: 'Open Cash Drawer',
+      description: 'Trigger printer to open the cash drawer',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + A',
+      action: 'Focus Categories',
+      description: 'Focus the menu category row',
+    ),
+    _ShortcutItem(
+      keyLabel: 'Ctrl + S',
+      action: 'Focus Search',
+      description: 'Jump cursor to menu item search',
+    ),
+  ];
+
   static const List<_ShortcutItem> _standardBillingShortcuts = [
     _ShortcutItem(
       keyLabel: 'F1',
@@ -96,8 +129,8 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
     _ShortcutItem(
       keyLabel: 'F9',
-      action: 'Save Order and Print',
-      description: 'Saves and prints receipt',
+      action: 'Save / Offline Print',
+      description: 'Online: save order. Offline: save and print',
     ),
     _ShortcutItem(
       keyLabel: 'F6',
@@ -167,8 +200,23 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     ),
     _ShortcutItem(
       keyLabel: 'F9',
-      action: 'Save Order and Print',
-      description: 'Saves and prints receipt',
+      action: 'Save / Offline Print',
+      description: 'Online: save order. Offline: save and print',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F3',
+      action: 'Select Customer',
+      description: 'Open customer selection',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F4',
+      action: 'Dining / Delivery',
+      description: 'Counter mode: delivery selector. Dining mode: table picker',
+    ),
+    _ShortcutItem(
+      keyLabel: 'F5',
+      action: 'Payment Step',
+      description: 'Open checkout at payment step when possible',
     ),
     _ShortcutItem(
       keyLabel: 'F6',
@@ -186,47 +234,47 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
       description: 'Starts a fresh order',
     ),
     _ShortcutItem(
+      keyLabel: 'F10',
+      action: 'Discount Step',
+      description: 'Open checkout at discount step when possible',
+    ),
+    _ShortcutItem(
       keyLabel: 'F12',
-      action: 'Activate sidebar keyboard mode',
-      description: 'Switch focus to right panel (Tab to cycle, Esc to exit)',
+      action: 'Toggle Tables Panel',
+      description: 'Desktop: show/hide tables panel. Mobile: switch panels',
     ),
   ];
 
   static const List<_ShortcutItem> _restaurantCartShortcuts = [
     _ShortcutItem(
-      keyLabel: 'Enter / Q',
-      action: 'Edit Cart Qty',
-      description: 'Open quantity dialog for the focused cart row',
+      keyLabel: 'Ctrl + D',
+      action: 'Focus Order Tabs',
+      description: 'Focus Cart, Saved, Ongoing tab strip',
     ),
     _ShortcutItem(
-      keyLabel: '+ / -',
-      action: 'Adjust Cart Qty',
-      description: 'Increase or decrease quantity of focused cart row',
+      keyLabel: 'Left / Right',
+      action: 'Move Tabs',
+      description: 'Move across Cart, Saved, and Ongoing',
     ),
     _ShortcutItem(
-      keyLabel: 'P',
-      action: 'Edit Cart Price',
-      description: 'Open unit price edit for focused cart row',
+      keyLabel: 'Down',
+      action: 'Focus Cart Items',
+      description: 'From Cart tab, move into current cart items',
     ),
     _ShortcutItem(
-      keyLabel: 'M',
-      action: 'Edit Cart MRP',
-      description: 'Open MRP edit for focused cart row',
+      keyLabel: 'Up / Down',
+      action: 'Move Cart Item',
+      description: 'Move through current cart item cards',
     ),
     _ShortcutItem(
-      keyLabel: 'T',
-      action: 'Edit Cart Tax',
-      description: 'Open tax-rate edit for focused cart row',
+      keyLabel: '+ / - / Delete',
+      action: 'Edit Cart Item',
+      description: 'Increase, decrease, or remove focused cart item',
     ),
     _ShortcutItem(
-      keyLabel: 'I',
-      action: 'Cart Item Info',
-      description: 'Open product details for focused cart row',
-    ),
-    _ShortcutItem(
-      keyLabel: 'Delete',
-      action: 'Remove Cart Item',
-      description: 'Remove focused cart row from cart',
+      keyLabel: 'Enter / Space',
+      action: 'Comment Item',
+      description: 'Open comment dialog for focused cart item',
     ),
   ];
 
@@ -327,6 +375,9 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
     final cartShortcuts = mode == KeyboardShortcutsHelpMode.restaurant
         ? _restaurantCartShortcuts
         : _standardCartShortcuts;
+    final globalShortcuts = mode == KeyboardShortcutsHelpMode.restaurant
+        ? _restaurantGlobalShortcuts
+        : _globalShortcuts;
     // Wrap in Focus to capture Esc and dismiss the dialog. autofocus ensures
     // the listener is active immediately after the help opens (e.g. via
     // Ctrl+H on the billing page or the toolbar icon).
@@ -417,9 +468,9 @@ class KeyboardShortcutsHelpDialog extends StatelessWidget {
                       const SizedBox(height: 14),
                       _buildSectionsSheet(
                         [
-                          const _ShortcutSection(
+                          _ShortcutSection(
                             title: 'Global',
-                            items: _globalShortcuts,
+                            items: globalShortcuts,
                           ),
                           _ShortcutSection(
                             title: mode == KeyboardShortcutsHelpMode.restaurant

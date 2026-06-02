@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -23,6 +25,7 @@ import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/list_cart.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/models/quotation_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -41,6 +44,8 @@ import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/providers/quotations_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -49,6 +54,7 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/billing/utils/billing_focus_orders.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 import 'package:pos_machine/services/print_service.dart';
+import 'package:pos_machine/services/quotation_print_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
 import 'package:pos_machine/widgets/sync_button.dart';
@@ -76,7 +82,9 @@ import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
 
-enum CheckoutActionMode { confirm, save }
+enum CheckoutActionMode { confirm, save, quotation }
+
+enum BillingPageMode { normal, quotation }
 
 class _CartUnitMenuOption {
   final String value;
@@ -89,7 +97,12 @@ class _CartUnitMenuOption {
 }
 
 class BillingPage extends StatefulWidget {
-  const BillingPage({super.key});
+  final BillingPageMode mode;
+
+  const BillingPage({
+    super.key,
+    this.mode = BillingPageMode.normal,
+  });
 
   @override
   State<BillingPage> createState() => BillingPageState();
@@ -97,6 +110,8 @@ class BillingPage extends StatefulWidget {
 
 class BillingPageState extends State<BillingPage>
     with AutomaticKeepAliveClientMixin {
+  bool get _isQuotationPage => widget.mode == BillingPageMode.quotation;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -247,6 +262,8 @@ class BillingPageState extends State<BillingPage>
   String? deliveryTime;
   String? deliveryAddress;
   double? _selectedDeliveryCharge;
+  DateTime _quotationDate = DateTime.now();
+  DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
 
   // Track last rehydrated order to avoid losing state on navigation
   String? _lastRehydratedOrderId;
@@ -393,6 +410,8 @@ class BillingPageState extends State<BillingPage>
 
     // Listen for sales executive changes to update default customer
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       final salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
       salesExecutiveProvider.addListener(_onSalesExecutiveChanged);
@@ -602,7 +621,9 @@ class BillingPageState extends State<BillingPage>
         // Check if there is any customer data to restore
         if (currentOrder.customerId != null ||
             (currentOrder.customerPhone != null &&
-                currentOrder.customerPhone!.isNotEmpty)) {
+                currentOrder.customerPhone!.isNotEmpty) ||
+            (currentOrder.customerName != null &&
+                currentOrder.customerName!.isNotEmpty)) {
           selectedCustomerID = currentOrder.customerId;
           selectedCustomerPhone = currentOrder.customerPhone;
 
@@ -631,9 +652,8 @@ class BillingPageState extends State<BillingPage>
               .setSelectedCustomer(selectedCustomer!);
 
           // **FIX**: Properly restore customer display based on whether it's a phone-only order
-          if (selectedCustomer!.id != null &&
-              (selectedCustomer!.name != null &&
-                  selectedCustomer!.name!.isNotEmpty)) {
+          if (selectedCustomer!.name != null &&
+              selectedCustomer!.name!.isNotEmpty) {
             // Customer from list - show name and phone
             String name = selectedCustomer!.name ?? '';
             String phone = selectedCustomer!.phone ?? '';
@@ -936,7 +956,6 @@ class BillingPageState extends State<BillingPage>
         key == LogicalKeyboardKey.f10 ||
         key == LogicalKeyboardKey.f11 ||
         key == LogicalKeyboardKey.f12 ||
-        key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.insert ||
         key == LogicalKeyboardKey.escape;
   }
@@ -998,7 +1017,7 @@ class BillingPageState extends State<BillingPage>
     }
 
     if (event.logicalKey == LogicalKeyboardKey.tab &&
-        !HardwareKeyboard.instance.isShiftPressed &&
+        !HardwareKeyboard.instance.isAltPressed &&
         _barcodeNode.hasFocus) {
       debugPrint(
           "⌨️ [BillingPage] Handling Tab from Barcode -> Search Product | ${_focusDebugSummary()}");
@@ -1006,8 +1025,12 @@ class BillingPageState extends State<BillingPage>
       return true;
     }
 
+    final isAltCashDrawerShortcut = HardwareKeyboard.instance.isAltPressed &&
+        !HardwareKeyboard.instance.isControlPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyD;
     if (!_isBillingShortcutKey(event.logicalKey) &&
-        !_isBillingControlShortcut(event.logicalKey)) {
+        !_isBillingControlShortcut(event.logicalKey) &&
+        !isAltCashDrawerShortcut) {
       return false;
     }
     debugPrint(
@@ -1102,9 +1125,10 @@ class BillingPageState extends State<BillingPage>
         }
       }
 
-      if (!HardwareKeyboard.instance.isControlPressed &&
+      if (HardwareKeyboard.instance.isAltPressed &&
+          !HardwareKeyboard.instance.isControlPressed &&
           event.logicalKey == LogicalKeyboardKey.keyD) {
-        debugPrint("⌨️ [BillingPage] Handling D -> open cash drawer");
+        debugPrint("Handling Alt+D -> open cash drawer");
         unawaited(_openCashDrawerFromShortcut());
         return;
       }
@@ -1114,41 +1138,65 @@ class BillingPageState extends State<BillingPage>
         _clearCart();
       } else if (event.logicalKey == LogicalKeyboardKey.f2) {
         debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
-        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+        _showCheckoutModal(
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm);
       } else if (event.logicalKey == LogicalKeyboardKey.f3) {
         debugPrint(
             "⌨️ [BillingPage] Handling F3 -> open checkout at Customer step");
         _showCheckoutModal(
-            actionMode: CheckoutActionMode.confirm, initialStep: 0);
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm,
+            initialStep: 0);
       } else if (event.logicalKey == LogicalKeyboardKey.f4) {
         debugPrint(
             "⌨️ [BillingPage] Handling F4 -> open checkout at Delivery step");
         _showCheckoutModal(
-            actionMode: CheckoutActionMode.confirm, initialStep: 1);
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm,
+            initialStep: 1);
       } else if (event.logicalKey == LogicalKeyboardKey.f5) {
         debugPrint(
             "⌨️ [BillingPage] Handling F5 -> open checkout at Payment step");
         _showCheckoutModal(
-            actionMode: CheckoutActionMode.confirm, initialStep: 3);
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm,
+            initialStep: 3);
       } else if (event.logicalKey == LogicalKeyboardKey.f6) {
         debugPrint(
             "⌨️ [BillingPage] Handling F6 -> open checkout confirm & print");
-        _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+        _showCheckoutModal(
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm);
       } else if (event.logicalKey == LogicalKeyboardKey.f7) {
         debugPrint("⌨️ [BillingPage] Handling F7 -> create new order");
         _createNewOrder();
       } else if (event.logicalKey == LogicalKeyboardKey.f8) {
         debugPrint("⌨️ [BillingPage] Handling F8 -> open checkout save");
-        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+        _showCheckoutModal(
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f9) {
         debugPrint(
             "⌨️ [BillingPage] Handling F9 -> open checkout save & print");
-        _showCheckoutModal(actionMode: CheckoutActionMode.save);
+        _showCheckoutModal(
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f10) {
         debugPrint(
             "⌨️ [BillingPage] Handling F10 -> open checkout at Discount step");
         _showCheckoutModal(
-            actionMode: CheckoutActionMode.confirm, initialStep: 2);
+            actionMode: _isQuotationPage
+                ? CheckoutActionMode.quotation
+                : CheckoutActionMode.confirm,
+            initialStep: 2);
       }
     } catch (e) {
       debugPrint("⌨️ [BillingPage] Error handling key press: $e");
@@ -1176,7 +1224,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  /// Opens the cash drawer through [CashDrawerService]. Triggered by Ctrl+D.
+  /// Opens the cash drawer through [CashDrawerService]. Triggered by Alt+D.
   Future<void> _openCashDrawerFromShortcut() async {
     if (!mounted) return;
     try {
@@ -2197,8 +2245,7 @@ class BillingPageState extends State<BillingPage>
         currentOrder?.customerPhone;
     final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
     final bool showHeaderCustomerBalance = selectedHeaderCustomer != null &&
-        !customerSelectionProvider.isDefaultCustomer &&
-        !_isDefaultCustomerPhone(selectedHeaderCustomer.phone);
+        !_isDefaultCustomer(selectedHeaderCustomer);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -3856,11 +3903,11 @@ class BillingPageState extends State<BillingPage>
 
   KeyEventResult _handleCartTableTabKey(int cartLength) {
     const int lastCellIndex = 4;
-    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final isAltPressed = HardwareKeyboard.instance.isAltPressed;
     final rowIndex = (_cartTableFocusedRowIndex ?? 0).clamp(0, cartLength - 1);
     final cellIndex = _cartTableFocusedCellIndex;
 
-    if (isShiftPressed) {
+    if (isAltPressed) {
       if (cellIndex == null) {
         return KeyEventResult.ignored;
       }
@@ -5317,6 +5364,13 @@ class BillingPageState extends State<BillingPage>
       return false;
     }
 
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final isQuotationDraft =
+        localProductProvider.currentOrder?.quotationId != null;
+    debugPrint(
+        "🧾 [BillingCustomer] Balance check phone=${selectedCustomer?.phone}, quotationDraft=$isQuotationDraft");
+
     // Get app settings to check for default customer
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -5324,8 +5378,9 @@ class BillingPageState extends State<BillingPage>
         appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
 
     // Don't show balance if it's the default customer (by phone match)
-    if (defaultCustomerPhone.isNotEmpty &&
-        selectedCustomer!.phone == defaultCustomerPhone) {
+    if (!isQuotationDraft && _isDefaultCustomer(selectedCustomer)) {
+      debugPrint(
+          "🧾 [BillingCustomer] Hiding balance for automatic default phone=$defaultCustomerPhone");
       return false;
     }
 
@@ -5406,19 +5461,45 @@ class BillingPageState extends State<BillingPage>
                 shortcutLabel: 'F1',
               ),
             ),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(BillingFocusOrders.saveOrder),
-              child: _buildActionButton(
-                text: 'billing.save_order'.tr,
-                color: ColorManager.kButtonYellow,
-                onPressed: () =>
-                    _showCheckoutModal(actionMode: CheckoutActionMode.save),
-                isLoading: isLoadingSaveOrder,
-                isDisabled: disableActions && !isLoadingSaveOrder,
-                shortcutLabel: 'F8',
+            if (!_isQuotationPage)
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(BillingFocusOrders.saveOrder),
+                child: _buildActionButton(
+                  text: 'billing.save_order'.tr,
+                  color: ColorManager.kButtonYellow,
+                  onPressed: () =>
+                      _showCheckoutModal(actionMode: CheckoutActionMode.save),
+                  isLoading: isLoadingSaveOrder,
+                  isDisabled: disableActions && !isLoadingSaveOrder,
+                  shortcutLabel: 'F8',
+                ),
               ),
-            ),
-            if (_hasInternet) ...[
+            if (_isQuotationPage) ...[
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(155.0),
+                child: _buildActionButton(
+                  text: 'Create Quotation',
+                  color: Colors.teal.shade500,
+                  onPressed: () => _showCheckoutModal(
+                      actionMode: CheckoutActionMode.quotation),
+                  isLoading: isLoadingSaveOrder,
+                  isDisabled: disableActions && !isLoadingSaveOrder,
+                ),
+              ),
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(156.0),
+                child: _buildActionButton(
+                  text: 'Quotation List',
+                  color: ColorManager.kPrimaryColor,
+                  onPressed: () {
+                    Get.find<SideBarController>().index.value = 87;
+                  },
+                  isLoading: false,
+                  isDisabled: disableActions,
+                ),
+              ),
+            ],
+            if (!_isQuotationPage && _hasInternet) ...[
               FocusTraversalOrder(
                 order:
                     const NumericFocusOrder(BillingFocusOrders.confirmAndPrint),
@@ -5450,7 +5531,7 @@ class BillingPageState extends State<BillingPage>
                   ),
                 ),
             ],
-            if (!_hasInternet) ...[
+            if (!_isQuotationPage && !_hasInternet) ...[
               FocusTraversalOrder(
                 order: const NumericFocusOrder(BillingFocusOrders.saveAndPrint),
                 child: _buildActionButton(
@@ -5564,6 +5645,7 @@ class BillingPageState extends State<BillingPage>
     final customerNameToSave = _customerNameForOrder();
     final customerPhoneToSave = _customerPhoneForOrder();
     final customerIdToSave = selectedCustomerID ?? selectedCustomer?.id;
+    final customerTypeToSave = selectedCustomer?.customerType;
     final couponIdToSave =
         isCouponApplied ? _trimToNull(coupenCodeTextController.text) : null;
     final currentOrder = localProductProvider.currentOrder;
@@ -5589,6 +5671,7 @@ class BillingPageState extends State<BillingPage>
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        customerType: customerTypeToSave,
       );
       return localProductProvider.findOrderById(currentOrder.id) ??
           currentOrder;
@@ -5614,6 +5697,7 @@ class BillingPageState extends State<BillingPage>
       toCustomerCredit: _toCustomerCreditEnabled,
       address: deliveryAddress,
       deliveryCharge: _getDeliveryChargeForOrder(),
+      customerType: customerTypeToSave,
     );
   }
 
@@ -5727,7 +5811,7 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  Future<void> _saveOrder() async {
+  Future<void> _saveOrder({bool shouldPrint = false}) async {
     if (!_beginOrderAction()) {
       return;
     }
@@ -5898,6 +5982,7 @@ class BillingPageState extends State<BillingPage>
           context: context,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         orderToUse = localProductProvider.moveToConfirmedOrders(currentOrderId);
@@ -5921,6 +6006,7 @@ class BillingPageState extends State<BillingPage>
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         showScaffold(
@@ -5956,6 +6042,7 @@ class BillingPageState extends State<BillingPage>
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         showScaffold(
@@ -6279,6 +6366,7 @@ class BillingPageState extends State<BillingPage>
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
         debugPrint(
@@ -6356,7 +6444,9 @@ class BillingPageState extends State<BillingPage>
                 orderDetails.data?.getCustomerAddressForDisplay();
 
             // Calculate customer balance for print
-            double? oldBalance = selectedCustomer?.balance;
+            final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+            double? oldBalance =
+                isDefaultCustomer ? null : selectedCustomer?.balance;
             double totalPaid = _getTotalPaidAmount();
             double? currentBalance;
             if (oldBalance != null) {
@@ -6394,15 +6484,14 @@ class BillingPageState extends State<BillingPage>
                 customerAlternatePhone: customerAlternatePhone,
                 customerVatNumber: customerVatNumber,
                 customerCrNumber: customerCrNumber,
+                customerType: selectedCustomer?.customerType,
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
                 deliveryMethod:
                     orderDetails.data?.deliveryMethodName ?? deliveryMethod,
-                isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                        context,
-                        listen: false)
-                    .isDefaultCustomer,
+                isDefaultCustomer:
+                    isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
                     ?.toString(),
               );
@@ -6639,6 +6728,7 @@ class BillingPageState extends State<BillingPage>
         toCustomerCredit: _toCustomerCreditEnabled,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        quotationId: localProductProvider.currentOrder?.quotationId,
       )
           .then((response) async {
         debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
@@ -6767,7 +6857,9 @@ class BillingPageState extends State<BillingPage>
     }
   }
 
-  void _hydrateCustomerListFromProviderCache() {
+  void _hydrateCustomerListFromProviderCache({
+    bool applyDefaultCustomer = true,
+  }) {
     try {
       final customerProvider =
           Provider.of<CustomerProvider>(context, listen: false);
@@ -6779,7 +6871,9 @@ class BillingPageState extends State<BillingPage>
       setState(() {
         customerList = List<CustomerListModelData>.from(cachedCustomers);
       });
-      _applyDefaultCustomerFromCacheIfNeeded();
+      if (applyDefaultCustomer) {
+        _applyDefaultCustomerFromCacheIfNeeded();
+      }
       debugPrint(
           "📦 Hydrated customer cache from provider: ${cachedCustomers.length} customers");
     } catch (error) {
@@ -6854,6 +6948,45 @@ class BillingPageState extends State<BillingPage>
         .clearSelectedCustomer();
   }
 
+  void _clearAutomaticDefaultCustomerForQuotation() {
+    if (!mounted || _isCustomerManuallySelected) return;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProductProvider.currentOrder?.quotationId != null) {
+      debugPrint(
+          "🧾 [BillingCustomer] Skip clearing customer: quotation draft ${localProductProvider.currentOrder?.quotationId}");
+      return;
+    }
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final defaultPhone =
+        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? '';
+
+    final isAutoDefault = customerSelectionProvider.isDefaultCustomer ||
+        (defaultPhone.isNotEmpty &&
+            (selectedCustomerPhone == defaultPhone ||
+                mobileNumberText == defaultPhone ||
+                salesExecutivemobileNumberText == defaultPhone));
+    debugPrint(
+        "🧾 [BillingCustomer] Auto-default clear check isAutoDefault=$isAutoDefault, defaultPhone=$defaultPhone, selectedPhone=$selectedCustomerPhone, mobile=$mobileNumberText");
+    if (!isAutoDefault) return;
+
+    customerSelectionProvider.clearSelectedCustomer();
+    setState(() {
+      selectedCustomer = null;
+      selectedCustomerID = null;
+      selectedCustomerPhone = null;
+      mobileNumberText = '';
+      salesExecutivemobileNumberText = '';
+      mobileNumberTextController.clear();
+      _autocompletePhoneKey = GlobalKey();
+    });
+  }
+
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
   /// This is called when clicking Confirm Order or Confirm & Print buttons
   void _showCheckoutModal({
@@ -6861,6 +6994,7 @@ class BillingPageState extends State<BillingPage>
     int? initialStep,
   }) async {
     final isSaveMode = actionMode == CheckoutActionMode.save;
+    final isQuotationMode = actionMode == CheckoutActionMode.quotation;
     bool checkoutActionTriggered = false;
     debugPrint(
         "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
@@ -6878,9 +7012,15 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "⌨️ [BillingPage] Focus released before checkout modal | ${_focusDebugSummary()}");
 
-    // Ensure default customer is resolved from cached list before opening checkout.
-    _hydrateCustomerListFromProviderCache();
-    _applyDefaultCustomerFromCacheIfNeeded();
+    // Quotations should not silently inherit the billing default customer.
+    _hydrateCustomerListFromProviderCache(
+      applyDefaultCustomer: !isQuotationMode,
+    );
+    if (isQuotationMode) {
+      _clearAutomaticDefaultCustomerForQuotation();
+    } else {
+      _applyDefaultCustomerFromCacheIfNeeded();
+    }
 
     // Reload payment methods
     final masterDataProvider =
@@ -6923,8 +7063,10 @@ class BillingPageState extends State<BillingPage>
         (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
         (double.tryParse(_debitAmountController.text) ?? 0) > 0;
 
-    // Apply default payment method only when no existing/rehydrated payment state exists
-    if (!hasExistingPaymentState) {
+    // Apply default payment method only when no existing/rehydrated payment state exists.
+    // Quotations are estimates, so payment must stay unconfigured unless a future
+    // explicit advance-payment flow is added.
+    if (!isQuotationMode && !hasExistingPaymentState) {
       _applyDefaultPaymentMethod();
     }
 
@@ -6939,6 +7081,27 @@ class BillingPageState extends State<BillingPage>
 
     CustomerListModelData? checkoutSelectedCustomer =
         selectedCustomer ?? customerSelectionProvider.selectedCustomer;
+    final currentOrder = localProductProvider.currentOrder;
+    final quotationCustomerPhoneForModal =
+        currentOrder?.customerPhone?.trim().isNotEmpty == true
+            ? currentOrder!.customerPhone
+            : checkoutSelectedCustomer?.phone;
+    final defaultCustomerPhone = Provider.of<AppSettingsProvider>(
+          context,
+          listen: false,
+        ).appSettings?.autoAssignDefaultCustomerPhone.trim() ??
+        '';
+    final quotationCustomerIsDefault = currentOrder?.quotationId != null &&
+        (customerSelectionProvider.isDefaultCustomer ||
+            (defaultCustomerPhone.isNotEmpty &&
+                quotationCustomerPhoneForModal?.trim() ==
+                    defaultCustomerPhone));
+    final requiresSavedQuotationCustomer = currentOrder?.quotationId != null &&
+        (quotationCustomerIsDefault || checkoutSelectedCustomer?.id == null) &&
+        ((currentOrder?.customerName?.trim().isNotEmpty ?? false) ||
+            (checkoutSelectedCustomer?.name?.trim().isNotEmpty ?? false));
+    debugPrint(
+        "🧾 [CheckoutOpen] quotationId=${currentOrder?.quotationId}, customerId=${checkoutSelectedCustomer?.id}, customerName=${checkoutSelectedCustomer?.name}, customerPhone=${checkoutSelectedCustomer?.phone}, quotationPhone=$quotationCustomerPhoneForModal, quotationCustomerIsDefault=$quotationCustomerIsDefault, requireSavedCustomer=$requiresSavedQuotationCustomer");
 
     // Prefer richer customer data from loaded list when IDs match
     if (checkoutSelectedCustomer?.id != null && customerList != null) {
@@ -6964,7 +7127,8 @@ class BillingPageState extends State<BillingPage>
               localProductProvider.cartTotal,
           availableCustomers: customerList ?? [],
           selectedCustomer: checkoutSelectedCustomer,
-          hasOpenedPaymentModalOnce: _hasOpenedPaymentModalOnce,
+          hasOpenedPaymentModalOnce:
+              isQuotationMode ? false : _hasOpenedPaymentModalOnce,
 
           // Delivery State
           enableDelivery: deliveryEnabled,
@@ -6997,20 +7161,23 @@ class BillingPageState extends State<BillingPage>
           },
 
           // Payment State
-          isCashSelected: _isCashSelected,
-          isCardSelected: _isCardSelected,
-          isUpiSelected: _isUpiSelected,
-          isCodSelected: _isCodSelected,
-          isDebitSelected: _isDebitSelected,
-          cashAmount: _cashAmountController.text,
-          cardAmount: _cardAmountController.text,
-          upiAmount: _upiAmountController.text,
-          codAmount: _codAmountController.text,
-          debitAmount: _debitAmountController.text,
-          transactionNumber: _transactionNumberController.text,
-          toCustomerCreditEnabled: _toCustomerCreditEnabled,
-          toCustomerCreditAmount:
-              double.tryParse(_debitAmountController.text) ?? 0.0,
+          isCashSelected: isQuotationMode ? false : _isCashSelected,
+          isCardSelected: isQuotationMode ? false : _isCardSelected,
+          isUpiSelected: isQuotationMode ? false : _isUpiSelected,
+          isCodSelected: isQuotationMode ? false : _isCodSelected,
+          isDebitSelected: isQuotationMode ? false : _isDebitSelected,
+          cashAmount: isQuotationMode ? '' : _cashAmountController.text,
+          cardAmount: isQuotationMode ? '' : _cardAmountController.text,
+          upiAmount: isQuotationMode ? '' : _upiAmountController.text,
+          codAmount: isQuotationMode ? '' : _codAmountController.text,
+          debitAmount: isQuotationMode ? '' : _debitAmountController.text,
+          transactionNumber:
+              isQuotationMode ? '' : _transactionNumberController.text,
+          toCustomerCreditEnabled:
+              isQuotationMode ? false : _toCustomerCreditEnabled,
+          toCustomerCreditAmount: isQuotationMode
+              ? 0.0
+              : double.tryParse(_debitAmountController.text) ?? 0.0,
           cashMethodId: billingProvider.cashPaymentMethodId,
           cardMethodId: billingProvider.cardPaymentMethodId,
           upiMethodId: billingProvider.upiPaymentMethodId,
@@ -7024,10 +7191,31 @@ class BillingPageState extends State<BillingPage>
               localProductProvider.getCurrentDiscount()['percentageDiscount'] ??
                   0.0,
           isCouponApplied: isCouponApplied,
-          confirmButtonTitle: isSaveMode ? 'billing.save_order'.tr : 'Confirm',
-          printButtonTitle:
-              isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print',
-          requireCheckoutCompletion: !isSaveMode,
+          confirmButtonTitle: isQuotationMode
+              ? 'Create Quotation'
+              : (isSaveMode ? 'billing.save_order'.tr : 'Confirm'),
+          printButtonTitle: isQuotationMode
+              ? 'Create & Print Quote'
+              : (isSaveMode ? 'billing.save_and_print'.tr : 'Confirm & Print'),
+          requireCheckoutCompletion: !(isSaveMode || isQuotationMode),
+          isQuotationMode: isQuotationMode,
+          requireSavedCustomer: requiresSavedQuotationCustomer,
+          quotationCustomerId: currentOrder?.quotationId == null
+              ? null
+              : currentOrder?.customerId,
+          quotationCustomerIsDefault: quotationCustomerIsDefault,
+          quotationCustomerName: currentOrder?.quotationId == null
+              ? null
+              : currentOrder?.customerName,
+          quotationCustomerPhone: currentOrder?.quotationId == null
+              ? null
+              : quotationCustomerPhoneForModal,
+          initialQuotationDate: _quotationDate,
+          initialQuotationExpiryDate: _quotationExpiryDate,
+          onQuotationDatesUpdated: (quotationDate, expiryDate) {
+            _quotationDate = quotationDate;
+            _quotationExpiryDate = expiryDate;
+          },
 
           onCustomerSelected: (customer) {
             // Update global customer selection provider
@@ -7045,18 +7233,26 @@ class BillingPageState extends State<BillingPage>
               _isCustomerManuallySelected = true;
             });
           },
-          onAddNewCustomer: (String searchQuery) async {
+          onAddNewCustomer: (
+            String searchQuery, {
+            String? initialName,
+            String? initialPhone,
+          }) async {
             // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
             final normalizedSearchQuery = searchQuery.trim();
-            if (normalizedSearchQuery.isNotEmpty &&
+            if ((initialPhone ?? '').trim().isNotEmpty) {
+              phoneToPreFill = initialPhone!.trim();
+            } else if (normalizedSearchQuery.isNotEmpty &&
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
+            debugPrint(
+                "🧾 [CheckoutCustomer] Opening add customer modal prefillName=$initialName, prefillPhone=$phoneToPreFill, search=$searchQuery");
 
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill);
+                mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];
@@ -7101,6 +7297,8 @@ class BillingPageState extends State<BillingPage>
                           customer.phone == createdCustomer.phone));
                   customerList!.insert(0, createdCustomer);
                 });
+                debugPrint(
+                    "✅ [CheckoutCustomer] Created local customer id=${createdCustomer.id}, name=${createdCustomer.name}, phone=${createdCustomer.phone}");
 
                 return createdCustomer;
               }
@@ -7121,6 +7319,8 @@ class BillingPageState extends State<BillingPage>
                 if (byPhone.id != null) return byPhone;
               }
             }
+            debugPrint(
+                "⚠️ [CheckoutCustomer] Add customer finished without selectable customer");
             return null;
           },
           onDiscountApplied: (code, isApplied, flat, percent) {
@@ -7193,7 +7393,7 @@ class BillingPageState extends State<BillingPage>
           onConfirmOrder: () async {
             checkoutActionTriggered = true;
             setState(() {
-              if (isSaveMode) {
+              if (isSaveMode || isQuotationMode) {
                 isLoadingSaveOrder = true;
               } else {
                 isLoadingConfirmOrder = true;
@@ -7202,7 +7402,9 @@ class BillingPageState extends State<BillingPage>
             });
             // Close modal after setting loading state
             if (mounted) Navigator.of(dialogContext).pop();
-            if (isSaveMode) {
+            if (isQuotationMode) {
+              await _createQuotationFromCheckout(shouldPrint: false);
+            } else if (isSaveMode) {
               await _saveOrder();
             } else {
               await _confirmOrder();
@@ -7211,7 +7413,7 @@ class BillingPageState extends State<BillingPage>
           onConfirmAndPrint: () async {
             checkoutActionTriggered = true;
             setState(() {
-              if (isSaveMode) {
+              if (isSaveMode || isQuotationMode) {
                 isLoadingSaveOrderAndPrint = true;
               } else {
                 isLoadingCreateOrder = true;
@@ -7220,7 +7422,9 @@ class BillingPageState extends State<BillingPage>
             });
             // Close modal after setting loading state
             if (mounted) Navigator.of(dialogContext).pop();
-            if (isSaveMode) {
+            if (isQuotationMode) {
+              await _createQuotationFromCheckout(shouldPrint: true);
+            } else if (isSaveMode) {
               await _saveOrderAndPrint();
             } else {
               await _createOrderAndPrint();
@@ -7241,6 +7445,273 @@ class BillingPageState extends State<BillingPage>
     debugPrint(
         "⌨️ [BillingPage] Checkout modal closed | mode=$actionMode | busy=$_isOrderActionBusy | ${_focusDebugSummary()}");
     _restoreShortcutFocus('checkout modal closed');
+  }
+
+  Future<void> _createQuotationFromCheckout({required bool shouldPrint}) async {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthModel>(context, listen: false);
+    final customerProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final quotationsProvider =
+        Provider.of<QuotationsProvider>(context, listen: false);
+    final storeProvider =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+
+    if (localProductProvider.cartItems.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Please add items to quote first.',
+      );
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+      return;
+    }
+    final quoteCustomer = customerProvider.selectedCustomer ?? selectedCustomer;
+    final quoteCustomerId = customerProvider.selectedCustomerID ??
+        selectedCustomerID ??
+        quoteCustomer?.id;
+    final quoteCustomerName = quoteCustomer?.name?.trim();
+    final quoteCustomerPhone =
+        (customerProvider.selectedCustomerPhone ?? selectedCustomerPhone)
+                    ?.trim()
+                    .isNotEmpty ==
+                true
+            ? (customerProvider.selectedCustomerPhone ?? selectedCustomerPhone)
+                ?.trim()
+            : quoteCustomer?.phone?.trim();
+    final hasExistingCustomer = quoteCustomerId != null;
+    final hasInlineCustomer = quoteCustomerName?.isNotEmpty ?? false;
+
+    if (!hasExistingCustomer && !hasInlineCustomer) {
+      showScaffoldError(
+        context: context,
+        message: 'Please select or enter a customer before creating quotation.',
+      );
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+      return;
+    }
+    if (_quotationExpiryDate.isBefore(_quotationDate)) {
+      showScaffoldError(
+        context: context,
+        message: 'Expiry date cannot be before quotation date.',
+      );
+      setState(() {
+        isLoadingSaveOrder = false;
+        isLoadingSaveOrderAndPrint = false;
+      });
+      return;
+    }
+
+    try {
+      final deliveryMethodIdValue = int.tryParse(deliveryMethodId);
+      final deliveryChargeValue = _getDeliveryChargeForOrder();
+      final priceSummary = localProductProvider.priceSummary;
+      final discountValue = priceSummary?.discount ?? 0.0;
+      final payload = <String, dynamic>{
+        if (hasExistingCustomer) ...{
+          'customer_type': 'existing',
+          'customer_id': quoteCustomerId,
+        } else ...{
+          'customer_type': 'new',
+          'customer_name': quoteCustomerName,
+          if (quoteCustomerPhone?.isNotEmpty ?? false)
+            'customer_phone': quoteCustomerPhone,
+        },
+        'store_id': storeProvider.activeStore?.storeId,
+        if (deliveryMethodIdValue != null)
+          'delivery_method_id': deliveryMethodIdValue,
+        if (deliveryChargeValue > 0) 'shipping_cost': deliveryChargeValue,
+        'quotation_date': DateFormat('yyyy-MM-dd').format(_quotationDate),
+        'expiry_date': DateFormat('yyyy-MM-dd').format(_quotationExpiryDate),
+        if (discountValue > 0) 'discount': discountValue,
+        'comment': _commentController.text, // Reusing delivery comment as note
+        'items': localProductProvider.cartItems.map((item) {
+          final productStockId = item.stockGroupIds.length == 1
+              ? item.stockGroupIds.first
+              : item.selectedStock?.id;
+          final itemMap = <String, dynamic>{
+            'product_id': item.product.productId,
+            'quantity': item.hasSaleUnit ? item.displayQuantity : item.quantity,
+            'price': item.hasSaleUnit ? item.displayPrice : item.price,
+          };
+          if (productStockId != null) {
+            itemMap['product_stock_id'] = productStockId;
+          }
+          if (item.saleUnitId != null) {
+            itemMap['product_sale_unit_id'] = item.saleUnitId;
+          }
+          return itemMap;
+        }).toList(),
+      };
+
+      final response = await quotationsProvider.createQuotation(
+        accessToken: authProvider.token ?? '',
+        data: payload,
+      );
+      debugPrint(
+          '🧾 BILLING QUOTATION CREATE RESPONSE: ${json.encode(response)}');
+
+      if (mounted) {
+        if (response['success'] == true || response['status'] == 'success') {
+          showScaffold(
+            context: context,
+            message: 'Quotation created successfully!',
+          );
+          final now = DateTime.now();
+          _quotationDate = now;
+          _quotationExpiryDate = now.add(const Duration(days: 30));
+          if (shouldPrint) {
+            final quotationId = _extractCreatedQuotationId(response);
+            debugPrint(
+                '🧾 BILLING QUOTATION EXTRACTED ID FOR PRINT: $quotationId');
+            if (quotationId == null) {
+              showScaffoldError(
+                context: context,
+                message:
+                    'Quotation created, but print failed because the API response did not include quotation id.',
+              );
+            } else {
+              final details = await quotationsProvider.fetchQuotationDetails(
+                accessToken: authProvider.token ?? '',
+                quotationId: quotationId,
+              );
+              debugPrint(
+                  '🧾 BILLING QUOTATION DETAILS FOR PRINT: ${_quotationDetailsDebugJson(details)}');
+              if (!mounted) return;
+              if (details == null) {
+                showScaffoldError(
+                  context: context,
+                  message:
+                      'Quotation created, but details could not be loaded for printing.',
+                );
+              } else {
+                Future<bool> printOnce() => _printQuotationDetails(details);
+                final autoPrintSuccess = await printOnce();
+                await _maybePrintCustomerCopy(
+                  canPrompt: autoPrintSuccess,
+                  printAction: printOnce,
+                );
+              }
+            }
+          }
+          _clearCart();
+        } else {
+          showScaffoldError(
+            context: context,
+            message: response['message'] ?? 'Failed to create quotation',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to create quotation',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoadingSaveOrder = false;
+          isLoadingSaveOrderAndPrint = false;
+        });
+      }
+    }
+  }
+
+  dynamic _extractCreatedQuotationId(Map<String, dynamic> response) {
+    dynamic readPath(dynamic source, List<String> path) {
+      dynamic current = source;
+      for (final key in path) {
+        if (current is! Map) return null;
+        current = current[key];
+      }
+      return current;
+    }
+
+    final candidates = <dynamic>[
+      response['quotation_id'],
+      response['id'],
+      readPath(response, ['data', 'quotation_id']),
+      readPath(response, ['data', 'id']),
+      readPath(response, ['data', 'quotation', 'id']),
+      readPath(response, ['quotation', 'id']),
+    ];
+
+    final data = response['data'];
+    if (data is int || data is String) {
+      candidates.add(data);
+    }
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final value = candidate.toString().trim();
+      if (value.isNotEmpty) return candidate;
+    }
+    return null;
+  }
+
+  Future<bool> _printQuotationDetails(QuotationDetailsData details) {
+    return const QuotationPrintService().printQuotationDetails(
+      context,
+      details,
+      customerOldBalance: _isDefaultCustomer(selectedCustomer)
+          ? null
+          : selectedCustomer?.balance,
+      paidAmount: null,
+      paymentMethod: null,
+      paymentBreakdown: null,
+      customerType: selectedCustomer?.customerType,
+      deliveryMethod: deliveryMethod,
+      isDefaultCustomer: _isDefaultCustomer(selectedCustomer),
+    );
+  }
+
+  Map<String, dynamic>? _quotationDetailsDebugJson(
+      QuotationDetailsData? details) {
+    if (details == null) return null;
+    return {
+      'id': details.id,
+      'quotation_number': details.quotationNumber,
+      'status': details.status,
+      'customer': {
+        'id': details.customer?.id,
+        'name': details.customer?.name,
+        'phone': details.customer?.phone,
+      },
+      'store': {
+        'id': details.store?.id,
+        'name': details.store?.name,
+      },
+      'quotation_date': details.quotationDate,
+      'expiry_date': details.expiryDate,
+      'sub_total': details.subTotal,
+      'discount': details.discount,
+      'tax': details.tax,
+      'grand_total': details.grandTotal,
+      'invoice_id': details.invoiceId,
+      'items': (details.items ?? [])
+          .map((item) => {
+                'id': item.id,
+                'product_id': item.productId,
+                'product_name': item.productName,
+                'category_id': item.categoryId,
+                'category_name': item.categoryName,
+                'unit': item.unit,
+                'unit_price': item.unitPrice,
+                'quantity': item.quantity,
+                'tax_rate': item.taxRate,
+                'tax_amount': item.taxAmount,
+                'total_price': item.totalPrice,
+              })
+          .toList(),
+    };
   }
 
   // Multi-payment helper methods
@@ -7321,7 +7792,9 @@ class BillingPageState extends State<BillingPage>
 
     double balance = 0.0;
 
-    if (_toCustomerCreditEnabled) {
+    final isDefaultSelectedCustomer = _isDefaultCustomer(selectedCustomer);
+
+    if (_toCustomerCreditEnabled && !isDefaultSelectedCustomer) {
       debugPrint(
           '🔛 BILLING PAGE: Toggle is ON - Calculating with customer credit consideration');
 
@@ -7829,6 +8302,8 @@ class BillingPageState extends State<BillingPage>
       }
     }
 
+    final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
@@ -7844,7 +8319,9 @@ class BillingPageState extends State<BillingPage>
         initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: effectiveTotal,
-        customerPrevBalance: selectedCustomer?.balance ?? 0.0,
+        customerPrevBalance:
+            isDefaultCustomer ? 0.0 : (selectedCustomer?.balance ?? 0.0),
+        isDefaultCustomer: isDefaultCustomer,
         onAfterApply: onAfterApply,
         customButtonTitle: customButtonTitle,
         onPaymentMethodSelected: (
@@ -8165,6 +8642,7 @@ class BillingPageState extends State<BillingPage>
     String? customerAlternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -8195,6 +8673,7 @@ class BillingPageState extends State<BillingPage>
       customerAlternatePhone: customerAlternatePhone,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -8227,6 +8706,7 @@ class BillingPageState extends State<BillingPage>
             customerAlternatePhone: customerAlternatePhone,
             customerVatNumber: customerVatNumber,
             customerCrNumber: customerCrNumber,
+            customerType: customerType,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -8281,6 +8761,7 @@ class BillingPageState extends State<BillingPage>
           'productName': item.product.productName ?? 'Unknown',
           'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
+          'product_unit': item.product.unit ?? '',
           'unitPrice': itemPrice.toString(),
           'totalPrice': itemTotalPrice.toString(),
           'tax_amount': itemTax.toString(),
@@ -8342,6 +8823,7 @@ class BillingPageState extends State<BillingPage>
           customerAlternatePhone: savedOrder.alternatePhone,
           customerVatNumber: savedOrder.customerVatNumber,
           customerCrNumber: savedOrder.customerCrNumber,
+          customerType: savedOrder.customerType,
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
@@ -8369,12 +8851,39 @@ class BillingPageState extends State<BillingPage>
 
   /// Helper method to check if a phone number matches the default customer phone from app settings
   bool _isDefaultCustomerPhone(String? phone) {
-    if (phone == null || phone.isEmpty) return false;
+    final customerPhone = phone?.trim() ?? '';
+    if (customerPhone.isEmpty) return false;
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProductProvider.currentOrder?.quotationId != null) {
+      debugPrint(
+          "🧾 [BillingCustomer] Phone $phone is not treated as default because quotationId=${localProductProvider.currentOrder?.quotationId}");
+      return false;
+    }
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
-    return defaultPhone.isNotEmpty && phone == defaultPhone;
+    final defaultPhone = appSettingsProvider
+            .appSettings?.autoAssignDefaultCustomerPhone
+            .trim() ??
+        "";
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
+
+  bool _isDefaultCustomer(CustomerListModelData? customer) {
+    if (customer == null) return false;
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final selectedCustomer = customerSelectionProvider.selectedCustomer;
+    if (customerSelectionProvider.isDefaultCustomer &&
+        ((selectedCustomer?.id != null &&
+                selectedCustomer?.id == customer.id) ||
+            (selectedCustomer?.phone?.trim().isNotEmpty == true &&
+                selectedCustomer?.phone?.trim() == customer.phone?.trim()))) {
+      return true;
+    }
+
+    return _isDefaultCustomerPhone(customer.phone);
   }
 
   // Function to scroll to the highlighted customer in the dropdown
@@ -8415,6 +8924,7 @@ class BillingPageState extends State<BillingPage>
 
   // Function to handle sales executive changes
   void _onSalesExecutiveChanged() {
+    if (!mounted) return;
     debugPrint(
         "🔄 BILLING: Sales executive changed, updating default customer...");
 
@@ -8474,8 +8984,20 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       // Clear payment and delivery states
       // iconColor = 1; // Default to cash
-      deliveryMethod = "Store Takeaway";
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      deliveryMethod = "";
+      try {
+        final deliveryMethodsProvider =
+            Provider.of<DeliveryMethodsProvider>(context, listen: false);
+        if (deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+          deliveryMethod = deliveryMethodsProvider.deliveryMethods
+              .firstWhere(
+                (m) => m.id == deliveryMethodId,
+                orElse: () => deliveryMethodsProvider.deliveryMethods.first,
+              )
+              .name;
+        }
+      } catch (_) {}
       _selectedDeliveryCharge = null;
 
       // Clear all controllers
@@ -8531,6 +9053,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _onUserSwitched() {
+    if (!mounted) return;
     debugPrint("🔄 BILLING: User switched, updating default customer...");
 
     // Check if auto-assign is enabled in app settings
@@ -8567,8 +9090,8 @@ class BillingPageState extends State<BillingPage>
 
   void _initializeDeliveryMethod() {
     // Set initial default values
-    deliveryMethod = "Store Takeaway";
-    deliveryMethodId = "11"; // Updated to match API response
+    deliveryMethod = "";
+    deliveryMethodId = "";
     _selectedDeliveryCharge = null;
 
     // Listen for delivery methods to be loaded and update default
@@ -8590,7 +9113,8 @@ class BillingPageState extends State<BillingPage>
               final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
                 (m) =>
                     m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                    m.id == appSettingsDefault,
+                    m.id == appSettingsDefault ||
+                    (m.code?.toLowerCase() == appSettingsDefault.toLowerCase()),
               );
 
               // Only update if different to avoid unnecessary rebuilds
@@ -8639,6 +9163,10 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _initializePaymentMethod() {
+    if (_isQuotationPage) {
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
@@ -8657,6 +9185,10 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _applyDefaultPaymentMethod() {
+    if (_isQuotationPage) {
+      return;
+    }
+
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 
@@ -8687,22 +9219,12 @@ class BillingPageState extends State<BillingPage>
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
 
-      // 1. Check AppSettings
       final appSettingsDefault =
           appSettingsProvider.appSettings?.defaultDeliveryMethod;
-      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
-        try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
-              (m) =>
-                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                  m.id == appSettingsDefault);
-          return match.id;
-        } catch (e) {
-          // Not found
-        }
-      }
-
-      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+      final defaultMethod =
+          deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+        appSettingsDefault: appSettingsDefault,
+      );
       return defaultMethod?.id ??
           "11"; // Fallback to Store Takeaway ID from API
     } catch (e) {

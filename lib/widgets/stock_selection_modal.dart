@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -86,16 +87,53 @@ class StockSelectionModal extends StatefulWidget {
   State<StockSelectionModal> createState() => _StockSelectionModalState();
 }
 
-/// Groups stocks by identical pricing (price, mrp, purchasePrice, unit,
-/// hsnCode, taxRate)
-/// and sums their quantities. Useful for deciding whether a stock-selection
-/// modal is needed (>1 group) or the single group can be auto-selected.
-List<CombinedStock> groupStocksByPricing(List<Stock> stocks) {
+/// Default stock grouping fields used when no active fields are provided.
+/// Only price and unit are checked — stocks with the same selling price
+/// and unit are grouped together regardless of other attribute differences.
+const Set<String> kDefaultStockGroupingFields = {
+  'price',
+  'unit',
+};
+
+/// Builds a grouping key for a stock using only the specified [activeFields].
+/// Fields not in [activeFields] are excluded from the key, so stocks that
+/// differ only in excluded fields will be grouped together.
+String _buildStockGroupingKey(Stock stock, Set<String> activeFields) {
+  final parts = <String>[];
+  if (activeFields.contains('price')) parts.add('${stock.price}');
+  if (activeFields.contains('mrp')) parts.add('${stock.mrp}');
+  if (activeFields.contains('purchasePrice')) {
+    parts.add('${stock.purchasePrice}');
+  }
+  if (activeFields.contains('unit')) parts.add('${stock.unit}');
+  if (activeFields.contains('hsnCode')) parts.add('${stock.hsnCode}');
+  if (activeFields.contains('taxRate')) parts.add('${stock.taxRate}');
+  if (activeFields.contains('wholesalePrice')) {
+    parts.add('${stock.wholesalePrice}');
+  }
+  if (activeFields.contains('wholesaleMinUnit')) {
+    parts.add('${stock.wholesaleMinUnit}');
+  }
+  return parts.join('_');
+}
+
+/// Groups stocks by identical pricing attributes and sums their quantities.
+///
+/// [activeFields] controls which Stock attributes are used for grouping.
+/// Only fields present in [activeFields] contribute to the grouping key.
+/// When [activeFields] is null, all fields are used (backward-compatible).
+///
+/// Useful for deciding whether a stock-selection modal is needed (>1 group)
+/// or the single group can be auto-selected.
+List<CombinedStock> groupStocksByPricing(
+  List<Stock> stocks, {
+  Set<String>? activeFields,
+}) {
+  final fields = activeFields ?? kDefaultStockGroupingFields;
   final Map<String, List<Stock>> grouped = {};
 
   for (final stock in stocks) {
-    final key =
-        '${stock.price}_${stock.mrp}_${stock.purchasePrice}_${stock.unit}_${stock.hsnCode}_${stock.taxRate}_${stock.wholesalePrice}_${stock.wholesaleMinUnit}';
+    final key = _buildStockGroupingKey(stock, fields);
     grouped.putIfAbsent(key, () => []).add(stock);
   }
 
@@ -128,9 +166,13 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
             ?.currency ??
         'INR';
 
-    // Group stocks by pricing information
-    List<CombinedStock> combinedStocks =
-        groupStocksByPricing(widget.stockOptions);
+    // Group stocks by pricing information (using master data active fields)
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+    List<CombinedStock> combinedStocks = groupStocksByPricing(
+      widget.stockOptions,
+      activeFields: masterDataProvider.activeStockGroupingFields,
+    );
 
     return Dialog(
       shape: RoundedRectangleBorder(

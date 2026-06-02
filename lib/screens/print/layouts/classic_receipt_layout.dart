@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
@@ -8,9 +8,6 @@ import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
 import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
@@ -24,12 +21,12 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
-import 'package:pos_machine/resources/app_url.dart';
 
 import 'receipt_layout.dart';
 import 'receipt_layout_params.dart';
 import '../thermal/printer_utils.dart';
 import '../thermal/debug_image_saver.dart';
+import '../logo_loader.dart';
 
 /// Classic receipt layout - the original/default design.
 ///
@@ -243,18 +240,12 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
     if (documentHeader.isNotEmpty) {
       rows.add(TextRow(documentHeader,
-          isBold: true,
-          scale: 1.1,
-          verticalPadding: 3,
-          verticalOffset: 1));
+          isBold: true, scale: 1.1, verticalPadding: 3, verticalOffset: 1));
     }
 
     if (documentSubheader.isNotEmpty) {
       rows.add(TextRow(documentSubheader,
-          isBold: true,
-          scale: 0.95,
-          verticalPadding: 2,
-          verticalOffset: 0));
+          isBold: true, scale: 0.95, verticalPadding: 2, verticalOffset: 0));
     }
 
     // Store Name - use displayConfig value only, then default
@@ -367,7 +358,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
     final bool showFooterInvoice =
         displayConfig?['showOrderNumberInFooter']?.visible == true;
     final bool showInvoiceNumber =
-      displayConfig?['showInvoiceNumber']?.visible == true;
+        displayConfig?['showInvoiceNumber']?.visible == true;
     final bool showTokenNumber =
         displayConfig?['showTokenNumber']?.visible == true &&
             params.tokenNumber != null &&
@@ -500,16 +491,10 @@ class ClassicReceiptLayout implements ReceiptLayout {
         isEnglish ? "Comment:" : "تعليق:");
     final deliveryLabel = _getLabel(displayConfig, 'showDeliveryMethod', null,
         isEnglish ? "Delivery:" : "التوصيل:");
-    final customerVatLabel = _getLabel(
-        displayConfig,
-        'showCustomerVatNumber',
-        null,
-        isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
-    final customerCrLabel = _getLabel(
-        displayConfig,
-        'showCustomerCrNumber',
-        null,
-        isEnglish ? "Customer CR:" : "السجل التجاري للعميل:");
+    final customerVatLabel = _getLabel(displayConfig, 'showCustomerVatNumber',
+        null, isEnglish ? "Customer VAT:" : "الرقم الضريبي للعميل:");
+    final customerCrLabel = _getLabel(displayConfig, 'showCustomerCrNumber',
+        null, isEnglish ? "Customer CR:" : "السجل التجاري للعميل:");
 
     if (isEnglish) {
       // English: Label: Value format
@@ -697,6 +682,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
     }
   }
 
+  // ==================== CART ITEMS SECTION ====================
+
   void _buildCartItemsSection(
     List<ReceiptRow> rows,
     ReceiptLayoutParams params,
@@ -706,7 +693,6 @@ class ClassicReceiptLayout implements ReceiptLayout {
     final resolvedLabels = params.billDocumentConfig.resolvedLabels;
 
     // Extract labels with fallbacks
-    // Priority: displayConfig.value > resolvedLabels > default
     final String particularsLabel = _getLabel(displayConfig, 'showParticulars',
         resolvedLabels?.particulars, isEnglish ? "Item" : "الصنف");
     final String mrpLabel =
@@ -715,26 +701,93 @@ class ClassicReceiptLayout implements ReceiptLayout {
         resolvedLabels?.qty, isEnglish ? "Qty" : "الكمية");
     final String rateLabel = _getLabel(displayConfig, 'showRate',
         resolvedLabels?.rate, isEnglish ? "Rate" : "السعر");
+    final String rateExcTaxLabel = _getLabel(displayConfig, 'showRateExcTax',
+        null, isEnglish ? "Rate Ex Tax" : "السعر بدون ضريبة");
+    final String unitLabel = _getLabel(displayConfig, 'showUnit',
+        resolvedLabels?.unitName, isEnglish ? "Unit" : "الوحدة");
     final String totalLabel = _getLabel(displayConfig, 'showTotal',
         resolvedLabels?.total, isEnglish ? "Total" : "الإجمالي");
-    // Use showTaxHeader for table header, with fallback to resolvedLabels.tax
     final String taxHeaderLabel = _getLabel(displayConfig, 'showTaxHeader',
         resolvedLabels?.tax, isEnglish ? "Tax" : "الضريبة");
     final String slLabel = _getLabel(displayConfig, 'showSLNumber',
         resolvedLabels?.slNumber, isEnglish ? "SL#" : "#");
+    final tableWeights = _buildNormalizedTableWeights(displayConfig);
+    final tableColumnCount = tableWeights.length;
+    final tableScale = _getTableScale(tableColumnCount);
+    final tableMinScale = _getTableMinScale(tableColumnCount);
+    final tableCellPadding = _getTableCellPadding(tableColumnCount);
 
     // Build table header
-    _buildTableHeader(rows, displayConfig, isEnglish, particularsLabel,
-        mrpLabel, qtyLabel, rateLabel, totalLabel, taxHeaderLabel, slLabel);
+    _buildTableHeader(
+        rows,
+        displayConfig,
+        isEnglish,
+        particularsLabel,
+        mrpLabel,
+        qtyLabel,
+        rateLabel,
+        rateExcTaxLabel,
+        unitLabel,
+        totalLabel,
+        taxHeaderLabel,
+        slLabel,
+        tableWeights,
+        tableScale,
+        tableMinScale,
+        tableCellPadding);
 
     // Build cart items
     for (var i = 0; i < params.cartItems.length; i++) {
-      _buildCartItemRow(rows, params.cartItems[i], i, params.isFromLocalStorage,
-          displayConfig, isEnglish);
+      _buildCartItemRow(
+          rows,
+          params.cartItems[i],
+          i,
+          params.isFromLocalStorage,
+          displayConfig,
+          isEnglish,
+          tableWeights,
+          tableScale,
+          tableMinScale,
+          tableCellPadding);
+      if (i < params.cartItems.length - 1) {
+        rows.add(DividerRow());
+      }
     }
 
     rows.add(SpacingRow(5));
-    rows.add(DividerRow());
+
+    // Items Count
+    if (displayConfig?['showItemsCount']?.visible == true) {
+      final itemsCountLabel = _getLabel(
+        displayConfig,
+        'showItemsCount',
+        null,
+        isEnglish ? "Items" : "أغراض",
+      );
+      final int itemCount = params.cartItems.length;
+      rows.add(TextRow(
+        "$itemsCountLabel: $itemCount",
+        scale: 0.9,
+        isBold: true,
+      ));
+      rows.add(SpacingRow(5));
+    }
+
+    if (displayConfig?['showQuantityCount']?.visible == true) {
+      final quantityCountLabel = _getLabel(
+        displayConfig,
+        'showQuantityCount',
+        null,
+        isEnglish ? "Total Qty" : "إجمالي الكمية",
+      );
+      final totalQuantity = params.totalQuantity;
+      rows.add(TextRow(
+        "$quantityCountLabel: ${totalQuantity % 1 == 0 ? totalQuantity.toInt().toString() : totalQuantity.toStringAsFixed(2)}",
+        scale: 0.9,
+        isBold: true,
+      ));
+      rows.add(SpacingRow(5));
+    }
   }
 
   void _buildTableHeader(
@@ -745,78 +798,182 @@ class ClassicReceiptLayout implements ReceiptLayout {
     String mrpLabel,
     String qtyLabel,
     String rateLabel,
+    String rateExcTaxLabel,
+    String unitLabel,
     String totalLabel,
     String taxHeaderLabel,
     String slLabel,
+    Map<String, double> tableWeights,
+    double tableScale,
+    double tableMinScale,
+    double tableCellPadding,
   ) {
     List<ReceiptTableColumn> headerCols = [];
 
     if (isEnglish) {
       if (displayConfig?['showSLNumber']?.visible == true) {
         headerCols.add(ReceiptTableColumn(slLabel,
-            weight: 0.08, align: TextAlign.left, isBold: true));
+            weight: tableWeights['showSLNumber'] ?? 0,
+            align: TextAlign.left,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showParticulars']?.visible == true) {
         headerCols.add(ReceiptTableColumn(particularsLabel,
-            weight:
-                displayConfig?['showSLNumber']?.visible == true ? 0.17 : 0.25,
+            weight: tableWeights['showParticulars'] ?? 0,
             align: TextAlign.left,
-            isBold: true));
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showMRP']?.visible == true) {
         headerCols.add(ReceiptTableColumn(mrpLabel,
-            weight: 0.15, align: TextAlign.center, isBold: true));
+            weight: tableWeights['showMRP'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showQty']?.visible == true) {
         headerCols.add(ReceiptTableColumn(qtyLabel,
-            weight: 0.12, align: TextAlign.center, isBold: true));
+            weight: tableWeights['showQty'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showRate']?.visible == true) {
         headerCols.add(ReceiptTableColumn(rateLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showRate'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
-      // Use showTaxHeader for table header visibility
+      if (displayConfig?['showRateExcTax']?.visible == true) {
+        headerCols.add(ReceiptTableColumn(rateExcTaxLabel,
+            weight: tableWeights['showRateExcTax'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showUnit']?.visible == true) {
+        headerCols.add(ReceiptTableColumn(unitLabel,
+            weight: tableWeights['showUnit'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols.add(ReceiptTableColumn(taxHeaderLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showTaxHeader'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showTotal']?.visible == true) {
         headerCols.add(ReceiptTableColumn(totalLabel,
-            weight: 0.18, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showTotal'] ?? 0,
+            align: TextAlign.center,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
     } else {
       // Arabic header (RTL)
       if (displayConfig?['showTotal']?.visible == true) {
         headerCols.add(ReceiptTableColumn(totalLabel,
-            weight: 0.18, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showTotal'] ?? 0,
+            align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
-      // Use showTaxHeader for table header visibility
       if (displayConfig?['showTaxHeader']?.visible == true) {
         headerCols.add(ReceiptTableColumn(taxHeaderLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showTaxHeader'] ?? 0,
+            align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showRate']?.visible == true) {
         headerCols.add(ReceiptTableColumn(rateLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showRate'] ?? 0,
+            align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showRateExcTax']?.visible == true) {
+        headerCols.add(ReceiptTableColumn(rateExcTaxLabel,
+            weight: tableWeights['showRateExcTax'] ?? 0,
+            align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showUnit']?.visible == true) {
+        headerCols.add(ReceiptTableColumn(unitLabel,
+            weight: tableWeights['showUnit'] ?? 0,
+            align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showQty']?.visible == true) {
         headerCols.add(ReceiptTableColumn(qtyLabel,
-            weight: 0.12, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showQty'] ?? 0,
+            align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showMRP']?.visible == true) {
         headerCols.add(ReceiptTableColumn(mrpLabel,
-            weight: 0.15, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showMRP'] ?? 0,
+            align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showParticulars']?.visible == true) {
         headerCols.add(ReceiptTableColumn(particularsLabel,
-            weight:
-                displayConfig?['showSLNumber']?.visible == true ? 0.17 : 0.25,
+            weight: tableWeights['showParticulars'] ?? 0,
             align: TextAlign.right,
-            isBold: true));
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showSLNumber']?.visible == true) {
         headerCols.add(ReceiptTableColumn(slLabel,
-            weight: 0.08, align: TextAlign.right, isBold: true));
+            weight: tableWeights['showSLNumber'] ?? 0,
+            align: TextAlign.right,
+            isBold: true,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
     }
 
@@ -833,28 +990,48 @@ class ClassicReceiptLayout implements ReceiptLayout {
     bool isFromLocalStorage,
     Map<String, DisplayOption>? displayConfig,
     bool isEnglish,
+    Map<String, double> tableWeights,
+    double tableScale,
+    double tableMinScale,
+    double tableCellPadding,
   ) {
     String productName = '';
     String productNameArabic = ''; // Add Arabic name field
     String mrp = '';
     String quantity = '';
     String unitPrice = '';
+    String unitPriceExTax = '';
+    String unitName = '';
     String totalPrice = '';
     String itemTaxAmount = '';
 
-    if (isFromLocalStorage) {
-      productName = item['productName'] ?? '';
+    if (isFromLocalStorage || item is Map) {
+      productName =
+          (item['productName'] ?? item['product_name'] ?? '').toString();
       mrp = (double.tryParse(item['mrp']?.toString() ?? '0') ?? 0.0)
           .toStringAsFixed(2);
-      quantity = item['quantity'] ?? '0';
-      unitPrice = (double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0.0)
+      quantity = (item['quantity'] ?? '0').toString();
+      final double unitPriceValue = (double.tryParse(
+              (item['unitPrice'] ?? item['unit_price'])?.toString() ?? '0') ??
+          0.0);
+      final double taxValue = (double.tryParse(
+              (item['tax_amount'] ?? item['taxAmount'])?.toString() ?? '0') ??
+          0.0);
+      final double quantityValue =
+          (double.tryParse(item['quantity']?.toString() ?? '0') ?? 0.0);
+      final double taxPerUnit =
+          quantityValue > 0 ? (taxValue / quantityValue) : 0.0;
+      unitPrice = unitPriceValue.toStringAsFixed(2);
+      unitPriceExTax = (unitPriceValue - taxPerUnit).toStringAsFixed(2);
+      unitName =
+          (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
+              .toString();
+      totalPrice = (double.tryParse(
+                  (item['totalPrice'] ?? item['total_price'])?.toString() ??
+                      '0') ??
+              0.0)
           .toStringAsFixed(2);
-      totalPrice =
-          (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0)
-              .toStringAsFixed(2);
-      itemTaxAmount =
-          (double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0)
-              .toStringAsFixed(2);
+      itemTaxAmount = taxValue.toStringAsFixed(2);
     } else {
       // Handle bilingual names for Arabic template
       if (!isEnglish &&
@@ -873,19 +1050,26 @@ class ClassicReceiptLayout implements ReceiptLayout {
       mrp = (double.tryParse(item.mrp?.toString() ?? '0') ?? 0.0)
           .toStringAsFixed(2);
       quantity = item.quantity?.toString() ?? '0';
-      unitPrice = (double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0.0)
-          .toStringAsFixed(2);
+      final double unitPriceValue =
+          (double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0.0);
+      final double taxValue =
+          (double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0);
+      final double quantityValue =
+          (double.tryParse(item.quantity?.toString() ?? '0') ?? 0.0);
+      final double taxPerUnit =
+          quantityValue > 0 ? (taxValue / quantityValue) : 0.0;
+      unitPrice = unitPriceValue.toStringAsFixed(2);
+      unitPriceExTax = (unitPriceValue - taxPerUnit).toStringAsFixed(2);
+      unitName = (item.productUnit ?? '').toString();
       totalPrice = (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
           .toStringAsFixed(2);
-      itemTaxAmount =
-          (double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0)
-              .toStringAsFixed(2);
+      itemTaxAmount = taxValue.toStringAsFixed(2);
     }
 
     String slNumber = (index + 1).toString();
 
     if (isEnglish) {
-      // Product name row (English - single name or bilingual fallback)
+      // Product name row (English - single name)
       if (displayConfig?['showParticulars']?.visible == true ||
           displayConfig?['showSLNumber']?.visible == true) {
         String itemText = displayConfig?['showSLNumber']?.visible == true
@@ -893,34 +1077,74 @@ class ClassicReceiptLayout implements ReceiptLayout {
             : productName;
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(itemText,
-              weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
+              weight: 1.0,
+              align: TextAlign.left,
+              textDirection: TextDirection.ltr),
         ]));
       }
       // Price details row
       List<ReceiptTableColumn> priceCols = [];
-      priceCols.add(ReceiptTableColumn("", weight: 0.25));
+      final itemDetailsWeight = _getItemDetailsWeight(tableWeights);
+      if (itemDetailsWeight > 0) {
+        priceCols.add(ReceiptTableColumn("", weight: itemDetailsWeight));
+      }
       if (displayConfig?['showMRP']?.visible == true) {
-        priceCols.add(
-            ReceiptTableColumn(mrp, weight: 0.15, align: TextAlign.center));
+        priceCols.add(ReceiptTableColumn(mrp,
+            weight: tableWeights['showMRP'] ?? 0,
+            align: TextAlign.center,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showQty']?.visible == true) {
         priceCols.add(ReceiptTableColumn(quantity,
-            weight: 0.12, align: TextAlign.center));
+            weight: tableWeights['showQty'] ?? 0,
+            align: TextAlign.center,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showRate']?.visible == true) {
         priceCols.add(ReceiptTableColumn(unitPrice,
-            weight: 0.15, align: TextAlign.right));
+            weight: tableWeights['showRate'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
-      // Use showTaxHeader for item tax column (same as table header)
+      if (displayConfig?['showRateExcTax']?.visible == true) {
+        priceCols.add(ReceiptTableColumn(unitPriceExTax,
+            weight: tableWeights['showRateExcTax'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showUnit']?.visible == true) {
+        priceCols.add(ReceiptTableColumn(unitName,
+            weight: tableWeights['showUnit'] ?? 0,
+            align: TextAlign.center,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
       if (displayConfig?['showTaxHeader']?.visible == true) {
         priceCols.add(ReceiptTableColumn(itemTaxAmount,
-            weight: 0.15, align: TextAlign.right));
+            weight: tableWeights['showTaxHeader'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showTotal']?.visible == true) {
         priceCols.add(ReceiptTableColumn(totalPrice,
-            weight: 0.18, align: TextAlign.right));
+            weight: tableWeights['showTotal'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
-      if (priceCols.length > 1) {
+      if (priceCols.any((column) => column.text.isNotEmpty)) {
         rows.add(ReceiptTableRow(priceCols));
       }
     } else {
@@ -929,7 +1153,6 @@ class ClassicReceiptLayout implements ReceiptLayout {
           displayConfig?['showSLNumber']?.visible == true) {
         // Show Arabic name (line 1) and English name (line 2) when available
         String itemText = '';
-        String englishText = '';
         if (productNameArabic.isNotEmpty) {
           // Bilingual: Arabic on line 1, English on line 2
           if (displayConfig?['showSLNumber']?.visible == true) {
@@ -937,25 +1160,30 @@ class ClassicReceiptLayout implements ReceiptLayout {
           } else {
             itemText = productNameArabic;
           }
-          englishText = productName;
-        } else {
-          // Fallback to single name (English or Arabic)
-          if (displayConfig?['showSLNumber']?.visible == true) {
-            itemText = '$slNumber. $productName';
-          } else {
-            itemText = productName;
-          }
-        }
-        rows.add(ReceiptTableRow([
-          ReceiptTableColumn(itemText,
-              weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
-        ]));
+          rows.add(ReceiptTableRow([
+            ReceiptTableColumn(itemText, weight: 1.0, align: TextAlign.right),
+          ]));
 
-        // Add English name on second line when bilingual
-        if (englishText.isNotEmpty) {
+          // Add English name on second line
+          String englishText = displayConfig?['showSLNumber']?.visible == true
+              ? '     $productName'
+              : '  $productName';
           rows.add(ReceiptTableRow([
             ReceiptTableColumn(englishText,
-                weight: 1.0, align: TextAlign.left, textDirection: TextDirection.ltr),
+                weight: 1.0,
+                align: TextAlign.left,
+                textDirection: TextDirection.ltr),
+          ]));
+        } else {
+          // Fallback to single name (English or Arabic)
+          String itemText = displayConfig?['showSLNumber']?.visible == true
+              ? '$slNumber. $productName'
+              : productName;
+          rows.add(ReceiptTableRow([
+            ReceiptTableColumn(itemText,
+                weight: 1.0,
+                align: TextAlign.left,
+                textDirection: TextDirection.ltr),
           ]));
         }
       }
@@ -963,30 +1191,142 @@ class ClassicReceiptLayout implements ReceiptLayout {
       List<ReceiptTableColumn> priceCols = [];
       if (displayConfig?['showTotal']?.visible == true) {
         priceCols.add(ReceiptTableColumn(totalPrice,
-            weight: 0.18, align: TextAlign.right));
+            weight: tableWeights['showTotal'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
-      // Use showTaxHeader for item tax column (same as table header)
       if (displayConfig?['showTaxHeader']?.visible == true) {
         priceCols.add(ReceiptTableColumn(itemTaxAmount,
-            weight: 0.15, align: TextAlign.right));
+            weight: tableWeights['showTaxHeader'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showRate']?.visible == true) {
         priceCols.add(ReceiptTableColumn(unitPrice,
-            weight: 0.15, align: TextAlign.right));
+            weight: tableWeights['showRate'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showRateExcTax']?.visible == true) {
+        priceCols.add(ReceiptTableColumn(unitPriceExTax,
+            weight: tableWeights['showRateExcTax'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
+      }
+      if (displayConfig?['showUnit']?.visible == true) {
+        priceCols.add(ReceiptTableColumn(unitName,
+            weight: tableWeights['showUnit'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showQty']?.visible == true) {
-        priceCols.add(
-            ReceiptTableColumn(quantity, weight: 0.12, align: TextAlign.right));
+        priceCols.add(ReceiptTableColumn(quantity,
+            weight: tableWeights['showQty'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale,
+            horizontalPadding: tableCellPadding));
       }
       if (displayConfig?['showMRP']?.visible == true) {
-        priceCols
-            .add(ReceiptTableColumn(mrp, weight: 0.15, align: TextAlign.right));
+        priceCols.add(ReceiptTableColumn(mrp,
+            weight: tableWeights['showMRP'] ?? 0,
+            align: TextAlign.right,
+            scale: tableScale,
+            minScale: tableMinScale));
       }
-      priceCols.add(ReceiptTableColumn("", weight: 0.25));
-      if (priceCols.length > 1) {
+      final itemDetailsWeight = _getItemDetailsWeight(tableWeights);
+      if (itemDetailsWeight > 0) {
+        priceCols.add(ReceiptTableColumn("", weight: itemDetailsWeight));
+      }
+      if (priceCols.any((column) => column.text.isNotEmpty)) {
         rows.add(ReceiptTableRow(priceCols));
       }
     }
+  }
+
+  Map<String, double> _buildNormalizedTableWeights(
+    Map<String, DisplayOption>? displayConfig,
+  ) {
+    final bool showSlNumber = displayConfig?['showSLNumber']?.visible == true;
+    final baseWeights = <String, double>{
+      if (showSlNumber) 'showSLNumber': 0.08,
+      if (displayConfig?['showParticulars']?.visible == true)
+        'showParticulars': showSlNumber ? 0.17 : 0.25,
+      if (displayConfig?['showMRP']?.visible == true) 'showMRP': 0.15,
+      if (displayConfig?['showQty']?.visible == true) 'showQty': 0.12,
+      if (displayConfig?['showRate']?.visible == true) 'showRate': 0.15,
+      if (displayConfig?['showRateExcTax']?.visible == true)
+        'showRateExcTax': 0.15,
+      if (displayConfig?['showUnit']?.visible == true) 'showUnit': 0.12,
+      if (displayConfig?['showTaxHeader']?.visible == true)
+        'showTaxHeader': 0.15,
+      if (displayConfig?['showTotal']?.visible == true) 'showTotal': 0.15,
+    };
+
+    final totalWeight =
+        baseWeights.values.fold<double>(0, (sum, weight) => sum + weight);
+    if (totalWeight <= 0) {
+      return const {};
+    }
+
+    if (totalWeight < 1.0) {
+      final remainingWeight = 1.0 - totalWeight;
+      if (baseWeights.containsKey('showParticulars')) {
+        baseWeights['showParticulars'] =
+            baseWeights['showParticulars']! + remainingWeight;
+      } else if (baseWeights.containsKey('showTotal')) {
+        baseWeights['showTotal'] = baseWeights['showTotal']! + remainingWeight;
+      } else {
+        final fallbackKey = baseWeights.keys.last;
+        baseWeights[fallbackKey] = baseWeights[fallbackKey]! + remainingWeight;
+      }
+      return baseWeights;
+    }
+
+    if (totalWeight == 1.0) {
+      return baseWeights;
+    }
+
+    return {
+      for (final entry in baseWeights.entries)
+        entry.key: entry.value / totalWeight,
+    };
+  }
+
+  double _getItemDetailsWeight(Map<String, double> tableWeights) {
+    return (tableWeights['showSLNumber'] ?? 0) +
+        (tableWeights['showParticulars'] ?? 0);
+  }
+
+  double _getTableScale(int columnCount) {
+    if (columnCount >= 9) return 0.74;
+    if (columnCount == 8) return 0.80;
+    if (columnCount == 7) return 0.86;
+    if (columnCount == 6) return 0.92;
+    return 1.0;
+  }
+
+  double _getTableMinScale(int columnCount) {
+    if (columnCount >= 9) return 0.48;
+    if (columnCount == 8) return 0.52;
+    if (columnCount == 7) return 0.56;
+    return 0.62;
+  }
+
+  double _getTableCellPadding(int columnCount) {
+    if (columnCount >= 8) return 2.0;
+    if (columnCount >= 6) return 2.5;
+    return 3.0;
   }
 
   void _buildTotalsSection(
@@ -998,8 +1338,13 @@ class ClassicReceiptLayout implements ReceiptLayout {
   ) {
     // Get currency from appSettings
     final String currency = appSettings?.currency ?? 'INR';
+    final String currencyPrefix =
+        currency.trim().toUpperCase() == 'INR' ? '\u20B9' : currency.trim();
+    String money(num amount) => currencyPrefix.isEmpty
+        ? amount.toStringAsFixed(2)
+        : '$currencyPrefix ${amount.toStringAsFixed(2)}';
     final bool isDualLanguage =
-      (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
     double total = double.tryParse(params.formattedTotal) ?? 0.0;
@@ -1055,10 +1400,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
         if (showDiscount) {
           summaryRow.add(ReceiptTableColumn(discountLabel,
               weight: 0.25, align: TextAlign.right));
-          summaryRow.add(ReceiptTableColumn(
-              discountAmountValue.toStringAsFixed(2),
-              weight: 0.20,
-              align: TextAlign.right));
+          summaryRow.add(ReceiptTableColumn(money(discountAmountValue),
+              weight: 0.20, align: TextAlign.right));
         } else {
           summaryRow.add(ReceiptTableColumn("", weight: 0.45));
         }
@@ -1088,7 +1431,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         if (showTax) {
           qtyTaxRow.add(ReceiptTableColumn(taxLabel,
               weight: 0.25, align: TextAlign.right));
-          qtyTaxRow.add(ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+          qtyTaxRow.add(ReceiptTableColumn(money(taxAmount),
               weight: 0.20, align: TextAlign.right));
         } else {
           qtyTaxRow.add(ReceiptTableColumn("", weight: 0.45));
@@ -1101,7 +1444,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(mrpTotalLabel,
               weight: 0.25, align: TextAlign.left),
-          ReceiptTableColumn(totalMrp.toStringAsFixed(2),
+          ReceiptTableColumn(money(totalMrp),
               weight: 0.25, align: TextAlign.left),
           ReceiptTableColumn(" ", weight: 0.50),
         ]));
@@ -1114,7 +1457,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(netAmountLabel,
               weight: 0.5, align: TextAlign.center, isBold: true),
-          ReceiptTableColumn(total.toStringAsFixed(2),
+          ReceiptTableColumn(money(total),
               weight: 0.5, align: TextAlign.center, isBold: true),
         ]));
       }
@@ -1149,7 +1492,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       // Subtotal
       if (showMRPTotal) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(subtotal.toStringAsFixed(2),
+          ReceiptTableColumn(money(subtotal),
               weight: 0.35, align: TextAlign.left),
           ReceiptTableColumn(subtotalLabel,
               weight: 0.65, align: TextAlign.right),
@@ -1159,7 +1502,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       // Discounts
       if (showDiscount && totalDiscountAmount > 0) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(totalDiscountAmount.toStringAsFixed(2),
+          ReceiptTableColumn(money(totalDiscountAmount),
               weight: 0.35, align: TextAlign.left),
           ReceiptTableColumn(discountLabel,
               weight: 0.65, align: TextAlign.right),
@@ -1169,7 +1512,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       // Tax
       if (showTax) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(taxAmount.toStringAsFixed(2),
+          ReceiptTableColumn(money(taxAmount),
               weight: 0.35, align: TextAlign.left),
           ReceiptTableColumn(taxLabelArabic,
               weight: 0.65, align: TextAlign.right),
@@ -1181,7 +1524,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       // Net Total
       if (showNetAmount) {
         rows.add(ReceiptTableRow([
-          ReceiptTableColumn(total.toStringAsFixed(2),
+          ReceiptTableColumn(money(total),
               weight: 0.35, align: TextAlign.left, isBold: true),
           ReceiptTableColumn(netTotalLabel,
               weight: 0.65, align: TextAlign.right, isBold: true),
@@ -1209,12 +1552,12 @@ class ClassicReceiptLayout implements ReceiptLayout {
             if (isEnglish) {
               rows.add(ReceiptTableRow([
                 ReceiptTableColumn(label, weight: 0.5, align: TextAlign.left),
-                ReceiptTableColumn(amt.toStringAsFixed(2),
+                ReceiptTableColumn(money(amt),
                     weight: 0.5, align: TextAlign.right),
               ]));
             } else {
               rows.add(ReceiptTableRow([
-                ReceiptTableColumn(amt.toStringAsFixed(2),
+                ReceiptTableColumn(money(amt),
                     weight: 0.5, align: TextAlign.left),
                 ReceiptTableColumn(label, weight: 0.5, align: TextAlign.right),
               ]));
@@ -1230,7 +1573,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
           isEnglish ? "You Saved:" : "لقد وفرت:");
       rows.add(SpacingRow(5));
       rows.add(TextRow(
-        "$savedLabel ${saved.toStringAsFixed(2)}",
+        "$savedLabel ${money(saved)}",
         isBold: true,
         scale: 0.9,
       ));
@@ -1250,9 +1593,9 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
         rows.add(TextRow('$arabicText فقط.', scale: 0.9, isBold: true));
         rows.add(TextRow('$englishText Only.',
-          scale: 0.9,
-          isBold: true,
-          textDirectionOverride: TextDirection.ltr));
+            scale: 0.9,
+            isBold: true,
+            textDirectionOverride: TextDirection.ltr));
       } else {
         final language =
             (params.billDocumentConfig.language ?? 'en').toLowerCase();
@@ -1622,40 +1965,6 @@ class ClassicReceiptLayout implements ReceiptLayout {
   }
 
   Future<ui.Image?> _fetchNetworkUiImage(String? url) async {
-    if (url == null || url.isEmpty) return null;
-
-    String fullUrl;
-    if (url.startsWith('http')) {
-      fullUrl = url;
-    } else if (url.startsWith('logos/')) {
-      fullUrl = '${APPUrl.baseURL}/storage/$url';
-    } else {
-      fullUrl = url.startsWith('/')
-          ? '${APPUrl.baseURL}$url'
-          : '${APPUrl.baseURL}/$url';
-    }
-
-    try {
-      final uri = Uri.parse(fullUrl);
-      final prefs = await SharedPreferences.getInstance();
-      final int? activeStoreId = prefs.getInt('active_store_id');
-
-      final Map<String, String> queryParams =
-          Map<String, String>.from(uri.queryParameters);
-      if (activeStoreId != null) {
-        queryParams['store_id'] = activeStoreId.toString();
-      }
-      final urlWithStore = uri.replace(queryParameters: queryParams);
-
-      final response = await http.get(urlWithStore);
-      if (response.statusCode == 200) {
-        final codec = await ui.instantiateImageCodec(response.bodyBytes);
-        final fi = await codec.getNextFrame();
-        return fi.image;
-      }
-    } catch (e) {
-      debugPrint("[ClassicReceiptLayout] Error fetching image: $e");
-    }
-    return null;
+    return PrintLogoLoader.loadUiLogo(url, tag: '[classic_receipt_layout]');
   }
 }

@@ -1,13 +1,14 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/restaurant/table_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/models/restaurant/table_model.dart';
-import '../../../components/build_container_box.dart';
-import '../../../resources/color_manager.dart';
-import '../../../resources/font_manager.dart';
-import '../../../resources/style_manager.dart';
+import '../../../../components/build_container_box.dart';
+import '../../../../resources/color_manager.dart';
+import '../../../../resources/font_manager.dart';
+import '../../../../resources/style_manager.dart';
 
 // Using the existing TableModel and TableStatus from your models
 
@@ -17,6 +18,7 @@ class TablesPanel extends StatelessWidget {
   final bool isCompact;
   final Size screenSize;
   final String? selectedDeliveryMethodId;
+  final bool showDeliveryMethods;
   final void Function(String id, String name) onDeliveryMethodSelected;
 
   const TablesPanel({
@@ -26,6 +28,7 @@ class TablesPanel extends StatelessWidget {
     this.isCompact = false,
     required this.screenSize,
     this.selectedDeliveryMethodId,
+    this.showDeliveryMethods = true,
     required this.onDeliveryMethodSelected,
   });
 
@@ -106,7 +109,7 @@ class TablesPanel extends StatelessWidget {
             children: [
               // Enhanced header with modern styling
               Container(
-                padding: EdgeInsets.all(isCompact ? 16.0 : 20.0),
+                padding: EdgeInsets.all(isCompact ? 10.0 : 12.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -126,7 +129,7 @@ class TablesPanel extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: const Color(0xFF2563EB).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -134,22 +137,22 @@ class TablesPanel extends StatelessWidget {
                       child: Icon(
                         Icons.table_restaurant,
                         color: const Color(0xFF2563EB),
-                        size: isCompact ? 18 : 20,
+                        size: isCompact ? 14 : 16,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Text(
                       'Tables',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
-                          isCompact ? FontSize.s16 : FontSize.s18,
+                          isCompact ? FontSize.s14 : FontSize.s16,
                           0.30,
                           const Color(0xFF1E293B)),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
                         color: const Color(0xFF059669).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -157,7 +160,7 @@ class TablesPanel extends StatelessWidget {
                       child: Text(
                         '${tables.length}',
                         style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s12, 0.21, const Color(0xFF059669)),
+                            FontSize.s11, 0.21, const Color(0xFF059669)),
                       ),
                     ),
                   ],
@@ -170,8 +173,7 @@ class TablesPanel extends StatelessWidget {
                   child: _buildTablesView(tables, context), // Pass context here
                 ),
               ),
-              // Delivery Methods Section at bottom
-              _buildDeliveryMethodsSection(context),
+              if (showDeliveryMethods) _buildDeliveryMethodsSection(context),
             ],
           ),
         );
@@ -183,11 +185,13 @@ class TablesPanel extends StatelessWidget {
     return Consumer<DeliveryMethodsProvider>(
       builder: (context, deliveryMethodsProvider, _) {
         final methods = deliveryMethodsProvider.deliveryMethods;
-        debugPrint('🚚 [TablesPanel] Consumer rebuild — isLoading=${deliveryMethodsProvider.isLoading}, methods=${methods.length}, hasMethods=${deliveryMethodsProvider.hasMethods}');
+        debugPrint(
+            '🚚 [TablesPanel] Consumer rebuild — isLoading=${deliveryMethodsProvider.isLoading}, methods=${methods.length}, hasMethods=${deliveryMethodsProvider.hasMethods}');
 
         // Show a compact loading row while fetching
         if (deliveryMethodsProvider.isLoading && methods.isEmpty) {
-          debugPrint('🚚 [TablesPanel] Showing loading spinner (first-time fetch in progress)');
+          debugPrint(
+              '🚚 [TablesPanel] Showing loading spinner (first-time fetch in progress)');
           return Container(
             decoration: BoxDecoration(
               border: Border(
@@ -235,11 +239,13 @@ class TablesPanel extends StatelessWidget {
         }
 
         if (methods.isEmpty) {
-          debugPrint('🚚 [TablesPanel] No delivery methods available — hiding section');
+          debugPrint(
+              '🚚 [TablesPanel] No delivery methods available — hiding section');
           return const SizedBox.shrink();
         }
 
-        debugPrint('🚚 [TablesPanel] Rendering ${methods.length} delivery method chips (selected=$selectedDeliveryMethodId)');
+        debugPrint(
+            '🚚 [TablesPanel] Rendering ${methods.length} delivery method chips (selected=$selectedDeliveryMethodId)');
         return Container(
           decoration: BoxDecoration(
             border: Border(
@@ -276,8 +282,9 @@ class TablesPanel extends StatelessWidget {
                       const Color(0xFF1E293B),
                     ),
                   ),
+                  const Spacer(),
                   if (selectedDeliveryMethodId != null) ...[
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => onDeliveryMethodSelected('', ''),
                       child: Icon(
@@ -297,7 +304,8 @@ class TablesPanel extends StatelessWidget {
                 children: methods.map((method) {
                   final isSelected = selectedDeliveryMethodId == method.id;
                   return GestureDetector(
-                    onTap: () => onDeliveryMethodSelected(method.id, method.name),
+                    onTap: () =>
+                        onDeliveryMethodSelected(method.id, method.name),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       padding: EdgeInsets.symmetric(
@@ -318,7 +326,8 @@ class TablesPanel extends StatelessWidget {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: const Color(0xFF1A56DB).withOpacity(0.25),
+                                  color:
+                                      const Color(0xFF1A56DB).withOpacity(0.25),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),

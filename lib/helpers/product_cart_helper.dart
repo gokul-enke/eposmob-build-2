@@ -3,6 +3,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
@@ -76,6 +77,8 @@ class ProductCartHelper {
         Provider.of<GeneralSettingsProvider>(context, listen: false);
     final storeSessionProvider =
         Provider.of<StoreSessionProvider>(context, listen: false);
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
     final activeStore = storeSessionProvider.activeStore;
 
     // Check if stock management is enabled
@@ -121,10 +124,14 @@ class ProductCartHelper {
         finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
       } else {
         // Group stocks by pricing BEFORE deciding whether to show modal
-        final List<CombinedStock> groups =
-            groupStocksByPricing(availableStocks);
+        final activeGroupingFields =
+            masterDataProvider.activeStockGroupingFields;
+        final List<CombinedStock> groups = groupStocksByPricing(
+          availableStocks,
+          activeFields: activeGroupingFields,
+        );
         debugPrint(
-            "📦 Grouped ${availableStocks.length} stocks into ${groups.length} pricing group(s)");
+            "📦 Grouped ${availableStocks.length} stocks into ${groups.length} pricing group(s) using fields: $activeGroupingFields");
 
         if (groups.length == 1) {
           // Only 1 pricing group → auto-select, no modal needed
@@ -164,7 +171,10 @@ class ProductCartHelper {
                 );
           final preferredSaleUnitGroups = preferredSaleUnitStocks.isEmpty
               ? const <CombinedStock>[]
-              : groupStocksByPricing(preferredSaleUnitStocks);
+              : groupStocksByPricing(
+                  preferredSaleUnitStocks,
+                  activeFields: activeGroupingFields,
+                );
 
           if (preferredSaleUnitGroups.length == 1 &&
               preferredSaleUnitGroups.first.totalQuantity >=

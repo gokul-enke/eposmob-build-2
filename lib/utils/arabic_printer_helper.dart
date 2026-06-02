@@ -152,14 +152,16 @@ class ReceiptTableRow extends ReceiptRow {
     for (var col in columns) {
       final colWidth = width * col.weight;
       final tp = col.createPainter(width, fontSize, textDirection);
+      final contentWidth =
+          (colWidth - (col.horizontalPadding * 2)).clamp(0.0, double.infinity);
 
       double xOffset = 0;
       if (col.align == TextAlign.center) {
-        xOffset = (colWidth - tp.width) / 2;
+        xOffset = col.horizontalPadding + ((contentWidth - tp.width) / 2);
       } else if (col.align == TextAlign.right) {
-        xOffset = colWidth - tp.width;
+        xOffset = col.horizontalPadding + contentWidth - tp.width;
       } else if (col.align == TextAlign.left) {
-        xOffset = 0;
+        xOffset = col.horizontalPadding;
       }
 
       tp.paint(canvas, Offset(currentX + xOffset, y + 5));
@@ -177,6 +179,7 @@ class ReceiptTableColumn {
   final int maxLines;
   final bool autoScaleToFit;
   final double minScale;
+  final double horizontalPadding;
   final TextDirection? textDirection; // null = inherit from parent context
 
   ReceiptTableColumn(this.text,
@@ -187,11 +190,13 @@ class ReceiptTableColumn {
       this.maxLines = 1,
       this.autoScaleToFit = true,
       this.minScale = 0.62,
+      this.horizontalPadding = 0,
       this.textDirection});
 
   TextPainter createPainter(
       double totalWidth, double fontSize, TextDirection contextTextDirection) {
-    final double maxWidth = totalWidth * weight;
+    final double maxWidth = ((totalWidth * weight) - (horizontalPadding * 2))
+        .clamp(0.0, double.infinity);
     final double baseFontSize = fontSize * scale;
     final double minFontSize = fontSize * minScale;
     final effectiveTextDirection = textDirection ?? contextTextDirection;

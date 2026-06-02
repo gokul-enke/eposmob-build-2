@@ -49,7 +49,8 @@ import 'widgets/mobile_filters.dart';
 import 'widgets/cancel_order_modal.dart';
 
 class SalesScreen extends StatefulWidget {
-  const SalesScreen({super.key});
+  final bool isOnlineSales;
+  const SalesScreen({super.key, this.isOnlineSales = false});
 
   @override
   State<SalesScreen> createState() => _SalesScreenState();
@@ -110,14 +111,22 @@ class _SalesScreenState extends State<SalesScreen> {
 
   @override
   void initState() {
-    loadInitData();
     super.initState();
+    loadInitData();
     // Ensure filters are shown by default on desktop
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final isMobile = MediaQuery.of(context).size.width < 768;
       Provider.of<SalesProvider>(context, listen: false)
           .setFiltersVisibility(!isMobile);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant SalesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isOnlineSales != widget.isOnlineSales) {
+      resetSearch();
+    }
   }
 
   @override
@@ -1092,6 +1101,7 @@ Powered by CloudPOS''',
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
         filterStore: activeStoreId,
+        filterOnlineSales: widget.isOnlineSales ? true : null,
       );
       debugPrint('fetchOrders completed successfully');
     } catch (error, stackTrace) {
@@ -1146,7 +1156,6 @@ Powered by CloudPOS''',
 
       debugPrint('Search filters: $filters');
       debugPrint('Calling fetchOrders with page: $page');
-
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
         orderNumber: filters['orderNumber'],
@@ -1158,6 +1167,7 @@ Powered by CloudPOS''',
         filterStore: filters['filterStore'],
         filterStatus: filters['filterStatus'],
         page: int.tryParse(filters['page'] ?? '1') ?? 1,
+        filterOnlineSales: widget.isOnlineSales ? true : null,
       );
 
       debugPrint('=== SEARCH ORDERS COMPLETED ===');
@@ -1351,12 +1361,17 @@ Powered by CloudPOS''',
                     orderDetails.data?.getCustomerAddressForDisplay();
                 String? customerAlternatePhone =
                     orderDetails.data?.customerDetails?.alternatePhone;
+                String? customerType =
+                    orderDetails.data?.customerDetails?.customerType;
                 String? customerVatNumber =
                     orderDetails.data?.kycInfo?.vatNumber;
                 String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
                 String? paymentMethod =
                     orderDetails.data?.paymentDetails?.paymentMethod;
                 String? deliveryMethod = orderDetails.data?.deliveryMethodName;
+
+                debugPrint(
+                    "[SalesPrint] order=${orderDetails.data?.orderNumber}, customerType=${customerType ?? 'null'}");
 
                 String? orderComment;
                 if (orderDetails.data?.orderProps != null) {
@@ -1425,6 +1440,12 @@ Powered by CloudPOS''',
                 // Debug: Verify cart items before printing
                 final cartItemsForPrint = orderDetails.data?.cart?.cartItems ?? [];
                 debugPrint("===== SALES PRINT DEBUG =====");
+                debugPrint(
+                    "Order=${orderDetails.data?.orderNumber}, token=${orderDetails.data?.tokenNumber}, customer=$customerName");
+                debugPrint(
+                    "Totals: formattedTotal=$formattedTotal, savedTotal=$savedTotal, discountAmount=$discountAmount");
+                debugPrint(
+                    "Payment: method=$paymentMethod, breakdown=$paymentBreakdown, paidAmount=$paidAmount");
                 debugPrint("Cart items count: ${cartItemsForPrint.length}");
                 for (int i = 0; i < cartItemsForPrint.length; i++) {
                   final item = cartItemsForPrint[i];
@@ -1450,6 +1471,7 @@ Powered by CloudPOS''',
                   customerAlternatePhone: customerAlternatePhone,
                   customerVatNumber: customerVatNumber,
                   customerCrNumber: customerCrNumber,
+                  customerType: customerType,
                   paymentMethod: paymentMethod,
                   paymentBreakdown:
                       paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
@@ -1462,9 +1484,13 @@ Powered by CloudPOS''',
                   netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
                       ?.toString(),
                 );
+                debugPrint(
+                    "[SALES][PRINT] autoPrintSuccess=$autoPrintSuccess for order=${orderDetails.data?.orderNumber}");
 
                 // Only show print page if auto-print failed
                 if (!autoPrintSuccess && mounted) {
+                  debugPrint(
+                      "[SALES][PRINT] Opening PrintPage because auto print failed.");
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -1484,6 +1510,7 @@ Powered by CloudPOS''',
                         customerAlternatePhone: customerAlternatePhone,
                         customerVatNumber: customerVatNumber,
                         customerCrNumber: customerCrNumber,
+                        customerType: customerType,
                         paymentMethod: paymentMethod,
                         paymentBreakdown: paymentBreakdown.isNotEmpty
                             ? paymentBreakdown
@@ -1895,6 +1922,8 @@ Powered by CloudPOS''',
                                       salesProvider.fetchOrders(
                                         accessToken: authModel.token ?? "",
                                         page: salesProvider.currentPage,
+                                        filterOnlineSales:
+                                            widget.isOnlineSales ? true : null,
                                       );
                                     }
                                   } catch (e) {
@@ -1948,7 +1977,8 @@ Powered by CloudPOS''',
     );
   }
 
-  Widget _buildEmptyState(SalesProvider provider) {
+  Widget _buildEmptyState(
+      SalesProvider provider, List<ListOrderModelData> displayedOrders) {
     final hasFilters = orderNumberController.text.isNotEmpty ||
         customerNameController.text.isNotEmpty ||
         amountController.text.isNotEmpty ||
@@ -1966,9 +1996,11 @@ Powered by CloudPOS''',
               size: 48, color: Colors.grey),
           const SizedBox(height: 16),
           Text(
-            provider.orders.isEmpty
-                ? "No orders available"
-                : "No orders match your filters",
+            displayedOrders.isEmpty && provider.orders.isNotEmpty
+                ? (widget.isOnlineSales
+                    ? "No online orders available"
+                    : "No orders match your filters")
+                : "No orders available",
             style: const TextStyle(color: Colors.grey),
           ),
           if (hasFilters)
@@ -1981,7 +2013,8 @@ Powered by CloudPOS''',
     );
   }
 
-  Widget _buildOrderTable(SalesProvider provider) {
+  Widget _buildOrderTable(
+      SalesProvider provider, List<ListOrderModelData> displayedOrders) {
     return BuildBoxShadowContainer(
       margin: const EdgeInsets.only(top: 5),
       circleRadius: 7,
@@ -2059,7 +2092,7 @@ Powered by CloudPOS''',
                     border: null,
                     defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [
-                      ...provider.orders.asMap().entries.map((entry) {
+                      ...displayedOrders.asMap().entries.map((entry) {
                         int index = entry.key;
                         ListOrderModelData order = entry.value;
                         PriceSummary priceSummary =
@@ -2184,7 +2217,7 @@ Powered by CloudPOS''',
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Orders List",
+                      widget.isOnlineSales ? "Online Orders List" : "Orders List",
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s20,
@@ -2642,8 +2675,11 @@ Powered by CloudPOS''',
                         return const Center(child: CircularProgressIndicator());
                       }
 
-                      if (orderProvider.orders.isEmpty) {
-                        return _buildEmptyState(orderProvider);
+                      final displayedOrders = orderProvider.orders;
+
+                      if (displayedOrders.isEmpty) {
+                        // Pass displayedOrders to empty state for correct message
+                        return _buildEmptyState(orderProvider, displayedOrders);
                       }
 
                       return Column(
@@ -2653,17 +2689,17 @@ Powered by CloudPOS''',
                                 ? ListView.builder(
                                     padding:
                                         const EdgeInsets.symmetric(vertical: 8),
-                                    itemCount: orderProvider.orders.length,
+                                    itemCount: displayedOrders.length,
                                     itemBuilder: (context, index) {
                                       return MobileOrderCard(
-                                        order: orderProvider.orders[index],
+                                        order: displayedOrders[index],
                                         index: index,
                                         onSharePDF: _sharePDFInvoice,
                                         onShareWhatsApp: _shareViaWhatsAppBot,
                                       );
                                     },
                                   )
-                                : _buildOrderTable(orderProvider),
+                                : _buildOrderTable(orderProvider, displayedOrders),
                           ),
                           PaginationControl(
                             currentPage: orderProvider.currentPage,

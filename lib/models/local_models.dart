@@ -178,6 +178,9 @@ class HiveSavedOrder extends HiveObject {
   @HiveField(28)
   final String? customerCrNumber;
 
+  @HiveField(29)
+  final String? customerType;
+
   HiveSavedOrder({
     required this.id,
     required this.orderNumber,
@@ -209,6 +212,7 @@ class HiveSavedOrder extends HiveObject {
     this.deliveryCharge,
     this.customerVatNumber,
     this.customerCrNumber,
+    this.customerType,
   });
 }
 

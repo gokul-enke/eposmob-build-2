@@ -184,6 +184,161 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
+  void _confirmDelete(GetProduct product) {
+    if (product.productId == null) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 10),
+            Text(
+              "Confirm Delete",
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s18,
+                0.2,
+                ColorManager.textColor,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Are you sure you want to delete this product?",
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s14,
+                0.15,
+                Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 15),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Product: ${product.productName}",
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s14,
+                      0.15,
+                      Colors.black,
+                    ),
+                  ),
+                  if (product.barcode != null && product.barcode!.isNotEmpty)
+                    Text(
+                      "Barcode: ${product.barcode}",
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s12,
+                        0.1,
+                        Colors.black54,
+                      ),
+                    ),
+                  if (product.itemCode != null && product.itemCode!.isNotEmpty)
+                    Text(
+                      "Item Code: ${product.itemCode}",
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s12,
+                        0.1,
+                        Colors.black54,
+                      ),
+                    ),
+                  Text(
+                    "Price: ${product.price?.price ?? 'N/A'}",
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.1,
+                      Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              "Cancel",
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.1,
+                Colors.grey,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade400,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+
+              setState(() {
+                initLoading = true;
+              });
+
+              final success = await Provider.of<LocalProductProvider>(context, listen: false)
+                  .deleteProductAPI(product.productId!);
+
+              setState(() {
+                initLoading = false;
+              });
+
+              if (success) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Product deleted successfully"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Failed to delete product"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(
+              "Delete",
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.1,
+                Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> refreshData() async {
     resetSearch();
   }
@@ -897,35 +1052,65 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                         padding:
                                                             const EdgeInsets
                                                                 .all(8.0),
-                                                        child:
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [
                                                             BuildBoxShadowContainer(
-                                                          margin:
-                                                              const EdgeInsets
-                                                                  .only(
-                                                                  left: 5,
-                                                                  right: 5),
-                                                          circleRadius: 5,
-                                                          child: IconButton(
-                                                            icon: Icon(
-                                                              Icons.visibility,
-                                                              size: 18,
-                                                              color: ColorManager
-                                                                  .kPrimaryColor
-                                                                  .withOpacity(
-                                                                      0.9),
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      left: 2,
+                                                                      right: 2),
+                                                              circleRadius: 5,
+                                                              child: IconButton(
+                                                                icon: Icon(
+                                                                  Icons.visibility,
+                                                                  size: 18,
+                                                                  color: ColorManager
+                                                                      .kPrimaryColor
+                                                                      .withOpacity(
+                                                                          0.9),
+                                                                ),
+                                                                onPressed: () {
+                                                                  _showProductDetails(
+                                                                      product);
+                                                                },
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                                padding:
+                                                                    EdgeInsets.zero,
+                                                              ),
                                                             ),
-                                                            onPressed: () {
-                                                              _showProductDetails(
-                                                                  product);
-                                                            },
-                                                            constraints:
-                                                                const BoxConstraints(
-                                                              minWidth: 36,
-                                                              minHeight: 36,
+                                                            const SizedBox(width: 5),
+                                                            BuildBoxShadowContainer(
+                                                              margin:
+                                                                  const EdgeInsets
+                                                                      .only(
+                                                                      left: 2,
+                                                                      right: 2),
+                                                              circleRadius: 5,
+                                                              child: IconButton(
+                                                                icon: Icon(
+                                                                  Icons.delete_outline,
+                                                                  size: 18,
+                                                                  color: Colors.red.shade400,
+                                                                ),
+                                                                onPressed: () {
+                                                                  _confirmDelete(product);
+                                                                },
+                                                                constraints:
+                                                                    const BoxConstraints(
+                                                                  minWidth: 32,
+                                                                  minHeight: 32,
+                                                                ),
+                                                                padding:
+                                                                    EdgeInsets.zero,
+                                                              ),
                                                             ),
-                                                            padding:
-                                                                EdgeInsets.zero,
-                                                          ),
+                                                          ],
                                                         ),
                                                       ),
                                                     ),

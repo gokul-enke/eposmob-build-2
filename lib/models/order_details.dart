@@ -648,6 +648,7 @@ class OrderDetailsModelDataCustomerDetails {
   final String? phone;
   final int? customerId; // Keep as int? if it's an int in JSON
   final List<dynamic>? address; // Changed to List<dynamic>
+  final String? customerType;
 
   final String? alternatePhone; // Added alternate_phone
 
@@ -657,6 +658,7 @@ class OrderDetailsModelDataCustomerDetails {
     this.phone,
     this.customerId,
     this.address,
+    this.customerType,
     this.alternatePhone,
   });
 
@@ -669,6 +671,7 @@ class OrderDetailsModelDataCustomerDetails {
         customerId: json["customer_id"], // Keep as int? if it's an int
         address:
             json["address"] == null ? [] : List<dynamic>.from(json["address"]),
+        customerType: json["customer_type"]?.toString(),
         alternatePhone: json["alternate_phone"],
       );
 
@@ -678,6 +681,7 @@ class OrderDetailsModelDataCustomerDetails {
         "phone": phone,
         "customer_id": customerId,
         "address": address,
+        "customer_type": customerType,
         "alternate_phone": alternatePhone,
       };
 }

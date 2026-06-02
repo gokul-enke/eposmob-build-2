@@ -413,8 +413,8 @@ class _CustomerInformationEditWidgetState
       final changedName = _changedText(widget.customer?.name, updatedName);
       final changedEmail =
           _changedText(widget.customer?.email, emailController.text);
-      final changedAltPhone =
-          _changedOptionalText(widget.customer?.altPhone, altPhoneController.text);
+      final changedAltPhone = _changedOptionalText(
+          widget.customer?.altPhone, altPhoneController.text);
       final changedGender =
           _changedOptionalText(widget.customer?.gender, selectedGender);
       final changedDob = _changedOptionalText(widget.customer?.dob, updatedDob);
@@ -438,8 +438,7 @@ class _CustomerInformationEditWidgetState
         }
       }
 
-      final changedCrNumber =
-          _changedOptionalText(originalCrNumber, crToSend);
+      final changedCrNumber = _changedOptionalText(originalCrNumber, crToSend);
       final changedVatNumber =
           _changedOptionalText(originalVatNumber, vatToSend);
 

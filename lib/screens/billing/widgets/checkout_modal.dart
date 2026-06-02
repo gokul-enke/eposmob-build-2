@@ -24,10 +24,17 @@ import 'package:pos_machine/resources/style_manager.dart'; // Re-added for deliv
 import 'package:pos_machine/components/build_dialog_box.dart'; // For showScaffoldError
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 
+enum CheckoutModalMode {
+  checkout,
+  selectionOnly,
+}
+
 class CheckoutModal extends StatefulWidget {
   final double cartTotal;
   final List<CustomerListModelData> availableCustomers;
   final CustomerListModelData? selectedCustomer;
+  final CheckoutModalMode mode;
+  final String title;
 
   // Payment Modal State
   final bool hasOpenedPaymentModalOnce;
@@ -70,11 +77,22 @@ class CheckoutModal extends StatefulWidget {
   final String confirmButtonTitle;
   final String printButtonTitle;
   final bool requireCheckoutCompletion;
+  final bool isQuotationMode;
+  final bool requireSavedCustomer;
+  final int? quotationCustomerId;
+  final bool quotationCustomerIsDefault;
+  final String? quotationCustomerName;
+  final String? quotationCustomerPhone;
+  final DateTime? initialQuotationDate;
+  final DateTime? initialQuotationExpiryDate;
 
   // Callbacks
   final Function(CustomerListModelData) onCustomerSelected;
-  final Future<CustomerListModelData?> Function(String searchQuery)
-      onAddNewCustomer;
+  final Future<CustomerListModelData?> Function(
+    String searchQuery, {
+    String? initialName,
+    String? initialPhone,
+  }) onAddNewCustomer;
   final Function(String couponCode, bool isApplied, double flatDiscount,
       double percentageDiscount) onDiscountApplied;
 
@@ -99,6 +117,8 @@ class CheckoutModal extends StatefulWidget {
       String? cardMethodId,
       String? upiMethodId,
       String? codMethodId}) onPaymentUpdated;
+  final Function(DateTime quotationDate, DateTime expiryDate)?
+      onQuotationDatesUpdated;
 
   final Future<void> Function() onConfirmOrder;
   final Future<void> Function() onConfirmAndPrint;
@@ -113,6 +133,8 @@ class CheckoutModal extends StatefulWidget {
     required this.cartTotal,
     required this.availableCustomers,
     this.selectedCustomer,
+    this.mode = CheckoutModalMode.checkout,
+    this.title = 'Finalize Order',
     this.hasOpenedPaymentModalOnce = false,
     required this.isCashSelected,
     required this.isCardSelected,
@@ -132,7 +154,7 @@ class CheckoutModal extends StatefulWidget {
     this.upiMethodId,
     this.codMethodId,
     this.enableDelivery = false,
-    this.deliveryMethod = "Store Takeaway",
+    this.deliveryMethod = "",
     this.deliveryMethodId = "",
     this.carNumber = "",
     this.deliveryComment = "",
@@ -147,12 +169,21 @@ class CheckoutModal extends StatefulWidget {
     this.confirmButtonTitle = 'Confirm',
     this.printButtonTitle = 'Confirm & Print',
     this.requireCheckoutCompletion = true,
+    this.isQuotationMode = false,
+    this.requireSavedCustomer = false,
+    this.quotationCustomerId,
+    this.quotationCustomerIsDefault = false,
+    this.quotationCustomerName,
+    this.quotationCustomerPhone,
+    this.initialQuotationDate,
+    this.initialQuotationExpiryDate,
     required this.onCustomerSelected,
     required this.onAddNewCustomer,
     required this.onDiscountApplied,
     this.onDeliveryUpdated,
     this.onDeliveryChargeUpdated,
     required this.onPaymentUpdated,
+    this.onQuotationDatesUpdated,
     required this.onConfirmOrder,
     required this.onConfirmAndPrint,
     this.initialStep,
@@ -170,6 +201,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   bool _hasOpenedPaymentModalOnce =
       false; // Track if payment step has been visited
   bool _isAddingCustomer = false;
+  bool _quotationCustomerSavedFromModal = false;
 
   // Local state for Customer Search
   String _customerSearchQuery = '';
@@ -177,15 +209,21 @@ class _CheckoutModalState extends State<CheckoutModal> {
   List<CustomerListModelData> _filteredCustomers = [];
   final TextEditingController _customerSearchController =
       TextEditingController();
+  final TextEditingController _quotationCustomerNameController =
+      TextEditingController();
+  final TextEditingController _quotationCustomerPhoneController =
+      TextEditingController();
   final FocusNode _customerSearchFocusNode = FocusNode();
   final FocusNode _customerSearchClearFocusNode =
       FocusNode(skipTraversal: true);
+  final FocusNode _quotationCustomerNameFocusNode = FocusNode();
+  final FocusNode _quotationCustomerPhoneFocusNode = FocusNode();
   final FocusNode _customerListFocusNode = FocusNode();
   int _focusedCustomerIndex = 0;
   // Customer grid uses 3 columns — kept in sync with the GridView delegate
   // below so arrow-key navigation maps cleanly to visual rows.
   static const int _customerGridColumns = 3;
-  final FocusNode _deliveryMethodFocusNode = FocusNode();
+  final Map<String, FocusNode> _deliveryMethodFocusNodes = {};
   final FocusNode _deliveryCarNumberFocusNode = FocusNode();
   final FocusNode _deliveryCommentFocusNode = FocusNode();
   final FocusNode _deliveryAddressFocusNode = FocusNode();
@@ -212,6 +250,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   /// or null when none. Drives the orange focus ring on each tile.
   String? _focusedDeliveryMethodName;
 
+  bool get _isSelectionOnly => widget.mode == CheckoutModalMode.selectionOnly;
+
   // Local Payment State
   late bool _lIsCashSelected;
   late bool _lIsCardSelected;
@@ -225,6 +265,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
   late String _lDebitAmount;
   late String _lTransactionNumber;
   late bool _lToCustomerCreditEnabled;
+  late DateTime _lQuotationDate;
+  late DateTime _lQuotationExpiryDate;
 
   String _initialForName(String? name) {
     final trimmed = name?.trim() ?? '';
@@ -313,6 +355,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _lDebitAmount = widget.debitAmount;
     _lTransactionNumber = widget.transactionNumber;
     _lToCustomerCreditEnabled = widget.toCustomerCreditEnabled;
+    _lQuotationDate = widget.initialQuotationDate ?? DateTime.now();
+    _lQuotationExpiryDate = widget.initialQuotationExpiryDate ??
+        _lQuotationDate.add(const Duration(days: 30));
+    if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
+      _lQuotationExpiryDate = _lQuotationDate.add(const Duration(days: 30));
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _applyDefaultPaymentMethod();
@@ -332,6 +380,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     if (requested == null) return 0;
     if (requested < 0 || requested > 3) return 0;
     if (requested == 1 && !widget.enableDelivery) return 0;
+    if (widget.isQuotationMode && requested == 3) return 0;
     return requested;
   }
 
@@ -351,7 +400,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
 
     _hasEvaluatedSkipCustomerSelection = true;
-    if (appSettings.skipCustomerSelection && mounted && _currentStep != 3) {
+    if (appSettings.skipCustomerSelection &&
+        !widget.isQuotationMode &&
+        mounted &&
+        _currentStep != 3) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         setState(() {
@@ -397,6 +449,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
   }
 
   void _applyDefaultPaymentMethod() {
+    if (widget.isQuotationMode) {
+      return;
+    }
+
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
 
@@ -429,10 +485,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
         "⌨️ [CheckoutModal] dispose | step=$_currentStep | paymentVisited=$_hasOpenedPaymentModalOnce");
     HardwareKeyboard.instance.removeHandler(_onHardwareKey);
     _customerSearchController.dispose();
+    _quotationCustomerNameController.dispose();
+    _quotationCustomerPhoneController.dispose();
     _customerSearchFocusNode.dispose();
     _customerSearchClearFocusNode.dispose();
+    _quotationCustomerNameFocusNode.dispose();
+    _quotationCustomerPhoneFocusNode.dispose();
     _customerListFocusNode.dispose();
-    _deliveryMethodFocusNode.dispose();
+    for (final focusNode in _deliveryMethodFocusNodes.values) {
+      focusNode.dispose();
+    }
+    _deliveryMethodFocusNodes.clear();
     _deliveryCarNumberFocusNode.dispose();
     _deliveryCommentFocusNode.dispose();
     _deliveryAddressFocusNode.dispose();
@@ -451,11 +514,42 @@ class _CheckoutModalState extends State<CheckoutModal> {
           break;
         case 1:
           if (widget.enableDelivery) {
-            _deliveryMethodFocusNode.requestFocus();
+            final focusNode = _selectedDeliveryMethodFocusNode();
+            if (focusNode != null) {
+              focusNode.requestFocus();
+            }
           }
           break;
       }
     });
+  }
+
+  String _deliveryMethodFocusKey(DeliveryMethod method) =>
+      method.id.isNotEmpty ? method.id : method.name;
+
+  FocusNode _deliveryMethodFocusNodeFor(DeliveryMethod method) {
+    final key = _deliveryMethodFocusKey(method);
+    return _deliveryMethodFocusNodes.putIfAbsent(key, () => FocusNode());
+  }
+
+  FocusNode? _selectedDeliveryMethodFocusNode() {
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      final matchesById =
+          _lDeliveryMethodId.isNotEmpty && method.id == _lDeliveryMethodId;
+      final matchesByName = method.name == _lDeliveryMethod;
+      if (matchesById || matchesByName) {
+        return _deliveryMethodFocusNodeFor(method);
+      }
+    }
+
+    if (deliveryMethodsProvider.deliveryMethods.isEmpty) {
+      return null;
+    }
+    return _deliveryMethodFocusNodeFor(
+        deliveryMethodsProvider.deliveryMethods.first);
   }
 
   bool _onHardwareKey(KeyEvent event) {
@@ -472,7 +566,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     if (event.logicalKey == LogicalKeyboardKey.f2) {
       debugPrint("⌨️ [CheckoutModal] Handling F2 -> confirm");
-      if (_canConfirmOrPrint && !_isConfirming) _handleConfirm();
+      if (_isSelectionOnly) {
+        _closeSelectionOnlyModal();
+      } else if (_canConfirmOrPrint && !_isConfirming) {
+        _handleConfirm();
+      }
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.f3) {
@@ -487,7 +585,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     if (event.logicalKey == LogicalKeyboardKey.f5) {
       debugPrint("⌨️ [CheckoutModal] Handling F5 -> payment step");
-      _goToStep(3);
+      if (!widget.isQuotationMode) {
+        _goToStep(3);
+      }
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.f6) {
@@ -520,11 +620,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
       next = 2; // Skip delivery
     }
 
+    final maxStep = widget.isQuotationMode ? 2 : 3;
+
     // Max steps logic: 0(Cust) -> 1(Del) -> 2(Disc) -> 3(Pay)
     // If delivery disabled: 0(Cust) -> 2(Disc) -> 3(Pay)
 
     // Original was 0,1,2,3. Now expanding.
-    if (next <= 3) {
+    if (next <= maxStep) {
       setState(() {
         _currentStep = next;
       });
@@ -547,7 +649,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   void _goToStep(int step) {
     if (_isAddingCustomer) return;
+    if (_isSelectionOnly && step != _currentStep) return;
     if (!widget.enableDelivery && step == 1) return;
+    if (widget.isQuotationMode && step == 3) return;
     if (step >= 0 && step <= 3) {
       setState(() {
         _currentStep = step;
@@ -608,6 +712,47 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
 
     return _selectedDeliveryCharge ?? selectedMethod?.basePrice ?? 0.0;
+  }
+
+  void _selectDeliveryMethod(
+    DeliveryMethod method, {
+    required bool shouldApplyDeliveryCharge,
+  }) {
+    setState(() {
+      _lDeliveryMethod = method.name;
+      _lDeliveryMethodId = method.id;
+      if (method.prices.isEmpty) {
+        _selectedDeliveryPriceId = null;
+        _selectedDeliveryCharge = 0.0;
+      } else {
+        final existingById = method.prices
+            .where((p) => p.id == _selectedDeliveryPriceId)
+            .toList();
+        if (existingById.isNotEmpty) {
+          _selectedDeliveryCharge = existingById.first.price;
+        } else {
+          final existingByCharge = _selectedDeliveryCharge == null
+              ? <DeliveryPrice>[]
+              : method.prices
+                  .where(
+                      (p) => (p.price - _selectedDeliveryCharge!).abs() < 0.001)
+                  .toList();
+
+          if (existingByCharge.isNotEmpty) {
+            _selectedDeliveryPriceId = existingByCharge.first.id;
+            _selectedDeliveryCharge = existingByCharge.first.price;
+          } else {
+            _selectedDeliveryPriceId = method.prices.first.id;
+            _selectedDeliveryCharge = method.prices.first.price;
+          }
+        }
+      }
+
+      if (!shouldApplyDeliveryCharge) {
+        _selectedDeliveryCharge = 0.0;
+      }
+    });
+    _handleDeliveryUpdate();
   }
 
   void _handleDeliveryUpdate() {
@@ -677,10 +822,22 @@ class _CheckoutModalState extends State<CheckoutModal> {
   void _handleCustomerSelection(CustomerListModelData customer) {
     setState(() {
       _localSelectedCustomer = customer;
+      _quotationCustomerNameController.clear();
+      _quotationCustomerPhoneController.clear();
     });
     widget.onCustomerSelected(customer);
-    // Auto-move to payment tab after customer selection
-    _goToStep(3);
+    if (!_isSelectionOnly) {
+      if (widget.isQuotationMode) {
+        _goToStep(widget.enableDelivery ? 1 : 2);
+      } else {
+        // Auto-move to payment tab after customer selection
+        _goToStep(3);
+      }
+    }
+  }
+
+  void _closeSelectionOnlyModal() {
+    Navigator.of(context).pop();
   }
 
   void _handleAddNewCustomer() async {
@@ -689,8 +846,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _isAddingCustomer = true;
     });
     try {
-      final newCustomer = await widget.onAddNewCustomer(_customerSearchQuery);
+      final quoteOnlyCustomer = _quoteOnlyCustomerForCreation;
+      debugPrint(
+          '🧾 [CheckoutModal] Add customer requested. quoteOnly=${quoteOnlyCustomer != null}, name=${quoteOnlyCustomer?.name}, phone=${quoteOnlyCustomer?.phone}, search=$_customerSearchQuery');
+      final newCustomer = await widget.onAddNewCustomer(
+        _customerSearchQuery,
+        initialName: quoteOnlyCustomer?.name,
+        initialPhone: quoteOnlyCustomer?.phone,
+      );
       if (newCustomer != null && mounted) {
+        debugPrint(
+            '✅ [CheckoutModal] New customer selected id=${newCustomer.id}, name=${newCustomer.name}, phone=${newCustomer.phone}');
         setState(() {
           _allCustomers.removeWhere((c) => c.id == newCustomer.id);
           _allCustomers.insert(0, newCustomer);
@@ -698,8 +864,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
           _localSelectedCustomer = newCustomer;
           _customerSearchController.clear();
           _customerSearchQuery = '';
+          _quotationCustomerSavedFromModal = true;
         });
         widget.onCustomerSelected(newCustomer);
+      } else {
+        debugPrint('⚠️ [CheckoutModal] Add customer returned no customer');
       }
     } finally {
       if (mounted) {
@@ -709,6 +878,37 @@ class _CheckoutModalState extends State<CheckoutModal> {
       }
     }
   }
+
+  CustomerListModelData? get _quoteOnlyCustomerForCreation {
+    final customer = _localSelectedCustomer;
+    if (_quotationCustomerSavedFromModal) return null;
+    if (widget.quotationCustomerIsDefault) {
+      final name = widget.quotationCustomerName?.trim();
+      if (name == null || name.isEmpty) return null;
+      final phone = widget.quotationCustomerPhone?.trim();
+      debugPrint(
+          '🧾 [CheckoutModal] Default quotation customer requires save. name=$name, sourcePhone=$phone, prefillPhone=null');
+      return CustomerListModelData(
+        name: name,
+        phone: null,
+      );
+    }
+    if (!widget.requireSavedCustomer ||
+        customer == null ||
+        customer.id != null) {
+      debugPrint(
+          '🧾 [CheckoutModal] Quote-only customer not required. requireSaved=${widget.requireSavedCustomer}, customerId=${customer?.id}, name=${customer?.name}');
+      return null;
+    }
+    final name = customer.name?.trim();
+    if (name == null || name.isEmpty) return null;
+    debugPrint(
+        '🧾 [CheckoutModal] Quote-only customer requires save. name=${customer.name}, phone=${customer.phone}');
+    return customer;
+  }
+
+  bool get _hasQuoteOnlyCustomerNeedingSave =>
+      _quoteOnlyCustomerForCreation != null;
 
   void _handleDiscountUpdate(
       String code, bool applied, double flat, double percent) {
@@ -764,13 +964,44 @@ class _CheckoutModalState extends State<CheckoutModal> {
         codMethodId: codMethodId);
   }
 
+  void _handleQuotationDateUpdate({
+    DateTime? quotationDate,
+    DateTime? expiryDate,
+  }) {
+    setState(() {
+      if (quotationDate != null) {
+        _lQuotationDate = quotationDate;
+        if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
+          _lQuotationExpiryDate = _lQuotationDate.add(const Duration(days: 30));
+        }
+      }
+      if (expiryDate != null) {
+        _lQuotationExpiryDate = expiryDate;
+      }
+    });
+    widget.onQuotationDatesUpdated?.call(
+      _lQuotationDate,
+      _lQuotationExpiryDate,
+    );
+  }
+
+  bool get _isDenseCheckout {
+    final size = MediaQuery.sizeOf(context);
+    return size.width <= 1100 || size.height <= 800;
+  }
+
+  double get _checkoutPadding => _isDenseCheckout ? 16.0 : 24.0;
+  double get _checkoutGap => _isDenseCheckout ? 14.0 : 24.0;
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final dialogWidth =
-        (screenSize.width * 0.94).clamp(320.0, 1300.0).toDouble();
-    final dialogHeight =
-        (screenSize.height * 0.92).clamp(520.0, 850.0).toDouble();
+    final dialogWidth = (screenSize.width * (_isDenseCheckout ? 0.965 : 0.94))
+        .clamp(320.0, 1300.0)
+        .toDouble();
+    final dialogHeight = (screenSize.height * (_isDenseCheckout ? 0.90 : 0.92))
+        .clamp(520.0, 850.0)
+        .toDouble();
 
     return Focus(
       autofocus: true,
@@ -779,7 +1010,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: Colors.white,
         elevation: 8,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: _isDenseCheckout ? 8 : 16,
+          vertical: _isDenseCheckout ? 12 : 16,
+        ),
         child: Stack(
           children: [
             Container(
@@ -829,7 +1063,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   Widget _buildTitleHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
+      padding: EdgeInsets.symmetric(
+        vertical: _isDenseCheckout ? 6 : 10,
+        horizontal: _isDenseCheckout ? 18 : 24,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -840,10 +1077,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
         alignment: Alignment.center,
         children: [
           Text(
-            "Finalize Order",
+            widget.title,
             style: buildCustomStyle(
               FontWeightManager.bold,
-              FontSize.s20,
+              _isDenseCheckout ? FontSize.s18 : FontSize.s20,
               0.25,
               Colors.black87,
             ),
@@ -915,9 +1152,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     isActive: _currentStep > (widget.enableDelivery ? 1 : 0)),
                 _buildStepIndicator(2, 'Discount', Icons.discount,
                     isActive: _currentStep == 2, isCompleted: hasDiscount),
-                _buildStepConnector(isActive: _currentStep > 2),
-                _buildStepIndicator(3, 'Payment', Icons.payment,
-                    isActive: _currentStep == 3, isCompleted: hasPayment),
+                if (!widget.isQuotationMode) ...[
+                  _buildStepConnector(isActive: _currentStep > 2),
+                  _buildStepIndicator(3, 'Payment', Icons.payment,
+                      isActive: _currentStep == 3, isCompleted: hasPayment),
+                ],
               ],
             ),
           ),
@@ -1034,7 +1273,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: EdgeInsets.all(_checkoutPadding),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1082,6 +1321,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           ),
                         ),
                         const SizedBox(height: 8),
+                        if (_hasQuoteOnlyCustomerNeedingSave) ...[
+                          _buildQuoteOnlyCustomerBanner(),
+                          const SizedBox(height: 8),
+                        ],
                         // List
                         Expanded(
                           child: FocusTraversalOrder(
@@ -1129,21 +1372,30 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   const VerticalDivider(width: 1),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   // Right: Summary only (no customer card)
                   Expanded(
                     flex: 2,
-                    child: Column(
-                      children: [
-                        Expanded(child: _buildCompactSummary()),
-                        _buildFooter(
-                          onPrint: _handlePrint,
-                          onConfirm: _handleConfirm,
-                        ),
-                      ],
-                    ),
+                    child: _isSelectionOnly
+                        ? _buildSelectionOnlySidePanel(
+                            icon: Icons.person,
+                            title: 'Selected Customer',
+                            value:
+                                _localSelectedCustomer?.name ?? 'Not selected',
+                            supportingText: _selectedCustomerSupportingText(),
+                            canDone: _localSelectedCustomer != null,
+                          )
+                        : Column(
+                            children: [
+                              Expanded(child: _buildCompactSummary()),
+                              _buildFooter(
+                                onPrint: _handlePrint,
+                                onConfirm: _handleConfirm,
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),
@@ -1152,6 +1404,327 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ],
       ),
     );
+  }
+
+  Widget _buildQuotationDatesPanel() {
+    final compact = widget.isQuotationMode || _isDenseCheckout;
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(
+        top: compact ? 6 : 12,
+        bottom: compact ? 6 : 12,
+      ),
+      padding: EdgeInsets.all(compact ? 10 : 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildQuotationInlineCustomerFields(),
+          SizedBox(height: compact ? 8 : 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuotationDateField(
+                  label: 'Quotation Date',
+                  date: _lQuotationDate,
+                  firstDate: DateTime(2020),
+                  onDateSelected: (date) =>
+                      _handleQuotationDateUpdate(quotationDate: date),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildQuotationDateField(
+                  label: 'Expiry Date',
+                  date: _lQuotationExpiryDate,
+                  firstDate: _lQuotationDate,
+                  isExpiry: true,
+                  onDateSelected: (date) =>
+                      _handleQuotationDateUpdate(expiryDate: date),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuoteOnlyCustomerBanner() {
+    final customer = _quoteOnlyCustomerForCreation;
+    if (customer == null) return const SizedBox.shrink();
+
+    final phone = customer.phone?.trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFBBF24), width: 1.2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFEF3C7),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.person_add_alt_1,
+              color: Color(0xFFD97706),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Quotation customer is not saved',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    customer.name?.trim(),
+                    if (phone != null && phone.isNotEmpty) phone,
+                  ].whereType<String>().join(' | '),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF78350F),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton.icon(
+            onPressed: _isAddingCustomer ? null : _handleAddNewCustomer,
+            icon: _isAddingCustomer
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add, size: 16),
+            label: Text(_isAddingCustomer ? 'Creating...' : 'Create'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              textStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotationInlineCustomerFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuotationInputField(
+                label: 'Customer Name',
+                controller: _quotationCustomerNameController,
+                focusNode: _quotationCustomerNameFocusNode,
+                hintText: 'Customer name',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildQuotationInputField(
+                label: 'Customer Phone',
+                controller: _quotationCustomerPhoneController,
+                focusNode: _quotationCustomerPhoneFocusNode,
+                hintText: 'Customer phone',
+                keyboardType: TextInputType.phone,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _handleQuotationInlineCustomerChanged() {
+    if (_quotationCustomerNameController.text.trim().isNotEmpty ||
+        _quotationCustomerPhoneController.text.trim().isNotEmpty) {
+      _localSelectedCustomer = null;
+    }
+    setState(() {});
+  }
+
+  Widget _buildQuotationInputField({
+    required String label,
+    required TextEditingController controller,
+    required FocusNode focusNode,
+    required String hintText,
+    TextInputType? keyboardType,
+  }) {
+    final compact = widget.isQuotationMode || _isDenseCheckout;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        SizedBox(height: compact ? 4 : 6),
+        Container(
+          height: compact ? 40 : 46,
+          padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFDDE7F3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          alignment: Alignment.centerLeft,
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: keyboardType,
+            onChanged: (_) => _handleQuotationInlineCustomerChanged(),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              hintText: hintText,
+              hintStyle: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF9CA3AF),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF0F172A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuotationDateField({
+    required String label,
+    required DateTime date,
+    required DateTime firstDate,
+    required ValueChanged<DateTime> onDateSelected,
+    bool isExpiry = false,
+  }) {
+    final compact = widget.isQuotationMode || _isDenseCheckout;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: compact ? 11 : 12,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+        SizedBox(height: compact ? 4 : 6),
+        Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _pickQuotationDate(
+              initialDate: date,
+              firstDate: firstDate,
+              onDateSelected: onDateSelected,
+            ),
+            child: Container(
+              height: compact ? 40 : 46,
+              padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFDDE7F3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today_outlined,
+                      size: 18, color: Color(0xFF2563EB)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      MaterialLocalizations.of(context).formatMediumDate(date),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickQuotationDate({
+    required DateTime initialDate,
+    required DateTime firstDate,
+    required ValueChanged<DateTime> onDateSelected,
+  }) async {
+    final effectiveInitialDate =
+        initialDate.isBefore(firstDate) ? firstDate : initialDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: effectiveInitialDate,
+      firstDate: firstDate,
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      onDateSelected(picked);
+    }
   }
 
   Widget _buildCustomerList() {
@@ -1195,16 +1768,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
       onKeyEvent: (node, event) =>
           _handleCustomerListKey(event, displayCustomers),
       child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: _customerGridColumns,
-          mainAxisSpacing: 6,
-          crossAxisSpacing: 6,
-          childAspectRatio: 3.6,
+          mainAxisSpacing: _isDenseCheckout ? 5 : 6,
+          crossAxisSpacing: _isDenseCheckout ? 5 : 6,
+          childAspectRatio: _isDenseCheckout ? 3.95 : 3.6,
         ),
         itemCount: displayCustomers.length,
         itemBuilder: (context, index) {
           final customer = displayCustomers[index];
           final isSelected = _localSelectedCustomer?.id == customer.id;
+          final isDefaultCustomer = _isDefaultCustomer(customer);
           final isKeyboardFocused =
               _customerListFocusNode.hasFocus && index == clampedIndex;
           final balance = customer.balance ?? 0.0;
@@ -1218,7 +1792,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
               borderRadius: BorderRadius.circular(10),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(
+                  horizontal: _isDenseCheckout ? 7 : 8,
+                  vertical: _isDenseCheckout ? 3 : 4,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFF2563EB).withOpacity(0.1)
@@ -1236,8 +1813,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 child: Row(
                   children: [
                     Container(
-                      width: 28,
-                      height: 28,
+                      width: _isDenseCheckout ? 24 : 28,
+                      height: _isDenseCheckout ? 24 : 28,
                       decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFF2563EB)
@@ -1255,7 +1832,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: _isDenseCheckout ? 6 : 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1266,8 +1843,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               Expanded(
                                 child: Text(
                                   customer.name ?? 'Unknown',
-                                  style: const TextStyle(
-                                    fontSize: 11,
+                                  style: TextStyle(
+                                    fontSize: _isDenseCheckout ? 10 : 11,
                                     fontWeight: FontWeight.w600,
                                   ),
                                   maxLines: 1,
@@ -1290,13 +1867,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   child: Text(
                                     customer.phone!,
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: _isDenseCheckout ? 9 : 10,
                                         color: Colors.grey.shade600),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (isSelected) ...[
+                                if (isSelected && !isDefaultCustomer) ...[
                                   const SizedBox(width: 4),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -1321,7 +1898,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ),
                     ),
                     if (isSelected)
-                      const Icon(Icons.check_circle, color: Color(0xFF2563EB)),
+                      Icon(
+                        Icons.check_circle,
+                        color: const Color(0xFF2563EB),
+                        size: _isDenseCheckout ? 18 : 24,
+                      ),
                   ],
                 ),
               ),
@@ -1431,7 +2012,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(_checkoutPadding),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1513,9 +2094,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                         color: Colors.transparent,
                                         borderRadius: BorderRadius.circular(10),
                                         child: InkWell(
-                                          focusNode: methodIndex == 0
-                                              ? _deliveryMethodFocusNode
-                                              : null,
+                                          focusNode:
+                                              _deliveryMethodFocusNodeFor(
+                                                  method),
                                           borderRadius:
                                               BorderRadius.circular(10),
                                           onFocusChange: (focused) {
@@ -1523,60 +2104,22 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               _focusedDeliveryMethodName =
                                                   focused ? method.name : null;
                                             });
+                                            if (focused &&
+                                                _lDeliveryMethod !=
+                                                    method.name) {
+                                              _selectDeliveryMethod(
+                                                method,
+                                                shouldApplyDeliveryCharge:
+                                                    shouldApplyDeliveryCharge,
+                                              );
+                                            }
                                           },
                                           onTap: () {
-                                            setState(() {
-                                              _lDeliveryMethod = method.name;
-                                              _lDeliveryMethodId = method.id;
-                                              if (method.prices.isEmpty) {
-                                                _selectedDeliveryPriceId = null;
-                                                _selectedDeliveryCharge = 0.0;
-                                              } else {
-                                                final existingById = method
-                                                    .prices
-                                                    .where((p) =>
-                                                        p.id ==
-                                                        _selectedDeliveryPriceId)
-                                                    .toList();
-                                                if (existingById.isNotEmpty) {
-                                                  _selectedDeliveryCharge =
-                                                      existingById.first.price;
-                                                } else {
-                                                  final existingByCharge =
-                                                      _selectedDeliveryCharge ==
-                                                              null
-                                                          ? <DeliveryPrice>[]
-                                                          : method.prices
-                                                              .where((p) =>
-                                                                  (p.price -
-                                                                          _selectedDeliveryCharge!)
-                                                                      .abs() <
-                                                                  0.001)
-                                                              .toList();
-
-                                                  if (existingByCharge
-                                                      .isNotEmpty) {
-                                                    _selectedDeliveryPriceId =
-                                                        existingByCharge
-                                                            .first.id;
-                                                    _selectedDeliveryCharge =
-                                                        existingByCharge
-                                                            .first.price;
-                                                  } else {
-                                                    _selectedDeliveryPriceId =
-                                                        method.prices.first.id;
-                                                    _selectedDeliveryCharge =
-                                                        method
-                                                            .prices.first.price;
-                                                  }
-                                                }
-                                              }
-
-                                              if (!shouldApplyDeliveryCharge) {
-                                                _selectedDeliveryCharge = 0.0;
-                                              }
-                                            });
-                                            _handleDeliveryUpdate();
+                                            _selectDeliveryMethod(
+                                              method,
+                                              shouldApplyDeliveryCharge:
+                                                  shouldApplyDeliveryCharge,
+                                            );
                                           },
                                           child: AnimatedContainer(
                                             duration: const Duration(
@@ -2054,21 +2597,34 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   const VerticalDivider(width: 1),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   // Right: Summary
                   Expanded(
                     flex: 2,
-                    child: Column(
-                      children: [
-                        Expanded(child: _buildCompactSummary()),
-                        _buildFooter(
-                          onPrint: _handlePrint,
-                          onConfirm: _handleConfirm,
-                        ),
-                      ],
-                    ),
+                    child: _isSelectionOnly
+                        ? _buildSelectionOnlySidePanel(
+                            icon: Icons.local_shipping,
+                            title: 'Selected Delivery',
+                            value: _lDeliveryMethod.isNotEmpty
+                                ? _lDeliveryMethod
+                                : 'Not selected',
+                            supportingText: _lDeliveryMethodId.isNotEmpty
+                                ? 'Method ID: $_lDeliveryMethodId'
+                                : null,
+                            canDone: _lDeliveryMethodId.isNotEmpty ||
+                                _lDeliveryMethod.isNotEmpty,
+                          )
+                        : Column(
+                            children: [
+                              Expanded(child: _buildCompactSummary()),
+                              _buildFooter(
+                                onPrint: _handlePrint,
+                                onConfirm: _handleConfirm,
+                              ),
+                            ],
+                          ),
                   ),
                 ],
               ),
@@ -2087,7 +2643,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(_checkoutPadding),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2101,7 +2657,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       initialPercentageDiscount: _localPercentageDiscount,
                       isCouponApplied: _localIsCouponApplied,
                       showAsDialog: false,
-                      showSkipButton: true,
+                      showSkipButton: !widget.isQuotationMode,
                       onSkip: () => _goToStep(3),
                       showShadow: false,
                       fullWidth: true,
@@ -2162,9 +2718,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   const VerticalDivider(width: 1),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   // Right: Summary
                   Expanded(
                     flex: 2,
@@ -2226,7 +2782,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         children: [
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(_checkoutPadding),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2259,11 +2815,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       initialTransactionNumber: _lTransactionNumber,
                       cartTotal: effectiveTotal,
                       customerPrevBalance:
-                          _localSelectedCustomer?.balance ?? 0.0,
-                      isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                              context,
-                              listen: false)
-                          .isDefaultCustomer,
+                          _isDefaultCustomer(_localSelectedCustomer)
+                              ? 0.0
+                              : (_localSelectedCustomer?.balance ?? 0.0),
+                      isDefaultCustomer:
+                          _isDefaultCustomer(_localSelectedCustomer),
                       customButtonTitle: "Confirm Payment Selection",
                       closeOnApply: false,
                       showConfirmButton: false,
@@ -2297,9 +2853,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   const VerticalDivider(width: 1),
-                  const SizedBox(width: 24),
+                  SizedBox(width: _checkoutGap),
                   // Right: Summary
                   Expanded(
                     flex: 2,
@@ -2324,6 +2880,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   void _handleConfirm() async {
     if (_isConfirming) return;
+    _syncQuotationInlineCustomer();
     setState(() => _isConfirming = true);
     try {
       await widget.onConfirmOrder();
@@ -2334,12 +2891,29 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   void _handlePrint() async {
     if (_isPrinting) return;
+    _syncQuotationInlineCustomer();
     setState(() => _isPrinting = true);
     try {
       await widget.onConfirmAndPrint();
     } finally {
       if (mounted) setState(() => _isPrinting = false);
     }
+  }
+
+  void _syncQuotationInlineCustomer() {
+    if (!widget.isQuotationMode) return;
+    final name = _quotationCustomerNameController.text.trim();
+    final phone = _quotationCustomerPhoneController.text.trim();
+    if (name.isEmpty) return;
+
+    final inlineCustomer = CustomerListModelData(
+      name: name,
+      phone: phone.isEmpty ? null : phone,
+      customerType: 'new',
+      balance: 0,
+    );
+    _localSelectedCustomer = inlineCustomer;
+    widget.onCustomerSelected(inlineCustomer);
   }
 
   Widget _buildSummaryRow(String label, double amount, Color color,
@@ -2354,14 +2928,18 @@ class _CheckoutModalState extends State<CheckoutModal> {
         Text(label,
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              fontSize: large ? 16 : 14,
+              fontSize: large
+                  ? (_isDenseCheckout ? 15 : 16)
+                  : (_isDenseCheckout ? 13 : 14),
               color: labelColor ?? (isBold ? Colors.black : Colors.black87),
             )),
         Text(
             '${amount < 0 ? "-" : ""}$currency ${amount.abs().toStringAsFixed(2)}',
             style: TextStyle(
                 fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-                fontSize: large ? 18 : 14,
+                fontSize: large
+                    ? (_isDenseCheckout ? 17 : 18)
+                    : (_isDenseCheckout ? 13 : 14),
                 color: color)),
       ],
     );
@@ -2381,13 +2959,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
         Text('Delivery Charge',
             style: TextStyle(
               fontWeight: FontWeight.w500,
-              fontSize: 14,
+              fontSize: _isDenseCheckout ? 13 : 14,
               color: Colors.black87,
             )),
         Text('$currency ${effectiveDeliveryCharge.toStringAsFixed(2)}',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 14,
+                fontSize: _isDenseCheckout ? 13 : 14,
                 color: effectiveDeliveryCharge > 0
                     ? const Color(0xFF8B5CF6)
                     : const Color(0xFF059669))),
@@ -2405,8 +2983,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // Check if Confirm button should be enabled
   bool get _canConfirmOrPrint {
+    if (widget.isQuotationMode) {
+      return _hasQuotationCustomer &&
+          !_lQuotationExpiryDate.isBefore(_lQuotationDate);
+    }
+
     if (!widget.requireCheckoutCompletion) {
       return true;
+    }
+
+    if (_hasQuoteOnlyCustomerNeedingSave) {
+      return false;
     }
 
     return _localSelectedCustomer != null &&
@@ -2416,9 +3003,201 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
   // Check if Print button should be enabled (always requires payment tab visited)
   bool get _canPrint {
+    if (widget.isQuotationMode) {
+      return _canConfirmOrPrint;
+    }
+
+    if (_hasQuoteOnlyCustomerNeedingSave) {
+      return false;
+    }
+
     return _localSelectedCustomer != null &&
         _hasOpenedPaymentModalOnce &&
         _hasPaymentMethod();
+  }
+
+  String _disabledActionMessage() {
+    if (widget.isQuotationMode) {
+      if (!_hasQuotationCustomer) {
+        return 'Please select a customer before creating quotation';
+      }
+      if (_lQuotationExpiryDate.isBefore(_lQuotationDate)) {
+        return 'Expiry date cannot be before quotation date';
+      }
+      return 'Unable to create quotation';
+    }
+    if (_hasQuoteOnlyCustomerNeedingSave) {
+      return 'Create or select a saved customer before confirming';
+    }
+    return widget.requireCheckoutCompletion
+        ? 'Please configure payment before confirm'
+        : 'Unable to proceed';
+  }
+
+  bool get _hasQuotationCustomer {
+    final customer = _localSelectedCustomer;
+    if (customer?.id != null) return true;
+    return _hasInlineQuotationCustomer;
+  }
+
+  bool get _hasInlineQuotationCustomer {
+    return _quotationCustomerNameController.text.trim().isNotEmpty;
+  }
+
+  String get _quotationCustomerDisplayName {
+    if (_hasInlineQuotationCustomer) {
+      return _quotationCustomerNameController.text.trim();
+    }
+    return _localSelectedCustomer?.name ?? 'Not Selected';
+  }
+
+  bool _isDefaultCustomer(CustomerListModelData? customer) {
+    if (customer == null) return false;
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final selectedCustomer = customerSelectionProvider.selectedCustomer;
+    if (customerSelectionProvider.isDefaultCustomer &&
+        ((selectedCustomer?.id != null &&
+                selectedCustomer?.id == customer.id) ||
+            (selectedCustomer?.phone?.trim().isNotEmpty == true &&
+                selectedCustomer?.phone?.trim() == customer.phone?.trim()))) {
+      return true;
+    }
+
+    final defaultPhone = Provider.of<AppSettingsProvider>(
+          context,
+          listen: false,
+        ).appSettings?.autoAssignDefaultCustomerPhone.trim() ??
+        '';
+    final customerPhone = customer.phone?.trim() ?? '';
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
+
+  String? _selectedCustomerSupportingText() {
+    final customer = _localSelectedCustomer;
+    if (customer == null) return null;
+
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'SAR';
+    final lines = <String>[];
+    final phone = customer.phone?.trim();
+
+    if (phone != null && phone.isNotEmpty) {
+      lines.add(phone);
+    }
+    if (!_isDefaultCustomer(customer)) {
+      lines.add(
+          'Balance: $currency ${(customer.balance ?? 0.0).toStringAsFixed(2)}');
+    }
+
+    return lines.join('\n');
+  }
+
+  Widget _buildSelectionOnlySidePanel({
+    required IconData icon,
+    required String title,
+    required String value,
+    String? supportingText,
+    required bool canDone,
+  }) {
+    return Column(
+      children: [
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: const Color(0xFF2563EB), size: 22),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                if (supportingText != null &&
+                    supportingText.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    supportingText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _closeSelectionOnlyModal,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: canDone ? _closeSelectionOnlyModal : null,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Done'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildFooter({
@@ -2429,126 +3208,140 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onPrint,
     VoidCallback? onConfirm,
   }) {
+    final compactFooter = widget.isQuotationMode || _isDenseCheckout;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      padding: EdgeInsets.fromLTRB(
+        _isDenseCheckout ? 8 : 12,
+        widget.isQuotationMode ? 0 : (_isDenseCheckout ? 8 : 12),
+        _isDenseCheckout ? 8 : 12,
+        0,
       ),
-      child: Row(
+      color: Colors.white,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (onBack != null) ...[
-            Expanded(
-              child: CustomRoundButtonWithIconAdvanced(
-                title: 'Back',
-                fct: onBack,
-                size: MediaQuery.of(context).size,
-                icon:
-                    const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                height: 48,
-                width: double.infinity,
-                fontSize: FontSize.s14,
-                boxColor: const Color(0xFF64748B),
-                borderColor: const Color(0xFF64748B),
-                radius: 12,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-          // Confirm button (optional)
-          if (onConfirm != null)
-            Expanded(
-              child: Opacity(
-                opacity: _canConfirmOrPrint ? 1.0 : 0.5,
-                child: CustomRoundButtonWithIconAdvanced(
-                  title: widget.confirmButtonTitle,
-                  isLoading: _isConfirming,
-                  shortcutLabel: 'F2',
-                  fct: _canConfirmOrPrint
-                      ? onConfirm
-                      : () {
-                          // Auto-navigate to payment tab and show feedback
-                          _goToStep(3);
-                          showScaffoldError(
-                            context: context,
-                            message: widget.requireCheckoutCompletion
-                                ? 'Please configure payment before confirm'
-                                : 'Unable to proceed',
-                          );
-                        },
-                  size: MediaQuery.of(context).size,
-                  icon: const Icon(Icons.check_circle,
-                      color: Colors.white, size: 20),
-                  height: 48,
-                  width: double.infinity,
-                  fontSize: FontSize.s14,
-                  boxColor: _canConfirmOrPrint
-                      ? const Color(0xFF2563EB)
-                      : Colors.grey.shade400,
-                  borderColor: _canConfirmOrPrint
-                      ? const Color(0xFF2563EB)
-                      : Colors.grey.shade400,
-                  radius: 12,
+          Row(
+            children: [
+              if (onBack != null) ...[
+                Expanded(
+                  child: CustomRoundButtonWithIconAdvanced(
+                    title: 'Back',
+                    fct: onBack,
+                    size: MediaQuery.of(context).size,
+                    icon: const Icon(Icons.arrow_back,
+                        color: Colors.white, size: 20),
+                    height: compactFooter ? 42 : 48,
+                    width: double.infinity,
+                    fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
+                    boxColor: const Color(0xFF64748B),
+                    borderColor: const Color(0xFF64748B),
+                    radius: 12,
+                  ),
                 ),
-              ),
-            ),
-          if (onConfirm != null && onPrint != null) const SizedBox(width: 12),
-          // Print Bill button (optional)
-          if (onPrint != null)
-            Expanded(
-              child: Opacity(
-                opacity: _canPrint ? 1.0 : 0.5,
-                child: CustomRoundButtonWithIconAdvanced(
-                  title: widget.printButtonTitle,
-                  isLoading: _isPrinting,
-                  shortcutLabel: 'F6',
-                  fct: _canPrint
-                      ? onPrint
-                      : () {
-                          // Auto-navigate to payment tab and show feedback
-                          _goToStep(3);
-                          showScaffoldError(
-                            context: context,
-                            message: 'Please configure payment before printing',
-                          );
-                        },
-                  size: MediaQuery.of(context).size,
-                  icon: const Icon(Icons.print, color: Colors.white, size: 20),
-                  height: 48,
-                  width: double.infinity,
-                  fontSize: FontSize.s14,
-                  boxColor: _canPrint
-                      ? const Color(0xFF059669)
-                      : Colors.grey.shade400,
-                  borderColor: _canPrint
-                      ? const Color(0xFF059669)
-                      : Colors.grey.shade400,
-                  textColor: Colors.white,
-                  radius: 12,
+                const SizedBox(width: 12),
+              ],
+              // Confirm button (optional)
+              if (onConfirm != null)
+                Expanded(
+                  child: Opacity(
+                    opacity: _canConfirmOrPrint ? 1.0 : 0.5,
+                    child: CustomRoundButtonWithIconAdvanced(
+                      title: widget.confirmButtonTitle,
+                      isLoading: _isConfirming,
+                      shortcutLabel: 'F2',
+                      fct: _canConfirmOrPrint
+                          ? onConfirm
+                          : () {
+                              // Auto-navigate to payment tab and show feedback
+                              if (!widget.isQuotationMode) {
+                                _goToStep(3);
+                              }
+                              showScaffoldError(
+                                context: context,
+                                message: _disabledActionMessage(),
+                              );
+                            },
+                      size: MediaQuery.of(context).size,
+                      icon: const Icon(Icons.check_circle,
+                          color: Colors.white, size: 20),
+                      height: compactFooter ? 42 : 48,
+                      width: double.infinity,
+                      fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
+                      boxColor: _canConfirmOrPrint
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade400,
+                      borderColor: _canConfirmOrPrint
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade400,
+                      radius: 12,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          // Next button (optional)
-          if (onNext != null)
-            Expanded(
-              child: CustomRoundButtonWithIconAdvanced(
-                title: nextLabel,
-                fct: isNextEnabled ? onNext : () {},
-                size: MediaQuery.of(context).size,
-                icon: const Icon(Icons.arrow_forward,
-                    color: Colors.white, size: 20),
-                height: 48,
-                width: double.infinity,
-                fontSize: FontSize.s14,
-                boxColor: isNextEnabled
-                    ? const Color(0xFF2563EB)
-                    : Colors.grey.shade400,
-                borderColor: isNextEnabled
-                    ? const Color(0xFF2563EB)
-                    : Colors.grey.shade400,
-                radius: 12,
-              ),
-            ),
+              if (onConfirm != null && onPrint != null)
+                const SizedBox(width: 12),
+              // Print Bill button (optional)
+              if (onPrint != null)
+                Expanded(
+                  child: Opacity(
+                    opacity: _canPrint ? 1.0 : 0.5,
+                    child: CustomRoundButtonWithIconAdvanced(
+                      title: widget.printButtonTitle,
+                      isLoading: _isPrinting,
+                      shortcutLabel: 'F6',
+                      fct: _canPrint
+                          ? onPrint
+                          : () {
+                              // Auto-navigate to payment tab and show feedback
+                              if (!widget.isQuotationMode) {
+                                _goToStep(3);
+                              }
+                              showScaffoldError(
+                                context: context,
+                                message: widget.isQuotationMode
+                                    ? _disabledActionMessage()
+                                    : 'Please configure payment before printing',
+                              );
+                            },
+                      size: MediaQuery.of(context).size,
+                      icon: const Icon(Icons.print,
+                          color: Colors.white, size: 20),
+                      height: compactFooter ? 42 : 48,
+                      width: double.infinity,
+                      fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
+                      boxColor: _canPrint
+                          ? const Color(0xFF059669)
+                          : Colors.grey.shade400,
+                      borderColor: _canPrint
+                          ? const Color(0xFF059669)
+                          : Colors.grey.shade400,
+                      textColor: Colors.white,
+                      radius: 12,
+                    ),
+                  ),
+                ),
+              // Next button (optional)
+              if (onNext != null)
+                Expanded(
+                  child: CustomRoundButtonWithIconAdvanced(
+                    title: nextLabel,
+                    fct: isNextEnabled ? onNext : () {},
+                    size: MediaQuery.of(context).size,
+                    icon: const Icon(Icons.arrow_forward,
+                        color: Colors.white, size: 20),
+                    height: compactFooter ? 42 : 48,
+                    width: double.infinity,
+                    fontSize: compactFooter ? FontSize.s12 : FontSize.s14,
+                    boxColor: isNextEnabled
+                        ? const Color(0xFF2563EB)
+                        : Colors.grey.shade400,
+                    borderColor: isNextEnabled
+                        ? const Color(0xFF2563EB)
+                        : Colors.grey.shade400,
+                    radius: 12,
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -2579,7 +3372,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
             (double.tryParse(_lUpiAmount) ?? 0) +
             (double.tryParse(_lCodAmount) ?? 0);
 
-        final prevBalance = _localSelectedCustomer?.balance ?? 0.0;
+        final isDefaultCustomer = _isDefaultCustomer(_localSelectedCustomer);
+        final prevBalance =
+            isDefaultCustomer ? 0.0 : (_localSelectedCustomer?.balance ?? 0.0);
         final creditAmount = double.tryParse(_lDebitAmount) ?? 0.0;
 
         // Match PaymentMethodModal logic for change calculation
@@ -2596,8 +3391,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
         final displayBalance = rawBalance < 0 ? 0.0 : rawBalance;
 
-        final bool hasCustomer = _localSelectedCustomer != null;
-        final bool hasPayment = _hasPaymentMethod();
+        final bool hasCustomer = widget.isQuotationMode
+            ? _hasQuotationCustomer
+            : _localSelectedCustomer != null &&
+                !_hasQuoteOnlyCustomerNeedingSave;
+        final bool hasPayment = !widget.isQuotationMode && _hasPaymentMethod();
         final bool hasDiscount = _localIsCouponApplied ||
             _localFlatDiscount > 0 ||
             _localPercentageDiscount > 0;
@@ -2607,144 +3405,184 @@ class _CheckoutModalState extends State<CheckoutModal> {
           children: [
             // Status Checklist (clickable to navigate)
             LayoutBuilder(builder: (context, constraints) {
-              final itemWidth = (constraints.maxWidth - 12) / 2;
+              final compactQuotation = widget.isQuotationMode;
+              final tileSpacing =
+                  compactQuotation || _isDenseCheckout ? 8.0 : 10.0;
+              final tileWidth = (constraints.maxWidth - tileSpacing) / 2;
+              final tileHeight =
+                  compactQuotation ? 60.0 : (_isDenseCheckout ? 72.0 : 92.0);
+              final tiles = <Widget>[
+                _buildClickableCheckItem(
+                  'Customer',
+                  _hasQuoteOnlyCustomerNeedingSave
+                      ? 'Create customer'
+                      : widget.isQuotationMode
+                          ? _quotationCustomerDisplayName
+                          : (_localSelectedCustomer?.name ?? 'Not Selected'),
+                  hasCustomer,
+                  Icons.person_outline,
+                  0,
+                  customer: _localSelectedCustomer,
+                ),
+                if (widget.enableDelivery)
+                  _buildClickableCheckItem(
+                    'Delivery',
+                    _lDeliveryMethod,
+                    hasDelivery,
+                    Icons.local_shipping_outlined,
+                    1,
+                  ),
+                _buildClickableCheckItem(
+                  'Discount',
+                  hasDiscount
+                      ? (_localPercentageDiscount > 0
+                          ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
+                          : _localFlatDiscount.toStringAsFixed(2))
+                      : 'Not Applied',
+                  hasDiscount,
+                  Icons.discount_outlined,
+                  2,
+                ),
+                if (!widget.isQuotationMode)
+                  _buildClickableCheckItem(
+                    'Payment',
+                    _hasPaymentMethod() ? 'Configured' : 'Not Configured',
+                    hasPayment,
+                    Icons.payment_outlined,
+                    3,
+                  ),
+              ];
+
               return Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  // Show Customer item in all tabs
-                  SizedBox(
-                    width: itemWidth,
-                    child: _buildClickableCheckItem(
-                      'Customer',
-                      _localSelectedCustomer?.name ?? 'Not Selected',
-                      hasCustomer,
-                      Icons.person_outline,
-                      0,
-                      customer: _localSelectedCustomer,
-                    ),
-                  ),
-                  if (widget.enableDelivery)
-                    SizedBox(
-                      width: itemWidth,
-                      child: _buildClickableCheckItem(
-                        'Delivery',
-                        _lDeliveryMethod,
-                        hasDelivery,
-                        Icons.local_shipping_outlined,
-                        1,
+                spacing: tileSpacing,
+                runSpacing: tileSpacing,
+                children: tiles
+                    .map(
+                      (tile) => SizedBox(
+                        width: tileWidth,
+                        height: tileHeight,
+                        child: tile,
                       ),
-                    ),
-                  SizedBox(
-                    width: itemWidth,
-                    child: _buildClickableCheckItem(
-                      'Discount',
-                      hasDiscount
-                          ? (_localPercentageDiscount > 0
-                              ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
-                              : _localFlatDiscount.toStringAsFixed(2))
-                          : 'Not Applied',
-                      hasDiscount,
-                      Icons.discount_outlined,
-                      2,
-                    ),
-                  ),
-                  SizedBox(
-                    width: itemWidth,
-                    child: _buildClickableCheckItem(
-                      'Payment',
-                      _hasPaymentMethod() ? 'Configured' : 'Not Configured',
-                      hasPayment,
-                      Icons.payment_outlined,
-                      3,
-                    ),
-                  ),
-                ],
+                    )
+                    .toList(),
               );
             }),
-            const SizedBox(height: 16),
+            SizedBox(
+                height:
+                    widget.isQuotationMode ? 8 : (_isDenseCheckout ? 10 : 16)),
             // Order Summary
-            Expanded(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border:
-                      Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context)
-                      .copyWith(scrollbars: false),
-                  child: SingleChildScrollView(
-                    primary: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Order Summary',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
-                            letterSpacing: 0.5,
-                          ),
+            Flexible(
+              fit: FlexFit.tight,
+              child: ScrollConfiguration(
+                behavior:
+                    ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                child: SingleChildScrollView(
+                  primary: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: widget.isQuotationMode
+                              ? 14
+                              : (_isDenseCheckout ? 14 : 20),
+                          vertical: widget.isQuotationMode
+                              ? 12
+                              : (_isDenseCheckout ? 14 : 20),
                         ),
-                        const SizedBox(height: 12),
-                        _buildSummaryRow('Net Amount', subTotal, Colors.black),
-                        const SizedBox(height: 10),
-                        _buildSummaryRow('Discount', -discountAmount,
-                            const Color(0xFFEF4444),
-                            labelColor: const Color(0xFFEF4444)),
-                        const SizedBox(height: 10),
-                        _buildSummaryRow(
-                            'Tax', taxAmount, const Color(0xFF64748B),
-                            labelColor: const Color(0xFF64748B)),
-                        if (hasDelivery && _isfreeDeliveryMinimumAmount()) ...[
-                          const SizedBox(height: 10),
-                          _buildDeliveryChargeRow(),
-                        ],
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Divider(
-                              height: 1,
-                              thickness: 1.5,
-                              color: Color(0xFFF1F5F9)),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: const Color(0xFFE2E8F0), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        _buildSummaryRow('Total Payable', effectiveTotal,
-                            const Color(0xFF2563EB),
-                            isBold: true,
-                            large: true,
-                            labelColor: const Color(0xFF2563EB)),
-                        if (_localSelectedCustomer != null) ...[
-                          const SizedBox(height: 10),
-                          _buildSummaryRow(
-                              'Cust. Prev. Balance',
-                              prevBalance,
-                              prevBalance >= 0
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFFDC2626),
-                              labelColor: prevBalance >= 0
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFFDC2626)),
-                        ],
-                        const SizedBox(height: 10),
-                        _buildSummaryRow('Total Paid', totalPaid, Colors.black),
-                        const SizedBox(height: 10),
-                        _buildSummaryRow(
-                            'Balance', displayBalance, const Color(0xFF059669),
-                            labelColor: const Color(0xFF059669)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Order Summary',
+                              style: TextStyle(
+                                fontSize: _isDenseCheckout ? 16 : 18,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            SizedBox(height: _isDenseCheckout ? 8 : 12),
+                            _buildSummaryRow(
+                                'Net Amount', subTotal, Colors.black),
+                            SizedBox(
+                                height: widget.isQuotationMode
+                                    ? 6
+                                    : (_isDenseCheckout ? 7 : 10)),
+                            _buildSummaryRow('Discount', -discountAmount,
+                                const Color(0xFFEF4444),
+                                labelColor: const Color(0xFFEF4444)),
+                            SizedBox(
+                                height: widget.isQuotationMode
+                                    ? 6
+                                    : (_isDenseCheckout ? 7 : 10)),
+                            _buildSummaryRow(
+                                'Tax', taxAmount, const Color(0xFF64748B),
+                                labelColor: const Color(0xFF64748B)),
+                            if (hasDelivery &&
+                                _isfreeDeliveryMinimumAmount()) ...[
+                              SizedBox(height: _isDenseCheckout ? 7 : 10),
+                              _buildDeliveryChargeRow(),
+                            ],
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                  vertical: widget.isQuotationMode
+                                      ? 8
+                                      : (_isDenseCheckout ? 10 : 16)),
+                              child: Divider(
+                                  height: 1,
+                                  thickness: 1.5,
+                                  color: Color(0xFFF1F5F9)),
+                            ),
+                            _buildSummaryRow('Total Payable', effectiveTotal,
+                                const Color(0xFF2563EB),
+                                isBold: true,
+                                large: true,
+                                labelColor: const Color(0xFF2563EB)),
+                            if (_localSelectedCustomer != null &&
+                                !isDefaultCustomer) ...[
+                              SizedBox(height: _isDenseCheckout ? 7 : 10),
+                              _buildSummaryRow(
+                                  'Cust. Prev. Balance',
+                                  prevBalance,
+                                  prevBalance >= 0
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFFDC2626),
+                                  labelColor: prevBalance >= 0
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFFDC2626)),
+                            ],
+                            if (!widget.isQuotationMode) ...[
+                              SizedBox(height: _isDenseCheckout ? 7 : 10),
+                              _buildSummaryRow(
+                                  'Total Paid', totalPaid, Colors.black),
+                              SizedBox(height: _isDenseCheckout ? 7 : 10),
+                              _buildSummaryRow('Balance', displayBalance,
+                                  const Color(0xFF059669),
+                                  labelColor: const Color(0xFF059669)),
+                            ],
+                          ],
+                        ),
+                      ),
+                      if (widget.isQuotationMode) ...[
+                        const SizedBox(height: 6),
+                        _buildQuotationDatesPanel(),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -2761,17 +3599,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
       {CustomerListModelData? customer}) {
     final isCurrentStep = _currentStep == stepIndex;
     final shortcutLabel = _shortcutLabelForStep(stepIndex);
+    final compactTile = widget.isQuotationMode || _isDenseCheckout;
     final showCustomerType = Provider.of<AppSettingsProvider>(context)
             .appSettings
             ?.companyB2BEnabled ??
         false;
+    final isDefaultCustomer = _isDefaultCustomer(customer);
     final customerBalance = customer?.balance ?? 0.0;
     final customerBalanceColor = customerBalance >= 0
         ? const Color(0xFF059669)
         : const Color(0xFFDC2626);
     final customerNameLength = customer?.name?.trim().length ?? subtitle.length;
     final customerTitleFontSize = customer == null
-        ? 14.0
+        ? (compactTile ? 12.0 : 14.0)
         : customerNameLength > 24
             ? 10.5
             : customerNameLength > 18
@@ -2816,13 +3656,18 @@ class _CheckoutModalState extends State<CheckoutModal> {
           onTap: () => _goToStep(stepIndex),
           borderRadius: BorderRadius.circular(11),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            height: double.infinity,
+            padding: EdgeInsets.symmetric(
+              vertical: compactTile ? 5 : 12,
+              horizontal: compactTile ? 10 : 16,
+            ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (customer == null) ...[
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: compactTile ? 28 : 36,
+                    height: compactTile ? 28 : 36,
                     decoration: BoxDecoration(
                       color: isCurrentStep
                           ? Colors.white.withOpacity(0.15)
@@ -2838,13 +3683,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           : isCompleted
                               ? const Color(0xFF166534)
                               : const Color(0xFF64748B),
-                      size: 20,
+                      size: compactTile ? 17 : 20,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: compactTile ? 10 : 14),
                 ],
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -2858,12 +3704,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               : const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: compactTile ? 1 : 2),
                       if (customer == null)
                         Text(
                           subtitle,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: compactTile ? 10 : 12,
                             color: isCurrentStep
                                 ? Colors.white.withOpacity(0.85)
                                 : isCompleted
@@ -2877,7 +3723,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       if (customer != null) ...[
-                        const SizedBox(height: 4),
+                        SizedBox(height: compactTile ? 2 : 4),
                         Row(
                           children: [
                             if (showCustomerType) ...[
@@ -2887,31 +3733,34 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               ),
                               const SizedBox(width: 2),
                             ],
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: isCurrentStep
-                                      ? Colors.white24
-                                      : customerBalanceColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Bal: ${customerBalance.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: isCurrentStep
-                                        ? Colors.white
-                                        : customerBalanceColor,
+                            if (!isDefaultCustomer)
+                              Flexible(
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: compactTile ? 5 : 6,
+                                    vertical: compactTile ? 1 : 2,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.visible,
-                                  softWrap: false,
+                                  decoration: BoxDecoration(
+                                    color: isCurrentStep
+                                        ? Colors.white24
+                                        : customerBalanceColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Bal: ${customerBalance.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: compactTile ? 9 : 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: isCurrentStep
+                                          ? Colors.white
+                                          : customerBalanceColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.visible,
+                                    softWrap: false,
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                       ],
@@ -2919,10 +3768,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   ),
                 ),
                 if (shortcutLabel.isNotEmpty) ...[
-                  const SizedBox(width: 8),
+                  SizedBox(width: compactTile ? 5 : 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compactTile ? 6 : 8,
+                      vertical: compactTile ? 3 : 4,
+                    ),
                     decoration: BoxDecoration(
                       color: isCurrentStep
                           ? Colors.white.withOpacity(0.18)
@@ -2937,7 +3788,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     child: Text(
                       shortcutLabel,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: compactTile ? 10 : 11,
                         fontWeight: FontWeight.w800,
                         color: isCurrentStep
                             ? Colors.white

@@ -1,7 +1,8 @@
 import 'package:get/get.dart';
+import 'package:pos_machine/screens/billing/billing_page.dart';
 import 'package:pos_machine/screens/billing/billing_page_responsive.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
-import 'package:pos_machine/screens/billing/restaurant_page.dart';
+import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
 import 'package:pos_machine/screens/category/add_category.dart';
 import 'package:pos_machine/screens/category/add_category_properties.dart';
 import 'package:pos_machine/screens/category/add_category_screen.dart';
@@ -11,10 +12,9 @@ import 'package:pos_machine/screens/customer_profile/open_customer_profile.dart'
 import 'package:pos_machine/screens/customers/add_customers.dart';
 import 'package:pos_machine/screens/cart/cart_list.dart';
 import 'package:pos_machine/screens/customers/customers.dart';
-import 'package:pos_machine/screens/dashboard/company_admin.dart';
+import 'package:pos_machine/screens/sales/widgets/quotation_details.dart';
 import 'package:pos_machine/screens/dashboard/dashboard.dart';
 
-import 'package:pos_machine/screens/dashboard/sales_exicutive_dahsboard.dart';
 import 'package:pos_machine/screens/edit_order/edit_order.dart';
 import 'package:pos_machine/screens/homenew/home_new.dart';
 
@@ -63,6 +63,7 @@ import 'package:pos_machine/screens/settings/whatsapp_settings.dart';
 import 'package:pos_machine/screens/settings/company_info.dart';
 import 'package:pos_machine/screens/support/support.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
+import 'package:pos_machine/screens/transactions/proforma_invoice_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_list.dart';
 import 'package:pos_machine/screens/transactions/receipt_voucher.dart';
 import 'package:pos_machine/screens/transactions/transaction_list.dart';
@@ -88,6 +89,7 @@ import 'package:pos_machine/screens/sales/confirmed_orders.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
+import 'package:pos_machine/screens/sales/quotations_list.dart';
 
 class SideBarController extends GetxController {
   RxInt index =
@@ -101,7 +103,7 @@ class SideBarController extends GetxController {
   }
 
   var screens = const [
-    HomeNew(), //0
+    BillingPageResponsive(), //0
     DashboardScreen(), //1 - Using the role-based dashboard
     SalesScreen(), //2
     CartScreen(), //3
@@ -147,7 +149,7 @@ class SideBarController extends GetxController {
     LocationManagementScreen(), //43
     LocationManagementScreen(), //44
     CategoryList(), //45 Home Old
-    BillingPageResponsive(), //46 Billing Page
+    HomeNew(), //46 Legacy Home alias
     ReceiptListScreen(), //47 Receipt List
     ViewReceiptDetailsWidget(), //48 Receipt Details
     SalesReturnScreen(), //49 Sales Return
@@ -156,7 +158,10 @@ class SideBarController extends GetxController {
     SupplierListScreen(), // 52 Suppliers List
     PrinterSettings(), // 53 Printer Settings
     ConfirmedOrdersScreen(), // 54 Confirmed Orders
-    RestaurantPage(), // 55 Restaurant Page
+    RestaurantPage(
+      allowCounterBillingFromAttender: false,
+      defaultCounterBillingMode: false,
+    ), // 55 Restaurant Page (Attender)
     KitchenMaster(), // 56 Kitchen Master
     SupplierDetailsScreen(), // 57 Supplier Details
     SalesExecutiveReportScreen(), // 58 Sales Executive Report
@@ -187,5 +192,16 @@ class SideBarController extends GetxController {
     ProductBarcodeScreen(), // 83 Product Barcode Screen
     AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
+    BillingPage(mode: BillingPageMode.quotation), // 86 Quotations
+    QuotationsListScreen(), // 87 Quotation List
+    QuotationDetailsScreen(
+        quotationId: null), // 88 Quotation Details (ID from Provider)
+    RestaurantPage(
+      allowCounterBillingFromAttender: true,
+      defaultCounterBillingMode: true,
+    ), // 89 Restaurant Billing Page
+    BillingPage(), // 90 Supermarket Billing Page
+    ProformaInvoiceListScreen(), // 91 Proforma Invoice List
+    SalesScreen(isOnlineSales: true), // 92 Online Sales
   ];
 }

@@ -1021,7 +1021,6 @@ class BillingPageState extends State<BillingPageRestaurant>
         key == LogicalKeyboardKey.f9 ||
         key == LogicalKeyboardKey.f10 ||
         key == LogicalKeyboardKey.f12 ||
-        key == LogicalKeyboardKey.keyD ||
         key == LogicalKeyboardKey.escape;
   }
 
@@ -1042,14 +1041,18 @@ class BillingPageState extends State<BillingPageRestaurant>
     if (dialogIsOnTop) return false;
 
     if (event.logicalKey == LogicalKeyboardKey.tab &&
-        !HardwareKeyboard.instance.isShiftPressed &&
+        !HardwareKeyboard.instance.isAltPressed &&
         _barcodeNode.hasFocus) {
       _focusSearchProductField();
       return true;
     }
 
+    final isAltCashDrawerShortcut = HardwareKeyboard.instance.isAltPressed &&
+        !HardwareKeyboard.instance.isControlPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyD;
     if (!_isBillingShortcutKey(event.logicalKey) &&
-        !_isBillingControlShortcut(event.logicalKey)) {
+        !_isBillingControlShortcut(event.logicalKey) &&
+        !isAltCashDrawerShortcut) {
       return false;
     }
 
@@ -1107,7 +1110,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         }
       }
 
-      if (!HardwareKeyboard.instance.isControlPressed &&
+      if (HardwareKeyboard.instance.isAltPressed &&
+          !HardwareKeyboard.instance.isControlPressed &&
           event.logicalKey == LogicalKeyboardKey.keyD) {
         unawaited(const CashDrawerService().openDrawer(context));
         return;
@@ -1334,7 +1338,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         _focusedMainCategoryIndex.clamp(0, categories.length - 1).toInt();
 
     if (key == LogicalKeyboardKey.tab &&
-        !HardwareKeyboard.instance.isShiftPressed) {
+        !HardwareKeyboard.instance.isAltPressed) {
       _focusSearchProductField();
       return KeyEventResult.handled;
     }
@@ -1382,7 +1386,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     }
 
     if (event.logicalKey == LogicalKeyboardKey.tab) {
-      if (HardwareKeyboard.instance.isShiftPressed) {
+      if (HardwareKeyboard.instance.isAltPressed) {
         _focusMainCategoryRow();
       } else {
         _focusMainProductGrid();
@@ -1411,7 +1415,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         _focusedMainProductIndex.clamp(0, products.length - 1).toInt();
 
     if (key == LogicalKeyboardKey.tab) {
-      if (HardwareKeyboard.instance.isShiftPressed) {
+      if (HardwareKeyboard.instance.isAltPressed) {
         _focusSearchProductField();
       } else {
         _focusCompactCartSidebar();
@@ -1908,17 +1912,23 @@ class BillingPageState extends State<BillingPageRestaurant>
               _isCustomerManuallySelected = true;
             });
           },
-          onAddNewCustomer: (String searchQuery) async {
+          onAddNewCustomer: (
+            String searchQuery, {
+            String? initialName,
+            String? initialPhone,
+          }) async {
             // Pass numeric search input as-is (including partial phone numbers)
             String phoneToPreFill = '';
             final normalizedSearchQuery = searchQuery.trim();
-            if (normalizedSearchQuery.isNotEmpty &&
+            if ((initialPhone ?? '').trim().isNotEmpty) {
+              phoneToPreFill = initialPhone!.trim();
+            } else if (normalizedSearchQuery.isNotEmpty &&
                 RegExp(r'^[0-9]+$').hasMatch(normalizedSearchQuery)) {
               phoneToPreFill = normalizedSearchQuery;
             }
             final result = await showAddCustomerModal(
                 context, MediaQuery.of(context).size,
-                mobileNumber: phoneToPreFill);
+                mobileNumber: phoneToPreFill, customerName: initialName);
 
             if (result != null && result['status'] == 'success') {
               final responseData = result['response']?['data'];
@@ -2498,6 +2508,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       toCustomerCredit: _toCustomerCreditEnabled,
                       address: deliveryAddress,
                       deliveryCharge: _getDeliveryChargeForOrder(),
+                      customerType: selectedCustomer?.customerType,
                     );
 
                     // Show quick feedback
@@ -2533,6 +2544,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                       toCustomerCredit: _toCustomerCreditEnabled,
                       address: deliveryAddress,
                       deliveryCharge: _getDeliveryChargeForOrder(),
+                      customerType: selectedCustomer?.customerType,
                     );
                     showScaffold(
                       context: context,
@@ -4280,15 +4292,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       return false;
     }
 
-    // Get app settings to check for default customer
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultCustomerPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
-
     // Don't show balance if it's the default customer (by phone match)
-    if (defaultCustomerPhone.isNotEmpty &&
-        selectedCustomer!.phone == defaultCustomerPhone) {
+    if (_isDefaultCustomer(selectedCustomer)) {
       return false;
     }
 
@@ -4625,6 +4630,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     final currentOrder = localProductProvider.currentOrder;
     final customerNameToSave = selectedCustomer?.name;
     final customerPhoneToSave = _resolveCustomerPhoneForPayload();
+    final customerTypeToSave = selectedCustomer?.customerType;
     final couponIdToSave =
         isCouponApplied ? coupenCodeTextController.text : null;
 
@@ -4650,6 +4656,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         context: context,
         address: deliveryAddress,
         deliveryCharge: _getDeliveryChargeForOrder(),
+        customerType: customerTypeToSave,
       );
       return localProductProvider.findOrderById(currentOrder.id) ??
           currentOrder;
@@ -4675,6 +4682,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       toCustomerCredit: _toCustomerCreditEnabled,
       address: deliveryAddress,
       deliveryCharge: _getDeliveryChargeForOrder(),
+      customerType: customerTypeToSave,
     );
   }
 
@@ -4923,6 +4931,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           context: context,
           address: deliveryAddress, // Pass address
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
           // context: context, // Pass context
         );
 
@@ -4967,6 +4976,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           transactionId: _transactionNumberController.text,
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
+          customerType: selectedCustomer?.customerType,
           carNumber: _carNumberController.text,
           status: 'saved',
           deliveryDate: deliveryDate,
@@ -5098,6 +5108,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           context: context,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         orderToUse = localProductProvider.moveToConfirmedOrders(currentOrderId);
@@ -5121,6 +5132,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           toCustomerCredit: _toCustomerCreditEnabled,
           address: deliveryAddress,
           deliveryCharge: _getDeliveryChargeForOrder(),
+          customerType: selectedCustomer?.customerType,
         );
 
         showScaffold(
@@ -5149,6 +5161,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           transactionId: _transactionNumberController.text,
           couponId: isCouponApplied ? coupenCodeTextController.text : null,
           deliveryMethodId: deliveryMethodId,
+          customerType: selectedCustomer?.customerType,
           carNumber: _carNumberController.text,
           status: 'confirmed',
           deliveryDate: deliveryDate,
@@ -5474,7 +5487,9 @@ class BillingPageState extends State<BillingPageRestaurant>
                 orderDetails.data?.getCustomerAddressForDisplay();
 
             // Calculate customer balance for print
-            double? oldBalance = selectedCustomer?.balance;
+            final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+            double? oldBalance =
+                isDefaultCustomer ? null : selectedCustomer?.balance;
             double totalPaid = _getTotalPaidAmount();
             double? currentBalance;
             if (oldBalance != null) {
@@ -5515,15 +5530,14 @@ class BillingPageState extends State<BillingPageRestaurant>
                 customerAlternatePhone: customerAlternatePhone,
                 customerVatNumber: customerVatNumber,
                 customerCrNumber: customerCrNumber,
+                customerType: selectedCustomer?.customerType,
                 paymentMethod: paymentMethod,
                 paymentBreakdown: paymentBreakdown,
                 orderComment: orderComment,
                 deliveryMethod:
                     orderDetails.data?.deliveryMethodName ?? deliveryMethod,
-                isDefaultCustomer: Provider.of<CustomerSelectionProvider>(
-                        context,
-                        listen: false)
-                    .isDefaultCustomer,
+                isDefaultCustomer:
+                    isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
                     ?.toString(),
               );
@@ -5921,7 +5935,9 @@ class BillingPageState extends State<BillingPageRestaurant>
 
     double balance = 0.0;
 
-    if (_toCustomerCreditEnabled) {
+    final isDefaultSelectedCustomer = _isDefaultCustomer(selectedCustomer);
+
+    if (_toCustomerCreditEnabled && !isDefaultSelectedCustomer) {
       debugPrint(
           '🔛 BILLING PAGE: Toggle is ON - Calculating with customer credit consideration');
 
@@ -6536,6 +6552,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       }
     }
 
+    final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+
     showDialog(
       context: context,
       builder: (context) => PaymentMethodModal(
@@ -6551,7 +6569,9 @@ class BillingPageState extends State<BillingPageRestaurant>
         initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
         cartTotal: effectiveTotal,
-        customerPrevBalance: selectedCustomer?.balance ?? 0.0,
+        customerPrevBalance:
+            isDefaultCustomer ? 0.0 : (selectedCustomer?.balance ?? 0.0),
+        isDefaultCustomer: isDefaultCustomer,
         onAfterApply: onAfterApply,
         customButtonTitle: customButtonTitle,
         onPaymentMethodSelected: (
@@ -6864,6 +6884,7 @@ class BillingPageState extends State<BillingPageRestaurant>
     String? customerAlternatePhone,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
     String? paymentMethod,
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
@@ -6894,6 +6915,7 @@ class BillingPageState extends State<BillingPageRestaurant>
       customerAlternatePhone: customerAlternatePhone,
       customerVatNumber: customerVatNumber,
       customerCrNumber: customerCrNumber,
+      customerType: customerType,
       paymentMethod: paymentMethod,
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
@@ -6926,6 +6948,7 @@ class BillingPageState extends State<BillingPageRestaurant>
             customerAlternatePhone: customerAlternatePhone,
             customerVatNumber: customerVatNumber,
             customerCrNumber: customerCrNumber,
+            customerType: customerType,
             paymentMethod: paymentMethod,
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
@@ -6942,12 +6965,32 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   /// Helper method to check if a phone number matches the default customer phone from app settings
   bool _isDefaultCustomerPhone(String? phone) {
-    if (phone == null || phone.isEmpty) return false;
+    final customerPhone = phone?.trim() ?? '';
+    if (customerPhone.isEmpty) return false;
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
-    return defaultPhone.isNotEmpty && phone == defaultPhone;
+    final defaultPhone = appSettingsProvider
+            .appSettings?.autoAssignDefaultCustomerPhone
+            .trim() ??
+        "";
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
+
+  bool _isDefaultCustomer(CustomerListModelData? customer) {
+    if (customer == null) return false;
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final selectedCustomer = customerSelectionProvider.selectedCustomer;
+    if (customerSelectionProvider.isDefaultCustomer &&
+        ((selectedCustomer?.id != null &&
+                selectedCustomer?.id == customer.id) ||
+            (selectedCustomer?.phone?.trim().isNotEmpty == true &&
+                selectedCustomer?.phone?.trim() == customer.phone?.trim()))) {
+      return true;
+    }
+
+    return _isDefaultCustomerPhone(customer.phone);
   }
 
   Future<void> printFromSavedOrder(SavedOrder savedOrder) async {
@@ -6977,6 +7020,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           'productName': item.product.productName ?? 'Unknown',
           'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
+          'product_unit': item.product.unit ?? '',
           'unitPrice': itemPrice.toString(),
           'totalPrice': itemTotalPrice.toString(),
           'tax_amount': itemTax.toString(),
@@ -7037,6 +7081,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           customerAlternatePhone: savedOrder.alternatePhone,
           customerVatNumber: savedOrder.customerVatNumber,
           customerCrNumber: savedOrder.customerCrNumber,
+          customerType: savedOrder.customerType,
           orderComment: savedOrder.comment,
           deliveryMethod: savedOrder.deliveryMethod ?? deliveryMethod,
           paidAmount: (double.tryParse(savedOrder.paidAmount ?? "0") ?? 0.0) > 0
@@ -7158,8 +7203,20 @@ class BillingPageState extends State<BillingPageRestaurant>
     setState(() {
       // Clear payment and delivery states
       // iconColor = 1; // Default to cash
-      deliveryMethod = "Store Takeaway";
       deliveryMethodId = _getDefaultDeliveryMethodId();
+      deliveryMethod = "";
+      try {
+        final deliveryMethodsProvider =
+            Provider.of<DeliveryMethodsProvider>(context, listen: false);
+        if (deliveryMethodsProvider.deliveryMethods.isNotEmpty) {
+          deliveryMethod = deliveryMethodsProvider.deliveryMethods
+              .firstWhere(
+                (m) => m.id == deliveryMethodId,
+                orElse: () => deliveryMethodsProvider.deliveryMethods.first,
+              )
+              .name;
+        }
+      } catch (_) {}
       _selectedDeliveryCharge = null;
 
       // Clear all controllers
@@ -7381,8 +7438,8 @@ class BillingPageState extends State<BillingPageRestaurant>
 
   void _initializeDeliveryMethod() {
     // Set initial default values
-    deliveryMethod = "Store Takeaway";
-    deliveryMethodId = "11"; // Updated to match API response
+    deliveryMethod = "";
+    deliveryMethodId = "";
     _selectedDeliveryCharge = null;
 
     // Listen for delivery methods to be loaded and update default
@@ -7404,7 +7461,8 @@ class BillingPageState extends State<BillingPageRestaurant>
               final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
                 (m) =>
                     m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                    m.id == appSettingsDefault,
+                    m.id == appSettingsDefault ||
+                    (m.code?.toLowerCase() == appSettingsDefault.toLowerCase()),
               );
 
               // Only update if different to avoid unnecessary rebuilds
@@ -7501,22 +7559,12 @@ class BillingPageState extends State<BillingPageRestaurant>
       final deliveryMethodsProvider =
           Provider.of<DeliveryMethodsProvider>(context, listen: false);
 
-      // 1. Check AppSettings
       final appSettingsDefault =
           appSettingsProvider.appSettings?.defaultDeliveryMethod;
-      if (appSettingsDefault != null && appSettingsDefault.isNotEmpty) {
-        try {
-          final match = deliveryMethodsProvider.deliveryMethods.firstWhere(
-              (m) =>
-                  m.name.toLowerCase() == appSettingsDefault.toLowerCase() ||
-                  m.id == appSettingsDefault);
-          return match.id;
-        } catch (e) {
-          // Not found
-        }
-      }
-
-      final defaultMethod = deliveryMethodsProvider.defaultDeliveryMethod;
+      final defaultMethod =
+          deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+        appSettingsDefault: appSettingsDefault,
+      );
       return defaultMethod?.id ??
           "11"; // Fallback to Store Takeaway ID from API
     } catch (e) {

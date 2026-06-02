@@ -7,6 +7,25 @@ import '../resources/style_manager.dart';
 // Global overlay entry to ensure messages appear above modals
 OverlayEntry? _currentOverlayEntry;
 OverlayEntry? _loadingOverlayEntry;
+String _notificationPosition = 'left';
+
+void setNotificationPosition(String position) {
+  const valid = {'left', 'center', 'right'};
+  _notificationPosition = valid.contains(position) ? position : 'left';
+}
+
+double? _leftForDialog(bool isMobile, double screenWidth) {
+  if (isMobile) return 16;
+  if (_notificationPosition == 'left') return 16;
+  if (_notificationPosition == 'center') return (screenWidth - 500) / 2;
+  return null;
+}
+
+double? _rightForDialog(bool isMobile) {
+  if (isMobile) return 16;
+  if (_notificationPosition == 'right') return 16;
+  return null;
+}
 
 ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
   // Remove any existing overlay message
@@ -20,8 +39,8 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
   _currentOverlayEntry = OverlayEntry(
     builder: (context) => Positioned(
       bottom: 20,
-      left: isMobile ? 16 : null,
-      right: 16,
+      left: _leftForDialog(isMobile, screenWidth),
+      right: _rightForDialog(isMobile),
       child: Material(
         elevation: 1000,
         borderRadius: BorderRadius.circular(15),
@@ -159,8 +178,8 @@ ScaffoldMessengerState showScaffoldError(
   _currentOverlayEntry = OverlayEntry(
     builder: (context) => Positioned(
       bottom: 20,
-      left: isMobile ? 16 : null,
-      right: 16,
+      left: _leftForDialog(isMobile, screenWidth),
+      right: _rightForDialog(isMobile),
       child: Material(
         elevation: 1000,
         borderRadius: BorderRadius.circular(15),

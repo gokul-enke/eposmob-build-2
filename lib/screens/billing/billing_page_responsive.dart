@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'package:pos_machine/screens/billing/billing_page_desktop.dart';
 import 'package:pos_machine/screens/billing/billing_page_mobile.dart';
-import 'package:pos_machine/screens/billing/billing_page_restaurant.dart';
+import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'billing_page.dart';
 
@@ -14,6 +14,7 @@ class BillingPageResponsive extends StatefulWidget {
 
 class _BillingPageResponsiveState extends State<BillingPageResponsive> {
   String userRole = '';
+  bool _isRoleLoaded = false;
 
   @override
   void initState() {
@@ -23,8 +24,10 @@ class _BillingPageResponsiveState extends State<BillingPageResponsive> {
 
   void _loadUserRole() async {
     String role = await SharedPreferenceProvider().getUserRole();
+    if (!mounted) return;
     setState(() {
       userRole = role;
+      _isRoleLoaded = true;
     });
   }
 
@@ -36,9 +39,19 @@ class _BillingPageResponsiveState extends State<BillingPageResponsive> {
       return const BillingPageMobile();
     }
 
-    // Show BillingPageRestaurant for restaurant_sales role, otherwise show BillingPage
+    if (!_isRoleLoaded) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8FAFC),
+        body: SizedBox.expand(),
+      );
+    }
+
+    // Show RestaurantPage for restaurant_sales role, otherwise show BillingPage
     if (userRole == 'restaurant_sales') {
-      return const BillingPageRestaurant();
+      return const RestaurantPage(
+        allowCounterBillingFromAttender: true,
+        defaultCounterBillingMode: true,
+      );
     }
     return const BillingPage();
   }

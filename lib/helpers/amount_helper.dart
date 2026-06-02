@@ -78,6 +78,12 @@ class AmountHelper {
     int wholeNumber = number.toInt();
     int decimalPart = ((number - wholeNumber) * 100).round();
 
+    // Guard against values like x.xxx that round cents to 100.
+    if (decimalPart == 100) {
+      wholeNumber += 1;
+      decimalPart = 0;
+    }
+
     String result = '';
     bool isIndianSystem = currency.toUpperCase() == 'INR';
 

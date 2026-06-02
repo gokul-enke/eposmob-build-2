@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
@@ -189,6 +190,22 @@ class BillingPageState extends State<BillingPage>
     super.dispose();
   }
 
+  void _setDefaultDeliveryMethod(BillingProvider billingProvider) {
+    final appSettingsDefault =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.defaultDeliveryMethod;
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final defaultMethod = deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+      appSettingsDefault: appSettingsDefault,
+    );
+    billingProvider.setDeliveryMethod(
+      defaultMethod?.name ?? "Store Takeaway",
+      defaultMethod?.id ?? billingProvider.getDefaultDeliveryMethodId(),
+    );
+  }
+
   // Rehydrate all UI state from the provider's current order
   void _rehydrateFromProvider() {
     // Prevent default customer from overriding when editing an order
@@ -302,41 +319,40 @@ class BillingPageState extends State<BillingPage>
                 }
                 if (!methods.contains('CASH') &&
                     (methods.contains(billingProvider.cashPaymentMethodId) ||
-                        amounts.containsKey(billingProvider.cashPaymentMethodId))) {
+                        amounts.containsKey(
+                            billingProvider.cashPaymentMethodId))) {
                   billingProvider.setPaymentMethod('CASH', true);
-                  billingProvider.cashAmountController.text = (amounts[
-                              billingProvider.cashPaymentMethodId] ??
-                          '0')
-                      .toString();
+                  billingProvider.cashAmountController.text =
+                      (amounts[billingProvider.cashPaymentMethodId] ?? '0')
+                          .toString();
                 }
                 if (!methods.contains('CARD') &&
                     (methods.contains(billingProvider.cardPaymentMethodId) ||
-                        amounts.containsKey(billingProvider.cardPaymentMethodId))) {
+                        amounts.containsKey(
+                            billingProvider.cardPaymentMethodId))) {
                   billingProvider.setPaymentMethod('CARD', true);
-                  billingProvider.cardAmountController.text = (amounts[
-                              billingProvider.cardPaymentMethodId] ??
-                          '0')
-                      .toString();
+                  billingProvider.cardAmountController.text =
+                      (amounts[billingProvider.cardPaymentMethodId] ?? '0')
+                          .toString();
                 }
                 if (!methods.contains('UPI') &&
                     (methods.contains(billingProvider.upiPaymentMethodId) ||
-                        amounts.containsKey(billingProvider.upiPaymentMethodId))) {
+                        amounts
+                            .containsKey(billingProvider.upiPaymentMethodId))) {
                   billingProvider.setPaymentMethod('UPI', true);
-                  billingProvider.upiAmountController.text = (amounts[
-                              billingProvider.upiPaymentMethodId] ??
-                          '0')
-                      .toString();
+                  billingProvider.upiAmountController.text =
+                      (amounts[billingProvider.upiPaymentMethodId] ?? '0')
+                          .toString();
                 }
                 if (methods.contains('COD') ||
                     methods.contains(billingProvider.codPaymentMethodId) ||
                     amounts.containsKey('COD') ||
                     amounts.containsKey(billingProvider.codPaymentMethodId)) {
                   billingProvider.setPaymentMethod('COD', true);
-                  billingProvider.codAmountController.text =
-                      (amounts['COD'] ??
-                              amounts[billingProvider.codPaymentMethodId] ??
-                              '0')
-                          .toString();
+                  billingProvider.codAmountController.text = (amounts['COD'] ??
+                          amounts[billingProvider.codPaymentMethodId] ??
+                          '0')
+                      .toString();
                 }
                 if (methods.contains('ONLINE') ||
                     amounts.containsKey('ONLINE')) {
@@ -392,10 +408,15 @@ class BillingPageState extends State<BillingPage>
         // 4. Restore Transaction, Delivery, and Other Details
         billingProvider.transactionNumberController.text =
             currentOrder.transactionId ?? "";
-        billingProvider.setDeliveryMethod(
-            currentOrder.deliveryMethod ?? "Store Takeaway",
-            currentOrder.deliveryMethodId ??
-                billingProvider.getDefaultDeliveryMethodId());
+        if (currentOrder.deliveryMethodId != null ||
+            currentOrder.deliveryMethod != null) {
+          billingProvider.setDeliveryMethod(
+              currentOrder.deliveryMethod ?? "Store Takeaway",
+              currentOrder.deliveryMethodId ??
+                  billingProvider.getDefaultDeliveryMethodId());
+        } else {
+          _setDefaultDeliveryMethod(billingProvider);
+        }
         billingProvider.commentController.text = currentOrder.comment ?? "";
         billingProvider.carNumberController.text = currentOrder.carNumber ?? "";
         if (currentOrder.deliveryDate != null) {
@@ -1148,10 +1169,9 @@ class BillingPageState extends State<BillingPage>
             "  - Skipping _fetchCustomers() because customer was manually selected");
       }
 
-      final methodId = Provider.of<BillingProvider>(context, listen: false)
-          .getDefaultDeliveryMethodId();
-      Provider.of<BillingProvider>(context, listen: false)
-          .setDeliveryMethod("Store Takeaway", methodId);
+      _setDefaultDeliveryMethod(
+        Provider.of<BillingProvider>(context, listen: false),
+      );
       // Remove iconColor reset
       // iconColor = 1; // DELETE THIS LINE
     });
@@ -1222,10 +1242,9 @@ class BillingPageState extends State<BillingPage>
     setState(() {
       // Clear payment and delivery states
       // iconColor = 1; // Default to cash
-      final methodId = Provider.of<BillingProvider>(context, listen: false)
-          .getDefaultDeliveryMethodId();
-      Provider.of<BillingProvider>(context, listen: false)
-          .setDeliveryMethod("Store Takeaway", methodId);
+      _setDefaultDeliveryMethod(
+        Provider.of<BillingProvider>(context, listen: false),
+      );
 
       // Clear all controllers
       final bp = Provider.of<BillingProvider>(context, listen: false);

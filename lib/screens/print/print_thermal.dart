@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart' hide TableRow;
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
@@ -141,7 +141,7 @@ class ThermalPrinter {
     // Use the loaded display configuration
     final displayConfig = billDocumentConfig.displayConfiguration?.options;
     final bool isArabicLanguage =
-      (billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+        (billDocumentConfig.language ?? '').toLowerCase() == 'ar';
     _debugPrintTemplateSettings(displayConfig);
 
     try {
@@ -364,7 +364,7 @@ class ThermalPrinter {
         showScaffold(context: context, message: "Print job sent successfully");
         Navigator.pop(context);
         SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        sideBarController.index.value = 90;
       }
     } catch (e) {
       debugPrint("ERROR printing receipt: ${e.toString()}");
@@ -1146,7 +1146,7 @@ class ThermalPrinter {
         showScaffold(context: context, message: "Print job sent successfully");
         Navigator.pop(context);
         SideBarController sideBarController = Get.put(SideBarController());
-        sideBarController.index.value = 46;
+        sideBarController.index.value = 90;
       }
     } catch (e, stacktrace) {
       debugPrint("ERROR in Image-Based Print: $e");
@@ -1639,15 +1639,14 @@ class ThermalPrinter {
 
   // Add this new method to build the total summary section
   List<int> _buildTotalSummarySection(
-    Generator generator,
-    String formattedTotal,
-    OrderReturns orderReturns,
-    List<dynamic> cartItems,
-    bool isFromLocalStorage,
-    PosFontType fontType,
-    Map<String, DisplayOption>? displayConfig,
-    {bool isArabic = false}
-  ) {
+      Generator generator,
+      String formattedTotal,
+      OrderReturns orderReturns,
+      List<dynamic> cartItems,
+      bool isFromLocalStorage,
+      PosFontType fontType,
+      Map<String, DisplayOption>? displayConfig,
+      {bool isArabic = false}) {
     List<int> bytes = [];
 
     debugPrint("===== BUILD TOTAL SUMMARY SECTION =====");
@@ -1834,8 +1833,8 @@ class ThermalPrinter {
     // Use 'showFinalAmountInWords' for Sales Return Bill configuration
     if (displayConfig?['showFinalAmountInWords']?.visible == true) {
       debugPrint("Building final amount in words (returns scenario)...");
-      bytes +=
-          _buildAmountInWords(generator, finalTotal, fontType, isArabic: isArabic);
+      bytes += _buildAmountInWords(generator, finalTotal, fontType,
+          isArabic: isArabic);
     }
 
     bytes += generator.emptyLines(1);
@@ -1846,11 +1845,8 @@ class ThermalPrinter {
 
   // Helper method for amount in words
   List<int> _buildAmountInWords(
-    Generator generator,
-    double amount,
-    PosFontType fontType,
-    {bool isArabic = false}
-  ) {
+      Generator generator, double amount, PosFontType fontType,
+      {bool isArabic = false}) {
     List<int> bytes = [];
 
     // bytes += generator.emptyLines(1);

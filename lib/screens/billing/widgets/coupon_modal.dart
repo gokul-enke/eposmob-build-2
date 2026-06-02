@@ -227,6 +227,8 @@ class _CouponModalState extends State<CouponModal> {
           discountProvider, child) {
         final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
         final size = MediaQuery.of(context).size;
+        final isDenseEmbedded =
+            widget.fullWidth && (size.width <= 1100 || size.height <= 800);
 
         final priceSummary = localProductProvider.priceSummary;
         final originalSubTotal =
@@ -245,9 +247,11 @@ class _CouponModalState extends State<CouponModal> {
         Widget content = BuildBoxShadowContainer(
           circleRadius: 12,
           color: Colors.white,
-          width: widget.fullWidth ? double.infinity : (size.width * 0.85).clamp(450.0, 900.0),
+          width: widget.fullWidth
+              ? double.infinity
+              : (size.width * 0.85).clamp(450.0, 900.0),
           showShadow: widget.showShadow,
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(isDenseEmbedded ? 16 : 20),
           child: FocusTraversalGroup(
             policy: OrderedTraversalPolicy(),
             child: Column(
@@ -273,7 +277,7 @@ class _CouponModalState extends State<CouponModal> {
                       ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: isDenseEmbedded ? 14 : 20),
                 Flexible(
                   child: Container(
                     constraints: BoxConstraints(
@@ -309,15 +313,15 @@ class _CouponModalState extends State<CouponModal> {
                                             BuildBoxShadowContainer(
                                               circleRadius: 7,
                                               alignment: Alignment.centerLeft,
-                                              padding:
-                                                  const EdgeInsets.only(left: 15),
+                                              padding: const EdgeInsets.only(
+                                                  left: 15),
                                               height: 50,
                                               child: TextField(
                                                 controller:
                                                     flatDiscountController,
                                                 keyboardType:
                                                     const TextInputType
-                                                            .numberWithOptions(
+                                                        .numberWithOptions(
                                                         decimal: true,
                                                         signed: false),
                                                 inputFormatters: [
@@ -342,7 +346,8 @@ class _CouponModalState extends State<CouponModal> {
                                                 ),
                                                 onTap: () {
                                                   WidgetsBinding.instance
-                                                      .addPostFrameCallback((_) {
+                                                      .addPostFrameCallback(
+                                                          (_) {
                                                     if (flatDiscountController
                                                         .text.isNotEmpty) {
                                                       flatDiscountController
@@ -370,7 +375,7 @@ class _CouponModalState extends State<CouponModal> {
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 15),
+                                    SizedBox(width: isDenseEmbedded ? 10 : 15),
                                     Expanded(
                                       child: FocusTraversalOrder(
                                         order: const NumericFocusOrder(20),
@@ -391,15 +396,15 @@ class _CouponModalState extends State<CouponModal> {
                                             BuildBoxShadowContainer(
                                               circleRadius: 7,
                                               alignment: Alignment.centerLeft,
-                                              padding:
-                                                  const EdgeInsets.only(left: 15),
+                                              padding: const EdgeInsets.only(
+                                                  left: 15),
                                               height: 50,
                                               child: TextField(
                                                 controller:
                                                     percentageDiscountController,
                                                 keyboardType:
                                                     const TextInputType
-                                                            .numberWithOptions(
+                                                        .numberWithOptions(
                                                         decimal: false,
                                                         signed: false),
                                                 inputFormatters: [
@@ -424,7 +429,8 @@ class _CouponModalState extends State<CouponModal> {
                                                 ),
                                                 onTap: () {
                                                   WidgetsBinding.instance
-                                                      .addPostFrameCallback((_) {
+                                                      .addPostFrameCallback(
+                                                          (_) {
                                                     if (percentageDiscountController
                                                         .text.isNotEmpty) {
                                                       percentageDiscountController
@@ -454,7 +460,7 @@ class _CouponModalState extends State<CouponModal> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 20),
+                                SizedBox(height: isDenseEmbedded ? 14 : 20),
                                 Text(
                                   'Select Coupon',
                                   style: buildCustomStyle(
@@ -464,7 +470,7 @@ class _CouponModalState extends State<CouponModal> {
                                     ColorManager.textColor,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 6),
                                 FocusTraversalOrder(
                                   order: const NumericFocusOrder(30),
                                   child: CustomDropDownWithSearch<DiscountData>(
@@ -486,7 +492,7 @@ class _CouponModalState extends State<CouponModal> {
                                     autofocus: false,
                                   ),
                                 ),
-                                const SizedBox(height: 20),
+                                SizedBox(height: isDenseEmbedded ? 14 : 20),
                                 if (_selectedDiscount != null)
                                   _buildDiscountDetailsCard(_selectedDiscount!,
                                       currency, discountProvider),
@@ -494,13 +500,14 @@ class _CouponModalState extends State<CouponModal> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 20),
+                        SizedBox(width: isDenseEmbedded ? 12 : 20),
                         Expanded(
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(14),
+                                  padding:
+                                      EdgeInsets.all(isDenseEmbedded ? 10 : 14),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(10),
@@ -508,277 +515,314 @@ class _CouponModalState extends State<CouponModal> {
                                         color: Colors.grey.shade200, width: 1),
                                   ),
                                   child: Column(
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Net Total:',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.semiBold,
-                                            FontSize.s14,
-                                            0.21,
-                                            Colors.grey.shade800,
-                                          ),
-                                        ),
-                                        Text(
-                                          '$currency ${AmountHelper.formatAmount(originalSubTotal)}',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.bold,
-                                            FontSize.s15,
-                                            0.21,
-                                            Colors.grey.shade900,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Discount Amount:',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.semiBold,
-                                            FontSize.s14,
-                                            0.21,
-                                            Colors.red.shade700,
-                                          ),
-                                        ),
-                                        Row(
-                                          children: [
-                                            Text(
-                                              '-$currency ${AmountHelper.formatAmount(totalDiscount)}',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.bold,
-                                                FontSize.s15,
-                                                0.21,
-                                                Colors.red.shade700,
-                                              ),
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Net Total:',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.semiBold,
+                                              isDenseEmbedded
+                                                  ? FontSize.s12
+                                                  : FontSize.s14,
+                                              0.21,
+                                              Colors.grey.shade800,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.red.shade100,
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                '${(originalSubTotal > 0 ? ((totalDiscount / originalSubTotal) * 100) : 0.0).toStringAsFixed(1)}%',
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.semiBold,
-                                                  FontSize.s11,
-                                                  0.21,
-                                                  Colors.red.shade700,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(
-                                      height: 16,
-                                      color: Color(0xFFE2E8F0),
-                                      thickness: 1,
-                                    ),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Total after Discount:',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.semiBold,
-                                            FontSize.s14,
-                                            0.21,
-                                            Colors.grey.shade800,
                                           ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: ColorManager.kPrimaryColor,
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            '$currency ${AmountHelper.formatAmount(newTotal)}',
+                                          Text(
+                                            '$currency ${AmountHelper.formatAmount(originalSubTotal)}',
                                             style: buildCustomStyle(
                                               FontWeightManager.bold,
-                                              FontSize.s16,
+                                              isDenseEmbedded
+                                                  ? FontSize.s13
+                                                  : FontSize.s15,
                                               0.21,
-                                              Colors.white,
+                                              Colors.grey.shade900,
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              if (isCartEmpty)
-                                Container(
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                        color: Colors.orange.shade300,
-                                        width: 1),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.warning_amber_rounded,
-                                        color: Colors.orange.shade700,
-                                        size: 20,
+                                        ],
                                       ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          'Cart is empty. Add products before applying discounts.',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s11,
-                                            0.21,
-                                            Colors.orange.shade800,
+                                      SizedBox(
+                                          height: isDenseEmbedded ? 7 : 10),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Discount Amount:',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.semiBold,
+                                              isDenseEmbedded
+                                                  ? FontSize.s12
+                                                  : FontSize.s14,
+                                              0.21,
+                                              Colors.red.shade700,
+                                            ),
                                           ),
-                                        ),
+                                          Flexible(
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.end,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    '-$currency ${AmountHelper.formatAmount(totalDiscount)}',
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.bold,
+                                                      isDenseEmbedded
+                                                          ? FontSize.s13
+                                                          : FontSize.s15,
+                                                      0.21,
+                                                      Colors.red.shade700,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red.shade100,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4),
+                                                  ),
+                                                  child: Text(
+                                                    '${(originalSubTotal > 0 ? ((totalDiscount / originalSubTotal) * 100) : 0.0).toStringAsFixed(1)}%',
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager
+                                                          .semiBold,
+                                                      FontSize.s10,
+                                                      0.21,
+                                                      Colors.red.shade700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Divider(
+                                        height: isDenseEmbedded ? 12 : 16,
+                                        color: Color(0xFFE2E8F0),
+                                        thickness: 1,
+                                      ),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Total after Discount:',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.semiBold,
+                                              isDenseEmbedded
+                                                  ? FontSize.s12
+                                                  : FontSize.s14,
+                                              0.21,
+                                              Colors.grey.shade800,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal:
+                                                  isDenseEmbedded ? 8 : 12,
+                                              vertical: isDenseEmbedded ? 3 : 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: ColorManager.kPrimaryColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              '$currency ${AmountHelper.formatAmount(newTotal)}',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.bold,
+                                                isDenseEmbedded
+                                                    ? FontSize.s14
+                                                    : FontSize.s16,
+                                                0.21,
+                                                Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
-                            ],
+                                const SizedBox(height: 20),
+                                if (isCartEmpty)
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: Colors.orange.shade300,
+                                          width: 1),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.warning_amber_rounded,
+                                          color: Colors.orange.shade700,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            'Cart is empty. Add products before applying discounts.',
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s11,
+                                              0.21,
+                                              Colors.orange.shade800,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: isDenseEmbedded ? 16 : 24),
+                Row(
+                  children: [
+                    if (widget.showSkipButton) ...[
+                      Expanded(
+                        child: FocusTraversalOrder(
+                          order: const NumericFocusOrder(40),
+                          child: CustomRoundButton(
+                            title: "Skip",
+                            fct: widget.onSkip ?? () {},
+                            fontSize:
+                                isDenseEmbedded ? FontSize.s14 : FontSize.s16,
+                            height: isDenseEmbedded ? 46 : 50,
+                            width: double.infinity,
+                            boxColor: const Color(0xFF94A3B8),
+                            borderColor: const Color(0xFF94A3B8),
                           ),
                         ),
                       ),
+                      SizedBox(width: isDenseEmbedded ? 8 : 12),
                     ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  if (widget.showSkipButton) ...[
                     Expanded(
                       child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(40),
+                        order: const NumericFocusOrder(50),
                         child: CustomRoundButton(
-                          title: "Skip",
-                          fct: widget.onSkip ?? () {},
-                          fontSize: FontSize.s16,
-                          height: 50,
+                          title: "Clear",
+                          fct: () {
+                            setState(() {
+                              flatDiscountController.clear();
+                              percentageDiscountController.clear();
+                              _selectedDiscount = null;
+                            });
+                          },
+                          fontSize:
+                              isDenseEmbedded ? FontSize.s14 : FontSize.s16,
+                          height: isDenseEmbedded ? 46 : 50,
                           width: double.infinity,
-                          boxColor: const Color(0xFF94A3B8),
-                          borderColor: const Color(0xFF94A3B8),
+                          boxColor: const Color(0xFF64748B),
+                          borderColor: const Color(0xFF64748B),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    child: FocusTraversalOrder(
-                      order: const NumericFocusOrder(50),
-                      child: CustomRoundButton(
-                        title: "Clear",
-                        fct: () {
-                          setState(() {
-                            flatDiscountController.clear();
-                            percentageDiscountController.clear();
-                            _selectedDiscount = null;
-                          });
-                        },
-                        fontSize: FontSize.s16,
-                        height: 50,
-                        width: double.infinity,
-                        boxColor: const Color(0xFF64748B),
-                        borderColor: const Color(0xFF64748B),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FocusTraversalOrder(
-                      order: const NumericFocusOrder(60),
-                      child: CustomRoundButton(
-                        title: _isLoading ? "Applying..." : "Apply Discount",
-                        fct: _isLoading
-                            ? () {}
-                            : () {
-                                if (originalSubTotal == 0) {
-                                  showScaffoldError(
-                                    context: context,
-                                    message: 'Cannot apply discount to empty cart',
-                                  );
-                                  return;
-                                }
-
-                                if (!_validateDiscountInputs(originalSubTotal)) {
-                                  return;
-                                }
-
-                                if (_selectedDiscount != null) {
-                                  final localProductProvider =
-                                      Provider.of<LocalProductProvider>(context, listen: false);
-                                  final priceSummary = localProductProvider.priceSummary;
-                                  final cartTotal = widget.subTotal ??
-                                      priceSummary?.originalSubTotal ??
-                                      0.0;
-                                  final validity = discountProvider.getValidityForDiscount(
-                                    _selectedDiscount!,
-                                    cartTotal,
-                                  );
-                                  if (validity != DiscountValidity.valid) {
+                    SizedBox(width: isDenseEmbedded ? 8 : 12),
+                    Expanded(
+                      child: FocusTraversalOrder(
+                        order: const NumericFocusOrder(60),
+                        child: CustomRoundButton(
+                          title: _isLoading ? "Applying..." : "Apply Discount",
+                          fct: _isLoading
+                              ? () {}
+                              : () {
+                                  if (originalSubTotal == 0) {
                                     showScaffoldError(
                                       context: context,
                                       message:
-                                          'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
+                                          'Cannot apply discount to empty cart',
                                     );
                                     return;
                                   }
-                                }
-                                double flatDiscount =
-                                    double.tryParse(flatDiscountController.text) ?? 0.0;
-                                double percentageDiscount =
-                                    double.tryParse(percentageDiscountController.text) ?? 0.0;
 
-                                widget.onCouponAction(
-                                  '', // Send empty code to treat as simple discount
-                                  flatDiscount > 0 || percentageDiscount > 0,
-                                  flatDiscount: flatDiscount,
-                                  percentageDiscount: percentageDiscount,
-                                );
-                                if (widget.closeOnApply) {
-                                  Navigator.of(context).pop();
-                                }
-                              },
-                        fontSize: FontSize.s16,
-                        height: 50,
-                        width: double.infinity,
-                        boxColor: ColorManager.kPrimaryColor,
-                        borderColor: ColorManager.kPrimaryColor,
+                                  if (!_validateDiscountInputs(
+                                      originalSubTotal)) {
+                                    return;
+                                  }
+
+                                  if (_selectedDiscount != null) {
+                                    final localProductProvider =
+                                        Provider.of<LocalProductProvider>(
+                                            context,
+                                            listen: false);
+                                    final priceSummary =
+                                        localProductProvider.priceSummary;
+                                    final cartTotal = widget.subTotal ??
+                                        priceSummary?.originalSubTotal ??
+                                        0.0;
+                                    final validity =
+                                        discountProvider.getValidityForDiscount(
+                                      _selectedDiscount!,
+                                      cartTotal,
+                                    );
+                                    if (validity != DiscountValidity.valid) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
+                                      );
+                                      return;
+                                    }
+                                  }
+                                  double flatDiscount = double.tryParse(
+                                          flatDiscountController.text) ??
+                                      0.0;
+                                  double percentageDiscount = double.tryParse(
+                                          percentageDiscountController.text) ??
+                                      0.0;
+
+                                  widget.onCouponAction(
+                                    '', // Send empty code to treat as simple discount
+                                    flatDiscount > 0 || percentageDiscount > 0,
+                                    flatDiscount: flatDiscount,
+                                    percentageDiscount: percentageDiscount,
+                                  );
+                                  if (widget.closeOnApply) {
+                                    Navigator.of(context).pop();
+                                  }
+                                },
+                          fontSize:
+                              isDenseEmbedded ? FontSize.s14 : FontSize.s16,
+                          height: isDenseEmbedded ? 46 : 50,
+                          width: double.infinity,
+                          boxColor: ColorManager.kPrimaryColor,
+                          borderColor: ColorManager.kPrimaryColor,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
 
         if (widget.showAsDialog) {
           return Dialog(

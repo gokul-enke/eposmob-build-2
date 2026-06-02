@@ -1267,11 +1267,18 @@ class StockProvider extends ChangeNotifier {
         final responseData = jsonDecode(response.body);
         if (responseData['status'] == 'success') {
           debugPrint(
-              '✅ [StockProvider.updateStockDetails] API success for stockId=$stockId. Refreshing stock list...');
-          // Refresh the stock list after successful update
-          await loadAllStocks(accessToken);
+              '✅ [StockProvider.updateStockDetails] API success for stockId=$stockId. Updating local stock cache...');
+          _updateStockInLocalCache(
+            stockId: stockId,
+            responseStock: responseData['data']?['stock'],
+            retailPrice: retailPrice,
+            mrp: mrp,
+            purchasePrice: purchasePrice,
+            quantity: quantity,
+            rack: rack,
+          );
           debugPrint(
-              '✅ [StockProvider.updateStockDetails] Stock list refresh complete for stockId=$stockId');
+              '✅ [StockProvider.updateStockDetails] Local stock cache update complete for stockId=$stockId');
           return true;
         }
         debugPrint(
@@ -1285,6 +1292,67 @@ class StockProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('❌ [StockProvider.updateStockDetails] Exception: $e');
       return false;
+    }
+  }
+
+  void _updateStockInLocalCache({
+    required int stockId,
+    required dynamic responseStock,
+    required String retailPrice,
+    required String mrp,
+    required String purchasePrice,
+    required String? quantity,
+    required String rack,
+  }) {
+    final stockJson = responseStock is Map<String, dynamic>
+        ? responseStock
+        : responseStock is Map
+            ? Map<String, dynamic>.from(responseStock)
+            : <String, dynamic>{};
+    final updatedQuantity =
+        _parseNullableDouble(stockJson['quantity'] ?? quantity);
+    final updatedRetailPrice =
+        stockJson['retail_price']?.toString() ?? retailPrice;
+    final updatedMrp = stockJson['mrp']?.toString() ?? mrp;
+    final updatedPurchasePrice =
+        stockJson['purchase_price']?.toString() ?? purchasePrice;
+    final updatedRack = stockJson.containsKey('rack')
+        ? stockJson['rack']?.toString()
+        : (rack.isEmpty ? null : rack);
+
+    bool updateList(List<stock_models.ListStockModelData>? list) {
+      if (list == null || list.isEmpty) return false;
+      final index = list.indexWhere((stock) => stock.stockId == stockId);
+      if (index == -1) return false;
+
+      final existing = list[index];
+      list[index] = existing.copyWith(
+        qty: updatedQuantity,
+        retailPrice: updatedRetailPrice,
+        mrp: updatedMrp,
+        purchaseRate: updatedPurchasePrice,
+        rack: updatedRack,
+      );
+      return true;
+    }
+
+    final didUpdate = updateList(_allStocks) |
+        updateList(_listStockModelDataList) |
+        updateList(_filteredStockList);
+
+    final isViewStockUpdated = _viewStockModelData?.stockId == stockId;
+    if (isViewStockUpdated) {
+      _viewStockModelData = _viewStockModelData!.copyWith(
+        qty: updatedQuantity,
+        retailPrice: updatedRetailPrice,
+        mrp: updatedMrp,
+        purchaseRate: updatedPurchasePrice,
+        rack: updatedRack,
+      );
+    }
+
+    if (didUpdate || isViewStockUpdated) {
+      notifyListeners();
     }
   }
 

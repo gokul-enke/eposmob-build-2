@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:provider/provider.dart';
@@ -66,7 +67,12 @@ Future<void> handleAddProductToCart({
       }
 
       // Group stocks by pricing before deciding whether to show modal
-      final groups = groupStocksByPricing(availableStocks);
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+      final groups = groupStocksByPricing(
+        availableStocks,
+        activeFields: masterDataProvider.activeStockGroupingFields,
+      );
 
       if (groups.length == 1) {
         // Single pricing group → auto-select, no modal needed

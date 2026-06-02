@@ -1219,7 +1219,7 @@ class BillingProvider extends ChangeNotifier {
   Map<String, dynamic>? get printOrderData => _printOrderData;
 
   // Delivery & Logistics (items 32-35)
-  String _deliveryMethod = "Store Takeaway";
+  String _deliveryMethod = "";
   String _deliveryMethodId = "";
   DateTime? _deliveryDate;
   String? _deliveryTime;
@@ -1629,7 +1629,7 @@ class BillingProvider extends ChangeNotifier {
     _printOrderData = null;
 
     // Reset delivery info
-    _deliveryMethod = "Store Takeaway";
+    _deliveryMethod = "";
     _deliveryMethodId = "";
     _deliveryDate = null;
     _deliveryTime = null;
@@ -2299,14 +2299,14 @@ class BillingProvider extends ChangeNotifier {
 
   // MISSED LOGIC: Default delivery method management
   String getDefaultDeliveryMethodId() {
-    // Fallback to Store Takeaway ID from API
-    return "11";
+    return getDefaultDeliveryMethod()?.id ?? "11";
   }
 
   void initializeDeliveryMethod() {
     // Set initial default values
-    _deliveryMethod = "Store Takeaway";
-    _deliveryMethodId = "11"; // Updated to match API response
+    final defaultMethod = getDefaultDeliveryMethod();
+    _deliveryMethod = defaultMethod?.name ?? "Store Takeaway";
+    _deliveryMethodId = defaultMethod?.id ?? "";
     notifyListeners();
   }
 
@@ -2329,7 +2329,7 @@ class BillingProvider extends ChangeNotifier {
 
       // Set default delivery method if not already set
       if (_deliveryMethodId.isEmpty && _deliveryMethods.isNotEmpty) {
-        final defaultMethod = provider.defaultDeliveryMethod;
+        final defaultMethod = provider.resolveDefaultDeliveryMethod();
         if (defaultMethod != null) {
           _deliveryMethod = defaultMethod.name;
           _deliveryMethodId = defaultMethod.id;

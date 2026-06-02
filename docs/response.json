@@ -1,0 +1,3159 @@
+{
+    "status": "success",
+    "message": "List of Orders",
+    "data": {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 135,
+                "cart_id": 127,
+                "address_id": 30,
+                "order_date": "2026-06-02 13:46:55",
+                "order_number": "ORD-000128",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "paid",
+                "delivery_status": null,
+                "status": "confirmed",
+                "sub_total": "240.000",
+                "discount": "0.000",
+                "grand_total": "240.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 13:46:55",
+                "updated_at": "2026-06-02 13:47:19",
+                "deleted_at": null,
+                "customer_name": "Muhammed Mubashir",
+                "store_name": "Luzine Bakes Store",
+                "created_by": "Muhammed Mubashir",
+                "orderProps": {
+                    "ORDER_STATUS": "confirmed - 2026-06-02 13:47:19",
+                    "ORDER_TOKEN_NUMBER": 103,
+                    "DELIVERY_ADDRESS": {
+                        "city": null,
+                        "name": "Muhammed Mubashir",
+                        "phone": "8089433955",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "rwfscd",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "8089433955",
+                    "CUSTOMER_EMAIL": "muhammedmubashir720@gmail.com"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 280,
+                            "cart_id": 127,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 9,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Kandari Alfaham (H)"
+                                }
+                            ],
+                            "product_name": "Kandari Alfaham (H)",
+                            "product_slug": "kandari-alfaham-h",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "1.000",
+                            "total_price": "240.000",
+                            "unit_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/q3LOA94g2Lpf1Z2OieDb6lHgGayZmm8w2CoPp8zN.jpg"
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 240,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "7d92a5a873ab81dbc931a6d1e93ee0ed6b4b2b86702439c9864f311f5e35fabe",
+                "token_number": 103,
+                "order_props": [
+                    {
+                        "id": 776,
+                        "order_id": 135,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 13:46:55\"",
+                        "created_at": "2026-06-02T08:16:55.000000Z",
+                        "updated_at": "2026-06-02T08:16:55.000000Z"
+                    },
+                    {
+                        "id": 777,
+                        "order_id": 135,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "103",
+                        "created_at": "2026-06-02T08:16:55.000000Z",
+                        "updated_at": "2026-06-02T08:16:55.000000Z"
+                    },
+                    {
+                        "id": 778,
+                        "order_id": 135,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": null, \"name\": \"Muhammed Mubashir\", \"phone\": \"8089433955\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"rwfscd\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T08:16:55.000000Z",
+                        "updated_at": "2026-06-02T08:16:55.000000Z"
+                    },
+                    {
+                        "id": 779,
+                        "order_id": 135,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"8089433955\"",
+                        "created_at": "2026-06-02T08:16:55.000000Z",
+                        "updated_at": "2026-06-02T08:16:55.000000Z"
+                    },
+                    {
+                        "id": 780,
+                        "order_id": 135,
+                        "code": "CUSTOMER_EMAIL",
+                        "value": "\"muhammedmubashir720@gmail.com\"",
+                        "created_at": "2026-06-02T08:16:55.000000Z",
+                        "updated_at": "2026-06-02T08:16:55.000000Z"
+                    },
+                    {
+                        "id": 781,
+                        "order_id": 135,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 13:46:55\"",
+                        "created_at": "2026-06-02T08:16:55.000000Z",
+                        "updated_at": "2026-06-02T08:16:55.000000Z"
+                    },
+                    {
+                        "id": 782,
+                        "order_id": 135,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 13:47:19\"",
+                        "created_at": "2026-06-02T08:17:19.000000Z",
+                        "updated_at": "2026-06-02T08:17:19.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 127,
+                    "customer_id": 17,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 38,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 13:46:54",
+                    "updated_at": "2026-06-02 13:47:19",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 280,
+                            "cart_id": 127,
+                            "category_id": 2,
+                            "product_id": 9,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "240.000",
+                            "mrp": "288.000",
+                            "total_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T08:16:54.000000Z",
+                            "updated_at": "2026-06-02T08:16:54.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 9,
+                                "category_id": 2,
+                                "barcode": "10008",
+                                "item_code": "KAF-H",
+                                "name": "Kandari Alfaham (H)",
+                                "description": "Kandari Alfaham ",
+                                "slug": "kandari-alfaham-h",
+                                "active": 1,
+                                "price": "240.000",
+                                "mrp": "288.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:41:44",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "language_id": 1,
+                                        "name": "Kandari Alfaham (H)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "product_variant_id": null,
+                                        "file_path": "44",
+                                        "title": "Kandari Alfaham (H)",
+                                        "alt": "Kandari Alfaham (H)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T12:11:44.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 131,
+                "cart_id": 123,
+                "address_id": 33,
+                "order_date": "2026-06-02 13:13:30",
+                "order_number": "ORD-000124",
+                "payment_id": [
+                    "whatsapp"
+                ],
+                "payment_method": [
+                    "whatsapp"
+                ],
+                "payment_status": "pending",
+                "delivery_status": null,
+                "status": "init",
+                "sub_total": "1760.000",
+                "discount": "0.000",
+                "grand_total": "1760.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 13:13:30",
+                "updated_at": "2026-06-02 13:13:30",
+                "deleted_at": null,
+                "customer_name": null,
+                "store_name": "Luzine Bakes Store",
+                "created_by": null,
+                "orderProps": {
+                    "ORDER_STATUS": "init - 2026-06-02 13:13:30",
+                    "ORDER_TOKEN_NUMBER": 189,
+                    "DELIVERY_ADDRESS": {
+                        "city": null,
+                        "name": "Mohammed Shaheli",
+                        "phone": "7510762474",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "Kakkat house",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "7510762474"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 266,
+                            "cart_id": 123,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 8,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Kandari Alfaham (F)"
+                                }
+                            ],
+                            "product_name": "Kandari Alfaham (F)",
+                            "product_slug": "kandari-alfaham-f",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "3.000",
+                            "total_price": "1320.000",
+                            "unit_price": "440.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/q3LOA94g2Lpf1Z2OieDb6lHgGayZmm8w2CoPp8zN.jpg"
+                        },
+                        {
+                            "id": 267,
+                            "cart_id": 123,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 3,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Normal Alfaham (H)"
+                                }
+                            ],
+                            "product_name": "Normal Alfaham (H)",
+                            "product_slug": "normal-alfaham-h",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "1.000",
+                            "total_price": "210.000",
+                            "unit_price": "210.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/W1x4PeHpei4iYwAHO2fMYIkNgPJFxVrmS2vwHzDl.jpg"
+                        },
+                        {
+                            "id": 268,
+                            "cart_id": 123,
+                            "customer_id": null,
+                            "category_id": 16,
+                            "store_id": null,
+                            "product_id": 80,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Chicken Momos"
+                                }
+                            ],
+                            "product_name": "Chicken Momos",
+                            "product_slug": "chicken-momos",
+                            "category_name": "Momos",
+                            "category_slug": "momos",
+                            "quantity": "1.000",
+                            "total_price": "100.000",
+                            "unit_price": "100.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/JR9EPkbVLaT0hGuunxKrRZi4AhgysoLudxLPANVZ.jpg"
+                        },
+                        {
+                            "id": 269,
+                            "cart_id": 123,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 10,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Kandari Alfaham (Q)"
+                                }
+                            ],
+                            "product_name": "Kandari Alfaham (Q)",
+                            "product_slug": "kandari-alfaham-q",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "1.000",
+                            "total_price": "130.000",
+                            "unit_price": "130.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/q3LOA94g2Lpf1Z2OieDb6lHgGayZmm8w2CoPp8zN.jpg"
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 1760,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "b1146e93a48db587c37e59080dc95e5592a3612899943395ed34f6073108912b",
+                "token_number": 189,
+                "order_props": [
+                    {
+                        "id": 756,
+                        "order_id": 131,
+                        "code": "ORDER_STATUS",
+                        "value": "\"init - 2026-06-02 13:13:30\"",
+                        "created_at": "2026-06-02T07:43:30.000000Z",
+                        "updated_at": "2026-06-02T07:43:30.000000Z"
+                    },
+                    {
+                        "id": 757,
+                        "order_id": 131,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "189",
+                        "created_at": "2026-06-02T07:43:30.000000Z",
+                        "updated_at": "2026-06-02T07:43:30.000000Z"
+                    },
+                    {
+                        "id": 758,
+                        "order_id": 131,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": null, \"name\": \"Mohammed Shaheli\", \"phone\": \"7510762474\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"Kakkat house\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T07:43:30.000000Z",
+                        "updated_at": "2026-06-02T07:43:30.000000Z"
+                    },
+                    {
+                        "id": 759,
+                        "order_id": 131,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"7510762474\"",
+                        "created_at": "2026-06-02T07:43:30.000000Z",
+                        "updated_at": "2026-06-02T07:43:30.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 123,
+                    "customer_id": 32,
+                    "store_id": 2,
+                    "status": "N",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 59,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 13:13:28",
+                    "updated_at": "2026-06-02 13:13:28",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 266,
+                            "cart_id": 123,
+                            "category_id": 2,
+                            "product_id": 8,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "3.000",
+                            "unit_price": "440.000",
+                            "mrp": "528.000",
+                            "total_price": "1320.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T07:43:28.000000Z",
+                            "updated_at": "2026-06-02T07:43:28.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 8,
+                                "category_id": 2,
+                                "barcode": "10007",
+                                "item_code": "KAF-F",
+                                "name": "Kandari Alfaham (F)",
+                                "description": "Kandari Alfaham (F)",
+                                "slug": "kandari-alfaham-f",
+                                "active": 1,
+                                "price": "440.000",
+                                "mrp": "528.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:41:09",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 8,
+                                        "product_id": 8,
+                                        "language_id": 1,
+                                        "name": "Kandari Alfaham (F)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 8,
+                                        "product_id": 8,
+                                        "product_variant_id": null,
+                                        "file_path": "44",
+                                        "title": "Kandari Alfaham (F)",
+                                        "alt": "Kandari Alfaham (F)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T12:11:08.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        },
+                        {
+                            "id": 267,
+                            "cart_id": 123,
+                            "category_id": 2,
+                            "product_id": 3,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "210.000",
+                            "mrp": "252.000",
+                            "total_price": "210.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T07:43:29.000000Z",
+                            "updated_at": "2026-06-02T07:43:29.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 3,
+                                "category_id": 2,
+                                "barcode": "10002",
+                                "item_code": "ALF-H",
+                                "name": "Normal Alfaham (H)",
+                                "description": "Normal Alfaham (H)",
+                                "slug": "normal-alfaham-h",
+                                "active": 1,
+                                "price": "210.000",
+                                "mrp": "252.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:23:45",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 3,
+                                        "product_id": 3,
+                                        "language_id": 1,
+                                        "name": "Normal Alfaham (H)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 3,
+                                        "product_id": 3,
+                                        "product_variant_id": null,
+                                        "file_path": "42",
+                                        "title": "Normal Alfaham (H)",
+                                        "alt": "Normal Alfaham (H)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T11:53:45.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        },
+                        {
+                            "id": 268,
+                            "cart_id": 123,
+                            "category_id": 16,
+                            "product_id": 80,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "100.000",
+                            "mrp": "120.000",
+                            "total_price": "100.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T07:43:29.000000Z",
+                            "updated_at": "2026-06-02T07:43:29.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 80,
+                                "category_id": 16,
+                                "barcode": "10077",
+                                "item_code": null,
+                                "name": "Chicken Momos",
+                                "description": "Chicken Momos",
+                                "slug": "chicken-momos",
+                                "active": 1,
+                                "price": "100.000",
+                                "mrp": "120.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:53",
+                                "updated_at": "2026-05-22 20:36:13",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 80,
+                                        "product_id": 80,
+                                        "language_id": 1,
+                                        "name": "Chicken Momos",
+                                        "created_at": "2026-05-21T15:50:53.000000Z",
+                                        "updated_at": "2026-05-21T15:50:53.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 16,
+                                    "name": "Momos",
+                                    "slug": "momos",
+                                    "sort_order": 16,
+                                    "description": "Momos",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "94",
+                                    "icon": "94",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:50:53.000000Z",
+                                    "updated_at": "2026-05-23T10:05:45.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 80,
+                                        "product_id": 80,
+                                        "product_variant_id": null,
+                                        "file_path": "94",
+                                        "title": "Chicken Momos",
+                                        "alt": "Chicken Momos",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:53.000000Z",
+                                        "updated_at": "2026-05-22T15:06:13.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        },
+                        {
+                            "id": 269,
+                            "cart_id": 123,
+                            "category_id": 2,
+                            "product_id": 10,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "130.000",
+                            "mrp": "156.000",
+                            "total_price": "130.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T07:43:30.000000Z",
+                            "updated_at": "2026-06-02T07:43:30.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 10,
+                                "category_id": 2,
+                                "barcode": "10009",
+                                "item_code": "KAF-Q",
+                                "name": "Kandari Alfaham (Q)",
+                                "description": "Kandari Alfaham",
+                                "slug": "kandari-alfaham-q",
+                                "active": 1,
+                                "price": "130.000",
+                                "mrp": "156.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:42:20",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 10,
+                                        "product_id": 10,
+                                        "language_id": 1,
+                                        "name": "Kandari Alfaham (Q)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 10,
+                                        "product_id": 10,
+                                        "product_variant_id": null,
+                                        "file_path": "44",
+                                        "title": "Kandari Alfaham (Q)",
+                                        "alt": "Kandari Alfaham (Q)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T12:12:20.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 128,
+                "cart_id": 120,
+                "address_id": 23,
+                "order_date": "2026-06-02 13:01:47",
+                "order_number": "ORD-000121",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "paid",
+                "delivery_status": null,
+                "status": "confirmed",
+                "sub_total": "720.000",
+                "discount": "0.000",
+                "grand_total": "720.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 13:01:47",
+                "updated_at": "2026-06-02 13:02:16",
+                "deleted_at": null,
+                "customer_name": "Muhammed Mubashir",
+                "store_name": "Luzine Bakes Store",
+                "created_by": "Muhammed Mubashir",
+                "orderProps": {
+                    "ORDER_STATUS": "confirmed - 2026-06-02 13:02:16",
+                    "ORDER_TOKEN_NUMBER": 186,
+                    "DELIVERY_ADDRESS": {
+                        "city": null,
+                        "name": "oooooooooj",
+                        "phone": "8089433955",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "hjjkjn",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "8089433955",
+                    "CUSTOMER_EMAIL": "muhammedmubashir720@gmail.com"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 257,
+                            "cart_id": 120,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 9,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Kandari Alfaham (H)"
+                                }
+                            ],
+                            "product_name": "Kandari Alfaham (H)",
+                            "product_slug": "kandari-alfaham-h",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "3.000",
+                            "total_price": "720.000",
+                            "unit_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/q3LOA94g2Lpf1Z2OieDb6lHgGayZmm8w2CoPp8zN.jpg"
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 720,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "9a6f54a49fea63a407c0ac57a4e9c72e16883cab63034055991d29605693e5d6",
+                "token_number": 186,
+                "order_props": [
+                    {
+                        "id": 741,
+                        "order_id": 128,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 13:01:47\"",
+                        "created_at": "2026-06-02T07:31:47.000000Z",
+                        "updated_at": "2026-06-02T07:31:47.000000Z"
+                    },
+                    {
+                        "id": 742,
+                        "order_id": 128,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "186",
+                        "created_at": "2026-06-02T07:31:47.000000Z",
+                        "updated_at": "2026-06-02T07:31:47.000000Z"
+                    },
+                    {
+                        "id": 743,
+                        "order_id": 128,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": null, \"name\": \"oooooooooj\", \"phone\": \"8089433955\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"hjjkjn\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T07:31:47.000000Z",
+                        "updated_at": "2026-06-02T07:31:47.000000Z"
+                    },
+                    {
+                        "id": 744,
+                        "order_id": 128,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"8089433955\"",
+                        "created_at": "2026-06-02T07:31:47.000000Z",
+                        "updated_at": "2026-06-02T07:31:47.000000Z"
+                    },
+                    {
+                        "id": 745,
+                        "order_id": 128,
+                        "code": "CUSTOMER_EMAIL",
+                        "value": "\"muhammedmubashir720@gmail.com\"",
+                        "created_at": "2026-06-02T07:31:47.000000Z",
+                        "updated_at": "2026-06-02T07:31:47.000000Z"
+                    },
+                    {
+                        "id": 746,
+                        "order_id": 128,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 13:01:47\"",
+                        "created_at": "2026-06-02T07:31:47.000000Z",
+                        "updated_at": "2026-06-02T07:31:47.000000Z"
+                    },
+                    {
+                        "id": 747,
+                        "order_id": 128,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 13:02:16\"",
+                        "created_at": "2026-06-02T07:32:16.000000Z",
+                        "updated_at": "2026-06-02T07:32:16.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 120,
+                    "customer_id": 17,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 38,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 12:58:25",
+                    "updated_at": "2026-06-02 13:02:16",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 257,
+                            "cart_id": 120,
+                            "category_id": 2,
+                            "product_id": 9,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "3.000",
+                            "unit_price": "240.000",
+                            "mrp": "288.000",
+                            "total_price": "720.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T07:28:25.000000Z",
+                            "updated_at": "2026-06-02T07:31:46.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 9,
+                                "category_id": 2,
+                                "barcode": "10008",
+                                "item_code": "KAF-H",
+                                "name": "Kandari Alfaham (H)",
+                                "description": "Kandari Alfaham ",
+                                "slug": "kandari-alfaham-h",
+                                "active": 1,
+                                "price": "240.000",
+                                "mrp": "288.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:41:44",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "language_id": 1,
+                                        "name": "Kandari Alfaham (H)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "product_variant_id": null,
+                                        "file_path": "44",
+                                        "title": "Kandari Alfaham (H)",
+                                        "alt": "Kandari Alfaham (H)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T12:11:44.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 124,
+                "cart_id": 116,
+                "address_id": 30,
+                "order_date": "2026-06-02 12:08:56",
+                "order_number": "ORD-000117",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "pending",
+                "delivery_status": null,
+                "status": "confirmed",
+                "sub_total": "240.000",
+                "discount": "0.000",
+                "grand_total": "240.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 12:08:56",
+                "updated_at": "2026-06-02 12:08:56",
+                "deleted_at": null,
+                "customer_name": "Muhammed Mubashir",
+                "store_name": "Luzine Bakes Store",
+                "created_by": "Muhammed Mubashir",
+                "orderProps": {
+                    "ORDER_STATUS": "confirmed - 2026-06-02 12:08:56",
+                    "ORDER_TOKEN_NUMBER": 182,
+                    "DELIVERY_ADDRESS": {
+                        "city": null,
+                        "name": "Muhammed Mubashir",
+                        "phone": "8089433955",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "rwfscd",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "8089433955",
+                    "CUSTOMER_EMAIL": "muhammedmubashir720@gmail.com"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 245,
+                            "cart_id": 116,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 9,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Kandari Alfaham (H)"
+                                }
+                            ],
+                            "product_name": "Kandari Alfaham (H)",
+                            "product_slug": "kandari-alfaham-h",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "1.000",
+                            "total_price": "240.000",
+                            "unit_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/q3LOA94g2Lpf1Z2OieDb6lHgGayZmm8w2CoPp8zN.jpg"
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 240,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "5b78184c1dbd0efcc99dd4b101de3f149ae03c9ee9d632ae4cfcd19187da0248",
+                "token_number": 182,
+                "order_props": [
+                    {
+                        "id": 709,
+                        "order_id": 124,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:08:56\"",
+                        "created_at": "2026-06-02T06:38:56.000000Z",
+                        "updated_at": "2026-06-02T06:38:56.000000Z"
+                    },
+                    {
+                        "id": 710,
+                        "order_id": 124,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "182",
+                        "created_at": "2026-06-02T06:38:56.000000Z",
+                        "updated_at": "2026-06-02T06:38:56.000000Z"
+                    },
+                    {
+                        "id": 711,
+                        "order_id": 124,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": null, \"name\": \"Muhammed Mubashir\", \"phone\": \"8089433955\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"rwfscd\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T06:38:56.000000Z",
+                        "updated_at": "2026-06-02T06:38:56.000000Z"
+                    },
+                    {
+                        "id": 712,
+                        "order_id": 124,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"8089433955\"",
+                        "created_at": "2026-06-02T06:38:56.000000Z",
+                        "updated_at": "2026-06-02T06:38:56.000000Z"
+                    },
+                    {
+                        "id": 713,
+                        "order_id": 124,
+                        "code": "CUSTOMER_EMAIL",
+                        "value": "\"muhammedmubashir720@gmail.com\"",
+                        "created_at": "2026-06-02T06:38:56.000000Z",
+                        "updated_at": "2026-06-02T06:38:56.000000Z"
+                    },
+                    {
+                        "id": 714,
+                        "order_id": 124,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:08:56\"",
+                        "created_at": "2026-06-02T06:38:56.000000Z",
+                        "updated_at": "2026-06-02T06:38:56.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 116,
+                    "customer_id": 17,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 38,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 12:08:55",
+                    "updated_at": "2026-06-02 12:08:56",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 245,
+                            "cart_id": 116,
+                            "category_id": 2,
+                            "product_id": 9,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "240.000",
+                            "mrp": "288.000",
+                            "total_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T06:38:55.000000Z",
+                            "updated_at": "2026-06-02T06:38:55.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 9,
+                                "category_id": 2,
+                                "barcode": "10008",
+                                "item_code": "KAF-H",
+                                "name": "Kandari Alfaham (H)",
+                                "description": "Kandari Alfaham ",
+                                "slug": "kandari-alfaham-h",
+                                "active": 1,
+                                "price": "240.000",
+                                "mrp": "288.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:41:44",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "language_id": 1,
+                                        "name": "Kandari Alfaham (H)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "product_variant_id": null,
+                                        "file_path": "44",
+                                        "title": "Kandari Alfaham (H)",
+                                        "alt": "Kandari Alfaham (H)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T12:11:44.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 123,
+                "cart_id": 115,
+                "address_id": 30,
+                "order_date": "2026-06-02 12:08:13",
+                "order_number": "ORD-000116",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "pending",
+                "delivery_status": null,
+                "status": "confirmed",
+                "sub_total": "240.000",
+                "discount": "0.000",
+                "grand_total": "240.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 12:08:13",
+                "updated_at": "2026-06-02 12:08:13",
+                "deleted_at": null,
+                "customer_name": "Muhammed Mubashir",
+                "store_name": "Luzine Bakes Store",
+                "created_by": "Muhammed Mubashir",
+                "orderProps": {
+                    "ORDER_STATUS": "confirmed - 2026-06-02 12:08:13",
+                    "ORDER_TOKEN_NUMBER": 181,
+                    "DELIVERY_ADDRESS": {
+                        "city": null,
+                        "name": "Muhammed Mubashir",
+                        "phone": "8089433955",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "rwfscd",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "8089433955",
+                    "CUSTOMER_EMAIL": "muhammedmubashir720@gmail.com"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 244,
+                            "cart_id": 115,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 9,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Kandari Alfaham (H)"
+                                }
+                            ],
+                            "product_name": "Kandari Alfaham (H)",
+                            "product_slug": "kandari-alfaham-h",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "1.000",
+                            "total_price": "240.000",
+                            "unit_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/q3LOA94g2Lpf1Z2OieDb6lHgGayZmm8w2CoPp8zN.jpg"
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 240,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "6930e32ba35ea7a2f0e103c995cab901e300880986ead72d8598a9ec36a80759",
+                "token_number": 181,
+                "order_props": [
+                    {
+                        "id": 703,
+                        "order_id": 123,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:08:13\"",
+                        "created_at": "2026-06-02T06:38:13.000000Z",
+                        "updated_at": "2026-06-02T06:38:13.000000Z"
+                    },
+                    {
+                        "id": 704,
+                        "order_id": 123,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "181",
+                        "created_at": "2026-06-02T06:38:13.000000Z",
+                        "updated_at": "2026-06-02T06:38:13.000000Z"
+                    },
+                    {
+                        "id": 705,
+                        "order_id": 123,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": null, \"name\": \"Muhammed Mubashir\", \"phone\": \"8089433955\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"rwfscd\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T06:38:13.000000Z",
+                        "updated_at": "2026-06-02T06:38:13.000000Z"
+                    },
+                    {
+                        "id": 706,
+                        "order_id": 123,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"8089433955\"",
+                        "created_at": "2026-06-02T06:38:13.000000Z",
+                        "updated_at": "2026-06-02T06:38:13.000000Z"
+                    },
+                    {
+                        "id": 707,
+                        "order_id": 123,
+                        "code": "CUSTOMER_EMAIL",
+                        "value": "\"muhammedmubashir720@gmail.com\"",
+                        "created_at": "2026-06-02T06:38:13.000000Z",
+                        "updated_at": "2026-06-02T06:38:13.000000Z"
+                    },
+                    {
+                        "id": 708,
+                        "order_id": 123,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:08:13\"",
+                        "created_at": "2026-06-02T06:38:13.000000Z",
+                        "updated_at": "2026-06-02T06:38:13.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 115,
+                    "customer_id": 17,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 38,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 12:08:12",
+                    "updated_at": "2026-06-02 12:08:13",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 244,
+                            "cart_id": 115,
+                            "category_id": 2,
+                            "product_id": 9,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "240.000",
+                            "mrp": "288.000",
+                            "total_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T06:38:12.000000Z",
+                            "updated_at": "2026-06-02T06:38:12.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 9,
+                                "category_id": 2,
+                                "barcode": "10008",
+                                "item_code": "KAF-H",
+                                "name": "Kandari Alfaham (H)",
+                                "description": "Kandari Alfaham ",
+                                "slug": "kandari-alfaham-h",
+                                "active": 1,
+                                "price": "240.000",
+                                "mrp": "288.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:41:44",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "language_id": 1,
+                                        "name": "Kandari Alfaham (H)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "product_variant_id": null,
+                                        "file_path": "44",
+                                        "title": "Kandari Alfaham (H)",
+                                        "alt": "Kandari Alfaham (H)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T12:11:44.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 122,
+                "cart_id": 114,
+                "address_id": 30,
+                "order_date": "2026-06-02 12:06:38",
+                "order_number": "ORD-000115",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "pending",
+                "delivery_status": null,
+                "status": "confirmed",
+                "sub_total": "240.000",
+                "discount": "0.000",
+                "grand_total": "240.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 12:06:38",
+                "updated_at": "2026-06-02 12:06:38",
+                "deleted_at": null,
+                "customer_name": "Muhammed Mubashir",
+                "store_name": "Luzine Bakes Store",
+                "created_by": "Muhammed Mubashir",
+                "orderProps": {
+                    "ORDER_STATUS": "confirmed - 2026-06-02 12:06:38",
+                    "ORDER_TOKEN_NUMBER": 180,
+                    "DELIVERY_ADDRESS": {
+                        "city": null,
+                        "name": "Muhammed Mubashir",
+                        "phone": "8089433955",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "rwfscd",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "8089433955",
+                    "CUSTOMER_EMAIL": "muhammedmubashir720@gmail.com"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 243,
+                            "cart_id": 114,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 9,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Kandari Alfaham (H)"
+                                }
+                            ],
+                            "product_name": "Kandari Alfaham (H)",
+                            "product_slug": "kandari-alfaham-h",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "1.000",
+                            "total_price": "240.000",
+                            "unit_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/q3LOA94g2Lpf1Z2OieDb6lHgGayZmm8w2CoPp8zN.jpg"
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 240,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "9f0ab45666babcac7b4b9dcc4f49306ad361da9ce03500bfc2c786f8fbc8202e",
+                "token_number": 180,
+                "order_props": [
+                    {
+                        "id": 697,
+                        "order_id": 122,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:06:38\"",
+                        "created_at": "2026-06-02T06:36:38.000000Z",
+                        "updated_at": "2026-06-02T06:36:38.000000Z"
+                    },
+                    {
+                        "id": 698,
+                        "order_id": 122,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "180",
+                        "created_at": "2026-06-02T06:36:38.000000Z",
+                        "updated_at": "2026-06-02T06:36:38.000000Z"
+                    },
+                    {
+                        "id": 699,
+                        "order_id": 122,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": null, \"name\": \"Muhammed Mubashir\", \"phone\": \"8089433955\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"rwfscd\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T06:36:38.000000Z",
+                        "updated_at": "2026-06-02T06:36:38.000000Z"
+                    },
+                    {
+                        "id": 700,
+                        "order_id": 122,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"8089433955\"",
+                        "created_at": "2026-06-02T06:36:38.000000Z",
+                        "updated_at": "2026-06-02T06:36:38.000000Z"
+                    },
+                    {
+                        "id": 701,
+                        "order_id": 122,
+                        "code": "CUSTOMER_EMAIL",
+                        "value": "\"muhammedmubashir720@gmail.com\"",
+                        "created_at": "2026-06-02T06:36:38.000000Z",
+                        "updated_at": "2026-06-02T06:36:38.000000Z"
+                    },
+                    {
+                        "id": 702,
+                        "order_id": 122,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:06:38\"",
+                        "created_at": "2026-06-02T06:36:38.000000Z",
+                        "updated_at": "2026-06-02T06:36:38.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 114,
+                    "customer_id": 17,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 38,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 12:06:37",
+                    "updated_at": "2026-06-02 12:06:38",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 243,
+                            "cart_id": 114,
+                            "category_id": 2,
+                            "product_id": 9,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "240.000",
+                            "mrp": "288.000",
+                            "total_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T06:36:37.000000Z",
+                            "updated_at": "2026-06-02T06:36:37.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 9,
+                                "category_id": 2,
+                                "barcode": "10008",
+                                "item_code": "KAF-H",
+                                "name": "Kandari Alfaham (H)",
+                                "description": "Kandari Alfaham ",
+                                "slug": "kandari-alfaham-h",
+                                "active": 1,
+                                "price": "240.000",
+                                "mrp": "288.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:41:44",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "language_id": 1,
+                                        "name": "Kandari Alfaham (H)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "product_variant_id": null,
+                                        "file_path": "44",
+                                        "title": "Kandari Alfaham (H)",
+                                        "alt": "Kandari Alfaham (H)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T12:11:44.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 121,
+                "cart_id": 113,
+                "address_id": 23,
+                "order_date": "2026-06-02 12:01:02",
+                "order_number": "ORD-000114",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "paid",
+                "delivery_status": null,
+                "status": "confirmed",
+                "sub_total": "240.000",
+                "discount": "0.000",
+                "grand_total": "240.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 12:01:02",
+                "updated_at": "2026-06-02 12:03:30",
+                "deleted_at": null,
+                "customer_name": "Muhammed Mubashir",
+                "store_name": "Luzine Bakes Store",
+                "created_by": "Muhammed Mubashir",
+                "orderProps": {
+                    "ORDER_STATUS": "confirmed - 2026-06-02 12:03:30",
+                    "ORDER_TOKEN_NUMBER": 179,
+                    "DELIVERY_ADDRESS": {
+                        "city": null,
+                        "name": "oooooooooj",
+                        "phone": "8089433955",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "hjjkjn",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "8089433955",
+                    "CUSTOMER_EMAIL": "muhammedmubashir720@gmail.com"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 241,
+                            "cart_id": 113,
+                            "customer_id": null,
+                            "category_id": 2,
+                            "store_id": null,
+                            "product_id": 9,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "Kandari Alfaham (H)"
+                                }
+                            ],
+                            "product_name": "Kandari Alfaham (H)",
+                            "product_slug": "kandari-alfaham-h",
+                            "category_name": "Al-faham",
+                            "category_slug": "al-faham",
+                            "quantity": "1.000",
+                            "total_price": "240.000",
+                            "unit_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "BUCKET",
+                            "product_sale_unit": null,
+                            "product_image_url": "https://erp.cloudposai.in/storage/q3LOA94g2Lpf1Z2OieDb6lHgGayZmm8w2CoPp8zN.jpg"
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 240,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "fb33b3f10ee2c4095c885d3cce712f566379ddd9a9882d642b2db90cf8180914",
+                "token_number": 179,
+                "order_props": [
+                    {
+                        "id": 688,
+                        "order_id": 121,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:01:03\"",
+                        "created_at": "2026-06-02T06:31:02.000000Z",
+                        "updated_at": "2026-06-02T06:31:03.000000Z"
+                    },
+                    {
+                        "id": 689,
+                        "order_id": 121,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "179",
+                        "created_at": "2026-06-02T06:31:02.000000Z",
+                        "updated_at": "2026-06-02T06:31:02.000000Z"
+                    },
+                    {
+                        "id": 690,
+                        "order_id": 121,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": null, \"name\": \"oooooooooj\", \"phone\": \"8089433955\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"hjjkjn\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T06:31:02.000000Z",
+                        "updated_at": "2026-06-02T06:31:02.000000Z"
+                    },
+                    {
+                        "id": 691,
+                        "order_id": 121,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"8089433955\"",
+                        "created_at": "2026-06-02T06:31:02.000000Z",
+                        "updated_at": "2026-06-02T06:31:02.000000Z"
+                    },
+                    {
+                        "id": 692,
+                        "order_id": 121,
+                        "code": "CUSTOMER_EMAIL",
+                        "value": "\"muhammedmubashir720@gmail.com\"",
+                        "created_at": "2026-06-02T06:31:02.000000Z",
+                        "updated_at": "2026-06-02T06:31:02.000000Z"
+                    },
+                    {
+                        "id": 693,
+                        "order_id": 121,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:01:03\"",
+                        "created_at": "2026-06-02T06:31:03.000000Z",
+                        "updated_at": "2026-06-02T06:31:03.000000Z"
+                    },
+                    {
+                        "id": 696,
+                        "order_id": 121,
+                        "code": "ORDER_STATUS",
+                        "value": "\"confirmed - 2026-06-02 12:03:30\"",
+                        "created_at": "2026-06-02T06:33:30.000000Z",
+                        "updated_at": "2026-06-02T06:33:30.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 113,
+                    "customer_id": 17,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 38,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 12:01:02",
+                    "updated_at": "2026-06-02 12:03:30",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 241,
+                            "cart_id": 113,
+                            "category_id": 2,
+                            "product_id": 9,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "240.000",
+                            "mrp": "288.000",
+                            "total_price": "240.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T06:31:02.000000Z",
+                            "updated_at": "2026-06-02T06:31:02.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 9,
+                                "category_id": 2,
+                                "barcode": "10008",
+                                "item_code": "KAF-H",
+                                "name": "Kandari Alfaham (H)",
+                                "description": "Kandari Alfaham ",
+                                "slug": "kandari-alfaham-h",
+                                "active": 1,
+                                "price": "240.000",
+                                "mrp": "288.000",
+                                "purchase_price": "0.000",
+                                "unit": "186",
+                                "sku": null,
+                                "reorder_level": 0,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-21 21:20:52",
+                                "updated_at": "2026-05-22 17:41:44",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "language_id": 1,
+                                        "name": "Kandari Alfaham (H)",
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-21T15:50:52.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 2,
+                                    "name": "Al-faham",
+                                    "slug": "al-faham",
+                                    "sort_order": 1,
+                                    "description": "Alfaham",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 0,
+                                    "parent_id": null,
+                                    "image": "42",
+                                    "icon": "42",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T15:24:00.000000Z",
+                                    "updated_at": "2026-05-25T04:11:34.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 9,
+                                        "product_id": 9,
+                                        "product_variant_id": null,
+                                        "file_path": "44",
+                                        "title": "Kandari Alfaham (H)",
+                                        "alt": "Kandari Alfaham (H)",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-21T15:50:52.000000Z",
+                                        "updated_at": "2026-05-22T12:11:44.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 120,
+                "cart_id": 112,
+                "address_id": 32,
+                "order_date": "2026-06-02 11:12:56",
+                "order_number": "ORD-000113",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "pending",
+                "delivery_status": null,
+                "status": "new",
+                "sub_total": "100.000",
+                "discount": "0.000",
+                "grand_total": "100.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 11:12:56",
+                "updated_at": "2026-06-02 11:12:56",
+                "deleted_at": null,
+                "customer_name": null,
+                "store_name": "Luzine Bakes Store",
+                "created_by": null,
+                "orderProps": {
+                    "ORDER_STATUS": "new - 2026-06-02 11:12:56",
+                    "ORDER_TOKEN_NUMBER": 178,
+                    "DELIVERY_ADDRESS": {
+                        "city": "Perinthalmanna",
+                        "name": "Kahab",
+                        "phone": "9946217945",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "H2",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "9946217945"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 240,
+                            "cart_id": 112,
+                            "customer_id": null,
+                            "category_id": 19,
+                            "store_id": null,
+                            "product_id": 167,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "7UP 2 L"
+                                }
+                            ],
+                            "product_name": "7UP 2 L",
+                            "product_slug": "7up-2-l",
+                            "category_name": "Soft Drinks",
+                            "category_slug": "soft-drinks",
+                            "quantity": "1.000",
+                            "total_price": "100.000",
+                            "unit_price": "100.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "PCS",
+                            "product_sale_unit": null,
+                            "product_image_url": null
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 100,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "a164a9c53880a828fd3d8cd2af695d8aa2d55d6d6c14526b48b256e91e77886e",
+                "token_number": 178,
+                "order_props": [
+                    {
+                        "id": 680,
+                        "order_id": 120,
+                        "code": "ORDER_STATUS",
+                        "value": "\"new - 2026-06-02 11:12:56\"",
+                        "created_at": "2026-06-02T05:42:56.000000Z",
+                        "updated_at": "2026-06-02T05:42:56.000000Z"
+                    },
+                    {
+                        "id": 681,
+                        "order_id": 120,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "178",
+                        "created_at": "2026-06-02T05:42:56.000000Z",
+                        "updated_at": "2026-06-02T05:42:56.000000Z"
+                    },
+                    {
+                        "id": 682,
+                        "order_id": 120,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": \"Perinthalmanna\", \"name\": \"Kahab\", \"phone\": \"9946217945\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"H2\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T05:42:56.000000Z",
+                        "updated_at": "2026-06-02T05:42:56.000000Z"
+                    },
+                    {
+                        "id": 683,
+                        "order_id": 120,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"9946217945\"",
+                        "created_at": "2026-06-02T05:42:56.000000Z",
+                        "updated_at": "2026-06-02T05:42:56.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 112,
+                    "customer_id": 31,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 58,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 11:12:56",
+                    "updated_at": "2026-06-02 11:12:56",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 240,
+                            "cart_id": 112,
+                            "category_id": 19,
+                            "product_id": 167,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "100.000",
+                            "mrp": "100.000",
+                            "total_price": "100.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T05:42:56.000000Z",
+                            "updated_at": "2026-06-02T05:42:56.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 167,
+                                "category_id": 19,
+                                "barcode": "10169",
+                                "item_code": "1057",
+                                "name": "7UP 2 L",
+                                "description": "7UP 2 L",
+                                "slug": "7up-2-l",
+                                "active": 1,
+                                "price": "100.000",
+                                "mrp": "100.000",
+                                "purchase_price": "95.000",
+                                "unit": "295",
+                                "sku": null,
+                                "reorder_level": 5,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-28 16:35:37",
+                                "updated_at": "2026-05-28 20:13:47",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 167,
+                                        "product_id": 167,
+                                        "language_id": 1,
+                                        "name": "7UP 2 L",
+                                        "created_at": "2026-05-28T11:05:37.000000Z",
+                                        "updated_at": "2026-05-28T11:05:37.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 19,
+                                    "name": "Soft Drinks",
+                                    "slug": "soft-drinks",
+                                    "sort_order": 9,
+                                    "description": "Soft Drinks",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 1,
+                                    "parent_id": null,
+                                    "image": "13",
+                                    "icon": "13",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T18:16:38.000000Z",
+                                    "updated_at": "2026-05-23T09:58:03.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 167,
+                                        "product_id": 167,
+                                        "product_variant_id": null,
+                                        "file_path": "1",
+                                        "title": "7UP 2 L",
+                                        "alt": "7UP 2 L",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-28T11:05:37.000000Z",
+                                        "updated_at": "2026-05-28T11:05:37.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 119,
+                "cart_id": 111,
+                "address_id": 32,
+                "order_date": "2026-06-02 11:12:26",
+                "order_number": "ORD-000112",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "pending",
+                "delivery_status": null,
+                "status": "new",
+                "sub_total": "100.000",
+                "discount": "0.000",
+                "grand_total": "100.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 11:12:26",
+                "updated_at": "2026-06-02 11:12:26",
+                "deleted_at": null,
+                "customer_name": null,
+                "store_name": "Luzine Bakes Store",
+                "created_by": null,
+                "orderProps": {
+                    "ORDER_STATUS": "new - 2026-06-02 11:12:26",
+                    "ORDER_TOKEN_NUMBER": 177,
+                    "DELIVERY_ADDRESS": {
+                        "city": "Perinthalmanna",
+                        "name": "Kahab",
+                        "phone": "9946217945",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "H2",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "9946217945"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 239,
+                            "cart_id": 111,
+                            "customer_id": null,
+                            "category_id": 19,
+                            "store_id": null,
+                            "product_id": 167,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "7UP 2 L"
+                                }
+                            ],
+                            "product_name": "7UP 2 L",
+                            "product_slug": "7up-2-l",
+                            "category_name": "Soft Drinks",
+                            "category_slug": "soft-drinks",
+                            "quantity": "1.000",
+                            "total_price": "100.000",
+                            "unit_price": "100.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "PCS",
+                            "product_sale_unit": null,
+                            "product_image_url": null
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 100,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "d505a50149e6bdaad73429217f6a27007610e6549c73955663521f80373553fd",
+                "token_number": 177,
+                "order_props": [
+                    {
+                        "id": 676,
+                        "order_id": 119,
+                        "code": "ORDER_STATUS",
+                        "value": "\"new - 2026-06-02 11:12:26\"",
+                        "created_at": "2026-06-02T05:42:26.000000Z",
+                        "updated_at": "2026-06-02T05:42:26.000000Z"
+                    },
+                    {
+                        "id": 677,
+                        "order_id": 119,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "177",
+                        "created_at": "2026-06-02T05:42:26.000000Z",
+                        "updated_at": "2026-06-02T05:42:26.000000Z"
+                    },
+                    {
+                        "id": 678,
+                        "order_id": 119,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": \"Perinthalmanna\", \"name\": \"Kahab\", \"phone\": \"9946217945\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"H2\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T05:42:26.000000Z",
+                        "updated_at": "2026-06-02T05:42:26.000000Z"
+                    },
+                    {
+                        "id": 679,
+                        "order_id": 119,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"9946217945\"",
+                        "created_at": "2026-06-02T05:42:26.000000Z",
+                        "updated_at": "2026-06-02T05:42:26.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 111,
+                    "customer_id": 31,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 58,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 11:12:26",
+                    "updated_at": "2026-06-02 11:12:26",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 239,
+                            "cart_id": 111,
+                            "category_id": 19,
+                            "product_id": 167,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "100.000",
+                            "mrp": "100.000",
+                            "total_price": "100.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T05:42:26.000000Z",
+                            "updated_at": "2026-06-02T05:42:26.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 167,
+                                "category_id": 19,
+                                "barcode": "10169",
+                                "item_code": "1057",
+                                "name": "7UP 2 L",
+                                "description": "7UP 2 L",
+                                "slug": "7up-2-l",
+                                "active": 1,
+                                "price": "100.000",
+                                "mrp": "100.000",
+                                "purchase_price": "95.000",
+                                "unit": "295",
+                                "sku": null,
+                                "reorder_level": 5,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-28 16:35:37",
+                                "updated_at": "2026-05-28 20:13:47",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 167,
+                                        "product_id": 167,
+                                        "language_id": 1,
+                                        "name": "7UP 2 L",
+                                        "created_at": "2026-05-28T11:05:37.000000Z",
+                                        "updated_at": "2026-05-28T11:05:37.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 19,
+                                    "name": "Soft Drinks",
+                                    "slug": "soft-drinks",
+                                    "sort_order": 9,
+                                    "description": "Soft Drinks",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 1,
+                                    "parent_id": null,
+                                    "image": "13",
+                                    "icon": "13",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T18:16:38.000000Z",
+                                    "updated_at": "2026-05-23T09:58:03.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 167,
+                                        "product_id": 167,
+                                        "product_variant_id": null,
+                                        "file_path": "1",
+                                        "title": "7UP 2 L",
+                                        "alt": "7UP 2 L",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-28T11:05:37.000000Z",
+                                        "updated_at": "2026-05-28T11:05:37.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            },
+            {
+                "id": 118,
+                "cart_id": 110,
+                "address_id": 32,
+                "order_date": "2026-06-02 11:04:09",
+                "order_number": "ORD-000111",
+                "payment_id": [
+                    98
+                ],
+                "payment_method": [
+                    "UPI"
+                ],
+                "payment_status": "pending",
+                "delivery_status": null,
+                "status": "new",
+                "sub_total": "100.000",
+                "discount": "0.000",
+                "grand_total": "100.000",
+                "tax": "0.000",
+                "shipping_cost": null,
+                "source_type": "web",
+                "delivery_method_id": 2,
+                "company_id": 2,
+                "created_at": "2026-06-02 11:04:09",
+                "updated_at": "2026-06-02 11:04:09",
+                "deleted_at": null,
+                "customer_name": null,
+                "store_name": "Luzine Bakes Store",
+                "created_by": null,
+                "orderProps": {
+                    "ORDER_STATUS": "new - 2026-06-02 11:04:09",
+                    "ORDER_TOKEN_NUMBER": 176,
+                    "DELIVERY_ADDRESS": {
+                        "city": "Perinthalmanna",
+                        "name": "Kahab",
+                        "phone": "9946217945",
+                        "state": {
+                            "id": 17,
+                            "name": "Kerala",
+                            "country_id": 100,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "state_code": "KL",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "address": "H2",
+                        "pincode": {
+                            "id": 3385,
+                            "name": "Malappuram",
+                            "status": "Y",
+                            "pin_code": "676505",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "deleted_at": null,
+                            "updated_at": "2026-05-21T06:54:59.000000Z",
+                            "district_id": 205
+                        },
+                        "district": {
+                            "id": 205,
+                            "name": "Malappuram",
+                            "state_id": 17,
+                            "created_at": "2026-05-21T06:54:59.000000Z",
+                            "updated_at": "2026-05-21T06:54:59.000000Z"
+                        },
+                        "landmark": null
+                    },
+                    "CUSTOMER_PHONE": "9946217945"
+                },
+                "cart_items": {
+                    "cart_items": [
+                        {
+                            "id": 238,
+                            "cart_id": 110,
+                            "customer_id": null,
+                            "category_id": 19,
+                            "store_id": null,
+                            "product_id": 167,
+                            "product_variant_id": null,
+                            "names": [
+                                {
+                                    "language": "English",
+                                    "code": "en",
+                                    "name": "7UP 2 L"
+                                }
+                            ],
+                            "product_name": "7UP 2 L",
+                            "product_slug": "7up-2-l",
+                            "category_name": "Soft Drinks",
+                            "category_slug": "soft-drinks",
+                            "quantity": "1.000",
+                            "total_price": "100.000",
+                            "unit_price": "100.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "variant_attributes": null,
+                            "comment": null,
+                            "unit_name": "PCS",
+                            "product_sale_unit": null,
+                            "product_image_url": null
+                        }
+                    ],
+                    "price_summary": {
+                        "grand_total": 100,
+                        "tax_total": 0,
+                        "taxes": []
+                    },
+                    "status_summary": []
+                },
+                "invoice_hash": "593b63ac90f8f92cd0c7b20dc51d8d6e96e15be68670e123bf38e90daf775739",
+                "token_number": 176,
+                "order_props": [
+                    {
+                        "id": 672,
+                        "order_id": 118,
+                        "code": "ORDER_STATUS",
+                        "value": "\"new - 2026-06-02 11:04:09\"",
+                        "created_at": "2026-06-02T05:34:09.000000Z",
+                        "updated_at": "2026-06-02T05:34:09.000000Z"
+                    },
+                    {
+                        "id": 673,
+                        "order_id": 118,
+                        "code": "ORDER_TOKEN_NUMBER",
+                        "value": "176",
+                        "created_at": "2026-06-02T05:34:09.000000Z",
+                        "updated_at": "2026-06-02T05:34:09.000000Z"
+                    },
+                    {
+                        "id": 674,
+                        "order_id": 118,
+                        "code": "DELIVERY_ADDRESS",
+                        "value": "{\"city\": \"Perinthalmanna\", \"name\": \"Kahab\", \"phone\": \"9946217945\", \"state\": {\"id\": 17, \"name\": \"Kerala\", \"country_id\": 100, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"state_code\": \"KL\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"address\": \"H2\", \"pincode\": {\"id\": 3385, \"name\": \"Malappuram\", \"status\": \"Y\", \"pin_code\": \"676505\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"deleted_at\": null, \"updated_at\": \"2026-05-21T06:54:59.000000Z\", \"district_id\": 205}, \"district\": {\"id\": 205, \"name\": \"Malappuram\", \"state_id\": 17, \"created_at\": \"2026-05-21T06:54:59.000000Z\", \"updated_at\": \"2026-05-21T06:54:59.000000Z\"}, \"landmark\": null}",
+                        "created_at": "2026-06-02T05:34:10.000000Z",
+                        "updated_at": "2026-06-02T05:34:10.000000Z"
+                    },
+                    {
+                        "id": 675,
+                        "order_id": 118,
+                        "code": "CUSTOMER_PHONE",
+                        "value": "\"9946217945\"",
+                        "created_at": "2026-06-02T05:34:10.000000Z",
+                        "updated_at": "2026-06-02T05:34:10.000000Z"
+                    }
+                ],
+                "cart": {
+                    "id": 110,
+                    "customer_id": 31,
+                    "store_id": 2,
+                    "status": "Y",
+                    "cart_type": "cart",
+                    "ip_address": null,
+                    "source_type": "web",
+                    "created_by": 58,
+                    "company_id": 2,
+                    "created_at": "2026-06-02 11:04:09",
+                    "updated_at": "2026-06-02 11:04:09",
+                    "deleted_at": null,
+                    "cart_items": [
+                        {
+                            "id": 238,
+                            "cart_id": 110,
+                            "category_id": 19,
+                            "product_id": 167,
+                            "product_sale_unit_id": null,
+                            "conversion_rate": "1.00",
+                            "product_stock_id": null,
+                            "quantity": "1.000",
+                            "unit_price": "100.000",
+                            "mrp": "100.000",
+                            "total_price": "100.000",
+                            "tax_rate": "0.000",
+                            "tax_amount": "0.000",
+                            "status": null,
+                            "comment": null,
+                            "deleted_at": null,
+                            "created_at": "2026-06-02T05:34:09.000000Z",
+                            "updated_at": "2026-06-02T05:34:09.000000Z",
+                            "product_variant_id": null,
+                            "variant_attributes": null,
+                            "product": {
+                                "id": 167,
+                                "category_id": 19,
+                                "barcode": "10169",
+                                "item_code": "1057",
+                                "name": "7UP 2 L",
+                                "description": "7UP 2 L",
+                                "slug": "7up-2-l",
+                                "active": 1,
+                                "price": "100.000",
+                                "mrp": "100.000",
+                                "purchase_price": "95.000",
+                                "unit": "295",
+                                "sku": null,
+                                "reorder_level": 5,
+                                "hsn_code": null,
+                                "user_id": 21,
+                                "company_id": 2,
+                                "created_at": "2026-05-28 16:35:37",
+                                "updated_at": "2026-05-28 20:13:47",
+                                "deleted_at": null,
+                                "product_names": [
+                                    {
+                                        "id": 167,
+                                        "product_id": 167,
+                                        "language_id": 1,
+                                        "name": "7UP 2 L",
+                                        "created_at": "2026-05-28T11:05:37.000000Z",
+                                        "updated_at": "2026-05-28T11:05:37.000000Z",
+                                        "deleted_at": null,
+                                        "language": {
+                                            "id": 1,
+                                            "name": "English",
+                                            "code": "en",
+                                            "type": "ltr",
+                                            "active": 1,
+                                            "created_at": "2026-05-21T06:55:02.000000Z",
+                                            "updated_at": "2026-05-21T06:55:02.000000Z",
+                                            "deleted_at": null
+                                        }
+                                    }
+                                ],
+                                "category": {
+                                    "id": 19,
+                                    "name": "Soft Drinks",
+                                    "slug": "soft-drinks",
+                                    "sort_order": 9,
+                                    "description": "Soft Drinks",
+                                    "active": true,
+                                    "is_sellable": 1,
+                                    "is_purchasable": 1,
+                                    "parent_id": null,
+                                    "image": "13",
+                                    "icon": "13",
+                                    "hsn_code": null,
+                                    "user_id": 21,
+                                    "company_id": 2,
+                                    "created_at": "2026-05-21T18:16:38.000000Z",
+                                    "updated_at": "2026-05-23T09:58:03.000000Z"
+                                },
+                                "product_attachments": [
+                                    {
+                                        "id": 167,
+                                        "product_id": 167,
+                                        "product_variant_id": null,
+                                        "file_path": "1",
+                                        "title": "7UP 2 L",
+                                        "alt": "7UP 2 L",
+                                        "is_primary": 1,
+                                        "created_at": "2026-05-28T11:05:37.000000Z",
+                                        "updated_at": "2026-05-28T11:05:37.000000Z",
+                                        "deleted_at": null
+                                    }
+                                ]
+                            },
+                            "product_sale_unit": null
+                        }
+                    ]
+                }
+            }
+        ],
+        "first_page_url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=1",
+        "from": 1,
+        "last_page": 5,
+        "last_page_url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=5",
+        "links": [
+            {
+                "url": null,
+                "label": "&laquo; Previous",
+                "active": false
+            },
+            {
+                "url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=1",
+                "label": "1",
+                "active": true
+            },
+            {
+                "url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=2",
+                "label": "2",
+                "active": false
+            },
+            {
+                "url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=3",
+                "label": "3",
+                "active": false
+            },
+            {
+                "url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=4",
+                "label": "4",
+                "active": false
+            },
+            {
+                "url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=5",
+                "label": "5",
+                "active": false
+            },
+            {
+                "url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=2",
+                "label": "Next &raquo;",
+                "active": false
+            }
+        ],
+        "next_page_url": "https://erp.cloudposai.in/api/v1/order/executive/list-orders?page=2",
+        "path": "https://erp.cloudposai.in/api/v1/order/executive/list-orders",
+        "per_page": 10,
+        "prev_page_url": null,
+        "to": 10,
+        "total": 50
+    }
+}
