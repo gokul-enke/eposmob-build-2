@@ -182,6 +182,7 @@ class SalesProvider with ChangeNotifier {
     String? filterStore,
     String? filterCreatedBy,
     int? page,
+    bool? filterOnlineSales,
   }) async {
     final queryParameters = <String, String>{};
 
@@ -212,6 +213,9 @@ class SalesProvider with ChangeNotifier {
       queryParameters['filter_created_by'] = filterCreatedBy;
     }
     if (page != null) queryParameters['page'] = page.toString();
+    if (filterOnlineSales != null) {
+      queryParameters['filter_online_sales'] = filterOnlineSales.toString();
+    }
 
     final uri = Uri.parse(APPUrl.getListOrder)
         .replace(queryParameters: queryParameters);

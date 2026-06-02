@@ -439,6 +439,9 @@ class _SideMenuState extends State<SideMenu> {
               final hasDayClosingPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.sales.day_closing.access');
+              final hasOnlineSalesPermission =
+                  roleProvider.currentUserHasPermissionSync(
+                      'menu.sales.online_sales.access');
               final isCompanyAdmin = userRole == 'company_admin';
 
               // Only show the expandable menu if user has at least one permission
@@ -446,7 +449,8 @@ class _SideMenuState extends State<SideMenu> {
                   !hasSalesPermission &&
                   !hasConfirmedOrdersPermission &&
                   !hasSalesReturnPermission &&
-                  !hasDayClosingPermission) {
+                  !hasDayClosingPermission &&
+                  !hasOnlineSalesPermission) {
                 return const SizedBox.shrink();
               }
 
@@ -467,11 +471,15 @@ class _SideMenuState extends State<SideMenu> {
                   onTapTitle5: () {
                     sideBarController.index.value = 84;
                   },
+                  onTapTitle6: () {
+                    sideBarController.index.value = 92;
+                  },
                   listTitle1: "Sales",
                   listTitle2: "Confirmed Orders",
                   listTitle3: "Sales Return",
                   listTitle4: "Day Sale Closing",
                   listTitle5: "Admin Day Sale records",
+                  listTitle6: "Online Orders",
 
                   // Permission-based visibility
                   showTitle1: hasSalesPermission,
@@ -479,6 +487,7 @@ class _SideMenuState extends State<SideMenu> {
                   showTitle3: hasSalesReturnPermission,
                   showTitle4: hasDayClosingPermission,
                   showTitle5: isCompanyAdmin && hasDayClosingPermission,
+                  showTitle6: hasOnlineSalesPermission || isCompanyAdmin,
                   icon: fa.FontAwesomeIcons.shoppingCart,
                   title: 'Sales',
                   onTap: () {
@@ -500,7 +509,8 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value == 54 ||
                       sideBarController.index.value == 78 ||
                       sideBarController.index.value == 79 ||
-                      sideBarController.index.value == 84,
+                      sideBarController.index.value == 84 ||
+                      sideBarController.index.value == 92,
                 ),
               );
             },
@@ -509,8 +519,8 @@ class _SideMenuState extends State<SideMenu> {
           // 5.5. QUOTATIONS (Index: 86)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider.currentUserHasPermissionSync(
-                  'menu.quotation.main.access');
+              final hasPermission = roleProvider
+                  .currentUserHasPermissionSync('menu.quotation.main.access');
 
               if (!hasPermission) {
                 return const SizedBox.shrink();
@@ -761,17 +771,16 @@ class _SideMenuState extends State<SideMenu> {
             builder: (context, roleProvider, child) {
               if (!roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.invoice.access') &&
-                  !roleProvider.currentUserHasPermissionSync(
-                      'page_ProformaInvoices')) {
+                  !roleProvider
+                      .currentUserHasPermissionSync('page_ProformaInvoices')) {
                 return const SizedBox.shrink();
               }
               // Check permissions for each sub-item
               final hasInvoicePermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.invoice.access');
-              final hasProformaPermission =
-                  roleProvider.currentUserHasPermissionSync(
-                      'page_ProformaInvoices');
+              final hasProformaPermission = roleProvider
+                  .currentUserHasPermissionSync('page_ProformaInvoices');
 
               // final hasReceiptsPermission =
               //     roleProvider.currentUserHasPermissionSync('page_Receipts') ||

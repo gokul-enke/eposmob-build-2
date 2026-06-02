@@ -74,6 +74,7 @@ class ListOrderModelData {
   final List<CartItem>? cartItems;
   final String? customerName;
   final String? invoiceHash;
+  final bool? isOnline;
 
   ListOrderModelData({
     this.id,
@@ -89,6 +90,7 @@ class ListOrderModelData {
     this.cartItems,
     this.customerName,
     this.invoiceHash,
+    this.isOnline,
   });
 
   factory ListOrderModelData.fromJson(Map<String, dynamic> json) {
@@ -140,6 +142,9 @@ class ListOrderModelData {
             : List<CartItem>.from(json["cart_items"]["cart_items"]
                 .map((x) => CartItem.fromJson(x))),
         invoiceHash: json["invoice_hash"],
+        isOnline: json["is_online"] == true ||
+            json["is_online"] == 1 ||
+            json["is_online"] == "1",
       );
     } catch (e, stackTrace) {
       debugPrint('=== ListOrderModelData.fromJson ERROR ===');
@@ -170,6 +175,7 @@ class ListOrderModelData {
             ? []
             : List<dynamic>.from(orderProps!.map((x) => x.toJson())),
         "invoice_hash": invoiceHash,
+        "is_online": isOnline,
       };
 }
 
