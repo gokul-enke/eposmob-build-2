@@ -1,12 +1,27 @@
 name: Release Linux CI
+
 on:
   push:
     tags:
       - v*
+
 permissions:
   contents: write
+
 jobs:
   build-and-release-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: eeezeeerp
+            url: "https://eeezeeerp.cloudposai.com"
+          - name: eposdemo
+            url: "https://eposdemo.yougoit.in"
+          - name: linetolinepos
+            url: "https://linetolinepos.yougoit.in"
+          - name: hypersouq
+            url: "https://epos.hypersouq.in"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,25 +49,25 @@ jobs:
         run: flutter pub get
 
       - name: Build Linux artifacts
-        run: flutter build linux --release -v
+        run: flutter build linux --release -v --dart-define=BASE_URL=${{ matrix.url }}
 
       - name: Package Linux bundle
         run: |
           cd build/linux/x64/release/bundle
-          tar -czf ../../EposMachine-linux-${{ github.ref_name }}.tar.gz .
+          tar -czf ../../cloudpos-${{ matrix.name }}-linux-${{ github.ref_name }}.tar.gz .
+
+      - name: Verify Linux package
+        run: ls -la build/linux/x64/
 
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
-          path: build/linux/x64/EposMachine-linux-${{ github.ref_name }}.tar.gz
-          name: EposMachine-linux-${{ github.ref_name }}.tar.gz
+          path: build/linux/x64/cloudpos-${{ matrix.name }}-linux-${{ github.ref_name }}.tar.gz
+          name: cloudpos-${{ matrix.name }}-linux-${{ github.ref_name }}.tar.gz
 
-      - name: Create Release
+      - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            build/linux/x64/EposMachine-linux-${{ github.ref_name }}.tar.gz
+          files: build/linux/x64/cloudpos-${{ matrix.name }}-linux-${{ github.ref_name }}.tar.gz
           draft: true
           prerelease: true
-          generate_release_notes: true
-
