@@ -2392,6 +2392,23 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (isStockEnabled &&
         sourceItem.selectedStock != null &&
+        quantityDifference > 0) {
+      final availableQuantity = getAvailableQuantityForSelection(
+        product: sourceItem.product,
+        selectedStock: sourceItem.selectedStock,
+        stockGroupIds: sourceItem.stockGroupIds,
+      );
+      if (availableQuantity < quantityDifference) {
+        debugPrint(
+          "Insufficient stock to change sale unit for productId=$productId: "
+          "needed=$quantityDifference, available=$availableQuantity",
+        );
+        return false;
+      }
+    }
+
+    if (isStockEnabled &&
+        sourceItem.selectedStock != null &&
         quantityDifference != 0) {
       if (quantityDifference > 0) {
         final reservationDeltas = _reserveStockForSelection(
