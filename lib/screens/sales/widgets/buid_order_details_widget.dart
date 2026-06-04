@@ -846,12 +846,13 @@ class OrderDetailWidget extends StatelessWidget {
       child: Table(
         columnWidths: const {
           0: FlexColumnWidth(0.5),
-          1: FlexColumnWidth(3.0),
-          2: FlexColumnWidth(1.1),
+          1: FlexColumnWidth(2.7),
+          2: FlexColumnWidth(1.0),
           3: FlexColumnWidth(0.6),
-          4: FlexColumnWidth(1.1),
-          5: FlexColumnWidth(1.0),
-          6: FlexColumnWidth(1.2),
+          4: FlexColumnWidth(0.8),
+          5: FlexColumnWidth(1.1),
+          6: FlexColumnWidth(1.0),
+          7: FlexColumnWidth(1.2),
         },
         children: [
           // Header Row
@@ -864,6 +865,7 @@ class OrderDetailWidget extends StatelessWidget {
               _buildTableCell('DESCRIPTION', isHeader: true),
               _buildTableCell('MRP', isHeader: true, align: TextAlign.right),
               _buildTableCell('QTY', isHeader: true, align: TextAlign.center),
+              _buildTableCell('UNIT', isHeader: true, align: TextAlign.center),
               _buildTableCell('RATE', isHeader: true, align: TextAlign.right),
               _buildTableCell('TAX', isHeader: true, align: TextAlign.right),
               _buildTableCell('AMOUNT', isHeader: true, align: TextAlign.right),
@@ -885,6 +887,7 @@ class OrderDetailWidget extends StatelessWidget {
                       align: TextAlign.right),
                   _buildTableCell('${_fmtQty(item.quantity)}',
                       align: TextAlign.center),
+                  _buildTableCell(_unitText(item), align: TextAlign.center),
                   _buildTableCell('$currency ${_fmt(item.unitPrice)}',
                       align: TextAlign.right),
                   _buildTableCell('$currency ${_fmt(item.taxAmount)}',
@@ -898,6 +901,20 @@ class OrderDetailWidget extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _unitText(OrderDetailsModelDataCartItem item) {
+    final saleUnitName = item.saleUnitName?.trim();
+    if (saleUnitName != null && saleUnitName.isNotEmpty) {
+      return saleUnitName;
+    }
+
+    final productUnit = item.productUnit?.trim();
+    if (productUnit != null && productUnit.isNotEmpty) {
+      return productUnit;
+    }
+
+    return '-';
   }
 
   String _fmtQty(dynamic val) {

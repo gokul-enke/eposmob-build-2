@@ -28,6 +28,10 @@ class AppSettings {
   final String freeDeliveryMinimumAmount;
   final bool itemCodeEnabled;
   final bool companyB2BEnabled;
+  final bool enableSendToKitchenButton;
+  final bool enableKotBillButton;
+  final bool kotBillAutoMarkServed;
+  final bool kotBillAllowedForDineIn;
 
   AppSettings({
     required this.barcodeSales,
@@ -57,6 +61,10 @@ class AppSettings {
     required this.freeDeliveryMinimumAmount,
     required this.itemCodeEnabled,
     required this.companyB2BEnabled,
+    required this.enableSendToKitchenButton,
+    required this.enableKotBillButton,
+    required this.kotBillAutoMarkServed,
+    required this.kotBillAllowedForDineIn,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -139,6 +147,14 @@ class AppSettings {
           settingsMap['FREE_DELIVERY_MINIMUM_AMOUNT']?['value'] ?? "",
       itemCodeEnabled: settingsMap['ITEM_CODE_ENABLED']?['status'] ?? false,
       companyB2BEnabled: settingsMap['B2B']?['status'] ?? false,
+      enableSendToKitchenButton:
+          settingsMap['ENABLE_SEND_TO_KITCHEN_BUTTON']?['status'] ?? true,
+      enableKotBillButton:
+          settingsMap['ENABLE_KOT_BILL_BUTTON']?['status'] ?? false,
+      kotBillAutoMarkServed:
+          settingsMap['KOT_BILL_AUTO_MARK_SERVED']?['status'] ?? false,
+      kotBillAllowedForDineIn:
+          settingsMap['KOT_BILL_ALLOWED_FOR_DINE_IN']?['status'] ?? false,
     );
   }
 
@@ -294,6 +310,30 @@ class AppSettings {
           "code": "B2B",
           "value": "",
           "status": companyB2BEnabled.toString(),
+        },
+        {
+          "name": "Enable Send To Kitchen Button",
+          "code": "ENABLE_SEND_TO_KITCHEN_BUTTON",
+          "value": "",
+          "status": enableSendToKitchenButton.toString(),
+        },
+        {
+          "name": "Enable KOT + Bill Button",
+          "code": "ENABLE_KOT_BILL_BUTTON",
+          "value": "",
+          "status": enableKotBillButton.toString(),
+        },
+        {
+          "name": "KOT + Bill Auto Mark Served",
+          "code": "KOT_BILL_AUTO_MARK_SERVED",
+          "value": "",
+          "status": kotBillAutoMarkServed.toString(),
+        },
+        {
+          "name": "KOT + Bill Allowed For Dine In",
+          "code": "KOT_BILL_ALLOWED_FOR_DINE_IN",
+          "value": "",
+          "status": kotBillAllowedForDineIn.toString(),
         },
       ],
     };

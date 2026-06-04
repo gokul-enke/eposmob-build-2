@@ -263,18 +263,30 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
   // Footer actions for current cart (New Order flow)
   Widget _buildCurrentCartActionButtons(List<LocalCartItem> cartItems) {
     final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
+    final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
     final showClearSaveActions = !_usesCounterOrderTabs;
     final hasSelectedTable = widget.tableId?.isNotEmpty ?? false;
     final hasKitchenOrderContext = hasSelectedTable ||
         (_usesCounterOrderTabs && _isSelectedDeliveryMethodDineIn);
-    final showSendToKitchen = hasKitchenOrderContext && hasInternet;
+    final kotBillEnabled = widget.allowCounterBilling &&
+        widget.isCounterBillingMode &&
+        (appSettings?.enableKotBillButton ?? false);
+    final kotBillAllowedForContext = !hasKitchenOrderContext ||
+        (appSettings?.kotBillAllowedForDineIn ?? false);
+    final showKotBillForKitchenContext =
+        kotBillEnabled && kotBillAllowedForContext && hasInternet;
+    final showSendToKitchen = hasKitchenOrderContext &&
+        hasInternet &&
+        (appSettings?.enableSendToKitchenButton ?? true);
+    final showKitchenActions =
+        showSendToKitchen || showKotBillForKitchenContext;
     final showConfirmOrder =
         _usesCounterOrderTabs && hasInternet && !hasKitchenOrderContext;
     final showOfflineSaveAndPrint = !hasInternet && !_usesCounterOrderTabs;
     final hasOfflineOrderContext = hasKitchenOrderContext ||
         (widget.allowCounterBilling && widget.isCounterBillingMode);
     final showFooterButtons = showClearSaveActions ||
-        showSendToKitchen ||
+        showKitchenActions ||
         showConfirmOrder ||
         showOfflineSaveAndPrint;
 
@@ -337,13 +349,16 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         ),
                       ),
                     ],
-                    if (showClearSaveActions && showSendToKitchen)
+                    if (showClearSaveActions && showKitchenActions)
                       const SizedBox(width: 8),
                     if (showSendToKitchen) ...[
                       Expanded(
-                        flex: showClearSaveActions ? 2 : 1,
+                        flex:
+                            showClearSaveActions || showKotBillForKitchenContext
+                                ? 1
+                                : 2,
                         child: _buildCurrentCartFooterButton(
-                          label: 'Send To Kitchen',
+                          label: 'Send Kitchen',
                           color: const Color(0xFF059669),
                           isDisabled: cartItems.isEmpty ||
                               widget.isLoadingPrint ||
@@ -353,14 +368,38 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         ),
                       ),
                     ],
-                    if ((showClearSaveActions || showSendToKitchen) &&
+                    if (showSendToKitchen && showKotBillForKitchenContext)
+                      const SizedBox(width: 8),
+                    if (showKotBillForKitchenContext) ...[
+                      Expanded(
+                        flex: showConfirmOrder
+                            ? 1
+                            : (showClearSaveActions || showSendToKitchen
+                                ? 1
+                                : 2),
+                        child: _buildCurrentCartFooterButton(
+                          label: 'KOT + BILL',
+                          color: const Color(0xFF7C3AED),
+                          isDisabled: cartItems.isEmpty ||
+                              widget.onKotBill == null ||
+                              widget.isLoadingKotBill,
+                          isLoading: widget.isLoadingKotBill,
+                          onTap: () => widget.onKotBill?.call(),
+                        ),
+                      ),
+                    ],
+                    if ((showClearSaveActions || showKitchenActions) &&
                         showConfirmOrder)
                       const SizedBox(width: 8),
                     if (showConfirmOrder) ...[
                       Expanded(
-                        flex: showClearSaveActions ? 2 : 1,
+                        flex: showKotBillForKitchenContext
+                            ? 1
+                            : (showClearSaveActions ? 2 : 1),
                         child: _buildCurrentCartFooterButton(
-                          label: 'Confirm Order',
+                          label: showKotBillForKitchenContext
+                              ? 'Confirm'
+                              : 'Confirm Order',
                           shortcutLabel: 'F2',
                           color: const Color(0xFF08C63F),
                           isDisabled: cartItems.isEmpty || _isLoadingConfirm,
@@ -370,7 +409,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                       ),
                     ],
                     if ((showClearSaveActions ||
-                            showSendToKitchen ||
+                            showKitchenActions ||
                             showConfirmOrder) &&
                         showOfflineSaveAndPrint)
                       const SizedBox(width: 8),

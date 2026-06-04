@@ -282,5 +282,161 @@ void main() {
       expect(payload.first['price'], 120.0);
       expect(payload.first['sale_unit_id'], 10);
     });
+
+    test('current payload for 2 CASE split as 16 reserved and 8 unreserved',
+        () {
+      final item = LocalCartItem(
+        product: buildProduct(),
+        quantity: 24,
+        price: 10,
+        mrp: 12,
+        selectedStock: Stock(id: 1),
+        saleUnitId: 10,
+        saleUnitName: 'CASE',
+        saleUnitConversionRate: 12,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 16),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      expect(payload, [
+        {
+          'product_id': 1,
+          'quantity': closeTo(1.333333, 0.000001),
+          'price': 120.0,
+          'mrp': 144.0,
+          'stock_id': 1,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
+        },
+        {
+          'product_id': 1,
+          'quantity': closeTo(0.666667, 0.000001),
+          'price': 120.0,
+          'mrp': 144.0,
+          'stock_id': null,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
+        },
+      ]);
+    });
+
+    test('current payload for 2 CASE fully reserved from one stock row', () {
+      final item = LocalCartItem(
+        product: buildProduct(),
+        quantity: 24,
+        price: 10,
+        mrp: 12,
+        selectedStock: Stock(id: 1),
+        saleUnitId: 10,
+        saleUnitName: 'CASE',
+        saleUnitConversionRate: 12,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 24),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      expect(payload, [
+        {
+          'product_id': 1,
+          'quantity': 2,
+          'price': 120.0,
+          'mrp': 144.0,
+          'stock_id': 1,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
+        },
+      ]);
+    });
+
+    test('current payload for 1 CASE split as 4 reserved and 8 unreserved',
+        () {
+      final item = LocalCartItem(
+        product: buildProduct(),
+        quantity: 12,
+        price: 10,
+        mrp: 12,
+        selectedStock: Stock(id: 1),
+        saleUnitId: 10,
+        saleUnitName: 'CASE',
+        saleUnitConversionRate: 12,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 4),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      expect(payload, [
+        {
+          'product_id': 1,
+          'quantity': closeTo(0.333333, 0.000001),
+          'price': 120.0,
+          'mrp': 144.0,
+          'stock_id': 1,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
+        },
+        {
+          'product_id': 1,
+          'quantity': closeTo(0.666667, 0.000001),
+          'price': 120.0,
+          'mrp': 144.0,
+          'stock_id': null,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
+        },
+      ]);
+    });
+
+    test('current payload for blocked stock case is empty only if item absent',
+        () {
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([]);
+
+      expect(payload, isEmpty);
+    });
+
+    test('current payload for 2 CASE split across two stock rows', () {
+      final item = LocalCartItem(
+        product: buildProduct(),
+        quantity: 24,
+        price: 10,
+        mrp: 12,
+        saleUnitId: 10,
+        saleUnitName: 'CASE',
+        saleUnitConversionRate: 12,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 16),
+          StockReservation(stockId: 2, quantity: 8),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      expect(payload, [
+        {
+          'product_id': 1,
+          'quantity': closeTo(1.333333, 0.000001),
+          'price': 120.0,
+          'mrp': 144.0,
+          'stock_id': 1,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
+        },
+        {
+          'product_id': 1,
+          'quantity': closeTo(0.666667, 0.000001),
+          'price': 120.0,
+          'mrp': 144.0,
+          'stock_id': 2,
+          'sale_unit_id': 10,
+          'product_sale_unit_id': 10,
+        },
+      ]);
+    });
   });
 }

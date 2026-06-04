@@ -53,6 +53,7 @@ class OrderPanel extends StatefulWidget {
   final VoidCallback onNewOrder; // New callback for new order
   final VoidCallback
       onPrintOrder; // New callback for print order (send + print)
+  final VoidCallback? onKotBill;
   final Function(dynamic)
       onOrderSelected; // New callback to update selected order
   final dynamic
@@ -60,6 +61,7 @@ class OrderPanel extends StatefulWidget {
   final int? refreshCounter; // Add refresh counter
   final bool isLoadingSendToKitchen; // Loading state for Send to Kitchen button
   final bool isLoadingPrint; // Loading state for Print button
+  final bool isLoadingKotBill;
   final String?
       preselectedDeliveryMethodId; // Delivery method chosen from tables panel
   final String?
@@ -82,11 +84,13 @@ class OrderPanel extends StatefulWidget {
     required this.onSendToKitchen, // Make it required
     required this.onNewOrder, // Make it required
     required this.onPrintOrder, // Make it required
+    this.onKotBill,
     required this.onOrderSelected, // Make it required
     this.selectedOrderFromParent, // Add this parameter
     this.refreshCounter, // Add refresh counter parameter
     this.isLoadingSendToKitchen = false, // Add loading state parameter
     this.isLoadingPrint = false, // Add loading state parameter for print
+    this.isLoadingKotBill = false,
     this.preselectedDeliveryMethodId, // Preselected delivery method from tables panel
     this.preselectedDeliveryMethodName, // Name of preselected delivery method
     this.allowCounterBilling = false,
@@ -114,6 +118,7 @@ class OrderPanelState extends State<OrderPanel> {
   bool _isLoadingConfirm = false; // Loading state for Confirm button
   bool _isLoadingPrintKot =
       false; // Loading state for edit-order Print KOT button
+  bool _isLoadingPreBill = false;
   String? _loadedLocalDraftId; // track currently loaded local draft
   bool _blockReselectAfterPlace = false; // Prevent reselect after order placed
   bool _showSavedOrdersView = false;
@@ -1524,8 +1529,8 @@ class OrderPanelState extends State<OrderPanel> {
   }
 
   /// Mark all order items as SERVED
-  Future<void> _markAllOrderItemsServed() async {
-    if (_selectedOrder == null) return;
+  Future<bool> _markAllOrderItemsServed() async {
+    if (_selectedOrder == null) return false;
 
     final orderId = _selectedOrder['order_id'] ?? _selectedOrder['id'];
     final displayOrderId = _selectedOrder['order_number']?.toString() ??
@@ -1538,7 +1543,7 @@ class OrderPanelState extends State<OrderPanel> {
     final statusId = _findStatusIdByValue('SERVED');
     if (statusId == null) {
       showScaffoldError(context: context, message: 'Status "SERVED" not found');
-      return;
+      return false;
     }
 
     setState(() {
@@ -1582,6 +1587,7 @@ class OrderPanelState extends State<OrderPanel> {
             message: 'Order $displayOrderId items marked as SERVED',
           );
         }
+        return true;
       } else {
         debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to update all order items');
         if (mounted) {
@@ -1590,6 +1596,7 @@ class OrderPanelState extends State<OrderPanel> {
             message: 'Failed to mark items as served: ${response['message']}',
           );
         }
+        return false;
       }
     } catch (e) {
       debugPrint('ÃƒÂ¢Ã‚ÂÃ…â€™ Exception updating all order items: $e');
@@ -1599,6 +1606,7 @@ class OrderPanelState extends State<OrderPanel> {
           message: 'Error marking items as served: $e',
         );
       }
+      return false;
     } finally {
       if (mounted) {
         setState(() {
@@ -5143,6 +5151,12 @@ class OrderPanelState extends State<OrderPanel> {
           }
           return false;
         });
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final showPreBillButton = widget.allowCounterBilling &&
+        widget.isCounterBillingMode &&
+        (appSettings?.enableKotBillButton ?? false);
+    final useCompactActionLabels = showPreBillButton;
 
     return SafeArea(
       top: false,
@@ -5202,14 +5216,10 @@ class OrderPanelState extends State<OrderPanel> {
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      Icons.receipt_long,
-                                      color: const Color(0xFFD97706),
-                                      size: widget.isCompact ? 16 : 18,
-                                    ),
-                                    const SizedBox(width: 8),
                                     Text(
-                                      'Print KOT',
+                                      useCompactActionLabels
+                                          ? 'KOT'
+                                          : 'Print KOT',
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
@@ -5226,6 +5236,65 @@ class OrderPanelState extends State<OrderPanel> {
                   ),
                 ),
                 const SizedBox(width: 12),
+                if (showPreBillButton) ...[
+                  Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: cartItems.isEmpty || _isLoadingPreBill
+                            ? null
+                            : _printSelectedOngoingOrderBillWithLoading,
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          height: widget.isCompact ? 44 : 48,
+                          decoration: BoxDecoration(
+                            color: _isLoadingPreBill
+                                ? const Color(0xFFF5F1FF)
+                                : Colors.white,
+                            border: Border.all(
+                              color: const Color(0xFF7C3AED),
+                              width: 1.5,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: _isLoadingPreBill
+                                ? SizedBox(
+                                    width: widget.isCompact ? 16 : 20,
+                                    height: widget.isCompact ? 16 : 20,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Color(0xFF7C3AED),
+                                      ),
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        useCompactActionLabels
+                                            ? 'BILL'
+                                            : 'Pre-Bill',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          widget.isCompact
+                                              ? FontSize.s13
+                                              : FontSize.s14,
+                                          0.21,
+                                          const Color(0xFF7C3AED),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 // 2. Confirm or Mark Served Button (Right Side)
                 Expanded(
                   child: Material(
@@ -5285,18 +5354,12 @@ class OrderPanelState extends State<OrderPanel> {
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      allItemsServed
-                                          ? Icons.check_circle
-                                          : Icons.room_service,
-                                      color: Colors.white,
-                                      size: widget.isCompact ? 16 : 18,
-                                    ),
-                                    const SizedBox(width: 8),
                                     Text(
                                       allItemsServed
                                           ? 'Confirm'
-                                          : 'Mark Served',
+                                          : (useCompactActionLabels
+                                              ? 'Serve'
+                                              : 'Mark Served'),
                                       style: buildCustomStyle(
                                           FontWeightManager.semiBold,
                                           widget.isCompact
@@ -6433,6 +6496,7 @@ class OrderPanelState extends State<OrderPanel> {
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
     String? deliveryMethod,
+    String? documentTitleOverride,
     bool isDefaultCustomer = false,
     String? netExcTax,
   }) async {
@@ -6464,6 +6528,7 @@ class OrderPanelState extends State<OrderPanel> {
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
       deliveryMethod: deliveryMethod,
+      documentTitleOverride: documentTitleOverride,
       isDefaultCustomer: isDefaultCustomer,
       netExcTax: netExcTax,
     );
@@ -6497,6 +6562,7 @@ class OrderPanelState extends State<OrderPanel> {
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
             deliveryMethod: deliveryMethod,
+            documentTitleOverride: documentTitleOverride,
             isDefaultCustomer: isDefaultCustomer,
             netExcTax: netExcTax,
           ),
@@ -7847,6 +7913,144 @@ class OrderPanelState extends State<OrderPanel> {
       initialStep: initialStep ??
           (useCurrentCart ? _resolveCurrentCartCheckoutInitialStep() : null),
     );
+  }
+
+  Future<void> prepareCounterKotBill({required bool autoMarkServed}) async {
+    if (_selectedOrder == null) {
+      showScaffoldError(
+        context: context,
+        message: 'No ongoing order selected for KOT + Bill',
+      );
+      return;
+    }
+
+    if (autoMarkServed && !_selectedOrderItemsAreServed()) {
+      final served = await _markAllOrderItemsServed();
+      if (!served || !mounted) return;
+    }
+
+    await _printSelectedOngoingOrderBill();
+    if (!mounted) return;
+
+    await _showCheckoutModal();
+  }
+
+  Future<void> _printSelectedOngoingOrderBillWithLoading() async {
+    if (_isLoadingPreBill) return;
+    setState(() {
+      _isLoadingPreBill = true;
+    });
+    try {
+      await _printSelectedOngoingOrderBill();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingPreBill = false;
+        });
+      }
+    }
+  }
+
+  bool _selectedOrderItemsAreServed() {
+    if (_selectedOrder == null) return false;
+    final cartItems = _getCartItemsFromOrder(_selectedOrder);
+    return cartItems.isNotEmpty &&
+        cartItems.every((item) {
+          if (item is Map<String, dynamic> && item['status'] != null) {
+            final status = item['status'].toString().toUpperCase();
+            return status == 'SERVED' || status == 'COMPLETED';
+          }
+          return false;
+        });
+  }
+
+  Future<bool> _printSelectedOngoingOrderBill() async {
+    if (_selectedOrder == null) return false;
+
+    final orderNumber = _selectedOrder['order_number']?.toString() ??
+        _selectedOrder['display_order_id']?.toString();
+    if (orderNumber == null || orderNumber.trim().isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Order number not found for order summary print',
+      );
+      return false;
+    }
+
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final response = await SalesProvider().listOrderDetails(
+        context,
+        orderNumber,
+        authModel.token ?? '',
+      );
+      if (response == null) {
+        showScaffoldError(
+          context: context,
+          message: 'Failed to fetch order summary details',
+        );
+        return false;
+      }
+
+      final orderDetails = OrderDetailsModel.fromJson(response);
+      final details = orderDetails.data;
+      final cart = details?.cart;
+      final cartItems =
+          cart?.cartItems ?? _getCartItemsFromOrder(_selectedOrder);
+      final formattedTotal = cart?.priceSummary?.netPayable?.toString() ??
+          cart?.priceSummary?.netTotal.toString() ??
+          _calculateOrderTotal().toStringAsFixed(2);
+      final savedTotal = cart?.priceSummary?.savedTotal.toString();
+      final discountAmount =
+          details?.priceSummary?.discount?.toString() ?? '0.00';
+      final orderDate = details?.orderDate ??
+          _selectedOrder['order_date']?.toString() ??
+          DateHelper.formatISODateToIST(DateHelper.now().toIso8601String());
+      final selectedOrder = _selectedOrder;
+      final customerName = _resolveCustomerName(
+        order: selectedOrder,
+        orderDetails: details,
+      );
+      final customerPhone = _resolveCustomerPhone(
+        order: selectedOrder,
+        orderDetails: details,
+      );
+      final isDefaultCustomer = _isDefaultCustomer(_selectedCustomer) ||
+          _isDefaultCustomerPhone(customerPhone);
+
+      return _printOrderDetailsWithFallback(
+        storeName: cart?.storeName,
+        cartItems: cartItems,
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount: discountAmount,
+        orderDate: orderDate,
+        orderNumber: details?.orderNumber ?? orderNumber,
+        tokenNumber: details?.tokenNumber,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: details?.customerDetails?.email,
+        customerAddress: details?.getCustomerAddressForDisplay(),
+        customerAlternatePhone: _resolveCustomerAlternatePhone(
+          orderDetails: details,
+        ),
+        customerVatNumber: details?.kycInfo?.vatNumber,
+        customerCrNumber: details?.kycInfo?.crNumber,
+        customerType: details?.customerDetails?.customerType,
+        orderComment: _extractOrderLevelComment(selectedOrder),
+        deliveryMethod: details?.deliveryMethodName,
+        documentTitleOverride: 'ORDER SUMMARY',
+        isDefaultCustomer: isDefaultCustomer,
+        netExcTax: cart?.priceSummary?.netExcTax?.toString(),
+      );
+    } catch (e) {
+      debugPrint('Error printing order summary: $e');
+      showScaffoldError(
+        context: context,
+        message: 'Failed to print order summary: ${e.toString()}',
+      );
+      return false;
+    }
   }
 
   int _resolveCurrentCartCheckoutInitialStep() {
