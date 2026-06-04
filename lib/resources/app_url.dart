@@ -51,6 +51,10 @@ class APPUrl {
   static String get addToOrderConfirmUrl =>
       '$baseURL/api/v1/order/confirm-order';
   static String get cancelOrderUrl => '$baseURL/api/v1/order/cancel-order';
+  static String get orderChangePaymentStatusUrl =>
+      '$baseURL/api/v1/order/order-change-payment-status';
+  static String get orderChangeStatusUrl =>
+      '$baseURL/api/v1/order/order-change-status';
   static String get getListOrder =>
       '$baseURL/api/v1/order/executive/list-orders';
   static String get searchListOrder => '$baseURL/api/v1/order-searchbar';

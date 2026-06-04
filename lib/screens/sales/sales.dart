@@ -47,6 +47,8 @@ import '../../resources/style_manager.dart';
 import 'widgets/mobile_order_card.dart';
 import 'widgets/mobile_filters.dart';
 import 'widgets/cancel_order_modal.dart';
+import 'widgets/change_order_status_modal.dart';
+import 'widgets/change_payment_status_modal.dart';
 
 class SalesScreen extends StatefulWidget {
   final bool isOnlineSales;
@@ -1295,8 +1297,9 @@ Powered by CloudPOS''',
           icon: const Icon(Icons.visibility,
               size: 18, color: ColorManager.kPrimaryColor),
           onPressed: () {
-            Provider.of<SalesProvider>(context, listen: false)
-                .setOrderNumber(order.orderNumber ?? "0");
+            final provider = Provider.of<SalesProvider>(context, listen: false);
+            provider.setOrderNumber(order.orderNumber ?? "0");
+            provider.isOnlineSalesNavigation = widget.isOnlineSales;
             Get.find<SideBarController>().index.value = 11;
           },
         ),
@@ -1430,7 +1433,8 @@ Powered by CloudPOS''',
                 }
 
                 // Debug: Verify cart items before printing
-                final cartItemsForPrint = orderDetails.data?.cart?.cartItems ?? [];
+                final cartItemsForPrint =
+                    orderDetails.data?.cart?.cartItems ?? [];
                 debugPrint("===== SALES PRINT DEBUG =====");
                 debugPrint(
                     "Order=${orderDetails.data?.orderNumber}, token=${orderDetails.data?.tokenNumber}, customer=$customerName");
@@ -1441,7 +1445,8 @@ Powered by CloudPOS''',
                 debugPrint("Cart items count: ${cartItemsForPrint.length}");
                 for (int i = 0; i < cartItemsForPrint.length; i++) {
                   final item = cartItemsForPrint[i];
-                  debugPrint("Item $i: name=${item.productName}, qty=${item.quantity}, price=${item.totalPrice}, tax=${item.taxAmount}");
+                  debugPrint(
+                      "Item $i: name=${item.productName}, qty=${item.quantity}, price=${item.totalPrice}, tax=${item.taxAmount}");
                 }
                 debugPrint("=============================");
 
@@ -1929,6 +1934,132 @@ Powered by CloudPOS''',
                             );
                           },
                         ),
+                        ListTile(
+                          leading: const CircleAvatar(
+                            radius: 18,
+                            backgroundColor:
+                                Color(0x1A6A1B9A), // ~10% opacity purple
+                            child: Icon(Icons.swap_horiz_outlined,
+                                color: Color(0xFF6A1B9A)),
+                          ),
+                          title: const Text('Change Order Status'),
+                          onTap: () async {
+                            Navigator.pop(ctx);
+                            showDialog(
+                              context: context,
+                              builder: (dialogCtx) => ChangeOrderStatusModal(
+                                currentStatus: order.status ?? 'pending',
+                                orderTotal: order.grantTotal?.toString() ?? '0',
+                                onConfirm: ({
+                                  required newStatus,
+                                  refundAmount,
+                                  paymentMethod,
+                                  deliveryChargeRefundable,
+                                  deliveryLogistics,
+                                }) async {
+                                  try {
+                                    final authModel = Provider.of<AuthModel>(
+                                        context,
+                                        listen: false);
+                                    final salesProvider =
+                                        Provider.of<SalesProvider>(context,
+                                            listen: false);
+
+                                    await salesProvider.changeOrderStatus(
+                                      accessToken: authModel.token ?? "",
+                                      orderId: order.id.toString(),
+                                      status: newStatus,
+                                      refundAmount: refundAmount,
+                                      paymentMethod: paymentMethod,
+                                      deliveryChargeRefundable:
+                                          deliveryChargeRefundable,
+                                      deliveryLogistics: deliveryLogistics,
+                                    );
+
+                                    if (context.mounted) {
+                                      showScaffold(
+                                        context: context,
+                                        message:
+                                            'Order status updated to $newStatus',
+                                      );
+                                      salesProvider.fetchOrders(
+                                        accessToken: authModel.token ?? "",
+                                        page: salesProvider.currentPage,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            'Failed to update order status: $e',
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const CircleAvatar(
+                            radius: 18,
+                            backgroundColor:
+                                Color(0x1A1E88E5), // ~10% opacity blue
+                            child: Icon(Icons.payment_outlined,
+                                color: Color(0xFF1E88E5)),
+                          ),
+                          title: const Text('Change Payment Status'),
+                          onTap: () async {
+                            Navigator.pop(ctx);
+                            if (!context.mounted) return;
+                            showDialog(
+                              context: context,
+                              builder: (dialogCtx) => ChangePaymentStatusModal(
+                                currentPaymentStatus:
+                                    order.paymentStatus ?? 'unpaid',
+                                grandTotal: order.grantTotal?.toString() ?? '0',
+                                onConfirm: (newStatus, amount) async {
+                                  try {
+                                    final authModel = Provider.of<AuthModel>(
+                                        context,
+                                        listen: false);
+                                    final salesProvider =
+                                        Provider.of<SalesProvider>(context,
+                                            listen: false);
+
+                                    await salesProvider.changePaymentStatus(
+                                      accessToken: authModel.token ?? "",
+                                      orderId: order.id.toString(),
+                                      status: newStatus,
+                                      amount: amount,
+                                    );
+
+                                    if (context.mounted) {
+                                      showScaffold(
+                                        context: context,
+                                        message:
+                                            'Payment status updated to $newStatus',
+                                      );
+                                      salesProvider.fetchOrders(
+                                        accessToken: authModel.token ?? "",
+                                        page: salesProvider.currentPage,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            'Failed to update payment status: $e',
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
                         // ListTile(
                         //   leading: const CircleAvatar(
                         //     radius: 18,
@@ -2207,7 +2338,9 @@ Powered by CloudPOS''',
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.isOnlineSales ? "Online Orders List" : "Orders List",
+                      widget.isOnlineSales
+                          ? "Online Orders List"
+                          : "Orders List",
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s20,
@@ -2694,7 +2827,8 @@ Powered by CloudPOS''',
                                       );
                                     },
                                   )
-                                : _buildOrderTable(orderProvider, displayedOrders),
+                                : _buildOrderTable(
+                                    orderProvider, displayedOrders),
                           ),
                           PaginationControl(
                             currentPage: orderProvider.currentPage,

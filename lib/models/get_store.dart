@@ -38,8 +38,13 @@ class GetStoreModelData {
   final int? id;
   final String? name;
   final String? code;
+  final String? phone;
+  final String? email;
+  final int? stateId;
+  final int? districtId;
+  final int? pincodeId;
+  final int? localLocationId;
   final int? companyId;
-  final int? locationId;
   final String? status;
   final int? userId;
   final DateTime? createdAt;
@@ -49,8 +54,13 @@ class GetStoreModelData {
     this.id,
     this.name,
     this.code,
+    this.phone,
+    this.email,
+    this.stateId,
+    this.districtId,
+    this.pincodeId,
+    this.localLocationId,
     this.companyId,
-    this.locationId,
     this.status,
     this.userId,
     this.createdAt,
@@ -62,8 +72,13 @@ class GetStoreModelData {
         id: json["id"],
         name: json["name"],
         code: json["code"],
+        phone: json["phone"]?.toString(),
+        email: json["email"],
+        stateId: json["state_id"],
+        districtId: json["district_id"],
+        pincodeId: json["pincode_id"],
+        localLocationId: json["local_location_id"] ?? json["location_id"],
         companyId: json["company_id"],
-        locationId: json["location_id"],
         status: json["status"],
         userId: json["user_id"],
         createdAt: json["created_at"] == null
@@ -78,8 +93,13 @@ class GetStoreModelData {
         "id": id,
         "name": name,
         "code": code,
+        "phone": phone,
+        "email": email,
+        "state_id": stateId,
+        "district_id": districtId,
+        "pincode_id": pincodeId,
+        "local_location_id": localLocationId,
         "company_id": companyId,
-        "location_id": locationId,
         "status": status,
         "user_id": userId,
         "created_at": createdAt?.toIso8601String(),

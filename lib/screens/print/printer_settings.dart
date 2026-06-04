@@ -74,6 +74,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'tax_invoice', 'name': 'Tax Invoice'},
     {'id': 'detailed_tax_invoice', 'name': 'Detailed Tax Invoice'},
     {'id': 'standard_tax_invoice', 'name': 'Standard Tax Invoice'},
+    {'id': 'new_classic', 'name': 'New Classic'},
   ];
 
   /// Returns the appropriate theme list based on selected paper size
@@ -149,6 +150,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Comprehensive Tax Invoice with detailed itemization and tax breakdown';
         case 'standard_tax_invoice':
           return 'Clean Tax Invoice layout with essential details and clear tax info';
+        case 'new_classic':
+          return 'Modern A4/A5 layout with enhanced font hierarchy and breathable spacing';
         default:
           return 'Standard PDF layout';
       }

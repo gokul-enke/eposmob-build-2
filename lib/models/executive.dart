@@ -104,31 +104,51 @@ class ExecutiveModelData {
 class Store {
   final int? storeId;
   final String? storeName;
+  final String? code;
   final String? location;
   final String? email;
   final String? phone;
+  final int? stateId;
+  final int? districtId;
+  final int? pincodeId;
+  final int? localLocationId;
 
   Store({
     this.storeId,
     this.storeName,
+    this.code,
     this.location,
     this.email,
     this.phone,
+    this.stateId,
+    this.districtId,
+    this.pincodeId,
+    this.localLocationId,
   });
 
   factory Store.fromJson(Map<String, dynamic> json) => Store(
-        storeId: json["store_id"],
-        storeName: json["store_name"],
+        storeId: json["store_id"] ?? json["id"],
+        storeName: json["store_name"] ?? json["name"],
+        code: json["code"],
         location: json["location"],
         email: json["email"],
         phone: json["phone"]?.toString(),
+        stateId: json["state_id"],
+        districtId: json["district_id"],
+        pincodeId: json["pincode_id"],
+        localLocationId: json["local_location_id"] ?? json["location_id"],
       );
 
   Map<String, dynamic> toJson() => {
         "store_id": storeId,
         "store_name": storeName,
+        "code": code,
         "location": location,
         "email": email,
         "phone": phone,
+        "state_id": stateId,
+        "district_id": districtId,
+        "pincode_id": pincodeId,
+        "local_location_id": localLocationId,
       };
 }
