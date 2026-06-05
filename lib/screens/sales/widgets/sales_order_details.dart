@@ -17,6 +17,8 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
 import 'package:pos_machine/screens/sales/widgets/buid_order_details_widget.dart';
 import 'package:pos_machine/screens/sales/widgets/buid_order_return_details_widget.dart';
+import 'package:pos_machine/screens/sales/widgets/change_order_status_modal.dart';
+import 'package:pos_machine/screens/sales/widgets/change_payment_status_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:cross_file/cross_file.dart';
@@ -276,7 +278,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       children: [
         CustomBackButton(
           onPressed: () {
-            sideBarController.index.value = 2;
+            final isOnline = Provider.of<SalesProvider>(context, listen: false).isOnlineSalesNavigation;
+            sideBarController.index.value = isOnline ? 92 : 2;
           },
           text: 'All Orders',
         ),
@@ -288,7 +291,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
           child: IconButton(
             padding: EdgeInsets.zero,
             onPressed: () {
-              sideBarController.index.value = 2;
+              final isOnline = Provider.of<SalesProvider>(context, listen: false).isOnlineSalesNavigation;
+              sideBarController.index.value = isOnline ? 92 : 2;
             },
             icon:
                 const Icon(Icons.close_rounded, size: 10, color: Colors.white),
@@ -554,6 +558,106 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   );
                 }
               }
+            },
+            height: 50,
+            width: size.width * 0.19,
+            fontSize: FontSize.s12,
+          ),
+          CustomRoundButton(
+            title: "Order Status",
+            boxColor: Colors.white,
+            textColor: const Color(0xFF6A1B9A),
+            fct: () {
+              showDialog(
+                context: context,
+                builder: (dialogCtx) => ChangeOrderStatusModal(
+                  currentStatus: orderDetailsModelData?.orderStatus ?? 'pending',
+                  orderTotal: priceSummary?.netPayable?.toString() ?? '0',
+                  onConfirm: ({
+                    required newStatus,
+                    refundAmount,
+                    paymentMethod,
+                    deliveryChargeRefundable,
+                    deliveryLogistics,
+                  }) async {
+                    try {
+                      final authModel =
+                          Provider.of<AuthModel>(context, listen: false);
+                      final salesProvider =
+                          Provider.of<SalesProvider>(context, listen: false);
+                      await salesProvider.changeOrderStatus(
+                        accessToken: authModel.token ?? '',
+                        orderId: orderDetailsModelData?.ordersId?.toString() ?? '',
+                        status: newStatus,
+                        refundAmount: refundAmount,
+                        paymentMethod: paymentMethod,
+                        deliveryChargeRefundable: deliveryChargeRefundable,
+                        deliveryLogistics: deliveryLogistics,
+                      );
+                      if (context.mounted) {
+                        showScaffold(
+                          context: context,
+                          message: 'Order status updated to $newStatus',
+                        );
+                        getOrderDetails();
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Failed to update order status: $e',
+                        );
+                      }
+                    }
+                  },
+                ),
+              );
+            },
+            height: 50,
+            width: size.width * 0.19,
+            fontSize: FontSize.s12,
+          ),
+          CustomRoundButton(
+            title: "Payment Status",
+            boxColor: Colors.white,
+            textColor: const Color(0xFF1E88E5),
+            fct: () {
+              showDialog(
+                context: context,
+                builder: (dialogCtx) => ChangePaymentStatusModal(
+                  currentPaymentStatus:
+                      orderDetailsModelData?.paymentStatus ?? 'unpaid',
+                  grandTotal: priceSummary?.netPayable?.toString() ?? '0',
+                  onConfirm: (newStatus, amount) async {
+                    try {
+                      final authModel =
+                          Provider.of<AuthModel>(context, listen: false);
+                      final salesProvider =
+                          Provider.of<SalesProvider>(context, listen: false);
+                      await salesProvider.changePaymentStatus(
+                        accessToken: authModel.token ?? '',
+                        orderId: orderDetailsModelData?.ordersId?.toString() ?? '',
+                        status: newStatus,
+                        amount: amount,
+                      );
+                      if (context.mounted) {
+                        showScaffold(
+                          context: context,
+                          message: 'Payment status updated to $newStatus',
+                        );
+                        getOrderDetails();
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Failed to update payment status: $e',
+                        );
+                      }
+                    }
+                  },
+                ),
+              );
             },
             height: 50,
             width: size.width * 0.19,

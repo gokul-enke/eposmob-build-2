@@ -4,6 +4,8 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/location_provider.dart';
+import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:provider/provider.dart';
 
 import '../components/build_container_box.dart';
@@ -63,12 +65,123 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
     if (widget.initialMobileNumber != null) {
       phoneNumberController.text = widget.initialMobileNumber!;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final locationProvider =
-          Provider.of<LocationProvider>(context, listen: false);
-      String? accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
-      locationProvider.listAllStates(accessToken!);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      debugPrint('🚀 [AddCustomerForm] START: Initializing location data...');
+      final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+      final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+      final sharedPrefProvider = Provider.of<SharedPreferenceProvider>(context, listen: false);
+      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
+
+      debugPrint('🔑 [AddCustomerForm] Token exists: ${accessToken != null && accessToken.isNotEmpty}');
+
+      if (accessToken == null) {
+        debugPrint('⚠️ [AddCustomerForm] EXIT: No access token found.');
+        return;
+      }
+
+      // Fetch states
+      await locationProvider.listAllStates(accessToken);
+      debugPrint('📊 [AddCustomerForm] States in list: ${locationProvider.stateList.length}');
+      if (locationProvider.stateList.isNotEmpty) {
+        debugPrint('   - First State: ${locationProvider.stateList.first.key} (${locationProvider.stateList.first.value})');
+      }
+
+      // Get activeStoreId from storage
+      final activeStoreId = await sharedPrefProvider.getActiveStoreId();
+      debugPrint('🔑 [AddCustomerForm] active_store_id from storage: $activeStoreId');
+
+      // Inspect storeList
+      debugPrint('🏬 [AddCustomerForm] purchaseProvider.storeList items: ${purchaseProvider.storeList.length}');
+      for (var s in purchaseProvider.storeList.take(5)) {
+        debugPrint('   - Store [ID: ${s.id}, Name: ${s.name}]');
+      }
+
+      // Find store details
+      if (activeStoreId != null && purchaseProvider.storeList.isNotEmpty) {
+        final currentStore = purchaseProvider.storeList.firstWhere(
+          (s) => s.id == activeStoreId,
+          orElse: () {
+            debugPrint('⚠️ [AddCustomerForm] Store ID $activeStoreId NOT FOUND in list. Fallback to first.');
+            return purchaseProvider.storeList.first;
+          },
+        );
+
+        debugPrint('🏪 [AddCustomerForm] SELECTED STORE: ${currentStore.name} (ID: ${currentStore.id})');
+        debugPrint('📍 [AddCustomerForm] METADATA: stateId=${currentStore.stateId}, districtId=${currentStore.districtId}, pincodeId=${currentStore.pincodeId}');
+
+        if (currentStore.stateId != null) {
+          final stateIdStr = currentStore.stateId.toString();
+          bool stateExists = locationProvider.stateList.any((s) => s.key == stateIdStr);
+          
+          debugPrint('🏁 [AddCustomerForm] Matching State ID [$stateIdStr] in States List? $stateExists');
+
+          if (stateExists) {
+            setState(() {
+              selectedStateId = stateIdStr;
+              isLoadingDistricts = true;
+              stateDropdownKey = UniqueKey();
+            });
+
+            debugPrint('🌆 [AddCustomerForm] Fetching Districts for State: $selectedStateId');
+            await locationProvider.listAllDistricts(
+              stateId: selectedStateId!,
+              accessToken: accessToken,
+            );
+            debugPrint('📊 [AddCustomerForm] Districts in list: ${locationProvider.districtList.length}');
+
+            if (currentStore.districtId != null) {
+              final districtIdStr = currentStore.districtId.toString();
+              bool districtExists = locationProvider.districtList.any((d) => d.key == districtIdStr);
+              debugPrint('🏁 [AddCustomerForm] Matching District ID [$districtIdStr] in Districts List? $districtExists');
+
+              if (districtExists) {
+                setState(() {
+                  selectedDistrictId = districtIdStr;
+                  isLoadingDistricts = false;
+                  isLoadingPincodes = true;
+                  districtDropdownKey = UniqueKey();
+                });
+
+                debugPrint('🏘️ [AddCustomerForm] Fetching Pincodes for District: $selectedDistrictId');
+                await locationProvider.listAllPincodes(
+                  districtId: selectedDistrictId!,
+                  accessToken: accessToken,
+                );
+                debugPrint('📊 [AddCustomerForm] Pincodes in list: ${locationProvider.pincodeList.length}');
+
+                if (currentStore.pincodeId != null) {
+                  final pincodeIdStr = currentStore.pincodeId.toString();
+                  bool pincodeExists = locationProvider.pincodeList.any((p) => p.key == pincodeIdStr);
+                  debugPrint('🏁 [AddCustomerForm] Matching Pincode ID [$pincodeIdStr] in Pincodes List? $pincodeExists');
+                  
+                  if (pincodeExists) {
+                    setState(() {
+                      selectedPincodeId = pincodeIdStr;
+                      isLoadingPincodes = false;
+                      pincodeDropdownKey = UniqueKey();
+                    });
+                  } else {
+                    debugPrint('⚠️ [AddCustomerForm] Pincode ID not found in list.');
+                    setState(() => isLoadingPincodes = false);
+                  }
+                } else {
+                  setState(() => isLoadingPincodes = false);
+                }
+              } else {
+                debugPrint('⚠️ [AddCustomerForm] District ID not found in list.');
+                setState(() => isLoadingDistricts = false);
+              }
+            } else {
+              setState(() => isLoadingDistricts = false);
+            }
+          }
+        } else {
+          debugPrint('⚠️ [AddCustomerForm] currentStore.stateId is NULL.');
+        }
+      } else {
+        debugPrint('⚠️ [AddCustomerForm] SKIPPING AUTOFILL: storeList is empty or activeStoreId is null.');
+      }
+      debugPrint('🏁 [AddCustomerForm] END: Initialization complete.');
     });
   }
 
