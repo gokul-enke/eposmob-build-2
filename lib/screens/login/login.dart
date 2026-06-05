@@ -217,8 +217,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                             .show('email', _emailController);
                                       },
                                       inputFormatters: <TextInputFormatter>[
-                                        FilteringTextInputFormatter.allow(
-                                            RegExp("[0-9@a-zA-Z.]")),
+                                        FilteringTextInputFormatter.allow(RegExp(
+                                            r"[0-9@a-zA-Z.!#$%&'*+/=?^_`{|}~-]")),
                                       ],
                                       keyboardType: TextInputType.emailAddress,
                                       decoration: decoration.copyWith(

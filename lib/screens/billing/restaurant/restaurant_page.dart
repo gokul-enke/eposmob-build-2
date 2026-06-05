@@ -15,6 +15,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 
 import 'package:pos_machine/models/delivery_method.dart';
+import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart'; // Import CartProvider
@@ -71,6 +72,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   bool _isLoadingSendToKitchen =
       false; // Loading state for Send to Kitchen button
   bool _isLoadingPrint = false; // Loading state for Print button
+  bool _isLoadingKotBill = false;
   bool _isLoadingCounterConfirmOrder = false;
   bool _isLoadingCounterConfirmAndPrint = false;
   bool _showTablesPanel = true; // Desktop toggle for left tables panel
@@ -552,6 +554,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       onSendToKitchen: _sendOrderToKitchenWithLoading,
                       onNewOrder: _handleNewOrder,
                       onPrintOrder: _printOrderWithLoading,
+                      onKotBill: _sendKotBillWithLoading,
                       allowCounterBilling:
                           widget.allowCounterBillingFromAttender,
                       isCounterBillingMode: _isCounterBillingMode,
@@ -574,6 +577,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       refreshCounter: _refreshCounter,
                       isLoadingSendToKitchen: _isLoadingSendToKitchen,
                       isLoadingPrint: _isLoadingPrint,
+                      isLoadingKotBill: _isLoadingKotBill,
                       isCompact: isDenseDesktop,
                       onLocalDraftLoaded: _applyLocalDraftContext,
                       onLocalDraftSaved: _resetCounterOrderContextAfterSave,
@@ -858,11 +862,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
       builder: (context, localProductProvider, _) {
         final hasItems = localProductProvider.cartItems.isNotEmpty;
         final hasInternet = Provider.of<BillingProvider>(context).hasInternet;
+        final appSettings =
+            Provider.of<AppSettingsProvider>(context).appSettings;
         final showConfirmAndPrintButton =
-            Provider.of<AppSettingsProvider>(context, listen: false)
-                    .appSettings
-                    ?.showConfirmOrderButton ??
-                true;
+            appSettings?.showConfirmOrderButton ?? true;
         final canCheckout = hasItems;
         final isCheckoutActionLoading =
             _isLoadingCounterConfirmOrder || _isLoadingCounterConfirmAndPrint;
@@ -961,6 +964,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
   bool _shouldDisableCounterCheckoutActions() {
     if (!_isCounterBillingMode) return false;
     return _activeTableId != null || _isSelectedDeliveryMethodDineIn();
+  }
+
+  bool _isKotBillEnabled(AppSettings? appSettings) {
+    return widget.allowCounterBillingFromAttender &&
+        _isCounterBillingMode &&
+        (appSettings?.enableKotBillButton ?? false);
+  }
+
+  bool _isKotBillAllowedForCurrentContext(AppSettings? appSettings) {
+    final hasDineInContext =
+        _activeTableId != null || _isSelectedDeliveryMethodDineIn();
+    return !hasDineInContext || (appSettings?.kotBillAllowedForDineIn ?? false);
   }
 
   bool _isSelectedDeliveryMethodDineIn() {
@@ -2291,6 +2306,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onSendToKitchen: _sendOrderToKitchenWithLoading,
             onNewOrder: _handleNewOrder,
             onPrintOrder: _printOrderWithLoading,
+            onKotBill: _sendKotBillWithLoading,
             allowCounterBilling: widget.allowCounterBillingFromAttender,
             isCounterBillingMode: _isCounterBillingMode,
             onOrderSelected: (order) {
@@ -2312,6 +2328,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             refreshCounter: _refreshCounter,
             isLoadingSendToKitchen: _isLoadingSendToKitchen,
             isLoadingPrint: _isLoadingPrint,
+            isLoadingKotBill: _isLoadingKotBill,
             onLocalDraftLoaded: _applyLocalDraftContext,
             onLocalDraftSaved: _resetCounterOrderContextAfterSave,
             onEditedOrderConfirmed: _resetCounterOrderContextAfterSave,
@@ -2548,13 +2565,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
     }
   }
 
-  Future<void> _sendOrderToKitchen() async {
+  Future<dynamic> _sendOrderToKitchen() async {
     if (_activeTableId == null && _selectedDeliveryMethodId == null) {
       showScaffoldError(
         context: context,
         message: 'Select a table or delivery method first',
       );
-      return;
+      return null;
     }
 
     try {
@@ -2569,7 +2586,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
           context: context,
           message: 'No items in cart to send to kitchen',
         );
-        return;
+        return null;
       }
       final loadedDraftIdForCleanup =
           _loadedLocalDraftIdForKitchenSync(localProductProvider);
@@ -2686,18 +2703,21 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
           _resetCounterOrderContextAfterKitchenSend();
         }
+        return response;
       } else {
         showScaffoldError(
           context: context,
           message:
               'Failed to send order to kitchen: ${response["message"] ?? "Unknown error"}',
         );
+        return null;
       }
     } catch (e) {
       showScaffoldError(
         context: context,
         message: 'Failed to send order to kitchen: ${e.toString()}',
       );
+      return null;
     }
   }
 
@@ -2852,6 +2872,60 @@ class _RestaurantPageState extends State<RestaurantPage> {
       if (mounted) {
         setState(() {
           _isLoadingSendToKitchen = false;
+        });
+      }
+    }
+  }
+
+  bool _shouldAutoMarkServedForKotBill() {
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    return _isKotBillEnabled(appSettings) &&
+        (appSettings?.kotBillAutoMarkServed ?? false);
+  }
+
+  Future<void> _sendKotBillWithLoading() async {
+    if (_isLoadingKotBill) return;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (!_isKotBillEnabled(appSettings)) {
+      showScaffoldError(
+        context: context,
+        message: 'KOT + Bill is disabled in app settings',
+      );
+      return;
+    }
+    if (!_isKotBillAllowedForCurrentContext(appSettings)) {
+      showScaffoldError(
+        context: context,
+        message: 'KOT + Bill is not allowed for dine-in/table orders',
+      );
+      return;
+    }
+    setState(() {
+      _isLoadingKotBill = true;
+    });
+
+    try {
+      final response = await _sendOrderToKitchen();
+      if (response == null || !mounted) return;
+
+      final orderPanelState = _orderPanelKey.currentState;
+      if (orderPanelState == null) {
+        showScaffoldError(
+          context: context,
+          message: 'Order panel is not ready',
+        );
+        return;
+      }
+
+      await orderPanelState.prepareCounterKotBill(
+        autoMarkServed: _shouldAutoMarkServedForKotBill(),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingKotBill = false;
         });
       }
     }

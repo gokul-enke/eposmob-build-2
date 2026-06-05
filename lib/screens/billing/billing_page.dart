@@ -2946,12 +2946,18 @@ class BillingPageState extends State<BillingPage>
       if (item.saleUnitId == null) {
         return;
       }
-      localProductProvider.changeCartItemSaleUnit(
+      final changed = localProductProvider.changeCartItemSaleUnit(
         item.product.productId!,
         item.selectedStock,
         stockGroupIds: item.stockGroupIds,
         currentSaleUnitId: item.saleUnitId,
       );
+      if (!changed) {
+        showScaffoldError(
+          context: context,
+          message: 'Unable to change unit for this cart item.',
+        );
+      }
       return;
     }
 
@@ -2973,7 +2979,7 @@ class BillingPageState extends State<BillingPage>
       return;
     }
 
-    localProductProvider.changeCartItemSaleUnit(
+    final changed = localProductProvider.changeCartItemSaleUnit(
       item.product.productId!,
       item.selectedStock,
       stockGroupIds: item.stockGroupIds,
@@ -2982,6 +2988,13 @@ class BillingPageState extends State<BillingPage>
       newSaleUnitName: selectedSaleUnit.unitName,
       newSaleUnitConversionRate: selectedRate,
     );
+    if (!changed) {
+      showScaffoldError(
+        context: context,
+        message:
+            'Insufficient stock for ${selectedSaleUnit.unitName ?? item.product.unit ?? "selected unit"}.',
+      );
+    }
   }
 
   void _openCartUnitMenu({
