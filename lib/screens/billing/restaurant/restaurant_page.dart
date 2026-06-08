@@ -962,8 +962,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   bool _shouldDisableCounterCheckoutActions() {
-    if (!_isCounterBillingMode) return false;
-    return _activeTableId != null || _isSelectedDeliveryMethodDineIn();
+    return false;
   }
 
   bool _isKotBillEnabled(AppSettings? appSettings) {
