@@ -871,12 +871,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
             _isLoadingCounterConfirmOrder || _isLoadingCounterConfirmAndPrint;
         final disableConfirmActions =
             _shouldDisableCounterCheckoutActions() || isCheckoutActionLoading;
-        final showCartPanelConfirmOrder =
-            widget.allowCounterBillingFromAttender &&
-                _isCounterBillingMode &&
-                hasInternet &&
-                !_shouldDisableCounterCheckoutActions();
-        final showFooterConfirmOrder = !showCartPanelConfirmOrder;
+        final showCartPanelConfirmOrder = false;
+        final showFooterConfirmOrder = widget.allowCounterBillingFromAttender &&
+            _isCounterBillingMode &&
+            hasInternet;
         final hasFooterCheckoutAction =
             !hasInternet || showConfirmAndPrintButton || showFooterConfirmOrder;
         final confirmOrderIsLoading = _isLoadingCounterConfirmOrder ||
