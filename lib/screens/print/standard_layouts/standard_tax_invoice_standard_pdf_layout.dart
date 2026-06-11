@@ -204,7 +204,8 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       totalTax += iTax;
       totalExclTax += (iTotal - iTax);
     }
-    final totalAmount = double.tryParse(params.formattedTotal) ?? 0.0;
+    final totalAmount =
+        double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0.0;
     final discountAmountValue =
         double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
     final double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
@@ -848,6 +849,28 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   }
 
   /// Build the items table with bilingual headers.
+  /// When the template language is Arabic and the item carries an Arabic name,
+  /// show Arabic on line 1 and English on line 2 (mirrors the thermal layout).
+  String _bilingualItemName(
+      dynamic item, String englishName, ReceiptLayoutParams params) {
+    final bool isAr =
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    if (!isAr) return englishName;
+    String? ar;
+    try {
+      if (item is Map) {
+        final n = item['product_names'] ?? item['productNames'] ?? item['names'];
+        if (n is Map) ar = (n['ar'] ?? n['arabic'])?.toString();
+      } else {
+        ar = item.names?.ar?.toString();
+      }
+    } catch (_) {}
+    if (ar != null && ar.trim().isNotEmpty) {
+      return englishName.trim().isNotEmpty ? '$ar\n$englishName' : ar;
+    }
+    return englishName;
+  }
+
   pw.Widget _buildItemsTable(
     ReceiptLayoutParams params,
     Map<String, DisplayOption>? dc,
@@ -970,12 +993,18 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       double taxableAmt = iTotal - iTax;
       double rateExcTax = qty > 0 ? unitPrice - (iTax / qty) : unitPrice;
 
+      name = _bilingualItemName(item, name, params);
+      final bool isArName =
+          (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar' &&
+              name.contains('\n');
+
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
       if (showItems) {
         cells.add(_dataCell(name, bodyStyle,
-            align: pw.Alignment.centerLeft,
-            textDirection: pw.TextDirection.ltr));
+            align: isArName ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
+            textDirection:
+                isArName ? pw.TextDirection.rtl : pw.TextDirection.ltr));
       }
       if (showQty) {
         cells.add(_dataCell(qty.toStringAsFixed(3), bodyStyle));

@@ -146,7 +146,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
     // Shared Styles (Updated for better hierarchy)
     final headerStyle = pw.TextStyle(
       font: arabicFontBold,
-      fontSize: params.selectedPaperSize == 'A5' ? 18.0 : 22.0,
+      fontSize: params.selectedPaperSize == 'A5' ? 15.0 : 18.0,
       fontWeight: pw.FontWeight.bold,
     );
     final subheaderStyle = pw.TextStyle(
@@ -187,21 +187,52 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
       pw.MultiPage(
         pageFormat: pageFormat,
         textDirection: textDirection,
-        margin: const pw.EdgeInsets.all(15),
-        footer: (context) => pw.Padding(
-          padding: const pw.EdgeInsets.only(top: 5),
-          child: pw.Text(
-            'Page ${context.pageNumber} of ${context.pagesCount}',
-            style: const pw.TextStyle(fontSize: 6),
-            textAlign: pw.TextAlign.center,
-          ),
-        ),
+        margin: const pw.EdgeInsets.all(10),
+        footer: (context) {
+          // Barcode + thank-you live in the footer area of the LAST page only,
+          // so they sit at the bottom of the final page and can never push a
+          // near-empty extra page into existence.
+          final bool isLastPage = context.pageNumber == context.pagesCount;
+          return pw.Column(
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              if (isLastPage) ...[
+                _buildOrderBarcodePDF(
+                    params.selectedPaperSize, params.orderNumber),
+                if (displayConfig?['showThankYouMessage']?.visible == true)
+                  pw.Center(
+                    child: pw.Text(
+                      (displayConfig?['showThankYouMessage']?.value as String?)
+                                  ?.isNotEmpty ==
+                              true
+                          ? displayConfig!['showThankYouMessage']!.value
+                              as String
+                          : (isRtl
+                              ? 'شكراً لك... نتمنى زيارتكم مرة أخرى'
+                              : 'Thank You... Visit Again'),
+                      style: pw.TextStyle(
+                          font: arabicFontBold,
+                          fontSize:
+                              params.selectedPaperSize == 'A5' ? 8.0 : 10.0,
+                          fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                pw.SizedBox(height: 4),
+              ],
+              pw.Text(
+                'Page ${context.pageNumber} of ${context.pagesCount}',
+                style: const pw.TextStyle(fontSize: 6),
+                textAlign: pw.TextAlign.center,
+              ),
+            ],
+          );
+        },
         build: (pw.Context context) => [
           // Store Header
           _buildStoreHeader(params, logoImage, headerStyle, subheaderStyle,
               bodyStyle, isRtl, arabicFont, arabicFontBold),
 
-          pw.SizedBox(height: 20),
+          pw.SizedBox(height: 6),
 
           // Invoice Info - Side by side FROM and BILL TO
           pw.Row(
@@ -236,7 +267,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
                               labelStyle)),
                     ]),
 
-          pw.SizedBox(height: 20),
+          pw.SizedBox(height: 6),
 
           // Date & Time Row - Modern Spaced
           _buildDateTimeRowPDF(params.selectedPaperSize, params.orderDate,
@@ -254,7 +285,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
               displayConfig?['showRate']?.visible == true ||
               displayConfig?['showTotal']?.visible == true)
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(vertical: 10),
+              padding: const pw.EdgeInsets.symmetric(vertical: 4),
               child: _buildPdfItemsTable(
                   tableHeaderStyle, bodyStyle, displayConfig, params, isRtl),
             ),
@@ -263,7 +294,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           _buildCartTotalRow(params, summaryStyle, isRtl, arabicFont,
               arabicFontBold, currency),
 
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 3),
 
           // Summary Section
           if (displayConfig?['showItemsCount']?.visible == true ||
@@ -273,7 +304,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
               displayConfig?['showNetAmount']?.visible == true)
             pw.Container(
               padding:
-                  const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+                  const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 8),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
@@ -356,32 +387,20 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
             pw.SizedBox(height: 5),
           ],
 
-          // Footer
-          pw.Column(
+          // Footer — wrapped in a Container so MultiPage treats it as one
+          // atomic block (prevents the barcode/thank-you tail from orphaning
+          // onto a near-empty second page).
+          // QR + terms stay in the document flow. The barcode and thank-you
+          // message are rendered in the last-page footer (see `footer:` above)
+          // so they never spill onto a second page on their own.
+          pw.Container(
+            child: pw.Column(
             children: [
               if (displayConfig?['showQRCode']?.visible == true) ...[
                 _buildQrCodeSection(
                     params, manualPaymentGateway, isRtl, arabicFontBold),
                 pw.SizedBox(height: 5),
               ],
-              _buildOrderBarcodePDF(
-                  params.selectedPaperSize, params.orderNumber),
-              if (displayConfig?['showThankYouMessage']?.visible == true)
-                pw.Center(
-                  child: pw.Text(
-                    (displayConfig?['showThankYouMessage']?.value as String?)
-                                ?.isNotEmpty ==
-                            true
-                        ? displayConfig!['showThankYouMessage']!.value as String
-                        : (isRtl
-                            ? 'شكراً لك... نتمنى زيارتكم مرة أخرى'
-                            : 'Thank You... Visit Again'),
-                    style: pw.TextStyle(
-                        font: arabicFontBold,
-                        fontSize: params.selectedPaperSize == 'A5' ? 8.0 : 10.0,
-                        fontWeight: pw.FontWeight.bold),
-                  ),
-                ),
               if (displayConfig?['showTermsConditions']?.visible == true &&
                   _hasTermsData(displayConfig, params.billDocumentConfig))
                 _buildTermsConditionsBoxPDF(params.selectedPaperSize,
@@ -390,7 +409,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
                     arabicFont: arabicFont,
                     arabicFontBold: arabicFontBold),
             ],
-          ),
+          )),
         ],
       ),
     );
@@ -414,8 +433,8 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
       child: pw.Column(
         children: [
           if (logoImage != null) ...[
-            pw.Container(height: 35, child: pw.Image(logoImage)),
-            pw.SizedBox(height: 5),
+            pw.Container(height: 26, child: pw.Image(logoImage)),
+            pw.SizedBox(height: 3),
           ],
           if (displayConfig?['showStoreName']?.visible == true)
             pw.Text(
@@ -518,6 +537,28 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           ];
 
     return pw.Row(mainAxisAlignment: mainAxisAlignment, children: children);
+  }
+
+  /// When the template language is Arabic and the item carries an Arabic name,
+  /// show Arabic on line 1 and English on line 2 (mirrors the thermal layout).
+  String _bilingualItemName(
+      dynamic item, String englishName, ReceiptLayoutParams params) {
+    final bool isAr =
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    if (!isAr) return englishName;
+    String? ar;
+    try {
+      if (item is Map) {
+        final n = item['product_names'] ?? item['productNames'] ?? item['names'];
+        if (n is Map) ar = (n['ar'] ?? n['arabic'])?.toString();
+      } else {
+        ar = item.names?.ar?.toString();
+      }
+    } catch (_) {}
+    if (ar != null && ar.trim().isNotEmpty) {
+      return englishName.trim().isNotEmpty ? '$ar\n$englishName' : ar;
+    }
+    return englishName;
   }
 
   pw.Widget _buildPdfItemsTable(
@@ -655,6 +696,8 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         tax = tx.toStringAsFixed(2);
       }
 
+      name = _bilingualItemName(item, name, params);
+
       if (displayConfig?['showSLNumber']?.visible == true)
         rowData.add((i + 1).toString());
       if (displayConfig?['showParticulars']?.visible == true) rowData.add(name);
@@ -694,11 +737,11 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           bottom: pw.BorderSide(color: PdfColors.black, width: 1),
         ),
       ),
-      headerHeight: 25,
+      headerHeight: 16,
       cellStyle: contentStyle,
-      cellHeight: 22,
+      cellHeight: 14,
       cellAlignments: finalAlign,
-      cellPadding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      cellPadding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 2.5),
       cellDecoration: (index, data, row) {
         if (row % 2 != 0) {
           return const pw.BoxDecoration(color: PdfColors.grey100);
@@ -721,7 +764,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
       ReceiptLayoutParams params,
       bool isRtl) {
     double saved = double.tryParse(params.savedTotal ?? '0') ?? 0;
-    double net = double.tryParse(params.formattedTotal) ?? 0;
+    double net = double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0;
     double mrp = saved + net;
     double disc = double.tryParse(params.discountAmount ?? '0') ?? 0;
     double tax = params.totalTax;
@@ -802,7 +845,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
 
     // Footer - Two rows: Labels in first, Values in second
     final amountInWordsText =
-        '${AmountHelper().convertNumberToWords(double.parse(params.formattedTotal), currency: "Riyals", language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}';
+        '${AmountHelper().convertNumberToWords(double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0, currency: "Riyals", language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}';
 
     final footerSection = pw.Column(
       children: [
@@ -934,7 +977,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           style: style));
 
     return pw.Container(
-        padding: const pw.EdgeInsets.all(8),
+        padding: const pw.EdgeInsets.all(4),
         child: pw.Column(
             crossAxisAlignment:
                 isRtl ? pw.CrossAxisAlignment.start : pw.CrossAxisAlignment.end,
@@ -1014,7 +1057,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         : (curr.isNotEmpty ? '$curr ' : '');
 
     return pw.Container(
-        padding: const pw.EdgeInsets.all(8),
+        padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 8),
         child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: isRtl

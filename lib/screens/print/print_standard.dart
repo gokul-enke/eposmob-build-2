@@ -704,7 +704,7 @@ class StandardPrinter {
                                 : (isRtl
                                     ? 'المبلغ بالكلمات:'
                                     : 'Amount in words:'),
-                            '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
+                            '${AmountHelper().convertNumberToWords((double.tryParse(formattedTotal.replaceAll(',', '')) ?? 0), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                             summaryStyle,
                             isRtl: isRtl,
                           ),
@@ -1240,9 +1240,31 @@ class StandardPrinter {
         }
       }
 
-      // Use full product name without truncation for PDF
-      // Prepend LRM (Left-to-Right Mark) to force LTR rendering even in RTL context
-      String displayProductName = '\u200E$productName';
+      // Use full product name without truncation for PDF.
+      // For Arabic templates, show the Arabic name on line 1 and English on
+      // line 2 (mirrors the thermal layout).
+      String? arabicItemName;
+      try {
+        if (isFromLocalStorage || item is Map) {
+          final n =
+              item['product_names'] ?? item['productNames'] ?? item['names'];
+          if (n is Map) arabicItemName = (n['ar'] ?? n['arabic'])?.toString();
+        } else {
+          arabicItemName = item.names?.ar?.toString();
+        }
+      } catch (_) {}
+
+      String displayProductName;
+      if (isRtl &&
+          arabicItemName != null &&
+          arabicItemName.trim().isNotEmpty) {
+        displayProductName = productName.trim().isNotEmpty
+            ? '$arabicItemName\n\u200E$productName'
+            : arabicItemName;
+      } else {
+        // Prepend LRM (Left-to-Right Mark) to force LTR rendering in RTL context
+        displayProductName = '\u200E$productName';
+      }
 
       List<String> rowData = [];
       if (displayConfig?['showSLNumber']?.visible == true) {
@@ -1346,7 +1368,8 @@ class StandardPrinter {
       List<dynamic>? cartItems,
       bool isFromLocalStorage = false}) {
     double savedTotalValue = double.tryParse(savedTotal ?? '0.0') ?? 0.0;
-    double formattedTotalValue = double.tryParse(formattedTotal) ?? 0.0;
+    double formattedTotalValue =
+        double.tryParse(formattedTotal.replaceAll(',', '')) ?? 0.0;
     double discountAmountValue =
         double.tryParse(discountAmount ?? '0.0') ?? 0.0;
     double totalMRP = savedTotalValue + formattedTotalValue;
@@ -1647,7 +1670,8 @@ class StandardPrinter {
 
       // Generate ZATCA Phase 1 compliant QR code
       final zatcaHelper = ZatcaQrHelper();
-      final totalAmount = double.tryParse(formattedTotal) ?? 0.0;
+      final totalAmount =
+          double.tryParse(formattedTotal.replaceAll(',', '')) ?? 0.0;
       qrData = zatcaHelper.generateQrForInvoice(
         sellerName: zatcaCompanyName,
         vatNumber: zatcaVatNumber,
@@ -2307,7 +2331,7 @@ class StandardPrinter {
     String currency, {
     bool isRtl = false,
   }) {
-    double orderTotal = double.tryParse(formattedTotal) ?? 0.0;
+    double orderTotal = double.tryParse(formattedTotal.replaceAll(',', '')) ?? 0.0;
     double returnTotal = 0.0;
 
     // Calculate return total (same logic as before)
@@ -3109,7 +3133,7 @@ class StandardPrinter {
                           ? updatedSettings!['showAmountInWords']!.value
                               as String
                           : (isRtl ? 'المبلغ بالكلمات:' : 'Amount in words:'),
-                      '${AmountHelper().convertNumberToWords(double.parse(formattedTotal), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
+                      '${AmountHelper().convertNumberToWords((double.tryParse(formattedTotal.replaceAll(',', '')) ?? 0), currency: currency, language: isRtl ? 'ar' : 'en')}${isRtl ? ' فقط.' : ' Only.'}',
                       summaryStyle,
                       isRtl: isRtl,
                     ),

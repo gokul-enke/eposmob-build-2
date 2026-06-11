@@ -1347,7 +1347,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
-    double total = double.tryParse(params.formattedTotal) ?? 0.0;
+    double total =
+        double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0.0;
     double discountAmountValue =
         double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
     double totalMrp = saved + total;
@@ -1532,38 +1533,78 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Payment Breakthrough (Multi-payment)
+    // Payment Breakthrough (Multi-payment / JSON payload / single payment)
     final bool showPaymentBreaked =
         displayConfig?['showPaymentBreaked']?.visible ?? true;
     if (params.paidAmount != null && showPaymentBreaked) {
+      void addPaymentRow(String label, double amt) {
+        if (isEnglish) {
+          rows.add(ReceiptTableRow([
+            ReceiptTableColumn(label, weight: 0.5, align: TextAlign.left),
+            ReceiptTableColumn(money(amt),
+                weight: 0.5, align: TextAlign.right),
+          ]));
+        } else {
+          rows.add(ReceiptTableRow([
+            ReceiptTableColumn(money(amt), weight: 0.5, align: TextAlign.left),
+            ReceiptTableColumn(label, weight: 0.5, align: TextAlign.right),
+          ]));
+        }
+      }
+
+      String paymentLabelFor(String method) {
+        if (method == 'CASH') return isEnglish ? "Cash" : "نقدي";
+        if (method == 'CARD') return isEnglish ? "Card" : "بطاقة";
+        if (method == 'UPI') return "UPI";
+        return method;
+      }
+
+      bool isMultiPayment = false;
+
+      // Preferred: structured payment breakdown map
       if (params.paymentBreakdown != null &&
           params.paymentBreakdown!.isNotEmpty) {
+        isMultiPayment = true;
         rows.add(SpacingRow(5));
         params.paymentBreakdown!.forEach((method, amount) {
           double amt = double.tryParse(amount.toString()) ?? 0.0;
           if (amt > 0) {
-            String label = method;
-            if (method == 'CASH') {
-              label = isEnglish ? "Cash" : "نقدي";
-            } else if (method == 'CARD') {
-              label = isEnglish ? "Card" : "بطاقة";
-            }
-
-            if (isEnglish) {
-              rows.add(ReceiptTableRow([
-                ReceiptTableColumn(label, weight: 0.5, align: TextAlign.left),
-                ReceiptTableColumn(money(amt),
-                    weight: 0.5, align: TextAlign.right),
-              ]));
-            } else {
-              rows.add(ReceiptTableRow([
-                ReceiptTableColumn(money(amt),
-                    weight: 0.5, align: TextAlign.left),
-                ReceiptTableColumn(label, weight: 0.5, align: TextAlign.right),
-              ]));
-            }
+            addPaymentRow(paymentLabelFor(method), amt);
           }
         });
+      }
+      // Fallback: paymentMethod carrying a JSON multi-payment payload
+      else if (params.paymentMethod != null &&
+          params.paymentMethod!.startsWith('{')) {
+        try {
+          final Map<String, dynamic> paymentData =
+              json.decode(params.paymentMethod!);
+          if (paymentData['isMultiPayment'] == true) {
+            isMultiPayment = true;
+            final Map<String, dynamic> amounts = paymentData['amounts'];
+            rows.add(SpacingRow(5));
+            amounts.forEach((method, amount) {
+              double amt = double.tryParse(amount.toString()) ?? 0.0;
+              if (amt > 0) {
+                addPaymentRow(paymentLabelFor(method), amt);
+              }
+            });
+          }
+        } catch (e) {
+          debugPrint("Error parsing multi-payment: $e");
+        }
+      }
+
+      // Single payment fallback
+      if (!isMultiPayment) {
+        String label = isEnglish ? "Cash" : "نقدي";
+        if (params.paymentMethod != null &&
+            params.paymentMethod!.isNotEmpty &&
+            params.paymentMethod != 'CASH') {
+          label = params.paymentMethod!;
+        }
+        rows.add(SpacingRow(5));
+        addPaymentRow(label, params.paidAmount!);
       }
     }
 
