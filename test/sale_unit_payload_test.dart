@@ -400,6 +400,84 @@ void main() {
       expect(payload, isEmpty);
     });
 
+    test('floors fractional base-unit reservation lines for non-decimal units',
+        () {
+      // Simulates legacy reservations persisted before the splitter fix:
+      // a PCS item split as 1.3 + 0.7 across two batches.
+      final item = LocalCartItem(
+        product: buildProduct(), // unit PCS
+        quantity: 2,
+        price: 10,
+        mrp: 12,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 1.3),
+          StockReservation(stockId: 2, quantity: 0.7),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      // 1.3 -> 1 (line kept), 0.7 -> 0 (line dropped by the > 0 filter).
+      expect(payload, [
+        {
+          'product_id': 1,
+          'quantity': 1,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': 1,
+        },
+      ]);
+    });
+
+    test('floors fractional unreserved overflow for non-decimal units', () {
+      final item = LocalCartItem(
+        product: buildProduct(), // unit PCS
+        quantity: 2,
+        price: 10,
+        mrp: 12,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 0.5),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      // reserved 0.5 -> floored to 0 (dropped); unreserved 1.5 -> floored to 1.
+      expect(payload, [
+        {
+          'product_id': 1,
+          'quantity': 1,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': null,
+        },
+      ]);
+    });
+
+    test('preserves fractional base-unit lines for decimal units (KG)', () {
+      final kgProduct = GetProduct(
+        productId: 2,
+        productName: 'Loose Rice',
+        unit: 'KG',
+        price: ProductPrice(price: '10'),
+        mrp: '12',
+      );
+      final item = LocalCartItem(
+        product: kgProduct,
+        quantity: 2,
+        price: 10,
+        mrp: 12,
+        stockReservations: [
+          StockReservation(stockId: 1, quantity: 1.3),
+          StockReservation(stockId: 2, quantity: 0.7),
+        ],
+      );
+
+      final payload = LocalProductProvider.buildOrderItemsPayloadFrom([item]);
+
+      expect(payload.map((line) => line['quantity']).toList(), [1.3, 0.7]);
+    });
+
     test('current payload for 2 CASE split across two stock rows', () {
       final item = LocalCartItem(
         product: buildProduct(),

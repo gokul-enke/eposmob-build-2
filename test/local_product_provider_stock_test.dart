@@ -60,6 +60,7 @@ void main() {
     required String basePrice,
     required String mrp,
     required List<Stock> stocks,
+    String unit = 'PCS',
   }) {
     return GetProduct(
       productId: productId,
@@ -67,7 +68,7 @@ void main() {
       price: ProductPrice(price: basePrice),
       mrp: mrp,
       purchasePrice: '8',
-      unit: 'PCS',
+      unit: unit,
       stock: stocks,
       taxes: const <ProductTax>[],
     );
@@ -359,6 +360,97 @@ void main() {
           ),
       isTrue,
     );
+  });
+
+  test('non-decimal unit floors a fractional batch when splitting reservations',
+      () {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    // Batch A holds a fractional 1.3 PCS (bad source data); batch B has plenty.
+    final stockOne = buildStock(id: 1, quantity: 1.3, price: '10', mrp: '12');
+    final stockTwo = buildStock(id: 2, quantity: 5, price: '10', mrp: '12');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: <Stock>[stockOne, stockTwo],
+    );
+
+    provider.initializeProducts(<GetProduct>[product]);
+
+    provider.addToCart(
+      product: product,
+      quantity: 2,
+      selectedStock: stockOne.copyWith(quantity: 6.3),
+      stockGroupIds: const <int>[1, 2],
+    );
+
+    // Batch A contributes only its whole unit (1), the remainder comes from B.
+    final reservations = provider.cartItems.first.stockReservations;
+    expect(reservations.map((r) => r.stockId).toList(), <int>[1, 2]);
+    expect(reservations[0].quantity, closeTo(1, 0.0001));
+    expect(reservations[1].quantity, closeTo(1, 0.0001));
+
+    // Payload carries only integer quantities — no 1.3 / 0.7 lines.
+    expect(
+      provider.buildOrderItemsPayload(),
+      <Map<String, dynamic>>[
+        {
+          'product_id': 1,
+          'quantity': 1,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': 1,
+        },
+        {
+          'product_id': 1,
+          'quantity': 1,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': 2,
+        },
+      ],
+    );
+
+    // The stranded 0.3 dust stays in batch A (availability untouched).
+    final updated = provider.getProductById(1)!;
+    expect(
+      updated.stock!.firstWhere((s) => s.id == 1).quantity,
+      closeTo(0.3, 0.0001),
+    );
+  });
+
+  test('decimal unit (KG) preserves fractional split', () {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    final stockOne =
+        buildStock(id: 1, quantity: 1.3, price: '10', mrp: '12', unit: 'KG');
+    final stockTwo =
+        buildStock(id: 2, quantity: 5, price: '10', mrp: '12', unit: 'KG');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      unit: 'KG',
+      stocks: <Stock>[stockOne, stockTwo],
+    );
+
+    provider.initializeProducts(<GetProduct>[product]);
+
+    provider.addToCart(
+      product: product,
+      quantity: 2,
+      selectedStock: stockOne.copyWith(quantity: 6.3),
+      stockGroupIds: const <int>[1, 2],
+    );
+
+    // KG is decimal-capable: batch A gives its full 1.3, B covers the 0.7.
+    final reservations = provider.cartItems.first.stockReservations;
+    expect(reservations.map((r) => r.stockId).toList(), <int>[1, 2]);
+    expect(reservations[0].quantity, closeTo(1.3, 0.0001));
+    expect(reservations[1].quantity, closeTo(0.7, 0.0001));
   });
 
   test('increment is blocked when no alternative stock remains', () async {

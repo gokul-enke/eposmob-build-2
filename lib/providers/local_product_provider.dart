@@ -6,6 +6,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/get_product.dart';
@@ -920,7 +921,12 @@ class LocalProductProvider extends ChangeNotifier {
         break;
       }
 
-      final availableQuantity = candidate.quantity ?? 0;
+      final rawAvailable = candidate.quantity ?? 0;
+      // For non-decimal units (PCS/PC/...) a batch can only contribute whole
+      // units, so floor its usable quantity. This prevents a fractional batch
+      // (e.g. 1.3) from emitting a decimal reservation line while splitting.
+      final availableQuantity =
+          normalizeQuantityForUnit(rawAvailable, product.unit);
       if (availableQuantity <= 0) {
         continue;
       }
@@ -1093,7 +1099,10 @@ class LocalProductProvider extends ChangeNotifier {
         final payloadQuantity =
             item.canUseSaleUnitPayloadFor(reservation.quantity)
                 ? item.toDisplayQuantity(reservation.quantity)
-                : reservation.quantity;
+                // Base-unit line: guard against fractional reservations on
+                // non-decimal units (e.g. legacy persisted 1.3 splits).
+                : normalizeQuantityForUnit(
+                    reservation.quantity, item.product.unit);
         final payloadPrice = item.canUseSaleUnitPayloadFor(reservation.quantity)
             ? item.toDisplayAmount(item.price)
             : item.price;
@@ -1126,7 +1135,7 @@ class LocalProductProvider extends ChangeNotifier {
           'product_id': item.product.productId,
           'quantity': canUseSaleUnitPayload
               ? item.toDisplayQuantity(baseQuantity)
-              : baseQuantity,
+              : normalizeQuantityForUnit(baseQuantity, item.product.unit),
           'price': canUseSaleUnitPayload
               ? item.toDisplayAmount(item.price)
               : item.price,
