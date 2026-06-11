@@ -76,7 +76,10 @@ void main() {
       );
 
   group('changeCartItemSaleUnit', () {
-    test('changes base row to sale unit without changing base quantity', () {
+    test('changes base row to sale unit reinterpreting the displayed number',
+        () {
+      // Semantics: the on-screen number is preserved when switching units.
+      // 24 PCS -> switch to CASE means "24 CASE", so base = 24 * 12 = 288.
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
       final product = buildProduct();
@@ -94,22 +97,24 @@ void main() {
       expect(changed, isTrue);
       expect(provider.cartItems, hasLength(1));
       final item = provider.cartItems.single;
-      expect(item.quantity, 24);
-      expect(item.displayQuantity, 2);
+      expect(item.quantity, 288); // base = 24 CASE * 12
+      expect(item.displayQuantity, 24); // displayed number unchanged
       expect(item.displayPrice, 120);
       expect(item.displayMrp, 144);
       expect(item.saleUnitId, 10);
       expect(item.displayUnitName, 'CASE');
 
       final payload = provider.buildOrderItemsPayload();
-      expect(payload.single['quantity'], 2);
+      expect(payload.single['quantity'], 24);
       expect(payload.single['price'], 120);
       expect(payload.single['mrp'], 144);
       expect(payload.single['sale_unit_id'], 10);
     });
 
-    test('changes sale-unit row back to base unit without changing quantity',
+    test('changes sale-unit row back to base reinterpreting the displayed number',
         () {
+      // Cart holds 24 base PCS shown as 2 CASE. Switching back to PCS keeps the
+      // displayed "2", so base becomes 2 PCS.
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
       final product = buildProduct();
@@ -133,19 +138,22 @@ void main() {
       expect(changed, isTrue);
       expect(provider.cartItems, hasLength(1));
       final item = provider.cartItems.single;
-      expect(item.quantity, 24);
-      expect(item.displayQuantity, 24);
+      expect(item.quantity, 2); // displayed 2 CASE -> 2 PCS
+      expect(item.displayQuantity, 2);
       expect(item.displayPrice, 10);
       expect(item.saleUnitId, isNull);
       expect(item.displayUnitName, 'PCS');
 
       final payload = provider.buildOrderItemsPayload();
-      expect(payload.single['quantity'], 24);
+      expect(payload.single['quantity'], 2);
       expect(payload.single['price'], 10);
       expect(payload.single.containsKey('sale_unit_id'), isFalse);
     });
 
     test('merges into an existing target unit cart row', () {
+      // Base row: 5 PCS. CASE row: 24 base PCS shown as 2 CASE.
+      // Switching the CASE row to PCS reinterprets its displayed 2 as 2 PCS,
+      // then merges into the existing base row: 5 + 2 = 7.
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
       final product = buildProduct();
@@ -171,8 +179,8 @@ void main() {
       expect(provider.cartItems, hasLength(1));
       final item = provider.cartItems.single;
       expect(item.saleUnitId, isNull);
-      expect(item.quantity, 29);
-      expect(item.displayQuantity, 29);
+      expect(item.quantity, 7); // 5 + 2
+      expect(item.displayQuantity, 7);
     });
   });
 }

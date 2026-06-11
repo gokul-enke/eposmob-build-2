@@ -89,6 +89,11 @@ class ProductCartHelper {
     // Set the stock enabled status in LocalProductProvider
     localProductProvider.setStockEnabled(stockEnabled);
 
+    // Mirror the configured grouping fields so cart merge decisions use the
+    // same pricing signature as stock grouping.
+    localProductProvider
+        .setActiveStockGroupingFields(masterDataProvider.activeStockGroupingFields);
+
     // Variables to track selected stock and final values
     Stock? selectedStock;
     List<int> selectedStockGroupIds = <int>[];

@@ -13,7 +13,9 @@ import '../models/get_product.dart';
 import '../models/local_models.dart';
 import '../resources/app_url.dart';
 import '../providers/app_settings_provider.dart';
+import '../providers/master_data_provider.dart';
 import '../providers/shared_preferences.dart' as prefs_provider;
+import '../widgets/stock_selection_modal.dart' show buildStockGroupingKey;
 
 /// A model representing a local cart item.
 /// It holds a product and its associated quantity in the offline cart.
@@ -438,6 +440,30 @@ class LocalProductProvider extends ChangeNotifier {
       prefs.setBool('general_stock_enabled', enabled);
     });
     debugPrint("📦 Stock management setting updated: $_stockEnabled");
+  }
+
+  /// Active stock grouping fields, mirrored from [MasterDataProvider] so cart
+  /// merge decisions use the same pricing signature as stock grouping. Defaults
+  /// to price+unit until the billing flow supplies the configured fields.
+  Set<String> _activeStockGroupingFields =
+      MasterDataProvider.defaultStockGroupingFields;
+
+  /// Sets the active stock grouping fields used to decide when two grouped
+  /// cart lines collapse into one (see [_stockGroupingKeyForStock]).
+  void setActiveStockGroupingFields(Set<String> fields) {
+    _activeStockGroupingFields =
+        fields.isEmpty ? MasterDataProvider.defaultStockGroupingFields : fields;
+  }
+
+  /// Builds the pricing signature for a stock using the active grouping fields.
+  /// All batches inside one pricing group share identical active-field values,
+  /// so this key is stable even as FEFO depletion changes which raw stock ids
+  /// remain in the group.
+  String? _stockGroupingKeyForStock(Stock? stock) {
+    if (stock == null) {
+      return null;
+    }
+    return buildStockGroupingKey(stock, _activeStockGroupingFields);
   }
 
   /// Gets the current stock enabled status
@@ -1064,6 +1090,15 @@ class LocalProductProvider extends ChangeNotifier {
 
       if (normalizedIncomingGroupIds.isNotEmpty) {
         if (item.stockGroupIds.isNotEmpty) {
+          // Collapse onto the existing line when both refer to the same pricing
+          // group. Matching on the pricing signature (not the exact raw id set)
+          // keeps the line intact as FEFO depletion shrinks each add's
+          // stockGroupIds. Falls back to id-set equality if a key is missing.
+          final incomingKey = _stockGroupingKeyForStock(selectedStock);
+          final itemKey = _stockGroupingKeyForStock(item.selectedStock);
+          if (incomingKey != null && itemKey != null) {
+            return incomingKey == itemKey;
+          }
           return _stockGroupIdsEqual(
               item.stockGroupIds, normalizedIncomingGroupIds);
         }
@@ -2238,9 +2273,13 @@ class LocalProductProvider extends ChangeNotifier {
       debugPrint("📝 Product already in cart - updating quantity");
 
       final existingItem = _cartItems[index];
-      if (normalizedStockGroupIds.isNotEmpty &&
-          existingItem.stockGroupIds.isEmpty) {
-        existingItem.stockGroupIds = List<int>.from(normalizedStockGroupIds);
+      if (normalizedStockGroupIds.isNotEmpty) {
+        // Union so the line records every raw batch it has drawn from across
+        // successive adds (earlier adds may have depleted some batches, leaving
+        // later adds with a smaller id set for the same pricing group).
+        existingItem.stockGroupIds = _normalizeStockGroupIds(
+          <int>[...existingItem.stockGroupIds, ...normalizedStockGroupIds],
+        );
       }
 
       // STOCK DEDUCTION: Deduct the additional quantity being added
