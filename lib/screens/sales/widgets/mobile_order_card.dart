@@ -370,13 +370,21 @@ class MobileOrderCard extends StatelessWidget {
               customerAddress: customerAddress,
               customerAlternatePhone: customerAlternatePhone,
               customerType: customerType,
+              customerVatNumber: orderDetails.data?.kycInfo?.vatNumber,
+              customerCrNumber: orderDetails.data?.kycInfo?.crNumber,
               paymentMethod: paymentMethod,
+              paymentBreakdown: orderDetails.data?.payments,
               orderComment: orderComment,
               orderReturns: orderDetails.data?.orderReturns,
               paidAmount: paidAmount > 0 ? paidAmount : null,
               customerCurrentBalance: customerCurrentBalance,
+              netExcTax: orderDetails.data?.cart?.priceSummary?.netExcTax?.toString(),
               isDefaultCustomer:
                   _isDefaultCustomerPhone(context, customerPhone),
+              documentConfigType: orderDetails.data?.orderReturns != null &&
+                      (orderDetails.data?.orderReturns?.returnItems?.isNotEmpty ?? false)
+                  ? 'Sales and Return Bill'
+                  : 'Bill',
             ),
           ),
         );

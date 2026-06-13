@@ -6889,6 +6889,8 @@ class BillingPageState extends State<BillingPageRestaurant>
     Map<String, dynamic>? paymentBreakdown,
     String? orderComment,
     String? deliveryMethod,
+    String? documentTitleOverride,
+    String? documentConfigType,
     bool isDefaultCustomer = false,
     String? netExcTax,
   }) async {
@@ -6920,6 +6922,8 @@ class BillingPageState extends State<BillingPageRestaurant>
       paymentBreakdown: paymentBreakdown,
       orderComment: orderComment,
       deliveryMethod: deliveryMethod,
+      documentTitleOverride: documentTitleOverride,
+      documentConfigType: documentConfigType,
       isDefaultCustomer: isDefaultCustomer,
       netExcTax: netExcTax,
     );
@@ -6953,6 +6957,8 @@ class BillingPageState extends State<BillingPageRestaurant>
             paymentBreakdown: paymentBreakdown,
             orderComment: orderComment,
             deliveryMethod: deliveryMethod,
+            documentTitleOverride: documentTitleOverride,
+            documentConfigType: documentConfigType,
             isDefaultCustomer: isDefaultCustomer,
             netExcTax: netExcTax,
           ),

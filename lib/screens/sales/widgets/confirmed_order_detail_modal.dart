@@ -567,6 +567,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
         isDefaultCustomer:
             _isDefaultCustomerPhone(context, order.customerPhone),
         netExcTax: netExcTax.toString(),
+        documentConfigType: 'Bill',
       );
 
       // Only show print page if auto-print failed
@@ -598,6 +599,7 @@ class ConfirmedOrderDetailModal extends StatelessWidget {
               isDefaultCustomer:
                   _isDefaultCustomerPhone(context, order.customerPhone),
               netExcTax: netExcTax.toString(),
+              documentConfigType: 'Bill',
             ),
           ),
         );

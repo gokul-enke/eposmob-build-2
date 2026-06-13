@@ -428,6 +428,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               }
 
               // Try auto-print with default printer first
+              final _hasReturns = orderDetailsModelData?.orderReturns != null &&
+                  (orderDetailsModelData?.orderReturns?.returnItems?.isNotEmpty ?? false);
               final autoPrintSuccess = await PrintPage.autoPrint(
                 context,
                 storeName: storeName,
@@ -456,6 +458,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax
                     ?.toString(),
+                documentConfigType: _hasReturns ? 'Sales and Return Bill' : 'Bill',
               );
 
               // Only show print page if auto-print failed
@@ -491,6 +494,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       netExcTax: orderDetailsModelData
                           ?.cart?.priceSummary?.netExcTax
                           ?.toString(),
+                      documentConfigType: _hasReturns ? 'Sales and Return Bill' : 'Bill',
                     ),
                   ),
                 );
@@ -857,6 +861,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         paymentMethod: paymentMethod,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        customerVatNumber: orderDetailsModelData?.kycInfo?.vatNumber,
+        customerCrNumber: orderDetailsModelData?.kycInfo?.crNumber,
+        customerType: orderDetailsModelData?.customerDetails?.customerType,
       );
 
       Navigator.of(context, rootNavigator: true).pop();

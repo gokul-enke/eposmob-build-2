@@ -2603,6 +2603,8 @@ class StandardPrinter {
     bool hideDefaultCustomerPhone = true,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? customerType,
+    String? documentTitleOverride,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -2632,8 +2634,43 @@ class StandardPrinter {
       // Create a PDF document
       final pdf = pw.Document();
 
-      // Get settings from the loaded display configuration
-      final updatedSettings = displayConfig;
+      // Resolve B2B/B2C invoice title — mirrors ReceiptLayoutParams.displayConfig logic
+      Map<String, DisplayOption>? updatedSettings = displayConfig;
+      if (displayConfig != null) {
+        final normalizedType = customerType?.trim().toUpperCase();
+        final hasKycDetails = (customerVatNumber?.trim().isNotEmpty ?? false) ||
+            (customerCrNumber?.trim().isNotEmpty ?? false);
+        final isB2B = normalizedType == 'B2B' ||
+            ((normalizedType == null || normalizedType.isEmpty) && hasKycDetails);
+        final titleOverride = documentTitleOverride?.trim();
+
+        final b2bInvoiceTitle = displayConfig['showInvoiceTitleB2B'] ??
+            displayConfig['showInvoiceTitleB2b'];
+
+        if (isB2B && b2bInvoiceTitle != null &&
+            (b2bInvoiceTitle.visible == true ||
+                (b2bInvoiceTitle.value?.toString().trim().isNotEmpty ?? false))) {
+          final merged = Map<String, DisplayOption>.from(displayConfig);
+          merged['showInvoiceTitle'] = titleOverride != null && titleOverride.isNotEmpty
+              ? DisplayOption(
+                  visible: true,
+                  value: titleOverride,
+                  defaultValue: b2bInvoiceTitle.defaultValue,
+                )
+              : b2bInvoiceTitle;
+          updatedSettings = merged;
+          debugPrint('[PDF Share] B2B customer — using showInvoiceTitleB2B: visible=${b2bInvoiceTitle.visible}, value=${b2bInvoiceTitle.value}');
+        } else if (titleOverride != null && titleOverride.isNotEmpty) {
+          final merged = Map<String, DisplayOption>.from(displayConfig);
+          merged['showInvoiceTitle'] = DisplayOption(
+            visible: true,
+            value: titleOverride,
+            defaultValue: displayConfig['showInvoiceTitle']?.defaultValue,
+          );
+          updatedSettings = merged;
+          debugPrint('[PDF Share] Using documentTitleOverride: $titleOverride');
+        }
+      }
 
       debugPrint("PDF Generation - Using user settings:");
       debugPrint(

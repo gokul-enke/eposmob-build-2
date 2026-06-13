@@ -358,6 +358,9 @@ class _SalesScreenState extends State<SalesScreen> {
         paymentMethod: paymentMethod,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        customerVatNumber: orderData.kycInfo?.vatNumber,
+        customerCrNumber: orderData.kycInfo?.crNumber,
+        customerType: orderData.customerDetails?.customerType,
       );
 
       // Close loading dialog
@@ -793,6 +796,9 @@ class _SalesScreenState extends State<SalesScreen> {
         paymentMethod: paymentMethod,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        customerVatNumber: orderData.kycInfo?.vatNumber,
+        customerCrNumber: orderData.kycInfo?.crNumber,
+        customerType: orderData.customerDetails?.customerType,
       );
 
       if (pdfFile == null) {
@@ -1488,6 +1494,12 @@ Powered by CloudPOS''',
                   isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                   netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
                       ?.toString(),
+                  documentConfigType: orderDetails.data?.orderReturns != null &&
+                          (orderDetails.data?.orderReturns?.returnItems
+                                  ?.isNotEmpty ??
+                              false)
+                      ? 'Sales and Return Bill'
+                      : 'Bill',
                 );
                 debugPrint(
                     "[SALES][PRINT] autoPrintSuccess=$autoPrintSuccess for order=${orderDetails.data?.orderNumber}");
@@ -1530,6 +1542,13 @@ Powered by CloudPOS''',
                         netExcTax: orderDetails
                             .data?.cart!.priceSummary?.netExcTax
                             ?.toString(),
+                        documentConfigType: orderDetails.data?.orderReturns !=
+                                    null &&
+                                (orderDetails.data?.orderReturns?.returnItems
+                                        ?.isNotEmpty ??
+                                    false)
+                            ? 'Sales and Return Bill'
+                            : 'Bill',
                       ),
                     ),
                   );

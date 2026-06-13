@@ -403,6 +403,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
         paidAmount: paidAmount,
         isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
         netExcTax: netExcTax.toString(),
+        documentConfigType: 'Bill',
       );
 
       // Only show print page if auto-print failed
@@ -432,6 +433,7 @@ class _ConfirmedOrdersScreenState extends State<ConfirmedOrdersScreen> {
               paidAmount: paidAmount,
               isDefaultCustomer: _isDefaultCustomerPhone(order.customerPhone),
               netExcTax: netExcTax.toString(),
+              documentConfigType: 'Bill',
             ),
           ),
         );

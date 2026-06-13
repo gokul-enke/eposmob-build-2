@@ -8695,6 +8695,8 @@ class BillingPageState extends State<BillingPage>
     String? deliveryMethod,
     bool isDefaultCustomer = false,
     String? netExcTax,
+    String? documentConfigType,
+    String? documentTitleOverride,
   }) async {
     if (!mounted) return false;
 
@@ -8726,6 +8728,8 @@ class BillingPageState extends State<BillingPage>
       deliveryMethod: deliveryMethod,
       isDefaultCustomer: isDefaultCustomer,
       netExcTax: netExcTax,
+      documentConfigType: documentConfigType,
+      documentTitleOverride: documentTitleOverride,
     );
 
     if (!autoPrintSuccess && mounted) {
@@ -8759,6 +8763,8 @@ class BillingPageState extends State<BillingPage>
             deliveryMethod: deliveryMethod,
             isDefaultCustomer: isDefaultCustomer,
             netExcTax: netExcTax,
+            documentConfigType: documentConfigType,
+            documentTitleOverride: documentTitleOverride,
           ),
         ),
       );
