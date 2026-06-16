@@ -114,6 +114,14 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final dc = config.displayConfiguration?.options;
     final pageFormat = PdfPageFormat.a4;
 
+    // Resolve B2B/B2C invoice title — params.displayConfig is B2B-aware
+    final _resolvedTitleOpt = params.displayConfig?['showInvoiceTitle'];
+    final _resolvedTitleVal = _resolvedTitleOpt?.value?.toString().trim();
+    final _resolvedTitleDefault = _resolvedTitleOpt?.defaultValue?.toString().trim();
+    final invoiceTitleText = (_resolvedTitleVal?.isNotEmpty == true)
+        ? _resolvedTitleVal!
+        : (_resolvedTitleDefault?.isNotEmpty == true ? _resolvedTitleDefault! : 'Tax Invoice');
+
     // ── Fonts & RTL ─────────────────────────────────────────────────
     final font = await _loadArabicFont();
     final fontBold = await _loadArabicFontBold();
@@ -342,7 +350,7 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Text('Tax Invoice', style: taxInvoiceTitleStyle),
+                    pw.Text(invoiceTitleText, style: taxInvoiceTitleStyle),
                     pw.Text('فاتورة ضريبية',
                         style: taxInvoiceArabicStyle,
                         textDirection: pw.TextDirection.rtl),
