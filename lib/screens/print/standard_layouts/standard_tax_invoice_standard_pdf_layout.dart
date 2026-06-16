@@ -517,7 +517,9 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   _paddedCell(pw.Text(displayDate, style: tableInfoStyle), 4),
                   _paddedCell(
                       pw.Text(
-                          params.paymentMethod == 'CASH' ? 'Cash' : 'Credit',
+                          params.paymentMethod == 'CASH'
+                              ? (isRtl ? 'نقدي' : 'Cash')
+                              : (isRtl ? 'بطاقة' : 'Credit'),
                           style: tableInfoStyle),
                       4),
                 ]),
@@ -651,7 +653,10 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                 fontSize: fs(6))),
                       if (_cfgVisible('showPayment') &&
                           params.paymentMethod != null)
-                        pw.Text('Payment Method: ${params.paymentMethod}',
+                        pw.Text(
+                            isRtl
+                                ? 'طريقة الدفع: ${params.paymentMethod}'
+                                : 'Payment Method: ${params.paymentMethod}',
                             style: pw.TextStyle(
                                 font: font,
                                 fontBold: fontBold,

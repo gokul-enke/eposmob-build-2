@@ -1441,13 +1441,9 @@ class BilingualReceiptLayout implements ReceiptLayout {
             // Map method code to label if possible
             String label = method;
             if (method == 'CASH') {
-              label = isDualLanguage
-                  ? "نقدي   Cash"
-                  : (isEnglish ? "Cash" : "نقدي");
+              label = isEnglish ? "Cash" : "نقدي";
             } else if (method == 'CARD') {
-              label = isDualLanguage
-                  ? "بطاقة   Card"
-                  : (isEnglish ? "Card" : "بطاقة");
+              label = isEnglish ? "Card" : "بطاقة";
             } else if (method == 'UPI') {
               label = "UPI";
             }
@@ -1477,13 +1473,9 @@ class BilingualReceiptLayout implements ReceiptLayout {
               if (amt > 0) {
                 String label = method;
                 if (method == 'CASH') {
-                  label = isDualLanguage
-                      ? "نقدي   Cash"
-                      : (isEnglish ? "Cash" : "نقدي");
+                  label = isEnglish ? "Cash" : "نقدي";
                 } else if (method == 'CARD') {
-                  label = isDualLanguage
-                      ? "بطاقة   Card"
-                      : (isEnglish ? "Card" : "بطاقة");
+                  label = isEnglish ? "Card" : "بطاقة";
                 } else if (method == 'UPI') {
                   label = "UPI";
                 }

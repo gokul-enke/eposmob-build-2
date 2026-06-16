@@ -961,12 +961,17 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
               ? '${params.customerAddress} :العنوان'
               : 'Address: ${params.customerAddress}',
           style: style));
-    if (params.paymentMethod?.isNotEmpty == true)
+    if (params.paymentMethod?.isNotEmpty == true) {
+      final _pmRaw = params.paymentMethod!;
+      final _pmLabel = _pmRaw == 'CASH'
+          ? (isRtl ? 'نقدي' : 'Cash')
+          : _pmRaw == 'CARD'
+              ? (isRtl ? 'بطاقة' : 'Card')
+              : _pmRaw;
       rows.add(pw.Text(
-          isRtl
-              ? 'طريقة الدفع: ${params.paymentMethod}'
-              : 'Payment Method: ${params.paymentMethod}',
+          isRtl ? 'طريقة الدفع: $_pmLabel' : 'Payment Method: $_pmLabel',
           style: style));
+    }
     if (params.customerVatNumber?.isNotEmpty == true)
       rows.add(pw.Text(
           isRtl

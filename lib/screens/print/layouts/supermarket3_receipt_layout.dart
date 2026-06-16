@@ -1463,8 +1463,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
       boxedItems.add(StandardBoxedLineItem(isSeparator: true));
 
       bool isMultiPayment = false;
-      final String cashLabel =
-          isDualLanguage ? "نقدي   Cash" : (isEnglish ? "Cash" : "نقدي");
+      final String cashLabel = isEnglish ? "Cash" : "نقدي";
 
       // Check if paymentBreakdown is provided (preferred)
       if (params.paymentBreakdown != null &&
@@ -1476,13 +1475,9 @@ class supermarket3ReciptLayout implements ReceiptLayout {
             // Map method code to label if possible
             String label = method;
             if (method == 'CASH') {
-              label = isDualLanguage
-                  ? "نقدي   Cash"
-                  : (isEnglish ? "Cash" : "نقدي");
+              label = isEnglish ? "Cash" : "نقدي";
             } else if (method == 'CARD') {
-              label = isDualLanguage
-                  ? "بطاقة   Card"
-                  : (isEnglish ? "Card" : "بطاقة");
+              label = isEnglish ? "Card" : "بطاقة";
             } else if (method == 'UPI') {
               label = "UPI";
             }
@@ -1512,13 +1507,9 @@ class supermarket3ReciptLayout implements ReceiptLayout {
               if (amt > 0) {
                 String label = method;
                 if (method == 'CASH') {
-                  label = isDualLanguage
-                      ? "نقدي   Cash"
-                      : (isEnglish ? "Cash" : "نقدي");
+                  label = isEnglish ? "Cash" : "نقدي";
                 } else if (method == 'CARD') {
-                  label = isDualLanguage
-                      ? "بطاقة   Card"
-                      : (isEnglish ? "Card" : "بطاقة");
+                  label = isEnglish ? "Card" : "بطاقة";
                 } else if (method == 'UPI') {
                   label = "UPI";
                 }
