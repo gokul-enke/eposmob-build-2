@@ -1413,7 +1413,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1434,7 +1434,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     debugPrint("Visibility Flags:");
     debugPrint(
-        "  showMRPTotal: $showMRPTotal (API: ${displayConfig?['showMRPTotal']?.visible})");
+        "  showSubTotal: $showMRPTotal (API showSubTotal: ${displayConfig?['showSubTotal']?.visible}, API showMRPTotal: ${displayConfig?['showMRPTotal']?.visible})");
     debugPrint(
         "  showDiscount: $showDiscount (API: ${displayConfig?['showDiscount']?.visible})");
     debugPrint(
@@ -1444,7 +1444,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     debugPrint("=======================================");
 
     // Labels
-    final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,
+    final subtotalLabelBase = _getLabel(displayConfig, 'showSubTotal', null,
         isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
     final subtotalLabel = subtotalLabelBase;
 

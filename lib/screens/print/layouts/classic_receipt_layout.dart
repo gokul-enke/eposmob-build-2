@@ -1380,7 +1380,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       final showQuantityCount =
           displayConfig?['showQuantityCount']?.visible ?? true;
       final showTax = displayConfig?['showTax']?.visible ?? true;
-      final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+      final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
       final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
 
       // Items count and Discount row
@@ -1476,7 +1476,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
 
       final subtotalLabel =
-          _getLabel(displayConfig, 'showMRPTotal', null, "SUBTOTAL المجموع");
+          _getLabel(displayConfig, 'showSubTotal', null, "SUBTOTAL المجموع");
       final discountLabel =
           _getLabel(displayConfig, 'showDiscount', null, "DISCOUNTS الخصم");
       final taxLabelArabic = _getLabel(
@@ -1485,7 +1485,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
           displayConfig, 'showNetAmount', null, "GRAND TOTAL المبلغ الاجمالي");
 
       // Check visibility settings
-      final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+      final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
       final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
       final showTax = displayConfig?['showTax']?.visible ?? true;
       final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;

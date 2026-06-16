@@ -298,7 +298,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
 
           // Summary Section
           if (displayConfig?['showItemsCount']?.visible == true ||
-              displayConfig?['showMRPTotal']?.visible == true ||
+              (displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible) == true ||
               displayConfig?['showSaved']?.visible == true ||
               displayConfig?['showDiscount']?.visible == true ||
               displayConfig?['showNetAmount']?.visible == true)
@@ -790,9 +790,11 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
             ? displayConfig!['showTax']!.value as String
             : (isRtl ? 'مبلغ الضريبة:' : 'Tax Amount:');
     final labelMrp =
-        (displayConfig?['showMRPTotal']?.value as String?)?.isNotEmpty == true
-            ? displayConfig!['showMRPTotal']!.value as String
-            : (isRtl ? 'إجمالي السعر:' : 'Total MRP:');
+        (displayConfig?['showSubTotal']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showSubTotal']!.value as String
+            : (displayConfig?['showMRPTotal']?.value as String?)?.isNotEmpty == true
+                ? displayConfig!['showMRPTotal']!.value as String
+                : (isRtl ? 'إجمالي السعر:' : 'Total MRP:');
     final labelNet =
         (displayConfig?['showNetAmount']?.value as String?)?.isNotEmpty == true
             ? displayConfig!['showNetAmount']!.value as String
@@ -831,7 +833,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         pw.Expanded(
           child: pw.Column(
             children: [
-              if (displayConfig?['showMRPTotal']?.visible == true)
+              if ((displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible) == true)
                 _buildLabelValueRow(labelMrp, mrp.toStringAsFixed(2), style,
                     isRtl: isRtl,
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween),

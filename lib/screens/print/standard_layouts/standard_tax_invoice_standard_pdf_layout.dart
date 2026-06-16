@@ -692,7 +692,7 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   child: pw.Table(
                     border: pw.TableBorder.all(width: 0.5),
                     children: [
-                      if (dc?['showMRPTotal']?.visible != false)
+                      if ((dc?['showSubTotal']?.visible ?? dc?['showMRPTotal']?.visible) != false)
                         _totalsRow('Total (Exc VAT)',
                             _formatMoney(currency, totalExclTax), footerStyle),
                       if (dc?['showDiscount']?.visible != false &&
