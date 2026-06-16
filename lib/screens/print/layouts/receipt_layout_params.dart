@@ -48,6 +48,7 @@ class ReceiptLayoutParams {
   final bool hideDefaultCustomerPhone;
   final String? netExcTax;
   final List<StoreBank> bankDetails;
+  final String? storeName;
 
   const ReceiptLayoutParams({
     required this.context,
@@ -87,6 +88,7 @@ class ReceiptLayoutParams {
     this.hideDefaultCustomerPhone = true,
     this.netExcTax,
     this.bankDetails = const [],
+    this.storeName,
   });
 
   /// Get the display configuration options from the document config

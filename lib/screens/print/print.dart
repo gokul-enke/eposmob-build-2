@@ -251,6 +251,7 @@ class PrintPage extends StatefulWidget {
         hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
         netExcTax: netExcTax,
         bankDetails: bankProvider.banks,
+        storeName: storeName,
       );
       final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
       debugPrint(
@@ -845,6 +846,7 @@ class _PrintPageState extends State<PrintPage> {
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
+      storeName: widget.storeName,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(
@@ -946,6 +948,7 @@ class _PrintPageState extends State<PrintPage> {
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
+      storeName: widget.storeName,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(

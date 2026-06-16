@@ -231,7 +231,9 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // ── Store info from config ──────────────────────────────────────
     final documentHeader = (config.header ?? '').trim();
     final documentSubheader = (config.subheader ?? '').trim();
-    final storeName = _cfgVal('showStoreName', 'STORE NAME');
+    final storeName = params.storeName?.isNotEmpty == true
+        ? params.storeName!
+        : _cfgVal('showStoreName', 'STORE NAME');
     final storeDesc = _cfgVal('showDescription', '');
     final storeAddress = _cfgVal('showStoreAddress', '');
     final storeFssai = _cfgVal('showFssaiInfo', '');

@@ -273,11 +273,13 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final storeNameText = _getOptionText(
-        displayConfig,
-        'showStoreName',
-        defaultValue: 'STORE NAME',
-      );
+      final storeNameText = params.storeName?.isNotEmpty == true
+          ? params.storeName!
+          : _getOptionText(
+              displayConfig,
+              'showStoreName',
+              defaultValue: 'STORE NAME',
+            );
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.6;

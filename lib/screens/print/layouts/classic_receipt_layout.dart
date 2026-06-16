@@ -248,11 +248,11 @@ class ClassicReceiptLayout implements ReceiptLayout {
           isBold: true, scale: 0.95, verticalPadding: 2, verticalOffset: 0));
     }
 
-    // Store Name - use displayConfig value only, then default
+    // Store Name - priority: logged-in store name > document config value > default
     if (displayConfig?['showStoreName']?.visible == true) {
       final storeName = _getDisplayValue(
+        params.storeName,
         displayConfig?['showStoreName']?.value,
-        null,
         'STORE NAME',
       );
 

@@ -284,15 +284,19 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
         // Only use fallback if both config values are empty
         if (arabicName.isEmpty && englishName.isEmpty) {
-          englishName = 'STORE NAME';
+          englishName = params.storeName?.isNotEmpty == true
+              ? params.storeName!
+              : 'STORE NAME';
         }
 
         storeNameText =
             _getBilingualText(arabic: arabicName, english: englishName);
       } else {
         // Single language mode
-        storeNameText =
-            displayConfig?['showStoreName']?.value as String? ?? 'STORE NAME';
+        storeNameText = params.storeName?.isNotEmpty == true
+            ? params.storeName!
+            : (displayConfig?['showStoreName']?.value as String? ??
+                'STORE NAME');
       }
 
       // Dynamic scaling based on name length

@@ -438,12 +438,16 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           ],
           if (displayConfig?['showStoreName']?.visible == true)
             pw.Text(
-              (displayConfig?['showStoreName']?.value as String?)?.isNotEmpty ==
-                      true
-                  ? displayConfig!['showStoreName']!.value as String
-                  : (params.billDocumentConfig.header?.isNotEmpty == true
-                      ? params.billDocumentConfig.header!
-                      : (isRtl ? 'اسم المتجر' : 'STORE NAME')),
+              params.storeName?.isNotEmpty == true
+                  ? params.storeName!
+                  : ((displayConfig?['showStoreName']?.value as String?)
+                                  ?.isNotEmpty ==
+                              true
+                          ? displayConfig!['showStoreName']!.value as String
+                          : (params.billDocumentConfig.header?.isNotEmpty ==
+                                  true
+                              ? params.billDocumentConfig.header!
+                              : (isRtl ? 'اسم المتجر' : 'STORE NAME'))),
               style: headerStyle,
             ),
           if (displayConfig?['showDescription']?.visible == true)

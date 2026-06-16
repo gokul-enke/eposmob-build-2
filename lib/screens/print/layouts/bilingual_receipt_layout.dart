@@ -274,14 +274,16 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
       if (isDualLanguage) {
         storeNameText = _getDisplayValue(
+          params.storeName,
           displayConfig?['showStoreName']?.value,
-          null,
           'STORE NAME',
         );
       } else {
         // Single language mode
-        storeNameText =
-            displayConfig?['showStoreName']?.value as String? ?? 'STORE NAME';
+        storeNameText = params.storeName?.isNotEmpty == true
+            ? params.storeName!
+            : (displayConfig?['showStoreName']?.value as String? ??
+                'STORE NAME');
       }
 
       // Dynamic scaling based on name length

@@ -284,11 +284,13 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
       final storeNameText = _storeText(
         activeStoreDetails,
         ['store_name', 'storeName', 'name'],
-        fallback: _getOptionText(
-          displayConfig,
-          'showStoreName',
-          defaultValue: 'STORE NAME',
-        ),
+        fallback: params.storeName?.isNotEmpty == true
+            ? params.storeName!
+            : _getOptionText(
+                displayConfig,
+                'showStoreName',
+                defaultValue: 'STORE NAME',
+              ),
       );
 
       // Dynamic scaling based on name length
