@@ -294,10 +294,10 @@ class supermarket3ReciptLayout implements ReceiptLayout {
             _getBilingualText(arabic: arabicName, english: englishName);
       } else {
         // Single language mode
-        storeNameText = params.storeName?.isNotEmpty == true
-            ? params.storeName!
-            : (displayConfig?['showStoreName']?.value as String? ??
-                'STORE NAME');
+        final _configSN = displayConfig?['showStoreName']?.value as String?;
+        storeNameText = (_configSN != null && _configSN.isNotEmpty)
+            ? _configSN
+            : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
       }
 
       // Dynamic scaling based on name length

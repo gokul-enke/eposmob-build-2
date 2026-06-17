@@ -293,9 +293,10 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final storeName = params.storeName?.isNotEmpty == true
-          ? params.storeName!
-          : (displayConfig?['showStoreName']?.value as String? ?? 'STORE NAME');
+      final _configStoreName = displayConfig?['showStoreName']?.value as String?;
+      final storeName = (_configStoreName != null && _configStoreName.isNotEmpty)
+          ? _configStoreName
+          : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.6;

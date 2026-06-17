@@ -273,13 +273,10 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final storeNameText = params.storeName?.isNotEmpty == true
-          ? params.storeName!
-          : _getOptionText(
-              displayConfig,
-              'showStoreName',
-              defaultValue: 'STORE NAME',
-            );
+      final _configStoreName = _getOptionText(displayConfig, 'showStoreName', defaultValue: '');
+      final storeNameText = _configStoreName.isNotEmpty
+          ? _configStoreName
+          : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.6;
