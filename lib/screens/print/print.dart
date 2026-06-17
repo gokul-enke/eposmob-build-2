@@ -20,6 +20,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/layouts/layouts.dart';
 import 'package:pos_machine/screens/print/standard_layouts/standard_layouts.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -155,6 +156,8 @@ class PrintPage extends StatefulWidget {
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
       final bankProvider = Provider.of<BankProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
 
       if (appSettings == null) {
@@ -252,6 +255,9 @@ class PrintPage extends StatefulWidget {
         netExcTax: netExcTax,
         bankDetails: bankProvider.banks,
         storeName: storeName,
+        storeLocation: storeSession.activeStore?.location,
+        storePhone: storeSession.activeStore?.phone,
+        storeEmail: storeSession.activeStore?.email,
       );
       final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
       debugPrint(
@@ -797,6 +803,8 @@ class _PrintPageState extends State<PrintPage> {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
+    final storeSession =
+        Provider.of<StoreSessionProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -847,6 +855,9 @@ class _PrintPageState extends State<PrintPage> {
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
       storeName: widget.storeName,
+      storeLocation: storeSession.activeStore?.location,
+      storePhone: storeSession.activeStore?.phone,
+      storeEmail: storeSession.activeStore?.email,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(
@@ -906,6 +917,8 @@ class _PrintPageState extends State<PrintPage> {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
+    final storeSession =
+        Provider.of<StoreSessionProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -949,6 +962,9 @@ class _PrintPageState extends State<PrintPage> {
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
       storeName: widget.storeName,
+      storeLocation: storeSession.activeStore?.location,
+      storePhone: storeSession.activeStore?.phone,
+      storeEmail: storeSession.activeStore?.email,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(

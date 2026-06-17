@@ -49,6 +49,9 @@ class ReceiptLayoutParams {
   final String? netExcTax;
   final List<StoreBank> bankDetails;
   final String? storeName;
+  final String? storeLocation;
+  final String? storePhone;
+  final String? storeEmail;
 
   const ReceiptLayoutParams({
     required this.context,
@@ -89,6 +92,9 @@ class ReceiptLayoutParams {
     this.netExcTax,
     this.bankDetails = const [],
     this.storeName,
+    this.storeLocation,
+    this.storePhone,
+    this.storeEmail,
   });
 
   /// Get the display configuration options from the document config

@@ -248,11 +248,11 @@ class ClassicReceiptLayout implements ReceiptLayout {
           isBold: true, scale: 0.95, verticalPadding: 2, verticalOffset: 0));
     }
 
-    // Store Name - priority: logged-in store name > document config value > default
+    // Store Name - priority: document config value > logged-in store name > default
     if (displayConfig?['showStoreName']?.visible == true) {
       final storeName = _getDisplayValue(
-        params.storeName,
         displayConfig?['showStoreName']?.value,
+        params.storeName,
         'STORE NAME',
       );
 
@@ -282,10 +282,14 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Store Address
+    // Store Address - priority: logged-in store location > document config value
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final storeAddress = displayConfig?['showStoreAddress']?.value as String?;
-      if (storeAddress != null && storeAddress.isNotEmpty) {
+      final storeAddress = _getDisplayValue(
+        params.storeLocation,
+        displayConfig?['showStoreAddress']?.value,
+        '',
+      );
+      if (storeAddress.isNotEmpty) {
         rows.add(TextRow(storeAddress, scale: 0.9, isBold: true));
       }
     }
@@ -316,11 +320,15 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Telephone
+    // Telephone - priority: logged-in store phone > document config value > app settings
     if (displayConfig?['showTel']?.visible == true) {
       final telephone = _getDisplayValue(
-        displayConfig?['showTel']?.value,
-        appSettings?.customerCarePhone,
+        params.storePhone,
+        _getDisplayValue(
+          displayConfig?['showTel']?.value,
+          appSettings?.customerCarePhone,
+          '',
+        ),
         '',
       );
       if (telephone.isNotEmpty) {
@@ -328,11 +336,15 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Email
+    // Email - priority: logged-in store email > document config value > app settings
     if (displayConfig?['showEmail']?.visible == true) {
       final email = _getDisplayValue(
-        displayConfig?['showEmail']?.value,
-        appSettings?.customerCareEmail,
+        params.storeEmail,
+        _getDisplayValue(
+          displayConfig?['showEmail']?.value,
+          appSettings?.customerCareEmail,
+          '',
+        ),
         '',
       );
       if (email.isNotEmpty) {

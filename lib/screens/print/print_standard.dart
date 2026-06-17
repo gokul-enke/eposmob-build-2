@@ -142,6 +142,9 @@ class StandardPrinter {
     bool hideDefaultCustomerPhone = true,
     String? customerVatNumber,
     String? customerCrNumber,
+    String? storeLocation,
+    String? storePhone,
+    String? storeEmail,
   }) async {
     debugPrint(
         "[LOGO_DEBUG] generateAndPrintPDF started for order: $orderNumber");
@@ -460,14 +463,18 @@ class StandardPrinter {
                       ),
                     ),
 
-                  // Store address - compact display
+                  // Store address - priority: store session > document config
                   if (updatedSettings?['showStoreAddress']?.visible ==
                       true) ...[
-                    if ((updatedSettings?['showStoreAddress']?.value as String?)
-                            ?.isNotEmpty ==
-                        true)
+                    if ((storeLocation?.isNotEmpty == true) ||
+                        (updatedSettings?['showStoreAddress']?.value as String?)
+                                ?.isNotEmpty ==
+                            true)
                       pw.Text(
-                        updatedSettings!['showStoreAddress']!.value as String,
+                        storeLocation?.isNotEmpty == true
+                            ? storeLocation!
+                            : updatedSettings!['showStoreAddress']!.value
+                                as String,
                         style: bodyStyle,
                       ),
                   ],
@@ -483,18 +490,22 @@ class StandardPrinter {
                       ),
                   ],
 
-                  // Contact information - compact display
+                  // Contact information - priority: store session > document config > app settings
                   if (updatedSettings?['showTel']?.visible == true)
                     pw.Text(
-                      updatedSettings?['showTel']?.value as String? ??
-                          customerCareNumber,
+                      storePhone?.isNotEmpty == true
+                          ? storePhone!
+                          : (updatedSettings?['showTel']?.value as String? ??
+                              customerCareNumber),
                       style: bodyStyle,
                     ),
 
                   if (updatedSettings?['showEmail']?.visible == true)
                     pw.Text(
-                      updatedSettings?['showEmail']?.value as String? ??
-                          customerCareEmail,
+                      storeEmail?.isNotEmpty == true
+                          ? storeEmail!
+                          : (updatedSettings?['showEmail']?.value as String? ??
+                              customerCareEmail),
                       style: bodyStyle,
                     ),
                 ],
@@ -2605,6 +2616,9 @@ class StandardPrinter {
     String? customerCrNumber,
     String? customerType,
     String? documentTitleOverride,
+    String? storeLocation,
+    String? storePhone,
+    String? storeEmail,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -2864,16 +2878,19 @@ class StandardPrinter {
                           ),
                         ),
 
-                      // Store address - compact display
+                      // Store address - priority: store session > document config
                       if (updatedSettings?['showStoreAddress']?.visible ==
                           true) ...[
-                        if ((updatedSettings?['showStoreAddress']?.value
-                                    as String?)
-                                ?.isNotEmpty ==
-                            true)
+                        if ((storeLocation?.isNotEmpty == true) ||
+                            (updatedSettings?['showStoreAddress']?.value
+                                        as String?)
+                                    ?.isNotEmpty ==
+                                true)
                           pw.Text(
-                            updatedSettings!['showStoreAddress']!.value
-                                as String,
+                            storeLocation?.isNotEmpty == true
+                                ? storeLocation!
+                                : updatedSettings!['showStoreAddress']!.value
+                                    as String,
                             style: bodyStyle,
                           ),
                       ],
@@ -2891,18 +2908,23 @@ class StandardPrinter {
                           ),
                       ],
 
-                      // Contact information - compact display
+                      // Contact information - priority: store session > document config > app settings
                       if (updatedSettings?['showTel']?.visible == true)
                         pw.Text(
-                          updatedSettings?['showTel']?.value as String? ??
-                              customerCareNumber,
+                          storePhone?.isNotEmpty == true
+                              ? storePhone!
+                              : (updatedSettings?['showTel']?.value as String? ??
+                                  customerCareNumber),
                           style: bodyStyle,
                         ),
 
                       if (updatedSettings?['showEmail']?.visible == true)
                         pw.Text(
-                          updatedSettings?['showEmail']?.value as String? ??
-                              customerCareEmail,
+                          storeEmail?.isNotEmpty == true
+                              ? storeEmail!
+                              : (updatedSettings?['showEmail']?.value
+                                      as String? ??
+                                  customerCareEmail),
                           style: bodyStyle,
                         ),
                     ],
