@@ -142,6 +142,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   late TextEditingController creditAmountController;
   bool _isApplying = false;
 
+  // Pristine-switch tracking: when the user selects a new method without having
+  // touched the auto-filled one, we deselect the old method and move the full
+  // amount to the new one instead of splitting.
+  // We compare controller text at decision time rather than using a touched flag
+  // because keyboard-provider side-effects can fire the listener during init.
+  String? _pristineMethod;
+  String _pristineAmount = '';
+
   @override
   void initState() {
     super.initState();
@@ -189,6 +197,22 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     // Initialize Credit amount controller (visual only)
     creditAmountController = TextEditingController();
+
+    // Record which method was auto-filled at open so we can switch away from it
+    // if the user picks a different method without changing the amount.
+    if (isCashSelected && cashAmountController.text.isNotEmpty) {
+      _pristineMethod = 'cash';
+      _pristineAmount = cashAmountController.text;
+    } else if (isCardSelected && cardAmountController.text.isNotEmpty) {
+      _pristineMethod = 'card';
+      _pristineAmount = cardAmountController.text;
+    } else if (isUpiSelected && upiAmountController.text.isNotEmpty) {
+      _pristineMethod = 'upi';
+      _pristineAmount = upiAmountController.text;
+    } else if (isCodSelected && codAmountController.text.isNotEmpty) {
+      _pristineMethod = 'cod';
+      _pristineAmount = codAmountController.text;
+    }
 
     // Calculate initial balance
     _calculateBalance();
@@ -536,6 +560,16 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
 
     _togglePaymentMethod(target);
+  }
+
+  TextEditingController? _getPristineController() {
+    switch (_pristineMethod) {
+      case 'cash': return cashAmountController;
+      case 'card': return cardAmountController;
+      case 'upi': return upiAmountController;
+      case 'cod': return codAmountController;
+      default: return null;
+    }
   }
 
   bool _isPaymentTypeSelected(String paymentType) {
@@ -956,10 +990,56 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
       // Handle selection (Toggle ON)
       if (targetSelected) {
-        _autoFillSelectedMethodAmount(paymentType);
+        // Pristine-switch: if the previously auto-filled method has not been
+        // touched by the user, deselect it and move the full amount here.
+        // We detect "untouched" by comparing the controller's current text to
+        // the amount recorded at open — immune to init-time listener side effects.
+        bool didPristineSwitch = false;
+        final pristineController = _getPristineController();
+        if (paymentType != 'credit' &&
+            _pristineMethod != null &&
+            pristineController != null &&
+            pristineController.text == _pristineAmount &&
+            _pristineMethod != paymentType &&
+            _isPaymentTypeSelected(_pristineMethod!)) {
+          switch (_pristineMethod) {
+            case 'cash':
+              isCashSelected = false;
+              cashAmountController.clear();
+              break;
+            case 'card':
+              isCardSelected = false;
+              cardAmountController.clear();
+              break;
+            case 'upi':
+              isUpiSelected = false;
+              upiAmountController.clear();
+              break;
+            case 'cod':
+              isCodSelected = false;
+              codAmountController.clear();
+              break;
+          }
+          // Fill new method with the full cart total.
+          targetController?.text = widget.cartTotal.toStringAsFixed(2);
+          _pristineMethod = paymentType;
+          _pristineAmount = targetController?.text ?? '';
+          didPristineSwitch = true;
+        }
+
+        if (!didPristineSwitch) {
+          _autoFillSelectedMethodAmount(paymentType);
+        }
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             targetFocusNode?.requestFocus();
+            if (targetController != null && targetController.text.isNotEmpty) {
+              targetController.selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: targetController.text.length,
+              );
+            }
             // Also trigger the keyboard immediately
             if (paymentType != 'credit' && targetController != null) {
               Provider.of<KeyboardProvider>(context, listen: false).show(
@@ -1695,6 +1775,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     : () {
                         // Update selection state if not already selected
                         setState(() {
+                          final wasSelected = _isPaymentTypeSelected(type);
                           if (type == 'cash')
                             isCashSelected = true;
                           else if (type == 'card')
@@ -1702,7 +1783,42 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           else if (type == 'upi')
                             isUpiSelected = true;
                           else if (type == 'cod') isCodSelected = true;
-                          _autoFillSelectedMethodAmount(type);
+
+                          // Pristine-switch when tapping an unselected method's field
+                          bool didSwitch = false;
+                          final pristineCtrl = _getPristineController();
+                          if (!wasSelected &&
+                              _pristineMethod != null &&
+                              pristineCtrl != null &&
+                              pristineCtrl.text == _pristineAmount &&
+                              _pristineMethod != type &&
+                              _isPaymentTypeSelected(_pristineMethod!)) {
+                            switch (_pristineMethod) {
+                              case 'cash':
+                                isCashSelected = false;
+                                cashAmountController.clear();
+                                break;
+                              case 'card':
+                                isCardSelected = false;
+                                cardAmountController.clear();
+                                break;
+                              case 'upi':
+                                isUpiSelected = false;
+                                upiAmountController.clear();
+                                break;
+                              case 'cod':
+                                isCodSelected = false;
+                                codAmountController.clear();
+                                break;
+                            }
+                            controller.text =
+                                widget.cartTotal.toStringAsFixed(2);
+                            _pristineMethod = type;
+                            _pristineAmount = controller.text;
+                            didSwitch = true;
+                          }
+
+                          if (!didSwitch) _autoFillSelectedMethodAmount(type);
                           _notifyChanges();
                         });
 
