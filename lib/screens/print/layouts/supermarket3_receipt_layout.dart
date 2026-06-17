@@ -352,7 +352,9 @@ class supermarket3ReciptLayout implements ReceiptLayout {
     if (displayConfig?['showStoreAddress']?.visible == true) {
       String addressText;
 
-      if (isDualLanguage) {
+      if (params.storeLocation?.isNotEmpty == true) {
+        addressText = params.storeLocation!;
+      } else if (isDualLanguage) {
         // Refined fallback: Only use fallback if BOTH config values are empty
         final arabicAddress =
             displayConfig?['showStoreAddress']?.value as String? ?? '';
@@ -486,7 +488,9 @@ class supermarket3ReciptLayout implements ReceiptLayout {
     if (displayConfig?['showTel']?.visible == true) {
       String telephoneText;
 
-      if (isDualLanguage) {
+      if (params.storePhone?.isNotEmpty == true) {
+        telephoneText = params.storePhone!;
+      } else if (isDualLanguage) {
         // Refined fallback: Only use fallback if BOTH config values are empty
         final arabicTel = displayConfig?['showTel']?.value as String? ?? '';
         String englishTel = displayConfig?['showTel']?.defaultValue ?? '';
@@ -513,7 +517,9 @@ class supermarket3ReciptLayout implements ReceiptLayout {
     if (displayConfig?['showEmail']?.visible == true) {
       String emailText;
 
-      if (isDualLanguage) {
+      if (params.storeEmail?.isNotEmpty == true) {
+        emailText = params.storeEmail!;
+      } else if (isDualLanguage) {
         // Refined fallback: Only use fallback if BOTH config values are empty
         final arabicEmail = displayConfig?['showEmail']?.value as String? ?? '';
         String englishEmail = displayConfig?['showEmail']?.defaultValue ?? '';

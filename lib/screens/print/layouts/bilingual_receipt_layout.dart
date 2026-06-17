@@ -330,7 +330,9 @@ class BilingualReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showStoreAddress']?.visible == true) {
       String addressText;
 
-      if (isDualLanguage) {
+      if (params.storeLocation?.isNotEmpty == true) {
+        addressText = params.storeLocation!;
+      } else if (isDualLanguage) {
         addressText = _getDisplayValue(
           displayConfig?['showStoreAddress']?.value,
           null,
@@ -433,7 +435,9 @@ class BilingualReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showTel']?.visible == true) {
       String telephoneText;
 
-      if (isDualLanguage) {
+      if (params.storePhone?.isNotEmpty == true) {
+        telephoneText = params.storePhone!;
+      } else if (isDualLanguage) {
         telephoneText = _getDisplayValue(
           displayConfig?['showTel']?.value,
           appSettings?.customerCarePhone,
@@ -454,7 +458,9 @@ class BilingualReceiptLayout implements ReceiptLayout {
     if (displayConfig?['showEmail']?.visible == true) {
       String emailText;
 
-      if (isDualLanguage) {
+      if (params.storeEmail?.isNotEmpty == true) {
+        emailText = params.storeEmail!;
+      } else if (isDualLanguage) {
         emailText = _getDisplayValue(
           displayConfig?['showEmail']?.value,
           appSettings?.customerCareEmail,

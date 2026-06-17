@@ -243,10 +243,16 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         ? params.storeName!
         : _cfgVal('showStoreName', 'STORE NAME');
     final storeDesc = _cfgVal('showDescription', '');
-    final storeAddress = _cfgVal('showStoreAddress', '');
+    final storeAddress = params.storeLocation?.isNotEmpty == true
+        ? params.storeLocation!
+        : _cfgVal('showStoreAddress', '');
     final storeFssai = _cfgVal('showFssaiInfo', '');
-    final storeTel = _cfgVal('showTel', params.customerCareNumber);
-    final storeEmail = _cfgVal('showEmail', params.customerCareEmail);
+    final storeTel = params.storePhone?.isNotEmpty == true
+        ? params.storePhone!
+        : _cfgVal('showTel', params.customerCareNumber);
+    final storeEmail = params.storeEmail?.isNotEmpty == true
+        ? params.storeEmail!
+        : _cfgVal('showEmail', params.customerCareEmail);
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
     final accountLines = params.bankAccountDetailLines;

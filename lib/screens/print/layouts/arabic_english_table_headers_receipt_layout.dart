@@ -313,7 +313,9 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final addressText = _getOptionText(displayConfig, 'showStoreAddress');
+      final addressText = params.storeLocation?.isNotEmpty == true
+          ? params.storeLocation!
+          : _getOptionText(displayConfig, 'showStoreAddress');
 
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText,
@@ -370,11 +372,13 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephoneText = _getOptionText(
-        displayConfig,
-        'showTel',
-        fallback: appSettings?.customerCarePhone,
-      );
+      final telephoneText = params.storePhone?.isNotEmpty == true
+          ? params.storePhone!
+          : _getOptionText(
+              displayConfig,
+              'showTel',
+              fallback: appSettings?.customerCarePhone,
+            );
 
       if (telephoneText.isNotEmpty) {
         rows.add(TextRow(telephoneText,
@@ -383,11 +387,13 @@ class ArabicEnglishTableHeadersReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final emailText = _getOptionText(
-        displayConfig,
-        'showEmail',
-        fallback: appSettings?.customerCareEmail,
-      );
+      final emailText = params.storeEmail?.isNotEmpty == true
+          ? params.storeEmail!
+          : _getOptionText(
+              displayConfig,
+              'showEmail',
+              fallback: appSettings?.customerCareEmail,
+            );
 
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText,

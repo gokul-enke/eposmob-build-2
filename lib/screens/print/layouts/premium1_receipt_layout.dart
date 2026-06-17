@@ -303,8 +303,12 @@ class Premium1ReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final storeAddress = displayConfig?['showStoreAddress']?.value as String?;
-      if (storeAddress != null && storeAddress.isNotEmpty) {
+      final storeAddress = _getDisplayValue(
+        params.storeLocation,
+        displayConfig?['showStoreAddress']?.value,
+        '',
+      );
+      if (storeAddress.isNotEmpty) {
         rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
       }
     }
@@ -331,9 +335,15 @@ class Premium1ReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephone = displayConfig?['showTel']?.value as String? ??
-          appSettings?.customerCarePhone ??
-          '';
+      final telephone = _getDisplayValue(
+        params.storePhone,
+        _getDisplayValue(
+          displayConfig?['showTel']?.value,
+          appSettings?.customerCarePhone,
+          '',
+        ),
+        '',
+      );
       if (telephone.isNotEmpty) {
         rows.add(SpacingRow(5));
         rows.add(TextRow(telephone, scale: 1.3, isBold: true));
@@ -341,9 +351,15 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final email = displayConfig?['showEmail']?.value as String? ??
-          appSettings?.customerCareEmail ??
-          '';
+      final email = _getDisplayValue(
+        params.storeEmail,
+        _getDisplayValue(
+          displayConfig?['showEmail']?.value,
+          appSettings?.customerCareEmail,
+          '',
+        ),
+        '',
+      );
       if (email.isNotEmpty) {
         rows.add(TextRow(email, scale: 0.9, isBold: true));
       }

@@ -460,10 +460,14 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
                     fontBold: arabicFontBold,
                     fontSize: params.selectedPaperSize == 'A5' ? 8.0 : 10.0)),
           if (displayConfig?['showStoreAddress']?.visible == true &&
-              (displayConfig?['showStoreAddress']?.value as String?)
-                      ?.isNotEmpty ==
-                  true)
-            pw.Text(displayConfig!['showStoreAddress']!.value as String,
+              (params.storeLocation?.isNotEmpty == true ||
+                  (displayConfig?['showStoreAddress']?.value as String?)
+                          ?.isNotEmpty ==
+                      true))
+            pw.Text(
+                params.storeLocation?.isNotEmpty == true
+                    ? params.storeLocation!
+                    : displayConfig!['showStoreAddress']!.value as String,
                 style: bodyStyle),
           if (displayConfig?['showFssaiInfo']?.visible == true &&
               (displayConfig?['showFssaiInfo']?.value as String?)?.isNotEmpty ==
@@ -472,13 +476,17 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
                 style: bodyStyle),
           if (displayConfig?['showTel']?.visible == true)
             pw.Text(
-                displayConfig?['showTel']?.value as String? ??
-                    params.customerCareNumber,
+                params.storePhone?.isNotEmpty == true
+                    ? params.storePhone!
+                    : (displayConfig?['showTel']?.value as String? ??
+                        params.customerCareNumber),
                 style: bodyStyle),
           if (displayConfig?['showEmail']?.visible == true)
             pw.Text(
-                displayConfig?['showEmail']?.value as String? ??
-                    params.customerCareEmail,
+                params.storeEmail?.isNotEmpty == true
+                    ? params.storeEmail!
+                    : (displayConfig?['showEmail']?.value as String? ??
+                        params.customerCareEmail),
                 style: bodyStyle),
         ],
       ),
