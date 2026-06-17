@@ -313,6 +313,8 @@ class _SalesScreenState extends State<SalesScreen> {
 
       // Create StandardPrinter instance and generate PDF
       final standardPrinter = StandardPrinter(context);
+      final storeSessionForPdfShare1 =
+          Provider.of<StoreSessionProvider>(context, listen: false);
 
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
@@ -361,6 +363,9 @@ class _SalesScreenState extends State<SalesScreen> {
         customerVatNumber: orderData.kycInfo?.vatNumber,
         customerCrNumber: orderData.kycInfo?.crNumber,
         customerType: orderData.customerDetails?.customerType,
+        storeLocation: storeSessionForPdfShare1.activeStore?.location,
+        storePhone: storeSessionForPdfShare1.activeStore?.phone,
+        storeEmail: storeSessionForPdfShare1.activeStore?.email,
       );
 
       // Close loading dialog
@@ -750,6 +755,8 @@ class _SalesScreenState extends State<SalesScreen> {
       // Create StandardPrinter instance and generate PDF
       debugPrint('🔄 Starting PDF generation for WhatsApp sharing...');
       final standardPrinter = StandardPrinter(context);
+      final storeSessionForPdfShare2 =
+          Provider.of<StoreSessionProvider>(context, listen: false);
 
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
@@ -799,6 +806,9 @@ class _SalesScreenState extends State<SalesScreen> {
         customerVatNumber: orderData.kycInfo?.vatNumber,
         customerCrNumber: orderData.kycInfo?.crNumber,
         customerType: orderData.customerDetails?.customerType,
+        storeLocation: storeSessionForPdfShare2.activeStore?.location,
+        storePhone: storeSessionForPdfShare2.activeStore?.phone,
+        storeEmail: storeSessionForPdfShare2.activeStore?.email,
       );
 
       if (pdfFile == null) {

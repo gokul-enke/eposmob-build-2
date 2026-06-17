@@ -12,6 +12,7 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
@@ -833,6 +834,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final standardPrinter = StandardPrinter(context);
 
+      final storeSessionForShare = Provider.of<StoreSessionProvider>(context, listen: false);
       final File? pdfFile = await standardPrinter.generatePDFForSharing(
         cartItems: orderDetailsModelData!.cart!.cartItems!,
         formattedTotal:
@@ -864,6 +866,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
         customerVatNumber: orderDetailsModelData?.kycInfo?.vatNumber,
         customerCrNumber: orderDetailsModelData?.kycInfo?.crNumber,
         customerType: orderDetailsModelData?.customerDetails?.customerType,
+        storeLocation: storeSessionForShare.activeStore?.location,
+        storePhone: storeSessionForShare.activeStore?.phone,
+        storeEmail: storeSessionForShare.activeStore?.email,
       );
 
       Navigator.of(context, rootNavigator: true).pop();
