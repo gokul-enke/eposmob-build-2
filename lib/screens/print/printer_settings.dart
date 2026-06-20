@@ -76,6 +76,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'detailed_tax_invoice', 'name': 'Detailed Tax Invoice'},
     {'id': 'standard_tax_invoice', 'name': 'Standard Tax Invoice'},
     {'id': 'simplified_tax_invoice', 'name': 'Simplified Tax Invoice'},
+    {'id': 'corporate_tax_invoice', 'name': 'Corporate Tax Invoice'},
     {'id': 'new_classic', 'name': 'New Classic'},
   ];
 
@@ -160,6 +161,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Clean Tax Invoice layout with essential details and clear tax info';
         case 'simplified_tax_invoice':
           return 'ZATCA Simplified Tax Invoice with teal accent header/footer, bilingual columns and totals';
+        case 'corporate_tax_invoice':
+          return 'Formal corporate Tax Invoice with logo header, buyer block, bank details and bilingual amount in words';
         case 'new_classic':
           return 'Modern A4/A5 layout with enhanced font hierarchy and breathable spacing';
         default:
