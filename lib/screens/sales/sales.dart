@@ -389,49 +389,12 @@ class _SalesScreenState extends State<SalesScreen> {
       debugPrint('Starting PDF share process...');
       if (Platform.isWindows) {
         debugPrint('Sharing on Windows platform');
-        // On Windows, use modern ShareParams API with pure file sharing
-        try {
-          debugPrint('Attempting Windows share with ShareParams API...');
-          // Create XFile with enhanced properties
-          final enhancedXFile = XFile(
-            pdfFile.path,
-            name: 'Invoice_${order.orderNumber}.pdf',
-            mimeType: 'application/pdf',
-            length: await pdfFile.length(),
-          );
-
-          // Use modern ShareParams API - files only for Windows
-          final params = ShareParams(
-            files: [enhancedXFile],
-          );
-
-          final result = await SharePlus.instance.share(params);
-
-          debugPrint('ShareParams API completed with status: ${result.status}');
-
-          if (result.status == ShareResultStatus.success) {
-            debugPrint('Windows file sharing succeeded!');
-          } else if (result.status == ShareResultStatus.dismissed) {
-            debugPrint('Windows sharing was dismissed by user');
-            if (context.mounted) {
-              showScaffold(
-                context: context,
-                message: 'Sharing cancelled by user.',
-              );
-            }
-            return;
-          } else {
-            debugPrint('Windows sharing failed with status: ${result.status}');
-            // Try alternative sharing approach
-            _handleWindowsAlternativeSharing(pdfFile, order);
-            return;
-          }
-        } catch (e) {
-          debugPrint('ShareParams API failed: $e');
-          // Alternative approach: Open the PDF file directly
-          _handleWindowsAlternativeSharing(pdfFile, order);
-          return;
-        }
+        // The native Windows Share sheet (used by share_plus) only works for
+        // packaged (MSIX) apps. For this unpackaged Win32 build it returns
+        // ShareResultStatus.unavailable and shows an OS "Try that again" dialog.
+        // Go straight to our own sharing options dialog instead.
+        _handleWindowsAlternativeSharing(pdfFile, order);
+        return;
       } else {
         debugPrint('Sharing on non-Windows platform');
         // On other platforms, use enhanced sharing with context
