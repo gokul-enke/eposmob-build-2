@@ -347,30 +347,19 @@ class SupermarketReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      String addressText;
-
-      if (params.storeLocation?.isNotEmpty == true) {
-        addressText = params.storeLocation!;
-      } else if (isDualLanguage) {
-        // Refined fallback: Only use fallback if BOTH config values are empty
-        final arabicAddress =
-            displayConfig?['showStoreAddress']?.value as String? ?? '';
-        String englishAddress =
-            displayConfig?['showStoreAddress']?.defaultValue ?? '';
-
-        // Only use fallback if both config values are empty
-        // No fallback available for address - just use empty string
-        if (arabicAddress.isEmpty && englishAddress.isEmpty) {
-          // No fallback - keep both empty
+      final addressVal = params.storeLocation ?? '';
+      String addressText = '';
+      if (addressVal.isNotEmpty) {
+        if (isDualLanguage) {
+          final arabicLabel = displayConfig?['showStoreAddress']?.value as String? ?? '';
+          final englishLabel = displayConfig?['showStoreAddress']?.defaultValue ?? '';
+          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
+        } else {
+          final label = displayConfig?['showStoreAddress']?.value as String? ?? '';
+          addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
         }
-
-        addressText =
-            _getBilingualText(arabic: arabicAddress, english: englishAddress);
-      } else {
-        addressText =
-            displayConfig?['showStoreAddress']?.value as String? ?? '';
       }
-
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText, scale: 0.75, isBold: true));
       }
@@ -483,28 +472,19 @@ class SupermarketReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      String telephoneText;
-
-      if (params.storePhone?.isNotEmpty == true) {
-        telephoneText = params.storePhone!;
-      } else if (isDualLanguage) {
-        // Refined fallback: Only use fallback if BOTH config values are empty
-        final arabicTel = displayConfig?['showTel']?.value as String? ?? '';
-        String englishTel = displayConfig?['showTel']?.defaultValue ?? '';
-
-        // Only use fallback if both config values are empty
-        if (arabicTel.isEmpty && englishTel.isEmpty) {
-          englishTel = appSettings?.customerCarePhone ?? '';
+      final phoneVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      String telephoneText = '';
+      if (phoneVal.isNotEmpty) {
+        if (isDualLanguage) {
+          final arabicLabel = displayConfig?['showTel']?.value as String? ?? '';
+          final englishLabel = displayConfig?['showTel']?.defaultValue ?? '';
+          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          telephoneText = label.isNotEmpty ? '$label: $phoneVal' : phoneVal;
+        } else {
+          final label = displayConfig?['showTel']?.value as String? ?? '';
+          telephoneText = label.isNotEmpty ? '$label: $phoneVal' : phoneVal;
         }
-
-        telephoneText =
-            _getBilingualText(arabic: arabicTel, english: englishTel);
-      } else {
-        telephoneText = displayConfig?['showTel']?.value as String? ??
-            appSettings?.customerCarePhone ??
-            '';
       }
-
       if (telephoneText.isNotEmpty) {
         rows.add(SpacingRow(_itemGap));
         rows.add(TextRow(telephoneText, scale: 0.75, isBold: true));
@@ -512,28 +492,19 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      String emailText;
-
-      if (params.storeEmail?.isNotEmpty == true) {
-        emailText = params.storeEmail!;
-      } else if (isDualLanguage) {
-        // Refined fallback: Only use fallback if BOTH config values are empty
-        final arabicEmail = displayConfig?['showEmail']?.value as String? ?? '';
-        String englishEmail = displayConfig?['showEmail']?.defaultValue ?? '';
-
-        // Only use fallback if both config values are empty
-        if (arabicEmail.isEmpty && englishEmail.isEmpty) {
-          englishEmail = appSettings?.customerCareEmail ?? '';
+      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      String emailText = '';
+      if (emailVal.isNotEmpty) {
+        if (isDualLanguage) {
+          final arabicLabel = displayConfig?['showEmail']?.value as String? ?? '';
+          final englishLabel = displayConfig?['showEmail']?.defaultValue ?? '';
+          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          emailText = label.isNotEmpty ? '$label: $emailVal' : emailVal;
+        } else {
+          final label = displayConfig?['showEmail']?.value as String? ?? '';
+          emailText = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         }
-
-        emailText =
-            _getBilingualText(arabic: arabicEmail, english: englishEmail);
-      } else {
-        emailText = displayConfig?['showEmail']?.value as String? ??
-            appSettings?.customerCareEmail ??
-            '';
       }
-
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText, scale: 0.75, isBold: true));
       }

@@ -457,14 +457,13 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
                     fontBold: arabicFontBold,
                     fontSize: params.selectedPaperSize == 'A5' ? 8.0 : 10.0)),
           if (displayConfig?['showStoreAddress']?.visible == true &&
-              (params.storeLocation?.isNotEmpty == true ||
-                  (displayConfig?['showStoreAddress']?.value as String?)
-                          ?.isNotEmpty ==
-                      true))
+              (params.storeLocation?.isNotEmpty == true))
             pw.Text(
-                params.storeLocation?.isNotEmpty == true
-                    ? params.storeLocation!
-                    : displayConfig!['showStoreAddress']!.value as String,
+                () {
+                  final addressLabel = (displayConfig?['showStoreAddress']?.value as String?) ?? '';
+                  final addressVal = params.storeLocation!;
+                  return addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal;
+                }(),
                 style: bodyStyle),
           if (displayConfig?['showFssaiInfo']?.visible == true &&
               (displayConfig?['showFssaiInfo']?.value as String?)?.isNotEmpty ==
@@ -472,19 +471,19 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
             pw.Text(displayConfig!['showFssaiInfo']!.value as String,
                 style: bodyStyle),
           if (displayConfig?['showTel']?.visible == true)
-            pw.Text(
-                params.storePhone?.isNotEmpty == true
-                    ? params.storePhone!
-                    : (displayConfig?['showTel']?.value as String? ??
-                        params.customerCareNumber),
-                style: bodyStyle),
+            () {
+              final phoneVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : params.customerCareNumber;
+              if (phoneVal.isEmpty) return pw.SizedBox();
+              final label = displayConfig?['showTel']?.value as String? ?? '';
+              return pw.Text(label.isNotEmpty ? '$label: $phoneVal' : phoneVal, style: bodyStyle);
+            }(),
           if (displayConfig?['showEmail']?.visible == true)
-            pw.Text(
-                params.storeEmail?.isNotEmpty == true
-                    ? params.storeEmail!
-                    : (displayConfig?['showEmail']?.value as String? ??
-                        params.customerCareEmail),
-                style: bodyStyle),
+            () {
+              final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : params.customerCareEmail;
+              if (emailVal.isEmpty) return pw.SizedBox();
+              final label = displayConfig?['showEmail']?.value as String? ?? '';
+              return pw.Text(label.isNotEmpty ? '$label: $emailVal' : emailVal, style: bodyStyle);
+            }(),
         ],
       ),
     );

@@ -326,21 +326,12 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      String addressText;
-
-      if (params.storeLocation?.isNotEmpty == true) {
-        addressText = params.storeLocation!;
-      } else if (isDualLanguage) {
-        addressText = _getDisplayValue(
-          displayConfig?['showStoreAddress']?.value,
-          null,
-          '',
-        );
-      } else {
-        addressText =
-            displayConfig?['showStoreAddress']?.value as String? ?? '';
+      final addressVal = params.storeLocation ?? '';
+      String addressText = '';
+      if (addressVal.isNotEmpty) {
+        final label = displayConfig?['showStoreAddress']?.value as String? ?? '';
+        addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
       }
-
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText, scale: 0.75, isBold: true));
       }
@@ -431,22 +422,12 @@ class BilingualReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      String telephoneText;
-
-      if (params.storePhone?.isNotEmpty == true) {
-        telephoneText = params.storePhone!;
-      } else if (isDualLanguage) {
-        telephoneText = _getDisplayValue(
-          displayConfig?['showTel']?.value,
-          appSettings?.customerCarePhone,
-          '',
-        );
-      } else {
-        telephoneText = displayConfig?['showTel']?.value as String? ??
-            appSettings?.customerCarePhone ??
-            '';
+      final phoneVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      String telephoneText = '';
+      if (phoneVal.isNotEmpty) {
+        final label = displayConfig?['showTel']?.value as String? ?? '';
+        telephoneText = label.isNotEmpty ? '$label: $phoneVal' : phoneVal;
       }
-
       if (telephoneText.isNotEmpty) {
         rows.add(SpacingRow(_itemGap));
         rows.add(TextRow(telephoneText, scale: 0.75, isBold: true));
@@ -454,22 +435,12 @@ class BilingualReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      String emailText;
-
-      if (params.storeEmail?.isNotEmpty == true) {
-        emailText = params.storeEmail!;
-      } else if (isDualLanguage) {
-        emailText = _getDisplayValue(
-          displayConfig?['showEmail']?.value,
-          appSettings?.customerCareEmail,
-          '',
-        );
-      } else {
-        emailText = displayConfig?['showEmail']?.value as String? ??
-            appSettings?.customerCareEmail ??
-            '';
+      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      String emailText = '';
+      if (emailVal.isNotEmpty) {
+        final label = displayConfig?['showEmail']?.value as String? ?? '';
+        emailText = label.isNotEmpty ? '$label: $emailVal' : emailVal;
       }
-
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText, scale: 0.75, isBold: true));
       }

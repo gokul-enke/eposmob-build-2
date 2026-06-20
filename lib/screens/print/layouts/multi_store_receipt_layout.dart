@@ -325,13 +325,13 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final addressText = params.storeLocation?.isNotEmpty == true
+      final addressLabel = _getOptionText(displayConfig, 'showStoreAddress');
+      final addressVal = params.storeLocation?.isNotEmpty == true
           ? params.storeLocation!
-          : _storeText(
-              activeStoreDetails,
-              ['location', 'address', 'store_address', 'storeAddress'],
-              fallback: _getOptionText(displayConfig, 'showStoreAddress'),
-            );
+          : _storeText(activeStoreDetails, ['location', 'address', 'store_address', 'storeAddress'], fallback: '');
+      final addressText = addressVal.isNotEmpty
+          ? (addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal)
+          : '';
 
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText,
@@ -388,17 +388,11 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephoneText = params.storePhone?.isNotEmpty == true
+      final telLabel = _getOptionText(displayConfig, 'showTel');
+      final phoneVal = params.storePhone?.isNotEmpty == true
           ? params.storePhone!
-          : _storeText(
-              activeStoreDetails,
-              ['phone', 'store_phone', 'storePhone'],
-              fallback: _getOptionText(
-                displayConfig,
-                'showTel',
-                fallback: appSettings?.customerCarePhone,
-              ),
-            );
+          : _storeText(activeStoreDetails, ['phone', 'store_phone', 'storePhone'], fallback: appSettings?.customerCarePhone ?? '');
+      final telephoneText = phoneVal.isNotEmpty ? (telLabel.isNotEmpty ? '$telLabel: $phoneVal' : phoneVal) : '';
 
       if (telephoneText.isNotEmpty) {
         rows.add(TextRow(telephoneText,
@@ -407,17 +401,11 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final emailText = params.storeEmail?.isNotEmpty == true
+      final emailLabel = _getOptionText(displayConfig, 'showEmail');
+      final emailVal = params.storeEmail?.isNotEmpty == true
           ? params.storeEmail!
-          : _storeText(
-              activeStoreDetails,
-              ['email', 'store_email', 'storeEmail'],
-              fallback: _getOptionText(
-                displayConfig,
-                'showEmail',
-                fallback: appSettings?.customerCareEmail,
-              ),
-            );
+          : _storeText(activeStoreDetails, ['email', 'store_email', 'storeEmail'], fallback: appSettings?.customerCareEmail ?? '');
+      final emailText = emailVal.isNotEmpty ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal) : '';
 
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText,

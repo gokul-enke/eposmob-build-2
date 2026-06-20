@@ -310,9 +310,11 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final addressText = params.storeLocation?.isNotEmpty == true
-          ? params.storeLocation!
-          : _getOptionText(displayConfig, 'showStoreAddress');
+      final addressLabel = _getOptionText(displayConfig, 'showStoreAddress');
+      final addressVal = params.storeLocation ?? '';
+      final addressText = addressVal.isNotEmpty
+          ? (addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal)
+          : '';
 
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText,
@@ -369,13 +371,9 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephoneText = params.storePhone?.isNotEmpty == true
-          ? params.storePhone!
-          : _getOptionText(
-              displayConfig,
-              'showTel',
-              fallback: appSettings?.customerCarePhone,
-            );
+      final telLabel = _getOptionText(displayConfig, 'showTel');
+      final phone = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      final telephoneText = phone.isNotEmpty ? (telLabel.isNotEmpty ? '$telLabel: $phone' : phone) : '';
 
       if (telephoneText.isNotEmpty) {
         rows.add(TextRow(telephoneText,
@@ -384,13 +382,9 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final emailText = params.storeEmail?.isNotEmpty == true
-          ? params.storeEmail!
-          : _getOptionText(
-              displayConfig,
-              'showEmail',
-              fallback: appSettings?.customerCareEmail,
-            );
+      final emailLabel = _getOptionText(displayConfig, 'showEmail');
+      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      final emailText = emailVal.isNotEmpty ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal) : '';
 
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText,

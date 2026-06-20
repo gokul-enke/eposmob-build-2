@@ -248,16 +248,22 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         ? _cfgStoreName
         : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
     final storeDesc = _cfgVal('showDescription', '');
-    final storeAddress = params.storeLocation?.isNotEmpty == true
-        ? params.storeLocation!
-        : _cfgVal('showStoreAddress', '');
+    final addressLabel = _cfgVal('showStoreAddress', '');
+    final addressVal = params.storeLocation ?? '';
+    final storeAddress = addressVal.isNotEmpty
+        ? (addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal)
+        : '';
     final storeFssai = _cfgVal('showFssaiInfo', '');
-    final storeTel = params.storePhone?.isNotEmpty == true
-        ? params.storePhone!
-        : _cfgVal('showTel', params.customerCareNumber);
-    final storeEmail = params.storeEmail?.isNotEmpty == true
-        ? params.storeEmail!
-        : _cfgVal('showEmail', params.customerCareEmail);
+    final telLabel = _cfgVal('showTel', '');
+    final telVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : params.customerCareNumber;
+    final storeTel = telVal.isNotEmpty
+        ? (telLabel.isNotEmpty ? '$telLabel: $telVal' : telVal)
+        : '';
+    final emailLabel = _cfgVal('showEmail', '');
+    final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : params.customerCareEmail;
+    final storeEmail = emailVal.isNotEmpty
+        ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal)
+        : '';
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
     final fallbackAccountLines = extraHeading2

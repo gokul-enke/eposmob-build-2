@@ -282,14 +282,12 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Store Address - priority: logged-in store location > document config value
+    // Store Address
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final storeAddress = _getDisplayValue(
-        params.storeLocation,
-        displayConfig?['showStoreAddress']?.value,
-        '',
-      );
-      if (storeAddress.isNotEmpty) {
+      final label = displayConfig?['showStoreAddress']?.value as String? ?? '';
+      final address = params.storeLocation ?? '';
+      if (address.isNotEmpty) {
+        final storeAddress = label.isNotEmpty ? '$label: $address' : address;
         rows.add(TextRow(storeAddress, scale: 0.9, isBold: true));
       }
     }
@@ -320,34 +318,22 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Telephone - priority: logged-in store phone > document config value > app settings
+    // Telephone
     if (displayConfig?['showTel']?.visible == true) {
-      final telephone = _getDisplayValue(
-        params.storePhone,
-        _getDisplayValue(
-          displayConfig?['showTel']?.value,
-          appSettings?.customerCarePhone,
-          '',
-        ),
-        '',
-      );
-      if (telephone.isNotEmpty) {
+      final label = displayConfig?['showTel']?.value as String? ?? '';
+      final phone = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      if (phone.isNotEmpty) {
+        final telephone = label.isNotEmpty ? '$label: $phone' : phone;
         rows.add(TextRow(telephone, scale: 0.8, isBold: true));
       }
     }
 
-    // Email - priority: logged-in store email > document config value > app settings
+    // Email
     if (displayConfig?['showEmail']?.visible == true) {
-      final email = _getDisplayValue(
-        params.storeEmail,
-        _getDisplayValue(
-          displayConfig?['showEmail']?.value,
-          appSettings?.customerCareEmail,
-          '',
-        ),
-        '',
-      );
-      if (email.isNotEmpty) {
+      final label = displayConfig?['showEmail']?.value as String? ?? '';
+      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      if (emailVal.isNotEmpty) {
+        final email = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         rows.add(TextRow(email, scale: 0.8, isBold: true));
       }
     }
