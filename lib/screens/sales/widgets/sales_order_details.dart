@@ -835,7 +835,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       final standardPrinter = StandardPrinter(context);
 
       final storeSessionForShare = Provider.of<StoreSessionProvider>(context, listen: false);
-      final File? pdfFile = await standardPrinter.generatePDFForSharing(
+      final File? pdfFile = await standardPrinter.generateThemedPDFForSharing(
         cartItems: orderDetailsModelData!.cart!.cartItems!,
         formattedTotal:
             orderDetailsModelData!.priceSummary?.netPayable?.toString() ??
@@ -850,7 +850,6 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
             DateHelper.now().toIso8601String(),
         orderNumber: orderNumber,
         isFromLocalStorage: false,
-        selectedPaperSize: 'A4',
         billDocumentConfig: billDocumentConfig,
         customerCareNumber: appSettings.customerCarePhone,
         customerCareEmail: appSettings.customerCareEmail,

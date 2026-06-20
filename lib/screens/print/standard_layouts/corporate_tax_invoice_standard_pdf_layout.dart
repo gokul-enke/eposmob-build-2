@@ -159,9 +159,10 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final fontBold = await _loadArabicFontBold();
     final configLang = config.language;
     final isRtl = configLang != null
-        ? configLang == 'ar'
+        ? configLang.toLowerCase() == 'ar'
         : LocalizationService.locale.languageCode == 'ar';
     final isEnglish = !isRtl;
+    final isDualLanguage = (configLang ?? '').toLowerCase() == 'ar';
     // Laid out left-to-right by design (English primary with Arabic sub-labels);
     // Arabic runs carry their own per-widget RTL direction.
 
@@ -360,7 +361,10 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final bankAccount = params.primaryBankAccount;
 
     // ── Invoice number (prefix + stripping) ─────────────────────────
-    final prefix = config.numberPrefix ?? '';
+    // Invoice prefix: config value > config default > numberPrefix > 'INV-'
+    // (mirrors the thermal layout's showInvoicePrefix resolution).
+    final prefix = _getOptionText(dc, 'showInvoicePrefix',
+        fallback: config.numberPrefix, defaultValue: 'INV-');
     final invRegex = RegExp(r'[1-9]\d*');
     final invMatch = invRegex.firstMatch(params.orderNumber);
     final strippedOrderNumber =
@@ -678,15 +682,15 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
                       if (showDiscountFlag && discountAmountValue > 0)
                         _totalsRow(
-                            _getLabel(dc, 'showDiscount', null, 'Discount'),
+                            _labelEn(dc, 'showDiscount', null, 'Discount',
+                                isDualLanguage),
                             'الخصم',
                             _formatMoney(currency, discountAmountValue),
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
                       if (showTaxTotalFlag)
                         _totalsRow(
-                            _getLabel(
-                                dc, 'showTax', resolvedLabels?.tax,
-                                'Total VAT 15%'),
+                            _labelEn(dc, 'showTax', resolvedLabels?.taxDefault,
+                                'Total VAT 15%', isDualLanguage),
                             'مجموع ضريبة القيمة المضافة ال 15%',
                             _formatMoney(currency, totalTax),
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
@@ -694,8 +698,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.SizedBox(height: 2),
                         pw.Divider(height: 0, thickness: 0.5),
                         _totalsRow(
-                            _getLabel(
-                                dc, 'showNetAmount', null, 'Total Amount Due'),
+                            _labelEn(dc, 'showNetAmount', null,
+                                'Total Amount Due', isDualLanguage),
                             'إجمالي المبلغ المستحق',
                             _formatMoney(currency, totalAmount),
                             totalsDueEn, totalsLabelAr, totalsDueValue),
@@ -861,6 +865,55 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (configValue != null && configValue.isNotEmpty) return configValue;
     if (resolvedLabel != null && resolvedLabel.isNotEmpty) return resolvedLabel;
     return defaultLabel;
+  }
+
+  /// Text from a config option: value > defaultValue > fallback > default.
+  /// Mirrors the thermal layout's `_getOptionText`.
+  String _getOptionText(Map<String, DisplayOption>? dc, String key,
+      {String? fallback, String defaultValue = ''}) {
+    final opt = dc?[key];
+    final v = opt?.value;
+    if (v is String && v.isNotEmpty) return v;
+    final d = opt?.defaultValue;
+    if (d != null && d.isNotEmpty) return d;
+    if (fallback != null && fallback.isNotEmpty) return fallback;
+    return defaultValue;
+  }
+
+  /// English label slot, dual-language aware.
+  ///
+  /// In dual/Arabic configs the localized custom label lives in `value`
+  /// (Arabic) and the English text in `defaultValue`, so the English slot must
+  /// prefer `defaultValue`. In English configs `value` *is* the English label.
+  /// Mirrors the English half of the thermal `_getBilingualLabel`.
+  String _labelEn(Map<String, DisplayOption>? dc, String key,
+      String? resolvedEnglish, String defaultEn, bool isDual) {
+    if (isDual) {
+      final cfgEn = dc?[key]?.defaultValue;
+      if (cfgEn != null && cfgEn.isNotEmpty) return cfgEn;
+    } else {
+      final cfgVal = dc?[key]?.value as String?;
+      if (cfgVal != null && cfgVal.isNotEmpty) return cfgVal;
+    }
+    if (resolvedEnglish != null && resolvedEnglish.isNotEmpty) {
+      return resolvedEnglish;
+    }
+    return defaultEn;
+  }
+
+  /// Arabic sub-label slot. In dual configs prefer the localized custom label
+  /// (`value`) / localized resolved label; otherwise fall back to the fixed
+  /// template translation. Mirrors the Arabic half of `_getBilingualLabel`.
+  String _labelAr(Map<String, DisplayOption>? dc, String key,
+      String? resolvedArabic, String defaultAr, bool isDual) {
+    if (isDual) {
+      final cfgAr = dc?[key]?.value as String?;
+      if (cfgAr != null && cfgAr.isNotEmpty) return cfgAr;
+      if (resolvedArabic != null && resolvedArabic.isNotEmpty) {
+        return resolvedArabic;
+      }
+    }
+    return defaultAr;
   }
 
   /// Bilingual amount-in-words (English then Arabic), as in the reference.
@@ -1106,6 +1159,9 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final showTax = col('showTaxHeader');
     final showTotal = col('showTotal');
 
+    final bool isAr =
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+
     // Column widths matching the reference proportions.
     final Map<int, pw.TableColumnWidth> colWidths = {};
     int ci = 0;
@@ -1144,51 +1200,62 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     final hdrs = <pw.Widget>[];
     if (showSL) {
-      hdrs.add(hdr(_getLabel(dc, 'showSLNumber', resolvedLabels?.slNumber, 'S/N'),
-          'التسلسل'));
+      hdrs.add(hdr(
+          _labelEn(dc, 'showSLNumber', resolvedLabels?.slNumberDefault, 'S/N',
+              isAr),
+          _labelAr(dc, 'showSLNumber', resolvedLabels?.slNumber, 'التسلسل',
+              isAr)));
     }
     if (showItems) {
       hdrs.add(hdr(
-          _getLabel(
-              dc, 'showParticulars', resolvedLabels?.particulars, 'Description'),
-          'البيان',
+          _labelEn(dc, 'showParticulars', resolvedLabels?.particularsDefault,
+              'Description', isAr),
+          _labelAr(
+              dc, 'showParticulars', resolvedLabels?.particulars, 'البيان',
+              isAr),
           align: pw.Alignment.centerLeft));
     }
     if (showMRP) {
-      hdrs.add(hdr(_getLabel(dc, 'showMRP', resolvedLabels?.mrp, 'MRP'),
-          'القيمة'));
+      hdrs.add(hdr(_labelEn(dc, 'showMRP', null, 'MRP', isAr),
+          _labelAr(dc, 'showMRP', resolvedLabels?.mrp, 'القيمة', isAr)));
     }
     if (showQty) {
-      hdrs.add(hdr(_getLabel(dc, 'showQty', resolvedLabels?.qty, 'Quantity'),
-          'الكمية'));
+      hdrs.add(hdr(
+          _labelEn(dc, 'showQty', resolvedLabels?.qtyDefault, 'Quantity', isAr),
+          _labelAr(dc, 'showQty', resolvedLabels?.qty, 'الكمية', isAr)));
     }
     if (showRate) {
       hdrs.add(hdr(
-          _getLabel(dc, 'showRate', resolvedLabels?.rate, 'Unit Price'),
-          'سعر الوحدة'));
+          _labelEn(dc, 'showRate', resolvedLabels?.rateDefault, 'Unit Price',
+              isAr),
+          _labelAr(dc, 'showRate', resolvedLabels?.rate, 'سعر الوحدة', isAr)));
     }
     if (showRateExcTax) {
-      hdrs.add(hdr(_getLabel(dc, 'showRateExcTax', null, 'Unit Price (Ex Tax)'),
-          'السعر بدون ضريبة'));
+      hdrs.add(hdr(
+          _labelEn(dc, 'showRateExcTax', null, 'Unit Price (Ex Tax)', isAr),
+          _labelAr(dc, 'showRateExcTax', null, 'السعر بدون ضريبة', isAr)));
     }
     if (showUnit) {
-      hdrs.add(hdr(_getLabel(dc, 'showUnit', resolvedLabels?.unitName, 'Unit'),
-          'الوحدة'));
+      hdrs.add(hdr(_labelEn(dc, 'showUnit', null, 'Unit', isAr),
+          _labelAr(dc, 'showUnit', resolvedLabels?.unitName, 'الوحدة', isAr)));
     }
     if (showDiscount) {
-      hdrs.add(hdr(_getLabel(dc, 'showDiscount', null, 'Discount'), 'الخصم'));
+      hdrs.add(hdr(_labelEn(dc, 'showDiscount', null, 'Discount', isAr),
+          _labelAr(dc, 'showDiscount', null, 'الخصم', isAr)));
     }
     // Total Amount (taxable) — always shown.
     hdrs.add(hdr('Total Amount', 'مبلغ الإجمالي'));
     if (showTax) {
       hdrs.add(hdr(
-          _getLabel(dc, 'showTaxHeader', resolvedLabels?.tax, 'VAT 15%'),
-          'الضريبة'));
+          _labelEn(dc, 'showTaxHeader', resolvedLabels?.taxDefault, 'VAT 15%',
+              isAr),
+          _labelAr(dc, 'showTaxHeader', resolvedLabels?.tax, 'الضريبة', isAr)));
     }
     if (showTotal) {
       hdrs.add(hdr(
-          _getLabel(dc, 'showTotal', resolvedLabels?.total, 'Net Total'),
-          'الإجمالي'));
+          _labelEn(dc, 'showTotal', resolvedLabels?.totalDefault, 'Net Total',
+              isAr),
+          _labelAr(dc, 'showTotal', resolvedLabels?.total, 'الإجمالي', isAr)));
     }
 
     final rows = <pw.TableRow>[];

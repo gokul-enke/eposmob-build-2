@@ -335,7 +335,7 @@ class _SalesScreenState extends State<SalesScreen> {
       }
 
       // Use the cart items directly without conversion since the PDF method expects the original objects
-      final File? pdfFile = await standardPrinter.generatePDFForSharing(
+      final File? pdfFile = await standardPrinter.generateThemedPDFForSharing(
         cartItems: orderData.cart!.cartItems!,
         formattedTotal: orderData.priceSummary?.netPayable?.toString() ??
             orderData.priceSummary?.netTotal?.toString() ??
@@ -347,7 +347,6 @@ class _SalesScreenState extends State<SalesScreen> {
         orderNumber:
             orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
         isFromLocalStorage: false,
-        selectedPaperSize: 'A4', // Default to A4 for sharing
         billDocumentConfig: billDocumentConfig,
         customerCareNumber: appSettings.customerCarePhone,
         customerCareEmail: appSettings.customerCareEmail,
@@ -776,7 +775,7 @@ class _SalesScreenState extends State<SalesScreen> {
         }
       }
 
-      final File? pdfFile = await standardPrinter.generatePDFForSharing(
+      final File? pdfFile = await standardPrinter.generateThemedPDFForSharing(
         cartItems: orderData.cart!.cartItems!,
         formattedTotal: orderData.priceSummary?.netPayable?.toString() ??
             orderData.priceSummary?.netTotal?.toString() ??
@@ -788,7 +787,6 @@ class _SalesScreenState extends State<SalesScreen> {
         orderNumber:
             orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
         isFromLocalStorage: false,
-        selectedPaperSize: 'A4',
         billDocumentConfig: billDocumentConfig,
         customerCareNumber: appSettings.customerCarePhone,
         customerCareEmail: appSettings.customerCareEmail,

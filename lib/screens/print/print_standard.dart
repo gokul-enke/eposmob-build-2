@@ -22,6 +22,11 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/localization_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/providers/bank_provider.dart';
+import 'package:pos_machine/screens/print/standard_layouts/standard_pdf_layout_factory.dart';
+import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'logo_loader.dart';
 
 class StandardPrinter {
@@ -2586,6 +2591,162 @@ class StandardPrinter {
   }
 
   // Generate PDF for sharing without printing
+  /// Generates a shareable PDF that honors the **B2B Billing Printer** settings
+  /// (paper size + receipt theme) chosen in Printer Settings, rendering through
+  /// [StandardPdfLayoutFactory] so the selected template (e.g. Simplified Tax
+  /// Invoice) is used instead of the hardcoded classic layout.
+  ///
+  /// Resolution order:
+  /// - Paper size: `default_paper_size_b2b` → `default_paper_size` → `A4`
+  ///   (thermal sizes are coerced to A4 since share output is an A-series PDF).
+  /// - Theme: `billing_receipt_theme_b2b` → `billing_receipt_theme` →
+  ///   document config `activeTheme` → `classic`.
+  ///
+  /// All Share-PDF buttons route through here. Returns the saved [File] or null.
+  Future<File?> generateThemedPDFForSharing({
+    required List<dynamic> cartItems,
+    required String formattedTotal,
+    required String? savedTotal,
+    String? discountAmount,
+    required String orderDate,
+    required String orderNumber,
+    required bool isFromLocalStorage,
+    required DocumentConfig? billDocumentConfig,
+    required String customerCareNumber,
+    required String customerCareEmail,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerAddress,
+    OrderReturns? orderReturns,
+    double? customerOldBalance,
+    double? customerCurrentBalance,
+    double? paidAmount,
+    String? orderComment,
+    String? deliveryMethod,
+    String? customerAlternatePhone,
+    String? paymentMethod,
+    Map<String, dynamic>? paymentBreakdown,
+    bool isDefaultCustomer = false,
+    bool hideDefaultCustomerPhone = true,
+    String? customerVatNumber,
+    String? customerCrNumber,
+    String? customerType,
+    String? documentTitleOverride,
+    String? netExcTax,
+    String? storeName,
+    String? storeLocation,
+    String? storePhone,
+    String? storeEmail,
+  }) async {
+    try {
+      if (billDocumentConfig == null) {
+        debugPrint(
+            "ERROR: Bill document configuration not loaded yet (themed share).");
+        return null;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      // Always read the B2B Billing Printer settings, falling back to the
+      // legacy B2C billing keys when B2B is left unconfigured.
+      String paperSize = prefs.getString('default_paper_size_b2b') ??
+          prefs.getString('default_paper_size') ??
+          'A4';
+      // Shared output is an A-series PDF; coerce thermal sizes to A4.
+      if (paperSize != 'A4' && paperSize != 'A5') {
+        paperSize = 'A4';
+      }
+
+      final theme = prefs.getString('billing_receipt_theme_b2b') ??
+          prefs.getString('billing_receipt_theme') ??
+          billDocumentConfig.activeTheme ??
+          'classic';
+
+      debugPrint(
+          '[StandardPrinter.share] Using B2B billing settings -> paperSize=$paperSize, theme=$theme');
+
+      // ZATCA credentials for Saudi Arabia e-invoicing.
+      final sharedPrefProvider = SharedPreferenceProvider();
+      final zatcaVatNumber = await sharedPrefProvider.getZatcaVatNumber();
+      final zatcaCompanyName = await sharedPrefProvider.getZatcaCompanyName();
+
+      final bankProvider = Provider.of<BankProvider>(context, listen: false);
+
+      final params = ReceiptLayoutParams(
+        context: context,
+        // No physical printer is used when sharing a PDF file.
+        selectedPrinter: BluetoothPrinter(deviceName: 'share'),
+        cartItems: cartItems,
+        formattedTotal: formattedTotal,
+        savedTotal: savedTotal,
+        discountAmount: discountAmount,
+        orderDate: orderDate,
+        orderNumber: orderNumber,
+        isFromLocalStorage: isFromLocalStorage,
+        selectedPaperSize: paperSize,
+        billDocumentConfig: billDocumentConfig,
+        customerCareNumber: customerCareNumber,
+        customerCareEmail: customerCareEmail,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        customerAddress: customerAddress,
+        orderReturns: orderReturns,
+        customerOldBalance: customerOldBalance,
+        customerCurrentBalance: customerCurrentBalance,
+        paidAmount: paidAmount,
+        orderComment: orderComment,
+        deliveryMethod: deliveryMethod,
+        customerAlternatePhone: customerAlternatePhone,
+        paymentMethod: paymentMethod,
+        customerVatNumber: customerVatNumber,
+        customerCrNumber: customerCrNumber,
+        customerType: customerType,
+        documentTitleOverride: documentTitleOverride,
+        paymentBreakdown: paymentBreakdown,
+        zatcaVatNumber: zatcaVatNumber,
+        zatcaCompanyName: zatcaCompanyName,
+        isDefaultCustomer: isDefaultCustomer,
+        hideDefaultCustomerPhone: hideDefaultCustomerPhone,
+        netExcTax: netExcTax,
+        bankDetails: bankProvider.banks,
+        storeName: storeName,
+        storeLocation: storeLocation,
+        storePhone: storePhone,
+        storeEmail: storeEmail,
+      );
+
+      // Build the themed PDF via the same factory used by the print flow.
+      final layout = StandardPdfLayoutFactory.getLayout(theme);
+      final pdf = await layout.buildPdfDocument(params);
+
+      // Save to the shared epos directory.
+      final output = await _getEposDirectory();
+      final sanitizedOrderNumber =
+          orderNumber.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+      final file = File('${output.path}/Invoice_$sanitizedOrderNumber.pdf');
+
+      final pdfBytes = await pdf.save();
+      await file.writeAsBytes(pdfBytes);
+
+      final fileExists = await file.exists();
+      final fileSize = fileExists ? await file.length() : 0;
+      debugPrint(
+          '[StandardPrinter.share] Themed PDF generated: ${file.path} (exists=$fileExists, size=$fileSize)');
+
+      if (!fileExists || fileSize == 0) {
+        debugPrint('ERROR: Themed share PDF was not created properly');
+        return null;
+      }
+
+      return file;
+    } catch (e) {
+      debugPrint("Error generating themed PDF for sharing: ${e.toString()}");
+      return null;
+    }
+  }
+
   Future<File?> generatePDFForSharing({
     required List<dynamic> cartItems,
     required String formattedTotal,
