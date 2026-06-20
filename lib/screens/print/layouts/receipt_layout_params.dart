@@ -3,6 +3,7 @@ import 'package:pos_machine/models/bank.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
 
 /// Data class containing all parameters needed for receipt generation.
 /// This eliminates the need to pass many individual parameters to layout methods.
@@ -103,11 +104,13 @@ class ReceiptLayoutParams {
     if (options == null) return null;
     final titleOverride = documentTitleOverride?.trim();
 
-    final normalizedType = customerType?.trim().toUpperCase();
     final hasKycDetails = (customerVatNumber?.trim().isNotEmpty ?? false) ||
         (customerCrNumber?.trim().isNotEmpty ?? false);
-    final isB2B = normalizedType == 'B2B' ||
-        ((normalizedType == null || normalizedType.isEmpty) && hasKycDetails);
+    final isB2B = ReceiptCustomerSegment.isBusiness(
+      customerType: customerType,
+      vatNumber: customerVatNumber,
+      crNumber: customerCrNumber,
+    );
     if (!isB2B) {
       if (titleOverride == null || titleOverride.isEmpty) return options;
       final merged = Map<String, DisplayOption>.from(options);
