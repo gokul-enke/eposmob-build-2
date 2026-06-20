@@ -5,6 +5,7 @@ import 'standard_tax_invoice_standard_pdf_layout.dart';
 import 'tax_invoice_standard_pdf_layout.dart';
 import 'detailed_tax_invoice_standard_pdf_layout.dart';
 import 'new_classic_standad_pdf_layout.dart';
+import 'simplified_tax_invoice_standard_pdf_layout.dart';
 
 /// Factory class for creating standard PDF layouts based on theme.
 ///
@@ -26,6 +27,7 @@ class StandardPdfLayoutFactory {
     'detailed_tax_invoice': () => DetailedTaxInvoiceStandardPdfLayout(),
     'standard_tax_invoice': () => StandardTaxInvoiceStandardPdfLayout(),
     'new_classic': () => NewClassicStandardPdfLayout(),
+    'simplified_tax_invoice': () => SimplifiedTaxInvoiceStandardPdfLayout(),
   };
 
   /// Get a layout instance based on the theme identifier.
