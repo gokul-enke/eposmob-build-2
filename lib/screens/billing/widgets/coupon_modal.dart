@@ -56,6 +56,7 @@ class _CouponModalState extends State<CouponModal> {
   DiscountData? _selectedDiscount;
   late TextEditingController flatDiscountController;
   late TextEditingController percentageDiscountController;
+  final FocusNode _flatDiscountFocusNode = FocusNode();
   late bool isCouponApplied;
   bool _isLoading = false;
   Timer? _debounceTimer;
@@ -97,6 +98,9 @@ class _CouponModalState extends State<CouponModal> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchDiscountsIfNeeded();
       _findDiscountByCode(widget.initialCouponCode);
+      if (mounted) {
+        _flatDiscountFocusNode.requestFocus();
+      }
     });
   }
 
@@ -104,6 +108,7 @@ class _CouponModalState extends State<CouponModal> {
   void dispose() {
     flatDiscountController.dispose();
     percentageDiscountController.dispose();
+    _flatDiscountFocusNode.dispose();
     _debounceTimer?.cancel();
     super.dispose();
   }
@@ -219,6 +224,61 @@ class _CouponModalState extends State<CouponModal> {
     return true;
   }
 
+  void _applyDiscount() {
+    if (_isLoading) return;
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final discountProvider =
+        Provider.of<DiscountProvider>(context, listen: false);
+    final priceSummary = localProductProvider.priceSummary;
+    final originalSubTotal =
+        widget.subTotal ?? priceSummary?.originalSubTotal ?? 0.0;
+
+    if (originalSubTotal == 0) {
+      showScaffoldError(
+        context: context,
+        message: 'Cannot apply discount to empty cart',
+      );
+      return;
+    }
+
+    if (!_validateDiscountInputs(originalSubTotal)) {
+      return;
+    }
+
+    if (_selectedDiscount != null) {
+      final cartTotal =
+          widget.subTotal ?? priceSummary?.originalSubTotal ?? 0.0;
+      final validity = discountProvider.getValidityForDiscount(
+        _selectedDiscount!,
+        cartTotal,
+      );
+      if (validity != DiscountValidity.valid) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
+        );
+        return;
+      }
+    }
+
+    double flatDiscount = double.tryParse(flatDiscountController.text) ?? 0.0;
+    double percentageDiscount =
+        double.tryParse(percentageDiscountController.text) ?? 0.0;
+
+    widget.onCouponAction(
+      '', // Send empty code to treat as simple discount
+      flatDiscount > 0 || percentageDiscount > 0,
+      flatDiscount: flatDiscount,
+      percentageDiscount: percentageDiscount,
+    );
+    if (widget.closeOnApply) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer3<LocalProductProvider, AppSettingsProvider,
@@ -319,6 +379,12 @@ class _CouponModalState extends State<CouponModal> {
                                               child: TextField(
                                                 controller:
                                                     flatDiscountController,
+                                                focusNode:
+                                                    _flatDiscountFocusNode,
+                                                textInputAction:
+                                                    TextInputAction.done,
+                                                onSubmitted: (_) =>
+                                                    _applyDiscount(),
                                                 keyboardType:
                                                     const TextInputType
                                                         .numberWithOptions(
@@ -402,6 +468,10 @@ class _CouponModalState extends State<CouponModal> {
                                               child: TextField(
                                                 controller:
                                                     percentageDiscountController,
+                                                textInputAction:
+                                                    TextInputAction.done,
+                                                onSubmitted: (_) =>
+                                                    _applyDiscount(),
                                                 keyboardType:
                                                     const TextInputType
                                                         .numberWithOptions(
@@ -750,64 +820,7 @@ class _CouponModalState extends State<CouponModal> {
                         order: const NumericFocusOrder(60),
                         child: CustomRoundButton(
                           title: _isLoading ? "Applying..." : "Apply Discount",
-                          fct: _isLoading
-                              ? () {}
-                              : () {
-                                  if (originalSubTotal == 0) {
-                                    showScaffoldError(
-                                      context: context,
-                                      message:
-                                          'Cannot apply discount to empty cart',
-                                    );
-                                    return;
-                                  }
-
-                                  if (!_validateDiscountInputs(
-                                      originalSubTotal)) {
-                                    return;
-                                  }
-
-                                  if (_selectedDiscount != null) {
-                                    final localProductProvider =
-                                        Provider.of<LocalProductProvider>(
-                                            context,
-                                            listen: false);
-                                    final priceSummary =
-                                        localProductProvider.priceSummary;
-                                    final cartTotal = widget.subTotal ??
-                                        priceSummary?.originalSubTotal ??
-                                        0.0;
-                                    final validity =
-                                        discountProvider.getValidityForDiscount(
-                                      _selectedDiscount!,
-                                      cartTotal,
-                                    );
-                                    if (validity != DiscountValidity.valid) {
-                                      showScaffoldError(
-                                        context: context,
-                                        message:
-                                            'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
-                                      );
-                                      return;
-                                    }
-                                  }
-                                  double flatDiscount = double.tryParse(
-                                          flatDiscountController.text) ??
-                                      0.0;
-                                  double percentageDiscount = double.tryParse(
-                                          percentageDiscountController.text) ??
-                                      0.0;
-
-                                  widget.onCouponAction(
-                                    '', // Send empty code to treat as simple discount
-                                    flatDiscount > 0 || percentageDiscount > 0,
-                                    flatDiscount: flatDiscount,
-                                    percentageDiscount: percentageDiscount,
-                                  );
-                                  if (widget.closeOnApply) {
-                                    Navigator.of(context).pop();
-                                  }
-                                },
+                          fct: _isLoading ? () {} : _applyDiscount,
                           fontSize:
                               isDenseEmbedded ? FontSize.s14 : FontSize.s16,
                           height: isDenseEmbedded ? 46 : 50,
