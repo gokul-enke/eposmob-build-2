@@ -114,6 +114,14 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final config = params.billDocumentConfig;
     final dc = config.displayConfiguration?.options;
     final isA5 = params.selectedPaperSize.toUpperCase() == 'A5';
+
+    // Resolve B2B/B2C invoice title — params.displayConfig is B2B-aware
+    final _resolvedTitleOpt = params.displayConfig?['showInvoiceTitle'];
+    final _resolvedTitleVal = _resolvedTitleOpt?.value?.toString().trim();
+    final _resolvedTitleDefault = _resolvedTitleOpt?.defaultValue?.toString().trim();
+    final invoiceTitleText = (_resolvedTitleVal?.isNotEmpty == true)
+        ? _resolvedTitleVal!
+        : (_resolvedTitleDefault?.isNotEmpty == true ? _resolvedTitleDefault! : 'Tax Invoice');
     final pageFormat = isA5 ? PdfPageFormat.a5 : PdfPageFormat.a4;
 
     // ── Fonts & RTL ─────────────────────────────────────────────────
@@ -204,7 +212,8 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       totalTax += iTax;
       totalExclTax += (iTotal - iTax);
     }
-    final totalAmount = double.tryParse(params.formattedTotal) ?? 0.0;
+    final totalAmount =
+        double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0.0;
     final discountAmountValue =
         double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
     final double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
@@ -234,12 +243,27 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // ── Store info from config ──────────────────────────────────────
     final documentHeader = (config.header ?? '').trim();
     final documentSubheader = (config.subheader ?? '').trim();
-    final storeName = _cfgVal('showStoreName', 'STORE NAME');
+    final _cfgStoreName = _cfgVal('showStoreName', '');
+    final storeName = _cfgStoreName.isNotEmpty
+        ? _cfgStoreName
+        : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
     final storeDesc = _cfgVal('showDescription', '');
-    final storeAddress = _cfgVal('showStoreAddress', '');
+    final addressLabel = _cfgVal('showStoreAddress', '');
+    final addressVal = params.storeLocation ?? '';
+    final storeAddress = addressVal.isNotEmpty
+        ? (addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal)
+        : '';
     final storeFssai = _cfgVal('showFssaiInfo', '');
-    final storeTel = _cfgVal('showTel', params.customerCareNumber);
-    final storeEmail = _cfgVal('showEmail', params.customerCareEmail);
+    final telLabel = _cfgVal('showTel', '');
+    final telVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : params.customerCareNumber;
+    final storeTel = telVal.isNotEmpty
+        ? (telLabel.isNotEmpty ? '$telLabel: $telVal' : telVal)
+        : '';
+    final emailLabel = _cfgVal('showEmail', '');
+    final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : params.customerCareEmail;
+    final storeEmail = emailVal.isNotEmpty
+        ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal)
+        : '';
     final extraHeading1 = _cfgVal('showExtraHeading1', '');
     final extraHeading2 = _cfgVal('showExtraHeading2', '');
     final fallbackAccountLines = extraHeading2
@@ -452,7 +476,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.end,
                           children: [
-                            pw.Text('Tax Invoice', style: taxInvoiceTitleStyle),
+                            pw.Text(invoiceTitleText, style: taxInvoiceTitleStyle),
                             pw.Text('فاتورة ضريبية',
                                 style: taxInvoiceArabicStyle,
                                 textDirection: pw.TextDirection.rtl),
@@ -549,7 +573,9 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   _paddedCell(pw.Text(displayDate, style: tableInfoStyle), 4),
                   _paddedCell(
                       pw.Text(
-                          params.paymentMethod == 'CASH' ? 'Cash' : 'Credit',
+                          params.paymentMethod == 'CASH'
+                              ? (isRtl ? 'نقدي' : 'Cash')
+                              : (isRtl ? 'بطاقة' : 'Credit'),
                           style: tableInfoStyle),
                       4),
                 ]),
@@ -683,7 +709,10 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                                 fontSize: fs(6))),
                       if (_cfgVisible('showPayment') &&
                           params.paymentMethod != null)
-                        pw.Text('Payment Method: ${params.paymentMethod}',
+                        pw.Text(
+                            isRtl
+                                ? 'طريقة الدفع: ${params.paymentMethod}'
+                                : 'Payment Method: ${params.paymentMethod}',
                             style: pw.TextStyle(
                                 font: font,
                                 fontBold: fontBold,
@@ -719,7 +748,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   child: pw.Table(
                     border: pw.TableBorder.all(width: 0.5),
                     children: [
-                      if (dc?['showMRPTotal']?.visible != false)
+                      if ((dc?['showSubTotal']?.visible ?? dc?['showMRPTotal']?.visible) != false)
                         _totalsRow('Total (Exc VAT)',
                             _formatMoney(currency, totalExclTax), footerStyle),
                       if (dc?['showDiscount']?.visible != false &&
@@ -891,6 +920,28 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   }
 
   /// Build the items table with bilingual headers.
+  /// When the template language is Arabic and the item carries an Arabic name,
+  /// show Arabic on line 1 and English on line 2 (mirrors the thermal layout).
+  String _bilingualItemName(
+      dynamic item, String englishName, ReceiptLayoutParams params) {
+    final bool isAr =
+        (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
+    if (!isAr) return englishName;
+    String? ar;
+    try {
+      if (item is Map) {
+        final n = item['product_names'] ?? item['productNames'] ?? item['names'];
+        if (n is Map) ar = (n['ar'] ?? n['arabic'])?.toString();
+      } else {
+        ar = item.names?.ar?.toString();
+      }
+    } catch (_) {}
+    if (ar != null && ar.trim().isNotEmpty) {
+      return englishName.trim().isNotEmpty ? '$ar\n$englishName' : ar;
+    }
+    return englishName;
+  }
+
   pw.Widget _buildItemsTable(
     ReceiptLayoutParams params,
     Map<String, DisplayOption>? dc,
@@ -1013,12 +1064,18 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       double taxableAmt = iTotal - iTax;
       double rateExcTax = qty > 0 ? unitPrice - (iTax / qty) : unitPrice;
 
+      name = _bilingualItemName(item, name, params);
+      final bool isArName =
+          (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar' &&
+              name.contains('\n');
+
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
       if (showItems) {
         cells.add(_dataCell(name, bodyStyle,
-            align: pw.Alignment.centerLeft,
-            textDirection: pw.TextDirection.ltr));
+            align: isArName ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
+            textDirection:
+                isArName ? pw.TextDirection.rtl : pw.TextDirection.ltr));
       }
       if (showQty) {
         cells.add(_dataCell(qty.toStringAsFixed(3), bodyStyle));

@@ -337,12 +337,12 @@ class _SideMenuState extends State<SideMenu> {
           // 2. DASHBOARD (Index: 1)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = roleProvider
-                  .currentUserHasPermissionSync('menu.dashboard.main.access');
+              // final hasPermission = roleProvider
+              //     .currentUserHasPermissionSync('menu.dashboard.main.access');
 
-              if (!hasPermission) {
-                return const SizedBox.shrink();
-              }
+              // // if (!hasPermission) {
+              // //   return const SizedBox.shrink();
+              // // }
 
               return Obx(
                 () => DrawerListTile(

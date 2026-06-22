@@ -60,6 +60,7 @@ void main() {
     required String basePrice,
     required String mrp,
     required List<Stock> stocks,
+    String unit = 'PCS',
   }) {
     return GetProduct(
       productId: productId,
@@ -67,7 +68,7 @@ void main() {
       price: ProductPrice(price: basePrice),
       mrp: mrp,
       purchasePrice: '8',
-      unit: 'PCS',
+      unit: unit,
       stock: stocks,
       taxes: const <ProductTax>[],
     );
@@ -167,6 +168,114 @@ void main() {
         },
       ],
     );
+  });
+
+  test('same pricing group collapses into one line as FEFO shrinks stockGroupIds',
+      () {
+    // Reproduces the reported bug: one product, three same-price/unit batches.
+    // Each successive add depletes a batch, so the available (qty>0) id set
+    // shrinks ([1,2,3] -> [2,3] -> [3]). The cart must still merge them into a
+    // single line because the pricing signature (price+unit) is unchanged.
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    final stockOne = buildStock(id: 1, quantity: 2, price: '2', mrp: '12');
+    final stockTwo = buildStock(id: 2, quantity: 5, price: '2', mrp: '12');
+    final stockThree = buildStock(id: 3, quantity: 1, price: '2', mrp: '12');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '2',
+      mrp: '12',
+      stocks: <Stock>[stockOne, stockTwo, stockThree],
+    );
+
+    provider.initializeProducts(<GetProduct>[product]);
+
+    // Add 2 -> drains batch 1.
+    provider.addToCart(
+      product: product,
+      quantity: 2,
+      selectedStock: stockOne.copyWith(quantity: 8),
+      stockGroupIds: const <int>[1, 2, 3],
+    );
+    // Add 5 -> batch 1 is gone, so the grouped id set the UI computes is [2,3].
+    provider.addToCart(
+      product: product,
+      quantity: 5,
+      selectedStock: stockTwo.copyWith(quantity: 6),
+      stockGroupIds: const <int>[2, 3],
+    );
+    // Add 1 -> only batch 3 remains, id set is [3].
+    provider.addToCart(
+      product: product,
+      quantity: 1,
+      selectedStock: stockThree.copyWith(quantity: 1),
+      stockGroupIds: const <int>[3],
+    );
+
+    // One merged line, not three.
+    expect(provider.cartItems, hasLength(1));
+    expect(provider.cartItems.first.quantity, 8);
+    // The line records every batch it drew from (union).
+    expect(provider.cartItems.first.stockGroupIds, <int>[1, 2, 3]);
+    expect(provider.cartItems.first.stockDeducted, 8);
+    expect(
+      provider.cartItems.first.stockReservations
+          .map((reservation) => '${reservation.stockId}:${reservation.quantity}')
+          .toList(),
+      <String>['1:2', '2:5', '3:1'],
+    );
+
+    // All three batches are exhausted.
+    final updatedProduct = provider.getProductById(1)!;
+    expect(updatedProduct.stock!.firstWhere((s) => s.id == 1).quantity, 0);
+    expect(updatedProduct.stock!.firstWhere((s) => s.id == 2).quantity, 0);
+    expect(updatedProduct.stock!.firstWhere((s) => s.id == 3).quantity, 0);
+
+    // Order send body is unchanged: still one payload line per stock_id.
+    expect(
+      provider.buildOrderItemsPayload(),
+      <Map<String, dynamic>>[
+        {'product_id': 1, 'quantity': 2, 'price': 2.0, 'mrp': 12.0, 'stock_id': 1},
+        {'product_id': 1, 'quantity': 5, 'price': 2.0, 'mrp': 12.0, 'stock_id': 2},
+        {'product_id': 1, 'quantity': 1, 'price': 2.0, 'mrp': 12.0, 'stock_id': 3},
+      ],
+    );
+  });
+
+  test('different pricing groups stay on separate lines', () {
+    // Guard against over-merging: same product, different selling price must
+    // remain two distinct cart lines even though both are grouped selections.
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    final cheapStock = buildStock(id: 1, quantity: 3, price: '2', mrp: '12');
+    final pricyStock = buildStock(id: 2, quantity: 3, price: '5', mrp: '15');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '2',
+      mrp: '12',
+      stocks: <Stock>[cheapStock, pricyStock],
+    );
+
+    provider.initializeProducts(<GetProduct>[product]);
+
+    provider.addToCart(
+      product: product,
+      quantity: 1,
+      price: 2.0,
+      selectedStock: cheapStock.copyWith(quantity: 3),
+      stockGroupIds: const <int>[1],
+    );
+    provider.addToCart(
+      product: product,
+      quantity: 1,
+      price: 5.0,
+      selectedStock: pricyStock.copyWith(quantity: 3),
+      stockGroupIds: const <int>[2],
+    );
+
+    expect(provider.cartItems, hasLength(2));
   });
 
   test('base-price fallback keeps stock null and increments same row', () {
@@ -359,6 +468,97 @@ void main() {
           ),
       isTrue,
     );
+  });
+
+  test('non-decimal unit floors a fractional batch when splitting reservations',
+      () {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    // Batch A holds a fractional 1.3 PCS (bad source data); batch B has plenty.
+    final stockOne = buildStock(id: 1, quantity: 1.3, price: '10', mrp: '12');
+    final stockTwo = buildStock(id: 2, quantity: 5, price: '10', mrp: '12');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: <Stock>[stockOne, stockTwo],
+    );
+
+    provider.initializeProducts(<GetProduct>[product]);
+
+    provider.addToCart(
+      product: product,
+      quantity: 2,
+      selectedStock: stockOne.copyWith(quantity: 6.3),
+      stockGroupIds: const <int>[1, 2],
+    );
+
+    // Batch A contributes only its whole unit (1), the remainder comes from B.
+    final reservations = provider.cartItems.first.stockReservations;
+    expect(reservations.map((r) => r.stockId).toList(), <int>[1, 2]);
+    expect(reservations[0].quantity, closeTo(1, 0.0001));
+    expect(reservations[1].quantity, closeTo(1, 0.0001));
+
+    // Payload carries only integer quantities — no 1.3 / 0.7 lines.
+    expect(
+      provider.buildOrderItemsPayload(),
+      <Map<String, dynamic>>[
+        {
+          'product_id': 1,
+          'quantity': 1,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': 1,
+        },
+        {
+          'product_id': 1,
+          'quantity': 1,
+          'price': 10.0,
+          'mrp': 12.0,
+          'stock_id': 2,
+        },
+      ],
+    );
+
+    // The stranded 0.3 dust stays in batch A (availability untouched).
+    final updated = provider.getProductById(1)!;
+    expect(
+      updated.stock!.firstWhere((s) => s.id == 1).quantity,
+      closeTo(0.3, 0.0001),
+    );
+  });
+
+  test('decimal unit (KG) preserves fractional split', () {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    final stockOne =
+        buildStock(id: 1, quantity: 1.3, price: '10', mrp: '12', unit: 'KG');
+    final stockTwo =
+        buildStock(id: 2, quantity: 5, price: '10', mrp: '12', unit: 'KG');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      unit: 'KG',
+      stocks: <Stock>[stockOne, stockTwo],
+    );
+
+    provider.initializeProducts(<GetProduct>[product]);
+
+    provider.addToCart(
+      product: product,
+      quantity: 2,
+      selectedStock: stockOne.copyWith(quantity: 6.3),
+      stockGroupIds: const <int>[1, 2],
+    );
+
+    // KG is decimal-capable: batch A gives its full 1.3, B covers the 0.7.
+    final reservations = provider.cartItems.first.stockReservations;
+    expect(reservations.map((r) => r.stockId).toList(), <int>[1, 2]);
+    expect(reservations[0].quantity, closeTo(1.3, 0.0001));
+    expect(reservations[1].quantity, closeTo(0.7, 0.0001));
   });
 
   test('increment is blocked when no alternative stock remains', () async {

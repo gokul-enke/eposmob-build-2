@@ -33,6 +33,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   String selectedPaperSize = '80mm';
   String selectedFontStyle = 'Font A (Small & Sharp)';
   String selectedSettingsType = 'Billing'; // 'Billing' or 'Kitchen'
+  String selectedSegment = 'B2C'; // 'B2C' or 'B2B' (Billing tab only)
   String selectedReceiptTheme = 'classic'; // Receipt theme selection
 
   // Printer scanning variables
@@ -74,6 +75,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'tax_invoice', 'name': 'Tax Invoice'},
     {'id': 'detailed_tax_invoice', 'name': 'Detailed Tax Invoice'},
     {'id': 'standard_tax_invoice', 'name': 'Standard Tax Invoice'},
+    {'id': 'simplified_tax_invoice', 'name': 'Simplified Tax Invoice'},
+    {'id': 'corporate_tax_invoice', 'name': 'Corporate Tax Invoice'},
+    {'id': 'letterhead_tax_invoice', 'name': 'Letterhead Tax Invoice'},
+    {'id': 'new_classic', 'name': 'New Classic'},
   ];
 
   /// Returns the appropriate theme list based on selected paper size
@@ -91,10 +96,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   bool get _usesReceiptSettings =>
       selectedSettingsType == 'Billing' || selectedSettingsType == 'Quotation';
 
+  /// True when editing the B2B variant of the Billing settings.
+  bool get _isB2BSegment =>
+      selectedSettingsType == 'Billing' && selectedSegment == 'B2B';
+
   String get _printerPrefsKey {
     switch (selectedSettingsType) {
       case 'Billing':
-        return 'default_printer';
+        return _isB2BSegment ? 'default_printer_b2b' : 'default_printer';
       case 'Quotation':
         return 'quotation_printer';
       case 'Barcode':
@@ -107,7 +116,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   String get _paperSizePrefsKey {
     switch (selectedSettingsType) {
       case 'Billing':
-        return 'default_paper_size';
+        return _isB2BSegment ? 'default_paper_size_b2b' : 'default_paper_size';
       case 'Quotation':
         return 'quotation_paper_size';
       default:
@@ -129,7 +138,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   String get _receiptThemePrefsKey {
     switch (selectedSettingsType) {
       case 'Billing':
-        return 'billing_receipt_theme';
+        return _isB2BSegment
+            ? 'billing_receipt_theme_b2b'
+            : 'billing_receipt_theme';
       case 'Quotation':
         return 'quotation_receipt_theme';
       default:
@@ -149,6 +160,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Comprehensive Tax Invoice with detailed itemization and tax breakdown';
         case 'standard_tax_invoice':
           return 'Clean Tax Invoice layout with essential details and clear tax info';
+        case 'simplified_tax_invoice':
+          return 'ZATCA Simplified Tax Invoice with teal accent header/footer, bilingual columns and totals';
+        case 'corporate_tax_invoice':
+          return 'Formal corporate Tax Invoice with logo header, buyer block, bank details and bilingual amount in words';
+        case 'letterhead_tax_invoice':
+          return 'Bilingual Tax Invoice with tri-column letterhead (EN/logo/AR), boxed title and bordered customer/invoice boxes';
+        case 'new_classic':
+          return 'Modern A4/A5 layout with enhanced font hierarchy and breathable spacing';
         default:
           return 'Standard PDF layout';
       }
@@ -1177,6 +1196,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           _buildHeader(),
           const SizedBox(height: 24),
           _buildTabToggle(),
+          if (selectedSettingsType == 'Billing') _buildSegmentToggle(),
           if (isMobile)
             Column(
               children: [
@@ -1828,6 +1848,85 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// B2C / B2B segment toggle, shown only for the Billing tab. Each segment
+  /// keeps its own printer, paper size and receipt theme. B2B falls back to the
+  /// B2C settings at print time when not separately configured.
+  Widget _buildSegmentToggle() {
+    Widget segmentButton(String segment, String label) {
+      final bool isActive = selectedSegment == segment;
+      return GestureDetector(
+        onTap: () {
+          if (selectedSegment == segment) return;
+          setState(() {
+            selectedSegment = segment;
+          });
+          _loadSettings();
+        },
+        child: Container(
+          width: 140,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive
+                ? ColorManager.kPrimaryColor.withValues(alpha: 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color:
+                  isActive ? ColorManager.kPrimaryColor : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isActive
+                  ? ColorManager.kPrimaryColor
+                  : ColorManager.kTitleTextColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    segmentButton('B2C', 'B2C (Retail)'),
+                    const SizedBox(width: 4),
+                    segmentButton('B2B', 'B2B (Business)'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Configure a separate printer, paper size and theme for '
+            '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
+            'bills. B2B uses the B2C settings when left unconfigured.',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
           ),
         ],
       ),

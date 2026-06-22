@@ -98,7 +98,7 @@ const Set<String> kDefaultStockGroupingFields = {
 /// Builds a grouping key for a stock using only the specified [activeFields].
 /// Fields not in [activeFields] are excluded from the key, so stocks that
 /// differ only in excluded fields will be grouped together.
-String _buildStockGroupingKey(Stock stock, Set<String> activeFields) {
+String buildStockGroupingKey(Stock stock, Set<String> activeFields) {
   final parts = <String>[];
   if (activeFields.contains('price')) parts.add('${stock.price}');
   if (activeFields.contains('mrp')) parts.add('${stock.mrp}');
@@ -133,7 +133,7 @@ List<CombinedStock> groupStocksByPricing(
   final Map<String, List<Stock>> grouped = {};
 
   for (final stock in stocks) {
-    final key = _buildStockGroupingKey(stock, fields);
+    final key = buildStockGroupingKey(stock, fields);
     grouped.putIfAbsent(key, () => []).add(stock);
   }
 

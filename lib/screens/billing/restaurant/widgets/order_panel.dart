@@ -6497,6 +6497,7 @@ class OrderPanelState extends State<OrderPanel> {
     String? orderComment,
     String? deliveryMethod,
     String? documentTitleOverride,
+    String? documentConfigType,
     bool isDefaultCustomer = false,
     String? netExcTax,
   }) async {
@@ -6529,6 +6530,7 @@ class OrderPanelState extends State<OrderPanel> {
       orderComment: orderComment,
       deliveryMethod: deliveryMethod,
       documentTitleOverride: documentTitleOverride,
+      documentConfigType: documentConfigType,
       isDefaultCustomer: isDefaultCustomer,
       netExcTax: netExcTax,
     );
@@ -6563,6 +6565,7 @@ class OrderPanelState extends State<OrderPanel> {
             orderComment: orderComment,
             deliveryMethod: deliveryMethod,
             documentTitleOverride: documentTitleOverride,
+            documentConfigType: documentConfigType,
             isDefaultCustomer: isDefaultCustomer,
             netExcTax: netExcTax,
           ),

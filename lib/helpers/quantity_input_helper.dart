@@ -23,6 +23,17 @@ bool allowsDecimalQuantityUnit(String? unit) {
   return decimalQuantityUnits.contains(normalizedUnit);
 }
 
+/// Normalizes a quantity for a given unit. For non-decimal units (anything
+/// not in [decimalQuantityUnits]) the value is floored to a whole number so
+/// PCS/PC-style products never carry a fractional quantity. Decimal-capable
+/// units (KG, LTR, ...) pass through unchanged.
+num normalizeQuantityForUnit(num value, String? unit) {
+  if (allowsDecimalQuantityUnit(unit)) {
+    return value;
+  }
+  return value.floor();
+}
+
 List<TextInputFormatter> quantityInputFormattersForUnit(String? unit) {
   if (allowsDecimalQuantityUnit(unit)) {
     return [

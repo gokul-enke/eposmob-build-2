@@ -47,6 +47,8 @@ import '../../resources/style_manager.dart';
 import 'widgets/mobile_order_card.dart';
 import 'widgets/mobile_filters.dart';
 import 'widgets/cancel_order_modal.dart';
+import 'widgets/change_order_status_modal.dart';
+import 'widgets/change_payment_status_modal.dart';
 
 class SalesScreen extends StatefulWidget {
   final bool isOnlineSales;
@@ -311,6 +313,8 @@ class _SalesScreenState extends State<SalesScreen> {
 
       // Create StandardPrinter instance and generate PDF
       final standardPrinter = StandardPrinter(context);
+      final storeSessionForPdfShare1 =
+          Provider.of<StoreSessionProvider>(context, listen: false);
 
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
@@ -331,7 +335,7 @@ class _SalesScreenState extends State<SalesScreen> {
       }
 
       // Use the cart items directly without conversion since the PDF method expects the original objects
-      final File? pdfFile = await standardPrinter.generatePDFForSharing(
+      final File? pdfFile = await standardPrinter.generateThemedPDFForSharing(
         cartItems: orderData.cart!.cartItems!,
         formattedTotal: orderData.priceSummary?.netPayable?.toString() ??
             orderData.priceSummary?.netTotal?.toString() ??
@@ -343,7 +347,6 @@ class _SalesScreenState extends State<SalesScreen> {
         orderNumber:
             orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
         isFromLocalStorage: false,
-        selectedPaperSize: 'A4', // Default to A4 for sharing
         billDocumentConfig: billDocumentConfig,
         customerCareNumber: appSettings.customerCarePhone,
         customerCareEmail: appSettings.customerCareEmail,
@@ -356,6 +359,12 @@ class _SalesScreenState extends State<SalesScreen> {
         paymentMethod: paymentMethod,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        customerVatNumber: orderData.kycInfo?.vatNumber,
+        customerCrNumber: orderData.kycInfo?.crNumber,
+        customerType: orderData.customerDetails?.customerType,
+        storeLocation: storeSessionForPdfShare1.activeStore?.location,
+        storePhone: storeSessionForPdfShare1.activeStore?.phone,
+        storeEmail: storeSessionForPdfShare1.activeStore?.email,
       );
 
       // Close loading dialog
@@ -380,49 +389,12 @@ class _SalesScreenState extends State<SalesScreen> {
       debugPrint('Starting PDF share process...');
       if (Platform.isWindows) {
         debugPrint('Sharing on Windows platform');
-        // On Windows, use modern ShareParams API with pure file sharing
-        try {
-          debugPrint('Attempting Windows share with ShareParams API...');
-          // Create XFile with enhanced properties
-          final enhancedXFile = XFile(
-            pdfFile.path,
-            name: 'Invoice_${order.orderNumber}.pdf',
-            mimeType: 'application/pdf',
-            length: await pdfFile.length(),
-          );
-
-          // Use modern ShareParams API - files only for Windows
-          final params = ShareParams(
-            files: [enhancedXFile],
-          );
-
-          final result = await SharePlus.instance.share(params);
-
-          debugPrint('ShareParams API completed with status: ${result.status}');
-
-          if (result.status == ShareResultStatus.success) {
-            debugPrint('Windows file sharing succeeded!');
-          } else if (result.status == ShareResultStatus.dismissed) {
-            debugPrint('Windows sharing was dismissed by user');
-            if (context.mounted) {
-              showScaffold(
-                context: context,
-                message: 'Sharing cancelled by user.',
-              );
-            }
-            return;
-          } else {
-            debugPrint('Windows sharing failed with status: ${result.status}');
-            // Try alternative sharing approach
-            _handleWindowsAlternativeSharing(pdfFile, order);
-            return;
-          }
-        } catch (e) {
-          debugPrint('ShareParams API failed: $e');
-          // Alternative approach: Open the PDF file directly
-          _handleWindowsAlternativeSharing(pdfFile, order);
-          return;
-        }
+        // The native Windows Share sheet (used by share_plus) only works for
+        // packaged (MSIX) apps. For this unpackaged Win32 build it returns
+        // ShareResultStatus.unavailable and shows an OS "Try that again" dialog.
+        // Go straight to our own sharing options dialog instead.
+        _handleWindowsAlternativeSharing(pdfFile, order);
+        return;
       } else {
         debugPrint('Sharing on non-Windows platform');
         // On other platforms, use enhanced sharing with context
@@ -745,6 +717,8 @@ class _SalesScreenState extends State<SalesScreen> {
       // Create StandardPrinter instance and generate PDF
       debugPrint('🔄 Starting PDF generation for WhatsApp sharing...');
       final standardPrinter = StandardPrinter(context);
+      final storeSessionForPdfShare2 =
+          Provider.of<StoreSessionProvider>(context, listen: false);
 
       String? customerAlternatePhone =
           orderData.customerDetails?.alternatePhone;
@@ -764,7 +738,7 @@ class _SalesScreenState extends State<SalesScreen> {
         }
       }
 
-      final File? pdfFile = await standardPrinter.generatePDFForSharing(
+      final File? pdfFile = await standardPrinter.generateThemedPDFForSharing(
         cartItems: orderData.cart!.cartItems!,
         formattedTotal: orderData.priceSummary?.netPayable?.toString() ??
             orderData.priceSummary?.netTotal?.toString() ??
@@ -776,7 +750,6 @@ class _SalesScreenState extends State<SalesScreen> {
         orderNumber:
             orderData.orderNumber?.toString() ?? order.orderNumber.toString(),
         isFromLocalStorage: false,
-        selectedPaperSize: 'A4',
         billDocumentConfig: billDocumentConfig,
         customerCareNumber: appSettings.customerCarePhone,
         customerCareEmail: appSettings.customerCareEmail,
@@ -791,6 +764,12 @@ class _SalesScreenState extends State<SalesScreen> {
         paymentMethod: paymentMethod,
         orderComment: orderComment,
         deliveryMethod: deliveryMethod,
+        customerVatNumber: orderData.kycInfo?.vatNumber,
+        customerCrNumber: orderData.kycInfo?.crNumber,
+        customerType: orderData.customerDetails?.customerType,
+        storeLocation: storeSessionForPdfShare2.activeStore?.location,
+        storePhone: storeSessionForPdfShare2.activeStore?.phone,
+        storeEmail: storeSessionForPdfShare2.activeStore?.email,
       );
 
       if (pdfFile == null) {
@@ -1303,8 +1282,9 @@ Powered by CloudPOS''',
           icon: const Icon(Icons.visibility,
               size: 18, color: ColorManager.kPrimaryColor),
           onPressed: () {
-            Provider.of<SalesProvider>(context, listen: false)
-                .setOrderNumber(order.orderNumber ?? "0");
+            final provider = Provider.of<SalesProvider>(context, listen: false);
+            provider.setOrderNumber(order.orderNumber ?? "0");
+            provider.isOnlineSalesNavigation = widget.isOnlineSales;
             Get.find<SideBarController>().index.value = 11;
           },
         ),
@@ -1438,7 +1418,8 @@ Powered by CloudPOS''',
                 }
 
                 // Debug: Verify cart items before printing
-                final cartItemsForPrint = orderDetails.data?.cart?.cartItems ?? [];
+                final cartItemsForPrint =
+                    orderDetails.data?.cart?.cartItems ?? [];
                 debugPrint("===== SALES PRINT DEBUG =====");
                 debugPrint(
                     "Order=${orderDetails.data?.orderNumber}, token=${orderDetails.data?.tokenNumber}, customer=$customerName");
@@ -1449,7 +1430,8 @@ Powered by CloudPOS''',
                 debugPrint("Cart items count: ${cartItemsForPrint.length}");
                 for (int i = 0; i < cartItemsForPrint.length; i++) {
                   final item = cartItemsForPrint[i];
-                  debugPrint("Item $i: name=${item.productName}, qty=${item.quantity}, price=${item.totalPrice}, tax=${item.taxAmount}");
+                  debugPrint(
+                      "Item $i: name=${item.productName}, qty=${item.quantity}, price=${item.totalPrice}, tax=${item.taxAmount}");
                 }
                 debugPrint("=============================");
 
@@ -1483,6 +1465,12 @@ Powered by CloudPOS''',
                   isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                   netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
                       ?.toString(),
+                  documentConfigType: orderDetails.data?.orderReturns != null &&
+                          (orderDetails.data?.orderReturns?.returnItems
+                                  ?.isNotEmpty ??
+                              false)
+                      ? 'Sales and Return Bill'
+                      : 'Bill',
                 );
                 debugPrint(
                     "[SALES][PRINT] autoPrintSuccess=$autoPrintSuccess for order=${orderDetails.data?.orderNumber}");
@@ -1525,6 +1513,13 @@ Powered by CloudPOS''',
                         netExcTax: orderDetails
                             .data?.cart!.priceSummary?.netExcTax
                             ?.toString(),
+                        documentConfigType: orderDetails.data?.orderReturns !=
+                                    null &&
+                                (orderDetails.data?.orderReturns?.returnItems
+                                        ?.isNotEmpty ??
+                                    false)
+                            ? 'Sales and Return Bill'
+                            : 'Bill',
                       ),
                     ),
                   );
@@ -1939,6 +1934,132 @@ Powered by CloudPOS''',
                             );
                           },
                         ),
+                        ListTile(
+                          leading: const CircleAvatar(
+                            radius: 18,
+                            backgroundColor:
+                                Color(0x1A6A1B9A), // ~10% opacity purple
+                            child: Icon(Icons.swap_horiz_outlined,
+                                color: Color(0xFF6A1B9A)),
+                          ),
+                          title: const Text('Change Order Status'),
+                          onTap: () async {
+                            Navigator.pop(ctx);
+                            showDialog(
+                              context: context,
+                              builder: (dialogCtx) => ChangeOrderStatusModal(
+                                currentStatus: order.status ?? 'pending',
+                                orderTotal: order.grantTotal?.toString() ?? '0',
+                                onConfirm: ({
+                                  required newStatus,
+                                  refundAmount,
+                                  paymentMethod,
+                                  deliveryChargeRefundable,
+                                  deliveryLogistics,
+                                }) async {
+                                  try {
+                                    final authModel = Provider.of<AuthModel>(
+                                        context,
+                                        listen: false);
+                                    final salesProvider =
+                                        Provider.of<SalesProvider>(context,
+                                            listen: false);
+
+                                    await salesProvider.changeOrderStatus(
+                                      accessToken: authModel.token ?? "",
+                                      orderId: order.id.toString(),
+                                      status: newStatus,
+                                      refundAmount: refundAmount,
+                                      paymentMethod: paymentMethod,
+                                      deliveryChargeRefundable:
+                                          deliveryChargeRefundable,
+                                      deliveryLogistics: deliveryLogistics,
+                                    );
+
+                                    if (context.mounted) {
+                                      showScaffold(
+                                        context: context,
+                                        message:
+                                            'Order status updated to $newStatus',
+                                      );
+                                      salesProvider.fetchOrders(
+                                        accessToken: authModel.token ?? "",
+                                        page: salesProvider.currentPage,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            'Failed to update order status: $e',
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const CircleAvatar(
+                            radius: 18,
+                            backgroundColor:
+                                Color(0x1A1E88E5), // ~10% opacity blue
+                            child: Icon(Icons.payment_outlined,
+                                color: Color(0xFF1E88E5)),
+                          ),
+                          title: const Text('Change Payment Status'),
+                          onTap: () async {
+                            Navigator.pop(ctx);
+                            if (!context.mounted) return;
+                            showDialog(
+                              context: context,
+                              builder: (dialogCtx) => ChangePaymentStatusModal(
+                                currentPaymentStatus:
+                                    order.paymentStatus ?? 'unpaid',
+                                grandTotal: order.grantTotal?.toString() ?? '0',
+                                onConfirm: (newStatus, amount) async {
+                                  try {
+                                    final authModel = Provider.of<AuthModel>(
+                                        context,
+                                        listen: false);
+                                    final salesProvider =
+                                        Provider.of<SalesProvider>(context,
+                                            listen: false);
+
+                                    await salesProvider.changePaymentStatus(
+                                      accessToken: authModel.token ?? "",
+                                      orderId: order.id.toString(),
+                                      status: newStatus,
+                                      amount: amount,
+                                    );
+
+                                    if (context.mounted) {
+                                      showScaffold(
+                                        context: context,
+                                        message:
+                                            'Payment status updated to $newStatus',
+                                      );
+                                      salesProvider.fetchOrders(
+                                        accessToken: authModel.token ?? "",
+                                        page: salesProvider.currentPage,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      showScaffoldError(
+                                        context: context,
+                                        message:
+                                            'Failed to update payment status: $e',
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
                         // ListTile(
                         //   leading: const CircleAvatar(
                         //     radius: 18,
@@ -2217,7 +2338,9 @@ Powered by CloudPOS''',
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      widget.isOnlineSales ? "Online Orders List" : "Orders List",
+                      widget.isOnlineSales
+                          ? "Online Orders List"
+                          : "Orders List",
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s20,
@@ -2699,7 +2822,8 @@ Powered by CloudPOS''',
                                       );
                                     },
                                   )
-                                : _buildOrderTable(orderProvider, displayedOrders),
+                                : _buildOrderTable(
+                                    orderProvider, displayedOrders),
                           ),
                           PaginationControl(
                             currentPage: orderProvider.currentPage,

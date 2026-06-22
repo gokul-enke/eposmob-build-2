@@ -284,11 +284,13 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
       final storeNameText = _storeText(
         activeStoreDetails,
         ['store_name', 'storeName', 'name'],
-        fallback: _getOptionText(
-          displayConfig,
-          'showStoreName',
-          defaultValue: 'STORE NAME',
-        ),
+        fallback: params.storeName?.isNotEmpty == true
+            ? params.storeName!
+            : _getOptionText(
+                displayConfig,
+                'showStoreName',
+                defaultValue: 'STORE NAME',
+              ),
       );
 
       // Dynamic scaling based on name length
@@ -323,11 +325,13 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final addressText = _storeText(
-        activeStoreDetails,
-        ['location', 'address', 'store_address', 'storeAddress'],
-        fallback: _getOptionText(displayConfig, 'showStoreAddress'),
-      );
+      final addressLabel = _getOptionText(displayConfig, 'showStoreAddress');
+      final addressVal = params.storeLocation?.isNotEmpty == true
+          ? params.storeLocation!
+          : _storeText(activeStoreDetails, ['location', 'address', 'store_address', 'storeAddress'], fallback: '');
+      final addressText = addressVal.isNotEmpty
+          ? (addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal)
+          : '';
 
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText,
@@ -384,15 +388,11 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephoneText = _storeText(
-        activeStoreDetails,
-        ['phone', 'store_phone', 'storePhone'],
-        fallback: _getOptionText(
-          displayConfig,
-          'showTel',
-          fallback: appSettings?.customerCarePhone,
-        ),
-      );
+      final telLabel = _getOptionText(displayConfig, 'showTel');
+      final phoneVal = params.storePhone?.isNotEmpty == true
+          ? params.storePhone!
+          : _storeText(activeStoreDetails, ['phone', 'store_phone', 'storePhone'], fallback: appSettings?.customerCarePhone ?? '');
+      final telephoneText = phoneVal.isNotEmpty ? (telLabel.isNotEmpty ? '$telLabel: $phoneVal' : phoneVal) : '';
 
       if (telephoneText.isNotEmpty) {
         rows.add(TextRow(telephoneText,
@@ -401,15 +401,11 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final emailText = _storeText(
-        activeStoreDetails,
-        ['email', 'store_email', 'storeEmail'],
-        fallback: _getOptionText(
-          displayConfig,
-          'showEmail',
-          fallback: appSettings?.customerCareEmail,
-        ),
-      );
+      final emailLabel = _getOptionText(displayConfig, 'showEmail');
+      final emailVal = params.storeEmail?.isNotEmpty == true
+          ? params.storeEmail!
+          : _storeText(activeStoreDetails, ['email', 'store_email', 'storeEmail'], fallback: appSettings?.customerCareEmail ?? '');
+      final emailText = emailVal.isNotEmpty ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal) : '';
 
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText,
@@ -1289,7 +1285,7 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1310,7 +1306,7 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
 
     debugPrint("Visibility Flags:");
     debugPrint(
-        "  showMRPTotal: $showMRPTotal (API: ${displayConfig?['showMRPTotal']?.visible})");
+        "  showSubTotal: $showMRPTotal (API showSubTotal: ${displayConfig?['showSubTotal']?.visible}, API showMRPTotal: ${displayConfig?['showMRPTotal']?.visible})");
     debugPrint(
         "  showDiscount: $showDiscount (API: ${displayConfig?['showDiscount']?.visible})");
     debugPrint(
@@ -1319,7 +1315,7 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
         "  showNetAmount: $showNetAmount (API: ${displayConfig?['showNetAmount']?.visible})");
     debugPrint("=======================================");
 
-    final subtotalLabel = _getLabel(displayConfig, 'showMRPTotal', null,
+    final subtotalLabel = _getLabel(displayConfig, 'showSubTotal', null,
         isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
 
     final discountLabel = _getLabel(
@@ -1407,13 +1403,9 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
             // Map method code to label if possible
             String label = method;
             if (method == 'CASH') {
-              label = isDualLanguage
-                  ? "نقدي   Cash"
-                  : (isEnglish ? "Cash" : "نقدي");
+              label = isEnglish ? "Cash" : "نقدي";
             } else if (method == 'CARD') {
-              label = isDualLanguage
-                  ? "بطاقة   Card"
-                  : (isEnglish ? "Card" : "بطاقة");
+              label = isEnglish ? "Card" : "بطاقة";
             } else if (method == 'UPI') {
               label = "UPI";
             }
@@ -1443,13 +1435,9 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
               if (amt > 0) {
                 String label = method;
                 if (method == 'CASH') {
-                  label = isDualLanguage
-                      ? "نقدي   Cash"
-                      : (isEnglish ? "Cash" : "نقدي");
+                  label = isEnglish ? "Cash" : "نقدي";
                 } else if (method == 'CARD') {
-                  label = isDualLanguage
-                      ? "بطاقة   Card"
-                      : (isEnglish ? "Card" : "بطاقة");
+                  label = isEnglish ? "Card" : "بطاقة";
                 } else if (method == 'UPI') {
                   label = "UPI";
                 }

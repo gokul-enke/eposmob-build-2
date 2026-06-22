@@ -248,11 +248,11 @@ class ClassicReceiptLayout implements ReceiptLayout {
           isBold: true, scale: 0.95, verticalPadding: 2, verticalOffset: 0));
     }
 
-    // Store Name - use displayConfig value only, then default
+    // Store Name - priority: document config value > logged-in store name > default
     if (displayConfig?['showStoreName']?.visible == true) {
       final storeName = _getDisplayValue(
         displayConfig?['showStoreName']?.value,
-        null,
+        params.storeName,
         'STORE NAME',
       );
 
@@ -284,8 +284,10 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
     // Store Address
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final storeAddress = displayConfig?['showStoreAddress']?.value as String?;
-      if (storeAddress != null && storeAddress.isNotEmpty) {
+      final label = displayConfig?['showStoreAddress']?.value as String? ?? '';
+      final address = params.storeLocation ?? '';
+      if (address.isNotEmpty) {
+        final storeAddress = label.isNotEmpty ? '$label: $address' : address;
         rows.add(TextRow(storeAddress, scale: 0.9, isBold: true));
       }
     }
@@ -318,24 +320,20 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
     // Telephone
     if (displayConfig?['showTel']?.visible == true) {
-      final telephone = _getDisplayValue(
-        displayConfig?['showTel']?.value,
-        appSettings?.customerCarePhone,
-        '',
-      );
-      if (telephone.isNotEmpty) {
+      final label = displayConfig?['showTel']?.value as String? ?? '';
+      final phone = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      if (phone.isNotEmpty) {
+        final telephone = label.isNotEmpty ? '$label: $phone' : phone;
         rows.add(TextRow(telephone, scale: 0.8, isBold: true));
       }
     }
 
     // Email
     if (displayConfig?['showEmail']?.visible == true) {
-      final email = _getDisplayValue(
-        displayConfig?['showEmail']?.value,
-        appSettings?.customerCareEmail,
-        '',
-      );
-      if (email.isNotEmpty) {
+      final label = displayConfig?['showEmail']?.value as String? ?? '';
+      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      if (emailVal.isNotEmpty) {
+        final email = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         rows.add(TextRow(email, scale: 0.8, isBold: true));
       }
     }
@@ -1347,7 +1345,8 @@ class ClassicReceiptLayout implements ReceiptLayout {
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
     double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
-    double total = double.tryParse(params.formattedTotal) ?? 0.0;
+    double total =
+        double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0.0;
     double discountAmountValue =
         double.tryParse(params.discountAmount ?? '0.0') ?? 0.0;
     double totalMrp = saved + total;
@@ -1379,7 +1378,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       final showQuantityCount =
           displayConfig?['showQuantityCount']?.visible ?? true;
       final showTax = displayConfig?['showTax']?.visible ?? true;
-      final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+      final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
       final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
 
       // Items count and Discount row
@@ -1475,7 +1474,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
 
       final subtotalLabel =
-          _getLabel(displayConfig, 'showMRPTotal', null, "SUBTOTAL المجموع");
+          _getLabel(displayConfig, 'showSubTotal', null, "SUBTOTAL المجموع");
       final discountLabel =
           _getLabel(displayConfig, 'showDiscount', null, "DISCOUNTS الخصم");
       final taxLabelArabic = _getLabel(
@@ -1484,7 +1483,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
           displayConfig, 'showNetAmount', null, "GRAND TOTAL المبلغ الاجمالي");
 
       // Check visibility settings
-      final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+      final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
       final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
       final showTax = displayConfig?['showTax']?.visible ?? true;
       final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1532,38 +1531,78 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // Payment Breakthrough (Multi-payment)
+    // Payment Breakthrough (Multi-payment / JSON payload / single payment)
     final bool showPaymentBreaked =
         displayConfig?['showPaymentBreaked']?.visible ?? true;
     if (params.paidAmount != null && showPaymentBreaked) {
+      void addPaymentRow(String label, double amt) {
+        if (isEnglish) {
+          rows.add(ReceiptTableRow([
+            ReceiptTableColumn(label, weight: 0.5, align: TextAlign.left),
+            ReceiptTableColumn(money(amt),
+                weight: 0.5, align: TextAlign.right),
+          ]));
+        } else {
+          rows.add(ReceiptTableRow([
+            ReceiptTableColumn(money(amt), weight: 0.5, align: TextAlign.left),
+            ReceiptTableColumn(label, weight: 0.5, align: TextAlign.right),
+          ]));
+        }
+      }
+
+      String paymentLabelFor(String method) {
+        if (method == 'CASH') return isEnglish ? "Cash" : "نقدي";
+        if (method == 'CARD') return isEnglish ? "Card" : "بطاقة";
+        if (method == 'UPI') return "UPI";
+        return method;
+      }
+
+      bool isMultiPayment = false;
+
+      // Preferred: structured payment breakdown map
       if (params.paymentBreakdown != null &&
           params.paymentBreakdown!.isNotEmpty) {
+        isMultiPayment = true;
         rows.add(SpacingRow(5));
         params.paymentBreakdown!.forEach((method, amount) {
           double amt = double.tryParse(amount.toString()) ?? 0.0;
           if (amt > 0) {
-            String label = method;
-            if (method == 'CASH') {
-              label = isEnglish ? "Cash" : "نقدي";
-            } else if (method == 'CARD') {
-              label = isEnglish ? "Card" : "بطاقة";
-            }
-
-            if (isEnglish) {
-              rows.add(ReceiptTableRow([
-                ReceiptTableColumn(label, weight: 0.5, align: TextAlign.left),
-                ReceiptTableColumn(money(amt),
-                    weight: 0.5, align: TextAlign.right),
-              ]));
-            } else {
-              rows.add(ReceiptTableRow([
-                ReceiptTableColumn(money(amt),
-                    weight: 0.5, align: TextAlign.left),
-                ReceiptTableColumn(label, weight: 0.5, align: TextAlign.right),
-              ]));
-            }
+            addPaymentRow(paymentLabelFor(method), amt);
           }
         });
+      }
+      // Fallback: paymentMethod carrying a JSON multi-payment payload
+      else if (params.paymentMethod != null &&
+          params.paymentMethod!.startsWith('{')) {
+        try {
+          final Map<String, dynamic> paymentData =
+              json.decode(params.paymentMethod!);
+          if (paymentData['isMultiPayment'] == true) {
+            isMultiPayment = true;
+            final Map<String, dynamic> amounts = paymentData['amounts'];
+            rows.add(SpacingRow(5));
+            amounts.forEach((method, amount) {
+              double amt = double.tryParse(amount.toString()) ?? 0.0;
+              if (amt > 0) {
+                addPaymentRow(paymentLabelFor(method), amt);
+              }
+            });
+          }
+        } catch (e) {
+          debugPrint("Error parsing multi-payment: $e");
+        }
+      }
+
+      // Single payment fallback
+      if (!isMultiPayment) {
+        String label = isEnglish ? "Cash" : "نقدي";
+        if (params.paymentMethod != null &&
+            params.paymentMethod!.isNotEmpty &&
+            params.paymentMethod != 'CASH') {
+          label = params.paymentMethod!;
+        }
+        rows.add(SpacingRow(5));
+        addPaymentRow(label, params.paidAmount!);
       }
     }
 

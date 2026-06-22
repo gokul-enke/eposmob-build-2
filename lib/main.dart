@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -71,8 +72,32 @@ import 'resources/localization_service.dart';
 import 'resources/app_translations.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
+Future<void> _lockOrientation() async {
+  // Phones (width < 600 logical px on the shorter axis) → portrait only.
+  // Tablets and desktops → landscape only.
+  // On web/desktop platforms that don't support this API it is a no-op.
+  if (kIsWeb) return;
+
+  final view = WidgetsBinding.instance.platformDispatcher.views.first;
+  final shortestSide = view.physicalSize.shortestSide / view.devicePixelRatio;
+
+  if (shortestSide < 600) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  } else {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await _lockOrientation();
 
   await _initializeBaseUrlFromPreferences();
   await _initializeNotificationPosition();

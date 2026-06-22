@@ -15,3 +15,7 @@ export 'classic_standard_pdf_layout.dart';
 export 'tax_invoice_standard_pdf_layout.dart';
 export 'detailed_tax_invoice_standard_pdf_layout.dart';
 export 'standard_tax_invoice_standard_pdf_layout.dart';
+export 'new_classic_standad_pdf_layout.dart';
+export 'simplified_tax_invoice_standard_pdf_layout.dart';
+export 'corporate_tax_invoice_standard_pdf_layout.dart';
+export 'letterhead_tax_invoice_standard_pdf_layout.dart';

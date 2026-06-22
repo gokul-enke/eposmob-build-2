@@ -20,6 +20,8 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/screens/print/layouts/layouts.dart';
 import 'package:pos_machine/screens/print/standard_layouts/standard_layouts.dart';
+import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -126,7 +128,15 @@ class PrintPage extends StatefulWidget {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final printerPrefsKey = _printerPrefsKeyForDocument(documentConfigType);
+      final isB2B = _isB2BForDocument(
+        documentConfigType,
+        customerType: customerType,
+        customerVatNumber: customerVatNumber,
+        customerCrNumber: customerCrNumber,
+      );
+      final printerPrefsKey =
+          _printerPrefsKeyForDocument(documentConfigType, isB2B: isB2B);
+      // B2B falls back to the legacy B2C printer when not separately configured.
       final defaultPrinterJson = prefs.getString(printerPrefsKey) ??
           prefs.getString('default_printer');
 
@@ -155,6 +165,8 @@ class PrintPage extends StatefulWidget {
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
       final bankProvider = Provider.of<BankProvider>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
 
       if (appSettings == null) {
@@ -183,8 +195,9 @@ class PrintPage extends StatefulWidget {
       _debugInvoiceTitleConfig('autoPrint', billDocumentConfig);
 
       // Get paper size
-      String paperSize =
-          prefs.getString(_paperSizePrefsKeyForDocument(documentConfigType)) ??
+      String paperSize = prefs.getString(_paperSizePrefsKeyForDocument(
+                  documentConfigType,
+                  isB2B: isB2B)) ??
               prefs.getString('default_paper_size') ??
               '80mm';
       if (paperSize == 'Thermal') {
@@ -196,6 +209,7 @@ class PrintPage extends StatefulWidget {
         billDocumentConfig,
         prefs,
         documentConfigType: documentConfigType,
+        isB2B: isB2B,
       );
 
       // Fetch ZATCA credentials
@@ -251,6 +265,10 @@ class PrintPage extends StatefulWidget {
         hideDefaultCustomerPhone: appSettings.hideDefaultPhone,
         netExcTax: netExcTax,
         bankDetails: bankProvider.banks,
+        storeName: storeName,
+        storeLocation: storeSession.activeStore?.location,
+        storePhone: storeSession.activeStore?.phone,
+        storeEmail: storeSession.activeStore?.email,
       );
       final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
       debugPrint(
@@ -278,10 +296,11 @@ class PrintPage extends StatefulWidget {
     DocumentConfig? billDocumentConfig,
     SharedPreferences prefs, {
     String? documentConfigType,
+    bool isB2B = false,
   }) async {
-    final localTheme =
-        prefs.getString(_themePrefsKeyForDocument(documentConfigType)) ??
-            prefs.getString('billing_receipt_theme');
+    final localTheme = prefs.getString(
+            _themePrefsKeyForDocument(documentConfigType, isB2B: isB2B)) ??
+        prefs.getString('billing_receipt_theme');
 
     if (localTheme != null && localTheme.isNotEmpty) {
       return localTheme;
@@ -359,22 +378,41 @@ class PrintPage extends StatefulWidget {
     return documentConfigType?.trim().toLowerCase() == 'quotation';
   }
 
-  static String _printerPrefsKeyForDocument(String? documentConfigType) {
-    return _isQuotationDocument(documentConfigType)
-        ? 'quotation_printer'
-        : 'default_printer';
+  static String _printerPrefsKeyForDocument(String? documentConfigType,
+      {bool isB2B = false}) {
+    if (_isQuotationDocument(documentConfigType)) return 'quotation_printer';
+    return isB2B ? 'default_printer_b2b' : 'default_printer';
   }
 
-  static String _paperSizePrefsKeyForDocument(String? documentConfigType) {
-    return _isQuotationDocument(documentConfigType)
-        ? 'quotation_paper_size'
-        : 'default_paper_size';
+  static String _paperSizePrefsKeyForDocument(String? documentConfigType,
+      {bool isB2B = false}) {
+    if (_isQuotationDocument(documentConfigType)) return 'quotation_paper_size';
+    return isB2B ? 'default_paper_size_b2b' : 'default_paper_size';
   }
 
-  static String _themePrefsKeyForDocument(String? documentConfigType) {
-    return _isQuotationDocument(documentConfigType)
-        ? 'quotation_receipt_theme'
-        : 'billing_receipt_theme';
+  static String _themePrefsKeyForDocument(String? documentConfigType,
+      {bool isB2B = false}) {
+    if (_isQuotationDocument(documentConfigType)) {
+      return 'quotation_receipt_theme';
+    }
+    return isB2B ? 'billing_receipt_theme_b2b' : 'billing_receipt_theme';
+  }
+
+  /// Whether this print job is for a business (B2B) customer.
+  /// B2B settings fall back to the legacy B2C keys when not configured, so the
+  /// segment only matters for the Billing document type.
+  static bool _isB2BForDocument(
+    String? documentConfigType, {
+    String? customerType,
+    String? customerVatNumber,
+    String? customerCrNumber,
+  }) {
+    if (_isQuotationDocument(documentConfigType)) return false;
+    return ReceiptCustomerSegment.isBusiness(
+      customerType: customerType,
+      vatNumber: customerVatNumber,
+      crNumber: customerCrNumber,
+    );
   }
 }
 
@@ -396,6 +434,15 @@ class _PrintPageState extends State<PrintPage> {
   static const Color backgroundColor = Color(0xFFF5F6FA);
 
   final List<String> paperSizes = ['112mm', '80mm', '58mm', 'A5', 'A4'];
+
+  /// Whether the current order is for a business (B2B) customer, used to route
+  /// to the B2B printer / paper size / theme preferences.
+  bool get _isB2B => PrintPage._isB2BForDocument(
+        widget.documentConfigType,
+        customerType: widget.customerType,
+        customerVatNumber: widget.customerVatNumber,
+        customerCrNumber: widget.customerCrNumber,
+      );
 
   @override
   void initState() {
@@ -561,6 +608,7 @@ class _PrintPageState extends State<PrintPage> {
     final defaultPrinterJson =
         prefs.getString(PrintPage._printerPrefsKeyForDocument(
               widget.documentConfigType,
+              isB2B: _isB2B,
             )) ??
             prefs.getString('default_printer');
 
@@ -609,7 +657,8 @@ class _PrintPageState extends State<PrintPage> {
       'typePrinter': printer.typePrinter.toString(),
     };
     await prefs.setString(
-      PrintPage._printerPrefsKeyForDocument(widget.documentConfigType),
+      PrintPage._printerPrefsKeyForDocument(widget.documentConfigType,
+          isB2B: _isB2B),
       json.encode(printerData),
     );
   }
@@ -796,6 +845,8 @@ class _PrintPageState extends State<PrintPage> {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
+    final storeSession =
+        Provider.of<StoreSessionProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -845,6 +896,10 @@ class _PrintPageState extends State<PrintPage> {
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
+      storeName: widget.storeName,
+      storeLocation: storeSession.activeStore?.location,
+      storePhone: storeSession.activeStore?.phone,
+      storeEmail: storeSession.activeStore?.email,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(
@@ -859,6 +914,7 @@ class _PrintPageState extends State<PrintPage> {
     final prefs = await SharedPreferences.getInstance();
     final localTheme = prefs.getString(PrintPage._themePrefsKeyForDocument(
           widget.documentConfigType,
+          isB2B: _isB2B,
         )) ??
         prefs.getString('billing_receipt_theme');
 
@@ -904,6 +960,8 @@ class _PrintPageState extends State<PrintPage> {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final bankProvider = Provider.of<BankProvider>(context, listen: false);
+    final storeSession =
+        Provider.of<StoreSessionProvider>(context, listen: false);
     final bool hideDefaultCustomerPhone =
         appSettingsProvider.appSettings?.hideDefaultPhone ?? true;
 
@@ -946,6 +1004,10 @@ class _PrintPageState extends State<PrintPage> {
       hideDefaultCustomerPhone: hideDefaultCustomerPhone,
       netExcTax: widget.netExcTax,
       bankDetails: bankProvider.banks,
+      storeName: widget.storeName,
+      storeLocation: storeSession.activeStore?.location,
+      storePhone: storeSession.activeStore?.phone,
+      storeEmail: storeSession.activeStore?.email,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(
@@ -961,6 +1023,7 @@ class _PrintPageState extends State<PrintPage> {
       final defaultPaperSize =
           prefs.getString(PrintPage._paperSizePrefsKeyForDocument(
                 widget.documentConfigType,
+                isB2B: _isB2B,
               )) ??
               prefs.getString('default_paper_size');
 
@@ -984,7 +1047,8 @@ class _PrintPageState extends State<PrintPage> {
   Future<void> _saveDefaultPaperSize(String paperSize) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-      PrintPage._paperSizePrefsKeyForDocument(widget.documentConfigType),
+      PrintPage._paperSizePrefsKeyForDocument(widget.documentConfigType,
+          isB2B: _isB2B),
       paperSize,
     );
 

@@ -69,10 +69,18 @@ Future<void> handleAddProductToCart({
       // Group stocks by pricing before deciding whether to show modal
       final masterDataProvider =
           Provider.of<MasterDataProvider>(context, listen: false);
+      final activeFields = masterDataProvider.activeStockGroupingFields;
+      debugPrint('🔑 [StockGrouping] Active grouping fields: $activeFields');
+      debugPrint('🔑 [StockGrouping] Available stocks (${availableStocks.length}):');
+      for (final s in availableStocks) {
+        final key = buildStockGroupingKey(s, activeFields);
+        debugPrint('   stock id=${s.id} price=${s.price} unit=${s.unit} mrp=${s.mrp} taxRate=${s.taxRate} → key="$key"');
+      }
       final groups = groupStocksByPricing(
         availableStocks,
-        activeFields: masterDataProvider.activeStockGroupingFields,
+        activeFields: activeFields,
       );
+      debugPrint('🔑 [StockGrouping] Result: ${groups.length} group(s) → ${groups.length == 1 ? "AUTO-SELECT (no modal)" : "SHOW MODAL"}');
 
       if (groups.length == 1) {
         // Single pricing group → auto-select, no modal needed

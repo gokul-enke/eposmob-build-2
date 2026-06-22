@@ -284,15 +284,19 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
         // Only use fallback if both config values are empty
         if (arabicName.isEmpty && englishName.isEmpty) {
-          englishName = 'STORE NAME';
+          englishName = params.storeName?.isNotEmpty == true
+              ? params.storeName!
+              : 'STORE NAME';
         }
 
         storeNameText =
             _getBilingualText(arabic: arabicName, english: englishName);
       } else {
         // Single language mode
-        storeNameText =
-            displayConfig?['showStoreName']?.value as String? ?? 'STORE NAME';
+        final _configSN = displayConfig?['showStoreName']?.value as String?;
+        storeNameText = (_configSN != null && _configSN.isNotEmpty)
+            ? _configSN
+            : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
       }
 
       // Dynamic scaling based on name length
@@ -349,28 +353,19 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      String addressText;
-
-      if (isDualLanguage) {
-        // Refined fallback: Only use fallback if BOTH config values are empty
-        final arabicAddress =
-            displayConfig?['showStoreAddress']?.value as String? ?? '';
-        String englishAddress =
-            displayConfig?['showStoreAddress']?.defaultValue ?? '';
-
-        // Only use fallback if both config values are empty
-        // No fallback available for address - just use empty string
-        if (arabicAddress.isEmpty && englishAddress.isEmpty) {
-          // No fallback - keep both empty
+      final addressVal = params.storeLocation ?? '';
+      String addressText = '';
+      if (addressVal.isNotEmpty) {
+        if (isDualLanguage) {
+          final arabicLabel = displayConfig?['showStoreAddress']?.value as String? ?? '';
+          final englishLabel = displayConfig?['showStoreAddress']?.defaultValue ?? '';
+          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
+        } else {
+          final label = displayConfig?['showStoreAddress']?.value as String? ?? '';
+          addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
         }
-
-        addressText =
-            _getBilingualText(arabic: arabicAddress, english: englishAddress);
-      } else {
-        addressText =
-            displayConfig?['showStoreAddress']?.value as String? ?? '';
       }
-
       if (addressText.isNotEmpty) {
         rows.add(TextRow(addressText, scale: 0.85, isBold: true));
       }
@@ -483,26 +478,19 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      String telephoneText;
-
-      if (isDualLanguage) {
-        // Refined fallback: Only use fallback if BOTH config values are empty
-        final arabicTel = displayConfig?['showTel']?.value as String? ?? '';
-        String englishTel = displayConfig?['showTel']?.defaultValue ?? '';
-
-        // Only use fallback if both config values are empty
-        if (arabicTel.isEmpty && englishTel.isEmpty) {
-          englishTel = appSettings?.customerCarePhone ?? '';
+      final phoneVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      String telephoneText = '';
+      if (phoneVal.isNotEmpty) {
+        if (isDualLanguage) {
+          final arabicLabel = displayConfig?['showTel']?.value as String? ?? '';
+          final englishLabel = displayConfig?['showTel']?.defaultValue ?? '';
+          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          telephoneText = label.isNotEmpty ? '$label: $phoneVal' : phoneVal;
+        } else {
+          final label = displayConfig?['showTel']?.value as String? ?? '';
+          telephoneText = label.isNotEmpty ? '$label: $phoneVal' : phoneVal;
         }
-
-        telephoneText =
-            _getBilingualText(arabic: arabicTel, english: englishTel);
-      } else {
-        telephoneText = displayConfig?['showTel']?.value as String? ??
-            appSettings?.customerCarePhone ??
-            '';
       }
-
       if (telephoneText.isNotEmpty) {
         rows.add(SpacingRow(5));
         rows.add(TextRow(telephoneText, scale: 0.9, isBold: true));
@@ -510,26 +498,19 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      String emailText;
-
-      if (isDualLanguage) {
-        // Refined fallback: Only use fallback if BOTH config values are empty
-        final arabicEmail = displayConfig?['showEmail']?.value as String? ?? '';
-        String englishEmail = displayConfig?['showEmail']?.defaultValue ?? '';
-
-        // Only use fallback if both config values are empty
-        if (arabicEmail.isEmpty && englishEmail.isEmpty) {
-          englishEmail = appSettings?.customerCareEmail ?? '';
+      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      String emailText = '';
+      if (emailVal.isNotEmpty) {
+        if (isDualLanguage) {
+          final arabicLabel = displayConfig?['showEmail']?.value as String? ?? '';
+          final englishLabel = displayConfig?['showEmail']?.defaultValue ?? '';
+          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          emailText = label.isNotEmpty ? '$label: $emailVal' : emailVal;
+        } else {
+          final label = displayConfig?['showEmail']?.value as String? ?? '';
+          emailText = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         }
-
-        emailText =
-            _getBilingualText(arabic: arabicEmail, english: englishEmail);
-      } else {
-        emailText = displayConfig?['showEmail']?.value as String? ??
-            appSettings?.customerCareEmail ??
-            '';
       }
-
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText, scale: 0.9, isBold: true));
       }
@@ -1405,7 +1386,7 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1426,7 +1407,7 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
 
     debugPrint("Visibility Flags:");
     debugPrint(
-        "  showMRPTotal: $showMRPTotal (API: ${displayConfig?['showMRPTotal']?.visible})");
+        "  showSubTotal: $showMRPTotal (API showSubTotal: ${displayConfig?['showSubTotal']?.visible}, API showMRPTotal: ${displayConfig?['showMRPTotal']?.visible})");
     debugPrint(
         "  showDiscount: $showDiscount (API: ${displayConfig?['showDiscount']?.visible})");
     debugPrint(
@@ -1435,7 +1416,7 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
         "  showNetAmount: $showNetAmount (API: ${displayConfig?['showNetAmount']?.visible})");
     debugPrint("=======================================");
 
-    final subtotalLabel = _getLabel(displayConfig, 'showMRPTotal', null,
+    final subtotalLabel = _getLabel(displayConfig, 'showSubTotal', null,
         isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
 
     final discountLabel = _getLabel(
@@ -1518,13 +1499,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
             // Map method code to label if possible
             String label = method;
             if (method == 'CASH') {
-              label = isDualLanguage
-                  ? "نقدي   Cash"
-                  : (isEnglish ? "Cash" : "نقدي");
+              label = isEnglish ? "Cash" : "نقدي";
             } else if (method == 'CARD') {
-              label = isDualLanguage
-                  ? "بطاقة   Card"
-                  : (isEnglish ? "Card" : "بطاقة");
+              label = isEnglish ? "Card" : "بطاقة";
             } else if (method == 'UPI') {
               label = "UPI";
             }
@@ -1554,13 +1531,9 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
               if (amt > 0) {
                 String label = method;
                 if (method == 'CASH') {
-                  label = isDualLanguage
-                      ? "نقدي   Cash"
-                      : (isEnglish ? "Cash" : "نقدي");
+                  label = isEnglish ? "Cash" : "نقدي";
                 } else if (method == 'CARD') {
-                  label = isDualLanguage
-                      ? "بطاقة   Card"
-                      : (isEnglish ? "Card" : "بطاقة");
+                  label = isEnglish ? "Card" : "بطاقة";
                 } else if (method == 'UPI') {
                   label = "UPI";
                 }

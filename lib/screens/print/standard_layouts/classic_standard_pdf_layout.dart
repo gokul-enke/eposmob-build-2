@@ -55,6 +55,9 @@ class ClassicStandardPdfLayout implements StandardPdfLayout {
       hideDefaultCustomerPhone: params.hideDefaultCustomerPhone,
       customerVatNumber: params.customerVatNumber,
       customerCrNumber: params.customerCrNumber,
+      storeLocation: params.storeLocation,
+      storePhone: params.storePhone,
+      storeEmail: params.storeEmail,
     );
   }
 

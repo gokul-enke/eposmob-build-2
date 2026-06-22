@@ -293,8 +293,10 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final storeName =
-          displayConfig?['showStoreName']?.value as String? ?? 'STORE NAME';
+      final _configStoreName = displayConfig?['showStoreName']?.value as String?;
+      final storeName = (_configStoreName != null && _configStoreName.isNotEmpty)
+          ? _configStoreName
+          : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.6;
@@ -326,8 +328,10 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final storeAddress = displayConfig?['showStoreAddress']?.value as String?;
-      if (storeAddress != null && storeAddress.isNotEmpty) {
+      final label = displayConfig?['showStoreAddress']?.value as String? ?? '';
+      final address = params.storeLocation ?? '';
+      if (address.isNotEmpty) {
+        final storeAddress = label.isNotEmpty ? '$label: $address' : address;
         rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
       }
     }
@@ -356,20 +360,20 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephone = displayConfig?['showTel']?.value as String? ??
-          appSettings?.customerCarePhone ??
-          '';
-      if (telephone.isNotEmpty) {
+      final label = displayConfig?['showTel']?.value as String? ?? '';
+      final phone = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      if (phone.isNotEmpty) {
+        final telephone = label.isNotEmpty ? '$label: $phone' : phone;
         rows.add(SpacingRow(5));
         rows.add(TextRow(telephone, scale: 1.3, isBold: true));
       }
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final email = displayConfig?['showEmail']?.value as String? ??
-          appSettings?.customerCareEmail ??
-          '';
-      if (email.isNotEmpty) {
+      final label = displayConfig?['showEmail']?.value as String? ?? '';
+      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      if (emailVal.isNotEmpty) {
+        final email = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         rows.add(TextRow(email, scale: 0.9, isBold: true));
       }
     }
@@ -1417,7 +1421,7 @@ class Premium2ReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1438,7 +1442,7 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
     debugPrint("Visibility Flags:");
     debugPrint(
-        "  showMRPTotal: $showMRPTotal (API: ${displayConfig?['showMRPTotal']?.visible})");
+        "  showSubTotal: $showMRPTotal (API showSubTotal: ${displayConfig?['showSubTotal']?.visible}, API showMRPTotal: ${displayConfig?['showMRPTotal']?.visible})");
     debugPrint(
         "  showDiscount: $showDiscount (API: ${displayConfig?['showDiscount']?.visible})");
     debugPrint(
@@ -1446,6 +1450,20 @@ class Premium2ReceiptLayout implements ReceiptLayout {
     debugPrint(
         "  showNetAmount: $showNetAmount (API: ${displayConfig?['showNetAmount']?.visible})");
     debugPrint("=======================================");
+
+    // EXTRA: dump all displayConfig keys and their visible/value for diagnosing missing subtotal
+    debugPrint("===== FULL DISPLAY CONFIG DUMP =====");
+    if (displayConfig == null) {
+      debugPrint("  displayConfig is NULL");
+    } else {
+      displayConfig.forEach((key, opt) {
+        debugPrint("  [$key] visible=${opt.visible} value=${opt.value}");
+      });
+    }
+    debugPrint("  params.netExcTax: ${params.netExcTax}");
+    debugPrint("  subtotal (resolved): $subtotal");
+    debugPrint("  showMRPTotal will add to box: $showMRPTotal");
+    debugPrint("=====================================");
 
     // Labels
     final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,

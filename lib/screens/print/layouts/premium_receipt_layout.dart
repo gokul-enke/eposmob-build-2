@@ -269,8 +269,10 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final storeName =
-          displayConfig?['showStoreName']?.value as String? ?? 'STORE NAME';
+      final _configStoreName = displayConfig?['showStoreName']?.value as String?;
+      final storeName = (_configStoreName != null && _configStoreName.isNotEmpty)
+          ? _configStoreName
+          : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.6;
@@ -302,8 +304,10 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // Address - Clean, smaller text
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final storeAddress = displayConfig?['showStoreAddress']?.value as String?;
-      if (storeAddress != null && storeAddress.isNotEmpty) {
+      final label = displayConfig?['showStoreAddress']?.value as String? ?? '';
+      final address = params.storeLocation ?? '';
+      if (address.isNotEmpty) {
+        final storeAddress = label.isNotEmpty ? '$label: $address' : address;
         rows.add(TextRow(storeAddress, scale: 0.85, isBold: true));
       }
     }
@@ -351,20 +355,20 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final telephone = displayConfig?['showTel']?.value as String? ??
-          appSettings?.customerCarePhone ??
-          '';
-      if (telephone.isNotEmpty) {
+      final label = displayConfig?['showTel']?.value as String? ?? '';
+      final phone = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      if (phone.isNotEmpty) {
+        final telephone = label.isNotEmpty ? '$label: $phone' : phone;
         rows.add(SpacingRow(5));
         rows.add(TextRow(telephone, scale: 0.9, isBold: true));
       }
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final email = displayConfig?['showEmail']?.value as String? ??
-          appSettings?.customerCareEmail ??
-          '';
-      if (email.isNotEmpty) {
+      final label = displayConfig?['showEmail']?.value as String? ?? '';
+      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      if (emailVal.isNotEmpty) {
+        final email = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         rows.add(TextRow(email, scale: 0.9, isBold: true));
       }
     }
@@ -1412,7 +1416,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1433,7 +1437,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     debugPrint("Visibility Flags:");
     debugPrint(
-        "  showMRPTotal: $showMRPTotal (API: ${displayConfig?['showMRPTotal']?.visible})");
+        "  showSubTotal: $showMRPTotal (API showSubTotal: ${displayConfig?['showSubTotal']?.visible}, API showMRPTotal: ${displayConfig?['showMRPTotal']?.visible})");
     debugPrint(
         "  showDiscount: $showDiscount (API: ${displayConfig?['showDiscount']?.visible})");
     debugPrint(
@@ -1443,7 +1447,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
     debugPrint("=======================================");
 
     // Labels
-    final subtotalLabelBase = _getLabel(displayConfig, 'showMRPTotal', null,
+    final subtotalLabelBase = _getLabel(displayConfig, 'showSubTotal', null,
         isEnglish ? "NET TOTAL (Exc Tax)" : "المجموع");
     final subtotalLabel = subtotalLabelBase;
 

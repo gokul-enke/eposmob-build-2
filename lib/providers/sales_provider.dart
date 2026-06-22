@@ -12,6 +12,7 @@ import '../models/list_sales_order.dart';
 import '../resources/app_url.dart';
 
 class SalesProvider with ChangeNotifier {
+  bool isOnlineSalesNavigation = false;
   List<ListOrderModelData> _orders = [];
   List<SalesReturnOrder> _salesReturnOrders = [];
   List<SalesReturnCart> _salesReturnItems = [];
@@ -752,6 +753,91 @@ class SalesProvider with ChangeNotifier {
       notifyListeners();
     } else {
       throw Exception('Failed to cancel order');
+    }
+  }
+
+  Future<void> changeOrderStatus({
+    required String accessToken,
+    required String orderId,
+    required String status,
+    double? refundAmount,
+    String? paymentMethod,
+    bool? deliveryChargeRefundable,
+    String? deliveryLogistics,
+  }) async {
+    final url = Uri.parse(APPUrl.orderChangeStatusUrl);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    final requestBody = {
+      'order_id': orderId,
+      'status': status,
+      if (refundAmount != null) 'refund_amount': refundAmount,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (deliveryChargeRefundable != null)
+        'delivery_charge_refundable': deliveryChargeRefundable,
+      if (deliveryLogistics != null) 'delivery_logistics': deliveryLogistics,
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      notifyListeners();
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Failed to change order status');
+    }
+  }
+
+  Future<void> changePaymentStatus({
+    required String accessToken,
+    required String orderId,
+    required String status,
+    required double amount,
+  }) async {
+    final url = Uri.parse(APPUrl.orderChangePaymentStatusUrl);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException("API key not found. Please restart the app.");
+    }
+
+    final requestBody = {
+      'order_id': orderId,
+      'status': status,
+      'amount': amount,
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      notifyListeners();
+    } else {
+      final error = jsonDecode(response.body);
+      throw Exception(error['message'] ?? 'Failed to change payment status');
     }
   }
 
