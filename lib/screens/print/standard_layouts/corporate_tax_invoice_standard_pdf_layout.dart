@@ -102,6 +102,32 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return '$currencyPrefix ${amount.toStringAsFixed(2)}';
   }
 
+  // ── Bidi helpers ────────────────────────────────────────────────────
+  // The `pdf` package only applies Arabic glyph shaping + bidi reordering
+  // when a Text widget's resolved textDirection is RTL. On this LTR page any
+  // Text carrying Arabic must therefore be flagged RTL, otherwise its letters
+  // render isolated/unshaped and overlap adjacent Latin text. Detection is
+  // conditional because forcing RTL on pure-Latin text reverses its word order.
+  static final RegExp _arabicRegex = RegExp(
+      '[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
+
+  bool _hasArabic(String? s) => s != null && _arabicRegex.hasMatch(s);
+
+  pw.TextDirection _dirOf(String? s) =>
+      _hasArabic(s) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
+
+  /// Text widget that auto-selects its direction from its content so Arabic is
+  /// shaped/reordered correctly while Latin/numeric content stays LTR.
+  pw.Widget _autoText(String text, pw.TextStyle style,
+      {pw.TextAlign? textAlign, int? maxLines, bool? softWrap}) {
+    return pw.Text(text,
+        style: style,
+        textAlign: textAlign,
+        maxLines: maxLines,
+        softWrap: softWrap,
+        textDirection: _dirOf(text));
+  }
+
   // ── Public interface ────────────────────────────────────────────────
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
@@ -520,22 +546,22 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text(documentHeader.isNotEmpty ? documentHeader : storeName,
-                    style: sellerNameStyle),
+                _autoText(documentHeader.isNotEmpty ? documentHeader : storeName,
+                    sellerNameStyle),
                 if (documentSubheader.isNotEmpty)
                   pw.Text(documentSubheader,
                       style: sellerInfoStyle,
                       textDirection: pw.TextDirection.rtl),
                 if (cfgVisible('showDescription') && storeDesc.isNotEmpty)
-                  pw.Text(storeDesc, style: sellerInfoStyle),
+                  _autoText(storeDesc, sellerInfoStyle),
                 if (cfgVisible('showStoreAddress') && storeAddress.isNotEmpty)
-                  pw.Text(storeAddress, style: sellerInfoStyle),
+                  _autoText(storeAddress, sellerInfoStyle),
                 if (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                  pw.Text(storeFssai, style: sellerInfoStyle),
+                  _autoText(storeFssai, sellerInfoStyle),
                 if (cfgVisible('showExtraHeading1') && extraHeading1.isNotEmpty)
-                  pw.Text(extraHeading1, style: sellerInfoStyle),
+                  _autoText(extraHeading1, sellerInfoStyle),
                 if (sellerCrNumber.isNotEmpty)
-                  pw.Text('CR No. $sellerCrNumber', style: sellerInfoStyle),
+                  _autoText('CR No. $sellerCrNumber', sellerInfoStyle),
               ],
             ),
             pw.SizedBox(height: 8),
@@ -549,7 +575,7 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   pw.Text(invoiceTitleArabic,
                       style: titleArStyle,
                       textDirection: pw.TextDirection.rtl),
-                  pw.Text(invoiceTitleText.toUpperCase(), style: titleStyle),
+                  _autoText(invoiceTitleText.toUpperCase(), titleStyle),
                   if (params.zatcaVatNumber?.isNotEmpty == true)
                     pw.Text('VAT NO: ${params.zatcaVatNumber}',
                         style: vatNoStyle),
@@ -727,12 +753,11 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           style: bankHeading),
                       pw.SizedBox(height: 2),
                       if (bankAccount?.accountHolderName?.isNotEmpty == true)
-                        pw.Text(
+                        _autoText(
                             'Beneficiary Name: ${bankAccount!.accountHolderName}',
-                            style: bankStyle),
+                            bankStyle),
                       if (bank?.bankName?.isNotEmpty == true)
-                        pw.Text('Bank Name: ${bank!.bankName}',
-                            style: bankStyle),
+                        _autoText('Bank Name: ${bank!.bankName}', bankStyle),
                       if (bankAccount?.accountNumber?.isNotEmpty == true)
                         pw.Text('Bank Account: ${bankAccount!.accountNumber}',
                             style: bankStyle),
@@ -755,15 +780,15 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       if (showComment &&
                           params.orderComment != null &&
                           params.orderComment!.isNotEmpty)
-                        pw.Text(
+                        _autoText(
                             '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                            style: wordsStyle),
+                            wordsStyle),
                       if (showDeliveryMethod &&
                           params.deliveryMethod != null &&
                           params.deliveryMethod!.isNotEmpty)
-                        pw.Text(
+                        _autoText(
                             '${_getLabel(dc, 'showDeliveryMethod', null, 'Delivery')}: ${params.deliveryMethod}',
-                            style: wordsStyle),
+                            wordsStyle),
                       if (cfgVisible('showItemsCount'))
                         pw.Text(
                             '${_getLabel(dc, 'showItemsCount', null, 'Items')}: ${params.cartItems.length}',
@@ -791,13 +816,13 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // TERMS & THANK YOU
             // ═══════════════════════════════════════════════════════
             if (cfgVisible('showTermsConditions')) ...[
-              pw.Text(_termsText(dc, config), style: smallStyle),
+              _autoText(_termsText(dc, config), smallStyle),
               pw.SizedBox(height: 4),
             ],
             if (cfgVisible('showThankYouMessage'))
               pw.Center(
-                child: pw.Text(_thankYouText(dc, config, isEnglish),
-                    style: wordsBold, textAlign: pw.TextAlign.center),
+                child: _autoText(_thankYouText(dc, config, isEnglish),
+                    wordsBold, textAlign: pw.TextAlign.center),
               ),
             pw.SizedBox(height: 8),
 
@@ -811,18 +836,18 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 if (sellerCrNumber.isNotEmpty)
-                  pw.Text('CR $sellerCrNumber', style: footerStyle),
+                  _autoText('CR $sellerCrNumber', footerStyle),
                 pw.Expanded(
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       if (cfgVisible('showStoreAddress') &&
                           storeAddress.isNotEmpty)
-                        pw.Text(storeAddress, style: footerStyle),
+                        _autoText(storeAddress, footerStyle),
                       if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
-                        pw.Text(storeEmail, style: footerStyle),
+                        _autoText(storeEmail, footerStyle),
                       if (cfgVisible('showTel') && storeTel.isNotEmpty)
-                        pw.Text(storeTel, style: footerStyle),
+                        _autoText(storeTel, footerStyle),
                       if (cfgVisible('showVATFooter') &&
                           params.zatcaVatNumber?.isNotEmpty == true)
                         pw.Text(
@@ -1074,13 +1099,15 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 style: labelStyle,
                 maxLines: 1,
                 softWrap: false,
-                overflow: pw.TextOverflow.clip),
+                overflow: pw.TextOverflow.clip,
+                textDirection: _dirOf(label)),
           ),
           pw.Expanded(
             child: pw.Text(value,
                 style: valueStyle,
                 maxLines: 2,
-                overflow: pw.TextOverflow.clip),
+                overflow: pw.TextOverflow.clip,
+                textDirection: _dirOf(value)),
           ),
         ],
       ),
@@ -1095,7 +1122,9 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Expanded(flex: 4, child: pw.Text(en, style: enStyle)),
+          pw.Expanded(
+              flex: 4,
+              child: pw.Text(en, style: enStyle, textDirection: _dirOf(en))),
           pw.Expanded(
             flex: 4,
             child: pw.Align(
@@ -1393,7 +1422,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          if (en.isNotEmpty) pw.Text(en, style: enStyle),
+          if (en.isNotEmpty)
+            pw.Text(en, style: enStyle, textDirection: _dirOf(en)),
           if (ar.isNotEmpty)
             pw.Text(ar, style: arStyle, textDirection: pw.TextDirection.rtl),
         ],

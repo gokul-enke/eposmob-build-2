@@ -102,6 +102,32 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return '$currencyPrefix ${amount.toStringAsFixed(2)}';
   }
 
+  // ── Bidi helpers ────────────────────────────────────────────────────
+  // The `pdf` package only applies Arabic glyph shaping + bidi reordering
+  // when a Text widget's resolved textDirection is RTL. On this LTR page any
+  // Text carrying Arabic must therefore be flagged RTL, otherwise its letters
+  // render isolated/unshaped and overlap adjacent Latin text. Detection is
+  // conditional because forcing RTL on pure-Latin text reverses its word order.
+  static final RegExp _arabicRegex = RegExp(
+      '[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
+
+  bool _hasArabic(String? s) => s != null && _arabicRegex.hasMatch(s);
+
+  pw.TextDirection _dirOf(String? s) =>
+      _hasArabic(s) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
+
+  /// Text widget that auto-selects its direction from its content so Arabic is
+  /// shaped/reordered correctly while Latin/numeric content stays LTR.
+  pw.Widget _autoText(String text, pw.TextStyle style,
+      {pw.TextAlign? textAlign, int? maxLines, bool? softWrap}) {
+    return pw.Text(text,
+        style: style,
+        textAlign: textAlign,
+        maxLines: maxLines,
+        softWrap: softWrap,
+        textDirection: _dirOf(text));
+  }
+
   // ── Public interface ────────────────────────────────────────────────
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
@@ -533,21 +559,17 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
                       if (headerPrimary.isNotEmpty)
-                        pw.Text(headerPrimary,
-                            style: storeNameArStyle,
+                        _autoText(headerPrimary, storeNameArStyle,
                             textAlign: pw.TextAlign.center),
                       if (headerSecondary.isNotEmpty)
-                        pw.Text(headerSecondary,
-                            style: storeNameEnStyle,
+                        _autoText(headerSecondary, storeNameEnStyle,
                             textAlign: pw.TextAlign.center),
                       if (cfgVisible('showStoreName') &&
                           documentHeader.isNotEmpty)
-                        pw.Text(storeName,
-                            style: storeNameEnStyle,
+                        _autoText(storeName, storeNameEnStyle,
                             textAlign: pw.TextAlign.center),
                       if (cfgVisible('showDescription') && storeDesc.isNotEmpty)
-                        pw.Text(storeDesc,
-                            style: storeInfoStyle,
+                        _autoText(storeDesc, storeInfoStyle,
                             textAlign: pw.TextAlign.center),
                     ],
                   ),
@@ -578,7 +600,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
-                    pw.Text(invoiceTitleText.toUpperCase(), style: titleStyle),
+                    _autoText(invoiceTitleText.toUpperCase(), titleStyle),
                     pw.Text(invoiceTitleArabic,
                         style: titleArStyle,
                         textDirection: pw.TextDirection.rtl),
@@ -669,21 +691,21 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                             'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
                             style: smallStyle),
                       if (showPayment && params.paymentMethod != null)
-                        pw.Text(
+                        _autoText(
                             '${_getLabel(dc, paymentConfigKey, null, 'Payment Method')}: ${params.paymentMethod}',
-                            style: smallStyle),
+                            smallStyle),
                       if (showComment &&
                           params.orderComment != null &&
                           params.orderComment!.isNotEmpty)
-                        pw.Text(
+                        _autoText(
                             '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                            style: wordsStyle),
+                            wordsStyle),
                       if (showDeliveryMethod &&
                           params.deliveryMethod != null &&
                           params.deliveryMethod!.isNotEmpty)
-                        pw.Text(
+                        _autoText(
                             '${_getLabel(dc, 'showDeliveryMethod', null, 'Delivery')}: ${params.deliveryMethod}',
-                            style: wordsStyle),
+                            wordsStyle),
                       ...paymentLines,
                       ..._customerBalanceLines(
                           params, dc, currency, wordsStyle, wordsBold),
@@ -759,10 +781,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // TERMS & CONDITIONS (config value → billDocumentConfig.terms)
             // ═══════════════════════════════════════════════════════
             if (cfgVisible('showTermsConditions')) ...[
-              pw.Text(
-                _termsText(dc, config),
-                style: smallStyle,
-              ),
+              _autoText(_termsText(dc, config), smallStyle),
               pw.SizedBox(height: 4),
             ],
 
@@ -771,9 +790,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // ═══════════════════════════════════════════════════════
             if (cfgVisible('showThankYouMessage'))
               pw.Center(
-                child: pw.Text(
+                child: _autoText(
                   _thankYouText(dc, config, isEnglish),
-                  style: footerBold,
+                  footerBold,
                   textAlign: pw.TextAlign.center,
                 ),
               ),
@@ -815,26 +834,30 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // SECTION 7: FOOTER BAND — account/IBAN + store contact
             // ═══════════════════════════════════════════════════════
             if (accountNumberValue.isNotEmpty || ibanValue.isNotEmpty)
-              pw.Text(
+              _autoText(
                 'ACCOUNT NUMBER AT ${displayOrBlank(accountNumberValue)}${ibanValue.isNotEmpty ? ' / IBAN ${displayOrBlank(ibanValue)}' : ''}',
-                style: footerBold,
+                footerBold,
               ),
-            pw.Text(
-              [
-                storeName,
-                if (cfgVisible('showStoreAddress') && storeAddress.isNotEmpty)
-                  storeAddress,
-                if (cfgVisible('showTel') && storeTel.isNotEmpty)
-                  'Mobile No.$storeTel',
-              ].join(' . '),
-              style: footerStyle,
-            ),
+            // Render the (often Arabic) store name on its own line so it is
+            // shaped RTL independently of the LTR contact details below.
+            _autoText(storeName, footerStyle),
+            if ((cfgVisible('showStoreAddress') && storeAddress.isNotEmpty) ||
+                (cfgVisible('showTel') && storeTel.isNotEmpty))
+              _autoText(
+                [
+                  if (cfgVisible('showStoreAddress') && storeAddress.isNotEmpty)
+                    storeAddress,
+                  if (cfgVisible('showTel') && storeTel.isNotEmpty)
+                    'Mobile No.$storeTel',
+                ].join(' . '),
+                footerStyle,
+              ),
             if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
-              pw.Text('Email: $storeEmail', style: footerStyle),
+              _autoText('Email: $storeEmail', footerStyle),
             if (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-              pw.Text(storeFssai, style: footerStyle),
+              _autoText(storeFssai, footerStyle),
             if (cfgVisible('showExtraHeading1') && extraHeading1.isNotEmpty)
-              pw.Text(extraHeading1, style: footerStyle),
+              _autoText(extraHeading1, footerStyle),
             if (cfgVisible('showVATFooter') &&
                 params.zatcaVatNumber?.isNotEmpty == true)
               pw.Text(
@@ -1088,13 +1111,15 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 style: labelStyle,
                 maxLines: 1,
                 softWrap: false,
-                overflow: pw.TextOverflow.clip),
+                overflow: pw.TextOverflow.clip,
+                textDirection: _dirOf(label)),
           ),
           pw.Expanded(
             child: pw.Text(value,
                 style: valueStyle,
                 maxLines: 2,
-                overflow: pw.TextOverflow.clip),
+                overflow: pw.TextOverflow.clip,
+                textDirection: _dirOf(value)),
           ),
         ],
       ),
@@ -1107,7 +1132,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return pw.TableRow(children: [
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-        child: pw.Text(en, style: enStyle),
+        child: pw.Text(en, style: enStyle, textDirection: _dirOf(en)),
       ),
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
@@ -1340,7 +1365,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final double rateExcTax = unitPrice - taxPerUnit;
 
       name = _bilingualItemName(item, name, isAr);
-      final bool isArName = isAr && name.contains('\n');
+      // Right-align + RTL-shape whenever the name carries any Arabic (covers
+      // bilingual names and English names with embedded Arabic).
+      final bool isArName = _hasArabic(name);
 
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
