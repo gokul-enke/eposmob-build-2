@@ -1124,7 +1124,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final showRate = col('showRate');
     final showRateExcTax = col('showRateExcTax');
     final showUnit = col('showUnit');
-    final showDiscount = col('showDiscount');
+    final showDiscountColumn = col('showDiscountColumn');
     final showTax = col('showTaxHeader');
     final showTotal = col('showTotal');
 
@@ -1140,7 +1140,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (showRate) colWidths[ci++] = const pw.FlexColumnWidth(1.3);
     if (showRateExcTax) colWidths[ci++] = const pw.FlexColumnWidth(1.2);
     if (showUnit) colWidths[ci++] = const pw.FlexColumnWidth(0.8);
-    if (showDiscount) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    if (showDiscountColumn) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
     // AMOUNT (taxable / excl-VAT line total) — always shown.
     colWidths[ci++] = const pw.FlexColumnWidth(1.3);
     if (showTax) colWidths[ci++] = const pw.FlexColumnWidth(1.1);
@@ -1201,9 +1201,9 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       hdrs.add(hdr(_labelEn(dc, 'showUnit', null, 'UNIT', isAr),
           _labelAr(dc, 'showUnit', resolvedLabels?.unitName, 'الوحدة', isAr)));
     }
-    if (showDiscount) {
-      hdrs.add(hdr(_labelEn(dc, 'showDiscount', null, 'DISCOUNT', isAr),
-          _labelAr(dc, 'showDiscount', null, 'خصم', isAr)));
+    if (showDiscountColumn) {
+      hdrs.add(hdr(_labelEn(dc, 'showDiscountColumn', null, 'DISCOUNT', isAr),
+          _labelAr(dc, 'showDiscountColumn', null, 'خصم', isAr)));
     }
     // AMOUNT (taxable) — always shown.
     hdrs.add(hdr('AMOUNT', 'مقدار'));
@@ -1324,7 +1324,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       if (showUnit) {
         cells.add(_dataCell(unitName, bodyStyle));
       }
-      if (showDiscount) {
+      if (showDiscountColumn) {
         cells.add(_dataCell(iDiscount.toStringAsFixed(2), bodyStyle,
             align: pw.Alignment.centerRight));
       }
