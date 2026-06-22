@@ -1136,19 +1136,12 @@ class GridSelectionProvider extends ChangeNotifier {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
-    final int? activeStoreId = prefs.getInt('active_store_id');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    // Build URL with store_id parameter
-    final Map<String, String> queryParams = {};
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
-    final url = Uri.parse(APPUrl.listFilesForImageUrl)
-        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+   final url = Uri.parse(APPUrl.listFilesForImageUrl);
 
     try {
       final response = await http.get(url, headers: {
@@ -1157,10 +1150,12 @@ class GridSelectionProvider extends ChangeNotifier {
         'X-Tenant': apiKey,
       });
 
+      debugPrint('FILES API URL: $url');           
+      debugPrint('FILES API STATUS: ${response.statusCode}');  
+      debugPrint('FILES API BODY: ${response.body}');        
+
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
-        // debugPrint(json.decode(response.body).toString());
-        // debugPrint(json.decode(response.body).toString());
         return json.decode(response.body);
       } else {
         return error;
