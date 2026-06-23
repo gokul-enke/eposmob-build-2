@@ -26,10 +26,20 @@ features/billing/
 ## Status (2026-06-23)
 - ✅ Phase 2 — single breakpoint source in `core/responsive/`.
 - ✅ Phase 3 — pages/widgets/utils/coordinators relocated here (pure move).
-- ⏳ Phase 4+ — carving `presentation/pages/billing_page.dart` (9.3k-line monolith)
-  into `widgets/` + `domain/` is **incremental, human-verified** work: the page
-  fires network/connectivity calls in `initState`, so it cannot be mounted in a
-  hermetic widget test. Extract one piece at a time and verify in the running app.
+- 🔄 Phase 4 — strategy changed to **parallel/strangler**: the desktop monolith
+  (`presentation/pages/billing_page.dart`) is left untouched and proven; mobile
+  work happens in the separate `presentation/pages/billing_page_mobile.dart`
+  (shown for width < 650), which already reuses the shared providers.
+  - Extracted pure logic to `domain/` + `presentation/utils/` with tests:
+    `embedded_barcode.dart` (scale-barcode parsing), `billing_sidebar_metrics.dart`
+    (sidebar clamp math). Mobile page dead code removed.
+- ✅ Runtime smoke test for the mobile page: `test/billing_page_mobile_smoke_test.dart`
+  mounts the real `BillingPageMobile` behind fake providers (network/connectivity
+  stubbed) and asserts it builds + switches all 3 tabs. Surfaced a finding: the
+  Home-tab header `Row` (home_tab.dart:56) overflows horizontally under tight
+  width — confirm/fix on-device.
+- ℹ️ Desktop page (`billing_page.dart`) still can't be hermetically mounted (same
+  network-in-`initState` pattern); verify it in the running app.
 
 ## Adding a new feature page
 Mirror this shape from day one: page = orchestrator, layouts per form factor,

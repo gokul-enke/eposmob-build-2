@@ -18,6 +18,7 @@ import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/features/billing/controllers/coordinators/payment_coordinator.dart';
+import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
 import 'package:pos_machine/services/checkout_service.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -46,9 +47,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
   // Keys for autocomplete widgets
   GlobalKey _autocompletePhoneKey = GlobalKey();
   GlobalKey _autocompleteProductKey = GlobalKey();
-
-  CartProvider cartProvider = CartProvider();
-  UniqueKey keyTile = UniqueKey();
 
   final FocusNode _focusNode = FocusNode();
   StreamSubscription<String>? _barcodeSubscription;
@@ -80,8 +78,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
         customerId: customerId!, accessToken: accessToken ?? '');
-
-    _focusNode.addListener(_handleFocusChange);
 
     // Initialize BillingProvider
     final billingProvider =
@@ -215,10 +211,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     try {
       if (currentOrder == null) {
-        final summary = localProductProvider.priceSummary;
-        setState(() {
-          // Handle coupon state from provider summary
-        });
+        // No saved order to restore; trigger a rebuild so any cleared coupon
+        // state is reflected.
+        setState(() {});
         return;
       }
 
@@ -438,12 +433,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
         .setToCustomerCreditEnabled(currentOrder.toCustomerCredit ?? false);
   }
 
-  void _handleFocusChange() {
-    if (_focusNode.hasFocus) {
-      // Handle focus changes
-    }
-  }
-
   void _handleKeyPress(KeyEvent event) {
     if (event is KeyDownEvent) {
       try {
@@ -474,25 +463,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
     List<GetProduct> filteredProducts = [];
 
     try {
-      String? prefix;
-      String? productCode;
-      String? lastFive;
+      // Embedded scale barcodes (14 chars, '000' prefix) carry a product code
+      // + weight/qty payload. Parsing lives in the pure, tested EmbeddedBarcode
+      // helper; behaviour is identical to the previous inline implementation.
+      final bool isEmbedded = EmbeddedBarcode.isEmbedded(query);
 
-      if (query.length > 2) {
-        prefix = query.substring(0, 3);
-      }
-
-      if (prefix != '000' || query.length != 14) {
-        filteredProducts =
-            Provider.of<LocalProductProvider>(context, listen: false)
-                .filterProductByBarcode(barCode: query);
-      } else {
-        productCode = query.substring(3, 9);
-        lastFive = query.substring(9, 14);
-        filteredProducts =
-            Provider.of<LocalProductProvider>(context, listen: false)
-                .filterProductByBarcode(barCode: productCode);
-      }
+      filteredProducts =
+          Provider.of<LocalProductProvider>(context, listen: false)
+              .filterProductByBarcode(barCode: EmbeddedBarcode.searchCode(query));
 
       if (filteredProducts.isNotEmpty) {
         GetProduct product = filteredProducts.first;
@@ -507,17 +485,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
           }
         }
 
-        if ((product.unit == 'KGS' || product.unit == 'KG') &&
-            prefix == '000' &&
-            query.length == 14) {
-          String weightKg = lastFive!.substring(0, 2);
-          String weightGrams = lastFive.substring(2, 5);
-          quantity =
-              double.parse(weightKg) + (double.parse(weightGrams) / 1000);
+        if ((product.unit == 'KGS' || product.unit == 'KG') && isEmbedded) {
+          quantity = EmbeddedBarcode.weightQuantityKg(query);
         } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
-            prefix == '000' &&
-            query.length == 14) {
-          quantity = int.parse(lastFive!);
+            isEmbedded) {
+          quantity = EmbeddedBarcode.pieceQuantity(query);
         } else if (matchedSaleUnit != null) {
           quantity =
               num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
