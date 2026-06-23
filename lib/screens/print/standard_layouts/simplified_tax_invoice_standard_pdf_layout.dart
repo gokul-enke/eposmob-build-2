@@ -753,14 +753,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       2: pw.FlexColumnWidth(1.8),
                     },
                     children: [
-                      if (showDiscountFlag && discountAmountValue != 0)
-                        _totalsRow(
-                            _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
-                                isDualLanguage),
-                            _labelAr(dc, 'showDiscount', null, 'خصم',
-                                isDualLanguage),
-                            _formatMoney(currency, discountAmountValue),
-                            totalsLabelEn, totalsLabelAr, totalsValueStyle),
                       if (showSubTotalFlag)
                         _totalsRow(
                             _labelEn(dc, 'showSubTotal', null, 'SUB TOTAL',
@@ -768,6 +760,14 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                             _labelAr(dc, 'showSubTotal', null,
                                 'المجموع الفرعي', isDualLanguage),
                             _formatMoney(currency, netExcTaxValue),
+                            totalsLabelEn, totalsLabelAr, totalsValueStyle),
+                      if (showDiscountFlag && discountAmountValue != 0)
+                        _totalsRow(
+                            _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
+                                isDualLanguage),
+                            _labelAr(dc, 'showDiscount', null, 'خصم',
+                                isDualLanguage),
+                            _formatMoney(currency, discountAmountValue),
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
                       if (showTaxTotalFlag)
                         _totalsRow(
