@@ -503,9 +503,16 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     // ── Invoice box rows ────────────────────────────────────────────
+    // Quotations show "Quotation No." rather than "Invoice No." (still
+    // overridable by the showInvoiceNumber config value).
+    final bool isQuotation =
+        (config.template ?? '').toLowerCase() == 'quotation' ||
+            (config.type ?? '').toLowerCase().contains('quotation');
+    final String numberLabelDefault =
+        isQuotation ? 'Quotation No.' : 'Invoice No.';
     final invoiceRows = <pw.Widget>[
       if (cfgVisibleDefault('showInvoiceNumber'))
-        _kvRow(_getLabel(dc, 'showInvoiceNumber', null, 'Invoice No.'),
+        _kvRow(_getLabel(dc, 'showInvoiceNumber', null, numberLabelDefault),
             invoiceNumber, infoLabel, infoValue),
       if (cfgVisibleDefault('showDate'))
         _kvRow('Date:', displayDate, infoLabel, infoValue),
