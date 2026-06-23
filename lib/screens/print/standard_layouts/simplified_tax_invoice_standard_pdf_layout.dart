@@ -296,11 +296,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final double saved = double.tryParse(params.savedTotal ?? '0.0') ?? 0.0;
 
     // Authoritative net-excl-tax (after discount). Prefer params.netExcTax,
-    // fall back to the item-summed excl-tax base. Gross = net + discount.
+    // fall back to the item-summed excl-tax base.
     final double netExcTaxValue = params.netExcTax != null
         ? (double.tryParse(params.netExcTax!) ?? totalExclTax)
         : totalExclTax;
-    final double grossExclTax = netExcTaxValue + discountAmountValue;
 
     // ── QR (ZATCA priority, payment-gateway fallback) ───────────────
     String qrData = '';
@@ -716,7 +715,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       pw.SizedBox(height: 4),
                       if (cfgVisibleDefault('showDate'))
                         pw.Text(
-                            'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
+                            'Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
                             style: smallStyle),
                       if (showPayment && params.paymentMethod != null)
                         _autoText(
@@ -766,10 +765,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       2: pw.FlexColumnWidth(1.8),
                     },
                     children: [
-                      if (showSubTotalFlag)
-                        _totalsRow('TOTAL', 'المجموع',
-                            _formatMoney(currency, grossExclTax),
-                            totalsLabelEn, totalsLabelAr, totalsValueStyle),
                       if (showDiscountFlag)
                         _totalsRow(
                             _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
