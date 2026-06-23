@@ -704,11 +704,11 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       if (cfgVisibleDefault('showDate'))
                         pw.Text(
                             'Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
-                            style: smallStyle),
+                            style: wordsStyle),
                       if (showPayment && paymentMethodSummary.isNotEmpty)
                         _autoText(
                             '${_getLabel(dc, paymentConfigKey, null, 'Payment Method')}: $paymentMethodSummary',
-                            smallStyle),
+                            wordsStyle),
                       if (showComment &&
                           params.orderComment != null &&
                           params.orderComment!.isNotEmpty)
