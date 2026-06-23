@@ -11,7 +11,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
 
 class HeaderBar extends StatelessWidget {
   final bool isSidebarVisible;

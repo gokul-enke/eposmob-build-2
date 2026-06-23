@@ -28,7 +28,7 @@ salesexecutive2@cyclopedia.in
 123456
 
 DEMO_FUNZCART_vqguo7a24ezI8a69o2q0FlQsPXPZRzrw
-salesexecutive1@funzcart.in
+salesexecutive2@funzcart.in
 123456
 kitchenmaster@funzcart.in
 attender@funzcart.in

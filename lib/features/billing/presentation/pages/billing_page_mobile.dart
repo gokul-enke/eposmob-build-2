@@ -17,13 +17,13 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/screens/billing/coordinators/payment_coordinator.dart';
+import 'package:pos_machine/features/billing/controllers/coordinators/payment_coordinator.dart';
 import 'package:pos_machine/services/checkout_service.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/screens/billing/widgets/mobile/home_tab.dart';
-import 'package:pos_machine/screens/billing/widgets/mobile/billing_tab.dart';
-import 'package:pos_machine/screens/billing/widgets/mobile/orders_tab.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home_tab.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing_tab.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders_tab.dart';
 
 class BillingPageMobile extends StatefulWidget {
   const BillingPageMobile({super.key});

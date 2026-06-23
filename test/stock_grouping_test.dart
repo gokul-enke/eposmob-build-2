@@ -49,25 +49,61 @@ void main() {
       );
     });
 
-    test('separates stocks with different MRP', () {
+    // ---------------------------------------------------------------------
+    // Default grouping behaviour (re-baselined).
+    //
+    // The default field set is now `kDefaultStockGroupingFields = {price,
+    // unit}` (see stock_selection_modal.dart). With the default, stocks that
+    // differ ONLY in mrp / purchasePrice / hsnCode / taxRate / wholesale*
+    // are grouped together. The per-field separation logic below verifies
+    // each field is still honoured when explicitly activated.
+    // ---------------------------------------------------------------------
+    test('default fields (price + unit) ignore non-price attribute differences',
+        () {
+      final stocks = [
+        buildStock(
+            id: 1,
+            mrp: '12',
+            purchasePrice: '8',
+            hsnCode: 'HSN1',
+            taxRate: '5',
+            wholesalePrice: '9',
+            wholesaleMinUnit: 5),
+        buildStock(
+            id: 2,
+            mrp: '13',
+            purchasePrice: '9',
+            hsnCode: 'HSN2',
+            taxRate: '12',
+            wholesalePrice: '8',
+            wholesaleMinUnit: 10),
+      ];
+      final groups = groupStocksByPricing(stocks);
+      expect(groups.length, 1);
+      expect(groups.first.totalQuantity, 2);
+    });
+
+    test('separates stocks with different MRP when mrp is an active field', () {
       final stocks = [
         buildStock(id: 1, mrp: '12'),
         buildStock(id: 2, mrp: '13'),
       ];
-      final groups = groupStocksByPricing(stocks);
+      final groups = groupStocksByPricing(stocks,
+          activeFields: {'price', 'unit', 'mrp'});
       expect(groups.length, 2);
     });
 
-    test('separates stocks with different purchase price', () {
+    test('separates stocks with different purchase price when active', () {
       final stocks = [
         buildStock(id: 1, purchasePrice: '8'),
         buildStock(id: 2, purchasePrice: '9'),
       ];
-      final groups = groupStocksByPricing(stocks);
+      final groups = groupStocksByPricing(stocks,
+          activeFields: {'price', 'unit', 'purchasePrice'});
       expect(groups.length, 2);
     });
 
-    test('separates stocks with different unit', () {
+    test('separates stocks with different unit (unit is a default field)', () {
       final stocks = [
         buildStock(id: 1, unit: 'PCS'),
         buildStock(id: 2, unit: 'BOX'),
@@ -76,39 +112,43 @@ void main() {
       expect(groups.length, 2);
     });
 
-    test('separates stocks with different HSN code', () {
+    test('separates stocks with different HSN code when active', () {
       final stocks = [
         buildStock(id: 1, hsnCode: 'HSN1'),
         buildStock(id: 2, hsnCode: 'HSN2'),
       ];
-      final groups = groupStocksByPricing(stocks);
+      final groups = groupStocksByPricing(stocks,
+          activeFields: {'price', 'unit', 'hsnCode'});
       expect(groups.length, 2);
     });
 
-    test('separates stocks with different tax rate', () {
+    test('separates stocks with different tax rate when active', () {
       final stocks = [
         buildStock(id: 1, taxRate: '5'),
         buildStock(id: 2, taxRate: '12'),
       ];
-      final groups = groupStocksByPricing(stocks);
+      final groups = groupStocksByPricing(stocks,
+          activeFields: {'price', 'unit', 'taxRate'});
       expect(groups.length, 2);
     });
 
-    test('separates stocks with different wholesale price', () {
+    test('separates stocks with different wholesale price when active', () {
       final stocks = [
         buildStock(id: 1, wholesalePrice: '9', wholesaleMinUnit: 5),
         buildStock(id: 2, wholesalePrice: '8', wholesaleMinUnit: 5),
       ];
-      final groups = groupStocksByPricing(stocks);
+      final groups = groupStocksByPricing(stocks,
+          activeFields: {'price', 'unit', 'wholesalePrice'});
       expect(groups.length, 2);
     });
 
-    test('separates stocks with different wholesale min unit', () {
+    test('separates stocks with different wholesale min unit when active', () {
       final stocks = [
         buildStock(id: 1, wholesalePrice: '9', wholesaleMinUnit: 5),
         buildStock(id: 2, wholesalePrice: '9', wholesaleMinUnit: 10),
       ];
-      final groups = groupStocksByPricing(stocks);
+      final groups = groupStocksByPricing(stocks,
+          activeFields: {'price', 'unit', 'wholesaleMinUnit'});
       expect(groups.length, 2);
     });
 

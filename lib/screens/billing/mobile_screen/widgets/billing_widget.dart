@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
 import 'package:pos_machine/screens/billing/mobile_screen/widgets/payment_method_modal_wrapper.dart';
 import 'package:provider/provider.dart';
 

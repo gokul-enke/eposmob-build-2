@@ -39,8 +39,8 @@ import 'package:pos_machine/screens/billing/restaurant/utils/restaurant_helpers.
 import 'package:pos_machine/screens/billing/restaurant/widgets/tables_panel.dart';
 import 'package:pos_machine/screens/billing/restaurant/widgets/menu_panel.dart';
 import 'package:pos_machine/screens/billing/restaurant/widgets/order_panel.dart';
-import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
-import 'package:pos_machine/screens/billing/widgets/dining_selection_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/dining_selection_modal.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 
 class RestaurantPage extends StatefulWidget {

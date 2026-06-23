@@ -6,9 +6,9 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/payment_method_modal.dart';
 
 class PaymentCoordinator {
   const PaymentCoordinator._();

@@ -16,7 +16,7 @@ import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/master_data.dart';
-import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
 import 'package:provider/provider.dart';
 
 Future<dynamic> showCreateInvoiceModal(BuildContext context, Size size) {

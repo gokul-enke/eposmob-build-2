@@ -6,9 +6,9 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/customer_input.dart';
-import 'package:pos_machine/screens/billing/widgets/payment_summary.dart';
-import 'package:pos_machine/screens/billing/coordinators/payment_coordinator.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/customer_input.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/payment_summary.dart';
+import 'package:pos_machine/features/billing/controllers/coordinators/payment_coordinator.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 

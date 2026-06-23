@@ -51,7 +51,8 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
-import 'package:pos_machine/screens/billing/utils/billing_focus_orders.dart';
+import 'package:pos_machine/features/billing/presentation/utils/billing_focus_orders.dart';
+import 'package:pos_machine/features/billing/presentation/utils/billing_sidebar_metrics.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/services/quotation_print_service.dart';
@@ -73,14 +74,14 @@ import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
 import 'package:pos_machine/providers/master_data_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/checkout_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/payment_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
 
 enum CheckoutActionMode { confirm, save, quotation }
 
@@ -207,9 +208,7 @@ class BillingPageState extends State<BillingPage>
   bool _isSidebarResizing = false;
 
   static const double _sidebarResizeHandleWidth = 14;
-  static const double _sidebarMinWidth = 250;
-  static const double _sidebarMaxWidth = 420;
-  static const double _mainContentMinWidth = 620;
+  // Sidebar width clamping moved to BillingSidebarMetrics (Phase 4 extraction).
   static const String _billingSidebarWidthPrefKey =
       'billing_sidebar_width_fraction';
 
@@ -1650,16 +1649,7 @@ class BillingPageState extends State<BillingPage>
   }
 
   double _getClampedSidebarWidth(double usableWidth, double desiredWidth) {
-    final double minWidth = math.min(_sidebarMinWidth, usableWidth * 0.4);
-    final double maxWidth = math.max(
-      minWidth,
-      math.min(
-        _sidebarMaxWidth,
-        usableWidth - _mainContentMinWidth,
-      ),
-    );
-
-    return desiredWidth.clamp(minWidth, maxWidth).toDouble();
+    return BillingSidebarMetrics.clampedWidth(usableWidth, desiredWidth);
   }
 
   Future<void> _loadSidebarWidthPreference() async {

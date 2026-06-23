@@ -10,7 +10,7 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/widgets/compact_quantity_control_local.dart';
 import 'package:websafe_svg/websafe_svg.dart';
-import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/price_fields.dart';
 
 class CartItemsTable extends StatelessWidget {
   const CartItemsTable({super.key});
