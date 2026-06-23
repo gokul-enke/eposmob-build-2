@@ -745,7 +745,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       2: pw.FlexColumnWidth(1.8),
                     },
                     children: [
-                      if (showDiscountFlag)
+                      if (showDiscountFlag && discountAmountValue != 0)
                         _totalsRow(
                             _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
                                 isDualLanguage),
@@ -970,7 +970,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
   /// Human-readable payment method(s). Handles a structured `paymentBreakdown`
   /// map, a JSON multi-payment payload in `paymentMethod`, or a single method.
-  /// For multiple payments the method names are joined with ' + '.
+  /// For multiple payments the method names are joined with ', '.
   String _paymentMethodSummary(ReceiptLayoutParams params) {
     // Structured breakdown map.
     if (params.paymentBreakdown != null &&
@@ -980,7 +980,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         final amt = double.tryParse(amount.toString()) ?? 0.0;
         if (amt > 0) methods.add(_paymentMethodLabel(method));
       });
-      if (methods.isNotEmpty) return methods.join(' + ');
+      if (methods.isNotEmpty) return methods.join(', ');
     }
 
     // JSON multi-payment payload embedded in paymentMethod.
@@ -994,7 +994,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             final amt = double.tryParse(amount.toString()) ?? 0.0;
             if (amt > 0) methods.add(_paymentMethodLabel(method.toString()));
           });
-          if (methods.isNotEmpty) return methods.join(' + ');
+          if (methods.isNotEmpty) return methods.join(', ');
         }
       } catch (e) {
         debugPrint('[simplified_tax_invoice] payment summary parse error: $e');
