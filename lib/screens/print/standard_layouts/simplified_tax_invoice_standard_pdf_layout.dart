@@ -519,8 +519,11 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     // ── Invoice box rows ────────────────────────────────────────────
     final invoiceRows = <pw.Widget>[
-      _kvRow('Invoice No.', invoiceNumber, infoLabel, infoValue),
-      _kvRow('Date:', displayDate, infoLabel, infoValue),
+      if (cfgVisibleDefault('showInvoiceNumber'))
+        _kvRow(_getLabel(dc, 'showInvoiceNumber', null, 'Invoice No.'),
+            invoiceNumber, infoLabel, infoValue),
+      if (cfgVisibleDefault('showDate'))
+        _kvRow('Date:', displayDate, infoLabel, infoValue),
       if (showPayment)
         _kvRow('Cash/Credit:', cashCreditText, infoLabel, infoValue),
       _kvRow('Delivery Note No:', deliveryNoteNo, infoLabel, infoValue),
@@ -711,12 +714,12 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           params, dc, currency, wordsStyle, wordsBold),
                       if (cfgVisible('showItemsCount'))
                         pw.Text(
-                          '${_getLabel(dc, 'showItemsCount', null, 'Items')}: ${params.cartItems.length}',
+                          '${_withColon(_getLabel(dc, 'showItemsCount', null, 'Items'))} ${params.cartItems.length}',
                           style: wordsStyle,
                         ),
                       if (cfgVisible('showQuantityCount'))
                         pw.Text(
-                          '${_getLabel(dc, 'showQuantityCount', null, 'Total Qty')}: ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
+                          '${_withColon(_getLabel(dc, 'showQuantityCount', null, 'Total Qty'))} ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
                           style: wordsStyle,
                         ),
                       if (cfgVisible('showSaved') && saved > 0)
@@ -746,28 +749,32 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         _totalsRow(
                             _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
                                 isDualLanguage),
-                            'خصم',
+                            _labelAr(dc, 'showDiscount', null, 'خصم',
+                                isDualLanguage),
                             _formatMoney(currency, discountAmountValue),
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
                       if (showSubTotalFlag)
                         _totalsRow(
                             _labelEn(dc, 'showSubTotal', null, 'SUB TOTAL',
                                 isDualLanguage),
-                            'المجموع الفرعي',
+                            _labelAr(dc, 'showSubTotal', null,
+                                'المجموع الفرعي', isDualLanguage),
                             _formatMoney(currency, netExcTaxValue),
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
                       if (showTaxTotalFlag)
                         _totalsRow(
                             _labelEn(dc, 'showTax', resolvedLabels?.taxDefault,
                                 'TOTAL VAT 15%', isDualLanguage),
-                            'ضريبة القيمة المضافة',
+                            _labelAr(dc, 'showTax', resolvedLabels?.tax,
+                                'ضريبة القيمة المضافة', isDualLanguage),
                             _formatMoney(currency, totalTax),
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
                       if (showNetFlag)
                         _totalsRow(
                             _labelEn(dc, 'showNetAmount', null, 'NET AMOUNT',
                                 isDualLanguage),
-                            'المبلغ الصافي',
+                            _labelAr(dc, 'showNetAmount', null,
+                                'المبلغ الصافي', isDualLanguage),
                             _formatMoney(currency, totalAmount),
                             totalsLabelEn, totalsLabelAr, totalsValueBold),
                     ],
@@ -886,6 +893,13 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (t.contains('tax')) return 'فاتورة ضريبية';
     if (t.contains('invoice')) return 'فاتورة';
     return 'فاتورة ضريبية مبسطة';
+  }
+
+  /// Appends a single trailing colon, avoiding a double `::` when the
+  /// configured label already ends with one (e.g. value `"AR Qty:"`).
+  String _withColon(String label) {
+    final t = label.trimRight();
+    return t.endsWith(':') ? t : '$t:';
   }
 
   /// Get a label with priority: displayConfig value > resolvedLabel > default.
