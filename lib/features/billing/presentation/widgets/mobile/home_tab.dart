@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
-import 'package:pos_machine/providers/local_product_provider.dart';
-import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/product_entry_header.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/cart/cart_items_table.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
-import 'package:pos_machine/widgets/sync_button.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/mobile_home_app_bar.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/mobile_home_cart_card.dart';
 
 class MobileHomeTab extends StatefulWidget {
   final GlobalKey autocompleteProductKey;
@@ -53,83 +49,8 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
             child: Column(
               children: [
                 // App Bar (Order info + controls)
-                Row(
-                  children: [
-                    // Left: Order label + number (like desktop)
-                    Consumer<LocalProductProvider>(
-                      builder: (context, localProductProvider, _) {
-                        final isEditingOrder =
-                            localProductProvider.currentOrder != null;
-                        final orderNumber = isEditingOrder
-                            ? '#${localProductProvider.currentOrder!.orderNumber}'
-                            : '#00000';
-                        return Row(
-                          children: [
-                            Text(
-                              isEditingOrder ? 'Edit - ' : 'New - ',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            Text(
-                              orderNumber,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const Spacer(),
-                    // Keyboard toggle
-                    Consumer<KeyboardProvider>(
-                      builder: (context, keyboardProvider, _) {
-                        final showing = keyboardProvider.showKeyboardFeature;
-                        return IconButton(
-                          onPressed: () {
-                            if (showing) {
-                              keyboardProvider.featureOff();
-                              keyboardProvider.clear();
-                            } else {
-                              keyboardProvider.featureOn();
-                            }
-                          },
-                          icon: Icon(
-                            showing ? Icons.keyboard_hide : Icons.keyboard,
-                            color: showing
-                                ? ColorManager.kPrimaryColor
-                                : Colors.grey.shade600,
-                          ),
-                          tooltip: showing ? 'Hide Keyboard' : 'Show Keyboard',
-                        );
-                      },
-                    ),
-                    // Sync button
-                    const SyncButton(
-                      showTooltip: true,
-                      showText: false,
-                    ),
-                    const SizedBox(width: 4),
-                    // Connectivity indicator
-                    _ConnectivityIndicatorMobile(),
-                    const SizedBox(width: 8),
-                    // Grid toggle - Show modal instead
-                    IconButton(
-                      onPressed: () {
-                        _showProductGridModal(context);
-                      },
-                      icon: const Icon(
-                        Icons.grid_view_outlined,
-                        color: ColorManager.kPrimaryColor,
-                      ),
-                      tooltip: 'Show Product Grid',
-                    ),
-                  ],
+                MobileHomeAppBar(
+                  onShowGrid: () => _showProductGridModal(context),
                 ),
                 const SizedBox(height: 8),
                 // Product Entry Fields
@@ -156,120 +77,7 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
               children: [
                 // Cart Section - Takes most of the space
                 Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: BuildBoxShadowContainer(
-                      circleRadius: 12,
-                      child: Column(
-                        children: [
-                          // Cart Header
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(12),
-                                topRight: Radius.circular(12),
-                              ),
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: Colors.grey.shade200,
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.shopping_cart,
-                                  color: ColorManager.kPrimaryColor,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Shopping Cart',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const Spacer(),
-                                // Cart Summary
-                                Consumer<LocalProductProvider>(
-                                  builder: (context, provider, child) {
-                                    final total = provider.cartTotal;
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          '${provider.cartItems.length} items',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                        Text(
-                                          '${total.toStringAsFixed(2)}',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: ColorManager.kPrimaryColor,
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                                const SizedBox(width: 12),
-                                Consumer<BillingProvider>(
-                                  builder: (context, provider, child) {
-                                    final isLoading =
-                                        provider.isLoadingClearCart;
-                                    return SizedBox(
-                                      height: 32,
-                                      child: OutlinedButton(
-                                        style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                          ),
-                                          foregroundColor: Colors.red.shade700,
-                                          side: BorderSide(
-                                            color: Colors.red.shade300,
-                                          ),
-                                        ),
-                                        onPressed: isLoading
-                                            ? null
-                                            : widget.onClearCart,
-                                        child: Text(
-                                          isLoading
-                                              ? 'Clearing...'
-                                              : 'Clear Cart',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Cart Items - Takes remaining space
-                          const Expanded(
-                            child: CartItemsTable(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  child: MobileHomeCartCard(onClearCart: widget.onClearCart),
                 ),
               ],
             ),
@@ -375,31 +183,3 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
   */
 }
 
-class _ConnectivityIndicatorMobile extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<BillingProvider>(
-      builder: (context, billingProvider, child) {
-        final hasNet = billingProvider.hasInternet;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          decoration: BoxDecoration(
-            color: hasNet
-                ? Colors.green.withValues(alpha: 0.1)
-                : Colors.red.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: hasNet ? Colors.green : Colors.red,
-              width: 1,
-            ),
-          ),
-          child: Icon(
-            hasNet ? Icons.wifi : Icons.wifi_off,
-            size: 18,
-            color: hasNet ? Colors.green : Colors.red,
-          ),
-        );
-      },
-    );
-  }
-}

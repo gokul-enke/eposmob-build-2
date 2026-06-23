@@ -38,8 +38,22 @@ features/billing/
   stubbed) and asserts it builds + switches all 3 tabs. Surfaced a finding: the
   Home-tab header `Row` (home_tab.dart:56) overflows horizontally under tight
   width — confirm/fix on-device.
+- ✅ Mobile business logic extracted to `controllers/billing_mobile_controller.dart`
+  (order rehydration, payment-JSON restore, order-detail restore, delivery
+  defaults, barcode scan, clear-cart, checkout/print). The page
+  (`billing_page_mobile.dart`) is now UI orchestration only (820 → 432 lines).
+  Covered by `test/billing_mobile_controller_test.dart` (payment-restore) +
+  the mount smoke test. Lifecycle wiring (provider listeners, subscriptions)
+  intentionally stays in the widget `State`.
+- ✅ Mobile tab widgets decomposed into focused sub-widgets (desktop untouched):
+  - `mobile/billing/` — section card, option button, payment-methods, pine-labs,
+    delivery-options, coupon, action-buttons (billing_tab.dart 828 → 159).
+  - `mobile/orders/` — order card, empty state; payment-summary formatting moved
+    to `domain/order_payment_summary.dart` + tests (orders_tab.dart 730 → 487).
+  - `mobile/home/` — app-bar, cart card (home_tab.dart 405 → 185).
 - ℹ️ Desktop page (`billing_page.dart`) still can't be hermetically mounted (same
-  network-in-`initState` pattern); verify it in the running app.
+  network-in-`initState` pattern); verify it in the running app. **Untouched by
+  all mobile work.**
 
 ## Adding a new feature page
 Mirror this shape from day one: page = orchestrator, layouts per form factor,
