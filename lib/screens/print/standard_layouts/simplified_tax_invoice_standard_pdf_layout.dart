@@ -574,6 +574,31 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       if (cfgVisible('showDescription') && storeDesc.isNotEmpty)
                         _autoText(storeDesc, storeInfoStyle,
                             textAlign: pw.TextAlign.center),
+                      // Store contact / tax info moved to the top header.
+                      if ((cfgVisible('showStoreAddress') &&
+                              storeAddress.isNotEmpty) ||
+                          (cfgVisible('showTel') && storeTel.isNotEmpty))
+                        _autoText(
+                          [
+                            if (cfgVisible('showStoreAddress') &&
+                                storeAddress.isNotEmpty)
+                              storeAddress,
+                            if (cfgVisible('showTel') && storeTel.isNotEmpty)
+                              'Mobile No.$storeTel',
+                          ].join(' . '),
+                          storeInfoStyle,
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
+                        _autoText('Email: $storeEmail', storeInfoStyle,
+                            textAlign: pw.TextAlign.center),
+                      if (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                        _autoText(storeFssai, storeInfoStyle,
+                            textAlign: pw.TextAlign.center),
+                      if (cfgVisible('showExtraHeading1') &&
+                          extraHeading1.isNotEmpty)
+                        _autoText(extraHeading1, storeInfoStyle,
+                            textAlign: pw.TextAlign.center),
                     ],
                   ),
                 ),
@@ -838,33 +863,18 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             pw.SizedBox(height: 4),
 
             // ═══════════════════════════════════════════════════════
-            // SECTION 7: FOOTER BAND — account/IBAN + store contact
+            // SECTION 7: FOOTER BAND — bank details (opt-in) + VAT
+            // Store name / address / tax info / extra headings are rendered
+            // in the top header band instead of here.
             // ═══════════════════════════════════════════════════════
-            if (accountNumberValue.isNotEmpty || ibanValue.isNotEmpty)
+            // Bank account/IBAN is gated behind `showBankDetails`, a key that
+            // is absent from the API response, so it defaults to hidden.
+            if (cfgVisible('showBankDetails') &&
+                (accountNumberValue.isNotEmpty || ibanValue.isNotEmpty))
               _autoText(
                 'ACCOUNT NUMBER AT ${displayOrBlank(accountNumberValue)}${ibanValue.isNotEmpty ? ' / IBAN ${displayOrBlank(ibanValue)}' : ''}',
                 footerBold,
               ),
-            // Render the (often Arabic) store name on its own line so it is
-            // shaped RTL independently of the LTR contact details below.
-            _autoText(storeName, footerStyle),
-            if ((cfgVisible('showStoreAddress') && storeAddress.isNotEmpty) ||
-                (cfgVisible('showTel') && storeTel.isNotEmpty))
-              _autoText(
-                [
-                  if (cfgVisible('showStoreAddress') && storeAddress.isNotEmpty)
-                    storeAddress,
-                  if (cfgVisible('showTel') && storeTel.isNotEmpty)
-                    'Mobile No.$storeTel',
-                ].join(' . '),
-                footerStyle,
-              ),
-            if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
-              _autoText('Email: $storeEmail', footerStyle),
-            if (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-              _autoText(storeFssai, footerStyle),
-            if (cfgVisible('showExtraHeading1') && extraHeading1.isNotEmpty)
-              _autoText(extraHeading1, footerStyle),
             if (cfgVisible('showVATFooter') &&
                 params.zatcaVatNumber?.isNotEmpty == true)
               pw.Text(
