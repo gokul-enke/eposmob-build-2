@@ -539,10 +539,15 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // ═══════════════════════════════════════════════════════
             // SECTION 1: HEADER — bilingual store name + logo
             // ═══════════════════════════════════════════════════════
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
+            pw.Stack(
               children: [
-                pw.Expanded(
+                // Store identity, centered across the full page width so the
+                // name stays visually centered regardless of the logo. The
+                // horizontal padding reserves room for the logo on the right.
+                pw.Container(
+                  width: double.infinity,
+                  padding: pw.EdgeInsets.symmetric(
+                      horizontal: logoImage != null ? (isA5 ? 60 : 84) : 0),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
@@ -556,47 +561,50 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           documentHeader.isNotEmpty)
                         _autoText(storeName, storeNameEnStyle,
                             textAlign: pw.TextAlign.center),
-                      if (cfgVisible('showDescription') && storeDesc.isNotEmpty)
-                        _autoText(storeDesc, storeInfoStyle,
-                            textAlign: pw.TextAlign.center),
-                      // Store contact / tax info moved to the top header.
-                      if ((cfgVisible('showStoreAddress') &&
-                              storeAddress.isNotEmpty) ||
-                          (cfgVisible('showTel') && storeTel.isNotEmpty))
-                        _autoText(
+                      pw.SizedBox(height: 3),
+                      // Store sub-details, each with an even vertical rhythm.
+                      ..._headerInfoLines([
+                        if (cfgVisible('showDescription') &&
+                            storeDesc.isNotEmpty)
+                          storeDesc,
+                        if ((cfgVisible('showStoreAddress') &&
+                                storeAddress.isNotEmpty) ||
+                            (cfgVisible('showTel') && storeTel.isNotEmpty))
                           [
                             if (cfgVisible('showStoreAddress') &&
                                 storeAddress.isNotEmpty)
                               storeAddress,
                             if (cfgVisible('showTel') && storeTel.isNotEmpty)
-                              'Mobile No.$storeTel',
+                              storeTel,
                           ].join(' . '),
-                          storeInfoStyle,
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
-                        _autoText('Email: $storeEmail', storeInfoStyle,
-                            textAlign: pw.TextAlign.center),
-                      if (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                        _autoText(storeFssai, storeInfoStyle,
-                            textAlign: pw.TextAlign.center),
-                      if (cfgVisible('showExtraHeading1') &&
-                          extraHeading1.isNotEmpty)
-                        _autoText(extraHeading1, storeInfoStyle,
-                            textAlign: pw.TextAlign.center),
+                        if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
+                          storeEmail,
+                        if (cfgVisible('showFssaiInfo') &&
+                            storeFssai.isNotEmpty)
+                          storeFssai,
+                        if (cfgVisible('showExtraHeading1') &&
+                            extraHeading1.isNotEmpty)
+                          extraHeading1,
+                      ], storeInfoStyle),
                     ],
                   ),
                 ),
+                // Logo pinned to the right edge, vertically centered against
+                // the whole header block.
                 if (logoImage != null)
-                  pw.Container(
-                    height: isA5 ? 36 : 48,
-                    width: isA5 ? 48 : 64,
-                    alignment: pw.Alignment.centerRight,
-                    child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                  pw.Positioned.fill(
+                    child: pw.Align(
+                      alignment: pw.Alignment.centerRight,
+                      child: pw.Container(
+                        height: isA5 ? 42 : 56,
+                        width: isA5 ? 60 : 80,
+                        child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                      ),
+                    ),
                   ),
               ],
             ),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 6),
             pw.Container(height: 3, color: _accent),
             pw.SizedBox(height: 4),
 
@@ -866,6 +874,17 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   // ══════════════════════════════════════════════════════════════════
   // PRIVATE HELPERS
   // ══════════════════════════════════════════════════════════════════
+
+  /// Renders header sub-detail lines centered with an even vertical rhythm
+  /// (a small gap between each, none before the first).
+  List<pw.Widget> _headerInfoLines(List<String> lines, pw.TextStyle style) {
+    final widgets = <pw.Widget>[];
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) widgets.add(pw.SizedBox(height: 2.5));
+      widgets.add(_autoText(lines[i], style, textAlign: pw.TextAlign.center));
+    }
+    return widgets;
+  }
 
   /// Appends a single trailing colon, avoiding a double `::` when the
   /// configured label already ends with one (e.g. value `"AR Qty:"`).
