@@ -178,7 +178,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         : (resolvedTitleDefault?.isNotEmpty == true
             ? resolvedTitleDefault!
             : 'Simplified Tax Invoice');
-    final invoiceTitleArabic = _arabicTitleFor(invoiceTitleText);
 
     // ── Fonts & language ────────────────────────────────────────────
     final font = await _loadArabicFont();
@@ -207,8 +206,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         fontSize: fs(12),
         fontWeight: pw.FontWeight.bold,
         decoration: pw.TextDecoration.underline);
-    final titleArStyle = pw.TextStyle(
-        font: fontBold, fontSize: fs(11), fontWeight: pw.FontWeight.bold);
     final crVatStyle = pw.TextStyle(
         font: fontBold, fontSize: fs(9), fontWeight: pw.FontWeight.bold);
     final infoLabel = pw.TextStyle(
@@ -366,6 +363,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         : '';
     final storeFssai = cfgVal('showFssaiInfo', '');
     final extraHeading1 = cfgVal('showExtraHeading1', '');
+    final extraHeading2 = cfgVal('showExtraHeading2', '');
     final telLabel = cfgVal('showTel', '');
     final telVal = params.storePhone?.isNotEmpty == true
         ? params.storePhone!
@@ -380,8 +378,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final storeEmail = emailVal.isNotEmpty
         ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal)
         : '';
-    // Seller CR number (mirrors the convention used by standard_tax_invoice).
-    final sellerCrNumber = cfgVal('showExtraHeading2', '');
     final ibanValue = params.primaryBankAccount?.iban ?? '';
     final accountNumberValue = params.primaryBankAccount?.accountNumber ?? '';
 
@@ -611,18 +607,12 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
                 pw.Expanded(
-                  child: pw.Text('CR No.${displayOrBlank(sellerCrNumber)}',
-                      style: crVatStyle),
+                  child: (cfgVisible('showExtraHeading2') &&
+                          extraHeading2.isNotEmpty)
+                      ? _autoText(extraHeading2, crVatStyle)
+                      : pw.SizedBox(),
                 ),
-                pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.center,
-                  children: [
-                    _autoText(invoiceTitleText.toUpperCase(), titleStyle),
-                    pw.Text(invoiceTitleArabic,
-                        style: titleArStyle,
-                        textDirection: pw.TextDirection.rtl),
-                  ],
-                ),
+                _autoText(invoiceTitleText.toUpperCase(), titleStyle),
                 pw.Expanded(
                   child: pw.Align(
                     alignment: pw.Alignment.centerRight,
@@ -876,19 +866,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   // ══════════════════════════════════════════════════════════════════
   // PRIVATE HELPERS
   // ══════════════════════════════════════════════════════════════════
-
-  /// Maps a (freeform, English) invoice title to its Arabic equivalent.
-  String _arabicTitleFor(String englishTitle) {
-    final t = englishTitle.toLowerCase().trim();
-    if (t.contains('simplified')) return 'فاتورة ضريبية مبسطة';
-    if (t.contains('quotation') || t.contains('quote')) return 'عرض سعر';
-    if (t.contains('credit note')) return 'إشعار دائن';
-    if (t.contains('debit note')) return 'إشعار مدين';
-    if (t.contains('return')) return 'فاتورة مرتجع';
-    if (t.contains('tax')) return 'فاتورة ضريبية';
-    if (t.contains('invoice')) return 'فاتورة';
-    return 'فاتورة ضريبية مبسطة';
-  }
 
   /// Appends a single trailing colon, avoiding a double `::` when the
   /// configured label already ends with one (e.g. value `"AR Qty:"`).
