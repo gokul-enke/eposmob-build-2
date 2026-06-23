@@ -455,17 +455,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final bool showComment = cfgVisibleDefault(commentConfigKey);
     final bool showDeliveryMethod = cfgVisibleDefault('showDeliveryMethod');
 
-    final cashCreditText = (params.paymentMethod == null ||
-            params.paymentMethod!.isEmpty ||
-            params.paymentMethod == 'CASH')
-        ? 'Cash'
-        : 'Credit';
-
-    final deliveryNoteNo = (cfgVisible('showTokenNumber') &&
-            params.tokenNumber != null &&
-            params.tokenNumber!.isNotEmpty)
-        ? '${cfgVal('showTokenNumber', '')}${params.tokenNumber}'
-        : '';
+    // Human-readable payment method summary (handles single + multi-payment),
+    // reused by both the invoice info box and the left payment line.
+    final paymentMethodSummary = _paymentMethodSummary(params);
 
     // ── Totals visibility ───────────────────────────────────────────
     final bool showSubTotalFlag =
@@ -505,8 +497,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             infoLabel,
             infoValue));
       }
-      // PO No. is part of the reference template (no data source wired).
-      customerRows.add(_kvRow('PO No.', '', infoLabel, infoValue));
       if (custPhone != null) {
         customerRows.add(_kvRow(
             _getLabel(dc, 'showCustomerPhone', null, 'Phone'),
@@ -523,9 +513,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             invoiceNumber, infoLabel, infoValue),
       if (cfgVisibleDefault('showDate'))
         _kvRow('Date:', displayDate, infoLabel, infoValue),
-      if (showPayment)
-        _kvRow('Cash/Credit:', cashCreditText, infoLabel, infoValue),
-      _kvRow('Delivery Note No:', deliveryNoteNo, infoLabel, infoValue),
+      if (showPayment && paymentMethodSummary.isNotEmpty)
+        _kvRow(_getLabel(dc, paymentConfigKey, null, 'Payment Method'),
+            paymentMethodSummary, infoLabel, infoValue),
     ];
 
     // ── Payment breakdown lines (left column) ───────────────────────
@@ -717,9 +707,9 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.Text(
                             'Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
                             style: smallStyle),
-                      if (showPayment && params.paymentMethod != null)
+                      if (showPayment && paymentMethodSummary.isNotEmpty)
                         _autoText(
-                            '${_getLabel(dc, paymentConfigKey, null, 'Payment Method')}: ${params.paymentMethod}',
+                            '${_getLabel(dc, paymentConfigKey, null, 'Payment Method')}: $paymentMethodSummary',
                             smallStyle),
                       if (showComment &&
                           params.orderComment != null &&
@@ -985,6 +975,58 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         .convertNumberToWords(total, currency: currency, language: language);
     final suffix = language == 'ar' ? ' فقط.' : ' only.';
     return [pw.Text('$words$suffix', style: style)];
+  }
+
+  /// Friendly label for a raw payment-method code.
+  String _paymentMethodLabel(String method) {
+    switch (method.trim().toUpperCase()) {
+      case 'CASH':
+        return 'Cash';
+      case 'CARD':
+        return 'Card';
+      case 'UPI':
+        return 'UPI';
+      default:
+        return method;
+    }
+  }
+
+  /// Human-readable payment method(s). Handles a structured `paymentBreakdown`
+  /// map, a JSON multi-payment payload in `paymentMethod`, or a single method.
+  /// For multiple payments the method names are joined with ' + '.
+  String _paymentMethodSummary(ReceiptLayoutParams params) {
+    // Structured breakdown map.
+    if (params.paymentBreakdown != null &&
+        params.paymentBreakdown!.isNotEmpty) {
+      final methods = <String>[];
+      params.paymentBreakdown!.forEach((method, amount) {
+        final amt = double.tryParse(amount.toString()) ?? 0.0;
+        if (amt > 0) methods.add(_paymentMethodLabel(method));
+      });
+      if (methods.isNotEmpty) return methods.join(' + ');
+    }
+
+    // JSON multi-payment payload embedded in paymentMethod.
+    final pm = params.paymentMethod;
+    if (pm != null && pm.startsWith('{')) {
+      try {
+        final data = json.decode(pm);
+        if (data['isMultiPayment'] == true && data['amounts'] is Map) {
+          final methods = <String>[];
+          (data['amounts'] as Map).forEach((method, amount) {
+            final amt = double.tryParse(amount.toString()) ?? 0.0;
+            if (amt > 0) methods.add(_paymentMethodLabel(method.toString()));
+          });
+          if (methods.isNotEmpty) return methods.join(' + ');
+        }
+      } catch (e) {
+        debugPrint('[simplified_tax_invoice] payment summary parse error: $e');
+      }
+    }
+
+    // Single method (default to Cash when unset).
+    if (pm == null || pm.isEmpty || pm.toUpperCase() == 'CASH') return 'Cash';
+    return _paymentMethodLabel(pm);
   }
 
   /// Multi-payment breakdown lines (structured map → JSON payload → single).
