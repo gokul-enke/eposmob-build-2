@@ -1227,8 +1227,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (showRateExcTax) colWidths[ci++] = const pw.FlexColumnWidth(1.2);
     if (showUnit) colWidths[ci++] = const pw.FlexColumnWidth(0.8);
     if (showDiscountColumn) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
-    // AMOUNT (taxable / excl-VAT line total) — always shown.
-    colWidths[ci++] = const pw.FlexColumnWidth(1.3);
     if (showTax) colWidths[ci++] = const pw.FlexColumnWidth(1.1);
     if (showTotal) colWidths[ci++] = const pw.FlexColumnWidth(1.5);
 
@@ -1291,8 +1289,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       hdrs.add(hdr(_labelEn(dc, 'showDiscountColumn', null, 'DISCOUNT', isAr),
           _labelAr(dc, 'showDiscountColumn', null, 'خصم', isAr)));
     }
-    // AMOUNT (taxable) — always shown.
-    hdrs.add(hdr('AMOUNT', 'مقدار'));
     if (showTax) {
       hdrs.add(hdr(
           _labelEn(dc, 'showTaxHeader', resolvedLabels?.taxDefault, 'VAT 15%',
@@ -1379,7 +1375,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         } catch (_) {}
       }
 
-      final double taxableAmt = iTotal - iTax;
       final double taxPerUnit = qty > 0 ? (iTax / qty) : 0;
       final double rateExcTax = unitPrice - taxPerUnit;
 
@@ -1420,9 +1415,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         cells.add(_dataCell(iDiscount.toStringAsFixed(2), bodyStyle,
             align: pw.Alignment.centerRight));
       }
-      // AMOUNT (excl VAT) — always shown.
-      cells.add(_dataCell(taxableAmt.toStringAsFixed(2), bodyStyle,
-          align: pw.Alignment.centerRight));
       if (showTax) {
         cells.add(_dataCell(iTax.toStringAsFixed(2), bodyStyle,
             align: pw.Alignment.centerRight));
