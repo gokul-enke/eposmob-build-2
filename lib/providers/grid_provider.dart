@@ -594,6 +594,7 @@ class GridSelectionProvider extends ChangeNotifier {
     List<Map<String, dynamic>>? saleUnits,
     String? conversionRateBase,
     String? itemCode,
+    String? minMarginPercentage,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'name': productName,
@@ -609,6 +610,10 @@ class GridSelectionProvider extends ChangeNotifier {
 
     if (itemCode != null && itemCode.isNotEmpty) {
       apiBodyData['item_code'] = itemCode;
+    }
+
+    if (minMarginPercentage != null && minMarginPercentage.isNotEmpty) {
+      apiBodyData['min_margin_percentage'] = num.tryParse(minMarginPercentage);
     }
 
     if (productNames != null && productNames.isNotEmpty) {
@@ -666,6 +671,7 @@ class GridSelectionProvider extends ChangeNotifier {
     List<Map<String, dynamic>>? saleUnits,
     String? conversionRateBase,
     String? itemCode,
+    String? minMarginPercentage,
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'name': productName,
@@ -680,6 +686,10 @@ class GridSelectionProvider extends ChangeNotifier {
 
     if (itemCode != null && itemCode.isNotEmpty) {
       apiBodyData['item_code'] = itemCode;
+    }
+
+    if (minMarginPercentage != null && minMarginPercentage.isNotEmpty) {
+      apiBodyData['min_margin_percentage'] = num.tryParse(minMarginPercentage);
     }
 
     if (productNames != null && productNames.isNotEmpty) {

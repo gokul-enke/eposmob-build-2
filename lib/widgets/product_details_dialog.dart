@@ -77,6 +77,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   late TextEditingController _quantityController;
   late TextEditingController _taxController; // Restore tax controller
   late TextEditingController _purchasePriceController;
+  late TextEditingController _minMarginController;
   late TextEditingController _rackController;
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
@@ -106,6 +107,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _mrpController = TextEditingController();
     _quantityController = TextEditingController();
     _purchasePriceController = TextEditingController();
+    _minMarginController = TextEditingController();
     _taxController = TextEditingController(); // Init tax controller
     _rackController = TextEditingController();
     if (widget.product != null) {
@@ -432,6 +434,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ? product.stock!.first.purchasePrice
             : '') ??
         '';
+    _minMarginController.text = _formatNumericString(product.minMarginPercentage);
 
     _editableStock = widget.selectedStock ??
         (product.stock != null && product.stock!.isNotEmpty
@@ -454,6 +457,15 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       return value.toString();
     }
     return value.toString();
+  }
+
+  // Formats a numeric-like value by trimming trailing zeros (e.g. "10.000" -> "10").
+  String _formatNumericString(dynamic value) {
+    final text = _valueToString(value).trim();
+    if (text.isEmpty) return '';
+    final parsed = num.tryParse(text);
+    if (parsed == null) return text;
+    return parsed % 1 == 0 ? parsed.toInt().toString() : parsed.toString();
   }
 
   Future<void> _handleSave() async {
@@ -492,6 +504,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final String updatedMrpString = _mrpController.text.trim();
     final String updatedQuantityString = _quantityController.text.trim();
     final String updatedPurchasePrice = _purchasePriceController.text.trim();
+    final String updatedMinMargin = _minMarginController.text.trim();
     final String updatedRack = _rackController.text.trim();
 
     final double priceForApi = updatedPriceString.isEmpty
@@ -570,6 +583,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         rackNumber: rackForApi,
         quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
+        minMarginPercentage: updatedMinMargin.isEmpty ? null : updatedMinMargin,
         accessToken: accessToken,
       );
 
@@ -664,6 +678,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         purchasePrice: updatedPurchasePrice.isEmpty
             ? product.purchasePrice
             : updatedPurchasePrice,
+        minMarginPercentage: serverProduct?.minMarginPercentage ??
+            (updatedMinMargin.isEmpty
+                ? product.minMarginPercentage
+                : num.tryParse(updatedMinMargin) ?? updatedMinMargin),
         names: responseNames ??
             (productNames.isNotEmpty ? productNames : product.names),
         saleUnits: (serverProduct?.saleUnits?.isNotEmpty ?? false)
@@ -735,6 +753,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _quantityController.dispose();
     _taxController.dispose(); // Restore dispose
     _purchasePriceController.dispose();
+    _minMarginController.dispose();
     _rackController.dispose();
     for (final controller in _languageNameControllers.values) {
       controller.dispose();
@@ -1235,6 +1254,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         'Offer Price',
                         product.offerPrice != null
                             ? '$currency ${product.offerPrice}'
+                            : 'N/A'),
+                    _buildDetailRow(
+                        'Min Margin %',
+                        _formatNumericString(product.minMarginPercentage)
+                                .isNotEmpty
+                            ? '${_formatNumericString(product.minMarginPercentage)}%'
                             : 'N/A'),
                     _buildDetailRow('SKU', product.sku ?? 'Not Available'),
                   ],
@@ -1811,6 +1836,31 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         //     autofocus: false,
                         //   ),
                         // ),
+                      ],
+                    ),
+                    const SizedBox(height: verticalGap),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: fieldWidth,
+                          child: buildColumnWidgetForTextFields(
+                            controller: _minMarginController,
+                            size: size,
+                            title: 'Min Margin %',
+                            hintText: 'Enter min margin %',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                        spacing(),
+                        SizedBox(width: fieldWidth),
+                        spacing(),
+                        SizedBox(width: fieldWidth),
                       ],
                     ),
                     const SizedBox(height: verticalGap),
