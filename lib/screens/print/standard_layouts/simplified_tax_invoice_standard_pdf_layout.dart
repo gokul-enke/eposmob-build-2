@@ -434,6 +434,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     final custAddress = params.customerAddress;
 
+    final bool isQuotation =
+        (config.template ?? '').toLowerCase() == 'quotation' ||
+            (config.type ?? '').toLowerCase().contains('quotation');
+
     // Customer / comment / payment / delivery config keys (with aliases).
     final String paymentConfigKey =
         dc?.containsKey('showPaymentMethod') == true
@@ -449,7 +453,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final bool showCustomerAddress = cfgVisibleDefault('showCustomerAddress');
     final bool showCustomerVat = cfgVisible('showCustomerVatNumber');
     final bool showCustomerCr = cfgVisible('showCustomerCrNumber');
-    final bool showPayment = cfgVisibleDefault(paymentConfigKey);
+    final bool showPayment = !isQuotation && cfgVisibleDefault(paymentConfigKey);
     final bool showComment = cfgVisibleDefault(commentConfigKey);
     final bool showDeliveryMethod = cfgVisibleDefault('showDeliveryMethod');
 
@@ -505,11 +509,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     // ── Invoice box rows ────────────────────────────────────────────
-    // Quotations show "Quotation No." rather than "Invoice No." (still
-    // overridable by the showInvoiceNumber config value).
-    final bool isQuotation =
-        (config.template ?? '').toLowerCase() == 'quotation' ||
-            (config.type ?? '').toLowerCase().contains('quotation');
     final String numberLabelDefault =
         isQuotation ? 'Quotation No.' : 'Invoice No.';
     final invoiceRows = <pw.Widget>[
@@ -524,7 +523,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     ];
 
     // ── Payment breakdown lines (left column) ───────────────────────
-    final paymentLines = _buildPaymentBreakdownLines(
+    final paymentLines = isQuotation ? <pw.Widget>[] : _buildPaymentBreakdownLines(
         params, currency, wordsStyle, dc);
 
     // ══════════════════════════════════════════════════════════════════
@@ -1042,8 +1041,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       }
     }
 
-    // Single method (default to Cash when unset).
-    if (pm == null || pm.isEmpty || pm.toUpperCase() == 'CASH') return 'Cash';
+    if (pm == null || pm.isEmpty) return '';
     return _paymentMethodLabel(pm);
   }
 
@@ -1101,16 +1099,12 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     if (!isMulti) {
-      String label = 'Cash';
-      if (params.paymentMethod != null &&
-          params.paymentMethod!.isNotEmpty &&
-          params.paymentMethod != 'CASH' &&
-          !params.paymentMethod!.startsWith('{')) {
-        label = params.paymentMethod!;
+      final pm = params.paymentMethod;
+      if (pm != null && pm.isNotEmpty && !pm.startsWith('{')) {
+        lines.add(pw.Text(
+            '${_paymentMethodLabel(pm)}: ${_formatMoney(currency, params.paidAmount!)}',
+            style: style));
       }
-      lines.add(pw.Text(
-          '$label: ${_formatMoney(currency, params.paidAmount!)}',
-          style: style));
     }
     return lines;
   }
