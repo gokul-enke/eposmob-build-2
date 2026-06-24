@@ -592,6 +592,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         if (cfgVisible('showExtraHeading1') &&
                             extraHeading1.isNotEmpty)
                           extraHeading1,
+                        // showExtraHeading2 is intentionally excluded from the
+                        // header — it is displayed in the title band instead.
                       ], storeInfoStyle),
                     ],
                   ),
