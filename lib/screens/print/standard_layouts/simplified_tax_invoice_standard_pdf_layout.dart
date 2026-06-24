@@ -597,9 +597,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           ].join(' . '),
                         if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
                           storeEmail,
-                        if (cfgVisible('showFssaiInfo') &&
-                            storeFssai.isNotEmpty)
-                          storeFssai,
                         if (cfgVisible('showExtraHeading1') &&
                             extraHeading1.isNotEmpty)
                           extraHeading1,
