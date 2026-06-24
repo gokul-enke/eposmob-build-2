@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
@@ -65,6 +67,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   final iconFilePathController = TextEditingController();
   List<GetProductListFileModelData>? imageFiles = [];
   GetProductListFileModelData? selctedImageFile;
+  String? _selectedImagePath;
+  String? _selectedIconPath;
   @override
   void initState() {
     super.initState();
@@ -76,10 +80,12 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
     Provider.of<GridSelectionProvider>(context, listen: false)
         .getProductListFilesAPI(accessToken: accessToken ?? "")
         .then((value) {
+          debugPrint("IMAGE FILES RESPONSE: $value");
       if (value["status"] == "success") {
         GetProductListFileModel getProductListFileModel =
             GetProductListFileModel.fromJson(value);
         imageFiles = getProductListFileModel.data;
+        debugPrint("IMAGE FILES COUNT: ${imageFiles?.length}");
       } else {}
     });
   }
@@ -179,27 +185,6 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
         });
       }
 
-      if (imageFilePathController.text.isEmpty) {
-        setState(() {
-          _imageError = "Category Image is required";
-        });
-        isValid = false;
-      } else {
-        setState(() {
-          _imageError = null;
-        });
-      }
-
-      if (iconFilePathController.text.isEmpty) {
-        setState(() {
-          _iconError = "Category Icon is required";
-        });
-        isValid = false;
-      } else {
-        setState(() {
-          _iconError = null;
-        });
-      }
 
       if (!isValid) {
         showScaffoldError(
@@ -274,7 +259,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         BuildTextTile(
-                                          isStarRed: true,
+                                          isStarRed: false,
                                           isTextField: true,
                                           title: "Select Parent Category",
                                           textStyle: buildCustomStyle(
@@ -405,6 +390,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                     padding: const EdgeInsets.only(left: 10.0),
                                     child: buildColumnWidgetForTextFields(
                                       onchanged: ((value) {
+                                        categoryNameEnglishController.text = value ?? '';
                                         categorySlugController.text = categoryNameController
                                             .text
                                             .toLowerCase() // Convert to lowercase
@@ -460,6 +446,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                       readOnly: false),
                                 ],
                               ),
+                              /*
                               Row(
                                 children: [
                                   Column(
@@ -504,6 +491,28 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                                 color: Colors.red,
                                                 fontSize: 12),
                                           ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 20.0, left: 0.0),
+                                          child: BuildBoxShadowContainer(
+                                              margin: const EdgeInsets.only(
+                                                  left: 5, right: 5),
+                                              circleRadius: 5,
+                                              height: 100,
+                                              width: 150,
+                                              child: imageFilePathController.text.startsWith('http')
+                                                  ? Image.network(
+                                                      imageFilePathController.text,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (c, e, s) => const Icon(Icons.broken_image),
+                                                    )
+                                                  : imageFilePathController.text.isNotEmpty
+                                                      ? Image.file(
+                                                          File(imageFilePathController.text),
+                                                          fit: BoxFit.cover,
+                                                        )
+                                                      : const Icon(Icons.image_outlined, color: Colors.grey)),
                                         ),
                                     ],
                                   ),
@@ -552,10 +561,33 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                                 fontSize: 12),
                                           ),
                                         ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 20.0, left: 20.0),
+                                          child: BuildBoxShadowContainer(
+                                              margin: const EdgeInsets.only(
+                                                  left: 5, right: 5),
+                                              circleRadius: 5,
+                                              height: 100,
+                                              width: 150,
+                                              child: iconFilePathController.text.startsWith('http')
+                                                  ? Image.network(
+                                                      iconFilePathController.text,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (c, e, s) => const Icon(Icons.broken_image),
+                                                    )
+                                                  : iconFilePathController.text.isNotEmpty
+                                                      ? Image.file(
+                                                          File(iconFilePathController.text),
+                                                          fit: BoxFit.cover,
+                                                        )
+                                                      : const Icon(Icons.image_outlined, color: Colors.grey)),
+                                        ),
                                     ],
                                   ),
                                 ],
                               ),
+                              */
                               const SizedBox(height: 25),
                               Row(
                                 children: [
@@ -577,12 +609,6 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                               "categoryNameArabicController.text ${categoryNameArabicController.text}");
 
                                           if (categorySlugController
-                                                  .text.isEmpty ||
-                                              categoryNameHindiController
-                                                  .text.isEmpty ||
-                                              categoryNameArabicController
-                                                  .text.isEmpty ||
-                                              categoryNameEnglishController
                                                   .text.isEmpty ||
                                               categoryNameController
                                                   .text.isEmpty) {
@@ -778,11 +804,45 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(
-                                height: 10,
+                              const SizedBox(height: 10),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: Row(
+                                  children: [
+                                    CustomRoundButton(
+                                      title: "Upload from Device",
+                                      fct: () async {
+                                        FilePickerResult? result = await FilePicker.platform.pickFiles(
+                                          type: FileType.image,
+                                        );
+                                        if (result != null) {
+                                          this.setState(() {
+                                            imageFilePathController.text = result.files.single.path ?? '';
+                                            _selectedImagePath = result.files.single.path;
+                                            _imageError = null;
+                                          });
+                                          setState(() {});
+                                        }
+                                      },
+                                      height: 40,
+                                      width: size.width * 0.12,
+                                      fontSize: FontSize.s12,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    if (_selectedImagePath != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.file(
+                                          File(_selectedImagePath!),
+                                          height: 60,
+                                          width: 60,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                               SizedBox(
-                                // height: 450,
                                 width: 700,
                                 child: Table(
                                   columnWidths: const {
@@ -1088,11 +1148,45 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(
-                                height: 10,
+                              const SizedBox(height: 10),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: Row(
+                                  children: [
+                                    CustomRoundButton(
+                                      title: "Upload from Device",
+                                      fct: () async {
+                                        FilePickerResult? result = await FilePicker.platform.pickFiles(
+                                          type: FileType.image,
+                                        );
+                                        if (result != null) {
+                                          this.setState(() {
+                                            iconFilePathController.text = result.files.single.path ?? '';
+                                            _selectedIconPath = result.files.single.path;
+                                            _iconError = null;
+                                          });
+                                          setState(() {});
+                                        }
+                                      },
+                                      height: 40,
+                                      width: size.width * 0.12,
+                                      fontSize: FontSize.s12,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    if (_selectedIconPath != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.file(
+                                          File(_selectedIconPath!),
+                                          height: 60,
+                                          width: 60,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                               SizedBox(
-                                // height: 450,
                                 width: 700,
                                 child: Table(
                                   columnWidths: const {
