@@ -622,18 +622,23 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
                 pw.Expanded(
-                  child: (cfgVisible('showExtraHeading2') &&
-                          extraHeading2.isNotEmpty)
-                      ? _autoText(extraHeading2, crVatStyle)
-                      : pw.SizedBox(),
+                  child: pw.Align(
+                    alignment: pw.Alignment.centerLeft,
+                    child: (cfgVisible('showExtraHeading2') &&
+                            extraHeading2.isNotEmpty)
+                        ? _autoText(extraHeading2, crVatStyle)
+                        : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                            ? _autoText(storeFssai, crVatStyle)
+                            : pw.SizedBox(),
+                  ),
                 ),
                 _autoText(invoiceTitleText.toUpperCase(), titleStyle),
                 pw.Expanded(
                   child: pw.Align(
                     alignment: pw.Alignment.centerRight,
-                    child: pw.Text(
-                        'VAT No. ${displayOrBlank(params.zatcaVatNumber)}',
-                        style: crVatStyle),
+                    child: (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                        ? _autoText(storeFssai, crVatStyle)
+                        : pw.SizedBox(),
                   ),
                 ),
               ],
