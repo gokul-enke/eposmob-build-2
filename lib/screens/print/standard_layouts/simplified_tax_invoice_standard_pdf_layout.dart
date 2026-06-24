@@ -199,8 +199,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         font: fontBold, fontSize: fs(18), fontWeight: pw.FontWeight.bold);
     final storeNameEnStyle = pw.TextStyle(
         font: fontBold, fontSize: fs(16), fontWeight: pw.FontWeight.bold);
+    final storeDescStyle = pw.TextStyle(
+        font: fontBold, fontSize: fs(15), fontWeight: pw.FontWeight.bold);
     final storeInfoStyle =
-        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(8));
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(10));
     final titleStyle = pw.TextStyle(
         font: fontBold,
         fontSize: fs(12),
@@ -558,22 +560,31 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
-                      if (headerPrimary.isNotEmpty)
-                        _autoText(headerPrimary, storeNameArStyle,
-                            textAlign: pw.TextAlign.center),
-                      if (headerSecondary.isNotEmpty)
-                        _autoText(headerSecondary, storeNameEnStyle,
-                            textAlign: pw.TextAlign.center),
-                      if (cfgVisible('showStoreName') &&
-                          documentHeader.isNotEmpty)
-                        _autoText(storeName, storeNameEnStyle,
-                            textAlign: pw.TextAlign.center),
+                      pw.SizedBox(
+                        width: isA5 ? 260 : 360,
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.center,
+                          children: [
+                            if (headerPrimary.isNotEmpty)
+                              _autoText(headerPrimary, storeNameArStyle,
+                                  textAlign: pw.TextAlign.center),
+                            if (headerSecondary.isNotEmpty)
+                              _autoText(headerSecondary, storeNameEnStyle,
+                                  textAlign: pw.TextAlign.center),
+                            if (cfgVisible('showStoreName') &&
+                                documentHeader.isNotEmpty)
+                              _autoText(storeName, storeNameEnStyle,
+                                  textAlign: pw.TextAlign.center),
+                            if (cfgVisible('showDescription') &&
+                                storeDesc.isNotEmpty)
+                              _autoText(storeDesc, storeDescStyle,
+                                  textAlign: pw.TextAlign.center),
+                          ],
+                        ),
+                      ),
                       pw.SizedBox(height: 3),
                       // Store sub-details, each with an even vertical rhythm.
                       ..._headerInfoLines([
-                        if (cfgVisible('showDescription') &&
-                            storeDesc.isNotEmpty)
-                          storeDesc,
                         if ((cfgVisible('showStoreAddress') &&
                                 storeAddress.isNotEmpty) ||
                             (cfgVisible('showTel') && storeTel.isNotEmpty))
