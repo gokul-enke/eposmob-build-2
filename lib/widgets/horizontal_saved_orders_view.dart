@@ -9,7 +9,7 @@ import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart'; // Added import
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/screens/billing/billing_page.dart';
+import 'package:pos_machine/features/billing/presentation/pages/billing_page.dart';
 import 'package:pos_machine/services/print_service.dart';
 import 'package:provider/provider.dart';
 import 'package:get/get.dart';

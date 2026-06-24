@@ -7,8 +7,8 @@ import 'package:pos_machine/models/delivery_method.dart';
 // import 'package:pos_machine/resources/color_manager.dart'; // Unused
 import 'package:pos_machine/resources/font_manager.dart';
 // import 'package:pos_machine/resources/style_manager.dart'; // Unused
-import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/payment_method_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';

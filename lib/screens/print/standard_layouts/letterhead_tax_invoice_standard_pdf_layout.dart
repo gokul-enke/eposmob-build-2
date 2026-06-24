@@ -101,6 +101,32 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return '$currencyPrefix ${amount.toStringAsFixed(2)}';
   }
 
+  // ── Bidi helpers ────────────────────────────────────────────────────
+  // The `pdf` package only applies Arabic glyph shaping + bidi reordering
+  // when a Text widget's resolved textDirection is RTL. On this LTR page any
+  // Text carrying Arabic must therefore be flagged RTL, otherwise its letters
+  // render isolated/unshaped and overlap adjacent Latin text. Detection is
+  // conditional because forcing RTL on pure-Latin text reverses its word order.
+  static final RegExp _arabicRegex = RegExp(
+      '[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
+
+  bool _hasArabic(String? s) => s != null && _arabicRegex.hasMatch(s);
+
+  pw.TextDirection _dirOf(String? s) =>
+      _hasArabic(s) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
+
+  /// Text widget that auto-selects its direction from its content so Arabic is
+  /// shaped/reordered correctly while Latin/numeric content stays LTR.
+  pw.Widget _autoText(String text, pw.TextStyle style,
+      {pw.TextAlign? textAlign, int? maxLines, bool? softWrap}) {
+    return pw.Text(text,
+        style: style,
+        textAlign: textAlign,
+        maxLines: maxLines,
+        softWrap: softWrap,
+        textDirection: _dirOf(text));
+  }
+
   // ── Public interface ────────────────────────────────────────────────
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
@@ -529,15 +555,15 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(sellerNameEn, style: companyNameStyle),
+                      _autoText(sellerNameEn, companyNameStyle),
                       if (cfgVisible('showStoreAddress') &&
                           storeAddress.isNotEmpty)
-                        pw.Text(storeAddress, style: letterheadStyle),
+                        _autoText(storeAddress, letterheadStyle),
                       if (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
-                        pw.Text(storeFssai, style: letterheadStyle),
+                        _autoText(storeFssai, letterheadStyle),
                       if (cfgVisible('showExtraHeading1') &&
                           extraHeading1.isNotEmpty)
-                        pw.Text(extraHeading1, style: letterheadStyle),
+                        _autoText(extraHeading1, letterheadStyle),
                       if (params.zatcaVatNumber?.isNotEmpty == true)
                         pw.Text('VAT NO . ${params.zatcaVatNumber}',
                             style: letterheadStyle),
@@ -555,9 +581,9 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                             height: isA5 ? 34 : 46,
                             child: pw.Image(logoImage, fit: pw.BoxFit.contain)),
                       if (sellerCrNumber.isNotEmpty)
-                        pw.Text('C.R.$sellerCrNumber', style: centerInfoStyle),
+                        _autoText('C.R.$sellerCrNumber', centerInfoStyle),
                       if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
-                        pw.Text(storeEmail, style: centerInfoStyle),
+                        _autoText(storeEmail, centerInfoStyle),
                     ],
                   ),
                 ),
@@ -597,7 +623,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 child: pw.Row(
                   mainAxisSize: pw.MainAxisSize.min,
                   children: [
-                    pw.Text(invoiceTitleText.toUpperCase(), style: titleStyle),
+                    _autoText(invoiceTitleText.toUpperCase(), titleStyle),
                     pw.SizedBox(width: 10),
                     pw.Text(invoiceTitleArabic,
                         style: titleArStyle,
@@ -690,21 +716,21 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                             'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
                             style: smallStyle),
                       if (showPayment && params.paymentMethod != null)
-                        pw.Text(
+                        _autoText(
                             '${_getLabel(dc, paymentConfigKey, null, 'Payment Method')}: ${params.paymentMethod}',
-                            style: smallStyle),
+                            smallStyle),
                       if (showComment &&
                           params.orderComment != null &&
                           params.orderComment!.isNotEmpty)
-                        pw.Text(
+                        _autoText(
                             '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                            style: wordsStyle),
+                            wordsStyle),
                       if (showDeliveryMethod &&
                           params.deliveryMethod != null &&
                           params.deliveryMethod!.isNotEmpty)
-                        pw.Text(
+                        _autoText(
                             '${_getLabel(dc, 'showDeliveryMethod', null, 'Delivery')}: ${params.deliveryMethod}',
-                            style: wordsStyle),
+                            wordsStyle),
                       ...paymentLines,
                       ...balanceLines,
                       if (cfgVisible('showItemsCount'))
@@ -776,7 +802,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // TERMS
             // ═══════════════════════════════════════════════════════
             if (cfgVisible('showTermsConditions')) ...[
-              pw.Text(_termsText(dc, config), style: smallStyle),
+              _autoText(_termsText(dc, config), smallStyle),
               pw.SizedBox(height: 4),
             ],
 
@@ -787,21 +813,21 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             pw.SizedBox(height: 4),
             if (cfgVisible('showThankYouMessage'))
               pw.Center(
-                child: pw.Text(_thankYouText(dc, config, isEnglish),
-                    style: taglineStyle, textAlign: pw.TextAlign.center),
+                child: _autoText(_thankYouText(dc, config, isEnglish),
+                    taglineStyle, textAlign: pw.TextAlign.center),
               ),
             if (accountNumberValue.isNotEmpty || ibanValue.isNotEmpty)
               pw.Center(
-                child: pw.Text(
+                child: _autoText(
                   'ACCOUNT NUMBER AT ${displayOrBlank(accountNumberValue)}${ibanValue.isNotEmpty ? ' / IBAN ${displayOrBlank(ibanValue)}' : ''}',
-                  style: footerStyle,
+                  footerStyle,
                   textAlign: pw.TextAlign.center,
                 ),
               ),
             if (cfgVisible('showTel') && storeTel.isNotEmpty)
               pw.Center(
-                child: pw.Text(storeTel,
-                    style: footerStyle, textAlign: pw.TextAlign.center),
+                child: _autoText(storeTel, footerStyle,
+                    textAlign: pw.TextAlign.center),
               ),
           ];
         },
@@ -1049,13 +1075,15 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 style: labelStyle,
                 maxLines: 1,
                 softWrap: false,
-                overflow: pw.TextOverflow.clip),
+                overflow: pw.TextOverflow.clip,
+                textDirection: _dirOf(label)),
           ),
           pw.Expanded(
             child: pw.Text(value,
                 style: valueStyle,
                 maxLines: 2,
-                overflow: pw.TextOverflow.clip),
+                overflow: pw.TextOverflow.clip,
+                textDirection: _dirOf(value)),
           ),
         ],
       ),
@@ -1068,7 +1096,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     return pw.TableRow(children: [
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-        child: pw.Text(en, style: enStyle),
+        child: pw.Text(en, style: enStyle, textDirection: _dirOf(en)),
       ),
       pw.Padding(
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
@@ -1124,7 +1152,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final showRate = col('showRate');
     final showRateExcTax = col('showRateExcTax');
     final showUnit = col('showUnit');
-    final showDiscount = col('showDiscount');
+    final showDiscountColumn = col('showDiscountColumn');
     final showTax = col('showTaxHeader');
     final showTotal = col('showTotal');
 
@@ -1140,7 +1168,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (showRate) colWidths[ci++] = const pw.FlexColumnWidth(1.3);
     if (showRateExcTax) colWidths[ci++] = const pw.FlexColumnWidth(1.2);
     if (showUnit) colWidths[ci++] = const pw.FlexColumnWidth(0.8);
-    if (showDiscount) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    if (showDiscountColumn) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
     // AMOUNT (taxable / excl-VAT line total) — always shown.
     colWidths[ci++] = const pw.FlexColumnWidth(1.3);
     if (showTax) colWidths[ci++] = const pw.FlexColumnWidth(1.1);
@@ -1201,9 +1229,9 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       hdrs.add(hdr(_labelEn(dc, 'showUnit', null, 'UNIT', isAr),
           _labelAr(dc, 'showUnit', resolvedLabels?.unitName, 'الوحدة', isAr)));
     }
-    if (showDiscount) {
-      hdrs.add(hdr(_labelEn(dc, 'showDiscount', null, 'DISCOUNT', isAr),
-          _labelAr(dc, 'showDiscount', null, 'خصم', isAr)));
+    if (showDiscountColumn) {
+      hdrs.add(hdr(_labelEn(dc, 'showDiscountColumn', null, 'DISCOUNT', isAr),
+          _labelAr(dc, 'showDiscountColumn', null, 'خصم', isAr)));
     }
     // AMOUNT (taxable) — always shown.
     hdrs.add(hdr('AMOUNT', 'مقدار'));
@@ -1292,7 +1320,9 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       final double taxableAmt = iTotal - iTax;
 
       name = _bilingualItemName(item, name, isAr);
-      final bool isArName = isAr && name.contains('\n');
+      // Right-align + RTL-shape whenever the name carries any Arabic (covers
+      // bilingual names and English names with embedded Arabic).
+      final bool isArName = _hasArabic(name);
 
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
@@ -1324,7 +1354,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       if (showUnit) {
         cells.add(_dataCell(unitName, bodyStyle));
       }
-      if (showDiscount) {
+      if (showDiscountColumn) {
         cells.add(_dataCell(iDiscount.toStringAsFixed(2), bodyStyle,
             align: pw.Alignment.centerRight));
       }

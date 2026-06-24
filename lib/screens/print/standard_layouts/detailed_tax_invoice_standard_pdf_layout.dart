@@ -957,7 +957,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final showRate = _col('showRate');
     final showRateExcTax = _col('showRateExcTax');
     final showUnit = _col('showUnit');
-    final showDiscount = _col('showDiscount');
+    final showDiscountColumn = _col('showDiscountColumn');
     final showTax = _col('showTaxHeader');
     final showTotal = _col('showTotal');
 
@@ -970,7 +970,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (showRate) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
     if (showRateExcTax) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
     if (showUnit) colWidths[ci++] = const pw.FlexColumnWidth(0.8);
-    if (showDiscount) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
+    if (showDiscountColumn) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
     // Taxable amount
     colWidths[ci++] = const pw.FlexColumnWidth(1.2);
     if (showTax) colWidths[ci++] = const pw.FlexColumnWidth(1.0);
@@ -1004,7 +1004,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     if (showRate) hdrs.add(hdr('Rate', 'مجموع'));
     if (showRateExcTax) hdrs.add(hdr('Rate Ex Tax', ''));
     if (showUnit) hdrs.add(hdr('Unit', ''));
-    if (showDiscount) hdrs.add(hdr('Discount', 'خصم'));
+    if (showDiscountColumn) hdrs.add(hdr('Discount', 'خصم'));
     // Taxable Amount always shown
     hdrs.add(hdr('Taxable Amt', 'المبلغ الخاضع'));
     if (showTax) hdrs.add(hdr('VAT (15%)', 'الضريبة'));
@@ -1089,7 +1089,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       if (showUnit) {
         cells.add(_dataCell(unitName, bodyStyle));
       }
-      if (showDiscount) {
+      if (showDiscountColumn) {
         cells.add(_dataCell(iDiscount.toStringAsFixed(2), bodyStyle));
       }
       // Taxable amount

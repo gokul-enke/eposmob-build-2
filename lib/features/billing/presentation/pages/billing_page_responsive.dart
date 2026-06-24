@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 // import 'package:pos_machine/screens/billing/billing_page_desktop.dart';
-import 'package:pos_machine/screens/billing/billing_page_mobile.dart';
+import 'package:pos_machine/core/responsive/breakpoints.dart';
+import 'package:pos_machine/features/billing/presentation/pages/billing_page_mobile.dart';
 import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'billing_page.dart';
@@ -33,9 +34,9 @@ class _BillingPageResponsiveState extends State<BillingPageResponsive> {
 
   @override
   Widget build(BuildContext context) {
-    // Use full screen width to decide layout, not inner constraints reduced by sidebar
-    final double screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth < 650) {
+    // Use full screen width to decide layout, not inner constraints reduced by
+    // sidebar. Threshold delegated to the single source of truth (Breakpoints).
+    if (Breakpoints.isMobileWidth(MediaQuery.of(context).size.width)) {
       return const BillingPageMobile();
     }
 

@@ -20,17 +20,17 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/payment_summary.dart';
-import 'package:pos_machine/screens/billing/widgets/quick_access_bar.dart';
-import 'package:pos_machine/screens/billing/widgets/cart/cart_items_table.dart';
-import 'package:pos_machine/screens/billing/widgets/customer_input.dart';
-import 'package:pos_machine/screens/billing/widgets/product_entry_header.dart';
-import 'package:pos_machine/screens/billing/widgets/action_buttons.dart';
-import 'package:pos_machine/screens/billing/widgets/sidebar.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/payment_summary.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/quick_access_bar.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/cart/cart_items_table.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/customer_input.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/product_entry_header.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/action_buttons.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/sidebar.dart';
 import 'package:pos_machine/services/print_service.dart';
-import 'package:pos_machine/screens/billing/coordinators/payment_coordinator.dart';
+import 'package:pos_machine/features/billing/controllers/coordinators/payment_coordinator.dart';
 import 'package:pos_machine/services/checkout_service.dart';
-import 'package:pos_machine/screens/billing/widgets/header.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/header.dart';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({super.key});

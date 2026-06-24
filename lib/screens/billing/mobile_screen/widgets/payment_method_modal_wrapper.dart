@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/payment_method_modal.dart';
 import 'package:provider/provider.dart';
 
 class PaymentMethodModalWrapper extends StatelessWidget {

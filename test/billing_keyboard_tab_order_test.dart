@@ -22,7 +22,7 @@
 ///    `Previous/NextFocusIntent`.
 ///  • Payment / Delivery tile `InkWell.onTap` activation via Enter / Space.
 ///  • `KeyboardShortcutsHelpDialog` Esc-close, autofocus, and the
-///    "GLOBAL ACTIONS" section content.
+///    "Global" section content.
 ///
 /// Each group uses `debugPrint` to emit a focus trace that makes failures
 /// easy to diagnose from `flutter test --reporter expanded`.
@@ -32,8 +32,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pos_machine/screens/billing/utils/billing_focus_orders.dart';
-import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/features/billing/presentation/utils/billing_focus_orders.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1349,26 +1349,28 @@ void main() {
           reason: 'Esc should pop the dialog route');
     });
 
-    testWidgets('shows the GLOBAL ACTIONS section with Ctrl+H/K/D/S',
+    testWidgets('shows the Global section with Ctrl shortcuts',
         (tester) async {
       await openDialog(tester);
 
-      expect(find.text('GLOBAL ACTIONS'), findsOneWidget);
-      expect(find.text('Ctrl + H'), findsOneWidget);
-      expect(find.text('Ctrl + K'), findsOneWidget);
-      expect(find.text('Ctrl + D'), findsOneWidget);
-      expect(find.text('Ctrl + S'), findsOneWidget);
+      // Section header was renamed GLOBAL ACTIONS → Global.
+      expect(find.text('Global'), findsOneWidget);
+      expect(find.text('Ctrl + H'), findsWidgets);
+      expect(find.text('Ctrl + K'), findsWidgets);
+      expect(find.text('Ctrl + D'), findsWidgets);
+      expect(find.text('Ctrl + S'), findsWidgets);
     });
 
     testWidgets(
-        'shows the FINALIZE ORDER MODAL section with Arrow / Enter / Space',
+        'shows the Checkout Modal section with Arrow / Enter / Space',
         (tester) async {
       await openDialog(tester);
 
-      expect(find.text('FINALIZE ORDER MODAL'), findsOneWidget);
+      // Section header was renamed FINALIZE ORDER MODAL → Checkout Modal.
+      expect(find.text('Checkout Modal'), findsOneWidget);
       expect(find.text('Arrow Keys'), findsWidgets,
           reason: 'arrow-keys hint must appear at least once');
-      expect(find.text('Enter / Space'), findsOneWidget);
+      expect(find.text('Enter / Space'), findsWidgets);
     });
 
     testWidgets('still includes the legacy F-key shortcuts', (tester) async {

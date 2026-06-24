@@ -44,8 +44,8 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_kot.dart';
-import 'package:pos_machine/screens/billing/utils/billing_focus_orders.dart';
-import 'package:pos_machine/screens/billing/widgets/keyboard_shortcuts_help_dialog.dart';
+import 'package:pos_machine/features/billing/presentation/utils/billing_focus_orders.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/keyboard_shortcuts_help_dialog.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/checkout_footer.dart';
@@ -62,11 +62,11 @@ import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 // Import modals
-import 'package:pos_machine/screens/billing/widgets/checkout_modal.dart'; // Import CheckoutModal
-import 'package:pos_machine/screens/billing/widgets/payment_method_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/delivery_method_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/coupon_modal.dart';
-import 'package:pos_machine/screens/billing/widgets/price_fields.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/checkout_modal.dart'; // Import CheckoutModal
+import 'package:pos_machine/features/billing/presentation/widgets/payment_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/price_fields.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/screens/customers/add_customer_modal.dart';
 // import 'package:pos_machine/screens/print/print_kot.dart'; // Add KOT print import

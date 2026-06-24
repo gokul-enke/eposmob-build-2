@@ -1,5 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/core/responsive/breakpoints.dart';
 
+// Re-export the single source of truth so existing
+// `import 'package:pos_machine/responsive.dart'` consumers gain access to
+// [Breakpoints], [DeviceFormFactor] and the `context.isMobile` extension
+// without changing their imports.
+export 'package:pos_machine/core/responsive/breakpoints.dart';
+
+/// Picks one of three children based on the available width.
+///
+/// Thresholds are delegated to [Breakpoints] (the single source of truth);
+/// the behaviour is identical to the previous hard-coded 650 / 1100 values.
 class ResponsiveWidget extends StatelessWidget {
   final Widget mobile;
   final Widget desktop;
@@ -11,20 +22,19 @@ class ResponsiveWidget extends StatelessWidget {
       required this.tablet});
 
   static bool isMobile(BuildContext context) =>
-      MediaQuery.of(context).size.width < 650;
+      Breakpoints.isMobileWidth(MediaQuery.of(context).size.width);
   static bool isTablet(BuildContext context) =>
-      MediaQuery.of(context).size.width < 1100 &&
-      MediaQuery.of(context).size.width >= 650;
+      Breakpoints.isTabletWidth(MediaQuery.of(context).size.width);
   static bool isDesktop(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 1100;
+      Breakpoints.isDesktopWidth(MediaQuery.of(context).size.width);
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth >= 1100) {
+        if (Breakpoints.isDesktopWidth(constraints.maxWidth)) {
           return desktop;
-        } else if (constraints.maxWidth >= 650) {
+        } else if (!Breakpoints.isMobileWidth(constraints.maxWidth)) {
           return tablet;
         } else {
           return mobile;

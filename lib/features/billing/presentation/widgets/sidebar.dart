@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/widgets/sidebar_product_list.dart';
-import 'package:pos_machine/screens/billing/widgets/orders_tab.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/orders_tab.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 
 class SidebarWidget extends StatelessWidget {
