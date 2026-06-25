@@ -99,62 +99,40 @@ class PaymentSummary extends StatelessWidget {
               ColorManager.textColor,
             ),
           ),
-          (Provider.of<AppSettingsProvider>(context, listen: false)
-                      .appSettings
-                      ?.priceRoundOff ==
-                  true)
-              ? BuildPaymentRow(
-                  amount:
-                      "$currency ${AmountHelper.roundOffAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
-                  title: "Discount",
-                  color: ColorManager.kButtonGreen,
-                  firstRowTextStyle: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.kButtonGreen,
-                  ),
-                  secondRowTextStyle: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.kButtonGreen,
-                  ),
-                )
-              : BuildPaymentRow(
-                  amount:
-                      "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
-                  title: "Discount",
-                  color: ColorManager.kButtonGreen,
-                  firstRowTextStyle: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.kButtonGreen,
-                  ),
-                  secondRowTextStyle: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s15,
-                    0.18,
-                    ColorManager.kButtonGreen,
-                  ),
-                ),
+          BuildPaymentRow(
+            amount:
+                "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}",
+            title: "Discount",
+            color: Colors.red,
+            firstRowTextStyle: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s15,
+              0.18,
+              Colors.red,
+            ),
+            secondRowTextStyle: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s15,
+              0.18,
+              Colors.red,
+            ),
+          ),
           if (deliveryCharge > 0)
             BuildPaymentRow(
               amount: "$currency ${AmountHelper.formatAmount(deliveryCharge)}",
               title: "Delivery Charge",
-              color: ColorManager.textColor,
+              color: Colors.green,
               firstRowTextStyle: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s15,
                 0.18,
-                ColorManager.textColor,
+                Colors.green,
               ),
               secondRowTextStyle: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s15,
                 0.18,
-                ColorManager.textColor,
+                Colors.green,
               ),
             ),
           const Divider(thickness: 2),
@@ -188,115 +166,168 @@ class PaymentSummary extends StatelessWidget {
       return AmountHelper.formatAmount(localProductProvider.cartTotal + deliveryCharge);
     }
 
+    if (localProductProvider.priceSummary == null) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        BuildPaymentRow(
-          amount: "",
-          title: "Payment Summary",
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s14,
-            0.21,
-            ColorManager.kPrimaryColor,
-          ),
-          color: ColorManager.kPrimaryColor,
-        ),
-        const SizedBox(height: 5),
-        BuildPaymentRow(
-          amount:
-              "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}",
-          title: "Net amount",
-          color: ColorManager.textColor,
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s15,
-            0.18,
-            ColorManager.textColor,
-          ),
-          secondRowTextStyle: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s15,
-            0.18,
-            ColorManager.textColor,
-          ),
-        ),
-        if (deliveryCharge > 0)
-          BuildPaymentRow(
-            amount: "$currency ${AmountHelper.formatAmount(deliveryCharge)}",
-            title: "Delivery Charge",
-            color: ColorManager.textColor,
-            firstRowTextStyle: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s15,
-              0.18,
-              ColorManager.textColor,
+        // Subtotal row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Subtotal',
+              style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500),
             ),
-            secondRowTextStyle: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s15,
-              0.18,
-              ColorManager.textColor,
+            Text(
+              '$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
-          ),
-        BuildPaymentRow(
-          amount:
-              "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)} (${(localProductProvider.priceSummary!.subTotal > 0 ? ((localProductProvider.priceSummary!.discount / localProductProvider.priceSummary!.subTotal) * 100) : 0.0).toStringAsFixed(1)}%)",
-          title: "Discount",
-          color: ColorManager.textColor,
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.medium,
-            FontSize.s15,
-            0.18,
-            ColorManager.textColor,
-          ),
-          secondRowTextStyle: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s15,
-            0.18,
-            ColorManager.textColor,
-          ),
+          ],
         ),
+        const SizedBox(height: 10),
+
+        // Discount row (red text)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Discount',
+              style: TextStyle(fontSize: 14, color: Colors.red, fontWeight: FontWeight.w500),
+            ),
+            Text(
+              '- $currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Tax row (tappable for details)
         GestureDetector(
-          child: BuildPaymentRow(
-            amount:
-                "$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}",
-            title: "GST",
-            color: ColorManager.kPrimaryColor,
-          ),
           onTap: () {
             showDialog(
               context: context,
               builder: (context) {
                 return Center(
                   child: TaxDetailsDialog(
-                    taxAmounts:
-                        Provider.of<BillingProvider>(context, listen: false)
-                            .taxNames,
+                    taxAmounts: billingProvider.taxNames,
                   ),
                 );
               },
             );
           },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Tax (VAT ${((localProductProvider.priceSummary!.subTotal > 0) ? (localProductProvider.priceSummary!.totalTax / localProductProvider.priceSummary!.subTotal * 100) : 15.0).toStringAsFixed(0)}%)',
+                style: const TextStyle(
+                  fontSize: 14, 
+                  color: Colors.black54, 
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+              Text(
+                '$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+            ],
+          ),
         ),
-        const Divider(thickness: 2),
-        BuildPaymentRow(
-          amount: "$currency ${getFormattedTotal()}",
-          title: "Total Payable",
-          secondRowTextStyle: buildCustomStyle(
-            FontWeightManager.bold,
-            FontSize.s15,
-            0.23,
-            ColorManager.textColor,
+        const SizedBox(height: 10),
+
+        // Delivery Charge row (green text)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Delivery Charge',
+              style: TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.w500),
+            ),
+            Text(
+              deliveryCharge == 0.0
+                  ? 'Free'
+                  : '$currency ${AmountHelper.formatAmount(deliveryCharge)}',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // To Customer Credit toggle (only show when a customer is selected)
+        if (billingProvider.selectedCustomer != null) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'To Customer Credit',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0066CC)),
+              ),
+              Switch(
+                value: billingProvider.toCustomerCreditEnabled,
+                activeColor: const Color(0xFF3B82F6),
+                onChanged: (value) {
+                  billingProvider.setToCustomerCreditEnabled(value);
+                  billingProvider.calculateBalance();
+                },
+              ),
+            ],
           ),
-          firstRowTextStyle: buildCustomStyle(
-            FontWeightManager.bold,
-            FontSize.s15,
-            0.23,
-            ColorManager.textColor,
-          ),
-          color: ColorManager.textColor,
+          const SizedBox(height: 4),
+        ],
+
+        const Divider(height: 24, thickness: 1, color: Color(0xFFE2E8F0)),
+
+        // Total Payable row (bold, primary blue)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Total Payable',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0066CC)),
+            ),
+            Text(
+              '$currency ${getFormattedTotal()}',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0066CC)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Total Paid row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Total Paid',
+              style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500),
+            ),
+            Text(
+              '$currency ${AmountHelper.formatAmount(billingProvider.totalPaidAmount)}',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Balance row (green text)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Balance',
+              style: TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.w500),
+            ),
+            Text(
+              '$currency ${AmountHelper.formatAmount(billingProvider.balanceAmount)}',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+            ),
+          ],
         ),
       ],
     );

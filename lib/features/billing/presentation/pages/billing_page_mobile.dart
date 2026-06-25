@@ -16,6 +16,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders_tab.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart_tab.dart';
 
 class BillingPageMobile extends StatefulWidget {
   const BillingPageMobile({super.key});
@@ -53,7 +54,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     super.initState();
 
     // Initialize tab controller
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         setState(() {
@@ -271,7 +272,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _currentTabIndex = 1;
         _tabController.animateTo(1);
       });
-      PaymentCoordinator.showPaymentMethodModal(context);
       return;
     }
 
@@ -300,10 +300,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
       _controller.loadOrderForEditing(context, orderId);
       _rehydrateFromProvider();
 
-      // Switch to home tab to show loaded cart
+      // Switch to cart tab to show loaded cart
       setState(() {
-        _currentTabIndex = 0;
-        _tabController.animateTo(0);
+        _currentTabIndex = 3;
+        _tabController.animateTo(3);
       });
 
       showScaffold(context: context, message: "Order loaded for editing");
@@ -366,10 +366,33 @@ class BillingPageMobileState extends State<BillingPageMobile>
                   onSaveOrder: saveOrder,
                   onCreateOrderAndPrint: createOrderAndPrint,
                   isConfirmingOrder: _isConfirmingOrder,
+                  onBack: () {
+                    setState(() {
+                      _currentTabIndex = 3;
+                      _tabController.animateTo(3);
+                    });
+                  },
                 ),
                 // Orders Tab
                 MobileOrdersTab(
                   onOrderSelected: loadSavedOrderForEditing,
+                ),
+                // Cart Tab
+                MobileCartTab(
+                  onBackToMarket: () {
+                    setState(() {
+                      _currentTabIndex = 0;
+                      _tabController.animateTo(0);
+                    });
+                  },
+                  onProceedToPayment: () {
+                    setState(() {
+                      _currentTabIndex = 1;
+                      _tabController.animateTo(1);
+                    });
+                  },
+                  onSaveOrder: saveOrder,
+                  onClearCart: clearCart,
                 ),
               ],
             ),
@@ -406,21 +429,46 @@ class BillingPageMobileState extends State<BillingPageMobile>
                 fontWeight: FontWeight.w400,
                 fontSize: 11,
               ),
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.home_outlined),
-                  activeIcon: Icon(Icons.home),
-                  label: 'Home',
+              items: [
+                const BottomNavigationBarItem(
+                  icon: Icon(Icons.storefront_outlined),
+                  activeIcon: Icon(Icons.storefront),
+                  label: 'Market',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.payment_outlined),
                   activeIcon: Icon(Icons.payment),
                   label: 'Billing',
                 ),
-                BottomNavigationBarItem(
+                const BottomNavigationBarItem(
                   icon: Icon(Icons.receipt_long_outlined),
                   activeIcon: Icon(Icons.receipt_long),
-                  label: 'Orders',
+                  label: 'Order',
+                ),
+                BottomNavigationBarItem(
+                  icon: Consumer<LocalProductProvider>(
+                    builder: (context, provider, _) {
+                      final count = provider.cartItems.length;
+                      return Badge(
+                        isLabelVisible: count > 0,
+                        label: Text('$count'),
+                        backgroundColor: ColorManager.kBadgeColor,
+                        child: const Icon(Icons.shopping_cart_outlined),
+                      );
+                    },
+                  ),
+                  activeIcon: Consumer<LocalProductProvider>(
+                    builder: (context, provider, _) {
+                      final count = provider.cartItems.length;
+                      return Badge(
+                        isLabelVisible: count > 0,
+                        label: Text('$count'),
+                        backgroundColor: ColorManager.kBadgeColor,
+                        child: const Icon(Icons.shopping_cart),
+                      );
+                    },
+                  ),
+                  label: 'Cart',
                 ),
               ],
             ),
@@ -430,3 +478,5 @@ class BillingPageMobileState extends State<BillingPageMobile>
     );
   }
 }
+
+

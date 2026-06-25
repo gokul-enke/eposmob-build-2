@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Empty-state placeholder for the mobile Orders tab. Extracted verbatim from
-/// `orders_tab.dart`'s `_buildEmptyState`.
+/// Empty-state placeholder for the mobile Orders tab.
 class OrdersEmptyState extends StatelessWidget {
   final bool hasSearchQuery;
 
@@ -22,8 +21,9 @@ class OrdersEmptyState extends StatelessWidget {
           Text(
             'No orders found',
             style: TextStyle(
+              fontFamily: 'Poppins',
               fontSize: 18,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: Colors.grey.shade600,
             ),
           ),
@@ -32,9 +32,10 @@ class OrdersEmptyState extends StatelessWidget {
             hasSearchQuery
                 ? 'Try adjusting your search or filter'
                 : 'Saved orders will appear here',
-            style: const TextStyle(
+            style: TextStyle(
+              fontFamily: 'Poppins',
               fontSize: 14,
-              color: Colors.white,
+              color: Colors.grey.shade500,
             ),
             textAlign: TextAlign.center,
           ),

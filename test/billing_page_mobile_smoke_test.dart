@@ -30,6 +30,8 @@ import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page_mobile.dart';
+import 'package:pos_machine/providers/discount_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 
 /// BillingProvider with the network/connectivity side-effects stubbed out so
 /// the page can mount hermetically.
@@ -162,6 +164,8 @@ void main() {
         ChangeNotifierProvider<KeyboardProvider>(create: (_) => KeyboardProvider()),
         ChangeNotifierProvider<SyncProvider>(create: (_) => SyncProvider()),
         ChangeNotifierProvider<PineLabsTerminalProvider>(create: (_) => PineLabsTerminalProvider()),
+        ChangeNotifierProvider<DiscountProvider>(create: (_) => DiscountProvider()),
+        ChangeNotifierProvider<MasterDataProvider>(create: (_) => MasterDataProvider()),
       ],
       child: const MaterialApp(home: BillingPageMobile()),
     );
@@ -179,9 +183,9 @@ void main() {
 
     expect(find.byType(BillingPageMobile), findsOneWidget);
     expect(find.byType(BottomNavigationBar), findsOneWidget);
-    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Market'), findsOneWidget);
     expect(find.text('Billing'), findsOneWidget);
-    expect(find.text('Orders'), findsOneWidget);
+    expect(find.text('Order'), findsOneWidget);
   });
 
   testWidgets('bottom-nav switches tabs without throwing', (tester) async {
@@ -197,7 +201,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.tap(find.text('Orders'));
+    await tester.tap(find.text('Order'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
