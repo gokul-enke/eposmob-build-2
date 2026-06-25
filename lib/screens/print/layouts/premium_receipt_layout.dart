@@ -114,7 +114,7 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
           if (logo != null) {
             debugPrint("[PREMIUM] Logo loaded: ${logo.width}x${logo.height}");
-            part1Rows.add(ImageRow(logo, width: printWidth * 0.6));
+            part1Rows.add(ImageRow(logo, height: printWidth * 0.22));
             part1Rows.add(SpacingRow(_headerGap));
           }
         } catch (e) {
@@ -269,10 +269,14 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final _configStoreName = displayConfig?['showStoreName']?.value as String?;
-      final storeName = (_configStoreName != null && _configStoreName.isNotEmpty)
-          ? _configStoreName
-          : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
+      final _configStoreName =
+          displayConfig?['showStoreName']?.value as String?;
+      final storeName =
+          (_configStoreName != null && _configStoreName.isNotEmpty)
+              ? _configStoreName
+              : (params.storeName?.isNotEmpty == true
+                  ? params.storeName!
+                  : 'STORE NAME');
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.6;
@@ -356,7 +360,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
       final label = displayConfig?['showTel']?.value as String? ?? '';
-      final phone = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      final phone = params.storePhone?.isNotEmpty == true
+          ? params.storePhone!
+          : (appSettings?.customerCarePhone ?? '');
       if (phone.isNotEmpty) {
         final telephone = label.isNotEmpty ? '$label: $phone' : phone;
         rows.add(SpacingRow(5));
@@ -366,7 +372,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
 
     if (displayConfig?['showEmail']?.visible == true) {
       final label = displayConfig?['showEmail']?.value as String? ?? '';
-      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      final emailVal = params.storeEmail?.isNotEmpty == true
+          ? params.storeEmail!
+          : (appSettings?.customerCareEmail ?? '');
       if (emailVal.isNotEmpty) {
         final email = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         rows.add(TextRow(email, scale: 0.9, isBold: true));
@@ -1416,7 +1424,9 @@ class PremiumReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ??
+        displayConfig?['showMRPTotal']?.visible ??
+        true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;

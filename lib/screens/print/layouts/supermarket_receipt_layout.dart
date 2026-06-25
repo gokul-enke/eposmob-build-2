@@ -116,7 +116,7 @@ class SupermarketReceiptLayout implements ReceiptLayout {
 
           if (logo != null) {
             debugPrint("[STANDARD] Logo loaded: ${logo.width}x${logo.height}");
-            part1Rows.add(ImageRow(logo, width: printWidth * 0.6));
+            part1Rows.add(ImageRow(logo, height: printWidth * 0.22));
             part1Rows.add(SpacingRow(_headerGap));
           }
         } catch (e) {
@@ -294,7 +294,9 @@ class SupermarketReceiptLayout implements ReceiptLayout {
         final _configSN = displayConfig?['showStoreName']?.value as String?;
         storeNameText = (_configSN != null && _configSN.isNotEmpty)
             ? _configSN
-            : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
+            : (params.storeName?.isNotEmpty == true
+                ? params.storeName!
+                : 'STORE NAME');
       }
 
       // Dynamic scaling based on name length
@@ -351,12 +353,16 @@ class SupermarketReceiptLayout implements ReceiptLayout {
       String addressText = '';
       if (addressVal.isNotEmpty) {
         if (isDualLanguage) {
-          final arabicLabel = displayConfig?['showStoreAddress']?.value as String? ?? '';
-          final englishLabel = displayConfig?['showStoreAddress']?.defaultValue ?? '';
-          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          final arabicLabel =
+              displayConfig?['showStoreAddress']?.value as String? ?? '';
+          final englishLabel =
+              displayConfig?['showStoreAddress']?.defaultValue ?? '';
+          final label =
+              _getBilingualText(arabic: arabicLabel, english: englishLabel);
           addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
         } else {
-          final label = displayConfig?['showStoreAddress']?.value as String? ?? '';
+          final label =
+              displayConfig?['showStoreAddress']?.value as String? ?? '';
           addressText = label.isNotEmpty ? '$label: $addressVal' : addressVal;
         }
       }
@@ -472,13 +478,16 @@ class SupermarketReceiptLayout implements ReceiptLayout {
 
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
-      final phoneVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      final phoneVal = params.storePhone?.isNotEmpty == true
+          ? params.storePhone!
+          : (appSettings?.customerCarePhone ?? '');
       String telephoneText = '';
       if (phoneVal.isNotEmpty) {
         if (isDualLanguage) {
           final arabicLabel = displayConfig?['showTel']?.value as String? ?? '';
           final englishLabel = displayConfig?['showTel']?.defaultValue ?? '';
-          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          final label =
+              _getBilingualText(arabic: arabicLabel, english: englishLabel);
           telephoneText = label.isNotEmpty ? '$label: $phoneVal' : phoneVal;
         } else {
           final label = displayConfig?['showTel']?.value as String? ?? '';
@@ -492,13 +501,17 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showEmail']?.visible == true) {
-      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      final emailVal = params.storeEmail?.isNotEmpty == true
+          ? params.storeEmail!
+          : (appSettings?.customerCareEmail ?? '');
       String emailText = '';
       if (emailVal.isNotEmpty) {
         if (isDualLanguage) {
-          final arabicLabel = displayConfig?['showEmail']?.value as String? ?? '';
+          final arabicLabel =
+              displayConfig?['showEmail']?.value as String? ?? '';
           final englishLabel = displayConfig?['showEmail']?.defaultValue ?? '';
-          final label = _getBilingualText(arabic: arabicLabel, english: englishLabel);
+          final label =
+              _getBilingualText(arabic: arabicLabel, english: englishLabel);
           emailText = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         } else {
           final label = displayConfig?['showEmail']?.value as String? ?? '';
@@ -1359,7 +1372,9 @@ class SupermarketReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ??
+        displayConfig?['showMRPTotal']?.visible ??
+        true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;

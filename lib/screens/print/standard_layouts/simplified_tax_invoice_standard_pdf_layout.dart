@@ -200,8 +200,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         font: fontBold, fontSize: fs(16), fontWeight: pw.FontWeight.bold);
     final storeDescStyle = pw.TextStyle(
         font: fontBold, fontSize: fs(15), fontWeight: pw.FontWeight.bold);
-    final storeInfoStyle =
-        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(10));
+    final storeInfoStyle = pw.TextStyle(
+        font: fontBold, fontSize: fs(11), fontWeight: pw.FontWeight.bold);
     final titleStyle = pw.TextStyle(
         font: fontBold,
         fontSize: fs(12),
@@ -612,8 +612,8 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                     child: pw.Align(
                       alignment: pw.Alignment.centerRight,
                       child: pw.Container(
-                        height: isA5 ? 42 : 56,
-                        width: isA5 ? 60 : 80,
+                        height: isA5 ? 64 : 86,
+                        width: isA5 ? 92 : 124,
                         child: pw.Image(logoImage, fit: pw.BoxFit.contain),
                       ),
                     ),
