@@ -74,11 +74,61 @@ class GridSelectionProvider extends ChangeNotifier {
     if (query.isEmpty) {
       return filteredProductList!;
     } else {
+      final normalizedQuery = query.toLowerCase();
       return filteredProductList!
-          .where((product) =>
-              product.productName!.toLowerCase().contains(query.toLowerCase()))
+          .where((product) => _productSearchNames(product)
+              .any((name) => name.toLowerCase().contains(normalizedQuery)))
           .toList();
     }
+  }
+
+  List<String> _productSearchNames(GetProduct product) {
+    final names = <String>[];
+
+    void addName(dynamic value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) {
+        names.add(text);
+      }
+    }
+
+    void extractNames(dynamic value) {
+      if (value == null) return;
+
+      if (value is String || value is num || value is bool) {
+        addName(value);
+        return;
+      }
+
+      if (value is Map) {
+        for (final key in const ['name', 'product_name', 'value', 'text']) {
+          if (value.containsKey(key)) {
+            addName(value[key]);
+          }
+        }
+
+        for (final entry in value.entries) {
+          final entryKey = entry.key?.toString().toLowerCase() ?? '';
+          if (entryKey.contains('language') || entryKey == 'id') {
+            continue;
+          }
+          extractNames(entry.value);
+        }
+        return;
+      }
+
+      if (value is Iterable) {
+        for (final item in value) {
+          extractNames(item);
+        }
+      }
+    }
+
+    addName(product.productName);
+    extractNames(product.names);
+
+    return names.toSet().toList();
   }
 
   void updateFilteredProducts(List<GetProduct> filtered) {

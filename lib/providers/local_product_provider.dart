@@ -1983,10 +1983,10 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     if (filterName != null && filterName.isNotEmpty) {
+      final normalizedFilterName = filterName.toLowerCase();
       result = result
-          .where((p) => (p.productName ?? '')
-              .toLowerCase()
-              .contains(filterName.toLowerCase()))
+          .where((p) => _productSearchNames(p)
+              .any((name) => name.toLowerCase().contains(normalizedFilterName)))
           .toList();
       result = _rankProductNameMatches(result, filterName);
     }
@@ -2058,9 +2058,10 @@ class LocalProductProvider extends ChangeNotifier {
     if (query.isEmpty) {
       return _filteredProducts;
     }
+    final normalizedQuery = query.toLowerCase();
     final matches = _filteredProducts
-        .where((p) =>
-            (p.productName ?? '').toLowerCase().contains(query.toLowerCase()))
+        .where((p) => _productSearchNames(p)
+            .any((name) => name.toLowerCase().contains(normalizedQuery)))
         .toList();
     return _rankProductNameMatches(matches, query);
   }
@@ -2083,9 +2084,60 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   int _productNameMatchRank(GetProduct product, String normalizedQuery) {
-    final productName = product.productName?.trim().toLowerCase() ?? '';
-    if (productName.startsWith(normalizedQuery)) return 0;
+    final productNames = _productSearchNames(product)
+        .map((name) => name.trim().toLowerCase())
+        .where((name) => name.isNotEmpty);
+    if (productNames.any((name) => name.startsWith(normalizedQuery))) return 0;
     return 1;
+  }
+
+  List<String> _productSearchNames(GetProduct product) {
+    final names = <String>[];
+
+    void addName(dynamic value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) {
+        names.add(text);
+      }
+    }
+
+    void extractNames(dynamic value) {
+      if (value == null) return;
+
+      if (value is String || value is num || value is bool) {
+        addName(value);
+        return;
+      }
+
+      if (value is Map) {
+        for (final key in const ['name', 'product_name', 'value', 'text']) {
+          if (value.containsKey(key)) {
+            addName(value[key]);
+          }
+        }
+
+        for (final entry in value.entries) {
+          final entryKey = entry.key?.toString().toLowerCase() ?? '';
+          if (entryKey.contains('language') || entryKey == 'id') {
+            continue;
+          }
+          extractNames(entry.value);
+        }
+        return;
+      }
+
+      if (value is Iterable) {
+        for (final item in value) {
+          extractNames(item);
+        }
+      }
+    }
+
+    addName(product.productName);
+    extractNames(product.names);
+
+    return names.toSet().toList();
   }
 
   /// Adds a product to the local products list.
