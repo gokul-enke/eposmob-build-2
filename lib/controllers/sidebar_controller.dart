@@ -200,7 +200,7 @@ class SideBarController extends GetxController {
       allowCounterBillingFromAttender: true,
       defaultCounterBillingMode: true,
     ), // 89 Restaurant Billing Page
-    BillingPage(), // 90 Supermarket Billing Page
+    BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
     SalesScreen(isOnlineSales: true), // 92 Online Sales
   ];
