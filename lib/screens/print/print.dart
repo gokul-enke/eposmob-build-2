@@ -177,7 +177,17 @@ class PrintPage extends StatefulWidget {
         return false;
       }
 
-      // Determine type based on orderReturns
+      // Get paper size
+      String paperSize = prefs.getString(_paperSizePrefsKeyForDocument(
+              documentConfigType,
+              isB2B: isB2B)) ??
+          prefs.getString('default_paper_size') ??
+          '80mm';
+      if (paperSize == 'Thermal') {
+        paperSize = '80mm';
+      }
+
+      // Determine type based on paper size and orderReturns
       final hasReturns = orderReturns != null &&
           orderReturns.returnItems != null &&
           orderReturns.returnItems!.isNotEmpty;
@@ -186,6 +196,7 @@ class PrintPage extends StatefulWidget {
         docConfigProvider,
         documentConfigType: documentConfigType,
         hasReturns: hasReturns,
+        paperSize: paperSize,
       );
 
       if (billDocumentConfig == null) {
@@ -196,16 +207,6 @@ class PrintPage extends StatefulWidget {
 
       debugPrint('[PrintPage] Using cached config: ${billDocumentConfig.type}');
       _debugInvoiceTitleConfig('autoPrint', billDocumentConfig);
-
-      // Get paper size
-      String paperSize = prefs.getString(_paperSizePrefsKeyForDocument(
-                  documentConfigType,
-                  isB2B: isB2B)) ??
-              prefs.getString('default_paper_size') ??
-              '80mm';
-      if (paperSize == 'Thermal') {
-        paperSize = '80mm';
-      }
 
       // Get receipt theme
       final theme = await _getReceiptThemeStatic(
@@ -362,9 +363,17 @@ class PrintPage extends StatefulWidget {
     DocumentConfigProvider docConfigProvider, {
     String? documentConfigType,
     required bool hasReturns,
+    String? paperSize,
   }) {
     final requestedType = documentConfigType?.trim();
     if (requestedType != null && requestedType.isNotEmpty) {
+      if (_isStandardPaperSize(paperSize) &&
+          requestedType.toLowerCase() == 'bill') {
+        return docConfigProvider.getCachedConfig("Bill A4") ??
+            docConfigProvider.getCachedConfig("bill_a4") ??
+            docConfigProvider.getCachedConfig("bill-a4") ??
+            docConfigProvider.getCachedConfig(requestedType);
+      }
       return docConfigProvider.getCachedConfig(requestedType) ??
           docConfigProvider.getCachedConfig(requestedType.toLowerCase());
     }
@@ -374,8 +383,20 @@ class PrintPage extends StatefulWidget {
           docConfigProvider.getCachedConfig("sales_and_return_bill");
     }
 
+    if (_isStandardPaperSize(paperSize)) {
+      return docConfigProvider.getCachedConfig("Bill A4") ??
+          docConfigProvider.getCachedConfig("bill_a4") ??
+          docConfigProvider.getCachedConfig("bill-a4") ??
+          docConfigProvider.getCachedConfig("Bill") ??
+          docConfigProvider.getCachedConfig("bill");
+    }
+
     return docConfigProvider.getCachedConfig("Bill") ??
         docConfigProvider.getCachedConfig("bill");
+  }
+
+  static bool _isStandardPaperSize(String? paperSize) {
+    return paperSize == 'A4' || paperSize == 'A5';
   }
 
   static bool _isQuotationDocument(String? documentConfigType) {
@@ -702,6 +723,7 @@ class _PrintPageState extends State<PrintPage> {
         docConfigProvider,
         documentConfigType: widget.documentConfigType,
         hasReturns: hasReturns,
+        paperSize: selectedPaperSize,
       );
 
       if (_billDocumentConfig == null) {
@@ -747,36 +769,15 @@ class _PrintPageState extends State<PrintPage> {
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
-      // Check if a specific document type was requested, otherwise infer from returns.
-      if (widget.documentConfigType?.trim().isNotEmpty == true) {
-        final requestedType = widget.documentConfigType!.trim();
-        debugPrint("Loading '$requestedType' configuration from API cache...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig(
-              requestedType,
-            ) ??
-            docConfigProvider.getDocumentConfig(
-              requestedType.toLowerCase(),
-            );
-      } else if (widget.orderReturns != null &&
+      final hasReturns = widget.orderReturns != null &&
           widget.orderReturns!.returnItems != null &&
-          widget.orderReturns!.returnItems!.isNotEmpty) {
-        debugPrint(
-            "Order has returns, loading 'Sales Return Bill' configuration from API...");
-        _billDocumentConfig =
-            docConfigProvider.getDocumentConfig("Sales and Return Bill");
-
-        if (_billDocumentConfig != null) {
-          debugPrint(
-              "SUCCESS: Sales Return Bill configuration loaded from API");
-        } else {
-          debugPrint(
-              "Sales Return Bill not found, falling back to Bill configuration");
-          _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-        }
-      } else {
-        debugPrint("No returns, loading 'Bill' configuration from API...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      }
+          widget.orderReturns!.returnItems!.isNotEmpty;
+      _billDocumentConfig = PrintPage._resolveCachedDocumentConfig(
+        docConfigProvider,
+        documentConfigType: widget.documentConfigType,
+        hasReturns: hasReturns,
+        paperSize: selectedPaperSize,
+      );
 
       if (_billDocumentConfig != null) {
         debugPrint("SUCCESS: Document configuration loaded from API");
