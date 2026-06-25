@@ -707,7 +707,7 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                             'المبلغ الإجمالي الخاضع للضريبة بإستثناء',
                             _formatMoney(currency, netExcTaxValue),
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
-                      if (showDiscountFlag && discountAmountValue > 0)
+                      if (showDiscountFlag && discountAmountValue != 0)
                         _totalsRow(
                             _labelEn(dc, 'showDiscount', null, 'Discount',
                                 isDualLanguage),

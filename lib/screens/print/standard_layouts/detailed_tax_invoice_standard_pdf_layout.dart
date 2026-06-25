@@ -753,7 +753,7 @@ class DetailedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         _totalsRow('Total (Exc VAT)',
                             _formatMoney(currency, totalExclTax), footerStyle),
                       if (dc?['showDiscount']?.visible != false &&
-                          discountAmountValue > 0)
+                          discountAmountValue != 0)
                         _totalsRow(
                             'Discount',
                             _formatMoney(currency, discountAmountValue),

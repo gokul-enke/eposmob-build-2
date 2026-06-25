@@ -1446,7 +1446,7 @@ class Premium1ReceiptLayout implements ReceiptLayout {
     }
 
     // 2. Discounts
-    if (showDiscount) {
+    if (showDiscount && discountAmountValue != 0) {
       boxedItems.add(BoxedLineItem(
         label: discountLabel,
         value: discountAmountValue.toStringAsFixed(2),

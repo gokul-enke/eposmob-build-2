@@ -1382,7 +1382,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
     }
 
     // 2. Discounts
-    if (showDiscount) {
+    if (showDiscount && discountAmountValue != 0) {
       boxedItems.add(StandardBoxedLineItem(
         label: discountLabel,
         value: discountAmountValue.toStringAsFixed(2),

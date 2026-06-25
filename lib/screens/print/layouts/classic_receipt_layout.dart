@@ -1382,7 +1382,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
 
       // Items count and Discount row
-      if (showItemsCount || showDiscount) {
+      if (showItemsCount || (showDiscount && discountAmountValue != 0)) {
         List<ReceiptTableColumn> summaryRow = [];
 
         if (showItemsCount) {
@@ -1396,7 +1396,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
         summaryRow.add(ReceiptTableColumn(" ", weight: 0.05));
 
-        if (showDiscount) {
+        if (showDiscount && discountAmountValue != 0) {
           summaryRow.add(ReceiptTableColumn(discountLabel,
               weight: 0.25, align: TextAlign.right));
           summaryRow.add(ReceiptTableColumn(money(discountAmountValue),
@@ -1499,7 +1499,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
 
       // Discounts
-      if (showDiscount && totalDiscountAmount > 0) {
+      if (showDiscount && totalDiscountAmount != 0) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(money(totalDiscountAmount),
               weight: 0.35, align: TextAlign.left),
