@@ -71,7 +71,7 @@ class CategoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  int _selectedCategoryIndex = 0;
+  int _selectedCategoryIndex = -1;
 
   int get selectedCategoryIndex => _selectedCategoryIndex;
 
@@ -441,9 +441,10 @@ class CategoryProvider extends ChangeNotifier {
       ..headers['Authorization'] = 'Bearer $accessToken'
       ..headers['X-Tenant'] = apiKey
       ..fields['name'] = categoryName
-      ..fields['slug'] = slug;
+      ..fields['slug'] = slug
+      ..fields['sort_order'] = '0';
 
-    if (parentCategory.trim().isNotEmpty) {
+    if (parentCategory.trim().isNotEmpty && parentCategory.trim() != '0') {
       request.fields['parent_category'] = parentCategory.trim();
     }
 
@@ -452,9 +453,11 @@ class CategoryProvider extends ChangeNotifier {
       request.fields['description'] = resolvedDescription;
     }
 
-    if (categoryNameEnglish.trim().isNotEmpty) {
-      request.fields['category_lang_name[en]'] = categoryNameEnglish.trim();
-    }
+    // Always send at least one translation field to prevent the backend from throwing a foreach() error on a null category_lang_name.
+    request.fields['category_lang_name[en]'] = categoryNameEnglish.trim().isNotEmpty
+        ? categoryNameEnglish.trim()
+        : categoryName.trim();
+
     if (categoryNameHindi.trim().isNotEmpty) {
       request.fields['category_lang_name[hi]'] = categoryNameHindi.trim();
     }
@@ -479,8 +482,11 @@ class CategoryProvider extends ChangeNotifier {
       }
     }
 
+    /*
     if (imagePath.trim().isNotEmpty) {
       final imageFile = File(imagePath);
+      debugPrint("IMAGE PATH: $imagePath");          
+      debugPrint("IMAGE FILE EXISTS: ${await imageFile.exists()}"); 
       if (await imageFile.exists()) {
         request.files.add(
           await http.MultipartFile.fromPath('image', imagePath),
@@ -500,12 +506,15 @@ class CategoryProvider extends ChangeNotifier {
         request.fields['icon'] = iconPath;
       }
     }
+    */
 
     try {
       final streamedResponse = await request.send().timeout(
             const Duration(seconds: 20),
           );
       final response = await http.Response.fromStream(streamedResponse);
+      debugPrint("ADD CATEGORY STATUS: ${response.statusCode}");
+      debugPrint("ADD CATEGORY RESPONSE: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await listAllCategory(force: true);
@@ -591,52 +600,83 @@ class CategoryProvider extends ChangeNotifier {
       required String imagePath,
       required String iconPath,
       required String accessToken}) async {
-    // debugPrint("ADD CATEGORY  API parentCategory $parentCategory ");
-    // debugPrint("ADD CATEGORY  API categoryName $categoryName ");
-    // debugPrint("ADD CATEGORY  API slug $slug ");
-    // debugPrint("ADD CATEGORY  API categoryNameEnglish $categoryNameEnglish ");
-    // debugPrint("ADD CATEGORY  API categoryNameHindi $categoryNameHindi ");
-    // debugPrint("ADD CATEGORY  API categoryNameArabic $categoryNameArabic ");
-
-    final Map<String, dynamic> apiBodyData = {
-      'name': categoryName,
-      'slug': slug,
-      'parent_category': parentCategory,
-      'category_lang_name[en]': categoryNameEnglish,
-      'category_lang_name[hi]': categoryNameHindi,
-      'category_lang_name[ar]': categoryNameArabic,
-      'category_image': imagePath,
-      'category_icon': iconPath
-    };
-
-    // debugPrint(apiBodyData.toString());
 
     final url = Uri.parse("${APPUrl.editCategoryUrl}/$categoryId");
-    // Get API key from SharedPreferences
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
     }
-    try {
-      final response = await http.post(url, body: apiBodyData, headers: {
-        // 'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-        'X-Tenant': apiKey,
-      });
-      // debugPrint('inside ${response.statusCode}');
-      if (response.statusCode == 200) {
-        listAllCategory();
-        notifyListeners();
-        // debugPrint(json.decode(response.body).toString());
-        // debugPrint(json.decode(response.body).toString());
-        return json.decode(response.body);
-      } else {}
-    } finally {
-      // _isLoading = false;
-      // notifyListeners();
+
+    final request = http.MultipartRequest('POST', url)
+      ..headers['Authorization'] = 'Bearer $accessToken'
+      ..headers['X-Tenant'] = apiKey
+      ..fields['name'] = categoryName
+      ..fields['slug'] = slug
+      ..fields['sort_order'] = '0';
+
+    if (parentCategory.trim().isNotEmpty && parentCategory.trim() != '0') {
+      request.fields['parent_category'] = parentCategory.trim();
     }
+
+    request.fields['category_lang_name[en]'] = categoryNameEnglish.trim().isNotEmpty
+        ? categoryNameEnglish.trim()
+        : categoryName.trim();
+
+    if (categoryNameHindi.trim().isNotEmpty) {
+      request.fields['category_lang_name[hi]'] = categoryNameHindi.trim();
+    }
+    if (categoryNameArabic.trim().isNotEmpty) {
+      request.fields['category_lang_name[ar]'] = categoryNameArabic.trim();
+    }
+
+    /*
+    if (imagePath.trim().isNotEmpty) {
+      final imageFile = File(imagePath);
+      if (await imageFile.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imagePath),
+        );
+      } else {
+        // Already a URL from backend, send as field
+        request.fields['category_image'] = imagePath;
+      }
+    }
+
+    if (iconPath.trim().isNotEmpty) {
+      final iconFile = File(iconPath);
+      if (await iconFile.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('icon', iconPath),
+        );
+      } else {
+        request.fields['category_icon'] = iconPath;
+      }
+    }
+    */
+
+    try {
+      final streamedResponse = await request.send().timeout(
+            const Duration(seconds: 20),
+          );
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint("EDIT CATEGORY STATUS: ${response.statusCode}");
+      debugPrint("EDIT CATEGORY RESPONSE: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await listAllCategory(force: true);
+        notifyListeners();
+        return json.decode(response.body);
+      }
+
+      final decodedBody = response.body.isNotEmpty
+          ? json.decode(response.body)
+          : {'status': 'error', 'message': 'Failed to edit category'};
+      return decodedBody;
+    } finally {}
   }
 
   Future<void> fetchPropValues({

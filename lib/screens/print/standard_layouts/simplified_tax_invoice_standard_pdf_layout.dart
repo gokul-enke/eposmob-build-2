@@ -199,8 +199,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         font: fontBold, fontSize: fs(18), fontWeight: pw.FontWeight.bold);
     final storeNameEnStyle = pw.TextStyle(
         font: fontBold, fontSize: fs(16), fontWeight: pw.FontWeight.bold);
+    final storeDescStyle = pw.TextStyle(
+        font: fontBold, fontSize: fs(15), fontWeight: pw.FontWeight.bold);
     final storeInfoStyle =
-        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(8));
+        pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(10));
     final titleStyle = pw.TextStyle(
         font: fontBold,
         fontSize: fs(12),
@@ -432,6 +434,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     final custAddress = params.customerAddress;
 
+    final bool isQuotation =
+        (config.template ?? '').toLowerCase() == 'quotation' ||
+            (config.type ?? '').toLowerCase().contains('quotation');
+
     // Customer / comment / payment / delivery config keys (with aliases).
     final String paymentConfigKey =
         dc?.containsKey('showPaymentMethod') == true
@@ -447,7 +453,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final bool showCustomerAddress = cfgVisibleDefault('showCustomerAddress');
     final bool showCustomerVat = cfgVisible('showCustomerVatNumber');
     final bool showCustomerCr = cfgVisible('showCustomerCrNumber');
-    final bool showPayment = cfgVisibleDefault(paymentConfigKey);
+    final bool showPayment = !isQuotation && cfgVisibleDefault(paymentConfigKey);
     final bool showComment = cfgVisibleDefault(commentConfigKey);
     final bool showDeliveryMethod = cfgVisibleDefault('showDeliveryMethod');
 
@@ -503,11 +509,6 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     // ── Invoice box rows ────────────────────────────────────────────
-    // Quotations show "Quotation No." rather than "Invoice No." (still
-    // overridable by the showInvoiceNumber config value).
-    final bool isQuotation =
-        (config.template ?? '').toLowerCase() == 'quotation' ||
-            (config.type ?? '').toLowerCase().contains('quotation');
     final String numberLabelDefault =
         isQuotation ? 'Quotation No.' : 'Invoice No.';
     final invoiceRows = <pw.Widget>[
@@ -522,7 +523,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     ];
 
     // ── Payment breakdown lines (left column) ───────────────────────
-    final paymentLines = _buildPaymentBreakdownLines(
+    final paymentLines = isQuotation ? <pw.Widget>[] : _buildPaymentBreakdownLines(
         params, currency, wordsStyle, dc);
 
     // ══════════════════════════════════════════════════════════════════
@@ -558,22 +559,31 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     children: [
-                      if (headerPrimary.isNotEmpty)
-                        _autoText(headerPrimary, storeNameArStyle,
-                            textAlign: pw.TextAlign.center),
-                      if (headerSecondary.isNotEmpty)
-                        _autoText(headerSecondary, storeNameEnStyle,
-                            textAlign: pw.TextAlign.center),
-                      if (cfgVisible('showStoreName') &&
-                          documentHeader.isNotEmpty)
-                        _autoText(storeName, storeNameEnStyle,
-                            textAlign: pw.TextAlign.center),
+                      pw.SizedBox(
+                        width: isA5 ? 260 : 360,
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.center,
+                          children: [
+                            if (headerPrimary.isNotEmpty)
+                              _autoText(headerPrimary, storeNameArStyle,
+                                  textAlign: pw.TextAlign.center),
+                            if (headerSecondary.isNotEmpty)
+                              _autoText(headerSecondary, storeNameEnStyle,
+                                  textAlign: pw.TextAlign.center),
+                            if (cfgVisible('showStoreName') &&
+                                documentHeader.isNotEmpty)
+                              _autoText(storeName, storeNameEnStyle,
+                                  textAlign: pw.TextAlign.center),
+                            if (cfgVisible('showDescription') &&
+                                storeDesc.isNotEmpty)
+                              _autoText(storeDesc, storeDescStyle,
+                                  textAlign: pw.TextAlign.center),
+                          ],
+                        ),
+                      ),
                       pw.SizedBox(height: 3),
                       // Store sub-details, each with an even vertical rhythm.
                       ..._headerInfoLines([
-                        if (cfgVisible('showDescription') &&
-                            storeDesc.isNotEmpty)
-                          storeDesc,
                         if ((cfgVisible('showStoreAddress') &&
                                 storeAddress.isNotEmpty) ||
                             (cfgVisible('showTel') && storeTel.isNotEmpty))
@@ -586,12 +596,11 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                           ].join(' . '),
                         if (cfgVisible('showEmail') && storeEmail.isNotEmpty)
                           storeEmail,
-                        if (cfgVisible('showFssaiInfo') &&
-                            storeFssai.isNotEmpty)
-                          storeFssai,
                         if (cfgVisible('showExtraHeading1') &&
                             extraHeading1.isNotEmpty)
                           extraHeading1,
+                        // showExtraHeading2 is intentionally excluded from the
+                        // header — it is displayed in the title band instead.
                       ], storeInfoStyle),
                     ],
                   ),
@@ -622,18 +631,23 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
                 pw.Expanded(
-                  child: (cfgVisible('showExtraHeading2') &&
-                          extraHeading2.isNotEmpty)
-                      ? _autoText(extraHeading2, crVatStyle)
-                      : pw.SizedBox(),
+                  child: pw.Align(
+                    alignment: pw.Alignment.centerLeft,
+                    child: (cfgVisible('showExtraHeading2') &&
+                            extraHeading2.isNotEmpty)
+                        ? _autoText(extraHeading2, crVatStyle)
+                        : (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                            ? _autoText(storeFssai, crVatStyle)
+                            : pw.SizedBox(),
+                  ),
                 ),
                 _autoText(invoiceTitleText.toUpperCase(), titleStyle),
                 pw.Expanded(
                   child: pw.Align(
                     alignment: pw.Alignment.centerRight,
-                    child: pw.Text(
-                        'VAT No. ${displayOrBlank(params.zatcaVatNumber)}',
-                        style: crVatStyle),
+                    child: (cfgVisible('showFssaiInfo') && storeFssai.isNotEmpty)
+                        ? _autoText(storeFssai, crVatStyle)
+                        : pw.SizedBox(),
                   ),
                 ),
               ],
@@ -1027,8 +1041,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       }
     }
 
-    // Single method (default to Cash when unset).
-    if (pm == null || pm.isEmpty || pm.toUpperCase() == 'CASH') return 'Cash';
+    if (pm == null || pm.isEmpty) return '';
     return _paymentMethodLabel(pm);
   }
 
@@ -1086,16 +1099,12 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
 
     if (!isMulti) {
-      String label = 'Cash';
-      if (params.paymentMethod != null &&
-          params.paymentMethod!.isNotEmpty &&
-          params.paymentMethod != 'CASH' &&
-          !params.paymentMethod!.startsWith('{')) {
-        label = params.paymentMethod!;
+      final pm = params.paymentMethod;
+      if (pm != null && pm.isNotEmpty && !pm.startsWith('{')) {
+        lines.add(pw.Text(
+            '${_paymentMethodLabel(pm)}: ${_formatMoney(currency, params.paidAmount!)}',
+            style: style));
       }
-      lines.add(pw.Text(
-          '$label: ${_formatMoney(currency, params.paidAmount!)}',
-          style: style));
     }
     return lines;
   }

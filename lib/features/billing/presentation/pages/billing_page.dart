@@ -4214,7 +4214,22 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      Provider.of<LocalProductProvider>(context, listen: false).updateItemPrice(
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+
+      // Enforce the product's minimum sale price (discount floor).
+      final double? minBase =
+          localProductProvider.minimumSalePriceForProduct(item.product);
+      if (minBase != null && selectedPrice < minBase - 0.001) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Selected price is below the minimum sale price of ${minBase.toStringAsFixed(2)}.',
+        );
+        return;
+      }
+
+      localProductProvider.updateItemPrice(
         productId,
         item.selectedStock,
         selectedPrice,

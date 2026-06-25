@@ -69,6 +69,8 @@ class _AddProductWithBarcodeModalState
       TextEditingController();
   final TextEditingController _productItemCodeController =
       TextEditingController();
+  final TextEditingController _productMinMarginController =
+      TextEditingController();
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
@@ -87,6 +89,7 @@ class _AddProductWithBarcodeModalState
   final FocusNode _sellingPriceFocusNode = FocusNode();
   final FocusNode _purchasePriceFocusNode = FocusNode();
   final FocusNode _itemCodeFocusNode = FocusNode();
+  final FocusNode _minMarginFocusNode = FocusNode();
   final FocusNode _unitFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
   final FocusNode _generateBarcodeFocusNode = FocusNode();
@@ -133,6 +136,7 @@ class _AddProductWithBarcodeModalState
       _sellingPriceFocusNode,
       _purchasePriceFocusNode,
       _itemCodeFocusNode,
+      _minMarginFocusNode,
       _unitFocusNode,
       _categoryFocusNode,
     ];
@@ -1012,6 +1016,7 @@ class _AddProductWithBarcodeModalState
     _productSellingPriceController.dispose();
     _productPurchasePriceController.dispose();
     _productItemCodeController.dispose();
+    _productMinMarginController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
     _baseConversionRateController.dispose();
@@ -1037,6 +1042,7 @@ class _AddProductWithBarcodeModalState
     _sellingPriceFocusNode.dispose();
     _purchasePriceFocusNode.dispose();
     _itemCodeFocusNode.dispose();
+    _minMarginFocusNode.dispose();
     _unitFocusNode.dispose();
     _categoryFocusNode.dispose();
     _generateBarcodeFocusNode.dispose();
@@ -1439,6 +1445,30 @@ class _AddProductWithBarcodeModalState
                           },
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Row 4: Min Margin Percentage (optional)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          "Min Margin %",
+                          _productMinMarginController,
+                          TextInputType.number,
+                          size,
+                          isRequired: false,
+                          inputFormatter: FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}$')),
+                          focusNode: _minMarginFocusNode,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(child: SizedBox()),
+                      const SizedBox(width: 8),
+                      const Expanded(child: SizedBox()),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -2640,6 +2670,9 @@ class _AddProductWithBarcodeModalState
                   ? _baseConversionRateController.text.trim()
                   : '1',
           itemCode: itemCodeEnabled ? _productItemCodeController.text.trim() : null,
+          minMarginPercentage: _productMinMarginController.text.trim().isNotEmpty
+              ? _productMinMarginController.text.trim()
+              : null,
         );
 
         if (!mounted) {
@@ -2748,6 +2781,7 @@ class _AddProductWithBarcodeModalState
     _productSellingPriceController.clear();
     _productPurchasePriceController.clear();
     _productItemCodeController.clear();
+    _productMinMarginController.clear();
     _baseConversionRateController.text = '1';
     for (var controller in _languageNameControllers.values) {
       if (controller != _productNameController) {

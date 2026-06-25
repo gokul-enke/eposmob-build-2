@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_back_button.dart';
@@ -39,6 +41,8 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
   late TextEditingController iconFilePathController;
   List<GetProductListFileModelData>? imageFiles = [];
   GetProductListFileModelData? selctedImageFile;
+  String? _selectedImagePath;
+  String? _selectedIconPath;
 
   void getData() {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
@@ -218,7 +222,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         BuildTextTile(
-                                          isStarRed: true,
+                                          isStarRed: false,
                                           isTextField: true,
                                           title: "Select Parent Category",
                                           textStyle: buildCustomStyle(
@@ -347,6 +351,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                 children: [
                                   buildColumnWidgetForTextFields(
                                     onchanged: ((value) {
+                                      categoryNameEnglishController.text = value ?? '';
                                       categorySlugController.text = categoryNameController
                                           .text
                                           .toLowerCase() // Convert to lowercase
@@ -393,6 +398,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       readOnly: false),
                                 ],
                               ),
+                              /*
                               Row(
                                 children: [
                                   Column(
@@ -436,10 +442,18 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                             circleRadius: 5,
                                             height: 100,
                                             width: 150,
-                                            child: Image.network(
-                                              imageFilePathController.text,
-                                              fit: BoxFit.cover,
-                                            )),
+                                            child: imageFilePathController.text.startsWith('http')
+                                                ? Image.network(
+                                                    imageFilePathController.text,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (c, e, s) => const Icon(Icons.broken_image),
+                                                  )
+                                                : imageFilePathController.text.isNotEmpty
+                                                    ? Image.file(
+                                                        File(imageFilePathController.text),
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : const Icon(Icons.image_outlined, color: Colors.grey)),
                                       ),
                                     ],
                                   ),
@@ -485,15 +499,24 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                             circleRadius: 5,
                                             height: 100,
                                             width: 150,
-                                            child: Image.network(
-                                              iconFilePathController.text,
-                                              fit: BoxFit.cover,
-                                            )),
-                                      ),
+                                            child: iconFilePathController.text.startsWith('http')
+                                                ? Image.network(
+                                                    iconFilePathController.text,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (c, e, s) => const Icon(Icons.broken_image),
+                                                  )
+                                                : iconFilePathController.text.isNotEmpty
+                                                    ? Image.file(
+                                                        File(iconFilePathController.text),
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : const Icon(Icons.image_outlined, color: Colors.grey)),
+                                        ),
                                     ],
                                   ),
                                 ],
                               ),
+                              */
                               const SizedBox(height: 25),
                               Row(
                                 children: [
@@ -515,12 +538,6 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                               "categoryNameArabicController.text ${categoryNameArabicController.text}");
 
                                           if (categorySlugController
-                                                  .text.isEmpty ||
-                                              categoryNameHindiController
-                                                  .text.isEmpty ||
-                                              categoryNameArabicController
-                                                  .text.isEmpty ||
-                                              categoryNameEnglishController
                                                   .text.isEmpty ||
                                               categoryNameController
                                                   .text.isEmpty) {
@@ -715,11 +732,44 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(
-                                height: 10,
+                              const SizedBox(height: 10),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: Row(
+                                  children: [
+                                    CustomRoundButton(
+                                      title: "Upload from Device",
+                                      fct: () async {
+                                        FilePickerResult? result = await FilePicker.platform.pickFiles(
+                                          type: FileType.image,
+                                        );
+                                        if (result != null) {
+                                          this.setState(() {
+                                            imageFilePathController.text = result.files.single.path ?? '';
+                                            _selectedImagePath = result.files.single.path;
+                                          });
+                                          setState(() {});
+                                        }
+                                      },
+                                      height: 40,
+                                      width: size.width * 0.12,
+                                      fontSize: FontSize.s12,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    if (_selectedImagePath != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.file(
+                                          File(_selectedImagePath!),
+                                          height: 60,
+                                          width: 60,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                               SizedBox(
-                                // height: 450,
                                 width: 700,
                                 child: Table(
                                   columnWidths: const {
@@ -1025,11 +1075,44 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(
-                                height: 10,
+                              const SizedBox(height: 10),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12.0),
+                                child: Row(
+                                  children: [
+                                    CustomRoundButton(
+                                      title: "Upload from Device",
+                                      fct: () async {
+                                        FilePickerResult? result = await FilePicker.platform.pickFiles(
+                                          type: FileType.image,
+                                        );
+                                        if (result != null) {
+                                          this.setState(() {
+                                            iconFilePathController.text = result.files.single.path ?? '';
+                                            _selectedIconPath = result.files.single.path;
+                                          });
+                                          setState(() {});
+                                        }
+                                      },
+                                      height: 40,
+                                      width: size.width * 0.12,
+                                      fontSize: FontSize.s12,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    if (_selectedIconPath != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.file(
+                                          File(_selectedIconPath!),
+                                          height: 60,
+                                          width: 60,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                               SizedBox(
-                                // height: 450,
                                 width: 700,
                                 child: Table(
                                   columnWidths: const {

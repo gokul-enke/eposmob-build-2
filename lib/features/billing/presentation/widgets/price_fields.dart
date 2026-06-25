@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -68,6 +69,55 @@ class _PriceTextFieldState extends State<PriceTextField> {
 
     // Listen for any text changes from either physical or virtual keyboards
     controller.addListener(_handleTextChanged);
+    // Enforce the minimum sale price whenever the field loses focus (e.g. the
+    // cashier taps another field without explicitly submitting).
+    focusNode.addListener(_handleFocusChange);
+  }
+
+  void _handleFocusChange() {
+    if (!focusNode.hasFocus) {
+      _enforceMinSalePrice();
+    }
+  }
+
+  /// Clamps the entered price up to the product's minimum sale price when it
+  /// would otherwise drop below the configured discount floor.
+  /// Returns true when a clamp was applied (price was below the floor).
+  bool _enforceMinSalePrice() {
+    final parsedPrice = double.tryParse(controller.text);
+    if (parsedPrice == null) return false;
+
+    final double? minBase = widget.localProductProvider
+        .minimumSalePriceForProduct(widget.item.product);
+    if (minBase == null) return false;
+
+    final enteredBase = _toBasePrice(parsedPrice);
+    // Small epsilon to avoid rounding-induced false positives.
+    if (enteredBase >= minBase - 0.001) return false;
+
+    widget.localProductProvider.updateItemPrice(
+      widget.item.product.productId!,
+      widget.item.selectedStock,
+      minBase,
+      stockGroupIds: widget.item.stockGroupIds,
+      saleUnitId: widget.item.saleUnitId,
+    );
+
+    final minDisplay = (widget.item.toDisplayAmount(minBase) ?? minBase) as double;
+    final text = _formatPrice(minDisplay);
+    controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+
+    if (mounted) {
+      showScaffoldError(
+        context: context,
+        message:
+            'Price can\'t go below the minimum sale price of ${_formatPrice(minDisplay)}.',
+      );
+    }
+    return true;
   }
 
   void _beginEditing() {
@@ -102,13 +152,17 @@ class _PriceTextFieldState extends State<PriceTextField> {
   void _commitAndEndEditing() {
     final parsedPrice = double.tryParse(controller.text);
     if (parsedPrice != null && parsedPrice >= 0) {
-      widget.localProductProvider.updateItemPrice(
-        widget.item.product.productId!,
-        widget.item.selectedStock,
-        _toBasePrice(parsedPrice),
-        stockGroupIds: widget.item.stockGroupIds,
-        saleUnitId: widget.item.saleUnitId,
-      );
+      // Clamp to the minimum sale price; only set the entered price when it is
+      // at or above the floor.
+      if (!_enforceMinSalePrice()) {
+        widget.localProductProvider.updateItemPrice(
+          widget.item.product.productId!,
+          widget.item.selectedStock,
+          _toBasePrice(parsedPrice),
+          stockGroupIds: widget.item.stockGroupIds,
+          saleUnitId: widget.item.saleUnitId,
+        );
+      }
     } else {
       controller.text = _displayPrice().toString();
     }
@@ -171,6 +225,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
   @override
   void dispose() {
     controller.removeListener(_handleTextChanged);
+    focusNode.removeListener(_handleFocusChange);
     controller.dispose();
     focusNode.dispose();
     super.dispose();

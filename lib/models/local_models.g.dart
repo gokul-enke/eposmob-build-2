@@ -319,13 +319,14 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       totalTaxRate: fields[19] as String?,
       taxes: (fields[20] as List?)?.cast<HiveProductTax>(),
       itemCode: fields[21] as String?,
+      minMarginPercentage: fields[22] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveGetProduct obj) {
     writer
-      ..writeByte(22)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -369,7 +370,9 @@ class HiveGetProductAdapter extends TypeAdapter<HiveGetProduct> {
       ..writeByte(20)
       ..write(obj.taxes)
       ..writeByte(21)
-      ..write(obj.itemCode);
+      ..write(obj.itemCode)
+      ..writeByte(22)
+      ..write(obj.minMarginPercentage);
   }
 
   @override

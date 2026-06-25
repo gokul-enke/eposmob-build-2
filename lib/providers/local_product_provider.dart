@@ -2585,6 +2585,29 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
+  /// Minimum allowed sale price (in base units) for a product, derived from its
+  /// `min_margin_percentage`. Acts as a discount floor off the catalog selling
+  /// price:
+  ///
+  ///   minSalePrice = sellingPrice × (1 − minMarginPercentage / 100)
+  ///
+  /// Returns `null` when no floor is configured (no/zero margin or no selling
+  /// price), meaning the price may be lowered freely.
+  double? minimumSalePriceForProduct(GetProduct product) {
+    final pct = _parseAmount(product.minMarginPercentage?.toString());
+    if (pct == null || pct <= 0) {
+      return null;
+    }
+
+    final sellingPrice = _parseAmount(product.price?.price?.toString());
+    if (sellingPrice == null || sellingPrice <= 0) {
+      return null;
+    }
+
+    final floor = sellingPrice * (1 - (pct / 100));
+    return floor < 0 ? 0.0 : floor;
+  }
+
   void updateItemPrice(int productId, Stock? selectedStock, double newPrice,
       {List<int>? stockGroupIds, int? saleUnitId}) {
     final index = _findCartItemIndex(
