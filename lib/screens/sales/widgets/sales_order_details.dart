@@ -460,6 +460,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax
                     ?.toString(),
                 documentConfigType: _hasReturns ? 'Sales and Return Bill' : 'Bill',
+                apiTotalTax: orderDetailsModelData?.priceSummary?.totalTax?.toDouble(),
               );
 
               // Only show print page if auto-print failed
@@ -496,6 +497,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                           ?.cart?.priceSummary?.netExcTax
                           ?.toString(),
                       documentConfigType: _hasReturns ? 'Sales and Return Bill' : 'Bill',
+                      apiTotalTax: orderDetailsModelData?.priceSummary?.totalTax?.toDouble(),
                     ),
                   ),
                 );

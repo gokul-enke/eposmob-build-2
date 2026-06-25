@@ -55,6 +55,7 @@ class PrintPage extends StatefulWidget {
       paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
   final String? netExcTax;
+  final double? apiTotalTax;
 
   const PrintPage({
     super.key,
@@ -87,6 +88,7 @@ class PrintPage extends StatefulWidget {
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
     this.netExcTax,
+    this.apiTotalTax,
   });
 
   @override
@@ -125,6 +127,7 @@ class PrintPage extends StatefulWidget {
     Map<String, dynamic>? paymentBreakdown,
     bool isDefaultCustomer = false,
     String? netExcTax,
+    double? apiTotalTax,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -269,6 +272,7 @@ class PrintPage extends StatefulWidget {
         storeLocation: storeSession.activeStore?.location,
         storePhone: storeSession.activeStore?.phone,
         storeEmail: storeSession.activeStore?.email,
+        apiTotalTax: apiTotalTax,
       );
       final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
       debugPrint(
@@ -900,6 +904,7 @@ class _PrintPageState extends State<PrintPage> {
       storeLocation: storeSession.activeStore?.location,
       storePhone: storeSession.activeStore?.phone,
       storeEmail: storeSession.activeStore?.email,
+      apiTotalTax: widget.apiTotalTax,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(
@@ -1008,6 +1013,7 @@ class _PrintPageState extends State<PrintPage> {
       storeLocation: storeSession.activeStore?.location,
       storePhone: storeSession.activeStore?.phone,
       storeEmail: storeSession.activeStore?.email,
+      apiTotalTax: widget.apiTotalTax,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(

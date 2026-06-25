@@ -1465,6 +1465,8 @@ Powered by CloudPOS''',
                   isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                   netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
                       ?.toString(),
+                  apiTotalTax: orderDetails.data?.priceSummary?.totalTax
+                      ?.toDouble(),
                   documentConfigType: orderDetails.data?.orderReturns != null &&
                           (orderDetails.data?.orderReturns?.returnItems
                                   ?.isNotEmpty ??
@@ -1513,6 +1515,8 @@ Powered by CloudPOS''',
                         netExcTax: orderDetails
                             .data?.cart!.priceSummary?.netExcTax
                             ?.toString(),
+                        apiTotalTax: orderDetails.data?.priceSummary?.totalTax
+                            ?.toDouble(),
                         documentConfigType: orderDetails.data?.orderReturns !=
                                     null &&
                                 (orderDetails.data?.orderReturns?.returnItems
