@@ -71,6 +71,8 @@ class _AddProductWithBarcodeModalState
       TextEditingController();
   final TextEditingController _productMinMarginController =
       TextEditingController();
+  final TextEditingController _productMinMarginPriceController =
+      TextEditingController();
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _categorySearchController =
       TextEditingController();
@@ -90,6 +92,7 @@ class _AddProductWithBarcodeModalState
   final FocusNode _purchasePriceFocusNode = FocusNode();
   final FocusNode _itemCodeFocusNode = FocusNode();
   final FocusNode _minMarginFocusNode = FocusNode();
+  final FocusNode _minMarginPriceFocusNode = FocusNode();
   final FocusNode _unitFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
   final FocusNode _generateBarcodeFocusNode = FocusNode();
@@ -137,6 +140,7 @@ class _AddProductWithBarcodeModalState
       _purchasePriceFocusNode,
       _itemCodeFocusNode,
       _minMarginFocusNode,
+      _minMarginPriceFocusNode,
       _unitFocusNode,
       _categoryFocusNode,
     ];
@@ -1017,6 +1021,7 @@ class _AddProductWithBarcodeModalState
     _productPurchasePriceController.dispose();
     _productItemCodeController.dispose();
     _productMinMarginController.dispose();
+    _productMinMarginPriceController.dispose();
     _unitSearchController.dispose();
     _categorySearchController.dispose();
     _baseConversionRateController.dispose();
@@ -1043,6 +1048,7 @@ class _AddProductWithBarcodeModalState
     _purchasePriceFocusNode.dispose();
     _itemCodeFocusNode.dispose();
     _minMarginFocusNode.dispose();
+    _minMarginPriceFocusNode.dispose();
     _unitFocusNode.dispose();
     _categoryFocusNode.dispose();
     _generateBarcodeFocusNode.dispose();
@@ -1449,7 +1455,7 @@ class _AddProductWithBarcodeModalState
                   ),
                   const SizedBox(height: 12),
 
-                  // Row 4: Min Margin Percentage (optional)
+                  // Row 4: Min Margin Percentage / Min Margin Price (optional)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1466,7 +1472,18 @@ class _AddProductWithBarcodeModalState
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Expanded(child: SizedBox()),
+                      Expanded(
+                        child: _buildTextField(
+                          "Min Margin Price",
+                          _productMinMarginPriceController,
+                          TextInputType.number,
+                          size,
+                          isRequired: false,
+                          inputFormatter: FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d*\.?\d{0,2}$')),
+                          focusNode: _minMarginPriceFocusNode,
+                        ),
+                      ),
                       const SizedBox(width: 8),
                       const Expanded(child: SizedBox()),
                     ],
@@ -2673,6 +2690,10 @@ class _AddProductWithBarcodeModalState
           minMarginPercentage: _productMinMarginController.text.trim().isNotEmpty
               ? _productMinMarginController.text.trim()
               : null,
+          minMarginPrice:
+              _productMinMarginPriceController.text.trim().isNotEmpty
+                  ? _productMinMarginPriceController.text.trim()
+                  : null,
         );
 
         if (!mounted) {
@@ -2782,6 +2803,7 @@ class _AddProductWithBarcodeModalState
     _productPurchasePriceController.clear();
     _productItemCodeController.clear();
     _productMinMarginController.clear();
+    _productMinMarginPriceController.clear();
     _baseConversionRateController.text = '1';
     for (var controller in _languageNameControllers.values) {
       if (controller != _productNameController) {

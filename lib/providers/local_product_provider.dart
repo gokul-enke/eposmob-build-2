@@ -2637,26 +2637,45 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  /// Minimum allowed sale price (in base units) for a product, derived from its
-  /// `min_margin_percentage`. Acts as a discount floor off the catalog selling
-  /// price:
+  /// Minimum allowed sale price (in base units) for a product. Acts as a
+  /// discount floor off the catalog selling price, derived from two optional
+  /// configurations:
   ///
-  ///   minSalePrice = sellingPrice × (1 − minMarginPercentage / 100)
+  ///   • `min_margin_percentage` → percentage discount floor:
+  ///       floor = sellingPrice × (1 − minMarginPercentage / 100)
+  ///   • `min_margin_price`      → absolute discount floor (max reduction):
+  ///       floor = sellingPrice − minMarginPrice
   ///
-  /// Returns `null` when no floor is configured (no/zero margin or no selling
+  /// When both are configured, the most restrictive (higher) floor wins.
+  ///
+  /// Returns `null` when no floor is configured (no/zero margins or no selling
   /// price), meaning the price may be lowered freely.
   double? minimumSalePriceForProduct(GetProduct product) {
-    final pct = _parseAmount(product.minMarginPercentage?.toString());
-    if (pct == null || pct <= 0) {
-      return null;
-    }
-
     final sellingPrice = _parseAmount(product.price?.price?.toString());
     if (sellingPrice == null || sellingPrice <= 0) {
       return null;
     }
 
-    final floor = sellingPrice * (1 - (pct / 100));
+    final pct = _parseAmount(product.minMarginPercentage?.toString());
+    final maxReduction = _parseAmount(product.minMarginPrice?.toString());
+
+    double? floor;
+
+    if (pct != null && pct > 0) {
+      final pctFloor = sellingPrice * (1 - (pct / 100));
+      floor = pctFloor;
+    }
+
+    if (maxReduction != null && maxReduction > 0) {
+      final priceFloor = sellingPrice - maxReduction;
+      // Most restrictive floor wins.
+      floor = (floor == null) ? priceFloor : (priceFloor > floor ? priceFloor : floor);
+    }
+
+    if (floor == null) {
+      return null;
+    }
+
     return floor < 0 ? 0.0 : floor;
   }
 

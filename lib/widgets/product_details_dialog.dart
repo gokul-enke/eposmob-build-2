@@ -78,6 +78,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   late TextEditingController _taxController; // Restore tax controller
   late TextEditingController _purchasePriceController;
   late TextEditingController _minMarginController;
+  late TextEditingController _minMarginPriceController;
   late TextEditingController _rackController;
   final Map<int, TextEditingController> _languageNameControllers = {};
   final Map<int, bool> _languageTranslating = {};
@@ -108,6 +109,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _quantityController = TextEditingController();
     _purchasePriceController = TextEditingController();
     _minMarginController = TextEditingController();
+    _minMarginPriceController = TextEditingController();
     _taxController = TextEditingController(); // Init tax controller
     _rackController = TextEditingController();
     if (widget.product != null) {
@@ -435,6 +437,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             : '') ??
         '';
     _minMarginController.text = _formatNumericString(product.minMarginPercentage);
+    _minMarginPriceController.text = _formatNumericString(product.minMarginPrice);
 
     _editableStock = widget.selectedStock ??
         (product.stock != null && product.stock!.isNotEmpty
@@ -505,6 +508,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final String updatedQuantityString = _quantityController.text.trim();
     final String updatedPurchasePrice = _purchasePriceController.text.trim();
     final String updatedMinMargin = _minMarginController.text.trim();
+    final String updatedMinMarginPrice = _minMarginPriceController.text.trim();
     final String updatedRack = _rackController.text.trim();
 
     final double priceForApi = updatedPriceString.isEmpty
@@ -584,6 +588,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
         minMarginPercentage: updatedMinMargin.isEmpty ? null : updatedMinMargin,
+        minMarginPrice:
+            updatedMinMarginPrice.isEmpty ? null : updatedMinMarginPrice,
         accessToken: accessToken,
       );
 
@@ -682,6 +688,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             (updatedMinMargin.isEmpty
                 ? product.minMarginPercentage
                 : num.tryParse(updatedMinMargin) ?? updatedMinMargin),
+        minMarginPrice: serverProduct?.minMarginPrice ??
+            (updatedMinMarginPrice.isEmpty
+                ? product.minMarginPrice
+                : num.tryParse(updatedMinMarginPrice) ?? updatedMinMarginPrice),
         names: responseNames ??
             (productNames.isNotEmpty ? productNames : product.names),
         saleUnits: (serverProduct?.saleUnits?.isNotEmpty ?? false)
@@ -754,6 +764,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _taxController.dispose(); // Restore dispose
     _purchasePriceController.dispose();
     _minMarginController.dispose();
+    _minMarginPriceController.dispose();
     _rackController.dispose();
     for (final controller in _languageNameControllers.values) {
       controller.dispose();
@@ -1260,6 +1271,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         _formatNumericString(product.minMarginPercentage)
                                 .isNotEmpty
                             ? '${_formatNumericString(product.minMarginPercentage)}%'
+                            : 'N/A'),
+                    _buildDetailRow(
+                        'Min Margin Price',
+                        _formatNumericString(product.minMarginPrice).isNotEmpty
+                            ? '$currency ${_formatNumericString(product.minMarginPrice)}'
                             : 'N/A'),
                     _buildDetailRow('SKU', product.sku ?? 'Not Available'),
                   ],
@@ -1858,7 +1874,21 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           ),
                         ),
                         spacing(),
-                        SizedBox(width: fieldWidth),
+                        SizedBox(
+                          width: fieldWidth,
+                          child: buildColumnWidgetForTextFields(
+                            controller: _minMarginPriceController,
+                            size: size,
+                            title: 'Min Margin Price',
+                            hintText: 'Enter min margin price',
+                            width: fieldWidth,
+                            height: fieldHeight,
+                            margin: EdgeInsets.zero,
+                            readOnly: false,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
                         spacing(),
                         SizedBox(width: fieldWidth),
                       ],
