@@ -1267,13 +1267,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             ? '$currency ${product.offerPrice}'
                             : 'N/A'),
                     _buildDetailRow(
-                        'Min Margin %',
+                        'Maximum Discount Percentage',
                         _formatNumericString(product.minMarginPercentage)
                                 .isNotEmpty
                             ? '${_formatNumericString(product.minMarginPercentage)}%'
                             : 'N/A'),
                     _buildDetailRow(
-                        'Min Margin Price',
+                        'Maximum Discount Amount',
                         _formatNumericString(product.minMarginPrice).isNotEmpty
                             ? '$currency ${_formatNumericString(product.minMarginPrice)}'
                             : 'N/A'),
@@ -1863,8 +1863,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _minMarginController,
                             size: size,
-                            title: 'Min Margin %',
-                            hintText: 'Enter min margin %',
+                            title: 'Maximum Discount Percentage',
+                            hintText: 'Enter maximum discount percentage',
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -1879,8 +1879,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _minMarginPriceController,
                             size: size,
-                            title: 'Min Margin Price',
-                            hintText: 'Enter min margin price',
+                            title: 'Maximum Discount Amount',
+                            hintText: 'Enter maximum discount amount',
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
