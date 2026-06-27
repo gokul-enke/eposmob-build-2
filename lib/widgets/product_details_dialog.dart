@@ -587,9 +587,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         rackNumber: rackForApi,
         quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
-        minMarginPercentage: updatedMinMargin.isEmpty ? null : updatedMinMargin,
-        minMarginPrice:
-            updatedMinMarginPrice.isEmpty ? null : updatedMinMarginPrice,
+        // Pass the raw text (even when empty) so an erased field is sent to the
+        // server as null to clear it, rather than being omitted from the body.
+        minMarginPercentage: updatedMinMargin,
+        minMarginPrice: updatedMinMarginPrice,
         accessToken: accessToken,
       );
 
@@ -1267,13 +1268,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             ? '$currency ${product.offerPrice}'
                             : 'N/A'),
                     _buildDetailRow(
-                        'Maximum Discount Percentage',
+                        'Max Discount Percentage',
                         _formatNumericString(product.minMarginPercentage)
                                 .isNotEmpty
                             ? '${_formatNumericString(product.minMarginPercentage)}%'
                             : 'N/A'),
                     _buildDetailRow(
-                        'Maximum Discount Amount',
+                        'Max Discount Amount',
                         _formatNumericString(product.minMarginPrice).isNotEmpty
                             ? '$currency ${_formatNumericString(product.minMarginPrice)}'
                             : 'N/A'),
@@ -1863,8 +1864,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _minMarginController,
                             size: size,
-                            title: 'Maximum Discount Percentage',
-                            hintText: 'Enter maximum discount percentage',
+                            title: 'Max Discount Percentage',
+                            hintText: 'Enter max discount percentage',
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
@@ -1879,8 +1880,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           child: buildColumnWidgetForTextFields(
                             controller: _minMarginPriceController,
                             size: size,
-                            title: 'Maximum Discount Amount',
-                            hintText: 'Enter maximum discount amount',
+                            title: 'Max Discount Amount',
+                            hintText: 'Enter max discount amount',
                             width: fieldWidth,
                             height: fieldHeight,
                             margin: EdgeInsets.zero,
