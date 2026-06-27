@@ -45,6 +45,7 @@ import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -3194,6 +3195,10 @@ class BillingPageState extends State<BillingPage>
             appSettings?.showCustomerLastBuyedPriceList == true &&
                 customerSelectionProvider.hasSelectedCustomer &&
                 !customerSelectionProvider.isDefaultCustomer;
+        final bool canViewBillingProductDetails = Provider.of<RoleProvider>(
+                context,
+                listen: true)
+            .currentUserHasPermissionSync('billing.product.view');
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
 
@@ -3333,9 +3338,11 @@ class BillingPageState extends State<BillingPage>
                                             cellIndex: 0,
                                             child: GestureDetector(
                                               behavior: HitTestBehavior.opaque,
-                                              onTap: () =>
-                                                  _showProductDetailsDialog(
-                                                      item),
+                                              onTap: canViewBillingProductDetails
+                                                  ? () =>
+                                                      _showProductDetailsDialog(
+                                                          item)
+                                                  : null,
                                               child: Row(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.center,
@@ -3369,15 +3376,20 @@ class BillingPageState extends State<BillingPage>
                                                   Tooltip(
                                                     message: isLowStock
                                                         ? 'Low stock'
-                                                        : 'billing.view_details'
-                                                            .tr,
+                                                        : canViewBillingProductDetails
+                                                            ? 'billing.view_details'
+                                                                .tr
+                                                            : 'No permission to view product details',
                                                     waitDuration:
                                                         const Duration(
                                                             milliseconds: 400),
                                                     child: InkWell(
-                                                      onTap: () =>
-                                                          _showProductDetailsDialog(
-                                                              item),
+                                                      onTap:
+                                                          canViewBillingProductDetails
+                                                              ? () =>
+                                                                  _showProductDetailsDialog(
+                                                                      item)
+                                                              : null,
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               16),
@@ -3387,8 +3399,11 @@ class BillingPageState extends State<BillingPage>
                                                         color: isLowStock
                                                             ? ColorManager
                                                                 .kOrange
-                                                            : ColorManager
-                                                                .kPrimaryColor,
+                                                            : canViewBillingProductDetails
+                                                                ? ColorManager
+                                                                    .kPrimaryColor
+                                                                : Colors.grey
+                                                                    .shade400,
                                                       ),
                                                     ),
                                                   ),
@@ -3876,7 +3891,12 @@ class BillingPageState extends State<BillingPage>
 
     if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
       if (_cartTableFocusedCellIndex == 0) {
-        _showProductDetailsDialog(item);
+        final canViewBillingProductDetails =
+            Provider.of<RoleProvider>(context, listen: false)
+                .currentUserHasPermissionSync('billing.product.view');
+        if (canViewBillingProductDetails) {
+          _showProductDetailsDialog(item);
+        }
       } else if (_cartTableFocusedCellIndex == 1) {
         final identityKey = _cartIdentityKey(item);
         final layerLink = _cartUnitMenuLayerLinks[identityKey];
@@ -4121,6 +4141,7 @@ class BillingPageState extends State<BillingPage>
           selectedStock: item.selectedStock,
           isCompact: false,
           currency: currency,
+          useBillingProductPermissions: true,
         );
       },
     );

@@ -16,6 +16,7 @@ import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -40,6 +41,8 @@ class ProductDetailsDialog extends StatefulWidget {
   final bool isCompact;
   final String currency;
   final VoidCallback? onAdd; // optional action button
+  /// When true, Edit tab / save / stock-row edit require `billing.product.edit`.
+  final bool useBillingProductPermissions;
 
   const ProductDetailsDialog({
     super.key,
@@ -52,6 +55,7 @@ class ProductDetailsDialog extends StatefulWidget {
     this.isCompact = false,
     this.currency = '',
     this.onAdd,
+    this.useBillingProductPermissions = false,
   });
 
   @override
@@ -63,6 +67,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   GetProduct? selectedProduct;
   bool isLoading = false;
   late TabController _tabController;
+  bool _tabControllerReady = false;
 
   final GlobalKey<FormState> _editFormKey = GlobalKey<FormState>();
   bool _controllersInitialized = false;
@@ -91,15 +96,49 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   bool _requestedUnitRackData = false;
   final Map<int, Stock> _editedStockRows = {};
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+  bool _canEditProduct(BuildContext context) {
+    final roleProvider = Provider.of<RoleProvider>(context, listen: false);
+    if (widget.useBillingProductPermissions) {
+      return roleProvider
+          .currentUserHasPermissionSync('billing.product.edit');
+    }
+    return roleProvider.currentUserHasPermissionSync('update_product') ||
+        roleProvider
+            .currentUserHasPermissionSync('menu.catalog.product.list.access');
+  }
+
+  void _ensureTabController(bool canEdit) {
+    final tabCount = canEdit ? 2 : 1;
+    if (!_tabControllerReady) {
+      _tabControllerReady = true;
+      _tabController = TabController(length: tabCount, vsync: this);
+      _tabController.addListener(() {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+      return;
+    }
+    if (_tabController.length == tabCount) {
+      return;
+    }
+    final previousIndex = _tabController.index.clamp(0, tabCount - 1);
+    _tabController.dispose();
+    _tabController = TabController(
+      length: tabCount,
+      vsync: this,
+      initialIndex: previousIndex,
+    );
     _tabController.addListener(() {
       if (mounted) {
         setState(() {});
       }
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
     _nameController = TextEditingController();
     _slugController = TextEditingController();
     _barcodeController = TextEditingController();
@@ -476,6 +515,14 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       return;
     }
 
+    if (!_canEditProduct(context)) {
+      showScaffoldError(
+        context: context,
+        message: 'You do not have permission to edit this product.',
+      );
+      return;
+    }
+
     if (!_editFormKey.currentState!.validate()) {
       return;
     }
@@ -754,7 +801,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
   @override
   void dispose() {
-    _tabController.dispose();
+    if (_tabControllerReady) {
+      _tabController.dispose();
+    }
     _nameController.dispose();
     _slugController.dispose();
     _barcodeController.dispose();
@@ -1196,7 +1245,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
-  Widget _buildViewTab(GetProduct product) {
+  Widget _buildViewTab(GetProduct product, {required bool canEditProduct}) {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: true);
     final localProductProvider =
@@ -1533,7 +1582,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                               _buildStockTableCell(stock.date ?? 'N/A'),
                               _buildStockTableCell(stock.expiryDate ?? 'N/A'),
                               _buildStockTableCell(stock.rack ?? 'N/A'),
-                              _buildRackTableCell(stock),
+                              _buildRackTableCell(
+                                stock,
+                                canEditProduct: canEditProduct,
+                              ),
                             ],
                           ),
                         ],
@@ -1969,8 +2021,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
-  Widget _buildRackTableCell(Stock stock) {
-    final bool canEdit = stock.id != null;
+  Widget _buildRackTableCell(
+    Stock stock, {
+    required bool canEditProduct,
+  }) {
+    final bool canEdit = canEditProduct && stock.id != null;
 
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
@@ -2087,6 +2142,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     final product = selectedProduct!;
     _initializeControllersIfNeeded();
+    final canEditProduct = _canEditProduct(context);
+    _ensureTabController(canEditProduct);
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -2132,9 +2189,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               labelColor: ColorManager.kPrimaryColor,
               unselectedLabelColor: ColorManager.textColor.withOpacity(0.6),
               indicatorColor: ColorManager.kPrimaryColor,
-              tabs: const [
-                Tab(text: 'View'),
-                Tab(text: 'Edit'),
+              tabs: [
+                const Tab(text: 'View'),
+                if (canEditProduct) const Tab(text: 'Edit'),
               ],
             ),
             const SizedBox(height: 12),
@@ -2142,8 +2199,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildViewTab(product),
-                  _buildEditTab(product),
+                  _buildViewTab(
+                    product,
+                    canEditProduct: canEditProduct,
+                  ),
+                  if (canEditProduct) _buildEditTab(product),
                 ],
               ),
             ),
@@ -2151,7 +2211,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (_tabController.index == 1)
+                if (canEditProduct && _tabController.index == 1)
                   Padding(
                     padding: const EdgeInsets.only(right: 12.0),
                     child: CustomRoundButton(

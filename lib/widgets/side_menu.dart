@@ -337,12 +337,12 @@ class _SideMenuState extends State<SideMenu> {
           // 2. DASHBOARD (Index: 1)
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              // final hasPermission = roleProvider
-              //     .currentUserHasPermissionSync('menu.dashboard.main.access');
+              final hasPermission = roleProvider
+                  .currentUserHasPermissionSync('menu.dashboard.main.access');
 
-              // // if (!hasPermission) {
-              // //   return const SizedBox.shrink();
-              // // }
+              if (!hasPermission) {
+                return const SizedBox.shrink();
+              }
 
               return Obx(
                 () => DrawerListTile(
@@ -769,18 +769,15 @@ class _SideMenuState extends State<SideMenu> {
           // 9. TRANSACTIONS (Index: 21) [EXPANDABLE]
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              if (!roleProvider.currentUserHasPermissionSync(
-                      'menu.transactions.invoice.access') &&
-                  !roleProvider
-                      .currentUserHasPermissionSync('page_ProformaInvoices')) {
-                return const SizedBox.shrink();
-              }
               // Check permissions for each sub-item
               final hasInvoicePermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.invoice.access');
+              // final hasProformaPermission = roleProvider
+              //     .currentUserHasPermissionSync(
+              //         'menu.transactions.proforma.access');
               final hasProformaPermission = roleProvider
-                  .currentUserHasPermissionSync('page_ProformaInvoices');
+                  .currentUserHasPermissionSync('menu.quotation.main.access');
 
               // final hasReceiptsPermission =
               //     roleProvider.currentUserHasPermissionSync('page_Receipts') ||
