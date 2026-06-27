@@ -286,6 +286,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       totalTax += iTax;
       totalExclTax += (iTotal - iTax);
     }
+    totalTax = params.totalTax;
     final totalAmount =
         double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0.0;
     final discountAmountValue =
@@ -763,7 +764,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         _totalsRow('TOTAL', 'المجموع',
                             _formatMoney(currency, grossExclTax),
                             totalsLabelEn, totalsLabelAr, totalsValueStyle),
-                      if (showDiscountFlag)
+                      if (showDiscountFlag && discountAmountValue != 0)
                         _totalsRow(
                             _labelEn(dc, 'showDiscount', null, 'DISCOUNT',
                                 isDualLanguage),

@@ -385,6 +385,7 @@ class MobileOrderCard extends StatelessWidget {
                       (orderDetails.data?.orderReturns?.returnItems?.isNotEmpty ?? false)
                   ? 'Sales and Return Bill'
                   : 'Bill',
+              apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
             ),
           ),
         );

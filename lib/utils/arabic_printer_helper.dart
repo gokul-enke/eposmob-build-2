@@ -370,7 +370,14 @@ class ImageRow extends ReceiptRow {
     double renderWidth = this.width ?? image.width.toDouble();
     double renderHeight = this.height ?? image.height.toDouble();
 
-    if (this.width == null && image.width > width) {
+    if (this.height != null && this.width == null) {
+      renderHeight = this.height!;
+      renderWidth = renderHeight * (image.width / image.height);
+      if (renderWidth > width) {
+        renderWidth = width;
+        renderHeight = width * (image.height / image.width);
+      }
+    } else if (this.width == null && image.width > width) {
       renderWidth = width;
       renderHeight = width * (image.height / image.width);
     } else if (this.width != null && this.height == null) {

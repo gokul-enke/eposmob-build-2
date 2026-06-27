@@ -2092,6 +2092,7 @@ class _EditOrderState extends State<EditOrder> {
                     deliveryMethod: orderDetails.data?.deliveryMethodName,
                     netExcTax: orderDetails.data?.cart?.priceSummary?.netExcTax?.toString(),
                     documentConfigType: 'Bill',
+                    apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
                   ),
                 ),
               );

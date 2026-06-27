@@ -95,7 +95,8 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
 
     // Search through the complete products list, not the filtered one
     return productProvider.products.where((product) {
-      final nameMatch = (product.productName ?? '').toLowerCase().contains(lowerQuery);
+      final nameMatch = _productSearchNames(product)
+          .any((name) => name.toLowerCase().contains(lowerQuery));
       if (nameMatch) return true;
       if (itemCodeEnabled) {
         final itemCode = product.itemCode ?? '';
@@ -105,6 +106,55 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       }
       return false;
     }).toList();
+  }
+
+  List<String> _productSearchNames(GetProduct product) {
+    final names = <String>[];
+
+    void addName(dynamic value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) {
+        names.add(text);
+      }
+    }
+
+    void extractNames(dynamic value) {
+      if (value == null) return;
+
+      if (value is String || value is num || value is bool) {
+        addName(value);
+        return;
+      }
+
+      if (value is Map) {
+        for (final key in const ['name', 'product_name', 'value', 'text']) {
+          if (value.containsKey(key)) {
+            addName(value[key]);
+          }
+        }
+
+        for (final entry in value.entries) {
+          final entryKey = entry.key?.toString().toLowerCase() ?? '';
+          if (entryKey.contains('language') || entryKey == 'id') {
+            continue;
+          }
+          extractNames(entry.value);
+        }
+        return;
+      }
+
+      if (value is Iterable) {
+        for (final item in value) {
+          extractNames(item);
+        }
+      }
+    }
+
+    addName(product.productName);
+    extractNames(product.names);
+
+    return names.toSet().toList();
   }
 
   Future<void> _handleProductSelection(GetProduct product) async {
@@ -362,4 +412,3 @@ return Align(
 
 
 }
-

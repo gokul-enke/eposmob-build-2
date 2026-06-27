@@ -33,6 +33,7 @@ class ProductProvider extends ChangeNotifier {
     num? quantity,
     List<Map<String, dynamic>>? productNames,
     String? minMarginPercentage,
+    String? minMarginPrice,
     required String accessToken,
   }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -67,6 +68,8 @@ class ProductProvider extends ChangeNotifier {
       'store_id': activeStoreId,
       if (minMarginPercentage != null && minMarginPercentage.trim().isNotEmpty)
         'min_margin_percentage': num.tryParse(minMarginPercentage.trim()),
+      if (minMarginPrice != null && minMarginPrice.trim().isNotEmpty)
+        'min_margin_price': num.tryParse(minMarginPrice.trim()),
       if (productNames != null && productNames.isNotEmpty)
         'product_names': productNames,
     }..removeWhere((key, value) {

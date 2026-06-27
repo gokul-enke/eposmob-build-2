@@ -842,7 +842,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
                     isRtl: isRtl,
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween),
               pw.SizedBox(height: 2),
-              if (displayConfig?['showDiscount']?.visible == true)
+              if (displayConfig?['showDiscount']?.visible == true && disc != 0)
                 _buildLabelValueRow(
                     labelDiscount, disc.toStringAsFixed(2), style,
                     isRtl: isRtl,

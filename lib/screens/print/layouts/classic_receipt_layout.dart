@@ -96,7 +96,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
           if (logo != null) {
             debugPrint(
                 "[LOGO_DEBUG] Logo loaded successfully: ${logo.width}x${logo.height}");
-            part1Rows.add(ImageRow(logo, width: printWidth * 0.8));
+            part1Rows.add(ImageRow(logo, height: printWidth * 0.22));
             part1Rows.add(SpacingRow(6));
           }
         } catch (e) {
@@ -321,7 +321,9 @@ class ClassicReceiptLayout implements ReceiptLayout {
     // Telephone
     if (displayConfig?['showTel']?.visible == true) {
       final label = displayConfig?['showTel']?.value as String? ?? '';
-      final phone = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
+      final phone = params.storePhone?.isNotEmpty == true
+          ? params.storePhone!
+          : (appSettings?.customerCarePhone ?? '');
       if (phone.isNotEmpty) {
         final telephone = label.isNotEmpty ? '$label: $phone' : phone;
         rows.add(TextRow(telephone, scale: 0.8, isBold: true));
@@ -331,7 +333,9 @@ class ClassicReceiptLayout implements ReceiptLayout {
     // Email
     if (displayConfig?['showEmail']?.visible == true) {
       final label = displayConfig?['showEmail']?.value as String? ?? '';
-      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
+      final emailVal = params.storeEmail?.isNotEmpty == true
+          ? params.storeEmail!
+          : (appSettings?.customerCareEmail ?? '');
       if (emailVal.isNotEmpty) {
         final email = label.isNotEmpty ? '$label: $emailVal' : emailVal;
         rows.add(TextRow(email, scale: 0.8, isBold: true));
@@ -1378,11 +1382,13 @@ class ClassicReceiptLayout implements ReceiptLayout {
       final showQuantityCount =
           displayConfig?['showQuantityCount']?.visible ?? true;
       final showTax = displayConfig?['showTax']?.visible ?? true;
-      final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
+      final showMRPTotal = displayConfig?['showSubTotal']?.visible ??
+          displayConfig?['showMRPTotal']?.visible ??
+          true;
       final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
 
       // Items count and Discount row
-      if (showItemsCount || showDiscount) {
+      if (showItemsCount || (showDiscount && discountAmountValue != 0)) {
         List<ReceiptTableColumn> summaryRow = [];
 
         if (showItemsCount) {
@@ -1396,7 +1402,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
 
         summaryRow.add(ReceiptTableColumn(" ", weight: 0.05));
 
-        if (showDiscount) {
+        if (showDiscount && discountAmountValue != 0) {
           summaryRow.add(ReceiptTableColumn(discountLabel,
               weight: 0.25, align: TextAlign.right));
           summaryRow.add(ReceiptTableColumn(money(discountAmountValue),
@@ -1483,7 +1489,9 @@ class ClassicReceiptLayout implements ReceiptLayout {
           displayConfig, 'showNetAmount', null, "GRAND TOTAL المبلغ الاجمالي");
 
       // Check visibility settings
-      final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
+      final showMRPTotal = displayConfig?['showSubTotal']?.visible ??
+          displayConfig?['showMRPTotal']?.visible ??
+          true;
       final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
       final showTax = displayConfig?['showTax']?.visible ?? true;
       final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1499,7 +1507,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
       }
 
       // Discounts
-      if (showDiscount && totalDiscountAmount > 0) {
+      if (showDiscount && totalDiscountAmount != 0) {
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(money(totalDiscountAmount),
               weight: 0.35, align: TextAlign.left),
@@ -1539,8 +1547,7 @@ class ClassicReceiptLayout implements ReceiptLayout {
         if (isEnglish) {
           rows.add(ReceiptTableRow([
             ReceiptTableColumn(label, weight: 0.5, align: TextAlign.left),
-            ReceiptTableColumn(money(amt),
-                weight: 0.5, align: TextAlign.right),
+            ReceiptTableColumn(money(amt), weight: 0.5, align: TextAlign.right),
           ]));
         } else {
           rows.add(ReceiptTableRow([

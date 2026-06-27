@@ -120,7 +120,7 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
 
           if (logo != null) {
             debugPrint("[STANDARD] Logo loaded: ${logo.width}x${logo.height}");
-            part1Rows.add(ImageRow(logo, width: printWidth * 0.6));
+            part1Rows.add(ImageRow(logo, height: printWidth * 0.22));
           }
         } catch (e) {
           debugPrint("[STANDARD] Error loading logo: $e");
@@ -328,9 +328,13 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
       final addressLabel = _getOptionText(displayConfig, 'showStoreAddress');
       final addressVal = params.storeLocation?.isNotEmpty == true
           ? params.storeLocation!
-          : _storeText(activeStoreDetails, ['location', 'address', 'store_address', 'storeAddress'], fallback: '');
+          : _storeText(activeStoreDetails,
+              ['location', 'address', 'store_address', 'storeAddress'],
+              fallback: '');
       final addressText = addressVal.isNotEmpty
-          ? (addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal)
+          ? (addressLabel.isNotEmpty
+              ? '$addressLabel: $addressVal'
+              : addressVal)
           : '';
 
       if (addressText.isNotEmpty) {
@@ -391,8 +395,12 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
       final telLabel = _getOptionText(displayConfig, 'showTel');
       final phoneVal = params.storePhone?.isNotEmpty == true
           ? params.storePhone!
-          : _storeText(activeStoreDetails, ['phone', 'store_phone', 'storePhone'], fallback: appSettings?.customerCarePhone ?? '');
-      final telephoneText = phoneVal.isNotEmpty ? (telLabel.isNotEmpty ? '$telLabel: $phoneVal' : phoneVal) : '';
+          : _storeText(
+              activeStoreDetails, ['phone', 'store_phone', 'storePhone'],
+              fallback: appSettings?.customerCarePhone ?? '');
+      final telephoneText = phoneVal.isNotEmpty
+          ? (telLabel.isNotEmpty ? '$telLabel: $phoneVal' : phoneVal)
+          : '';
 
       if (telephoneText.isNotEmpty) {
         rows.add(TextRow(telephoneText,
@@ -404,8 +412,12 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
       final emailLabel = _getOptionText(displayConfig, 'showEmail');
       final emailVal = params.storeEmail?.isNotEmpty == true
           ? params.storeEmail!
-          : _storeText(activeStoreDetails, ['email', 'store_email', 'storeEmail'], fallback: appSettings?.customerCareEmail ?? '');
-      final emailText = emailVal.isNotEmpty ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal) : '';
+          : _storeText(
+              activeStoreDetails, ['email', 'store_email', 'storeEmail'],
+              fallback: appSettings?.customerCareEmail ?? '');
+      final emailText = emailVal.isNotEmpty
+          ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal)
+          : '';
 
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText,
@@ -1285,7 +1297,9 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ??
+        displayConfig?['showMRPTotal']?.visible ??
+        true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1348,7 +1362,7 @@ class MultiStoreReceiptLayout implements ReceiptLayout {
     }
 
     // 2. Discounts
-    if (showDiscount) {
+    if (showDiscount && discountAmountValue != 0) {
       boxedItems.add(StandardBoxedLineItem(
         label: discountLabel,
         value: discountAmountValue.toStringAsFixed(2),

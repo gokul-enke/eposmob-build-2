@@ -6545,6 +6545,7 @@ class BillingPageState extends State<BillingPage>
                     isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
                     ?.toString(),
+                apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
               );
             }
 
@@ -8702,6 +8703,7 @@ class BillingPageState extends State<BillingPage>
     String? netExcTax,
     String? documentConfigType,
     String? documentTitleOverride,
+    double? apiTotalTax,
   }) async {
     if (!mounted) return false;
 
@@ -8735,6 +8737,7 @@ class BillingPageState extends State<BillingPage>
       netExcTax: netExcTax,
       documentConfigType: documentConfigType,
       documentTitleOverride: documentTitleOverride,
+      apiTotalTax: apiTotalTax,
     );
 
     if (!autoPrintSuccess && mounted) {
@@ -8770,6 +8773,7 @@ class BillingPageState extends State<BillingPage>
             netExcTax: netExcTax,
             documentConfigType: documentConfigType,
             documentTitleOverride: documentTitleOverride,
+            apiTotalTax: apiTotalTax,
           ),
         ),
       );

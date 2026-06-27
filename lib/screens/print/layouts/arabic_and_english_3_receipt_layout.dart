@@ -117,7 +117,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
           if (logo != null) {
             debugPrint("[STANDARD] Logo loaded: ${logo.width}x${logo.height}");
-            part1Rows.add(ImageRow(logo, width: printWidth * 0.6));
+            part1Rows.add(ImageRow(logo, height: printWidth * 0.22));
           }
         } catch (e) {
           debugPrint("[STANDARD] Error loading logo: $e");
@@ -273,10 +273,13 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     // Store Name - Large, centered, clean
     if (displayConfig?['showStoreName']?.visible == true) {
-      final _configStoreName = _getOptionText(displayConfig, 'showStoreName', defaultValue: '');
+      final _configStoreName =
+          _getOptionText(displayConfig, 'showStoreName', defaultValue: '');
       final storeNameText = _configStoreName.isNotEmpty
           ? _configStoreName
-          : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
+          : (params.storeName?.isNotEmpty == true
+              ? params.storeName!
+              : 'STORE NAME');
 
       // Dynamic scaling based on name length
       double storeNameScale = 1.6;
@@ -313,7 +316,9 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       final addressLabel = _getOptionText(displayConfig, 'showStoreAddress');
       final addressVal = params.storeLocation ?? '';
       final addressText = addressVal.isNotEmpty
-          ? (addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal)
+          ? (addressLabel.isNotEmpty
+              ? '$addressLabel: $addressVal'
+              : addressVal)
           : '';
 
       if (addressText.isNotEmpty) {
@@ -372,8 +377,12 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     // Contact info
     if (displayConfig?['showTel']?.visible == true) {
       final telLabel = _getOptionText(displayConfig, 'showTel');
-      final phone = params.storePhone?.isNotEmpty == true ? params.storePhone! : (appSettings?.customerCarePhone ?? '');
-      final telephoneText = phone.isNotEmpty ? (telLabel.isNotEmpty ? '$telLabel: $phone' : phone) : '';
+      final phone = params.storePhone?.isNotEmpty == true
+          ? params.storePhone!
+          : (appSettings?.customerCarePhone ?? '');
+      final telephoneText = phone.isNotEmpty
+          ? (telLabel.isNotEmpty ? '$telLabel: $phone' : phone)
+          : '';
 
       if (telephoneText.isNotEmpty) {
         rows.add(TextRow(telephoneText,
@@ -383,8 +392,12 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     if (displayConfig?['showEmail']?.visible == true) {
       final emailLabel = _getOptionText(displayConfig, 'showEmail');
-      final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : (appSettings?.customerCareEmail ?? '');
-      final emailText = emailVal.isNotEmpty ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal) : '';
+      final emailVal = params.storeEmail?.isNotEmpty == true
+          ? params.storeEmail!
+          : (appSettings?.customerCareEmail ?? '');
+      final emailText = emailVal.isNotEmpty
+          ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal)
+          : '';
 
       if (emailText.isNotEmpty) {
         rows.add(TextRow(emailText,
@@ -1264,7 +1277,9 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     }
 
     // Visibility settings
-    final showMRPTotal = displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible ?? true;
+    final showMRPTotal = displayConfig?['showSubTotal']?.visible ??
+        displayConfig?['showMRPTotal']?.visible ??
+        true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
@@ -1327,7 +1342,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     }
 
     // 2. Discounts
-    if (showDiscount) {
+    if (showDiscount && discountAmountValue != 0) {
       boxedItems.add(StandardBoxedLineItem(
         label: discountLabel,
         value: discountAmountValue.toStringAsFixed(2),
