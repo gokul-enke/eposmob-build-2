@@ -162,6 +162,12 @@ class BillingPageState extends State<BillingPage>
   bool _isUpiSelected = false;
   bool _isCodSelected = false;
   bool _isDebitSelected = false;
+  // Dynamic/extra payment methods (anything beyond CASH/CARD/UPI/COD) coming
+  // back from PaymentMethodModal. Keyed by payment-method id (as String).
+  //   _extraPaymentAmounts: methodId -> entered amount string ("" when none)
+  //   _extraPaymentValues:  methodId -> method value/name (e.g. "CHEQUE")
+  Map<String, String> _extraPaymentAmounts = {};
+  Map<String, String> _extraPaymentValues = {};
   bool _hasOpenedPaymentModalOnce = false;
   bool isInitLoading = false;
   List<CustomerListModelData>? customerList = [];
@@ -683,6 +689,8 @@ class BillingPageState extends State<BillingPage>
         _upiAmountController.clear();
         _codAmountController.clear();
         _debitAmountController.clear();
+        _extraPaymentAmounts = {};
+        _extraPaymentValues = {};
 
         if (currentOrder.paymentMethod != null) {
           final pm = currentOrder.paymentMethod!;
@@ -741,6 +749,33 @@ class BillingPageState extends State<BillingPage>
                 if (hasMethodOrAmount(['COD', codId])) {
                   _isCodSelected = true;
                   _codAmountController.text = firstAmount(['COD', codId]);
+                }
+
+                // Dynamic/extra methods: any amount key that isn't one of the
+                // typed methods/DEBIT. Resolve a display value for each.
+                final masterDataProvider =
+                    Provider.of<MasterDataProvider>(context, listen: false);
+                final typedKeys = {
+                  'CASH', cashId,
+                  'CARD', cardId,
+                  'UPI', upiId,
+                  'COD', codId,
+                  'DEBIT', 'BALANCE', 'ONLINE',
+                };
+                for (final entry in amounts.entries) {
+                  if (typedKeys.contains(entry.key)) continue;
+                  final amount =
+                      double.tryParse(entry.value.toString()) ?? 0;
+                  if (amount <= 0) continue;
+                  _extraPaymentAmounts[entry.key] = entry.value.toString();
+                  final resolvedId = int.tryParse(entry.key);
+                  final resolvedValue = resolvedId != null
+                      ? masterDataProvider.getPaymentMethodValue(resolvedId)
+                      : null;
+                  _extraPaymentValues[entry.key] =
+                      (resolvedValue != null && resolvedValue.isNotEmpty)
+                          ? resolvedValue
+                          : entry.key;
                 }
               }
             } catch (e) {
@@ -7255,6 +7290,8 @@ class BillingPageState extends State<BillingPage>
           cardMethodId: billingProvider.cardPaymentMethodId,
           upiMethodId: billingProvider.upiPaymentMethodId,
           codMethodId: billingProvider.codPaymentMethodId,
+          extraAmounts: isQuotationMode ? const {} : _extraPaymentAmounts,
+          extraValues: isQuotationMode ? const {} : _extraPaymentValues,
 
           // Discount State
           couponCode: coupenCodeTextController.text,
@@ -7414,13 +7451,25 @@ class BillingPageState extends State<BillingPage>
           },
           onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
               upi, cod, debit, trans, toCredit,
-              {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+              {cashMethodId,
+              cardMethodId,
+              upiMethodId,
+              codMethodId,
+              extraMethodAmounts,
+              extraMethodValues}) {
             // Update payment state
             _isCashSelected = isCash;
             _isCardSelected = isCard;
             _isUpiSelected = isUpi;
             _isCodSelected = isCod;
             _isDebitSelected = isDebit;
+            if (extraMethodAmounts != null) {
+              _extraPaymentAmounts =
+                  Map<String, String>.from(extraMethodAmounts);
+            }
+            if (extraMethodValues != null) {
+              _extraPaymentValues = Map<String, String>.from(extraMethodValues);
+            }
             _cashAmountController.text = cash;
             _cardAmountController.text = card;
             _upiAmountController.text = upi;
@@ -7458,7 +7507,8 @@ class BillingPageState extends State<BillingPage>
             double total = (double.tryParse(cash) ?? 0) +
                 (double.tryParse(card) ?? 0) +
                 (double.tryParse(upi) ?? 0) +
-                (double.tryParse(cod) ?? 0);
+                (double.tryParse(cod) ?? 0) +
+                _sumExtraPaidAmounts();
 
             _paidAmountController.text = total.toStringAsFixed(2);
             _updateBalanceAmount();
@@ -7813,23 +7863,32 @@ class BillingPageState extends State<BillingPage>
     if (selectedMethodsForStorage.isNotEmpty) {
       // Always store payment as multi-payment JSON (even when a single method is selected).
       // This keeps local-save and sync request bodies in the same structure.
+      final Map<String, dynamic> amountsMap = {
+        cashId: _cashAmountController.text.isNotEmpty
+            ? _cashAmountController.text
+            : "0",
+        cardId: _cardAmountController.text.isNotEmpty
+            ? _cardAmountController.text
+            : "0",
+        upiId: _upiAmountController.text.isNotEmpty
+            ? _upiAmountController.text
+            : "0",
+        codId: _codAmountController.text.isNotEmpty
+            ? _codAmountController.text
+            : "0",
+        debitId: debitAmount > 0 ? _debitAmountController.text : "0",
+      };
+      // Dynamic/extra methods (Cheque, Wallet, Bank Transfer, ...)
+      _extraPaymentAmounts.forEach((methodId, amountStr) {
+        final amount = double.tryParse(amountStr) ?? 0;
+        if (amount > 0) {
+          amountsMap[methodId] = amountStr;
+        }
+      });
+
       Map<String, dynamic> multiPaymentData = {
         "methods": selectedMethodsForStorage,
-        "amounts": {
-          cashId: _cashAmountController.text.isNotEmpty
-              ? _cashAmountController.text
-              : "0",
-          cardId: _cardAmountController.text.isNotEmpty
-              ? _cardAmountController.text
-              : "0",
-          upiId: _upiAmountController.text.isNotEmpty
-              ? _upiAmountController.text
-              : "0",
-          codId: _codAmountController.text.isNotEmpty
-              ? _codAmountController.text
-              : "0",
-          debitId: debitAmount > 0 ? _debitAmountController.text : "0",
-        },
+        "amounts": amountsMap,
         "isMultiPayment": true
       };
       paymentMethod = json.encode(multiPaymentData);
@@ -7861,7 +7920,11 @@ class BillingPageState extends State<BillingPage>
     double cardAmount = double.tryParse(_cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
     double codAmount = double.tryParse(_codAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
+    double totalCollected = cashAmount +
+        cardAmount +
+        upiAmount +
+        codAmount +
+        _sumExtraPaidAmounts();
 
     double balance = 0.0;
 
@@ -7973,8 +8036,22 @@ class BillingPageState extends State<BillingPage>
     double upiAmount = double.tryParse(_upiAmountController.text) ?? 0.0;
     double codAmount = double.tryParse(_codAmountController.text) ?? 0.0;
     // Note: We don't include debit/toCustomerCredit in total paid amount
-    // as it represents money going to customer credit, not money collected
-    return cashAmount + cardAmount + upiAmount + codAmount;
+    // as it represents money going to customer credit, not money collected.
+    // Dynamic/extra methods ARE money collected, so include them.
+    return cashAmount +
+        cardAmount +
+        upiAmount +
+        codAmount +
+        _sumExtraPaidAmounts();
+  }
+
+  /// Sum of amounts entered against dynamic/extra payment methods.
+  double _sumExtraPaidAmounts() {
+    double total = 0.0;
+    for (final amountStr in _extraPaymentAmounts.values) {
+      total += double.tryParse(amountStr) ?? 0.0;
+    }
+    return total;
   }
 
   double _getDeliveryChargeForOrder() {
@@ -8050,6 +8127,12 @@ class BillingPageState extends State<BillingPage>
     //     (double.tryParse(_debitAmountController.text) ?? 0) > 0) {
     //   methods.add("DEBIT");
     // }
+    // Dynamic/extra methods (Cheque, Wallet, Bank Transfer, ...)
+    _extraPaymentAmounts.forEach((methodId, amountStr) {
+      if ((double.tryParse(amountStr) ?? 0) > 0) {
+        methods.add(methodId);
+      }
+    });
     return methods;
   }
 
@@ -8103,6 +8186,17 @@ class BillingPageState extends State<BillingPage>
     //     "amount": double.tryParse(_debitAmountController.text) ?? 0,
     //   });
     // }
+
+    // Dynamic/extra methods (Cheque, Wallet, Bank Transfer, ...)
+    _extraPaymentAmounts.forEach((methodId, amountStr) {
+      final amount = double.tryParse(amountStr) ?? 0;
+      if (amount > 0) {
+        paidMethods.add({
+          "method": methodId,
+          "amount": amount,
+        });
+      }
+    });
     return PaymentHelper.normalizePaidMethodsForApi(
       paidMethods: paidMethods,
       balanceAmount: _balanceAmount,
@@ -8391,6 +8485,7 @@ class BillingPageState extends State<BillingPage>
         initialCodAmount: initialCod,
         initialDebitAmount: initialDebit,
         initialTransactionNumber: _transactionNumberController.text,
+        initialExtraAmounts: _extraPaymentAmounts,
         cartTotal: effectiveTotal,
         customerPrevBalance:
             isDefaultCustomer ? 0.0 : (selectedCustomer?.balance ?? 0.0),
@@ -8414,6 +8509,8 @@ class BillingPageState extends State<BillingPage>
           String? cardMethodId,
           String? upiMethodId,
           String? codMethodId,
+          Map<String, String>? extraMethodAmounts,
+          Map<String, String>? extraMethodValues,
         }) {
           setState(() {
             _hasOpenedPaymentModalOnce =
@@ -8423,6 +8520,12 @@ class BillingPageState extends State<BillingPage>
             _isUpiSelected = isUpi;
             _isCodSelected = isCod;
             _isDebitSelected = isDebit;
+            if (extraMethodAmounts != null) {
+              _extraPaymentAmounts = Map<String, String>.from(extraMethodAmounts);
+            }
+            if (extraMethodValues != null) {
+              _extraPaymentValues = Map<String, String>.from(extraMethodValues);
+            }
             _cashAmountController.text = cashAmount;
             _cardAmountController.text = cardAmount;
             _upiAmountController.text = upiAmount;

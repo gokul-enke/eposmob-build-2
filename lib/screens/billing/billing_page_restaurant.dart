@@ -2019,7 +2019,12 @@ class BillingPageState extends State<BillingPageRestaurant>
           },
           onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
               upi, cod, debit, trans, toCredit,
-              {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+              {cashMethodId,
+              cardMethodId,
+              upiMethodId,
+              codMethodId,
+              extraMethodAmounts,
+              extraMethodValues}) {
             // Update payment state
             _isCashSelected = isCash;
             _isCardSelected = isCard;
@@ -6591,6 +6596,8 @@ class BillingPageState extends State<BillingPageRestaurant>
           String? cardMethodId,
           String? upiMethodId,
           String? codMethodId,
+          Map<String, String>? extraMethodAmounts,
+          Map<String, String>? extraMethodValues,
         }) {
           setState(() {
             _isCashSelected = isCash;

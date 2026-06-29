@@ -68,6 +68,10 @@ class CheckoutModal extends StatefulWidget {
   final String? cardMethodId;
   final String? upiMethodId;
   final String? codMethodId;
+  // Dynamic/extra payment methods (beyond CASH/CARD/UPI/COD), keyed by
+  // method id. Used to pre-fill the payment step when re-opening checkout.
+  final Map<String, String>? extraAmounts;
+  final Map<String, String>? extraValues;
 
   // Discount State
   final String couponCode;
@@ -116,7 +120,9 @@ class CheckoutModal extends StatefulWidget {
       {String? cashMethodId,
       String? cardMethodId,
       String? upiMethodId,
-      String? codMethodId}) onPaymentUpdated;
+      String? codMethodId,
+      Map<String, String>? extraMethodAmounts,
+      Map<String, String>? extraMethodValues}) onPaymentUpdated;
   final Function(DateTime quotationDate, DateTime expiryDate)?
       onQuotationDatesUpdated;
 
@@ -153,6 +159,8 @@ class CheckoutModal extends StatefulWidget {
     this.cardMethodId,
     this.upiMethodId,
     this.codMethodId,
+    this.extraAmounts,
+    this.extraValues,
     this.enableDelivery = false,
     this.deliveryMethod = "",
     this.deliveryMethodId = "",
@@ -265,6 +273,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
   late String _lDebitAmount;
   late String _lTransactionNumber;
   late bool _lToCustomerCreditEnabled;
+  // Dynamic/extra payment methods (beyond CASH/CARD/UPI/COD), keyed by
+  // method id. Kept so they survive across steps and reach the parent's POST.
+  Map<String, String> _lExtraAmounts = {};
+  Map<String, String> _lExtraValues = {};
   late DateTime _lQuotationDate;
   late DateTime _lQuotationExpiryDate;
 
@@ -355,6 +367,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     _lDebitAmount = widget.debitAmount;
     _lTransactionNumber = widget.transactionNumber;
     _lToCustomerCreditEnabled = widget.toCustomerCreditEnabled;
+    _lExtraAmounts = Map<String, String>.from(widget.extraAmounts ?? const {});
+    _lExtraValues = Map<String, String>.from(widget.extraValues ?? const {});
     _lQuotationDate = widget.initialQuotationDate ?? DateTime.now();
     _lQuotationExpiryDate = widget.initialQuotationExpiryDate ??
         _lQuotationDate.add(const Duration(days: 30));
@@ -940,7 +954,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
       {String? cashMethodId,
       String? cardMethodId,
       String? upiMethodId,
-      String? codMethodId}) {
+      String? codMethodId,
+      Map<String, String>? extraMethodAmounts,
+      Map<String, String>? extraMethodValues}) {
     setState(() {
       _lIsCashSelected = isCash;
       _lIsCardSelected = isCard;
@@ -954,6 +970,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
       _lDebitAmount = debit;
       _lTransactionNumber = trans;
       _lToCustomerCreditEnabled = toCredit;
+      if (extraMethodAmounts != null) {
+        _lExtraAmounts = Map<String, String>.from(extraMethodAmounts);
+      }
+      if (extraMethodValues != null) {
+        _lExtraValues = Map<String, String>.from(extraMethodValues);
+      }
       _hasOpenedPaymentModalOnce = true;
     });
     widget.onPaymentUpdated(isCash, isCard, isUpi, isCod, isDebit, cash, card,
@@ -961,7 +983,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
         cashMethodId: cashMethodId,
         cardMethodId: cardMethodId,
         upiMethodId: upiMethodId,
-        codMethodId: codMethodId);
+        codMethodId: codMethodId,
+        extraMethodAmounts: extraMethodAmounts,
+        extraMethodValues: extraMethodValues);
   }
 
   void _handleQuotationDateUpdate({
@@ -2711,7 +2735,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               cashMethodId: widget.cashMethodId,
                               cardMethodId: widget.cardMethodId,
                               upiMethodId: widget.upiMethodId,
-                              codMethodId: widget.codMethodId);
+                              codMethodId: widget.codMethodId,
+                              extraMethodAmounts: _lExtraAmounts,
+                              extraMethodValues: _lExtraValues);
                         }
 
                         _nextStep();
@@ -2813,6 +2839,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           : _lCodAmount,
                       initialDebitAmount: _lDebitAmount,
                       initialTransactionNumber: _lTransactionNumber,
+                      initialExtraAmounts: _lExtraAmounts,
                       cartTotal: effectiveTotal,
                       customerPrevBalance:
                           _isDefaultCustomer(_localSelectedCustomer)
@@ -2831,7 +2858,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           {cashMethodId,
                           cardMethodId,
                           upiMethodId,
-                          codMethodId}) {
+                          codMethodId,
+                          extraMethodAmounts,
+                          extraMethodValues}) {
                         _handlePaymentUpdate(
                             isCash,
                             isCard,
@@ -2848,7 +2877,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             cashMethodId: cashMethodId,
                             cardMethodId: cardMethodId,
                             upiMethodId: upiMethodId,
-                            codMethodId: codMethodId);
+                            codMethodId: codMethodId,
+                            extraMethodAmounts: extraMethodAmounts,
+                            extraMethodValues: extraMethodValues);
                         _nextStep();
                       },
                     ),

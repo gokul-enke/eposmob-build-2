@@ -9,6 +9,7 @@ import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
@@ -1027,15 +1028,32 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
   }
 
+  /// Returns a payment breakdown keyed by human-readable method names. Prefers
+  /// the structured map already on [params]; otherwise resolves the raw
+  /// multi-payment JSON in `paymentMethod` (whose keys are numeric ids) into
+  /// names so dynamic/extra methods (BANK, Cheque, ...) don't print as ids.
+  Map<String, dynamic>? _resolvedBreakdown(ReceiptLayoutParams params) {
+    if (params.paymentBreakdown != null &&
+        params.paymentBreakdown!.isNotEmpty) {
+      return params.paymentBreakdown;
+    }
+    final parsed =
+        PaymentHelper.parseLocalMultiPayment(params.context, params.paymentMethod);
+    if (parsed != null && parsed.paymentBreakdown.isNotEmpty) {
+      return parsed.paymentBreakdown;
+    }
+    return null;
+  }
+
   /// Human-readable payment method(s). Handles a structured `paymentBreakdown`
   /// map, a JSON multi-payment payload in `paymentMethod`, or a single method.
   /// For multiple payments the method names are joined with ', '.
   String _paymentMethodSummary(ReceiptLayoutParams params) {
-    // Structured breakdown map.
-    if (params.paymentBreakdown != null &&
-        params.paymentBreakdown!.isNotEmpty) {
+    // Structured breakdown map (name-keyed; resolves numeric ids when needed).
+    final breakdown = _resolvedBreakdown(params);
+    if (breakdown != null && breakdown.isNotEmpty) {
       final methods = <String>[];
-      params.paymentBreakdown!.forEach((method, amount) {
+      breakdown.forEach((method, amount) {
         final amt = double.tryParse(amount.toString()) ?? 0.0;
         if (amt > 0) methods.add(_paymentMethodLabel(method));
       });
@@ -1084,10 +1102,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final lines = <pw.Widget>[];
     bool isMulti = false;
 
-    if (params.paymentBreakdown != null &&
-        params.paymentBreakdown!.isNotEmpty) {
+    final breakdown = _resolvedBreakdown(params);
+    if (breakdown != null && breakdown.isNotEmpty) {
       isMulti = true;
-      params.paymentBreakdown!.forEach((method, amount) {
+      breakdown.forEach((method, amount) {
         final amt = double.tryParse(amount.toString()) ?? 0.0;
         if (amt > 0) {
           lines.add(pw.Text(
