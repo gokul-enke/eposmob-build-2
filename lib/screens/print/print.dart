@@ -379,6 +379,11 @@ class PrintPage extends StatefulWidget {
     }
 
     if (hasReturns) {
+      if (_isStandardPaperSize(paperSize)) {
+        return docConfigProvider.getCachedConfig("Sales and Return Bill A4") ??
+            docConfigProvider.getCachedConfig("Sales and Return Bill") ??
+            docConfigProvider.getCachedConfig("sales_and_return_bill");
+      }
       return docConfigProvider.getCachedConfig("Sales and Return Bill") ??
           docConfigProvider.getCachedConfig("sales_and_return_bill");
     }
