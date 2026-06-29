@@ -2168,18 +2168,24 @@ class LocalProductProvider extends ChangeNotifier {
     // Check if the product already exists in the list
     int index = _products.indexWhere((p) => p.productId == product.productId);
     if (index == -1) {
-      // If the product does not exist, add it to the first position in the list
       _products.insert(0, product);
+      _filteredProducts.insert(0, product);
       _rebuildBarcodeIndex();
       _saveProductsToHive();
-      notifyListeners(); // Notify listeners about the change
+      notifyListeners();
       debugPrint("✅ Product added to local storage successfully");
     } else {
-      // Optionally, you can update the existing product if needed
-      _products[index] = product; // Update the existing product
+      _products[index] = product;
+      final filteredIndex =
+          _filteredProducts.indexWhere((p) => p.productId == product.productId);
+      if (filteredIndex == -1) {
+        _filteredProducts.insert(0, product);
+      } else {
+        _filteredProducts[filteredIndex] = product;
+      }
       _rebuildBarcodeIndex();
       _saveProductsToHive();
-      notifyListeners(); // Notify listeners about the change
+      notifyListeners();
       debugPrint("✅ Product updated in local storage successfully");
     }
 
