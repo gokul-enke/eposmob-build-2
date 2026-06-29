@@ -1485,11 +1485,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         4: FlexColumnWidth(1.2),
                         5: FlexColumnWidth(1.4),
                         6: FlexColumnWidth(1.4),
-                        7: FlexColumnWidth(1.0),
+                        7: FlexColumnWidth(1.2),
                         8: FlexColumnWidth(1.2),
-                        9: FlexColumnWidth(1.2),
-                        10: FlexColumnWidth(1.0),
-                        11: FlexColumnWidth(0.8),
+                        9: FlexColumnWidth(1.0),
+                        10: FlexColumnWidth(1.2),
+                        11: FlexColumnWidth(1.2),
+                        12: FlexColumnWidth(1.0),
+                        13: FlexColumnWidth(0.8),
                       },
                       border: null,
                       defaultVerticalAlignment:
@@ -1504,6 +1506,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             _buildStockTableHeader('Purchase Price'),
                             _buildStockTableHeader('Supplier'),
                             _buildStockTableHeader('Store Name'),
+                            _buildStockTableHeader('Wholesale Price'),
+                            _buildStockTableHeader('Min Count'),
                             _buildStockTableHeader('SKU'),
                             _buildStockTableHeader('Date'),
                             _buildStockTableHeader('Expiry Date'),
@@ -1542,11 +1546,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                           4: FlexColumnWidth(1.2),
                           5: FlexColumnWidth(1.4),
                           6: FlexColumnWidth(1.4),
-                          7: FlexColumnWidth(1.0),
+                          7: FlexColumnWidth(1.2),
                           8: FlexColumnWidth(1.2),
-                          9: FlexColumnWidth(1.2),
-                          10: FlexColumnWidth(1.0),
-                          11: FlexColumnWidth(0.8),
+                          9: FlexColumnWidth(1.0),
+                          10: FlexColumnWidth(1.2),
+                          11: FlexColumnWidth(1.2),
+                          12: FlexColumnWidth(1.0),
+                          13: FlexColumnWidth(0.8),
                         },
                         border: null,
                         defaultVerticalAlignment:
@@ -1578,6 +1584,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                       : 'N/A'),
                               _buildStockTableCell(stock.supplier ?? 'N/A'),
                               _buildStockTableCell(stock.storeName ?? 'N/A'),
+                              _buildStockTableCell(
+                                  stock.wholesalePrice != null &&
+                                          stock.wholesalePrice!.isNotEmpty
+                                      ? '$currency ${stock.wholesalePrice}'
+                                      : 'N/A'),
+                              _buildStockTableCell(
+                                  stock.wholesaleMinUnit?.toString() ?? 'N/A'),
                               _buildStockTableCell(stock.sku ?? 'N/A'),
                               _buildStockTableCell(stock.date ?? 'N/A'),
                               _buildStockTableCell(stock.expiryDate ?? 'N/A'),
