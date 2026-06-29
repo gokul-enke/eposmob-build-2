@@ -264,6 +264,166 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
     );
   }
 
+  void _showEditItemQuantityDialog(dynamic cartItem, {bool isLocal = false}) {
+    final double quantity = isLocal
+        ? (cartItem as LocalCartItem).quantity.toDouble()
+        : (double.tryParse((cartItem['quantity'] ?? 1).toString()) ?? 1.0);
+
+    final String productName = isLocal
+        ? (cartItem as LocalCartItem).product.productName ?? 'Item'
+        : (cartItem['product']?['name'] ?? cartItem['product_name'] ?? 'Item');
+
+    final TextEditingController quantityController =
+        TextEditingController(text: quantity.toStringAsFixed(0));
+
+    quantityController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: quantityController.text.length,
+    );
+
+    void handleUpdate() {
+      Navigator.pop(context);
+      final newQtyStr = quantityController.text;
+      final newQty = double.tryParse(newQtyStr);
+
+      if (newQty != null && newQty > 0) {
+        if (isLocal) {
+          final localItem = cartItem as LocalCartItem;
+          _updateCurrentCartItemQuantity(localItem, newQty);
+        } else {
+          _updateCartItemQuantityWithLoading(cartItem, newQty, 'increase');
+        }
+      } else {
+        showScaffoldError(context: context, message: 'Invalid quantity');
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.numbers_rounded,
+                    color: Color(0xFF059669), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Edit Quantity',
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18,
+                    0.21, const Color(0xFF1E293B)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                productName,
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                    0.21, const Color(0xFF1E293B)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Current Quantity: ${quantity.toStringAsFixed(0)}',
+                style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
+                    0.21, const Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: quantityController,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => handleUpdate(),
+                keyboardType: TextInputType.number,
+                style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                    0.21, const Color(0xFF1E293B)),
+                decoration: InputDecoration(
+                  labelText: 'New Quantity',
+                  labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                        color: Color(0xFF059669), width: 2),
+                  ),
+                ),
+                onTap: () {
+                  Provider.of<KeyboardProvider>(context, listen: false)
+                      .show('numeric', quantityController);
+                },
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          actions: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s14, 0.21, const Color(0xFF64748B)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: handleUpdate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF059669),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Update',
+                      style: buildCustomStyle(FontWeightManager.bold,
+                          FontSize.s14, 0.21, Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildSavedOrderItem(dynamic cartItem, int index) {
     final productName = cartItem['product']?['name'] ??
         cartItem['product_name'] ??
@@ -484,16 +644,24 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                         ),
                       ),
                     ),
-                    Container(
-                      width: widget.isCompact ? 32 : 40,
-                      alignment: Alignment.center,
-                      child: Text(
-                        quantity.toStringAsFixed(0),
-                        style: buildCustomStyle(
-                            FontWeightManager.bold,
-                            widget.isCompact ? FontSize.s14 : FontSize.s16,
-                            0.21,
-                            const Color(0xFF1E293B)),
+                    GestureDetector(
+                      onTap: isRemovable
+                          ? () => _showEditItemQuantityDialog(cartItem,
+                              isLocal: false)
+                          : null,
+                      child: Container(
+                        width: widget.isCompact ? 32 : 40,
+                        alignment: Alignment.center,
+                        child: Text(
+                          quantity.toStringAsFixed(0),
+                          style: buildCustomStyle(
+                              FontWeightManager.bold,
+                              widget.isCompact ? FontSize.s14 : FontSize.s16,
+                              0.21,
+                              isRemovable
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF1E293B)),
+                        ),
                       ),
                     ),
                     Material(
