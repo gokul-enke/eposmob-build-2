@@ -136,7 +136,7 @@ class _BillingPageMobileState extends State<BillingPageMobile> {
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.payment),
+              icon: Icon(Icons.point_of_sale),
               label: 'Billing',
             ),
             BottomNavigationBarItem(

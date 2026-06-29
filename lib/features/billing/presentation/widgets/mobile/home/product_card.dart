@@ -17,10 +17,10 @@ class ProductCard extends StatelessWidget {
 
   bool get _inStock {
     return (product.stock?.fold<num>(
-          0,
-          (sum, stock) => sum + (stock.quantity ?? 0),
-        ) ??
-        0) >
+              0,
+              (sum, stock) => sum + (stock.quantity ?? 0),
+            ) ??
+            0) >
         0;
   }
 

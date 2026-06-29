@@ -24,33 +24,35 @@ class PaymentSummary extends StatelessWidget {
         Provider.of<AppSettingsProvider>(context, listen: true);
     final billingProvider = Provider.of<BillingProvider>(context, listen: true);
     final deliveryMethodsProvider =
-      Provider.of<DeliveryMethodsProvider>(context, listen: true);
+        Provider.of<DeliveryMethodsProvider>(context, listen: true);
     final currency = appSettingsProvider.appSettings?.currency ?? '';
 
     final thresholdEnabled =
-      appSettingsProvider.appSettings?.freeDeliveryEnabled ??
-        false;
+        appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
     final thresholdAmount = double.tryParse(
-        appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
-          '',
-      ) ??
-      0.0;
+          appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
+              '',
+        ) ??
+        0.0;
 
     final discountedTotalForThreshold =
-      localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+        localProductProvider.priceSummary?.netTotal ??
+            localProductProvider.cartTotal;
 
     double deliveryCharge = 0.0;
     if (thresholdEnabled &&
-      !(thresholdAmount > 0 && discountedTotalForThreshold >= thresholdAmount)) {
+        !(thresholdAmount > 0 &&
+            discountedTotalForThreshold >= thresholdAmount)) {
       final selectedMethodId = billingProvider.deliveryMethodId;
       final selectedMethodName = billingProvider.deliveryMethod;
 
       for (final method in deliveryMethodsProvider.deliveryMethods) {
-      if ((selectedMethodId.isNotEmpty && method.id == selectedMethodId) ||
-        (selectedMethodName.isNotEmpty && method.name == selectedMethodName)) {
-        deliveryCharge = method.basePrice ?? 0.0;
-        break;
-      }
+        if ((selectedMethodId.isNotEmpty && method.id == selectedMethodId) ||
+            (selectedMethodName.isNotEmpty &&
+                method.name == selectedMethodName)) {
+          deliveryCharge = method.basePrice ?? 0.0;
+          break;
+        }
       }
     }
 
@@ -59,8 +61,8 @@ class PaymentSummary extends StatelessWidget {
 
     // Keep provider's total order amount in sync with cart total
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final netTotal =
-          localProductProvider.priceSummary?.netTotal ?? localProductProvider.cartTotal;
+      final netTotal = localProductProvider.priceSummary?.netTotal ??
+          localProductProvider.cartTotal;
       billingProvider.setTotalOrderAmount(netTotal + deliveryCharge);
     });
 
@@ -163,7 +165,8 @@ class PaymentSummary extends StatelessWidget {
         double roundedTotal = localProductProvider.getRoundedTotal(context);
         return AmountHelper.formatAmount(roundedTotal + deliveryCharge);
       }
-      return AmountHelper.formatAmount(localProductProvider.cartTotal + deliveryCharge);
+      return AmountHelper.formatAmount(
+          localProductProvider.cartTotal + deliveryCharge);
     }
 
     if (localProductProvider.priceSummary == null) {
@@ -180,11 +183,17 @@ class PaymentSummary extends StatelessWidget {
           children: [
             const Text(
               'Subtotal',
-              style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500),
             ),
             Text(
               '$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.subTotal)}',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
             ),
           ],
         ),
@@ -196,11 +205,13 @@ class PaymentSummary extends StatelessWidget {
           children: [
             const Text(
               'Discount',
-              style: TextStyle(fontSize: 14, color: Colors.red, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  fontSize: 14, color: Colors.red, fontWeight: FontWeight.w500),
             ),
             Text(
               '- $currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.discount)}',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red),
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red),
             ),
           ],
         ),
@@ -226,15 +237,18 @@ class PaymentSummary extends StatelessWidget {
               Text(
                 'Tax (VAT ${((localProductProvider.priceSummary!.subTotal > 0) ? (localProductProvider.priceSummary!.totalTax / localProductProvider.priceSummary!.subTotal * 100) : 15.0).toStringAsFixed(0)}%)',
                 style: const TextStyle(
-                  fontSize: 14, 
-                  color: Colors.black54, 
+                  fontSize: 14,
+                  color: Colors.black54,
                   fontWeight: FontWeight.w500,
                   decoration: TextDecoration.underline,
                 ),
               ),
               Text(
                 '$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
               ),
             ],
           ),
@@ -247,13 +261,19 @@ class PaymentSummary extends StatelessWidget {
           children: [
             const Text(
               'Delivery Charge',
-              style: TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.green,
+                  fontWeight: FontWeight.w500),
             ),
             Text(
               deliveryCharge == 0.0
                   ? 'Free'
                   : '$currency ${AmountHelper.formatAmount(deliveryCharge)}',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green),
             ),
           ],
         ),
@@ -266,7 +286,10 @@ class PaymentSummary extends StatelessWidget {
             children: [
               const Text(
                 'To Customer Credit',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0066CC)),
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0066CC)),
               ),
               Switch(
                 value: billingProvider.toCustomerCreditEnabled,
@@ -289,11 +312,17 @@ class PaymentSummary extends StatelessWidget {
           children: [
             const Text(
               'Total Payable',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0066CC)),
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0066CC)),
             ),
             Text(
               '$currency ${getFormattedTotal()}',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0066CC)),
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0066CC)),
             ),
           ],
         ),
@@ -305,11 +334,17 @@ class PaymentSummary extends StatelessWidget {
           children: [
             const Text(
               'Total Paid',
-              style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w500),
             ),
             Text(
               '$currency ${AmountHelper.formatAmount(billingProvider.totalPaidAmount)}',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
             ),
           ],
         ),
@@ -321,11 +356,17 @@ class PaymentSummary extends StatelessWidget {
           children: [
             const Text(
               'Balance',
-              style: TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.green,
+                  fontWeight: FontWeight.w500),
             ),
             Text(
               '$currency ${AmountHelper.formatAmount(billingProvider.balanceAmount)}',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green),
             ),
           ],
         ),

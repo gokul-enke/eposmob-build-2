@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_grid.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/new_order_button.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_app_bar.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_search_bar.dart';
 import 'package:pos_machine/features/billing/presentation/pages/add_product_mobile.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -75,7 +74,8 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const AddProductMobileScreen(),
+                              builder: (context) =>
+                                  const AddProductMobileScreen(),
                             ),
                           );
                         },
@@ -104,7 +104,8 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                       ),
                       const Spacer(),
                       GestureDetector(
-                        onTap: () => setState(() => _viewMode = ProductViewMode.grid),
+                        onTap: () =>
+                            setState(() => _viewMode = ProductViewMode.grid),
                         child: _ViewModeIcon(
                           icon: Icons.grid_view,
                           selected: _viewMode == ProductViewMode.grid,
@@ -112,7 +113,8 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                       ),
                       const SizedBox(width: 8),
                       GestureDetector(
-                        onTap: () => setState(() => _viewMode = ProductViewMode.list),
+                        onTap: () =>
+                            setState(() => _viewMode = ProductViewMode.list),
                         child: _ViewModeIcon(
                           icon: Icons.table_rows_outlined,
                           selected: _viewMode == ProductViewMode.list,
@@ -120,7 +122,8 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                       ),
                       const SizedBox(width: 8),
                       GestureDetector(
-                        onTap: () => setState(() => _viewMode = ProductViewMode.dense),
+                        onTap: () =>
+                            setState(() => _viewMode = ProductViewMode.dense),
                         child: _ViewModeIcon(
                           icon: Icons.apps,
                           selected: _viewMode == ProductViewMode.dense,
@@ -148,7 +151,8 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
     return products.where((product) {
       final name = product.productName?.toLowerCase() ?? '';
       final category = product.category?.name ?? '';
-      final matchesSearch = _query.isEmpty || name.contains(_query.toLowerCase());
+      final matchesSearch =
+          _query.isEmpty || name.contains(_query.toLowerCase());
       final matchesCategory = _selectedCategory == 'All products' ||
           category.toLowerCase() == _selectedCategory.toLowerCase();
       return matchesSearch && matchesCategory;
@@ -198,7 +202,8 @@ class _CategoryChips extends StatelessWidget {
             selectedColor: ColorManager.kPrimaryColor,
             backgroundColor: Colors.white,
             side: BorderSide(
-              color: selected ? ColorManager.kPrimaryColor : Colors.grey.shade200,
+              color:
+                  selected ? ColorManager.kPrimaryColor : Colors.grey.shade200,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(100),

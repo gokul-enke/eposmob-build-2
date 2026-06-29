@@ -17,7 +17,8 @@ class _LiveTimeDisplayState extends State<LiveTimeDisplay> {
   void initState() {
     super.initState();
     _timeString = _formatDateTime(DateTime.now());
-    _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _updateTime());
+    _timer =
+        Timer.periodic(const Duration(seconds: 1), (Timer t) => _updateTime());
   }
 
   @override

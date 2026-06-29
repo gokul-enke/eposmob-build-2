@@ -137,8 +137,10 @@ class OrdersScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _DetailRow(label: 'Items', value: order.items.length.toString()),
-                _DetailRow(label: 'Delivery', value: order.deliveryMethod ?? '-'),
+                _DetailRow(
+                    label: 'Items', value: order.items.length.toString()),
+                _DetailRow(
+                    label: 'Delivery', value: order.deliveryMethod ?? '-'),
                 _DetailRow(
                   label: 'Total',
                   value: '\$${order.total.toStringAsFixed(2)}',

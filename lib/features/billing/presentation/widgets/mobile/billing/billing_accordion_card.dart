@@ -75,7 +75,9 @@ class _BillingAccordionCardState extends State<BillingAccordionCard> {
                     ),
                   ),
                   Icon(
-                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: Colors.black54,
                     size: 24,
                   ),

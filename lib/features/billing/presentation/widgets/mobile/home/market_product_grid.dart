@@ -40,10 +40,10 @@ class MarketProductGrid extends StatelessWidget {
         itemBuilder: (context, index) {
           final product = products[index];
           final inStock = (product.stock?.fold<num>(
-                0,
-                (sum, stock) => sum + (stock.quantity ?? 0),
-              ) ??
-              0) >
+                    0,
+                    (sum, stock) => sum + (stock.quantity ?? 0),
+                  ) ??
+                  0) >
               0;
 
           return ProductListRow(
@@ -74,10 +74,10 @@ class MarketProductGrid extends StatelessWidget {
       itemBuilder: (context, index) {
         final product = products[index];
         final inStock = (product.stock?.fold<num>(
-              0,
-              (sum, stock) => sum + (stock.quantity ?? 0),
-            ) ??
-            0) >
+                  0,
+                  (sum, stock) => sum + (stock.quantity ?? 0),
+                ) ??
+                0) >
             0;
 
         return ProductCard(
@@ -108,10 +108,10 @@ class ProductListRow extends StatelessWidget {
 
   bool get _inStock {
     return (product.stock?.fold<num>(
-          0,
-          (sum, stock) => sum + (stock.quantity ?? 0),
-        ) ??
-        0) >
+              0,
+              (sum, stock) => sum + (stock.quantity ?? 0),
+            ) ??
+            0) >
         0;
   }
 
@@ -201,8 +201,8 @@ class ProductListRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color:
                             inStock ? Colors.green.shade50 : Colors.red.shade50,
