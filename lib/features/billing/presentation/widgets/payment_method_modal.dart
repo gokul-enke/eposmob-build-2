@@ -31,6 +31,9 @@ class PaymentMethodModal extends StatefulWidget {
   final String initialCodAmount;
   final String initialDebitAmount;
   final String initialTransactionNumber;
+  // Pre-entered amounts for dynamic/extra methods (methodId -> amount string),
+  // used when re-opening the modal for an order that already used them.
+  final Map<String, String>? initialExtraAmounts;
   final double cartTotal;
   // Customer previous balance (positive = customer has credit; negative = customer owes)
   final double customerPrevBalance;
@@ -51,6 +54,12 @@ class PaymentMethodModal extends StatefulWidget {
     String? cardMethodId,
     String? upiMethodId,
     String? codMethodId,
+    // Dynamic methods beyond the four typed ones (e.g. Cheque, Wallet,
+    // Bank Transfer). Keyed by payment-method id (as String).
+    //   extraMethodAmounts: methodId -> entered amount string ("" when none)
+    //   extraMethodValues:  methodId -> method value/name (e.g. "CHEQUE")
+    Map<String, String>? extraMethodAmounts,
+    Map<String, String>? extraMethodValues,
   }) onPaymentMethodSelected;
   final VoidCallback?
       onAfterApply; // Optional callback to execute after applying payment methods
@@ -76,6 +85,7 @@ class PaymentMethodModal extends StatefulWidget {
     this.initialCodAmount = "",
     required this.initialDebitAmount,
     required this.initialTransactionNumber,
+    this.initialExtraAmounts,
     required this.cartTotal,
     this.customerPrevBalance = 0.0,
     required this.onPaymentMethodSelected,
@@ -136,6 +146,18 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   String? _codPaymentMethodId;
   List<MasterDataValue> _paymentMethods = [];
   bool _isLoadingPaymentMethods = false;
+
+  // Dynamic payment methods returned by the API beyond the four typed ones
+  // (CASH/CARD/UPI/COD). Each gets its own controller/focus-node/selection,
+  // all keyed by the method id (as String). This is what makes the modal
+  // "fully dynamic": any method the backend configures shows up here.
+  final List<MasterDataValue> _extraMethods = [];
+  final Map<String, TextEditingController> _extraControllers = {};
+  final Map<String, FocusNode> _extraFocusNodes = {};
+  final Map<String, bool> _extraSelected = {};
+  final Map<String, VoidCallback> _extraListeners = {};
+
+  static const Set<String> _typedMethodValues = {'CASH', 'CARD', 'UPI', 'COD'};
 
   // Credit option (visual only, for sales staff)
   bool isCreditSelected = false;
@@ -385,7 +407,30 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       cardMethodId: _cardPaymentMethodId,
       upiMethodId: _upiPaymentMethodId,
       codMethodId: _codPaymentMethodId,
+      extraMethodAmounts: _buildExtraAmountsMap(),
+      extraMethodValues: _buildExtraValuesMap(),
     );
+  }
+
+  /// methodId -> entered amount string (only for selected extra methods).
+  Map<String, String> _buildExtraAmountsMap() {
+    final map = <String, String>{};
+    for (final method in _extraMethods) {
+      final key = method.id.toString();
+      final selected = _extraSelected[key] ?? false;
+      final text = _extraControllers[key]?.text ?? '';
+      map[key] = selected ? text : '';
+    }
+    return map;
+  }
+
+  /// methodId -> method value/name (e.g. "CHEQUE"), for every extra method.
+  Map<String, String> _buildExtraValuesMap() {
+    final map = <String, String>{};
+    for (final method in _extraMethods) {
+      map[method.id.toString()] = method.value;
+    }
+    return map;
   }
 
   void _debounceNotifyChanges() {
@@ -420,6 +465,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     toCustomerCreditController.removeListener(_toCustomerCreditListener);
     toCustomerCreditController.dispose();
     creditAmountController.dispose();
+    _disposeExtraMethods();
     super.dispose();
   }
 
@@ -677,6 +723,25 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           debugPrint('📦 COD ID: $_codPaymentMethodId');
         }
       }
+
+      // Build dynamic rows for any method that is not one of the four typed
+      // ones. Re-derive from scratch so repeated calls (cache + fetch) don't
+      // create duplicate controllers.
+      _disposeExtraMethods();
+      for (final method in sortedMethods) {
+        if (_typedMethodValues.contains(method.value.toUpperCase())) continue;
+        final key = method.id.toString();
+        _extraMethods.add(method);
+        final initialAmount = widget.initialExtraAmounts?[key] ?? '';
+        final controller = TextEditingController(text: initialAmount);
+        void listener() => _handleExtraAmountChange(key);
+        controller.addListener(listener);
+        _extraControllers[key] = controller;
+        _extraFocusNodes[key] = FocusNode();
+        _extraSelected[key] = initialAmount.isNotEmpty;
+        _extraListeners[key] = listener;
+        debugPrint('🧾 EXTRA method "${method.value}" ID: $key');
+      }
     });
 
     // Notify parent with the newly loaded payment method IDs
@@ -694,7 +759,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
+    double totalCollected =
+        cashAmount + cardAmount + upiAmount + codAmount + _sumExtraAmounts();
 
     // Net due is always the current purchase total in the modal
     final double netDue = widget.cartTotal;
@@ -779,7 +845,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
+    double totalCollected =
+        cashAmount + cardAmount + upiAmount + codAmount + _sumExtraAmounts();
 
     double cashBal = 0.0;
 
@@ -884,7 +951,87 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
     // Total Paid = amounts actually collected now (cash + card + UPI + COD)
-    return cashAmount + cardAmount + upiAmount + codAmount;
+    // plus any dynamic/extra methods.
+    return cashAmount + cardAmount + upiAmount + codAmount + _sumExtraAmounts();
+  }
+
+  /// Sum of all amounts entered against dynamic/extra methods.
+  double _sumExtraAmounts() {
+    double total = 0.0;
+    for (final controller in _extraControllers.values) {
+      total += double.tryParse(controller.text) ?? 0.0;
+    }
+    return total;
+  }
+
+  void _disposeExtraMethods() {
+    for (final entry in _extraControllers.entries) {
+      final listener = _extraListeners[entry.key];
+      if (listener != null) entry.value.removeListener(listener);
+      entry.value.dispose();
+    }
+    for (final node in _extraFocusNodes.values) {
+      node.dispose();
+    }
+    _extraMethods.clear();
+    _extraControllers.clear();
+    _extraFocusNodes.clear();
+    _extraSelected.clear();
+    _extraListeners.clear();
+  }
+
+  /// Text-change handler for a dynamic/extra method field. Mirrors the typed
+  /// methods: typing a value auto-selects the method, recalculates balance and
+  /// notifies the parent.
+  void _handleExtraAmountChange(String methodId) {
+    if (!mounted) return;
+    final controller = _extraControllers[methodId];
+    if (controller == null) return;
+    setState(() {
+      if (controller.text.isNotEmpty) {
+        _extraSelected[methodId] = true;
+      }
+    });
+    _calculateBalance();
+    _debounceNotifyChanges();
+  }
+
+  /// Toggle a dynamic/extra method on/off. On select we auto-fill the
+  /// remaining balance (so a single tap settles the bill); on deselect we
+  /// clear the field.
+  void _toggleExtraMethod(String methodId) {
+    final controller = _extraControllers[methodId];
+    final focusNode = _extraFocusNodes[methodId];
+    if (controller == null) return;
+    setState(() {
+      final nowSelected = !(_extraSelected[methodId] ?? false);
+      _extraSelected[methodId] = nowSelected;
+      if (nowSelected) {
+        final remaining = widget.cartTotal - _getTotalPaidAmount();
+        if (remaining > 0) {
+          controller.text = remaining.toStringAsFixed(2);
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          focusNode?.requestFocus();
+          if (controller.text.isNotEmpty) {
+            controller.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: controller.text.length,
+            );
+          }
+          Provider.of<KeyboardProvider>(context, listen: false).show(
+            'number',
+            controller,
+            replaceOnFirstInput: true,
+          );
+        });
+      } else {
+        controller.clear();
+      }
+      _calculateBalance();
+      _notifyChanges();
+    });
   }
 
   void _autoFillSelectedMethodAmount(String paymentType) {
@@ -1308,6 +1455,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                 shortcutLabel: _shortcutForPaymentType('cod'),
                               ),
                             ),
+                            SizedBox(height: isDenseEmbedded ? 10 : 15),
+                          ],
+
+                          // Dynamic / extra payment methods (Cheque, Wallet,
+                          // Bank Transfer, ... — anything the API returns
+                          // beyond the four typed methods).
+                          for (final method in _extraMethods) ...[
+                            _buildExtraPaymentRow(method, size),
                             SizedBox(height: isDenseEmbedded ? 10 : 15),
                           ],
 
@@ -1842,6 +1997,120 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           replaceOnFirstInput: true,
                         );
                       }),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Row for a dynamic/extra payment method. Mirrors [_buildModalPaymentRow]
+  /// visually but is driven entirely by the per-method maps keyed by method id.
+  Widget _buildExtraPaymentRow(MasterDataValue method, Size size) {
+    final key = method.id.toString();
+    final controller = _extraControllers[key];
+    final focusNode = _extraFocusNodes[key];
+    if (controller == null) return const SizedBox.shrink();
+    final bool isSelected = _extraSelected[key] ?? false;
+    final String focusKey = 'extra_$key';
+    final bool isFocused = _focusedPaymentKey == focusKey;
+    final isDenseEmbedded =
+        widget.fullWidth && (size.width <= 1100 || size.height <= 800);
+    final String label = method.description.isNotEmpty
+        ? method.description
+        : method.value;
+
+    return Row(
+      children: [
+        Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
+          child: InkWell(
+            onTap: () => _toggleExtraMethod(key),
+            borderRadius: BorderRadius.circular(5),
+            onFocusChange: (focused) {
+              setState(() {
+                _focusedPaymentKey = focused ? focusKey : null;
+              });
+            },
+            child: BuildBoxShadowContainer(
+              border: isFocused
+                  ? Border.all(color: Colors.orange, width: 3)
+                  : isSelected
+                      ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
+                      : Border.all(color: Colors.grey.shade300),
+              padding: EdgeInsets.symmetric(
+                horizontal: isDenseEmbedded ? 6 : 8,
+                vertical: isDenseEmbedded ? 5 : 6,
+              ),
+              blurRadius: isFocused ? 8 : 4,
+              circleRadius: 5,
+              height: size.height * .06,
+              width: isDenseEmbedded ? 118 : 132,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  WebsafeSvg.asset(
+                    ImageAssets.creditCardIcon,
+                    width: 14,
+                    height: 14,
+                    colorFilter: ColorFilter.mode(
+                        isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                        BlendMode.srcIn),
+                    fit: BoxFit.none,
+                  ),
+                  SizedBox(width: isDenseEmbedded ? 4 : 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        isDenseEmbedded ? FontSize.s10 : FontSize.s11,
+                        0.12,
+                        isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        SizedBox(width: isDenseEmbedded ? 10 : 15),
+        Expanded(
+          child: buildColumnWidgetForTextFields(
+            controller: controller,
+            size: size,
+            height: size.height * .06,
+            hintText: 'Enter $label amount',
+            keyboardType: TextInputType.number,
+            focusNode: focusNode,
+            onTap: () {
+              setState(() {
+                _extraSelected[key] = true;
+                final remaining = widget.cartTotal - _getTotalPaidAmount();
+                if (controller.text.isEmpty && remaining > 0) {
+                  controller.text = remaining.toStringAsFixed(2);
+                }
+                _notifyChanges();
+              });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (controller.text.isNotEmpty &&
+                    focusNode != null &&
+                    focusNode.hasFocus) {
+                  controller.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: controller.text.length,
+                  );
+                }
+              });
+              Provider.of<KeyboardProvider>(context, listen: false).show(
+                'number',
+                controller,
+                replaceOnFirstInput: true,
+              );
+            },
           ),
         ),
       ],

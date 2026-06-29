@@ -22,6 +22,7 @@ import 'package:pos_machine/screens/print/layouts/layouts.dart';
 import 'package:pos_machine/screens/print/standard_layouts/standard_layouts.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -262,7 +263,8 @@ class PrintPage extends StatefulWidget {
         customerCrNumber: customerCrNumber,
         customerType: customerType,
         documentTitleOverride: documentTitleOverride,
-        paymentBreakdown: paymentBreakdown,
+        paymentBreakdown: _resolvePaymentBreakdown(
+            context, paymentBreakdown, paymentMethod),
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
         isDefaultCustomer: isDefaultCustomer,
@@ -338,6 +340,28 @@ class PrintPage extends StatefulWidget {
         '[PrintPage.$source] B2B invoice title key=$b2bTitleKey, exists=${b2bTitle != null}, visible=${b2bTitle?.visible}, value=${b2bTitle?.value}, default=${b2bTitle?.defaultValue}');
   }
 
+  /// Ensures the payment breakdown handed to a layout is keyed by human-readable
+  /// method names. When a caller only supplies the raw multi-payment JSON
+  /// (`paymentMethod`) — common for locally-saved/offline orders — the method
+  /// keys are numeric ids (e.g. "15"). We resolve those to names here, where a
+  /// BuildContext + providers are available, so dynamic/extra methods (BANK,
+  /// Cheque, Online Payment, ...) print by name on every layout.
+  static Map<String, dynamic>? _resolvePaymentBreakdown(
+    BuildContext context,
+    Map<String, dynamic>? paymentBreakdown,
+    String? paymentMethod,
+  ) {
+    if (paymentBreakdown != null && paymentBreakdown.isNotEmpty) {
+      return paymentBreakdown;
+    }
+    final parsed =
+        PaymentHelper.parseLocalMultiPayment(context, paymentMethod);
+    if (parsed != null && parsed.paymentBreakdown.isNotEmpty) {
+      return parsed.paymentBreakdown;
+    }
+    return paymentBreakdown;
+  }
+
   static String _cartItemName(dynamic item) {
     if (item is Map) {
       return (item['productName'] ?? item['product_name'] ?? '').toString();
@@ -379,6 +403,11 @@ class PrintPage extends StatefulWidget {
     }
 
     if (hasReturns) {
+      if (_isStandardPaperSize(paperSize)) {
+        return docConfigProvider.getCachedConfig("Sales and Return Bill A4") ??
+            docConfigProvider.getCachedConfig("Sales and Return Bill") ??
+            docConfigProvider.getCachedConfig("sales_and_return_bill");
+      }
       return docConfigProvider.getCachedConfig("Sales and Return Bill") ??
           docConfigProvider.getCachedConfig("sales_and_return_bill");
     }
@@ -894,7 +923,8 @@ class _PrintPageState extends State<PrintPage> {
       customerCrNumber: widget.customerCrNumber,
       customerType: widget.customerType,
       documentTitleOverride: widget.documentTitleOverride,
-      paymentBreakdown: widget.paymentBreakdown,
+      paymentBreakdown: PrintPage._resolvePaymentBreakdown(
+          context, widget.paymentBreakdown, widget.paymentMethod),
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
@@ -1003,7 +1033,8 @@ class _PrintPageState extends State<PrintPage> {
       customerCrNumber: widget.customerCrNumber,
       customerType: widget.customerType,
       documentTitleOverride: widget.documentTitleOverride,
-      paymentBreakdown: widget.paymentBreakdown,
+      paymentBreakdown: PrintPage._resolvePaymentBreakdown(
+          context, widget.paymentBreakdown, widget.paymentMethod),
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,

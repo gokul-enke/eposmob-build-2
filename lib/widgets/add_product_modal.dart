@@ -1461,7 +1461,7 @@ class _AddProductWithBarcodeModalState
                     children: [
                       Expanded(
                         child: _buildTextField(
-                          "Min Margin %",
+                          "Max Discount Percentage",
                           _productMinMarginController,
                           TextInputType.number,
                           size,
@@ -1474,7 +1474,7 @@ class _AddProductWithBarcodeModalState
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildTextField(
-                          "Min Margin Price",
+                          "Max Discount Amount",
                           _productMinMarginPriceController,
                           TextInputType.number,
                           size,

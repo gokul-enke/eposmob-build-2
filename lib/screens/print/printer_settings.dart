@@ -72,13 +72,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   // List of available receipt themes for standard PDF printing (A4/A5)
   final List<Map<String, String>> standardPdfThemes = [
     {'id': 'classic', 'name': 'Classic'},
-    {'id': 'tax_invoice', 'name': 'Tax Invoice'},
-    {'id': 'detailed_tax_invoice', 'name': 'Detailed Tax Invoice'},
-    {'id': 'standard_tax_invoice', 'name': 'Standard Tax Invoice'},
     {'id': 'simplified_tax_invoice', 'name': 'Simplified Tax Invoice'},
-    {'id': 'corporate_tax_invoice', 'name': 'Corporate Tax Invoice'},
-    {'id': 'letterhead_tax_invoice', 'name': 'Letterhead Tax Invoice'},
-    {'id': 'new_classic', 'name': 'New Classic'},
   ];
 
   /// Returns the appropriate theme list based on selected paper size

@@ -63,6 +63,8 @@ class PaymentCoordinator {
           String? cardMethodId,
           String? upiMethodId,
           String? codMethodId,
+          Map<String, String>? extraMethodAmounts,
+          Map<String, String>? extraMethodValues,
         }) {
           bp.updatePaymentFromModal(
             isCash: isCash,

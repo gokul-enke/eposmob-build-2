@@ -66,10 +66,6 @@ class ProductProvider extends ChangeNotifier {
       if (rackNumber != null) 'rack_number': rackNumber,
       if (quantity != null) 'quantity': quantity,
       'store_id': activeStoreId,
-      if (minMarginPercentage != null && minMarginPercentage.trim().isNotEmpty)
-        'min_margin_percentage': num.tryParse(minMarginPercentage.trim()),
-      if (minMarginPrice != null && minMarginPrice.trim().isNotEmpty)
-        'min_margin_price': num.tryParse(minMarginPrice.trim()),
       if (productNames != null && productNames.isNotEmpty)
         'product_names': productNames,
     }..removeWhere((key, value) {
@@ -79,6 +75,22 @@ class ProductProvider extends ChangeNotifier {
         }
         return false;
       });
+
+    // Margin fields are explicitly clearable: when the caller passes a non-null
+    // value, always include the key so an erased field is sent to the server
+    // (instead of being dropped). The server requires a number, and 0 is
+    // treated as "no floor" by the cart logic, so an erased field is sent as 0.
+    // Added after removeWhere so a cleared value survives.
+    if (minMarginPercentage != null) {
+      body['min_margin_percentage'] = minMarginPercentage.trim().isEmpty
+          ? 0
+          : (num.tryParse(minMarginPercentage.trim()) ?? 0);
+    }
+    if (minMarginPrice != null) {
+      body['min_margin_price'] = minMarginPrice.trim().isEmpty
+          ? 0
+          : (num.tryParse(minMarginPrice.trim()) ?? 0);
+    }
 
     _setUpdating(true);
     try {

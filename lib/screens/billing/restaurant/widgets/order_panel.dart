@@ -1815,6 +1815,8 @@ class OrderPanelState extends State<OrderPanel> {
           String? cardMethodId,
           String? upiMethodId,
           String? codMethodId,
+          Map<String, String>? extraMethodAmounts,
+          Map<String, String>? extraMethodValues,
         }) {
           setState(() {
             _isCashSelected = isCash;
@@ -5796,7 +5798,12 @@ class OrderPanelState extends State<OrderPanel> {
           },
           onPaymentUpdated: (isCash, isCard, isUpi, isCod, isDebit, cash, card,
               upi, cod, debit, trans, toCredit,
-              {cashMethodId, cardMethodId, upiMethodId, codMethodId}) {
+              {cashMethodId,
+              cardMethodId,
+              upiMethodId,
+              codMethodId,
+              extraMethodAmounts,
+              extraMethodValues}) {
             setState(() {
               _isCashSelected = isCash;
               _isCardSelected = isCard;
