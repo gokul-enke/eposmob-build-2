@@ -1082,31 +1082,34 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     final unitPriceValue = double.parse(unitPrice);
     final maxTotal = maxQuantity * unitPriceValue;
 
-    // Update total when quantity changes
+    bool _updatingFromQuantity = false;
+    bool _updatingFromTotal = false;
+
     quantityController.addListener(() {
+      if (_updatingFromTotal) return;
       if (quantityController.text.isEmpty) return;
 
       final enteredQuantity = int.tryParse(quantityController.text) ?? 0;
 
-      // If entered quantity exceeds max, reset to max
       if (enteredQuantity > maxQuantity) {
-        quantityController.text = maxQuantity.toString();
+        quantityController.text = maxQuantity.toInt().toString();
         quantityController.selection = TextSelection.fromPosition(
           TextPosition(offset: quantityController.text.length),
         );
       }
 
+      _updatingFromQuantity = true;
       final total = enteredQuantity * unitPriceValue;
       returnTotalController.text = total.toStringAsFixed(2);
+      _updatingFromQuantity = false;
     });
 
-    // Update quantity when total changes
     returnTotalController.addListener(() {
+      if (_updatingFromQuantity) return;
       if (returnTotalController.text.isEmpty) return;
 
       final enteredTotal = double.tryParse(returnTotalController.text) ?? 0.0;
 
-      // If entered total exceeds max, reset to max
       if (enteredTotal > maxTotal) {
         returnTotalController.text = maxTotal.toStringAsFixed(2);
         returnTotalController.selection = TextSelection.fromPosition(
@@ -1114,11 +1117,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         );
       }
 
-      // Calculate and update quantity based on total
+      _updatingFromTotal = true;
       final calculatedQuantity = (enteredTotal / unitPriceValue).floor();
       if (calculatedQuantity <= maxQuantity) {
         quantityController.text = calculatedQuantity.toString();
       }
+      _updatingFromTotal = false;
     });
 
     showDialog(
@@ -1692,34 +1696,33 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             double paidAmount =
                 double.tryParse(paidAmountController.text) ?? 0.0;
 
-            // Calculate maximum returnable amount
+            // Calculate maximum returnable amount (session-only) and original items total
             double maxReturnAmount = 0.0;
+            double originalItemsTotal = 0.0;
             for (var item in _salesReturnItems) {
-              final itemReturned =
+              originalItemsTotal +=
+                  double.tryParse(item.totalPrice.toString()) ?? 0.0;
+              final initialReturnedTotal =
+                  _initialReturnedTotals[item.cartItemId] ?? 0.0;
+              final currentReturnedTotal =
                   double.tryParse(item.returnedTotal.toString()) ?? 0.0;
-              maxReturnAmount += itemReturned;
+              maxReturnAmount +=
+                  (currentReturnedTotal - initialReturnedTotal);
             }
 
-            // Calculate if it's a full return for discount deduction
-            bool isFullOrderReturn = true;
-            for (var item in _salesReturnItems) {
-              if (item.returnedQuantity < (int.tryParse(item.quantity) ?? 0)) {
-                isFullOrderReturn = false;
-                break;
-              }
+            // Pro-rata discount deduction (before adding shipping)
+            final discountAmountForSubmit =
+                (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
+            if (originalItemsTotal > 0 && discountAmountForSubmit > 0) {
+              final proRata =
+                  (maxReturnAmount / originalItemsTotal) * discountAmountForSubmit;
+              maxReturnAmount -= proRata;
             }
 
             // Include shipping cost in max check if toggle is ON
             if (_deliveryChargeRefundable) {
               maxReturnAmount +=
                   (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
-            }
-
-            // Deduct discount if full return AND delivery refund is ON
-            if (isFullOrderReturn && _deliveryChargeRefundable) {
-              maxReturnAmount -=
-                  (orderDetailsModelData?.priceSummary?.discount ?? 0)
-                      .toDouble();
             }
 
             if (paidAmount <= 0) {
@@ -1890,10 +1893,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       final discountAmount =
           (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
-      double returnDiscount = 0.0;
-      if (isFullOrderReturn && _deliveryChargeRefundable) {
-        returnDiscount = discountAmount;
-      }
+      // Pro-rata: deduct the proportional share of the discount for the returned items
+      final double returnDiscount = orderTotal > 0
+          ? (returnedTotal / orderTotal) * discountAmount
+          : 0.0;
       returnedTotal -= returnDiscount;
 
       // Include shipping cost in Return Summary if toggle is ON
@@ -2053,9 +2056,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         return const SizedBox.shrink();
       }
 
-      // Calculate return total (ONLY from this session)
+      // Calculate return total (ONLY from this session) and original items total
       double returnedTotal = 0.0;
+      double originalItemsTotal = 0.0;
       for (var item in salesReturnItems) {
+        originalItemsTotal +=
+            double.tryParse(item.totalPrice.toString()) ?? 0.0;
         final initialReturnedTotal =
             _initialReturnedTotals[item.cartItemId] ?? 0.0;
         final currentReturnedTotal =
@@ -2065,20 +2071,13 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         returnedTotal += sessionReturnedTotal;
       }
 
-      // Calculate if it's a full return for discount deduction
-      bool isFullOrderReturn = true;
-      for (var item in salesReturnItems) {
-        if (item.returnedQuantity < (int.tryParse(item.quantity) ?? 0)) {
-          isFullOrderReturn = false;
-          break;
-        }
-      }
-
       final discountAmount =
           (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
-      if (isFullOrderReturn && _deliveryChargeRefundable) {
-        returnedTotal -= discountAmount;
-      }
+      // Pro-rata: deduct proportional discount share for the returned items
+      final double proRataDiscount = originalItemsTotal > 0
+          ? (returnedTotal / originalItemsTotal) * discountAmount
+          : 0.0;
+      returnedTotal -= proRataDiscount;
 
       // Add shipping cost if toggle is ON and we have order data
       final shippingCost =
@@ -2114,10 +2113,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   onChanged: (value) {
                     setState(() {
                       _deliveryChargeRefundable = value;
-                      // Refresh the refund amount automatically when toggle changes
+                      // Clear so the autofill recalculates with the new toggle state
                       if (hasPayment) {
-                        paidAmountController.text =
-                            returnedTotal.toStringAsFixed(2);
+                        paidAmountController.clear();
                       }
                     });
                   },
