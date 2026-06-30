@@ -12,6 +12,8 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/models/purchase_order_model.dart';
 import 'package:pos_machine/models/list_purchase.dart';
 
+import 'package:pos_machine/components/build_calendar_selection.dart';
+
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -641,7 +643,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
           const SizedBox(height: 5),
           GestureDetector(
             onTap: () async {
-              DateTime? picked = await showDatePicker(
+              DateTime? picked = await showAutoDismissDatePicker(
                 context: context,
                 initialDate: DateTime.now(),
                 firstDate: DateTime(2000),

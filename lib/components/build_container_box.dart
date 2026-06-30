@@ -16,6 +16,7 @@ class BuildBoxShadowContainer extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final BoxConstraints? constraints;
   final bool showShadow;
+  final List<BoxShadow>? boxShadow;
 
   const BuildBoxShadowContainer({
     super.key,
@@ -32,6 +33,7 @@ class BuildBoxShadowContainer extends StatelessWidget {
     this.alignment,
     this.constraints,
     this.showShadow = true,
+    this.boxShadow,
   });
 
   @override
@@ -47,13 +49,13 @@ class BuildBoxShadowContainer extends StatelessWidget {
         border: border,
         color: color ?? Colors.white,
         borderRadius: BorderRadius.circular(circleRadius),
-        boxShadow: showShadow ? [
+        boxShadow: boxShadow ?? (showShadow ? [
           BoxShadow(
             color: ColorManager.boxShadowColor,
             blurRadius: blurRadius ?? 3,
             offset: offsetValue ?? const Offset(0, 1),
           ),
-        ] : null,
+        ] : null),
       ),
       child: child,
     );

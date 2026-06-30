@@ -79,6 +79,9 @@ import 'package:pos_machine/screens/transactions/customer_voucher_list.dart';
 import 'package:pos_machine/screens/transactions/widgets/create_customer_voucher.dart';
 import 'package:pos_machine/screens/transactions/supplier_voucher_list.dart';
 import 'package:pos_machine/screens/transactions/widgets/create_supplier_voucher.dart';
+import 'package:pos_machine/screens/transactions/expense_list_screen.dart';
+import 'package:pos_machine/screens/transactions/create_expense_screen.dart';
+import 'package:pos_machine/screens/transactions/view_expense_screen.dart';
 
 import '../screens/product/widgets/stock_details.dart';
 import '../screens/sales/widgets/sales_order_details.dart';
@@ -203,5 +206,8 @@ class SideBarController extends GetxController {
     BillingPageResponsive(), // 90 Supermarket Billing Page
     ProformaInvoiceListScreen(), // 91 Proforma Invoice List
     SalesScreen(isOnlineSales: true), // 92 Online Sales
+    ExpenseListScreen(), // 93
+    CreateExpenseScreen(), // 94
+    ViewExpenseScreen(), // 95
   ];
 }

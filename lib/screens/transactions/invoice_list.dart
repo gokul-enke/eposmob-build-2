@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
+import '../../components/build_calendar_selection.dart';
 import '../../components/build_container_box.dart';
 import '../transactions/create_invoice_modal.dart';
 import '../../components/build_dropdown_with_search.dart';
@@ -50,6 +51,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   String? activeBulkSyncType;
   Timer? _invoiceSearchDebounce;
 
+  final FocusNode invoiceNoFocusNode = FocusNode();
+  final FocusNode nameFocusNode = FocusNode();
+  final FocusNode phoneFocusNode = FocusNode();
+  final FocusNode zatcaFocusNode = FocusNode();
+  final FocusNode statusFocusNode = FocusNode();
+  final FocusNode dateFromFocusNode = FocusNode();
+  final FocusNode dateToFocusNode = FocusNode();
+
+  bool _isPickerOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -66,6 +77,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         );
       }
     });
+
+    dateFromFocusNode.addListener(_handleDateFromFocusChange);
+    dateToFocusNode.addListener(_handleDateToFocusChange);
   }
 
   void _resetInvoiceFilters({
@@ -98,6 +112,28 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     });
   }
 
+  void _handleDateFromFocusChange() {
+    if (dateFromFocusNode.hasFocus && !_isPickerOpen) {
+      _openDatePicker(isFromDate: true);
+    }
+  }
+
+  void _handleDateToFocusChange() {
+    if (dateToFocusNode.hasFocus && !_isPickerOpen) {
+      _openDatePicker(isFromDate: false);
+    }
+  }
+
+  Future<void> _openDatePicker({required bool isFromDate}) async {
+    _isPickerOpen = true;
+    await _selectDate(context, isFromDate: isFromDate);
+    // Advance focus so when date dialog dismisses, it doesn't land back and loop
+    FocusScope.of(context).nextFocus();
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _isPickerOpen = false;
+    });
+  }
+
   void _debounceInvoiceSearch() {
     _invoiceSearchDebounce?.cancel();
     _invoiceSearchDebounce =
@@ -116,6 +152,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     emailController.dispose();
     dateFromController.dispose();
     dateToController.dispose();
+    dateFromFocusNode.removeListener(_handleDateFromFocusChange);
+    dateToFocusNode.removeListener(_handleDateToFocusChange);
+    invoiceNoFocusNode.dispose();
+    nameFocusNode.dispose();
+    phoneFocusNode.dispose();
+    zatcaFocusNode.dispose();
+    statusFocusNode.dispose();
+    dateFromFocusNode.dispose();
+    dateToFocusNode.dispose();
     super.dispose();
   }
 
@@ -624,27 +669,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   // Date selection method
   Future<void> _selectDate(BuildContext context,
       {required bool isFromDate}) async {
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showAutoDismissDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: ColorManager.kPrimaryColor, // Header background color
-              onPrimary: Colors.white, // Header text color
-              surface: Colors.white, // Calendar background
-              onSurface: Colors.black, // Calendar text color
-            ), // Dialog background
-            cardColor: Colors.white,
-            dialogTheme: const DialogThemeData(
-                backgroundColor: Colors.white), // Card background
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -1117,9 +1146,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           circleRadius: 7,
           child: TextFormField(
             controller: invoiceNumberController,
+            focusNode: invoiceNoFocusNode,
+            autofocus: true,
             onChanged: (value) => _debounceInvoiceSearch(),
             cursorColor: ColorManager.kPrimaryColor,
             cursorHeight: 13,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: decoration.copyWith(
@@ -1127,6 +1160,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIconColor: Colors.black,
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(7),
+              ),
             ),
           ),
         ),
@@ -1155,10 +1196,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             circleRadius: 7,
             child: TextFormField(
               controller: phoneController,
+              focusNode: phoneFocusNode,
               onChanged: (value) => _debounceInvoiceSearch(),
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
               keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
@@ -1166,6 +1210,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(7),
+                ),
               ),
             ),
           ),
@@ -1238,9 +1290,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   circleRadius: 7,
                   child: TextFormField(
                     controller: dateFromController,
+                    focusNode: dateFromFocusNode,
                     onTap: () => _selectDate(context, isFromDate: true),
                     readOnly: true,
                     cursorColor: ColorManager.kPrimaryColor,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) => _selectDate(context, isFromDate: true),
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
@@ -1257,6 +1312,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
                     ),
                   ),
                 ),
@@ -1283,9 +1346,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   circleRadius: 7,
                   child: TextFormField(
                     controller: dateToController,
+                    focusNode: dateToFocusNode,
                     onTap: () => _selectDate(context, isFromDate: false),
                     readOnly: true,
                     cursorColor: ColorManager.kPrimaryColor,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) => _selectDate(context, isFromDate: false),
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
@@ -1302,6 +1368,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
                     ),
                   ),
                 ),
@@ -1355,6 +1429,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               displayText: (status) => status.toUpperCase(),
               height: 45,
               margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+              focusNode: statusFocusNode,
             );
           },
         ),
@@ -1386,6 +1461,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             displayText: (status) => status.toUpperCase(),
             height: 45,
             margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            focusNode: zatcaFocusNode,
           );
         },
       ),
@@ -1628,11 +1704,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             circleRadius: 7,
             child: TextFormField(
               controller: searchTextController,
+              focusNode: nameFocusNode,
               onChanged: (value) {
                 _debounceInvoiceSearch();
               },
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
@@ -1640,6 +1719,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(7),
+                ),
               ),
             ),
           ),

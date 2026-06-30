@@ -239,12 +239,21 @@ class _CustomRoundButtonState extends State<CustomRoundButton> {
       decoration: BoxDecoration(
         border: Border.all(
           color: isFocused
-              ? ColorManager.kPrimaryColor
+              ? (widget.boxColor == Colors.white ? ColorManager.kPrimaryColor : Colors.white.withOpacity(0.8))
               : widget.borderColor ?? ColorManager.kPrimaryColor,
-          width: isFocused ? 3 : 1,
+          width: isFocused ? 2 : 1,
         ),
         color: widget.boxColor ?? ColorManager.kPrimaryColor,
         borderRadius: BorderRadius.circular(radius),
+        boxShadow: isFocused
+            ? [
+                BoxShadow(
+                  color: (widget.boxColor ?? ColorManager.kPrimaryColor).withOpacity(0.45),
+                  blurRadius: 8,
+                  spreadRadius: 2.5,
+                )
+              ]
+            : null,
       ),
       child: MaterialButton(
         focusNode: _focusNode,

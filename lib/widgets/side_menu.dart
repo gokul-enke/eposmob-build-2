@@ -830,17 +830,22 @@ class _SideMenuState extends State<SideMenu> {
                     onTapTitle5: () {
                       sideBarController.index.value = 91;
                     },
+                    onTapTitle6: () {
+                      sideBarController.index.value = 93;
+                    },
                     listTitle1: "Invoice",
                     listTitle2: "Receipts",
                     listTitle3: "Customer Voucher",
                     listTitle4: "Supplier Voucher (Purchase Entry)",
                     listTitle5: "Proforma Invoice",
+                    listTitle6: "Expense",
                     // Permission-based visibility
                     showTitle1: hasInvoicePermission,
                     showTitle2: hasReceiptsPermission,
                     showTitle3: hasCustomerVouchersPermission,
                     showTitle4: hasSupplierVouchersPermission,
                     showTitle5: hasProformaPermission,
+                    showTitle6: true,
                     icon: fa.FontAwesomeIcons.exchange,
                     title: 'Transactions',
                     onTap: () {
@@ -856,6 +861,9 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 75 ||
                         sideBarController.index.value == 76 ||
                         sideBarController.index.value == 91 ||
+                        sideBarController.index.value == 93 ||
+                        sideBarController.index.value == 94 ||
+                        sideBarController.index.value == 95 ||
                         sideBarController.index.value == 30),
               );
             },

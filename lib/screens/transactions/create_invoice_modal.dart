@@ -484,51 +484,69 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
       flex: flex,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: readOnly ? Colors.grey.shade100 : Colors.white,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: TextFormField(
-            controller: controller,
-            focusNode: focusNode,
-            keyboardType: keyboardType,
-            textInputAction: textInputAction,
-            onFieldSubmitted: onFieldSubmitted,
-            readOnly: readOnly,
-            onTap: () {
-              // Select all text when field is focused
-              controller.selection = TextSelection(
-                baseOffset: 0,
-                extentOffset: controller.text.length,
-              );
-            },
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s13,
-              0.20,
-              ColorManager.textColor,
-            ),
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s13,
-                0.20,
-                Colors.grey.shade400,
+        child: ListenableBuilder(
+          listenable: focusNode,
+          builder: (context, _) {
+            final hasFocus = focusNode.hasFocus;
+            return Container(
+              height: 40,
+              decoration: BoxDecoration(
+                color: readOnly ? Colors.grey.shade100 : Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: hasFocus ? ColorManager.kPrimaryColor : Colors.grey.shade300,
+                  width: hasFocus ? 1.2 : 1,
+                ),
+                boxShadow: hasFocus
+                    ? [
+                        BoxShadow(
+                          color: ColorManager.kPrimaryColor.withOpacity(0.18),
+                          blurRadius: 6,
+                          offset: const Offset(0, 1),
+                        ),
+                      ]
+                    : null,
               ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 8,
+              child: TextFormField(
+                controller: controller,
+                focusNode: focusNode,
+                keyboardType: keyboardType,
+                textInputAction: textInputAction,
+                onFieldSubmitted: onFieldSubmitted,
+                readOnly: readOnly,
+                onTap: () {
+                  // Select all text when field is focused
+                  controller.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: controller.text.length,
+                  );
+                },
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s13,
+                  0.20,
+                  ColorManager.textColor,
+                ),
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  hintStyle: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s13,
+                    0.20,
+                    Colors.grey.shade400,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
+                ),
+                inputFormatters: keyboardType == TextInputType.number
+                    ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+                    : null,
               ),
-            ),
-            inputFormatters: keyboardType == TextInputType.number
-                ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
-                : null,
-          ),
+            );
+          },
         ),
       ),
     );

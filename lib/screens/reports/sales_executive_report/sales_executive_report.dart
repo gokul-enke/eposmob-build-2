@@ -12,6 +12,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
@@ -160,26 +161,11 @@ class _SalesExecutiveReportScreenState
   // Combined Date and Time selection method
   Future<void> _selectDateTime(BuildContext context,
       {required bool isFromDate}) async {
-    final DateTime? pickedDate = await showDatePicker(
+    final DateTime? pickedDate = await showAutoDismissDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: ColorManager.kPrimaryColor, // Header background color
-              onPrimary: Colors.white, // Header text color
-              surface: Colors.white, // Calendar background
-              onSurface: Colors.black, // Calendar text color
-            ),
-            dialogBackgroundColor: Colors.white, // Dialog background
-            cardColor: Colors.white, // Card background
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (pickedDate != null) {

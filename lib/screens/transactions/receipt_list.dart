@@ -36,6 +36,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   String? selectedStatus;
   String? paymentMethod;
 
+  final FocusNode receiptNoFocusNode = FocusNode();
+  final FocusNode referenceNoFocusNode = FocusNode();
+  final FocusNode nameFocusNode = FocusNode();
+  final FocusNode phoneFocusNode = FocusNode();
+  final FocusNode emailFocusNode = FocusNode();
+  final FocusNode statusFocusNode = FocusNode();
+  final FocusNode paymentMethodFocusNode = FocusNode();
+
   bool isInitialized = false;
 
   @override
@@ -44,6 +52,23 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadReceipts();
     });
+  }
+
+  @override
+  void dispose() {
+    searchTextController.dispose();
+    receiptNumberController.dispose();
+    paymentReferenceController.dispose();
+    phoneController.dispose();
+    emailController.dispose();
+    receiptNoFocusNode.dispose();
+    referenceNoFocusNode.dispose();
+    nameFocusNode.dispose();
+    phoneFocusNode.dispose();
+    emailFocusNode.dispose();
+    statusFocusNode.dispose();
+    paymentMethodFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> loadReceipts() async {
@@ -379,21 +404,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Phone",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
           BuildBoxShadowContainer(
             height: 45,
             width: double.infinity,
             circleRadius: 7,
             child: TextFormField(
               controller: phoneController,
+              focusNode: phoneFocusNode,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               onChanged: (value) {
                 searchReceipts();
               },
@@ -406,6 +425,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(7),
+                ),
               ),
             ),
           ),
@@ -418,21 +445,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.all(8.0),
-        //   child: Text(
-        //     "Email",
-        //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-        //         0.27, Colors.black.withOpacity(0.6)),
-        //   ),
-        // ),
-        // const SizedBox(height: 8),
         BuildBoxShadowContainer(
           height: 45,
           width: double.infinity,
           circleRadius: 7,
           child: TextFormField(
             controller: emailController,
+            focusNode: emailFocusNode,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             onChanged: (value) {
               searchReceipts();
             },
@@ -445,6 +466,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIconColor: Colors.black,
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(7),
+              ),
             ),
           ),
         ),
@@ -457,23 +486,16 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Padding(
-        //   padding: const EdgeInsets.all(8.0),
-        //   child: Text(
-        //     "Receipt Number",
-        //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-        //         0.27, Colors.black.withOpacity(0.6)),
-        //   ),
-        // ),
-        // SizedBox(
-        //   height: 8,
-        // ),
         BuildBoxShadowContainer(
           height: 45,
           width: double.infinity, // Take full available width
           circleRadius: 7,
           child: TextFormField(
             controller: receiptNumberController,
+            focusNode: receiptNoFocusNode,
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             onChanged: (value) {
               searchReceipts();
             },
@@ -486,6 +508,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIconColor: Colors.black,
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(7),
+              ),
             ),
           ),
         ),
@@ -499,21 +529,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Payment Reference",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // SizedBox(height: 8),
           BuildBoxShadowContainer(
             circleRadius: 7,
             height: 45,
             width: double.infinity, // Take full available width
             child: TextFormField(
               controller: paymentReferenceController,
+              focusNode: referenceNoFocusNode,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               onChanged: (value) {
                 searchReceipts();
               },
@@ -526,6 +550,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(7),
+                ),
               ),
             ),
           ),
@@ -540,21 +572,13 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Status",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
           Consumer<InvoiceProvider>(
             builder: (context, invoiceProvider, child) {
               List<String> statusOptions =
                   invoiceProvider.getReceiptStatusOptions();
 
               return BuildDropDownWithSearch<String>(
+                focusNode: statusFocusNode,
                 title: null,
                 showName: false,
                 hintText: 'All Status',
@@ -585,21 +609,13 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Payment Method",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
           Consumer<InvoiceProvider>(
             builder: (context, invoiceProvider, child) {
               List<String> paymentMethodOptions =
                   invoiceProvider.getPaymentMethodOptions();
 
               return BuildDropDownWithSearch<String>(
+                focusNode: paymentMethodFocusNode,
                 title: null,
                 showName: false,
                 hintText: 'All Payment',
@@ -630,23 +646,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Name",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // SizedBox(
-          //   height: 8,
-          // ),
           BuildBoxShadowContainer(
             height: 45,
             width: double.infinity, // Take full available width
             circleRadius: 7,
             child: TextFormField(
               controller: searchTextController,
+              focusNode: nameFocusNode,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               onChanged: (value) {
                 searchReceipts();
               },
@@ -659,6 +667,14 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(7),
+                ),
               ),
             ),
           ),

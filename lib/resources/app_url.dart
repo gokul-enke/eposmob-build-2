@@ -299,4 +299,12 @@ class APPUrl {
       '$baseURL/api/v1/consumed-stocks-report';
   static String get getAdminSalesExecutiveReport =>
       '$baseURL/api/v1/sales-executive-report-admin';
+
+  // General Payments / Expense API endpoints
+  static String get listGeneralPayments =>
+      '$baseURL/api/v1/general-payment/list-general-payments';
+  static String get generalPaymentAccountOptions =>
+      '$baseURL/api/v1/general-payment/account-options';
+  static String get createGeneralPayment =>
+      '$baseURL/api/v1/general-payment/create-general-payment';
 }

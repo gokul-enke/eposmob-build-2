@@ -35,12 +35,25 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
   String? selectedStatus;
   int? selectedSupplierId;
 
+  final FocusNode supplierFocusNode = FocusNode();
+  final FocusNode typeFocusNode = FocusNode();
+  final FocusNode statusFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadVouchers();
     });
+  }
+
+  @override
+  void dispose() {
+    voucherNumberController.dispose();
+    supplierFocusNode.dispose();
+    typeFocusNode.dispose();
+    statusFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> loadVouchers() async {
@@ -234,6 +247,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
               // ),
               // const SizedBox(height: 8),
               BuildDropDownWithSearch<int>(
+                focusNode: supplierFocusNode,
                 title: null,
                 showName: false,
                 hintText: 'All Suppliers',
@@ -305,20 +319,12 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Type",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
           Consumer<SupplierVoucherProvider>(
             builder: (context, voucherProvider, child) {
               List<String> typeOptions = voucherProvider.getTypeOptions();
 
               return BuildDropDownWithSearch<String>(
+                focusNode: typeFocusNode,
                 title: null,
                 showName: false,
                 hintText: 'All Types',
@@ -348,20 +354,12 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Padding(
-          //   padding: const EdgeInsets.all(8.0),
-          //   child: Text(
-          //     "Status",
-          //     style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-          //         0.27, Colors.black.withOpacity(0.6)),
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
           Consumer<SupplierVoucherProvider>(
             builder: (context, voucherProvider, child) {
               List<String> statusOptions = voucherProvider.getStatusOptions();
 
               return BuildDropDownWithSearch<String>(
+                focusNode: statusFocusNode,
                 title: null,
                 showName: false,
                 hintText: 'All Status',
@@ -963,11 +961,5 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    voucherNumberController.dispose();
-    super.dispose();
   }
 }

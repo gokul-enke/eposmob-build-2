@@ -217,6 +217,7 @@ class CustomRoundButtonAdvanced extends StatelessWidget {
   final Color? textColor;
   final double? radius;
   final bool isLoading;
+  final FocusNode? focusNode;
   const CustomRoundButtonAdvanced({
     Key? key,
     required this.title,
@@ -229,10 +230,69 @@ class CustomRoundButtonAdvanced extends StatelessWidget {
     this.radius,
     this.borderColor,
     this.isLoading = false,
+    this.focusNode,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    Widget buttonContent = MaterialButton(
+      focusNode: focusNode,
+      onPressed: isLoading
+          ? null
+          : () {
+              fct();
+            },
+      child: isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : Text(
+              title,
+              style: TextStyle(
+                  fontFamily: FontConstants.fontFamily,
+                  fontSize: fontSize,
+                  fontWeight: FontWeightManager.semiBold,
+                  color: textColor ?? Colors.white),
+            ),
+    );
+
+    if (focusNode != null) {
+      return ListenableBuilder(
+        listenable: focusNode!,
+        builder: (context, _) {
+          final hasFocus = focusNode!.hasFocus;
+          return Container(
+            width: width,
+            height: height,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: hasFocus
+                    ? ColorManager.kPrimaryColor
+                    : (borderColor ?? ColorManager.kPrimaryColor),
+                width: hasFocus ? 1.5 : 1,
+              ),
+              color: boxColor ?? ColorManager.kPrimaryColor,
+              borderRadius: BorderRadius.circular(radius ?? 5),
+              boxShadow: hasFocus
+                  ? [
+                      BoxShadow(
+                        color: ColorManager.kPrimaryColor.withOpacity(0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1.5,
+                      ),
+                    ]
+                  : null,
+            ),
+            child: buttonContent,
+          );
+        },
+      );
+    }
+
     return Container(
       width: width,
       height: height,
@@ -241,29 +301,7 @@ class CustomRoundButtonAdvanced extends StatelessWidget {
         color: boxColor ?? ColorManager.kPrimaryColor,
         borderRadius: BorderRadius.circular(radius ?? 5),
       ),
-      child: MaterialButton(
-        onPressed: isLoading
-            ? null
-            : () {
-                fct();
-              },
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                title,
-                style: TextStyle(
-                    fontFamily: FontConstants.fontFamily,
-                    fontSize: fontSize,
-                    fontWeight: FontWeightManager.semiBold,
-                    color: textColor ?? Colors.white),
-              ),
-      ),
+      child: buttonContent,
     );
   }
 }
