@@ -145,18 +145,27 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                   child: BuildBoxShadowContainer(
                     circleRadius: 7,
                     offsetValue: const Offset(1, 1),
-                    child: _isLoading
-                        ? const Center(
-                            child: SizedBox(
-                              height: 20,
-                              width: 20,
+                    child: Stack(
+                      children: [
+                        _isLoading && salesProvider.salesReturnOrders.isEmpty
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: ColorManager.kPrimaryColor,
+                                ),
+                              )
+                            : _buildSalesReturnTable(salesProvider),
+                        if (_isLoading &&
+                            salesProvider.salesReturnOrders.isNotEmpty)
+                          Container(
+                            color: Colors.white.withOpacity(0.6),
+                            child: const Center(
                               child: CircularProgressIndicator(
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                color: ColorManager.kPrimaryColor,
                               ),
                             ),
-                          )
-                        : _buildSalesReturnTable(salesProvider),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -408,6 +417,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         color: ColorManager.kPrimaryColor.withOpacity(0.9),
                         circleRadius: 5,
                         child: IconButton(
+                          tooltip: 'View details',
                           icon: const Icon(
                             Icons.visibility,
                             size: 18,
@@ -429,6 +439,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                         color: Colors.green.withOpacity(0.9),
                         circleRadius: 5,
                         child: IconButton(
+                          tooltip: 'Print return bill',
                           icon: const Icon(
                             Icons.print,
                             size: 18,

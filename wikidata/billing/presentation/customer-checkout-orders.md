@@ -2,6 +2,10 @@
 
 Source: `lib/features/billing/presentation/pages/billing_page.dart`.
 
+## Mobile scope
+
+**Production v1:** Quotation mode is **not** available on mobile billing (`billing_page_mobile.dart` and `presentation/widgets/mobile/`). Mobile supports retail POS actions only (cart, save draft, confirm, print). Quotation entry (`BillingPageMode.quotation`, Create Quotation, Quotation List) and `_createQuotationFromCheckout` remain **desktop-only** until Phase 2. Verified 2026-06-30: no quotation affordances under `mobile/`.
+
 ## Customer Input
 
 The mobile/customer field supports typed search and selection.
@@ -257,6 +261,8 @@ On success:
 Important current-code note: it then calls `_clearCart()` while the busy guard is still active. Since provider cart is already cleared, this is effectively redundant and may be blocked by the guard.
 
 ## Quotation Flow
+
+**Desktop only** (see Mobile scope above).
 
 `_createQuotationFromCheckout`:
 

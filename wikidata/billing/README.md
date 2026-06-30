@@ -20,6 +20,29 @@ Generated from the current workspace on 2026-06-30.
 - `data/api-providers-and-services.md` - online APIs, provider bridges, printing, sync, settings, master data.
 - `widgets/helpers-and-modals.md` - helper and modal behavior used by billing.
 
+## Mobile scope (production v1)
+
+Mobile billing (`billing_page_mobile.dart`, width < 650) is intentionally limited to the retail POS flow. **Quotation mode is desktop-only** until Phase 2 — no Create Quotation button, no quotation page mode, and no quotation-specific checkout on mobile. See `todo.md` P1.10 (decision 2026-06-30) and `presentation/customer-checkout-orders.md` for details.
+
+## Mobile-specific divergence from desktop (approved v1)
+
+Documented exceptions where mobile intentionally differs from `billing_page.dart`. Product owner approval required before adding more.
+
+| Area | Desktop | Mobile v1 |
+| --- | --- | --- |
+| **Quotation** | `BillingPageMode.quotation`, Create Quotation, quotation checkout without payment | **Not supported** — scoped out (P1.10, 2026-06-30) |
+| **Checkout UX** | Multi-step `CheckoutModal` sidebar stepper | Inline accordion sections on Billing tab (`billing_tab.dart`) |
+| **Payment entry** | `PaymentMethodModal` dialog | Inline `payment_methods_section.dart` driven by `BillingMobilePaymentController` |
+| **Product entry layout** | Sidebar + autocomplete header | Tabbed Home (grid + barcode/search), no desktop sidebar |
+| **Cart editing** | `CartItemsTable` + `PriceFields` + `CompactQuantityControlLocal` | `cart_item_card.dart` + `mobile_cart_price_fields.dart` |
+| **Keyboard shortcuts** | Full desktop F-key set + checkout modal bindings | Subset via `BillingMobileController.resolveShortcutAction` (F2–F9, F12, Esc, Ctrl+A) — see P1.5 |
+| **Orders UI** | Desktop orders tab in sidebar | Dedicated mobile Orders tab with saved/local order cards |
+| **Page orchestration** | Monolithic `BillingPageState` (~8k lines) | Thin `billing_page_mobile.dart` + `billing_mobile_controller.dart` + `billing_mobile_ui_controller.dart` |
+
+**Shared (no divergence):** cart mutations (`ProductCartHelper`, `CartQuantityStockHelper`), stock reservations (`LocalProductProvider`), payment payload rules (`PaymentHelper`, `PaymentValidation`), delivery charge (`delivery_charge_helper.dart`), confirm/save (`CheckoutService`), online API payload (`CartProvider.addToOrderAPI`), barcode queue semantics (`BarcodeScanQueue`).
+
+Architecture map: `feature-folder-map.md` (Implemented mobile column) and `lib/features/billing/README.md`.
+
 ## Highest-Level Billing Rules
 
 - The desktop billing page is still the main orchestrator. It owns UI state, keyboard flow, customer/payment/delivery state, order actions, and resets.

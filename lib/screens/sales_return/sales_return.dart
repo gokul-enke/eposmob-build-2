@@ -79,6 +79,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   bool _deliveryChargeRefundable = false;
   final List<String> paymentMethods = ['CASH', 'CARD', 'UPI'];
   bool isCompletingReturn = false;
+  String? _initLoadError;
 
   // Track initial state to calculate session-specific returns
   Map<int, double> _initialReturnedQuantities =
@@ -129,6 +130,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           debugPrint('✅ Initial order loaded and baseline state saved');
         } catch (e) {
           debugPrint('Error loading specific order: $e');
+          if (mounted) {
+            _initLoadError = e is Exception
+                ? e.toString().replaceFirst('Exception: ', '')
+                : 'Failed to load order';
+            showScaffoldError(context: context, message: _initLoadError!);
+          }
         } finally {
           if (mounted) {
             setState(() {
@@ -265,7 +272,117 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   }
 
   Future<void> refreshData() async {
-    resetSearch();
+    if (selectedOrderNumber != null && selectedOrderNumber!.isNotEmpty) {
+      await getOrderDetails(selectedOrderNumber!, resetInitialState: false);
+    }
+  }
+
+  int? get _draftReturnOrderId {
+    for (final item in _salesReturnItems) {
+      if (item.returnOrderId != 0) return item.returnOrderId;
+    }
+    return null;
+  }
+
+  bool get _canCompleteReturn =>
+      !initLoading &&
+      !isCompletingReturn &&
+      isOrderSelected &&
+      _draftReturnOrderId != null;
+
+  Widget _buildLoadingOverlay() {
+    if (!initLoading) return const SizedBox.shrink();
+    return Positioned.fill(
+      child: Container(
+        color: Colors.white.withOpacity(0.75),
+        child: const Center(
+          child: CircularProgressIndicator(
+            color: ColorManager.kPrimaryColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepHint() {
+    if (!isOrderSelected || initLoading) return const SizedBox.shrink();
+
+    final hasDraft = _draftReturnOrderId != null;
+    final step2Ready = _canCompleteReturn;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: ColorManager.kPrimaryColor.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: ColorManager.kPrimaryColor.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildStepChip('1', 'Return items', active: true, done: hasDraft),
+          const SizedBox(width: 8),
+          Icon(Icons.arrow_forward, size: 14, color: Colors.grey.shade400),
+          const SizedBox(width: 8),
+          _buildStepChip(
+            '2',
+            'Complete return',
+            active: step2Ready,
+            done: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepChip(
+    String number,
+    String label, {
+    required bool active,
+    required bool done,
+  }) {
+    final color = done
+        ? Colors.green
+        : active
+            ? ColorManager.kPrimaryColor
+            : Colors.grey.shade400;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 11,
+          backgroundColor: color.withOpacity(0.15),
+          child: done
+              ? Icon(Icons.check, size: 12, color: color)
+              : Text(
+                  number,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s11,
+            0.25,
+            color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  double _itemsTableHeight(int itemCount) {
+    if (itemCount == 0) return 140;
+    return (56.0 * itemCount + 52).clamp(160.0, 380.0);
   }
 
   Future<void> getOrderDetails(String ordersId,
@@ -390,18 +507,23 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   ),
                 ],
                 color: Colors.white),
-            child: Padding(
+            child: Stack(
+              children: [
+                Padding(
               padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CustomBackButton(
-                        onPressed: () {
-                          sideBarController.index.value = 50;
-                        },
+                        onPressed: initLoading || isCompletingReturn
+                            ? () {}
+                            : () {
+                                sideBarController.index.value = 50;
+                              },
                         text: 'Sales Return List',
                       ),
                       Row(
@@ -557,6 +679,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(
                     height: 8,
                   ),
+                  _buildStepHint(),
                   // Enhanced Order Details Card
                   Consumer<SalesProvider>(
                     builder: (context, orderProvider, child) {
@@ -750,7 +873,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'No Order Selected',
+                                'Open an order from Sales',
                                 style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   FontSize.s16,
@@ -760,7 +883,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Please select an order to view details and process returns',
+                                'Go to Sales → order actions → Return to start a return',
                                 style: buildCustomStyle(
                                   FontWeightManager.regular,
                                   FontSize.s12,
@@ -802,10 +925,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(
                     height: 20,
                   ),
-                  // Wrap the order details in a SizedBox with fixed height
-                  SizedBox(
-                    height: 300, // Set a fixed height for the table
-                    child: _buildOrderDetails(),
+                  Consumer<SalesProvider>(
+                    builder: (context, salesProvider, _) {
+                      final itemCount = salesProvider.salesReturnItems.length;
+                      return SizedBox(
+                        height: _itemsTableHeight(itemCount),
+                        child: _buildOrderDetails(),
+                      );
+                    },
                   ),
                   const SizedBox(
                     height: 20,
@@ -826,6 +953,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   ),
                 ],
               ),
+            ),
+                _buildLoadingOverlay(),
+              ],
             )),
       ),
     );
@@ -1157,8 +1287,13 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
     showDialog(
       context: context,
-      builder: (context) {
-        return Dialog(
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        var isSubmitting = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -1377,7 +1512,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: isSubmitting
+                            ? null
+                            : () => Navigator.pop(dialogContext),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
@@ -1388,7 +1525,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton(
-                        onPressed: () async {
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
                           final parsedOrderId = int.tryParse(orderId);
                           if (parsedOrderId == null) {
                             showScaffoldError(
@@ -1416,6 +1555,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             return;
                           }
 
+                          setDialogState(() => isSubmitting = true);
+
                           try {
                             String? accessToken =
                                 Provider.of<AuthModel>(context, listen: false)
@@ -1432,17 +1573,20 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               reason: reasonController.text,
                             );
 
+                            if (!dialogContext.mounted) return;
+
                             showScaffold(
                               context: context,
-                              message: 'Sales Return Submitted Successfully',
+                              message: 'Item returned successfully',
                             );
 
-                            // Refresh items WITHOUT resetting initial state (keep session tracking)
                             await getOrderDetails(
                                 selectedOrderNumber.toString(),
                                 resetInitialState: false);
 
-                            Navigator.pop(context);
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
                           } catch (error, stackTrace) {
                             debugPrint('Error submitting sales return: $error');
                             debugPrint(
@@ -1455,10 +1599,15 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                       .replaceFirst('Exception: ', '')
                                   : 'Failed to submit sales return',
                             );
+                          } finally {
+                            if (context.mounted) {
+                              setDialogState(() => isSubmitting = false);
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
+                          disabledBackgroundColor: Colors.blue.shade200,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
                             vertical: 12,
@@ -1467,10 +1616,19 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Submit',
-                          style: TextStyle(color: Colors.white),
-                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Submit',
+                                style: TextStyle(color: Colors.white),
+                              ),
                       ),
                     ],
                   ),
@@ -1478,6 +1636,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               ),
             ),
           ),
+        );
+          },
         );
       },
     );
@@ -1488,11 +1648,24 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       final salesReturnItems = salesProvider.salesReturnItems;
 
       if (salesReturnItems.isEmpty) {
-        return const Column(
-          children: [
-            Center(child: Text("No return items available.")),
-            SizedBox(height: 50),
-          ],
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.inventory_2_outlined,
+                  size: 40, color: Colors.grey.shade400),
+              const SizedBox(height: 10),
+              Text(
+                initLoading ? 'Loading items…' : 'No items to return',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s13,
+                  0.25,
+                  Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
         );
       }
 
@@ -1731,10 +1904,31 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
   Widget _buildCompleteReturnButton(Size size) {
     final SideBarController sideBarController = Get.put(SideBarController());
+    final canComplete = _canCompleteReturn;
 
-    return CustomRoundButton(
-      title: "Create Sales Return",
-      fct: () async {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!canComplete && isOrderSelected && !initLoading)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Return at least one item before completing',
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s11,
+                0.25,
+                Colors.grey.shade600,
+              ),
+            ),
+          ),
+        Opacity(
+          opacity: canComplete ? 1 : 0.45,
+          child: CustomRoundButton(
+            title: isCompletingReturn ? "Completing…" : "Complete Sales Return",
+            fct: canComplete
+                ? () async {
         debugPrint('Return Order ID: $selectedOrderId');
 
         // Check if there are any items with return_order_id
@@ -1776,7 +1970,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             }
 
             final refundSummary = _refundSummaryFor(_salesReturnItems);
-            final maxReturnAmount = refundSummary.netRefundAmount;
+            final maxCashRefund = refundSummary.maxCashRefundAmount;
             final paidAmount =
                 double.tryParse(paidAmountController.text) ?? 0.0;
 
@@ -1788,11 +1982,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               return;
             }
 
-            if (paidAmount > maxReturnAmount) {
+            if (paidAmount > maxCashRefund) {
               showScaffoldError(
                 context: context,
                 message:
-                    'Return amount cannot exceed ${maxReturnAmount.toStringAsFixed(2)}',
+                    'Return amount cannot exceed ${maxCashRefund.toStringAsFixed(2)}',
               );
               return;
             }
@@ -1840,11 +2034,15 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             });
           }
         }
-      },
-      height: 40,
-      width: size.width,
-      fontSize: FontSize.s13,
-      isLoading: isCompletingReturn,
+              }
+                : () {},
+            height: 40,
+            width: size.width,
+            fontSize: FontSize.s13,
+            isLoading: isCompletingReturn,
+          ),
+        ),
+      ],
     );
   }
 
@@ -2101,17 +2299,19 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       // Calculate return total (ONLY from this session) via shared helper
       final refundSummary = _refundSummaryFor(salesReturnItems);
-      final returnedTotal = refundSummary.netRefundAmount;
+      final suggestedRefund = refundSummary.netRefundAmount;
+      final maxCashRefund = refundSummary.maxCashRefundAmount;
 
-      // Autofill the return amount when payment is enabled and field is empty
+      // Autofill suggested refund (after pro-rata discount); cashier can increase up to max.
       if (hasPayment && paidAmountController.text.isEmpty) {
-        paidAmountController.text = returnedTotal.toStringAsFixed(2);
+        paidAmountController.text = suggestedRefund.toStringAsFixed(2);
       }
 
       // Real-time validation flag
       final double enteredAmount =
           double.tryParse(paidAmountController.text) ?? 0.0;
-      final bool isExceedingMax = hasPayment && enteredAmount > returnedTotal;
+      final bool isExceedingMax =
+          hasPayment && enteredAmount > maxCashRefund;
 
       return BuildBoxShadowContainer(
         circleRadius: 12,
@@ -2388,7 +2588,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                 decoration: InputDecoration(
                                   isDense: true,
                                   errorText: isExceedingMax
-                                      ? 'Return amount cannot exceed ${returnedTotal.toStringAsFixed(2)}'
+                                      ? 'Return amount cannot exceed ${maxCashRefund.toStringAsFixed(2)}'
                                       : null,
                                   prefixText: '$currency ',
                                   constraints: const BoxConstraints.tightFor(
@@ -2439,7 +2639,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               if (refundSummary.proRataDiscount > 0) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Pro-rata discount: −${refundSummary.proRataDiscount.toStringAsFixed(2)}',
+                  'Suggested refund (after pro-rata discount): ${suggestedRefund.toStringAsFixed(2)}',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s11,
+                    0.25,
+                    Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Pro-rata discount (optional): −${refundSummary.proRataDiscount.toStringAsFixed(2)}',
                   style: buildCustomStyle(
                     FontWeightManager.regular,
                     FontSize.s11,
@@ -2450,12 +2660,22 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               ],
               const SizedBox(height: 4),
               Text(
-                'Maximum returnable amount: ${returnedTotal.toStringAsFixed(2)}',
+                'Maximum cash refund: ${maxCashRefund.toStringAsFixed(2)}',
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s11,
                   0.25,
                   Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'You may refund up to the returned items total without applying the discount.',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s10,
+                  0.25,
+                  Colors.grey.shade500,
                 ),
               ),
             ],
