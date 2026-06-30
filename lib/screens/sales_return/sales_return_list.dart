@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -29,6 +30,8 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
   final SideBarController sideBarController = Get.put(SideBarController());
   bool _isLoading = true;
 
+  String? _loadError;
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +42,7 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
     if (mounted) {
       setState(() {
         _isLoading = true;
+        _loadError = null;
       });
     }
     try {
@@ -55,10 +59,28 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
       }
     } catch (e) {
       debugPrint(e.toString());
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _loadError = e is Exception
+              ? e.toString().replaceFirst('Exception: ', '')
+              : 'Failed to load sales returns';
+        });
+        showScaffoldError(
+          context: context,
+          message: _loadError!,
+        );
+      }
     }
   }
 
   void _searchSalesReturns(int page) async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _loadError = null;
+      });
+    }
     try {
       SalesProvider salesProvider =
           Provider.of<SalesProvider>(context, listen: false);
@@ -67,12 +89,25 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
       await salesProvider.fetchSalesReturn(
           accessToken: accessToken ?? "", page: page);
 
-      setState(() {
-        currentPage = page;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          currentPage = page;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      // debugPrint(e.toString());
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _loadError = e is Exception
+              ? e.toString().replaceFirst('Exception: ', '')
+              : 'Failed to load sales returns';
+        });
+        showScaffoldError(
+          context: context,
+          message: _loadError!,
+        );
+      }
     }
   }
 
@@ -166,6 +201,69 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
   }
 
   Widget _buildSalesReturnTable(SalesProvider salesProvider) {
+    if (_loadError != null && salesProvider.salesReturnOrders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade300),
+            const SizedBox(height: 12),
+            Text(
+              _loadError!,
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.25,
+                Colors.red.shade700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            CustomRoundButton(
+              title: 'Retry',
+              fct: _fetchSalesReturns,
+              fontSize: 12,
+              height: 40,
+              width: 120,
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (salesProvider.salesReturnOrders.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.assignment_return_outlined,
+                size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
+            Text(
+              'No sales returns yet',
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.25,
+                Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start a return from Sales → order actions → Return',
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s12,
+                0.25,
+                Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
         Table(
@@ -376,32 +474,42 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
 
   Widget _buildTableCell(String text, {bool isStatusCell = false}) {
     if (isStatusCell) {
-      IconData iconData;
-      Color iconColor;
-
-      if (text == '1') {
-        // Approved status
-        iconData = Icons.check_circle;
-        iconColor = Colors.green;
-      } else if (text == '0') {
-        // Pending status - show red X
-        iconData = Icons.cancel;
-        iconColor = Colors.red;
-      } else {
-        // Default case (rejected or unknown)
-        iconData = Icons.cancel;
-        iconColor = Colors.red;
-      }
+      final bool isCompleted = text == '1' || text == 'true';
+      final String statusLabel = isCompleted ? 'Completed' : 'Pending';
+      final Color statusColor = isCompleted ? Colors.green : Colors.orange;
 
       return TableCell(
         verticalAlignment: TableCellVerticalAlignment.middle,
         child: Padding(
           padding: const EdgeInsets.all(15.0),
           child: Center(
-            child: Icon(
-              iconData,
-              color: iconColor,
-              size: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: statusColor.withOpacity(0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isCompleted ? Icons.check_circle : Icons.schedule,
+                    color: statusColor,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    statusLabel,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11,
+                      0.13,
+                      statusColor,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

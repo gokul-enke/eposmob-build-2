@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/helpers/api_response_helper.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
@@ -488,39 +489,21 @@ class SalesProvider with ChangeNotifier {
           'fetch Sales Return list response status code: ${response.statusCode}');
       debugPrint('response.body ${response.body}');
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        try {
-          debugPrint('=== SALES RETURN JSON PARSING DEBUG ===');
-          debugPrint('About to parse SalesReturnResponse.fromJson...');
-          debugPrint('JSON Data Keys: ${jsonData.keys}');
-          debugPrint('Data section: ${jsonData['data']}');
-          final salesReturnResponse = SalesReturnResponse.fromJson(jsonData);
-          debugPrint(
-              'fetch Sales Return list response data: ${salesReturnResponse.data.data}');
-          _salesReturnOrders = salesReturnResponse
-              .data.data; // Store fetched data from nested structure
+      ApiResponseHelper.ensureSuccess(
+        response.statusCode,
+        response.body,
+        fallback: 'Failed to load sales returns',
+      );
 
-          // Update pagination for sales return
-          salesReturnCurrentPage = salesReturnResponse.data.currentPage;
-          salesReturnTotalPages = salesReturnResponse.data.lastPage;
-          debugPrint(
-              'Sales Return Pagination - Current: $salesReturnCurrentPage, Total: $salesReturnTotalPages');
+      final jsonData = json.decode(response.body);
+      final salesReturnResponse = SalesReturnResponse.fromJson(jsonData);
+      _salesReturnOrders = salesReturnResponse.data.data;
 
-          notifyListeners(); // Notify listeners to update UI
-        } catch (e, stackTrace) {
-          debugPrint('=== JSON PARSING ERROR ===');
-          debugPrint('Error parsing JSON data: $e');
-          debugPrint('Stack Trace: $stackTrace');
-          debugPrint('JSON that failed to parse: ${jsonData.toString()}');
-        }
-      } else {
-        debugPrint(
-            'Failed to load orders: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to load orders');
-      }
+      salesReturnCurrentPage = salesReturnResponse.data.currentPage;
+      salesReturnTotalPages = salesReturnResponse.data.lastPage;
+
+      notifyListeners();
     } catch (error) {
-      // debugPrint('Error in fetchOrders: $error');
       _salesReturnOrders = [];
       rethrow;
     }
@@ -569,24 +552,19 @@ class SalesProvider with ChangeNotifier {
           'fetch Sales Return list response status code: ${response.statusCode}');
       debugPrint('response.body ${response.body}');
 
+      ApiResponseHelper.ensureSuccess(
+        response.statusCode,
+        response.body,
+        fallback: 'Failed to load return items',
+      );
+
       final jsonData = json.decode(response.body);
-      try {
-        debugPrint('=== SALES RETURN ITEMS JSON PARSING DEBUG ===');
-        debugPrint('About to parse SalesReturnItemsResponse.fromJson...');
-        debugPrint('JSON Data Keys: ${jsonData.keys}');
-        debugPrint('Data section: ${jsonData['data']}');
-        final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
-        _salesReturnItems = salesReturnResponse.data;
-        _currentReturnOrder = salesReturnResponse.order;
-        notifyListeners();
-      } catch (e, stackTrace) {
-        debugPrint('=== SALES RETURN ITEMS JSON PARSING ERROR ===');
-        debugPrint('Error parsing JSON data: $e');
-        debugPrint('Stack Trace: $stackTrace');
-        debugPrint('JSON that failed to parse: ${jsonData.toString()}');
-      }
+      final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
+      _salesReturnItems = salesReturnResponse.data;
+      _currentReturnOrder = salesReturnResponse.order;
+      notifyListeners();
     } catch (error) {
-      debugPrint('Error in fetchOrders: $error');
+      debugPrint('Error in fetchSalesReturnItems: $error');
       rethrow;
     }
   }
@@ -595,7 +573,7 @@ class SalesProvider with ChangeNotifier {
     required String accessToken,
     required int orderId,
     required double price,
-    required int quantity,
+    required num quantity,
     required int cartItemId,
     required String reason,
   }) async {
@@ -634,14 +612,12 @@ class SalesProvider with ChangeNotifier {
     debugPrint("response.statusCode ${response.statusCode}");
     debugPrint("response.body ${response.body}");
 
-    if (response.statusCode == 200) {
-      // debugPrint('Sales return submitted successfully: ${response.body}');
-      notifyListeners();
-    } else {
-      debugPrint(
-          'Failed to submit sales return: ${response.statusCode} - ${response.body}');
-      throw Exception('Failed to submit sales return');
-    }
+    ApiResponseHelper.ensureSuccess(
+      response.statusCode,
+      response.body,
+      fallback: 'Failed to submit sales return',
+    );
+    notifyListeners();
   }
 
   Future<void> completeSalesReturn({
@@ -650,7 +626,7 @@ class SalesProvider with ChangeNotifier {
     String? paymentMethod,
     double? paidAmount,
     bool? hasPayment,
-    bool isDeliveryRefundable = true,
+    bool isDeliveryRefundable = false,
   }) async {
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
@@ -696,14 +672,13 @@ class SalesProvider with ChangeNotifier {
       body: requestBody,
     );
 
-    if (response.statusCode == 200) {
-      debugPrint('Sales return submitted successfully: ${response.body}');
-      notifyListeners();
-    } else {
-      debugPrint(
-          'Failed to submit sales return: ${response.statusCode} - ${response.body}');
-      throw Exception('Failed to submit sales return');
-    }
+    ApiResponseHelper.ensureSuccess(
+      response.statusCode,
+      response.body,
+      fallback: 'Failed to complete sales return',
+    );
+    debugPrint('Sales return completed successfully: ${response.body}');
+    notifyListeners();
   }
 
   Future<void> cancelOrder({

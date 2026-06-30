@@ -65,7 +65,7 @@ class SalesReturnCart {
   final String quantity;
   final String unitPrice;
   final String totalPrice;
-  final int returnedQuantity;
+  final double returnedQuantity;
   final String returnedTotal;
   final bool isReturned;
 
@@ -89,10 +89,8 @@ class SalesReturnCart {
       quantity: json['quantity'],
       unitPrice: json['unit_price'].toString(),
       totalPrice: json['total_price'].toString(),
-      returnedQuantity: json['returned_quantity'] != null 
-          ? (json['returned_quantity'] is int)
-              ? json['returned_quantity']
-              : int.tryParse(json['returned_quantity'].toString()) ?? 0
+      returnedQuantity: json['returned_quantity'] != null
+          ? double.tryParse(json['returned_quantity'].toString()) ?? 0
           : 0,
       returnedTotal: json['returned_total']?.toString() ?? '0',
       isReturned: json['is_returned'],

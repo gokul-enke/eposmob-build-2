@@ -15,7 +15,9 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
 import 'package:pos_machine/models/order_details.dart';
-import 'package:pos_machine/providers/cart_provider.dart';
+import 'package:pos_machine/helpers/sales_return_calculation_helper.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
@@ -79,7 +81,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   bool isCompletingReturn = false;
 
   // Track initial state to calculate session-specific returns
-  Map<int, int> _initialReturnedQuantities =
+  Map<int, double> _initialReturnedQuantities =
       {}; // cartItemId -> initial returned quantity
   Map<int, double> _initialReturnedTotals =
       {}; // cartItemId -> initial returned total
@@ -170,9 +172,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
 
+      final prefs = await SharedPreferences.getInstance();
+      final storeId = prefs.getInt('active_store_id') ?? 1;
+
       await orderProvider.fetchOrders(
         accessToken: accessToken ?? '',
-        storeId: 1,
+        storeId: storeId,
       );
     } catch (error, stackTrace) {
       debugPrint('Error in loadInitData: $error');
@@ -337,6 +342,14 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     } catch (error, stackTrace) {
       debugPrint('Error in getOrderDetails for order ID $ordersId: $error');
       debugPrint('Stack Trace for getOrderDetails: $stackTrace');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: error is Exception
+              ? error.toString().replaceFirst('Exception: ', '')
+              : 'Failed to load return items',
+        );
+      }
     } finally {
       // Hide loading indicator
       if (mounted) {
@@ -1066,6 +1079,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     required String currency,
     required String totalPrice,
     required String quantity,
+    required double returnedQuantity,
   }) {
     debugPrint('_showReturnDialog called with:');
     debugPrint('  productName: $productName');
@@ -1075,12 +1089,15 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     debugPrint('  currency: $currency');
     debugPrint('  totalPrice: $totalPrice');
     debugPrint('  quantity: $quantity');
+    debugPrint('  returnedQuantity: $returnedQuantity');
     final TextEditingController quantityController = TextEditingController();
     final TextEditingController reasonController = TextEditingController();
     final TextEditingController returnTotalController = TextEditingController();
-    final maxQuantity = double.parse(quantity);
+    final soldQuantity = double.tryParse(quantity) ?? 0;
+    final maxQuantity = (soldQuantity - returnedQuantity).clamp(0, soldQuantity);
     final unitPriceValue = double.parse(unitPrice);
     final maxTotal = maxQuantity * unitPriceValue;
+    final bool allowsDecimals = soldQuantity != soldQuantity.roundToDouble();
 
     bool _updatingFromQuantity = false;
     bool _updatingFromTotal = false;
@@ -1089,10 +1106,13 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       if (_updatingFromTotal) return;
       if (quantityController.text.isEmpty) return;
 
-      final enteredQuantity = int.tryParse(quantityController.text) ?? 0;
+      final enteredQuantity =
+          double.tryParse(quantityController.text) ?? 0;
 
       if (enteredQuantity > maxQuantity) {
-        quantityController.text = maxQuantity.toInt().toString();
+        quantityController.text = allowsDecimals
+            ? maxQuantity.toStringAsFixed(3)
+            : maxQuantity.toInt().toString();
         quantityController.selection = TextSelection.fromPosition(
           TextPosition(offset: quantityController.text.length),
         );
@@ -1118,12 +1138,22 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       }
 
       _updatingFromTotal = true;
-      final calculatedQuantity = (enteredTotal / unitPriceValue).floor();
+      final calculatedQuantity = enteredTotal / unitPriceValue;
       if (calculatedQuantity <= maxQuantity) {
-        quantityController.text = calculatedQuantity.toString();
+        quantityController.text = allowsDecimals
+            ? calculatedQuantity.toStringAsFixed(3)
+            : calculatedQuantity.floor().toString();
       }
       _updatingFromTotal = false;
     });
+
+    if (maxQuantity <= 0) {
+      showScaffoldError(
+        context: context,
+        message: 'No remaining quantity to return for this item',
+      );
+      return;
+    }
 
     showDialog(
       context: context,
@@ -1276,20 +1306,26 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.grey[100],
-                      helperText: 'Maximum quantity: $maxQuantity',
-                      errorText: int.tryParse(quantityController.text) !=
-                                  null &&
-                              int.parse(quantityController.text) > maxQuantity
-                          ? 'Cannot exceed original quantity'
+                      helperText:
+                          'Maximum returnable: ${allowsDecimals ? maxQuantity.toStringAsFixed(3) : maxQuantity.toInt()}',
+                      errorText: (double.tryParse(quantityController.text) ??
+                                  0) >
+                              maxQuantity
+                          ? 'Cannot exceed remaining quantity'
                           : null,
                     ),
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
                     inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
+                      if (allowsDecimals)
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,3}'))
+                      else
+                        FilteringTextInputFormatter.digitsOnly,
                       TextInputFormatter.withFunction((oldValue, newValue) {
                         if (newValue.text.isEmpty) return newValue;
-                        final intValue = int.tryParse(newValue.text);
-                        if (intValue == null || intValue <= maxQuantity) {
+                        final parsed = double.tryParse(newValue.text);
+                        if (parsed == null || parsed <= maxQuantity) {
                           return newValue;
                         }
                         return oldValue;
@@ -1353,13 +1389,33 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       const SizedBox(width: 12),
                       ElevatedButton(
                         onPressed: () async {
-                          // if (reasonController.text.isEmpty) {
-                          //   showScaffoldError(
-                          //     context: context,
-                          //     message: 'Please enter reason',
-                          //   );
-                          //   return;
-                          // }
+                          final parsedOrderId = int.tryParse(orderId);
+                          if (parsedOrderId == null) {
+                            showScaffoldError(
+                              context: context,
+                              message: 'Invalid order. Please reopen from Sales.',
+                            );
+                            return;
+                          }
+
+                          final returnQty =
+                              double.tryParse(quantityController.text);
+                          if (returnQty == null || returnQty <= 0) {
+                            showScaffoldError(
+                              context: context,
+                              message: 'Please enter a valid quantity',
+                            );
+                            return;
+                          }
+                          if (returnQty > maxQuantity) {
+                            showScaffoldError(
+                              context: context,
+                              message:
+                                  'Quantity cannot exceed remaining returnable amount',
+                            );
+                            return;
+                          }
+
                           try {
                             String? accessToken =
                                 Provider.of<AuthModel>(context, listen: false)
@@ -1369,9 +1425,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                     listen: false)
                                 .submitSalesReturn(
                               accessToken: accessToken ?? '',
-                              orderId: int.parse(orderId),
+                              orderId: parsedOrderId,
                               price: double.parse(unitPrice),
-                              quantity: int.parse(quantityController.text),
+                              quantity: returnQty,
                               cartItemId: cartItemId,
                               reason: reasonController.text,
                             );
@@ -1393,7 +1449,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                 'Stack Trace for submitSalesReturn: $stackTrace');
                             showScaffoldError(
                               context: context,
-                              message: 'Failed to submit sales return',
+                              message: error is Exception
+                                  ? error
+                                      .toString()
+                                      .replaceFirst('Exception: ', '')
+                                  : 'Failed to submit sales return',
                             );
                           }
                         },
@@ -1545,7 +1605,12 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               SizedBox(
                                 height: 55,
                                 child: _buildTableCell(
-                                    item.returnedQuantity.toString()),
+                                  item.returnedQuantity ==
+                                          item.returnedQuantity.roundToDouble()
+                                      ? item.returnedQuantity.toInt().toString()
+                                      : item.returnedQuantity
+                                          .toStringAsFixed(3),
+                                ),
                               ),
                               SizedBox(
                                 height: 55,
@@ -1569,7 +1634,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               SizedBox(
                                 height: 55,
                                 child: Center(
-                                  child: item.isReturned
+                                  child: item.isReturned ||
+                                          SalesReturnCalculationHelper
+                                                  .remainingReturnableQuantity(
+                                                      item) <=
+                                              0
                                       ? const Text(
                                           "Returned",
                                           style: TextStyle(
@@ -1594,6 +1663,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                                   item.totalPrice.toString(),
                                               quantity:
                                                   item.quantity.toString(),
+                                              returnedQuantity:
+                                                  item.returnedQuantity,
                                             );
                                           },
                                           child: const Text("Return"),
@@ -1647,6 +1718,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     );
   }
 
+  SalesReturnRefundSummary _refundSummaryFor(List<SalesReturnCart> items) {
+    return SalesReturnCalculationHelper.calculateRefund(
+      items: items,
+      initialReturnedTotals: _initialReturnedTotals,
+      orderDiscount:
+          (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble(),
+      shippingCost: (orderDetailsModelData?.deliveryCharge ?? 0).toDouble(),
+      deliveryRefundable: _deliveryChargeRefundable,
+    );
+  }
+
   Widget _buildCompleteReturnButton(Size size) {
     final SideBarController sideBarController = Get.put(SideBarController());
 
@@ -1693,37 +1775,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               return;
             }
 
-            double paidAmount =
+            final refundSummary = _refundSummaryFor(_salesReturnItems);
+            final maxReturnAmount = refundSummary.netRefundAmount;
+            final paidAmount =
                 double.tryParse(paidAmountController.text) ?? 0.0;
-
-            // Calculate maximum returnable amount (session-only) and original items total
-            double maxReturnAmount = 0.0;
-            double originalItemsTotal = 0.0;
-            for (var item in _salesReturnItems) {
-              originalItemsTotal +=
-                  double.tryParse(item.totalPrice.toString()) ?? 0.0;
-              final initialReturnedTotal =
-                  _initialReturnedTotals[item.cartItemId] ?? 0.0;
-              final currentReturnedTotal =
-                  double.tryParse(item.returnedTotal.toString()) ?? 0.0;
-              maxReturnAmount +=
-                  (currentReturnedTotal - initialReturnedTotal);
-            }
-
-            // Pro-rata discount deduction (before adding shipping)
-            final discountAmountForSubmit =
-                (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
-            if (originalItemsTotal > 0 && discountAmountForSubmit > 0) {
-              final proRata =
-                  (maxReturnAmount / originalItemsTotal) * discountAmountForSubmit;
-              maxReturnAmount -= proRata;
-            }
-
-            // Include shipping cost in max check if toggle is ON
-            if (_deliveryChargeRefundable) {
-              maxReturnAmount +=
-                  (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
-            }
 
             if (paidAmount <= 0) {
               showScaffoldError(
@@ -1774,7 +1829,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           debugPrint('Stack Trace for completeSalesReturn: $stackTrace');
           showScaffoldError(
             context: context,
-            message: 'Failed to create sales return',
+            message: error is Exception
+                ? error.toString().replaceFirst('Exception: ', '')
+                : 'Failed to create sales return',
           );
         } finally {
           if (mounted) {
@@ -1846,18 +1903,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       // Calculate totals
       double orderTotal = 0.0;
-      double returnedTotal = 0.0;
       int totalItems = salesReturnItems.length; // Count of distinct items
       int totalQuantity = 0; // Total quantity of all items
       int returnedItems = 0;
-      int returnedQuantity = 0; // Total returned quantity IN THIS SESSION
+      double returnedQuantity = 0; // Total returned quantity IN THIS SESSION
 
       for (var item in salesReturnItems) {
         final itemTotal = double.tryParse(item.totalPrice.toString()) ?? 0.0;
-        final itemQuantity = int.tryParse(item.quantity) ?? 0;
+        final itemQuantity = double.tryParse(item.quantity) ?? 0;
 
         orderTotal += itemTotal;
-        totalQuantity += itemQuantity;
+        totalQuantity += itemQuantity.round();
 
         // Calculate ONLY the returns made in THIS session (difference from initial state)
         final initialReturnedQty =
@@ -1874,7 +1930,6 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         final sessionReturnedTotal =
             currentReturnedTotal - initialReturnedTotal;
 
-        returnedTotal += sessionReturnedTotal;
         returnedQuantity += sessionReturnedQty;
 
         if (sessionReturnedQty > 0) {
@@ -1882,33 +1937,21 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         }
       }
 
-      // Check if this is now a FULL order return (including previous returns)
-      bool isFullOrderReturn = true;
-      for (var item in salesReturnItems) {
-        if (item.returnedQuantity < (int.tryParse(item.quantity) ?? 0)) {
-          isFullOrderReturn = false;
-          break;
-        }
-      }
-
-      final discountAmount =
-          (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
-      // Pro-rata: deduct the proportional share of the discount for the returned items
-      final double returnDiscount = orderTotal > 0
-          ? (returnedTotal / orderTotal) * discountAmount
-          : 0.0;
-      returnedTotal -= returnDiscount;
-
-      // Include shipping cost in Return Summary if toggle is ON
-      final shippingCost = (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
-      if (_deliveryChargeRefundable) {
-        returnedTotal += shippingCost;
-      }
+      final refundSummary = _refundSummaryFor(salesReturnItems);
+      final returnDiscount = refundSummary.proRataDiscount;
+      final returnedTotal = refundSummary.netRefundAmount;
+      final shippingCost =
+          (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
 
       // Order total should also ideally come from orderDetailsModelData to include tax/shipping
       if (orderDetailsModelData?.priceSummary?.netPayable != null) {
-        orderTotal = (orderDetailsModelData!.priceSummary!.netPayable!).toDouble();
+        orderTotal =
+            (orderDetailsModelData!.priceSummary!.netPayable!).toDouble();
       }
+
+      final returnedQtyLabel = returnedQuantity == returnedQuantity.roundToDouble()
+          ? '${returnedQuantity.toInt()}'
+          : returnedQuantity.toStringAsFixed(3);
 
       return Row(
         children: [
@@ -2004,7 +2047,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   const SizedBox(height: 12),
                   _buildSummaryRow('Returned Items', '$returnedItems'),
                   const SizedBox(height: 6),
-                  _buildSummaryRow('Returned Quantity', '$returnedQuantity'),
+                  _buildSummaryRow('Returned Quantity', returnedQtyLabel),
                   const SizedBox(height: 6),
                   _buildSummaryRow('Discount', returnDiscount.toStringAsFixed(2)),
                   const SizedBox(height: 6),
@@ -2056,35 +2099,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         return const SizedBox.shrink();
       }
 
-      // Calculate return total (ONLY from this session) and original items total
-      double returnedTotal = 0.0;
-      double originalItemsTotal = 0.0;
-      for (var item in salesReturnItems) {
-        originalItemsTotal +=
-            double.tryParse(item.totalPrice.toString()) ?? 0.0;
-        final initialReturnedTotal =
-            _initialReturnedTotals[item.cartItemId] ?? 0.0;
-        final currentReturnedTotal =
-            double.tryParse(item.returnedTotal.toString()) ?? 0.0;
-        final sessionReturnedTotal =
-            currentReturnedTotal - initialReturnedTotal;
-        returnedTotal += sessionReturnedTotal;
-      }
-
-      final discountAmount =
-          (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
-      // Pro-rata: deduct proportional discount share for the returned items
-      final double proRataDiscount = originalItemsTotal > 0
-          ? (returnedTotal / originalItemsTotal) * discountAmount
-          : 0.0;
-      returnedTotal -= proRataDiscount;
-
-      // Add shipping cost if toggle is ON and we have order data
-      final shippingCost =
-          (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
-      if (_deliveryChargeRefundable) {
-        returnedTotal += shippingCost;
-      }
+      // Calculate return total (ONLY from this session) via shared helper
+      final refundSummary = _refundSummaryFor(salesReturnItems);
+      final returnedTotal = refundSummary.netRefundAmount;
 
       // Autofill the return amount when payment is enabled and field is empty
       if (hasPayment && paidAmountController.text.isEmpty) {
@@ -2347,56 +2364,62 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        SizedBox(
-                          height: 48,
-                          child: TextFormField(
-                            controller: paidAmountController,
-                            focusNode: paidAmountFocusNode,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            textAlignVertical: TextAlignVertical.center,
-                            onTap: () {
-                              paidAmountController.selection = TextSelection(
-                                baseOffset: 0,
-                                extentOffset: paidAmountController.text.length,
-                              );
-                            },
-                            decoration: InputDecoration(
-                              isDense: true,
-                              errorText: isExceedingMax
-                                  ? 'Return amount cannot exceed ${returnedTotal.toStringAsFixed(2)}'
-                                  : null,
-                              prefixIcon:
-                                  const Icon(Icons.currency_rupee, size: 16),
-                              prefixIconConstraints: const BoxConstraints(
-                                  minWidth: 40, minHeight: 40),
-                              constraints:
-                                  const BoxConstraints.tightFor(height: 48),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
+                        Consumer<AppSettingsProvider>(
+                          builder: (context, settings, _) {
+                            final currency =
+                                settings.appSettings?.currency ?? 'INR';
+                            return SizedBox(
+                              height: 48,
+                              child: TextFormField(
+                                controller: paidAmountController,
+                                focusNode: paidAmountFocusNode,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                textAlignVertical: TextAlignVertical.center,
+                                onTap: () {
+                                  paidAmountController.selection =
+                                      TextSelection(
+                                    baseOffset: 0,
+                                    extentOffset:
+                                        paidAmountController.text.length,
+                                  );
+                                },
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  errorText: isExceedingMax
+                                      ? 'Return amount cannot exceed ${returnedTotal.toStringAsFixed(2)}'
+                                      : null,
+                                  prefixText: '$currency ',
+                                  constraints: const BoxConstraints.tightFor(
+                                      height: 48),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                        color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                        color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                        color: ColorManager.kPrimaryColor),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 12),
+                                ),
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s14,
+                                  0.25,
+                                  ColorManager.textColor,
+                                ),
                               ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                    color: ColorManager.kPrimaryColor),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 12),
-                            ),
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s14,
-                              0.25,
-                              ColorManager.textColor,
-                            ),
-                          ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -2404,6 +2427,28 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              Text(
+                'Items total (this session): ${refundSummary.sessionItemsTotal.toStringAsFixed(2)}',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s11,
+                  0.25,
+                  Colors.grey.shade600,
+                ),
+              ),
+              if (refundSummary.proRataDiscount > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Pro-rata discount: −${refundSummary.proRataDiscount.toStringAsFixed(2)}',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s11,
+                    0.25,
+                    Colors.grey.shade600,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 4),
               Text(
                 'Maximum returnable amount: ${returnedTotal.toStringAsFixed(2)}',
                 style: buildCustomStyle(
