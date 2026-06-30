@@ -89,6 +89,7 @@ class GetProduct {
   final List<ProductTax>? taxes; // Restore taxes list
   final String? purchasePrice;
   final dynamic minMarginPercentage;
+  final dynamic minMarginPrice;
   final List<Attachment>? attachment;
   bool isSelected = false;
   final dynamic names; // Change to dynamic
@@ -120,6 +121,7 @@ class GetProduct {
     this.taxes, // Restore taxes list
     this.purchasePrice,
     this.minMarginPercentage,
+    this.minMarginPrice,
     this.unit,
     this.currency,
     this.description,
@@ -157,6 +159,7 @@ class GetProduct {
     List<ProductTax>? taxes,
     String? purchasePrice,
     dynamic minMarginPercentage,
+    dynamic minMarginPrice,
     List<Attachment>? attachment,
     dynamic names,
     List<ProductProp>? productProps,
@@ -188,6 +191,7 @@ class GetProduct {
       taxes: taxes ?? this.taxes,
       purchasePrice: purchasePrice ?? this.purchasePrice,
       minMarginPercentage: minMarginPercentage ?? this.minMarginPercentage,
+      minMarginPrice: minMarginPrice ?? this.minMarginPrice,
       unit: unit ?? this.unit,
       currency: currency ?? this.currency,
       description: description ?? this.description,
@@ -260,6 +264,7 @@ class GetProduct {
         purchasePrice: json["purchase_price"]?.toString() ??
             json["purchase_rate"]?.toString(),
         minMarginPercentage: json["min_margin_percentage"],
+        minMarginPrice: json["min_margin_price"],
         attachment: json["attachment"] == null
             ? []
             : List<Attachment>.from((json["attachment"] as List)
@@ -333,6 +338,7 @@ class GetProduct {
             : List<dynamic>.from(taxes!.map((x) => x.toJson())),
         "purchase_price": purchasePrice,
         "min_margin_percentage": minMarginPercentage,
+        "min_margin_price": minMarginPrice,
         "unit": unit,
         "currency": currency,
         "description": description,

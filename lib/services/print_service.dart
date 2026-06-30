@@ -156,6 +156,7 @@ class PrintService {
         customerCurrentBalance: customerCurrentBalance,
         isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
         netExcTax: netExcTax,
+        apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
       );
 
       // Only show print page if auto-print failed
@@ -192,6 +193,7 @@ class PrintService {
               isDefaultCustomer:
                   _isDefaultCustomerPhone(context, customerPhone),
               netExcTax: netExcTax,
+              apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
             ),
           ),
         );

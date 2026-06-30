@@ -447,8 +447,12 @@ class MenuPanelState extends State<MenuPanel> {
     final indexedProducts = products.indexed.toList();
 
     int matchRank(GetProduct product) {
-      final productName = product.productName?.trim().toLowerCase() ?? '';
-      if (productName.startsWith(normalizedQuery)) return 0;
+      final productNames = _productSearchNames(product)
+          .map((name) => name.trim().toLowerCase())
+          .where((name) => name.isNotEmpty);
+      if (productNames.any((name) => name.startsWith(normalizedQuery))) {
+        return 0;
+      }
       return 1;
     }
 
@@ -459,6 +463,55 @@ class MenuPanelState extends State<MenuPanel> {
     });
 
     return indexedProducts.map((entry) => entry.$2).toList();
+  }
+
+  List<String> _productSearchNames(GetProduct product) {
+    final names = <String>[];
+
+    void addName(dynamic value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) {
+        names.add(text);
+      }
+    }
+
+    void extractNames(dynamic value) {
+      if (value == null) return;
+
+      if (value is String || value is num || value is bool) {
+        addName(value);
+        return;
+      }
+
+      if (value is Map) {
+        for (final key in const ['name', 'product_name', 'value', 'text']) {
+          if (value.containsKey(key)) {
+            addName(value[key]);
+          }
+        }
+
+        for (final entry in value.entries) {
+          final entryKey = entry.key?.toString().toLowerCase() ?? '';
+          if (entryKey.contains('language') || entryKey == 'id') {
+            continue;
+          }
+          extractNames(entry.value);
+        }
+        return;
+      }
+
+      if (value is Iterable) {
+        for (final item in value) {
+          extractNames(item);
+        }
+      }
+    }
+
+    addName(product.productName);
+    extractNames(product.names);
+
+    return names.toSet().toList();
   }
 
   void _clearSearch() {
@@ -779,8 +832,8 @@ class MenuPanelState extends State<MenuPanel> {
         // Apply search filter
         if (_searchQuery.isNotEmpty) {
           items = items.where((product) {
-            return product.productName?.toLowerCase().contains(_searchQuery) ??
-                false;
+            return _productSearchNames(product)
+                .any((name) => name.toLowerCase().contains(_searchQuery));
           }).toList();
           items = _rankSearchMatches(items, _searchQuery);
         }

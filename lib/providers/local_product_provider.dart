@@ -1983,10 +1983,10 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     if (filterName != null && filterName.isNotEmpty) {
+      final normalizedFilterName = filterName.toLowerCase();
       result = result
-          .where((p) => (p.productName ?? '')
-              .toLowerCase()
-              .contains(filterName.toLowerCase()))
+          .where((p) => _productSearchNames(p)
+              .any((name) => name.toLowerCase().contains(normalizedFilterName)))
           .toList();
       result = _rankProductNameMatches(result, filterName);
     }
@@ -2058,9 +2058,10 @@ class LocalProductProvider extends ChangeNotifier {
     if (query.isEmpty) {
       return _filteredProducts;
     }
+    final normalizedQuery = query.toLowerCase();
     final matches = _filteredProducts
-        .where((p) =>
-            (p.productName ?? '').toLowerCase().contains(query.toLowerCase()))
+        .where((p) => _productSearchNames(p)
+            .any((name) => name.toLowerCase().contains(normalizedQuery)))
         .toList();
     return _rankProductNameMatches(matches, query);
   }
@@ -2083,9 +2084,60 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   int _productNameMatchRank(GetProduct product, String normalizedQuery) {
-    final productName = product.productName?.trim().toLowerCase() ?? '';
-    if (productName.startsWith(normalizedQuery)) return 0;
+    final productNames = _productSearchNames(product)
+        .map((name) => name.trim().toLowerCase())
+        .where((name) => name.isNotEmpty);
+    if (productNames.any((name) => name.startsWith(normalizedQuery))) return 0;
     return 1;
+  }
+
+  List<String> _productSearchNames(GetProduct product) {
+    final names = <String>[];
+
+    void addName(dynamic value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) {
+        names.add(text);
+      }
+    }
+
+    void extractNames(dynamic value) {
+      if (value == null) return;
+
+      if (value is String || value is num || value is bool) {
+        addName(value);
+        return;
+      }
+
+      if (value is Map) {
+        for (final key in const ['name', 'product_name', 'value', 'text']) {
+          if (value.containsKey(key)) {
+            addName(value[key]);
+          }
+        }
+
+        for (final entry in value.entries) {
+          final entryKey = entry.key?.toString().toLowerCase() ?? '';
+          if (entryKey.contains('language') || entryKey == 'id') {
+            continue;
+          }
+          extractNames(entry.value);
+        }
+        return;
+      }
+
+      if (value is Iterable) {
+        for (final item in value) {
+          extractNames(item);
+        }
+      }
+    }
+
+    addName(product.productName);
+    extractNames(product.names);
+
+    return names.toSet().toList();
   }
 
   /// Adds a product to the local products list.
@@ -2116,18 +2168,24 @@ class LocalProductProvider extends ChangeNotifier {
     // Check if the product already exists in the list
     int index = _products.indexWhere((p) => p.productId == product.productId);
     if (index == -1) {
-      // If the product does not exist, add it to the first position in the list
       _products.insert(0, product);
+      _filteredProducts.insert(0, product);
       _rebuildBarcodeIndex();
       _saveProductsToHive();
-      notifyListeners(); // Notify listeners about the change
+      notifyListeners();
       debugPrint("✅ Product added to local storage successfully");
     } else {
-      // Optionally, you can update the existing product if needed
-      _products[index] = product; // Update the existing product
+      _products[index] = product;
+      final filteredIndex =
+          _filteredProducts.indexWhere((p) => p.productId == product.productId);
+      if (filteredIndex == -1) {
+        _filteredProducts.insert(0, product);
+      } else {
+        _filteredProducts[filteredIndex] = product;
+      }
       _rebuildBarcodeIndex();
       _saveProductsToHive();
-      notifyListeners(); // Notify listeners about the change
+      notifyListeners();
       debugPrint("✅ Product updated in local storage successfully");
     }
 
@@ -2585,26 +2643,45 @@ class LocalProductProvider extends ChangeNotifier {
     }
   }
 
-  /// Minimum allowed sale price (in base units) for a product, derived from its
-  /// `min_margin_percentage`. Acts as a discount floor off the catalog selling
-  /// price:
+  /// Minimum allowed sale price (in base units) for a product. Acts as a
+  /// discount floor off the catalog selling price, derived from two optional
+  /// configurations:
   ///
-  ///   minSalePrice = sellingPrice × (1 − minMarginPercentage / 100)
+  ///   • `min_margin_percentage` → percentage discount floor:
+  ///       floor = sellingPrice × (1 − minMarginPercentage / 100)
+  ///   • `min_margin_price`      → absolute discount floor (max reduction):
+  ///       floor = sellingPrice − minMarginPrice
   ///
-  /// Returns `null` when no floor is configured (no/zero margin or no selling
+  /// When both are configured, the most restrictive (higher) floor wins.
+  ///
+  /// Returns `null` when no floor is configured (no/zero margins or no selling
   /// price), meaning the price may be lowered freely.
   double? minimumSalePriceForProduct(GetProduct product) {
-    final pct = _parseAmount(product.minMarginPercentage?.toString());
-    if (pct == null || pct <= 0) {
-      return null;
-    }
-
     final sellingPrice = _parseAmount(product.price?.price?.toString());
     if (sellingPrice == null || sellingPrice <= 0) {
       return null;
     }
 
-    final floor = sellingPrice * (1 - (pct / 100));
+    final pct = _parseAmount(product.minMarginPercentage?.toString());
+    final maxReduction = _parseAmount(product.minMarginPrice?.toString());
+
+    double? floor;
+
+    if (pct != null && pct > 0) {
+      final pctFloor = sellingPrice * (1 - (pct / 100));
+      floor = pctFloor;
+    }
+
+    if (maxReduction != null && maxReduction > 0) {
+      final priceFloor = sellingPrice - maxReduction;
+      // Most restrictive floor wins.
+      floor = (floor == null) ? priceFloor : (priceFloor > floor ? priceFloor : floor);
+    }
+
+    if (floor == null) {
+      return null;
+    }
+
     return floor < 0 ? 0.0 : floor;
   }
 

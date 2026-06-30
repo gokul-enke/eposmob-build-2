@@ -227,12 +227,12 @@ class DocumentConfigProvider extends ChangeNotifier {
           await _saveSnapshotToSharedPreferences(jsonData);
         }
 
-        // Save each config to Hive for persistence
-        if (_documentConfigurations?.documentConfigurations != null) {
-          _documentConfigurations!.documentConfigurations!
-              .forEach((key, value) async {
-            await _saveToHive(key, value.toJson());
-          });
+        // Save each config to Hive for persistence before reporting sync done.
+        final configs = _documentConfigurations?.documentConfigurations;
+        if (configs != null) {
+          for (final entry in configs.entries) {
+            await _saveToHive(entry.key, entry.value.toJson());
+          }
         }
         await cacheDocumentLogosLocally();
 
@@ -272,11 +272,6 @@ class DocumentConfigProvider extends ChangeNotifier {
   }) async {
     debugPrint("📄 Fetching document config: type=$type, language=$language");
 
-    String urlString = '${APPUrl.documentConfigs}?type=$type';
-    if (language != null && language.isNotEmpty) {
-      urlString += '&language=$language';
-    }
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
@@ -285,14 +280,15 @@ class DocumentConfigProvider extends ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    // Build URL with store_id parameter
-    final Map<String, String> queryParams = {};
+    final Map<String, String> queryParams = {'type': type};
+    if (language != null && language.isNotEmpty) {
+      queryParams['language'] = language;
+    }
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();
     }
-    final baseUrl = Uri.parse(urlString);
-    final url = baseUrl.replace(
-        queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    final url =
+        Uri.parse(APPUrl.documentConfigs).replace(queryParameters: queryParams);
 
     try {
       final response = await http.get(

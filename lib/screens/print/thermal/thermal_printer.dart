@@ -502,8 +502,8 @@ class ThermalPrinter {
           if (logo != null) {
             debugPrint(
                 "[LOGO_DEBUG] Network logo resolved successfully for image-based print. Size: ${logo.width}x${logo.height}");
-            // Use 80% of width for logo
-            part1Rows.add(ImageRow(logo, width: printWidth * 0.8));
+            // Cap logo by height so it does not dominate the receipt header.
+            part1Rows.add(ImageRow(logo, height: printWidth * 0.22));
             part1Rows.add(SpacingRow(10));
             debugPrint(
                 "[LOGO_DEBUG] Logo added to part1Rows for image-based print");

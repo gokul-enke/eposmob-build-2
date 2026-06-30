@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:provider/provider.dart';
 
 /// Helper class to parse locally stored multi-payment JSON into
@@ -270,6 +271,18 @@ class PaymentHelper {
   /// Example: { "7974": "CASH", "7973": "CARD", "7975": "UPI", "7976": "COD" }
   static Map<String, String> _buildIdToNameMap(BuildContext context) {
     final map = <String, String>{};
+    // Dynamic/extra methods: pull id -> value/name for every configured
+    // payment method so methods beyond the typed four display by name.
+    try {
+      final masterData =
+          Provider.of<MasterDataProvider>(context, listen: false);
+      for (final method in masterData.paymentMethods ?? const []) {
+        map[method.id.toString()] =
+            method.description.isNotEmpty ? method.description : method.value;
+      }
+    } catch (_) {
+      // MasterDataProvider may not be available in all contexts
+    }
     try {
       final billing = Provider.of<BillingProvider>(context, listen: false);
       if (billing.cashPaymentMethodId != null) {

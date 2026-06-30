@@ -315,6 +315,9 @@ class HiveGetProduct extends HiveObject {
   @HiveField(22)
   final String? minMarginPercentage;
 
+  @HiveField(23)
+  final String? minMarginPrice;
+
   HiveGetProduct({
     this.productId,
     this.categoryId,
@@ -339,6 +342,7 @@ class HiveGetProduct extends HiveObject {
     this.taxes,
     this.itemCode,
     this.minMarginPercentage,
+    this.minMarginPrice,
   });
 
   // Convert from app model to Hive model
@@ -375,6 +379,7 @@ class HiveGetProduct extends HiveObject {
           : [],
       itemCode: product.itemCode,
       minMarginPercentage: product.minMarginPercentage?.toString(),
+      minMarginPrice: product.minMarginPrice?.toString(),
     );
   }
 
@@ -403,6 +408,7 @@ class HiveGetProduct extends HiveObject {
       taxes: taxes?.map((t) => t.toProductTax()).toList() ?? [],
       itemCode: itemCode,
       minMarginPercentage: minMarginPercentage,
+      minMarginPrice: minMarginPrice,
     )..isSelected = isSelected;
   }
 }

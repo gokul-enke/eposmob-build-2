@@ -53,6 +53,9 @@ class ReceiptLayoutParams {
   final String? storeLocation;
   final String? storePhone;
   final String? storeEmail;
+  // Pre-computed total tax from API price_summary.total_tax (post-discount).
+  // Null for offline/local-storage orders, which fall back to item-level sum.
+  final double? apiTotalTax;
 
   const ReceiptLayoutParams({
     required this.context,
@@ -96,6 +99,7 @@ class ReceiptLayoutParams {
     this.storeLocation,
     this.storePhone,
     this.storeEmail,
+    this.apiTotalTax,
   });
 
   /// Get the display configuration options from the document config
@@ -196,11 +200,14 @@ class ReceiptLayoutParams {
   /// Get base font size for image-based printing
   double get baseFontSize => selectedPaperSize == '80mm' ? 28.0 : 20.0;
 
-  /// Calculate total tax from cart items
+  /// Total tax for display. Prefers the API-provided post-discount value
+  /// (price_summary.total_tax). Falls back to summing item-level taxAmount for
+  /// offline/local-storage orders where the API value is unavailable.
   double get totalTax {
+    if (apiTotalTax != null) return apiTotalTax!;
     double tax = 0.0;
     for (var item in cartItems) {
-      if (isFromLocalStorage) {
+      if (isFromLocalStorage || item is Map) {
         tax += double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0.0;
       } else {
         tax += double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0.0;

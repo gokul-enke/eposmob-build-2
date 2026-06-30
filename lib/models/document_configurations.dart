@@ -107,6 +107,9 @@ class DocumentConfig {
 
   factory DocumentConfig.fromJson(Map<String, dynamic> json) {
     var displayConfigJson = json["display_configuration"];
+    displayConfigJson ??= _displayFlagsToDisplayConfiguration(
+      json["display_flags"],
+    );
     DisplayConfiguration? displayConfiguration;
 
     if (displayConfigJson is Map<String, dynamic>) {
@@ -163,6 +166,22 @@ class DocumentConfig {
       activeTheme: json["active_theme"], // Parse active theme from JSON
       displayConfiguration: displayConfiguration,
       resolvedLabels: parseResolvedLabels(json["resolved_labels"]),
+    );
+  }
+
+  static Map<String, dynamic>? _displayFlagsToDisplayConfiguration(
+    dynamic raw,
+  ) {
+    if (raw is! Map) return null;
+
+    return Map.from(raw).map(
+      (key, value) => MapEntry<String, dynamic>(
+        key.toString(),
+        {
+          'visible': value == true,
+          'value': null,
+        },
+      ),
     );
   }
 

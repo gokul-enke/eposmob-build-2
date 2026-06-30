@@ -7,6 +7,7 @@ import 'package:pos_machine/components/build_back_button.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
@@ -51,6 +52,24 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
   OrderDetailsModelDataCart? cart;
   List<OrderDetailsModelDataCartItem>? cartItems = [];
   OrderDetailsModelDataPriceSummary? priceSummary;
+
+  DocumentConfig? _resolvePdfBillDocumentConfig(
+    DocumentConfigProvider docConfigProvider,
+  ) {
+    final hasReturns = orderDetailsModelData?.orderReturns != null &&
+        orderDetailsModelData!.orderReturns!.returnItems != null &&
+        orderDetailsModelData!.orderReturns!.returnItems!.isNotEmpty;
+
+    if (hasReturns) {
+      return docConfigProvider.getDocumentConfig("Sales and Return Bill A4") ??
+          docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
+          docConfigProvider.getDocumentConfig("Bill A4") ??
+          docConfigProvider.getDocumentConfig("Bill");
+    }
+
+    return docConfigProvider.getDocumentConfig("Bill A4") ??
+        docConfigProvider.getDocumentConfig("Bill");
+  }
 
   @override
   void initState() {
@@ -279,7 +298,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
       children: [
         CustomBackButton(
           onPressed: () {
-            final isOnline = Provider.of<SalesProvider>(context, listen: false).isOnlineSalesNavigation;
+            final isOnline = Provider.of<SalesProvider>(context, listen: false)
+                .isOnlineSalesNavigation;
             sideBarController.index.value = isOnline ? 92 : 2;
           },
           text: 'All Orders',
@@ -292,7 +312,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
           child: IconButton(
             padding: EdgeInsets.zero,
             onPressed: () {
-              final isOnline = Provider.of<SalesProvider>(context, listen: false).isOnlineSalesNavigation;
+              final isOnline =
+                  Provider.of<SalesProvider>(context, listen: false)
+                      .isOnlineSalesNavigation;
               sideBarController.index.value = isOnline ? 92 : 2;
             },
             icon:
@@ -430,7 +452,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
               // Try auto-print with default printer first
               final _hasReturns = orderDetailsModelData?.orderReturns != null &&
-                  (orderDetailsModelData?.orderReturns?.returnItems?.isNotEmpty ?? false);
+                  (orderDetailsModelData
+                          ?.orderReturns?.returnItems?.isNotEmpty ??
+                      false);
               final autoPrintSuccess = await PrintPage.autoPrint(
                 context,
                 storeName: storeName,
@@ -459,7 +483,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetailsModelData?.cart?.priceSummary?.netExcTax
                     ?.toString(),
-                documentConfigType: _hasReturns ? 'Sales and Return Bill' : 'Bill',
+                documentConfigType:
+                    _hasReturns ? 'Sales and Return Bill' : 'Bill',
+                apiTotalTax:
+                    orderDetailsModelData?.priceSummary?.totalTax?.toDouble(),
               );
 
               // Only show print page if auto-print failed
@@ -495,7 +522,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                       netExcTax: orderDetailsModelData
                           ?.cart?.priceSummary?.netExcTax
                           ?.toString(),
-                      documentConfigType: _hasReturns ? 'Sales and Return Bill' : 'Bill',
+                      documentConfigType:
+                          _hasReturns ? 'Sales and Return Bill' : 'Bill',
+                      apiTotalTax: orderDetailsModelData?.priceSummary?.totalTax
+                          ?.toDouble(),
                     ),
                   ),
                 );
@@ -576,7 +606,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
               showDialog(
                 context: context,
                 builder: (dialogCtx) => ChangeOrderStatusModal(
-                  currentStatus: orderDetailsModelData?.orderStatus ?? 'pending',
+                  currentStatus:
+                      orderDetailsModelData?.orderStatus ?? 'pending',
                   orderTotal: priceSummary?.netPayable?.toString() ?? '0',
                   onConfirm: ({
                     required newStatus,
@@ -592,7 +623,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                           Provider.of<SalesProvider>(context, listen: false);
                       await salesProvider.changeOrderStatus(
                         accessToken: authModel.token ?? '',
-                        orderId: orderDetailsModelData?.ordersId?.toString() ?? '',
+                        orderId:
+                            orderDetailsModelData?.ordersId?.toString() ?? '',
                         status: newStatus,
                         refundAmount: refundAmount,
                         paymentMethod: paymentMethod,
@@ -641,7 +673,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                           Provider.of<SalesProvider>(context, listen: false);
                       await salesProvider.changePaymentStatus(
                         accessToken: authModel.token ?? '',
-                        orderId: orderDetailsModelData?.ordersId?.toString() ?? '',
+                        orderId:
+                            orderDetailsModelData?.ordersId?.toString() ?? '',
                         status: newStatus,
                         amount: amount,
                       );
@@ -796,12 +829,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final appSettings = appSettingsProvider.appSettings;
 
-      final billDocumentConfig = (orderDetailsModelData!.orderReturns != null &&
-              orderDetailsModelData!.orderReturns!.returnItems != null &&
-              orderDetailsModelData!.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
-              docConfigProvider.getDocumentConfig("Bill"))
-          : docConfigProvider.getDocumentConfig("Bill");
+      final billDocumentConfig = _resolvePdfBillDocumentConfig(
+        docConfigProvider,
+      );
 
       if (appSettings == null || billDocumentConfig == null) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -834,7 +864,8 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
 
       final standardPrinter = StandardPrinter(context);
 
-      final storeSessionForShare = Provider.of<StoreSessionProvider>(context, listen: false);
+      final storeSessionForShare =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final File? pdfFile = await standardPrinter.generateThemedPDFForSharing(
         cartItems: orderDetailsModelData!.cart!.cartItems!,
         formattedTotal:

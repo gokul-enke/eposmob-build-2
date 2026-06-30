@@ -42,6 +42,8 @@ class PaymentMethodModalWrapper extends StatelessWidget {
             String? cardMethodId,
             String? upiMethodId,
             String? codMethodId,
+            Map<String, String>? extraMethodAmounts,
+            Map<String, String>? extraMethodValues,
           }) {
             billingProvider.updatePaymentFromModal(
               isCash: isCash,

@@ -212,6 +212,7 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       totalTax += iTax;
       totalExclTax += (iTotal - iTax);
     }
+    totalTax = params.totalTax;
     final totalAmount =
         double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0.0;
     final discountAmountValue =
@@ -709,7 +710,7 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         _totalsRow('Total (Exc VAT)',
                             _formatMoney(currency, totalExclTax), footerStyle),
                       if (dc?['showDiscount']?.visible != false &&
-                          discountAmountValue > 0)
+                          discountAmountValue != 0)
                         _totalsRow(
                             'Discount',
                             _formatMoney(currency, discountAmountValue),

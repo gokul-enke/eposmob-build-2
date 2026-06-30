@@ -18,6 +18,7 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/get_store.dart';
+import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
@@ -77,6 +78,25 @@ class _SalesScreenState extends State<SalesScreen> {
   String orderNumber = "";
   OrderDetailsModelData? orderDetailsModelData;
   List<OrderDetailsModelDataCartItem>? cartItems = [];
+
+  DocumentConfig? _resolvePdfBillDocumentConfig(
+    DocumentConfigProvider docConfigProvider,
+    OrderDetailsModelData? orderData,
+  ) {
+    final hasReturns = orderData?.orderReturns != null &&
+        orderData!.orderReturns!.returnItems != null &&
+        orderData.orderReturns!.returnItems!.isNotEmpty;
+
+    if (hasReturns) {
+      return docConfigProvider.getDocumentConfig("Sales and Return Bill A4") ??
+          docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
+          docConfigProvider.getDocumentConfig("Bill A4") ??
+          docConfigProvider.getDocumentConfig("Bill");
+    }
+
+    return docConfigProvider.getDocumentConfig("Bill A4") ??
+        docConfigProvider.getDocumentConfig("Bill");
+  }
 
   bool initLoading = false;
 
@@ -292,13 +312,10 @@ class _SalesScreenState extends State<SalesScreen> {
 
       final appSettings = appSettingsProvider.appSettings;
 
-      // Check if orderReturns data is available to determine which config to use
-      final billDocumentConfig = (orderData.orderReturns != null &&
-              orderData.orderReturns!.returnItems != null &&
-              orderData.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
-              docConfigProvider.getDocumentConfig("Bill"))
-          : docConfigProvider.getDocumentConfig("Bill");
+      final billDocumentConfig = _resolvePdfBillDocumentConfig(
+        docConfigProvider,
+        orderData,
+      );
 
       if (appSettings == null || billDocumentConfig == null) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -695,13 +712,10 @@ class _SalesScreenState extends State<SalesScreen> {
 
       final appSettings = appSettingsProvider.appSettings;
 
-      // Check if orderReturns data is available to determine which config to use
-      final billDocumentConfig = (orderData.orderReturns != null &&
-              orderData.orderReturns!.returnItems != null &&
-              orderData.orderReturns!.returnItems!.isNotEmpty)
-          ? (docConfigProvider.getDocumentConfig("Sales and Return Bill") ??
-              docConfigProvider.getDocumentConfig("Bill"))
-          : docConfigProvider.getDocumentConfig("Bill");
+      final billDocumentConfig = _resolvePdfBillDocumentConfig(
+        docConfigProvider,
+        orderData,
+      );
 
       if (appSettings == null || billDocumentConfig == null) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -1465,6 +1479,8 @@ Powered by CloudPOS''',
                   isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
                   netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
                       ?.toString(),
+                  apiTotalTax:
+                      orderDetails.data?.priceSummary?.totalTax?.toDouble(),
                   documentConfigType: orderDetails.data?.orderReturns != null &&
                           (orderDetails.data?.orderReturns?.returnItems
                                   ?.isNotEmpty ??
@@ -1513,13 +1529,15 @@ Powered by CloudPOS''',
                         netExcTax: orderDetails
                             .data?.cart!.priceSummary?.netExcTax
                             ?.toString(),
-                        documentConfigType: orderDetails.data?.orderReturns !=
-                                    null &&
-                                (orderDetails.data?.orderReturns?.returnItems
-                                        ?.isNotEmpty ??
-                                    false)
-                            ? 'Sales and Return Bill'
-                            : 'Bill',
+                        apiTotalTax: orderDetails.data?.priceSummary?.totalTax
+                            ?.toDouble(),
+                        documentConfigType:
+                            orderDetails.data?.orderReturns != null &&
+                                    (orderDetails.data?.orderReturns
+                                            ?.returnItems?.isNotEmpty ??
+                                        false)
+                                ? 'Sales and Return Bill'
+                                : 'Bill',
                       ),
                     ),
                   );

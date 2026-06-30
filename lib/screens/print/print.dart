@@ -22,6 +22,7 @@ import 'package:pos_machine/screens/print/layouts/layouts.dart';
 import 'package:pos_machine/screens/print/standard_layouts/standard_layouts.dart';
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/helpers/payment_helper.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -55,6 +56,7 @@ class PrintPage extends StatefulWidget {
       paymentBreakdown; // Added for multi-payment support
   final bool isDefaultCustomer;
   final String? netExcTax;
+  final double? apiTotalTax;
 
   const PrintPage({
     super.key,
@@ -87,6 +89,7 @@ class PrintPage extends StatefulWidget {
     this.paymentBreakdown,
     this.isDefaultCustomer = false,
     this.netExcTax,
+    this.apiTotalTax,
   });
 
   @override
@@ -125,6 +128,7 @@ class PrintPage extends StatefulWidget {
     Map<String, dynamic>? paymentBreakdown,
     bool isDefaultCustomer = false,
     String? netExcTax,
+    double? apiTotalTax,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -174,7 +178,17 @@ class PrintPage extends StatefulWidget {
         return false;
       }
 
-      // Determine type based on orderReturns
+      // Get paper size
+      String paperSize = prefs.getString(_paperSizePrefsKeyForDocument(
+              documentConfigType,
+              isB2B: isB2B)) ??
+          prefs.getString('default_paper_size') ??
+          '80mm';
+      if (paperSize == 'Thermal') {
+        paperSize = '80mm';
+      }
+
+      // Determine type based on paper size and orderReturns
       final hasReturns = orderReturns != null &&
           orderReturns.returnItems != null &&
           orderReturns.returnItems!.isNotEmpty;
@@ -183,6 +197,7 @@ class PrintPage extends StatefulWidget {
         docConfigProvider,
         documentConfigType: documentConfigType,
         hasReturns: hasReturns,
+        paperSize: paperSize,
       );
 
       if (billDocumentConfig == null) {
@@ -193,16 +208,6 @@ class PrintPage extends StatefulWidget {
 
       debugPrint('[PrintPage] Using cached config: ${billDocumentConfig.type}');
       _debugInvoiceTitleConfig('autoPrint', billDocumentConfig);
-
-      // Get paper size
-      String paperSize = prefs.getString(_paperSizePrefsKeyForDocument(
-                  documentConfigType,
-                  isB2B: isB2B)) ??
-              prefs.getString('default_paper_size') ??
-              '80mm';
-      if (paperSize == 'Thermal') {
-        paperSize = '80mm';
-      }
 
       // Get receipt theme
       final theme = await _getReceiptThemeStatic(
@@ -258,7 +263,8 @@ class PrintPage extends StatefulWidget {
         customerCrNumber: customerCrNumber,
         customerType: customerType,
         documentTitleOverride: documentTitleOverride,
-        paymentBreakdown: paymentBreakdown,
+        paymentBreakdown: _resolvePaymentBreakdown(
+            context, paymentBreakdown, paymentMethod),
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
         isDefaultCustomer: isDefaultCustomer,
@@ -269,6 +275,7 @@ class PrintPage extends StatefulWidget {
         storeLocation: storeSession.activeStore?.location,
         storePhone: storeSession.activeStore?.phone,
         storeEmail: storeSession.activeStore?.email,
+        apiTotalTax: apiTotalTax,
       );
       final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
       debugPrint(
@@ -333,6 +340,28 @@ class PrintPage extends StatefulWidget {
         '[PrintPage.$source] B2B invoice title key=$b2bTitleKey, exists=${b2bTitle != null}, visible=${b2bTitle?.visible}, value=${b2bTitle?.value}, default=${b2bTitle?.defaultValue}');
   }
 
+  /// Ensures the payment breakdown handed to a layout is keyed by human-readable
+  /// method names. When a caller only supplies the raw multi-payment JSON
+  /// (`paymentMethod`) — common for locally-saved/offline orders — the method
+  /// keys are numeric ids (e.g. "15"). We resolve those to names here, where a
+  /// BuildContext + providers are available, so dynamic/extra methods (BANK,
+  /// Cheque, Online Payment, ...) print by name on every layout.
+  static Map<String, dynamic>? _resolvePaymentBreakdown(
+    BuildContext context,
+    Map<String, dynamic>? paymentBreakdown,
+    String? paymentMethod,
+  ) {
+    if (paymentBreakdown != null && paymentBreakdown.isNotEmpty) {
+      return paymentBreakdown;
+    }
+    final parsed =
+        PaymentHelper.parseLocalMultiPayment(context, paymentMethod);
+    if (parsed != null && parsed.paymentBreakdown.isNotEmpty) {
+      return parsed.paymentBreakdown;
+    }
+    return paymentBreakdown;
+  }
+
   static String _cartItemName(dynamic item) {
     if (item is Map) {
       return (item['productName'] ?? item['product_name'] ?? '').toString();
@@ -358,20 +387,45 @@ class PrintPage extends StatefulWidget {
     DocumentConfigProvider docConfigProvider, {
     String? documentConfigType,
     required bool hasReturns,
+    String? paperSize,
   }) {
     final requestedType = documentConfigType?.trim();
     if (requestedType != null && requestedType.isNotEmpty) {
+      if (_isStandardPaperSize(paperSize) &&
+          requestedType.toLowerCase() == 'bill') {
+        return docConfigProvider.getCachedConfig("Bill A4") ??
+            docConfigProvider.getCachedConfig("bill_a4") ??
+            docConfigProvider.getCachedConfig("bill-a4") ??
+            docConfigProvider.getCachedConfig(requestedType);
+      }
       return docConfigProvider.getCachedConfig(requestedType) ??
           docConfigProvider.getCachedConfig(requestedType.toLowerCase());
     }
 
     if (hasReturns) {
+      if (_isStandardPaperSize(paperSize)) {
+        return docConfigProvider.getCachedConfig("Sales and Return Bill A4") ??
+            docConfigProvider.getCachedConfig("Sales and Return Bill") ??
+            docConfigProvider.getCachedConfig("sales_and_return_bill");
+      }
       return docConfigProvider.getCachedConfig("Sales and Return Bill") ??
           docConfigProvider.getCachedConfig("sales_and_return_bill");
     }
 
+    if (_isStandardPaperSize(paperSize)) {
+      return docConfigProvider.getCachedConfig("Bill A4") ??
+          docConfigProvider.getCachedConfig("bill_a4") ??
+          docConfigProvider.getCachedConfig("bill-a4") ??
+          docConfigProvider.getCachedConfig("Bill") ??
+          docConfigProvider.getCachedConfig("bill");
+    }
+
     return docConfigProvider.getCachedConfig("Bill") ??
         docConfigProvider.getCachedConfig("bill");
+  }
+
+  static bool _isStandardPaperSize(String? paperSize) {
+    return paperSize == 'A4' || paperSize == 'A5';
   }
 
   static bool _isQuotationDocument(String? documentConfigType) {
@@ -698,6 +752,7 @@ class _PrintPageState extends State<PrintPage> {
         docConfigProvider,
         documentConfigType: widget.documentConfigType,
         hasReturns: hasReturns,
+        paperSize: selectedPaperSize,
       );
 
       if (_billDocumentConfig == null) {
@@ -743,36 +798,15 @@ class _PrintPageState extends State<PrintPage> {
       await docConfigProvider.fetchDocumentConfigurations(
           accessToken: accessToken);
 
-      // Check if a specific document type was requested, otherwise infer from returns.
-      if (widget.documentConfigType?.trim().isNotEmpty == true) {
-        final requestedType = widget.documentConfigType!.trim();
-        debugPrint("Loading '$requestedType' configuration from API cache...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig(
-              requestedType,
-            ) ??
-            docConfigProvider.getDocumentConfig(
-              requestedType.toLowerCase(),
-            );
-      } else if (widget.orderReturns != null &&
+      final hasReturns = widget.orderReturns != null &&
           widget.orderReturns!.returnItems != null &&
-          widget.orderReturns!.returnItems!.isNotEmpty) {
-        debugPrint(
-            "Order has returns, loading 'Sales Return Bill' configuration from API...");
-        _billDocumentConfig =
-            docConfigProvider.getDocumentConfig("Sales and Return Bill");
-
-        if (_billDocumentConfig != null) {
-          debugPrint(
-              "SUCCESS: Sales Return Bill configuration loaded from API");
-        } else {
-          debugPrint(
-              "Sales Return Bill not found, falling back to Bill configuration");
-          _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-        }
-      } else {
-        debugPrint("No returns, loading 'Bill' configuration from API...");
-        _billDocumentConfig = docConfigProvider.getDocumentConfig("Bill");
-      }
+          widget.orderReturns!.returnItems!.isNotEmpty;
+      _billDocumentConfig = PrintPage._resolveCachedDocumentConfig(
+        docConfigProvider,
+        documentConfigType: widget.documentConfigType,
+        hasReturns: hasReturns,
+        paperSize: selectedPaperSize,
+      );
 
       if (_billDocumentConfig != null) {
         debugPrint("SUCCESS: Document configuration loaded from API");
@@ -889,7 +923,8 @@ class _PrintPageState extends State<PrintPage> {
       customerCrNumber: widget.customerCrNumber,
       customerType: widget.customerType,
       documentTitleOverride: widget.documentTitleOverride,
-      paymentBreakdown: widget.paymentBreakdown,
+      paymentBreakdown: PrintPage._resolvePaymentBreakdown(
+          context, widget.paymentBreakdown, widget.paymentMethod),
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
@@ -900,6 +935,7 @@ class _PrintPageState extends State<PrintPage> {
       storeLocation: storeSession.activeStore?.location,
       storePhone: storeSession.activeStore?.phone,
       storeEmail: storeSession.activeStore?.email,
+      apiTotalTax: widget.apiTotalTax,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(
@@ -997,7 +1033,8 @@ class _PrintPageState extends State<PrintPage> {
       customerCrNumber: widget.customerCrNumber,
       customerType: widget.customerType,
       documentTitleOverride: widget.documentTitleOverride,
-      paymentBreakdown: widget.paymentBreakdown,
+      paymentBreakdown: PrintPage._resolvePaymentBreakdown(
+          context, widget.paymentBreakdown, widget.paymentMethod),
       zatcaVatNumber: zatcaVatNumber,
       zatcaCompanyName: zatcaCompanyName,
       isDefaultCustomer: widget.isDefaultCustomer,
@@ -1008,6 +1045,7 @@ class _PrintPageState extends State<PrintPage> {
       storeLocation: storeSession.activeStore?.location,
       storePhone: storeSession.activeStore?.phone,
       storeEmail: storeSession.activeStore?.email,
+      apiTotalTax: widget.apiTotalTax,
     );
     final invoiceTitleConfig = params.displayConfig?['showInvoiceTitle'];
     debugPrint(
