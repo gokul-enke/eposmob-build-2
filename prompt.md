@@ -1,0 +1,3 @@
+can you write every single billing logics in feature sub folder way ? c:\Users\gokul\Desktop\Projects\Enke\eposmob\wikidata\billing @lib/features/billing/
+  presentation/pages/billing_page.dart only this page and other files mentioned in it logics need to write @lib/providers/local_product_provider.dart , can split
+  in to multiple md files , also can us sub agents , write correctly without lossing any single logics.

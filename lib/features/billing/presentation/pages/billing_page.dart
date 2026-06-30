@@ -18,6 +18,7 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -551,12 +552,80 @@ class BillingPageState extends State<BillingPage>
   }
 
   void _onCartChanged() {
-    if (_hasOpenedPaymentModalOnce && mounted) {
-      debugPrint("🛒 Cart changed - Resetting payment modal flag");
-      setState(() {
-        _hasOpenedPaymentModalOnce = false;
-      });
+    if (!mounted) return;
+
+    final hadPayment = _hasOpenedPaymentModalOnce ||
+        PaymentValidation.hasCollectedPayment(
+          isCashSelected: _isCashSelected,
+          isCardSelected: _isCardSelected,
+          isUpiSelected: _isUpiSelected,
+          isCodSelected: _isCodSelected,
+          cashAmount: _cashAmountController.text,
+          cardAmount: _cardAmountController.text,
+          upiAmount: _upiAmountController.text,
+          codAmount: _codAmountController.text,
+          extraAmounts: _extraPaymentAmounts,
+        );
+
+    if (!hadPayment) return;
+
+    debugPrint('🛒 Cart changed - Resetting payment amounts');
+    setState(() {
+      _clearPaymentAmountsOnly();
+      _hasOpenedPaymentModalOnce = false;
+    });
+    _updateBalanceAmount();
+  }
+
+  void _clearPaymentAmountsOnly() {
+    _cashAmountController.clear();
+    _cardAmountController.clear();
+    _upiAmountController.clear();
+    _codAmountController.clear();
+    _debitAmountController.clear();
+    _extraPaymentAmounts = {};
+    _extraPaymentValues = {};
+  }
+
+  PaymentValidationResult _validatePaymentForOrder() {
+    final isDefaultCustomer = _isDefaultCustomer(selectedCustomer);
+    return PaymentValidation.validateForOrder(
+      orderTotal: _getEffectiveOrderTotal(),
+      toCustomerCreditEnabled: _toCustomerCreditEnabled,
+      isDefaultCustomer: isDefaultCustomer,
+      customerPrevBalance:
+          isDefaultCustomer ? 0.0 : (selectedCustomer?.balance ?? 0.0),
+      isCashSelected: _isCashSelected,
+      isCardSelected: _isCardSelected,
+      isUpiSelected: _isUpiSelected,
+      isCodSelected: _isCodSelected,
+      cashAmount: _cashAmountController.text,
+      cardAmount: _cardAmountController.text,
+      upiAmount: _upiAmountController.text,
+      codAmount: _codAmountController.text,
+      extraAmounts: _extraPaymentAmounts,
+    );
+  }
+
+  bool _ensurePaymentReadyForConfirm(VoidCallback retryAction) {
+    if (_isQuotationPage) return true;
+
+    if (!_hasOpenedPaymentModalOnce) {
+      _showPaymentMethodModal(onAfterApply: retryAction);
+      return false;
     }
+
+    final validation = _validatePaymentForOrder();
+    if (!validation.isValid) {
+      showScaffoldError(
+        context: context,
+        message: validation.message ?? 'Please configure payment before confirm',
+      );
+      _showPaymentMethodModal(onAfterApply: retryAction);
+      return false;
+    }
+
+    return true;
   }
 
   // Function to initialize the connectivity listener
@@ -870,6 +939,7 @@ class BillingPageState extends State<BillingPage>
             _isCodSelected ||
             _isDebitSelected ||
             _toCustomerCreditEnabled ||
+            _extraPaymentAmounts.isNotEmpty ||
             (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
             (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
             (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
@@ -5826,6 +5896,8 @@ class BillingPageState extends State<BillingPage>
       _upiAmountController.clear();
       _codAmountController.clear();
       _debitAmountController.clear();
+      _extraPaymentAmounts = {};
+      _extraPaymentValues = {};
       _autocompleteProductKey = GlobalKey();
       quantityController.clear();
       barcodeController.clear();
@@ -5991,7 +6063,7 @@ class BillingPageState extends State<BillingPage>
     }
 
     setState(() {
-      isLoadingSaveOrderAndPrint = true; // Indicate that loading has started
+      isLoadingSaveOrderAndPrint = true;
     });
     debugPrint("Save Order and Print pressed");
     try {
@@ -6005,7 +6077,6 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Check if customer is selected (consider pre-filled default text)
       final hasCustomer = selectedCustomerID != null ||
           (mobileNumberText?.isNotEmpty == true) ||
           (salesExecutivemobileNumberText?.isNotEmpty == true);
@@ -6014,7 +6085,6 @@ class BillingPageState extends State<BillingPage>
           context: context,
           message: "billing.select_customer".tr,
         );
-        // Auto-focus on customer field
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_autocompleteFocusNode != null) {
             FocusScope.of(context).requestFocus(_autocompleteFocusNode!);
@@ -6025,9 +6095,7 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Auto-show payment modal if never opened
-      if (!_hasOpenedPaymentModalOnce) {
-        _showPaymentMethodModal(onAfterApply: _saveOrderAndPrint);
+      if (!_ensurePaymentReadyForConfirm(_saveOrderAndPrint)) {
         return;
       }
 
@@ -6330,9 +6398,8 @@ class BillingPageState extends State<BillingPage>
     debugPrint("Create Order and Print pressed");
     debugPrint("🚀 API REQUEST STARTING - Create Order and Print");
 
-    // Auto-show payment modal if never opened
-    if (!_hasOpenedPaymentModalOnce) {
-      _showPaymentMethodModal(onAfterApply: _createOrderAndPrint);
+    // Require valid payment before creating order
+    if (!_ensurePaymentReadyForConfirm(_createOrderAndPrint)) {
       return;
     }
 
@@ -6363,7 +6430,7 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Get selected payment methods (no longer required - can be empty)
+      // Get selected payment methods for multi-payment API payload
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
       if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
@@ -6380,23 +6447,7 @@ class BillingPageState extends State<BillingPage>
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
       debugPrint("📦 Cart ID for order: $cartId");
-
-      String paymentMethod = "";
-
-      if (selectedPaymentMethods.contains("CASH")) {
-        paymentMethod = "CASH";
-      } else if (selectedPaymentMethods.contains("CARD")) {
-        paymentMethod = "CARD";
-      } else if (selectedPaymentMethods.contains("UPI")) {
-        paymentMethod = "UPI";
-      } else if (selectedPaymentMethods.contains("COD")) {
-        paymentMethod = "COD";
-      } else if (selectedPaymentMethods.contains("DEBIT")) {
-        paymentMethod = "DEBIT";
-      } else if (selectedPaymentMethods.contains("BALANCE")) {
-        paymentMethod = "BALANCE";
-      }
-      debugPrint("💰 Payment Method: $paymentMethod");
+      debugPrint("💰 Payment methods: $selectedPaymentMethods");
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -6696,9 +6747,8 @@ class BillingPageState extends State<BillingPage>
     debugPrint("Confirm Order pressed");
     debugPrint("🚀 API REQUEST STARTING - Confirm Order");
 
-    // Auto-show payment modal if never opened
-    if (!_hasOpenedPaymentModalOnce) {
-      _showPaymentMethodModal(onAfterApply: _confirmOrder);
+    // Require valid payment before confirming order
+    if (!_ensurePaymentReadyForConfirm(_confirmOrder)) {
       return;
     }
 
@@ -6729,7 +6779,7 @@ class BillingPageState extends State<BillingPage>
         return;
       }
 
-      // Get selected payment methods (no longer required - can be empty)
+      // Get selected payment methods for multi-payment API payload
       List<String> selectedPaymentMethods = _getSelectedPaymentMethods();
 
       if (deliveryMethod == "Car Delivery" && _carNumberController.text == "") {
@@ -6746,23 +6796,7 @@ class BillingPageState extends State<BillingPage>
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
       debugPrint("📦 Cart ID for order: $cartId");
-
-      String paymentMethod = "";
-
-      if (selectedPaymentMethods.contains("CASH")) {
-        paymentMethod = "CASH";
-      } else if (selectedPaymentMethods.contains("CARD")) {
-        paymentMethod = "CARD";
-      } else if (selectedPaymentMethods.contains("UPI")) {
-        paymentMethod = "UPI";
-      } else if (selectedPaymentMethods.contains("COD")) {
-        paymentMethod = "COD";
-      } else if (selectedPaymentMethods.contains("DEBIT")) {
-        paymentMethod = "DEBIT";
-      } else if (selectedPaymentMethods.contains("BALANCE")) {
-        paymentMethod = "BALANCE";
-      }
-      debugPrint("💰 Payment Method: $paymentMethod");
+      debugPrint("💰 Payment methods: $selectedPaymentMethods");
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -7165,6 +7199,7 @@ class BillingPageState extends State<BillingPage>
         _isCodSelected ||
         _isDebitSelected ||
         _toCustomerCreditEnabled ||
+        _extraPaymentAmounts.isNotEmpty ||
         (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
         (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
         (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
@@ -8307,7 +8342,8 @@ class BillingPageState extends State<BillingPage>
 
   IconData _getPaymentIcon() {
     List<String> activeMethods = [];
-    if (_isCashSelected) {
+    if (_isCashSelected &&
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
       activeMethods.add('Cash');
     }
     if (_isCardSelected &&
@@ -8322,9 +8358,17 @@ class BillingPageState extends State<BillingPage>
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
       activeMethods.add('COD');
     }
+    for (final entry in _extraPaymentAmounts.entries) {
+      if ((double.tryParse(entry.value) ?? 0) > 0) {
+        final label = _extraPaymentValues[entry.key];
+        activeMethods.add(
+          label != null && label.isNotEmpty ? label : 'Extra',
+        );
+      }
+    }
 
     if (activeMethods.length > 1) {
-      return Icons.account_balance_wallet; // Multiple payment methods
+      return Icons.account_balance_wallet;
     } else if (activeMethods.contains('Cash')) {
       return Icons.payments;
     } else if (activeMethods.contains('Card')) {
@@ -8339,7 +8383,8 @@ class BillingPageState extends State<BillingPage>
 
   String _getPaymentLabel() {
     List<String> activeMethods = [];
-    if (_isCashSelected) {
+    if (_isCashSelected &&
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0) {
       activeMethods.add('billing.cash'.tr);
     }
     if (_isCardSelected &&
@@ -8354,9 +8399,15 @@ class BillingPageState extends State<BillingPage>
         (double.tryParse(_codAmountController.text) ?? 0) > 0) {
       activeMethods.add('billing.cod'.tr);
     }
+    for (final entry in _extraPaymentAmounts.entries) {
+      if ((double.tryParse(entry.value) ?? 0) > 0) {
+        final label = _extraPaymentValues[entry.key];
+        activeMethods.add(label != null && label.isNotEmpty ? label : 'Extra');
+      }
+    }
 
     if (activeMethods.length > 1) {
-      return 'billing.multi'.tr; // Multiple payment methods
+      return 'billing.multi'.tr;
     } else if (activeMethods.length == 1) {
       return activeMethods.first;
     }
@@ -9382,7 +9433,9 @@ class BillingPageState extends State<BillingPage>
         _isCardSelected ||
         _isUpiSelected ||
         _isCodSelected ||
-        _isDebitSelected) {
+        _isDebitSelected ||
+        _extraPaymentAmounts.isNotEmpty ||
+        _sumExtraPaidAmounts() > 0) {
       return;
     }
 

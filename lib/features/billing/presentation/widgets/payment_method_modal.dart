@@ -18,6 +18,8 @@ import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
+import 'package:pos_machine/features/billing/domain/payment_validation.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 
 class PaymentMethodModal extends StatefulWidget {
   final bool initialIsCashSelected;
@@ -433,6 +435,25 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     return map;
   }
 
+  PaymentValidationResult _validateBeforeApply() {
+    return PaymentValidation.validateForOrder(
+      orderTotal: widget.cartTotal,
+      toCustomerCreditEnabled: toCustomerCreditEnabled,
+      isDefaultCustomer: widget.isDefaultCustomer,
+      customerPrevBalance:
+          widget.isDefaultCustomer ? 0.0 : widget.customerPrevBalance,
+      isCashSelected: isCashSelected,
+      isCardSelected: isCardSelected,
+      isUpiSelected: isUpiSelected,
+      isCodSelected: isCodSelected,
+      cashAmount: isCashSelected ? cashAmountController.text : '',
+      cardAmount: isCardSelected ? cardAmountController.text : '',
+      upiAmount: isUpiSelected ? upiAmountController.text : '',
+      codAmount: isCodSelected ? codAmountController.text : '',
+      extraAmounts: _buildExtraAmountsMap(),
+    );
+  }
+
   void _debounceNotifyChanges() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
@@ -528,11 +549,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       toCustomerCreditEnabled = enabled;
       if (enabled) {
         final currentBaseBalance = _computeBaseBalance();
-        final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-        final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
-        final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-        final codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-        final totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
+        final totalCollected = _getTotalCollectedAmount();
         final transactionExcess = totalCollected - widget.cartTotal;
         if (transactionExcess > 0) {
           double prefillAmount;
@@ -608,14 +625,232 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     _togglePaymentMethod(target);
   }
 
-  TextEditingController? _getPristineController() {
-    switch (_pristineMethod) {
-      case 'cash': return cashAmountController;
-      case 'card': return cardAmountController;
-      case 'upi': return upiAmountController;
-      case 'cod': return codAmountController;
-      default: return null;
+  bool _amountsEqual(String a, String b) {
+    final da = double.tryParse(a.trim()) ?? 0.0;
+    final db = double.tryParse(b.trim()) ?? 0.0;
+    return (da - db).abs() < 0.009;
+  }
+
+  bool _isFullCartTotal(String amount) {
+    return _amountsEqual(amount, widget.cartTotal.toStringAsFixed(2)) ||
+        _amountsEqual(amount, widget.cartTotal.toString());
+  }
+
+  double _effectiveCustomerPrevBalance() {
+    return widget.isDefaultCustomer ? 0.0 : widget.customerPrevBalance;
+  }
+
+  /// Money collected at the register from typed + selected extra methods.
+  double _getTotalCollectedAmount() {
+    var total = 0.0;
+    if (isCashSelected) {
+      total += double.tryParse(cashAmountController.text) ?? 0.0;
     }
+    if (isCardSelected) {
+      total += double.tryParse(cardAmountController.text) ?? 0.0;
+    }
+    if (isUpiSelected) {
+      total += double.tryParse(upiAmountController.text) ?? 0.0;
+    }
+    if (isCodSelected) {
+      total += double.tryParse(codAmountController.text) ?? 0.0;
+    }
+    total += _sumExtraAmounts();
+    return total;
+  }
+
+  static const _extraMethodKeyPrefix = 'extra_';
+
+  String _extraMethodKey(String methodId) => '$_extraMethodKeyPrefix$methodId';
+
+  String? _extraMethodIdFromKey(String key) {
+    if (!key.startsWith(_extraMethodKeyPrefix)) return null;
+    return key.substring(_extraMethodKeyPrefix.length);
+  }
+
+  TextEditingController? _getControllerForMethodKey(String key) {
+    final extraId = _extraMethodIdFromKey(key);
+    if (extraId != null) return _extraControllers[extraId];
+    switch (key) {
+      case 'cash':
+        return cashAmountController;
+      case 'card':
+        return cardAmountController;
+      case 'upi':
+        return upiAmountController;
+      case 'cod':
+        return codAmountController;
+      default:
+        return null;
+    }
+  }
+
+  TextEditingController? _getPristineController() {
+    if (_pristineMethod == null) return null;
+    return _getControllerForMethodKey(_pristineMethod!);
+  }
+
+  bool _isMethodActive(String methodKey) {
+    final extraId = _extraMethodIdFromKey(methodKey);
+    if (extraId != null) return _extraSelected[extraId] ?? false;
+    return _isPaymentTypeSelected(methodKey);
+  }
+
+  void _clearMethod(String methodKey) {
+    final extraId = _extraMethodIdFromKey(methodKey);
+    if (extraId != null) {
+      _extraSelected[extraId] = false;
+      _extraControllers[extraId]?.clear();
+      return;
+    }
+    switch (methodKey) {
+      case 'cash':
+        isCashSelected = false;
+        cashAmountController.clear();
+        break;
+      case 'card':
+        isCardSelected = false;
+        cardAmountController.clear();
+        break;
+      case 'upi':
+        isUpiSelected = false;
+        upiAmountController.clear();
+        break;
+      case 'cod':
+        isCodSelected = false;
+        codAmountController.clear();
+        break;
+    }
+  }
+
+  /// When the user picks a new method without editing the auto-filled one,
+  /// move the full cart total to the new method and clear the previous one.
+  bool _applyPristineSwitch(
+    String newMethodKey,
+    TextEditingController targetController,
+  ) {
+    if (newMethodKey == 'credit') return false;
+    if (_pristineMethod == null || _pristineMethod == newMethodKey) {
+      return false;
+    }
+
+    final pristineController = _getPristineController();
+    if (pristineController == null || !_isMethodActive(_pristineMethod!)) {
+      return false;
+    }
+    if (!_amountsEqual(pristineController.text, _pristineAmount)) {
+      return false;
+    }
+
+    _clearMethod(_pristineMethod!);
+    targetController.text = widget.cartTotal.toStringAsFixed(2);
+    _pristineMethod = newMethodKey;
+    _pristineAmount = targetController.text;
+    return true;
+  }
+
+  void _recordPristineIfFullTotal(String methodKey, TextEditingController controller) {
+    if (_isFullCartTotal(controller.text)) {
+      _pristineMethod = methodKey;
+      _pristineAmount = controller.text;
+    }
+  }
+
+  /// All collected-payment slots that are currently selected (typed + extra).
+  List<({String key, TextEditingController controller, FocusNode? focusNode})>
+      _listActiveCollectedMethodEntries() {
+    final entries =
+        <({String key, TextEditingController controller, FocusNode? focusNode})>[];
+
+    if (isCashSelected) {
+      entries.add((
+        key: 'cash',
+        controller: cashAmountController,
+        focusNode: cashAmountFocusNode,
+      ));
+    }
+    if (isCardSelected) {
+      entries.add((
+        key: 'card',
+        controller: cardAmountController,
+        focusNode: cardAmountFocusNode,
+      ));
+    }
+    if (isUpiSelected) {
+      entries.add((
+        key: 'upi',
+        controller: upiAmountController,
+        focusNode: upiAmountFocusNode,
+      ));
+    }
+    if (isCodSelected) {
+      entries.add((
+        key: 'cod',
+        controller: codAmountController,
+        focusNode: codAmountFocusNode,
+      ));
+    }
+    for (final method in _extraMethods) {
+      final id = method.id.toString();
+      if (_extraSelected[id] ?? false) {
+        entries.add((
+          key: _extraMethodKey(id),
+          controller: _extraControllers[id]!,
+          focusNode: _extraFocusNodes[id],
+        ));
+      }
+    }
+    return entries;
+  }
+
+  /// Snapshot of entered/collected amounts for every selected method.
+  Map<String, String> _buildCollectedAmountsMap() {
+    final amounts = <String, String>{};
+    if (isCashSelected) amounts['cash'] = cashAmountController.text;
+    if (isCardSelected) amounts['card'] = cardAmountController.text;
+    if (isUpiSelected) amounts['upi'] = upiAmountController.text;
+    if (isCodSelected) amounts['cod'] = codAmountController.text;
+    for (final method in _extraMethods) {
+      final id = method.id.toString();
+      if (_extraSelected[id] ?? false) {
+        amounts[_extraMethodKey(id)] = _extraControllers[id]?.text ?? '';
+      }
+    }
+    return amounts;
+  }
+
+  /// Split-payment fill: add the remaining balance to the newly selected method.
+  void _autoFillRemainingForMethod(
+    String methodKey,
+    TextEditingController controller,
+  ) {
+    controller.text = PaymentAutoFillHelper.autoFillRemaining(
+      targetMethodKey: methodKey,
+      targetCurrentAmount: controller.text,
+      collectedAmounts: _buildCollectedAmountsMap(),
+      cartTotal: widget.cartTotal,
+    );
+  }
+
+  /// When toggling off leaves exactly one collected method, refill it to the
+  /// full cart total (same rule for CASH/CARD/UPI/COD and dynamic methods).
+  void _refillIfSingleCollectedMethodRemaining() {
+    final active = _listActiveCollectedMethodEntries();
+    if (active.length != 1) return;
+
+    final only = active.first;
+    only.controller.text = widget.cartTotal.toStringAsFixed(2);
+    _recordPristineIfFullTotal(only.key, only.controller);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      only.focusNode?.requestFocus();
+      Provider.of<KeyboardProvider>(context, listen: false).show(
+        'number',
+        only.controller,
+        replaceOnFirstInput: true,
+      );
+    });
   }
 
   bool _isPaymentTypeSelected(String paymentType) {
@@ -694,6 +929,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   /// Assign payment method IDs by matching value field
   void _assignPaymentMethodIds(List<MasterDataValue> methods) {
+    final preservedExtraAmounts = <String, String>{};
+    final preservedExtraSelected = <String, bool>{};
+    for (final entry in _extraControllers.entries) {
+      preservedExtraAmounts[entry.key] = entry.value.text;
+      preservedExtraSelected[entry.key] =
+          _extraSelected[entry.key] ?? entry.value.text.isNotEmpty;
+    }
+
     // Sort to put CASH first
     final sortedMethods = List<MasterDataValue>.from(methods);
     sortedMethods.sort((a, b) {
@@ -732,15 +975,33 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         if (_typedMethodValues.contains(method.value.toUpperCase())) continue;
         final key = method.id.toString();
         _extraMethods.add(method);
-        final initialAmount = widget.initialExtraAmounts?[key] ?? '';
+        final initialAmount = widget.initialExtraAmounts?[key] ??
+            preservedExtraAmounts[key] ??
+            '';
         final controller = TextEditingController(text: initialAmount);
         void listener() => _handleExtraAmountChange(key);
         controller.addListener(listener);
         _extraControllers[key] = controller;
         _extraFocusNodes[key] = FocusNode();
-        _extraSelected[key] = initialAmount.isNotEmpty;
+        _extraSelected[key] = initialAmount.isNotEmpty
+            ? true
+            : (preservedExtraSelected[key] ?? false);
         _extraListeners[key] = listener;
         debugPrint('🧾 EXTRA method "${method.value}" ID: $key');
+      }
+
+      if (_pristineMethod == null) {
+        for (final method in _extraMethods) {
+          final key = method.id.toString();
+          final controller = _extraControllers[key];
+          if ((_extraSelected[key] ?? false) &&
+              controller != null &&
+              controller.text.isNotEmpty) {
+            _pristineMethod = _extraMethodKey(key);
+            _pristineAmount = controller.text;
+            break;
+          }
+        }
       }
     });
 
@@ -755,17 +1016,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
   // Base balance calculation: always based on current purchase total
   double _computeBaseBalance() {
-    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
-    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-    double totalCollected =
-        cashAmount + cardAmount + upiAmount + codAmount + _sumExtraAmounts();
-
-    // Net due is always the current purchase total in the modal
+    final totalCollected = _getTotalCollectedAmount();
     final double netDue = widget.cartTotal;
-
-    double balance = totalCollected - netDue;
+    final balance = totalCollected - netDue;
     return balance > 0 ? balance : 0.0;
   }
 
@@ -841,20 +1094,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   void _calculateBalance() {
     debugPrint('🧮 === CALCULATE BALANCE START ===');
 
-    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
-    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-    double totalCollected =
-        cashAmount + cardAmount + upiAmount + codAmount + _sumExtraAmounts();
-
+    final totalCollected = _getTotalCollectedAmount();
+    final customerPrevBalance = _effectiveCustomerPrevBalance();
     double cashBal = 0.0;
 
-    if (toCustomerCreditEnabled) {
+    if (toCustomerCreditEnabled && !widget.isDefaultCustomer) {
       debugPrint(
           '🔛 Toggle is ON - Calculating with customer credit consideration');
 
-      if (widget.customerPrevBalance < 0) {
+      if (customerPrevBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
         debugPrint('💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalCollected - widget.cartTotal;
@@ -884,12 +1132,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         // Customer has positive/zero balance - use Net Due logic
         debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
         // Net Due = Purchase Total - Customer Previous Balance
-        double netDue = widget.cartTotal - widget.customerPrevBalance;
+        double netDue = widget.cartTotal - customerPrevBalance;
         debugPrint('💰 Net Due calculation:');
         debugPrint(
             '  - Purchase Total: ${widget.cartTotal.toStringAsFixed(2)}');
         debugPrint(
-            '  - Customer Prev Balance: ${widget.customerPrevBalance.toStringAsFixed(2)}');
+            '  - Customer Prev Balance: ${customerPrevBalance.toStringAsFixed(2)}');
         debugPrint('  - Net Due: ${netDue.toStringAsFixed(2)}');
 
         // Available balance = Total Collected - Net Due
@@ -945,21 +1193,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     debugPrint('🧮 === CALCULATE BALANCE END ===\n');
   }
 
-  double _getTotalPaidAmount() {
-    double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-    double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
-    double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-    // Total Paid = amounts actually collected now (cash + card + UPI + COD)
-    // plus any dynamic/extra methods.
-    return cashAmount + cardAmount + upiAmount + codAmount + _sumExtraAmounts();
-  }
+  double _getTotalPaidAmount() => _getTotalCollectedAmount();
 
-  /// Sum of all amounts entered against dynamic/extra methods.
+  /// Sum of amounts on selected dynamic/extra payment methods only.
   double _sumExtraAmounts() {
     double total = 0.0;
-    for (final controller in _extraControllers.values) {
-      total += double.tryParse(controller.text) ?? 0.0;
+    for (final entry in _extraControllers.entries) {
+      if (!(_extraSelected[entry.key] ?? false)) continue;
+      total += double.tryParse(entry.value.text) ?? 0.0;
     }
     return total;
   }
@@ -993,24 +1234,35 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       }
     });
     _calculateBalance();
+    _syncCreditAmountWithRemaining();
     _debounceNotifyChanges();
   }
-
-  /// Toggle a dynamic/extra method on/off. On select we auto-fill the
-  /// remaining balance (so a single tap settles the bill); on deselect we
-  /// clear the field.
+  /// CASH/CARD/UPI/COD so switching methods moves the full total cleanly.
   void _toggleExtraMethod(String methodId) {
     final controller = _extraControllers[methodId];
     final focusNode = _extraFocusNodes[methodId];
     if (controller == null) return;
+
+    final methodKey = _extraMethodKey(methodId);
+    final wasSelected = _extraSelected[methodId] ?? false;
+
     setState(() {
-      final nowSelected = !(_extraSelected[methodId] ?? false);
-      _extraSelected[methodId] = nowSelected;
-      if (nowSelected) {
-        final remaining = widget.cartTotal - _getTotalPaidAmount();
-        if (remaining > 0) {
-          controller.text = remaining.toStringAsFixed(2);
+      if (wasSelected) {
+        _extraSelected[methodId] = false;
+        controller.clear();
+        if (_pristineMethod == methodKey) {
+          _pristineMethod = null;
+          _pristineAmount = '';
         }
+        _refillIfSingleCollectedMethodRemaining();
+      } else {
+        _extraSelected[methodId] = true;
+        final didPristineSwitch = _applyPristineSwitch(methodKey, controller);
+        if (!didPristineSwitch) {
+          _autoFillRemainingForMethod(methodKey, controller);
+        }
+        _recordPristineIfFullTotal(methodKey, controller);
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           focusNode?.requestFocus();
@@ -1026,8 +1278,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             replaceOnFirstInput: true,
           );
         });
-      } else {
-        controller.clear();
       }
       _calculateBalance();
       _notifyChanges();
@@ -1035,34 +1285,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   void _autoFillSelectedMethodAmount(String paymentType) {
-    TextEditingController? targetController;
-
-    switch (paymentType) {
-      case 'cash':
-        targetController = cashAmountController;
-        break;
-      case 'card':
-        targetController = cardAmountController;
-        break;
-      case 'upi':
-        targetController = upiAmountController;
-        break;
-      case 'cod':
-        targetController = codAmountController;
-        break;
-      default:
-        return;
-    }
-
-    targetController.text = PaymentAutoFillHelper.autoFillSingleMethod(
-      paymentType: paymentType,
-      currentTargetAmount: targetController.text,
-      cashAmount: cashAmountController.text,
-      cardAmount: cardAmountController.text,
-      upiAmount: upiAmountController.text,
-      codAmount: codAmountController.text,
-      cartTotal: widget.cartTotal,
-    );
+    final controller = _getControllerForMethodKey(paymentType);
+    if (controller == null) return;
+    _autoFillRemainingForMethod(paymentType, controller);
   }
 
   void _syncCreditAmountWithRemaining() {
@@ -1070,13 +1295,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       return;
     }
 
-    final cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
-    final cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
-    final upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    final codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-
-    final totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
-    final remainingAmount = widget.cartTotal - totalCollected;
+    final remainingAmount = widget.cartTotal - _getTotalCollectedAmount();
 
     if (remainingAmount > 0) {
       creditAmountController.text = remainingAmount.toStringAsFixed(2);
@@ -1137,45 +1356,13 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
       // Handle selection (Toggle ON)
       if (targetSelected) {
-        // Pristine-switch: if the previously auto-filled method has not been
-        // touched by the user, deselect it and move the full amount here.
-        // We detect "untouched" by comparing the controller's current text to
-        // the amount recorded at open — immune to init-time listener side effects.
-        bool didPristineSwitch = false;
-        final pristineController = _getPristineController();
-        if (paymentType != 'credit' &&
-            _pristineMethod != null &&
-            pristineController != null &&
-            pristineController.text == _pristineAmount &&
-            _pristineMethod != paymentType &&
-            _isPaymentTypeSelected(_pristineMethod!)) {
-          switch (_pristineMethod) {
-            case 'cash':
-              isCashSelected = false;
-              cashAmountController.clear();
-              break;
-            case 'card':
-              isCardSelected = false;
-              cardAmountController.clear();
-              break;
-            case 'upi':
-              isUpiSelected = false;
-              upiAmountController.clear();
-              break;
-            case 'cod':
-              isCodSelected = false;
-              codAmountController.clear();
-              break;
+        if (paymentType != 'credit' && targetController != null) {
+          final didPristineSwitch =
+              _applyPristineSwitch(paymentType, targetController);
+          if (!didPristineSwitch) {
+            _autoFillSelectedMethodAmount(paymentType);
           }
-          // Fill new method with the full cart total.
-          targetController?.text = widget.cartTotal.toStringAsFixed(2);
-          _pristineMethod = paymentType;
-          _pristineAmount = targetController?.text ?? '';
-          didPristineSwitch = true;
-        }
-
-        if (!didPristineSwitch) {
-          _autoFillSelectedMethodAmount(paymentType);
+          _recordPristineIfFullTotal(paymentType, targetController);
         }
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1198,46 +1385,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           }
         });
       }
-      // Handle deselection (Toggle OFF) - Auto-fill logic for remaining method
-      else {
-        // Find remaining active methods
-        List<MapEntry<String, TextEditingController>> activeMethods = [];
-        if (isCashSelected) {
-          activeMethods.add(MapEntry('cash', cashAmountController));
-        }
-        if (isCardSelected) {
-          activeMethods.add(MapEntry('card', cardAmountController));
-        }
-        if (isUpiSelected) {
-          activeMethods.add(MapEntry('upi', upiAmountController));
-        }
-        if (isCodSelected) {
-          activeMethods.add(MapEntry('cod', codAmountController));
-        }
-
-        // If exactly one method is left, fill it with the total
-        if (activeMethods.length == 1) {
-          final remainingMethod = activeMethods.first;
-          remainingMethod.value.text = widget.cartTotal.toStringAsFixed(2);
-
-          // Focus and show keyboard for the remaining method
-          FocusNode? remainingFocusNode;
-          if (isCashSelected) remainingFocusNode = cashAmountFocusNode;
-          if (isCardSelected) remainingFocusNode = cardAmountFocusNode;
-          if (isUpiSelected) remainingFocusNode = upiAmountFocusNode;
-          if (isCodSelected) remainingFocusNode = codAmountFocusNode;
-
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              remainingFocusNode?.requestFocus();
-              Provider.of<KeyboardProvider>(context, listen: false).show(
-                'number',
-                remainingMethod.value,
-                replaceOnFirstInput: true,
-              );
-            }
-          });
-        }
+      // Handle deselection (Toggle OFF) — refill sole remaining method to total.
+      else if (paymentType != 'credit') {
+        _refillIfSingleCollectedMethodRemaining();
       }
 
       _syncCreditAmountWithRemaining();
@@ -1655,37 +1805,21 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                                     debugPrint(
                                         '📈 TOGGLE ON - Enabling customer credit functionality');
 
-                                    // Calculate current state
                                     final currentBaseBalance =
                                         _computeBaseBalance();
-                                    final cashAmount = double.tryParse(
-                                            cashAmountController.text) ??
-                                        0.0;
-                                    final cardAmount = double.tryParse(
-                                            cardAmountController.text) ??
-                                        0.0;
-                                    final upiAmount = double.tryParse(
-                                            upiAmountController.text) ??
-                                        0.0;
-                                    final codAmount = double.tryParse(
-                                            codAmountController.text) ??
-                                        0.0;
-                                    final totalCollected = cashAmount +
-                                        cardAmount +
-                                        upiAmount +
-                                        codAmount;
-
-                                    // Auto-fill logic with debt settlement priority
+                                    final totalCollected =
+                                        _getTotalCollectedAmount();
                                     final transactionExcess =
                                         totalCollected - widget.cartTotal;
+                                    final customerPrevBalance =
+                                        _effectiveCustomerPrevBalance();
 
                                     if (transactionExcess > 0) {
                                       double prefillAmount;
 
-                                      if (widget.customerPrevBalance < 0) {
-                                        // Customer owes money - prioritize debt settlement
+                                      if (customerPrevBalance < 0) {
                                         final customerDebt =
-                                            widget.customerPrevBalance.abs();
+                                            customerPrevBalance.abs();
                                         if (customerDebt <= transactionExcess) {
                                           prefillAmount = customerDebt;
                                         } else {
@@ -1782,6 +1916,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               'billing.apply_payment_methods'.tr,
                           fct: () {
                             if (_isApplying) return;
+
+                            final validation = _validateBeforeApply();
+                            if (!validation.isValid) {
+                              showScaffoldError(
+                                context: context,
+                                message: validation.message ??
+                                    'Please configure payment before confirm',
+                              );
+                              return;
+                            }
+
                             setState(() {
                               _isApplying = true;
                             });
@@ -1930,7 +2075,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     : () {
                         // Update selection state if not already selected
                         setState(() {
-                          final wasSelected = _isPaymentTypeSelected(type);
                           if (type == 'cash')
                             isCashSelected = true;
                           else if (type == 'card')
@@ -1939,41 +2083,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                             isUpiSelected = true;
                           else if (type == 'cod') isCodSelected = true;
 
-                          // Pristine-switch when tapping an unselected method's field
-                          bool didSwitch = false;
-                          final pristineCtrl = _getPristineController();
-                          if (!wasSelected &&
-                              _pristineMethod != null &&
-                              pristineCtrl != null &&
-                              pristineCtrl.text == _pristineAmount &&
-                              _pristineMethod != type &&
-                              _isPaymentTypeSelected(_pristineMethod!)) {
-                            switch (_pristineMethod) {
-                              case 'cash':
-                                isCashSelected = false;
-                                cashAmountController.clear();
-                                break;
-                              case 'card':
-                                isCardSelected = false;
-                                cardAmountController.clear();
-                                break;
-                              case 'upi':
-                                isUpiSelected = false;
-                                upiAmountController.clear();
-                                break;
-                              case 'cod':
-                                isCodSelected = false;
-                                codAmountController.clear();
-                                break;
+                          if (type != 'credit') {
+                            final didSwitch =
+                                _applyPristineSwitch(type, controller);
+                            if (!didSwitch) {
+                              _autoFillSelectedMethodAmount(type);
                             }
-                            controller.text =
-                                widget.cartTotal.toStringAsFixed(2);
-                            _pristineMethod = type;
-                            _pristineAmount = controller.text;
-                            didSwitch = true;
+                            _recordPristineIfFullTotal(type, controller);
                           }
-
-                          if (!didSwitch) _autoFillSelectedMethodAmount(type);
                           _notifyChanges();
                         });
 
@@ -2088,11 +2205,15 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             focusNode: focusNode,
             onTap: () {
               setState(() {
+                final wasSelected = isSelected;
                 _extraSelected[key] = true;
-                final remaining = widget.cartTotal - _getTotalPaidAmount();
-                if (controller.text.isEmpty && remaining > 0) {
-                  controller.text = remaining.toStringAsFixed(2);
+                final methodKey = _extraMethodKey(key);
+                final didSwitch = !wasSelected &&
+                    _applyPristineSwitch(methodKey, controller);
+                if (!didSwitch) {
+                  _autoFillRemainingForMethod(methodKey, controller);
                 }
+                _recordPristineIfFullTotal(methodKey, controller);
                 _notifyChanges();
               });
               WidgetsBinding.instance.addPostFrameCallback((_) {

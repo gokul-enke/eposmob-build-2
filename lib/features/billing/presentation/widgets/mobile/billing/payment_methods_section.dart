@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
@@ -15,14 +16,9 @@ class PaymentMethodsSection extends StatefulWidget {
 }
 
 class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
+  static const _controller = BillingMobilePaymentController();
   bool _isLoadingPaymentMethods = false;
   List<MasterDataValue> _paymentMethods = [];
-
-  // Local payment IDs
-  String? _cashPaymentMethodId;
-  String? _cardPaymentMethodId;
-  String? _upiPaymentMethodId;
-  String? _codPaymentMethodId;
 
   @override
   void initState() {
@@ -62,12 +58,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   }
 
   void _assignPaymentMethodIds(List<MasterDataValue> methods) {
-    final sortedMethods = List<MasterDataValue>.from(methods);
-    sortedMethods.sort((a, b) {
-      if (a.value.toUpperCase() == 'CASH') return -1;
-      if (b.value.toUpperCase() == 'CASH') return 1;
-      return a.value.compareTo(b.value);
-    });
+    final sortedMethods = _controller.sortPaymentMethods(methods);
+    final ids = _controller.paymentMethodIds(sortedMethods);
 
     if (mounted) {
       setState(() {
@@ -75,136 +67,23 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
       });
     }
 
-    for (final method in sortedMethods) {
-      final value = method.value.toUpperCase();
-      if (value == 'CASH') {
-        _cashPaymentMethodId = method.id.toString();
-      } else if (value == 'CARD') {
-        _cardPaymentMethodId = method.id.toString();
-      } else if (value == 'UPI') {
-        _upiPaymentMethodId = method.id.toString();
-      } else if (value == 'COD') {
-        _codPaymentMethodId = method.id.toString();
-      }
-    }
-
-    // Proactively send payment method IDs to provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final bp = Provider.of<BillingProvider>(context, listen: false);
         bp.updatePaymentMethodIds(
-          cashId: _cashPaymentMethodId,
-          cardId: _cardPaymentMethodId,
-          upiId: _upiPaymentMethodId,
-          codId: _codPaymentMethodId,
+          cashId: ids.cashId,
+          cardId: ids.cardId,
+          upiId: ids.upiId,
+          codId: ids.codId,
         );
       }
     });
   }
 
-  IconData _getPaymentIcon(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('cash')) return Icons.money;
-    if (lower.contains('card')) return Icons.credit_card;
-    if (lower.contains('upi')) return Icons.qr_code;
-    if (lower.contains('cod')) return Icons.local_shipping;
-    if (lower.contains('debit') || lower.contains('credit'))
-      return Icons.account_balance_wallet;
-    return Icons.payment;
-  }
-
-  double _getRemainingPayable(BillingProvider bp) {
-    double cashAmount = double.tryParse(bp.cashAmountController.text) ?? 0.0;
-    double cardAmount = double.tryParse(bp.cardAmountController.text) ?? 0.0;
-    double upiAmount = double.tryParse(bp.upiAmountController.text) ?? 0.0;
-    double codAmount = double.tryParse(bp.codAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount + codAmount;
-    double remaining = bp.totalOrderAmount - totalCollected;
-    return remaining > 0 ? remaining : 0.0;
-  }
-
-  void _toggleMethod(String type, BillingProvider bp) {
-    final bool isSelected;
-    final TextEditingController controller;
-
-    switch (type.toUpperCase()) {
-      case 'CASH':
-        isSelected = bp.isCashSelected;
-        controller = bp.cashAmountController;
-        break;
-      case 'CARD':
-        isSelected = bp.isCardSelected;
-        controller = bp.cardAmountController;
-        break;
-      case 'UPI':
-        isSelected = bp.isUpiSelected;
-        controller = bp.upiAmountController;
-        break;
-      case 'COD':
-        isSelected = bp.isCodSelected;
-        controller = bp.codAmountController;
-        break;
-      case 'DEBIT':
-        isSelected = bp.isDebitSelected;
-        controller = bp.debitAmountController;
-        break;
-      default:
-        return;
-    }
-
-    if (isSelected) {
-      bp.setPaymentMethod(type, false);
-    } else {
-      bp.setPaymentMethod(type, true);
-      // Auto-fill remaining payable if amount is currently empty
-      if (controller.text.isEmpty || double.tryParse(controller.text) == 0.0) {
-        final remaining = _getRemainingPayable(bp);
-        if (remaining > 0) {
-          controller.text = remaining.toStringAsFixed(2);
-          bp.calculateBalance();
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final bp = Provider.of<BillingProvider>(context);
-
-    // Prepare list of payment items: CASH, CARD, UPI, COD, CREDIT (DEBIT)
-    final List<Map<String, dynamic>> items = [
-      {
-        'name': 'Cash',
-        'type': 'CASH',
-        'controller': bp.cashAmountController,
-        'selected': bp.isCashSelected
-      },
-      {
-        'name': 'Card',
-        'type': 'CARD',
-        'controller': bp.cardAmountController,
-        'selected': bp.isCardSelected
-      },
-      {
-        'name': 'UPI',
-        'type': 'UPI',
-        'controller': bp.upiAmountController,
-        'selected': bp.isUpiSelected
-      },
-      {
-        'name': 'COD',
-        'type': 'COD',
-        'controller': bp.codAmountController,
-        'selected': bp.isCodSelected
-      },
-      {
-        'name': 'Credit',
-        'type': 'DEBIT',
-        'controller': bp.debitAmountController,
-        'selected': bp.isDebitSelected,
-        'readOnly': true
-      },
-    ];
+    final items = _controller.paymentItems(bp, _paymentMethods);
 
     if (_isLoadingPaymentMethods && _paymentMethods.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -221,36 +100,20 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
           separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final item = items[index];
-            final String name = item['name'];
-            final String type = item['type'];
-            final TextEditingController controller = item['controller'];
-            final bool isSelected = item['selected'];
-            final bool readOnly = item['readOnly'] ?? false;
+            final name = item.name;
+            final type = item.type;
+            final controller = item.controller;
+            final isSelected = item.selected;
+            final readOnly = item.readOnly;
 
-            // Credit logic: if selectedCustomer is null, hide Credit option
-            if (type == 'DEBIT' && bp.selectedCustomer == null) {
+            if (!_controller.shouldShowItem(item, bp)) {
               return const SizedBox.shrink();
             }
 
-            // Sync debit amount with auto-calculated balance if DEBIT is selected
             if (type == 'DEBIT' && isSelected && bp.totalOrderAmount > 0) {
-              final cashAmount =
-                  double.tryParse(bp.cashAmountController.text) ?? 0.0;
-              final cardAmount =
-                  double.tryParse(bp.cardAmountController.text) ?? 0.0;
-              final upiAmount =
-                  double.tryParse(bp.upiAmountController.text) ?? 0.0;
-              final codAmount =
-                  double.tryParse(bp.codAmountController.text) ?? 0.0;
-              final remaining = bp.totalOrderAmount -
-                  (cashAmount + cardAmount + upiAmount + codAmount);
-              final autoDebit = remaining > 0 ? remaining : 0.0;
-              if (controller.text != autoDebit.toStringAsFixed(2)) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  controller.text = autoDebit.toStringAsFixed(2);
-                  bp.calculateBalance();
-                });
-              }
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _controller.syncDebitAmount(bp);
+              });
             }
 
             return Container(
@@ -265,7 +128,12 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                 ),
               ),
               child: InkWell(
-                onTap: () => _toggleMethod(type, bp),
+                onTap: () => _controller.toggleMethod(
+                  type,
+                  bp,
+                  methodId: item.methodId,
+                  displayValue: item.type,
+                ),
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
@@ -276,7 +144,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                       Row(
                         children: [
                           Icon(
-                            _getPaymentIcon(type),
+                            _controller.iconForType(type),
                             color: isSelected
                                 ? const Color(0xFF0066CC)
                                 : Colors.grey.shade700,
@@ -339,10 +207,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                           ),
                         ),
                         onTap: () {
-                          // Select the method automatically when tapping input
-                          if (!isSelected) {
-                            bp.setPaymentMethod(type, true);
-                          }
+                          _controller.selectMethodOnTap(item, bp);
                           if (!readOnly) {
                             Provider.of<KeyboardProvider>(context,
                                     listen: false)
@@ -353,14 +218,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                             );
                           }
                         },
-                        onChanged: (value) {
-                          // Update payment selections & calculate balance on input changes
-                          if (value.isNotEmpty &&
-                              double.tryParse(value) != 0.0) {
-                            if (!isSelected) bp.setPaymentMethod(type, true);
-                          }
-                          bp.calculateBalance();
-                        },
+                        onChanged: (value) =>
+                            _controller.onAmountChanged(item, value, bp),
                       ),
                     ],
                   ),

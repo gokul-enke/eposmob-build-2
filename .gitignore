@@ -47,6 +47,7 @@ app.*.map.json
 .local-chromium/
 
 Todo.md
+!wikidata/billing/todo.md
 .idx
 # .opencode
 /enkepos
