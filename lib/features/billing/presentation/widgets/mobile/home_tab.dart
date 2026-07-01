@@ -25,7 +25,10 @@ class _MobileHomeTabState extends State<MobileHomeTab> {
   @override
   Widget build(BuildContext context) {
     return MarketHomeWidget(
-      onNewOrder: widget.onClearCart,
+      autocompleteProductKey: widget.autocompleteProductKey,
+      onProcessBarcode: widget.onProcessBarcode,
+      onClearProductFields: widget.onClearProductFields,
+      focusTextField: widget.focusTextField,
     );
   }
 }

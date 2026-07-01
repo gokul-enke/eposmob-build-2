@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/providers/delivery_methods_provider.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
+import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
 class DeliveryOptionsSection extends StatefulWidget {
@@ -16,6 +20,8 @@ class DeliveryOptionsSection extends StatefulWidget {
 }
 
 class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
+  static const _deliveryController = BillingMobileDeliveryController();
+  static const _settingsController = BillingMobileSettingsController();
   late TextEditingController _addressController;
 
   @override
@@ -34,29 +40,27 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
     super.dispose();
   }
 
-  IconData _getDeliveryIcon(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('dine')) return Icons.restaurant;
-    if (lower.contains('toyou')) return Icons.local_shipping;
-    if (lower.contains('door')) return Icons.doorbell_outlined;
-    if (lower.contains('store') || lower.contains('takeaway')) {
-      return Icons.store;
-    }
-    if (lower.contains('car')) return Icons.directions_car;
-    if (lower.contains('third') || lower.contains('logistics')) {
-      return Icons.hub;
-    }
-    if (lower.contains('hunger')) return Icons.motorcycle;
-    return Icons.local_shipping;
-  }
-
   @override
   Widget build(BuildContext context) {
     final bp = Provider.of<BillingProvider>(context);
     final deliveryProvider = Provider.of<DeliveryMethodsProvider>(context);
     final appSettingsProvider = Provider.of<AppSettingsProvider>(context);
     final customerProvider = Provider.of<CustomerSelectionProvider>(context);
-    final currency = appSettingsProvider.appSettings?.currency ?? 'SAR';
+    final localProductProvider = Provider.of<LocalProductProvider>(context);
+    final currency = appSettingsProvider.appSettings?.currency ?? '';
+    final netTotal = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
+    final freeDeliveryEnabled =
+        appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
+    final freeDeliveryMinimumAmount = double.tryParse(
+          appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
+              '',
+        ) ??
+        0.0;
+    final askDeliveryDate =
+        _settingsController.shouldShowDeliveryDateTime(
+      appSettingsProvider.appSettings,
+    );
 
     // Sync order address from provider if modified outside (e.g. order rehydration)
     if (_addressController.text != bp.orderAddress) {
@@ -66,6 +70,27 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (!BillingCrashGuards.hasDeliveryMethods(
+            deliveryProvider.deliveryMethods)) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Text(
+              deliveryProvider.isLoading
+                  ? 'Loading delivery methods...'
+                  : 'No delivery methods available',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+        ] else
         // List of delivery methods
         ListView.separated(
           shrinkWrap: true,
@@ -74,17 +99,19 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
           separatorBuilder: (context, index) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final method = deliveryProvider.deliveryMethods[index];
-            final isSelected = bp.deliveryMethod == method.name ||
-                (bp.deliveryMethod.isEmpty &&
-                    method.name == 'Store Takeaway');
+            final isSelected = _deliveryController.isSelected(method, bp);
 
-            final double price = method.basePrice ?? 0.0;
-            final isFree = price == 0.0;
+            final feeLabel = _deliveryController.feeLabelForMethodInOrder(
+              method: method,
+              currency: currency,
+              freeDeliveryEnabled: freeDeliveryEnabled,
+              freeDeliveryMinimumAmount: freeDeliveryMinimumAmount,
+              netTotal: netTotal,
+              deliveryMethods: deliveryProvider.deliveryMethods,
+            );
 
             return InkWell(
-              onTap: () {
-                bp.setDeliveryMethod(method.name, method.id);
-              },
+              onTap: () => _deliveryController.selectMethod(bp, method),
               borderRadius: BorderRadius.circular(8),
               child: Container(
                 padding:
@@ -102,7 +129,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
                 child: Row(
                   children: [
                     Icon(
-                      _getDeliveryIcon(method.name),
+                      _deliveryController.iconForMethod(method.name),
                       color: isSelected
                           ? const Color(0xFF0066CC)
                           : Colors.grey.shade700,
@@ -131,9 +158,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isFree
-                            ? 'Free'
-                            : '($currency ${price.toStringAsFixed(2)})',
+                        feeLabel,
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -197,7 +222,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
           const SizedBox(height: 16),
           // Customer Address suggestions if selected
           if (customerProvider.hasSelectedCustomer &&
-              customerProvider.selectedCustomer!.addresses != null &&
+              customerProvider.selectedCustomer?.addresses != null &&
               customerProvider.selectedCustomer!.addresses!.isNotEmpty) ...[
             const Text(
               'Choose an address:',
@@ -213,7 +238,7 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
               runSpacing: 8,
               children: customerProvider.selectedCustomer!.addresses!
                   .map((Address address) {
-                final fullAddress = "${address.address}, ${address.city}";
+                final fullAddress = _deliveryController.formatAddress(address);
                 return InkWell(
                   onTap: () {
                     setState(() {
@@ -279,6 +304,40 @@ class _DeliveryOptionsSectionState extends State<DeliveryOptionsSection> {
                 replaceOnFirstInput: true,
               );
             },
+          ),
+        ],
+
+        if (askDeliveryDate) ...[
+          const SizedBox(height: 16),
+          const Text(
+            'Delivery Date:',
+            key: Key('delivery_date_label'),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          CalendarPickerTableCell(
+            initialDate: bp.deliveryDate,
+            onDateSelected: (date) => bp.setDeliveryDate(date),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Delivery Time:',
+            key: Key('delivery_time_label'),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TimePickerTableCell(
+            initialTime: _deliveryController.parseDeliveryTime(bp.deliveryTime),
+            onTimeSelected: (time) =>
+                bp.setDeliveryTime(_deliveryController.formatDeliveryTime(time)),
           ),
         ],
 

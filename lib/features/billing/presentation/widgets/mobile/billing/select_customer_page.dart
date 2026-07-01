@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -20,6 +23,7 @@ class SelectCustomerPage extends StatefulWidget {
 }
 
 class _SelectCustomerPageState extends State<SelectCustomerPage> {
+  static const _controller = BillingMobileCustomerController();
   final TextEditingController _searchController = TextEditingController();
   List<CustomerListModelData> _allCustomers = [];
   List<CustomerListModelData> _filteredCustomers = [];
@@ -69,37 +73,27 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
           _allCustomers = [];
           _filteredCustomers = [];
           _isLoading = false;
+          _errorMessage = BillingMobileErrorMessages.customersUnavailable;
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to load customers';
+        _errorMessage = BillingMobileErrorMessages.loadCustomersFailed;
       });
     }
   }
 
   void _onSearchChanged(String query) {
-    if (query.isEmpty) {
-      setState(() => _filteredCustomers = List.from(_allCustomers));
-      return;
-    }
-    final lowerQuery = query.toLowerCase();
     setState(() {
-      _filteredCustomers = _allCustomers.where((c) {
-        final name = (c.name ?? '').toLowerCase();
-        final phone = (c.phone ?? '').toLowerCase();
-        return name.contains(lowerQuery) || phone.contains(lowerQuery);
-      }).toList();
+      _filteredCustomers = _controller.filterCustomers(_allCustomers, query);
     });
   }
 
   /// First 10 customers act as "Frequent Customers" for the horizontal cards.
   List<CustomerListModelData> get _frequentCustomers {
-    return _allCustomers.length > 10
-        ? _allCustomers.sublist(0, 10)
-        : _allCustomers;
+    return _controller.frequentCustomers(_allCustomers);
   }
 
   void _selectAndDone(CustomerListModelData customer) {
@@ -108,20 +102,15 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
   }
 
   void _applyCustomerSelection(CustomerListModelData customer) {
-    final customerSelectionProv =
-        Provider.of<CustomerSelectionProvider>(context, listen: false);
-    customerSelectionProv.setSelectedCustomer(customer);
-
-    final bp = Provider.of<BillingProvider>(context, listen: false);
-    bp.setMobileNumberText('${customer.name} ${customer.phone}');
-    bp.setSelectedCustomer(customer, isManual: true);
-    bp.mobileNumberTextController.text = '${customer.name} ${customer.phone}';
-
-    final accessToken =
-        Provider.of<AuthModel>(context, listen: false).token ?? '';
-    Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
-      customerId: customer.id ?? 0,
-      accessToken: accessToken,
+    _controller.applySelection(
+      customer: customer,
+      customerSelectionProvider: Provider.of<CustomerSelectionProvider>(
+        context,
+        listen: false,
+      ),
+      billingProvider: Provider.of<BillingProvider>(context, listen: false),
+      cartProvider: Provider.of<CartProvider>(context, listen: false),
+      auth: Provider.of<AuthModel>(context, listen: false),
     );
   }
 
@@ -134,31 +123,101 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
     );
 
     if (result != null && result is Map && result['status'] == 'success') {
-      // Reload the list after adding a new customer
+      final createdCustomer =
+          _controller.parseCreatedCustomerFromAddResponse(result);
+      if (createdCustomer != null) {
+        setState(() {
+          _allCustomers.removeWhere((customer) =>
+              customer.id == createdCustomer.id ||
+              (customer.phone != null &&
+                  customer.phone == createdCustomer.phone));
+          _allCustomers.insert(0, createdCustomer);
+          _filteredCustomers = _controller.filterCustomers(
+            _allCustomers,
+            _searchController.text,
+          );
+          _selectedCustomer = createdCustomer;
+        });
+        _applyCustomerSelection(createdCustomer);
+        if (mounted) {
+          Navigator.of(context).pop(createdCustomer);
+        }
+        return;
+      }
+
+      final createdPhone = (result['phone'] ?? '').toString();
       await _loadCustomers();
+      final matched =
+          _controller.findCustomerByPhone(_allCustomers, createdPhone);
+      if (matched != null) {
+        setState(() => _selectedCustomer = matched);
+        _applyCustomerSelection(matched);
+        if (mounted) {
+          Navigator.of(context).pop(matched);
+        }
+      } else if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.addCustomerFailed,
+        );
+      }
+    } else if (result != null && result is Map && result['status'] != 'success') {
+      if (mounted) {
+        final apiMessage = result['message']?.toString();
+        showScaffoldError(
+          context: context,
+          message: apiMessage?.trim().isNotEmpty == true
+              ? apiMessage!.trim()
+              : BillingMobileErrorMessages.addCustomerFailed,
+        );
+      }
     }
   }
 
   // Build avatar initial for the customer
   String _avatarInitial(CustomerListModelData customer) {
-    final name = customer.name ?? '';
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return _controller.avatarInitial(customer);
+  }
+
+  MobileCustomerBalanceDisplay? _balanceDisplayForCustomer(
+    CustomerListModelData customer,
+  ) {
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final customerSelection =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final shouldShow = _controller.shouldShowCustomerBalance(
+      customer: customer,
+      customerSelectionProvider: customerSelection,
+      defaultCustomerPhone:
+          appSettings?.autoAssignDefaultCustomerPhone ?? '',
+      isQuotationDraft: false,
+    );
+    if (!shouldShow) return null;
+
+    return _controller.balanceDisplay(
+      balance: customer.balance ?? 0.0,
+      currency: appSettings?.currency ?? '',
+    );
+  }
+
+  Widget _buildBalanceChip(MobileCustomerBalanceDisplay display) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        '${display.label}: ${display.amountText}',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: display.color,
+        ),
+      ),
+    );
   }
 
   // Get a color for the avatar based on the initial
   Color _avatarColor(String initial) {
-    const colors = [
-      Color(0xFF1D4ED8), // Blue
-      Color(0xFF059669), // Green
-      Color(0xFFD97706), // Amber
-      Color(0xFFDC2626), // Red
-      Color(0xFF7C3AED), // Purple
-      Color(0xFF0891B2), // Cyan
-      Color(0xFFDB2777), // Pink
-      Color(0xFF4F46E5), // Indigo
-    ];
-    final index = initial.codeUnitAt(0) % colors.length;
-    return colors[index];
+    return _controller.avatarColor(initial);
   }
 
   @override
@@ -210,17 +269,16 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                             ],
                           ),
                         )
-                      : SingleChildScrollView(
+                      : CustomScrollView(
                           physics: const BouncingScrollPhysics(
-                              parent: AlwaysScrollableScrollPhysics()),
-                          padding: EdgeInsets.only(bottom: 80 + bottomPadding),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Frequent Customers horizontal carousel
-                              if (_frequentCustomers.isNotEmpty) ...[
-                                const Padding(
-                                  padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          slivers: [
+                            if (_frequentCustomers.isNotEmpty) ...[
+                              const SliverToBoxAdapter(
+                                child: Padding(
+                                  padding:
+                                      EdgeInsets.fromLTRB(20, 16, 20, 12),
                                   child: Text(
                                     'Frequent Customers',
                                     style: TextStyle(
@@ -230,14 +288,51 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                                     ),
                                   ),
                                 ),
-                                _buildFrequentCustomerCards(),
-                                const SizedBox(height: 8),
-                              ],
-
-                              // Full customer list
-                              ..._buildCustomerList(),
+                              ),
+                              SliverToBoxAdapter(
+                                child: _buildFrequentCustomerCards(),
+                              ),
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 8),
+                              ),
                             ],
-                          ),
+                            if (_filteredCustomers.isEmpty)
+                              SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.person_search,
+                                          size: 48,
+                                          color: Colors.grey.shade300),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'No customers found',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else
+                              SliverPadding(
+                                padding: EdgeInsets.only(
+                                  bottom: 80 + bottomPadding,
+                                ),
+                                sliver: SliverList.builder(
+                                  itemCount: _filteredCustomers.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildCustomerRow(
+                                      _filteredCustomers[index],
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
                         ),
             ),
           ],
@@ -351,6 +446,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
           final isSelected = _selectedCustomer?.id == customer.id;
           final hasVip = customer.membershipName != null &&
               customer.membershipName!.isNotEmpty;
+          final balanceDisplay = _balanceDisplayForCustomer(customer);
 
           return GestureDetector(
             onTap: () => _selectAndDone(customer),
@@ -368,7 +464,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -384,7 +480,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                       CircleAvatar(
                         radius: 22,
                         backgroundColor:
-                            _avatarColor(initial).withOpacity(0.12),
+                            _avatarColor(initial).withValues(alpha: 0.12),
                         child: Icon(
                           Icons.person,
                           size: 22,
@@ -396,7 +492,8 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF059669).withOpacity(0.1),
+                            color:
+                                const Color(0xFF059669).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -443,6 +540,8 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                       ),
                     ],
                   ),
+                  if (balanceDisplay != null)
+                    _buildBalanceChip(balanceDisplay),
                   const Spacer(),
                   // Select button
                   SizedBox(
@@ -480,117 +579,94 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // CUSTOMER LIST
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  List<Widget> _buildCustomerList() {
-    if (_filteredCustomers.isEmpty) {
-      return [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(Icons.person_search,
-                    size: 48, color: Colors.grey.shade300),
-                const SizedBox(height: 12),
-                Text(
-                  'No customers found',
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildCustomerRow(CustomerListModelData customer) {
+    final initial = _avatarInitial(customer);
+    final isSelected = _selectedCustomer?.id == customer.id;
+    final balanceDisplay = _balanceDisplayForCustomer(customer);
+
+    return InkWell(
+      onTap: () {
+        setState(() => _selectedCustomer = customer);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: Colors.grey.shade100, width: 1),
           ),
         ),
-      ];
-    }
-
-    return _filteredCustomers.map((customer) {
-      final initial = _avatarInitial(customer);
-      final isSelected = _selectedCustomer?.id == customer.id;
-
-      return InkWell(
-        onTap: () {
-          setState(() => _selectedCustomer = customer);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+        child: Row(
+          children: [
+            // Avatar circle with initial
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: _avatarColor(initial).withValues(alpha: 0.12),
+              child: Text(
+                initial,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _avatarColor(initial),
+                ),
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              // Avatar circle with initial
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: _avatarColor(initial).withOpacity(0.12),
-                child: Text(
-                  initial,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _avatarColor(initial),
+            const SizedBox(width: 14),
+            // Name + Phone
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    customer.name ?? 'Unknown',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 3),
+                  Text(
+                    customer.phone ?? '',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                  if (balanceDisplay != null)
+                    _buildBalanceChip(balanceDisplay),
+                ],
               ),
-              const SizedBox(width: 14),
-              // Name + Phone
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      customer.name ?? 'Unknown',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+            ),
+            // Selection indicator
+            isSelected
+                ? Container(
+                    width: 26,
+                    height: 26,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF22C55E),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  )
+                : Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                        width: 2,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      customer.phone ?? '',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Selection indicator
-              isSelected
-                  ? Container(
-                      width: 26,
-                      height: 26,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF22C55E),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    )
-                  : Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-            ],
-          ),
+                  ),
+          ],
         ),
-      );
-    }).toList();
+      ),
+    );
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -603,7 +679,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),

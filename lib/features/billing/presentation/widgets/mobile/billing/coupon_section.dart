@@ -7,6 +7,8 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/models/discount_list_model.dart';
+import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/controllers/coordinators/payment_coordinator.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -20,6 +22,9 @@ class CouponSection extends StatefulWidget {
 }
 
 class _CouponSectionState extends State<CouponSection> {
+  static const _couponController = BillingMobileCouponController();
+  static const _paymentController = BillingMobilePaymentController();
+
   DiscountData? _selectedDiscount;
   late TextEditingController flatDiscountController;
   late TextEditingController percentageDiscountController;
@@ -36,20 +41,41 @@ class _CouponSectionState extends State<CouponSection> {
     final initialPercentage = currentDiscounts['percentageDiscount'] ?? 0.0;
 
     flatDiscountController = TextEditingController(
-        text: initialFlat == 0.0 ? '' : initialFlat.toString());
+      text: _couponController.initialDiscountFieldText(initialFlat),
+    );
     percentageDiscountController = TextEditingController(
-        text: initialPercentage == 0.0 ? '' : initialPercentage.toString());
+      text: _couponController.initialDiscountFieldText(initialPercentage),
+    );
 
     flatDiscountController.addListener(_onManualDiscountChanged);
     percentageDiscountController.addListener(_onManualDiscountChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final discountProvider =
           Provider.of<DiscountProvider>(context, listen: false);
       if (discountProvider.discounts.isEmpty && !discountProvider.isLoading) {
-        await discountProvider.fetchDiscounts();
+        try {
+          await discountProvider.fetchDiscounts();
+        } catch (_) {
+          if (mounted) {
+            showScaffoldError(
+              context: context,
+              message: BillingMobileErrorMessages.loadDiscountsFailed,
+            );
+          }
+        }
       }
-      _findDiscountByCode(bp.coupenCodeTextController.text);
+      if (!mounted) return;
+      final match = _couponController.findDiscountByCode(
+        discountProvider.discounts,
+        bp.coupenCodeTextController.text,
+      );
+      if (match != null && mounted) {
+        setState(() {
+          _selectedDiscount = match;
+        });
+      }
     });
   }
 
@@ -62,71 +88,27 @@ class _CouponSectionState extends State<CouponSection> {
     super.dispose();
   }
 
-  void _findDiscountByCode(String code) {
-    if (code.isEmpty) return;
-    final discountProvider =
-        Provider.of<DiscountProvider>(context, listen: false);
-    for (final discount in discountProvider.discounts) {
-      if (discount.couponCode.toLowerCase() == code.toLowerCase()) {
-        if (mounted) {
-          setState(() {
-            _selectedDiscount = discount;
-          });
-        }
-        break;
-      }
-    }
-  }
-
   void _onManualDiscountChanged() {
-    if (flatDiscountController.text.isNotEmpty ||
-        percentageDiscountController.text.isNotEmpty) {
-      if (_selectedDiscount != null) {
-        setState(() {
-          _selectedDiscount = null;
-        });
-      }
+    if (_couponController.shouldClearSelectedCouponOnManualInput(
+      flatDiscountText: flatDiscountController.text,
+      percentageDiscountText: percentageDiscountController.text,
+      selectedDiscount: _selectedDiscount,
+    )) {
+      setState(() {
+        _selectedDiscount = null;
+      });
     }
   }
 
   void _onDiscountSelected(DiscountData? discount) {
     if (discount == null) return;
-    final isPercentage = discount.discountType.toLowerCase() == 'percent';
-    final finalValue = discount.discountValue.toDouble();
+    final values = _couponController.fieldValuesForSelectedDiscount(discount);
 
     setState(() {
-      if (isPercentage) {
-        flatDiscountController.clear();
-        percentageDiscountController.text = finalValue.toString();
-      } else {
-        flatDiscountController.text = finalValue.toString();
-        percentageDiscountController.clear();
-      }
+      flatDiscountController.text = values.flat;
+      percentageDiscountController.text = values.percent;
       _selectedDiscount = discount;
     });
-  }
-
-  bool _validateDiscountInputs(double originalSubTotal) {
-    final flatDiscount = double.tryParse(flatDiscountController.text) ?? 0.0;
-    final percentageDiscount =
-        double.tryParse(percentageDiscountController.text) ?? 0.0;
-
-    if (flatDiscount < 0 || percentageDiscount < 0) {
-      showScaffoldError(
-          context: context, message: 'Discount cannot be negative');
-      return false;
-    }
-    if (percentageDiscount > 100) {
-      showScaffoldError(
-          context: context, message: 'Percentage discount cannot exceed 100%');
-      return false;
-    }
-    if (flatDiscount > originalSubTotal && originalSubTotal > 0) {
-      showScaffoldError(
-          context: context, message: 'Flat discount cannot exceed cart total');
-      return false;
-    }
-    return true;
   }
 
   Future<void> _applyDiscount() async {
@@ -135,68 +117,53 @@ class _CouponSectionState extends State<CouponSection> {
         Provider.of<LocalProductProvider>(context, listen: false);
     final discountProvider =
         Provider.of<DiscountProvider>(context, listen: false);
-    final originalSubTotal =
-        localProductProvider.priceSummary?.originalSubTotal ?? 0.0;
 
-    if (originalSubTotal == 0) {
-      showScaffoldError(
-          context: context, message: 'Cannot apply discount to empty cart');
-      return;
-    }
-    if (!_validateDiscountInputs(originalSubTotal)) {
-      return;
-    }
+    final result = await _couponController.applyDiscount(
+      localProductProvider: localProductProvider,
+      billingProvider: bp,
+      discountProvider: discountProvider,
+      paymentController: _paymentController,
+      flatDiscountText: flatDiscountController.text,
+      percentageDiscountText: percentageDiscountController.text,
+      selectedDiscount: _selectedDiscount,
+      applyCouponApi: () async {
+        await PaymentCoordinator.applyCoupon(context);
+        return bp.isCouponApplied;
+      },
+    );
 
-    if (_selectedDiscount != null) {
-      final validity = discountProvider.getValidityForDiscount(
-          _selectedDiscount!, originalSubTotal);
-      if (validity != DiscountValidity.valid) {
-        showScaffoldError(
-          context: context,
-          message:
-              'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
-        );
-        return;
+    if (!mounted) return;
+
+    if (!result.success) {
+      if (result.errorMessage != null) {
+        showScaffoldError(context: context, message: result.errorMessage!);
       }
+      return;
     }
 
-    double flat = double.tryParse(flatDiscountController.text) ?? 0.0;
-    double percent = double.tryParse(percentageDiscountController.text) ?? 0.0;
-
-    localProductProvider.applyDiscount(
-        flatDiscount: flat, percentageDiscount: percent);
-    if (_selectedDiscount != null) {
-      bp.coupenCodeTextController.text = _selectedDiscount!.couponCode;
-      await PaymentCoordinator.applyCoupon(context);
-      bp.setCouponApplied(true,
-          code: _selectedDiscount!.couponCode,
-          discount: flat > 0 ? flat : percent);
-    } else {
-      bp.coupenCodeTextController.text = '';
-      bp.setCouponApplied(flat > 0 || percent > 0,
-          code: '', discount: flat > 0 ? flat : percent);
-    }
-    if (mounted) {
-      showScaffold(context: context, message: 'Discount applied successfully');
-    }
+    showScaffold(context: context, message: 'Discount applied successfully');
   }
 
   void _clearDiscount() {
     final bp = Provider.of<BillingProvider>(context, listen: false);
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final auth = Provider.of<AuthModel>(context, listen: false);
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
 
-    localProductProvider.clearDiscount();
-    bp.clearDiscounts();
-
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
-    if (customerId != null && accessToken != null) {
-      Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
-        customerId: customerId,
-        accessToken: accessToken,
-      );
-    }
+    _couponController.clearDiscount(
+      localProductProvider: localProductProvider,
+      billingProvider: bp,
+      paymentController: _paymentController,
+      accessToken: BillingCrashGuards.accessTokenOrNull(auth.token),
+      customerId: auth.userId,
+      refreshCart: ({required int customerId, required String accessToken}) {
+        cartProvider.fetchCartDataFromApi(
+          customerId: customerId,
+          accessToken: accessToken,
+        );
+      },
+    );
 
     setState(() {
       flatDiscountController.clear();
@@ -212,14 +179,15 @@ class _CouponSectionState extends State<CouponSection> {
     final discountProvider = Provider.of<DiscountProvider>(context);
     final localProductProvider = Provider.of<LocalProductProvider>(context);
 
-    // Sync controllers if cart discount is cleared externally
     final currentDiscounts = localProductProvider.getCurrentDiscount();
     final flat = currentDiscounts['flatDiscount'] ?? 0.0;
     final pct = currentDiscounts['percentageDiscount'] ?? 0.0;
-    if (flat == 0.0 &&
-        pct == 0.0 &&
-        (flatDiscountController.text.isNotEmpty ||
-            percentageDiscountController.text.isNotEmpty)) {
+    if (_couponController.shouldSyncClearedDiscountFields(
+      flatDiscount: flat,
+      percentageDiscount: pct,
+      flatFieldText: flatDiscountController.text,
+      percentageFieldText: percentageDiscountController.text,
+    )) {
       flatDiscountController.clear();
       percentageDiscountController.clear();
       _selectedDiscount = null;
@@ -228,7 +196,6 @@ class _CouponSectionState extends State<CouponSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Discount Inputs Row
         Row(
           children: [
             Expanded(
@@ -332,7 +299,6 @@ class _CouponSectionState extends State<CouponSection> {
         ),
         const SizedBox(height: 16),
 
-        // Select Coupon Dropdown
         const Text(
           'Select Coupon',
           style: TextStyle(
@@ -352,14 +318,13 @@ class _CouponSectionState extends State<CouponSection> {
         ),
         const SizedBox(height: 16),
 
-        // Action Buttons Row (Clear / Apply Discount)
         Row(
           children: [
             Expanded(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
-                  backgroundColor: const Color(0xFFE2E8F0), // Light grey
+                  backgroundColor: const Color(0xFFE2E8F0),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
@@ -380,7 +345,7 @@ class _CouponSectionState extends State<CouponSection> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
-                  backgroundColor: const Color(0xFF0066CC), // Primary blue
+                  backgroundColor: const Color(0xFF0066CC),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),

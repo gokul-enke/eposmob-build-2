@@ -53,3 +53,5 @@ Todo.md
 /enkepos
 /temp
 /cloudpos-docs
+/.gradle-user-home
+.gradle-user-home/

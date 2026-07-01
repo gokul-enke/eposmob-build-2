@@ -1,20 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
+import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/mobile_cart_price_fields.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/customer_purchase_provider.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/show_product_details.dart';
+import 'package:provider/provider.dart';
 
 class CartItemCard extends StatelessWidget {
   const CartItemCard({
     super.key,
     required this.item,
+    required this.controller,
     required this.onDecrease,
     required this.onIncrease,
     required this.onRemove,
+    required this.onSaleUnitChanged,
+    this.showMrp = false,
+    this.showTaxRate = false,
+    this.showTaxAmount = false,
   });
 
+  static const _settingsController = BillingMobileSettingsController();
+  static const double _minTouchTarget = 44;
+
   final LocalCartItem item;
+  final BillingMobileCartController controller;
   final VoidCallback onDecrease;
   final VoidCallback onIncrease;
   final VoidCallback onRemove;
+  final ValueChanged<MobileSaleUnitChangeResult> onSaleUnitChanged;
+  final bool showMrp;
+  final bool showTaxRate;
+  final bool showTaxAmount;
 
   String? get _imageUrl {
     final attachments = item.product.attachment ?? const <Attachment>[];
@@ -36,33 +65,54 @@ class CartItemCard extends StatelessWidget {
   }
 
   String get _lineTotal {
-    final total = (item.price ?? 0) * item.quantity;
-    return total.toStringAsFixed(2);
+    final total = BillingCrashGuards.lineTotal(
+      unitPrice: item.price,
+      quantity: item.quantity,
+    );
+    return AmountHelper.formatAmount(total);
   }
 
   @override
   Widget build(BuildContext context) {
+    final unitOptions = controller.cartUnitOptionsForItem(item);
+    final selectedUnit = controller.selectedCartUnitValue(item);
+    final canChangeUnit = controller.canChangeSaleUnit(item);
+    final appSettings =
+        context.watch<AppSettingsProvider>().appSettings;
+    final customerSelection =
+        context.watch<CustomerSelectionProvider>();
+    final canViewBillingProductDetails = context
+        .watch<RoleProvider>()
+        .currentUserHasPermissionSync('billing.product.view');
+    final canShowPurchaseHistoryAction =
+        _settingsController.shouldShowPurchaseHistoryAction(
+      appSettings: appSettings,
+      hasSelectedCustomer: customerSelection.hasSelectedCustomer,
+      isDefaultCustomer: customerSelection.isDefaultCustomer,
+    );
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.grey.shade100,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: ColorManager.containerShadowColorForList,
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: SizedBox(
-              width: 78,
-              height: 78,
+              width: 72,
+              height: 72,
               child: _imageUrl == null
                   ? _fallbackImage()
                   : Image.network(
@@ -74,7 +124,7 @@ class CartItemCard extends StatelessWidget {
                     ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,30 +139,75 @@ class CartItemCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontFamily: 'Poppins',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                          fontSize: 14,
+                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                          color: ColorManager.kTitleTextColor,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.chat_bubble,
-                      size: 15,
-                      color: Colors.blueGrey.shade100,
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: onRemove,
-                      child: Icon(
-                        Icons.delete_outline,
-                        size: 20,
-                        color: Colors.red.shade400,
+                    if (canViewBillingProductDetails)
+                      _CardIconButton(
+                        key: const ValueKey('cart_product_details_action'),
+                        tooltip: 'Product details',
+                        icon: Icons.info_outline,
+                        iconColor: ColorManager.kGreyColor,
+                        onTap: () => _showProductDetailsDialog(context, item),
                       ),
+                    if (canShowPurchaseHistoryAction)
+                      _CardIconButton(
+                        key: const ValueKey('cart_purchase_history_action'),
+                        tooltip: 'Customer purchase history',
+                        icon: Icons.history,
+                        iconColor: ColorManager.kPrimaryColor,
+                        onTap: () => _showCustomerPurchaseHistoryForCartItem(
+                          context,
+                          item,
+                          controller,
+                        ),
+                      ),
+                    _CardIconButton(
+                      tooltip: 'Remove item',
+                      icon: Icons.delete_outline,
+                      iconColor: ColorManager.kButtonRed,
+                      onTap: onRemove,
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                if (canChangeUnit) ...[
+                  const SizedBox(height: 6),
+                  _SaleUnitSelector(
+                    currentLabel: item.displayUnitName,
+                    options: unitOptions,
+                    selectedValue: selectedUnit,
+                    onSelected: (value) {
+                      final result = controller.changeSaleUnit(
+                        provider: context.read<LocalProductProvider>(),
+                        item: item,
+                        value: value,
+                      );
+                      onSaleUnitChanged(result);
+                      if (!result.success && result.errorMessage != null) {
+                        showScaffoldError(
+                          context: context,
+                          message: result.errorMessage!,
+                        );
+                      }
+                    },
+                  ),
+                ] else if (item.hasSaleUnit) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    item.displayUnitName,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: ColorManager.kGreyColor,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     _QuantityButton(
@@ -120,15 +215,16 @@ class CartItemCard extends StatelessWidget {
                       filled: false,
                       onTap: onDecrease,
                     ),
-                    Container(
-                      width: 34,
-                      alignment: Alignment.center,
+                    SizedBox(
+                      width: 36,
                       child: Text(
                         _displayQuantity,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 15,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
+                          color: ColorManager.kTitleTextColor,
                         ),
                       ),
                     ),
@@ -140,15 +236,54 @@ class CartItemCard extends StatelessWidget {
                     const Spacer(),
                     Text(
                       _lineTotal,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontFamily: 'Poppins',
-                        color: Color(0xFF1764C0),
-                        fontSize: 18,
+                        color: ColorManager.kPrimaryColor,
+                        fontSize: 17,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 10),
+                Divider(height: 1, color: Colors.grey.shade200),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: MobileCartPriceField(
+                        key: ValueKey(
+                          'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                        ),
+                        item: item,
+                        controller: controller,
+                      ),
+                    ),
+                    if (showMrp) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: MobileCartMrpField(
+                          key: ValueKey(
+                            'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                          ),
+                          item: item,
+                          controller: controller,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (showTaxRate || showTaxAmount) ...[
+                  const SizedBox(height: 8),
+                  MobileCartTaxDisplay(
+                    item: item,
+                    controller: controller,
+                    showTaxRate: showTaxRate,
+                    showTaxAmount: showTaxAmount,
+                  ),
+                ],
               ],
             ),
           ),
@@ -159,13 +294,276 @@ class CartItemCard extends StatelessWidget {
 
   Widget _fallbackImage() {
     return Container(
-      color: Colors.blueGrey.shade50,
+      color: ColorManager.kBgLightColor,
       alignment: Alignment.center,
       child: Icon(
         Icons.inventory_2_outlined,
-        size: 30,
+        size: 28,
         color: Colors.blueGrey.shade200,
       ),
+    );
+  }
+}
+
+class _CardIconButton extends StatelessWidget {
+  const _CardIconButton({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.iconColor,
+    required this.onTap,
+  });
+
+  static const double _size = CartItemCard._minTouchTarget;
+
+  final String tooltip;
+  final IconData icon;
+  final Color iconColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: SizedBox(
+            width: _size,
+            height: _size,
+            child: Icon(icon, size: 20, color: iconColor),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showProductDetailsDialog(BuildContext context, LocalCartItem item) {
+  final appSettingsProvider =
+      Provider.of<AppSettingsProvider>(context, listen: false);
+  final currency = appSettingsProvider.appSettings?.currency ?? '';
+
+  showProductDetails(
+    context,
+    product: item.product,
+    unitPrice: item.price,
+    mrp: item.mrp,
+    quantity: item.quantity,
+    selectedStock: item.selectedStock,
+    isCompact: true,
+    currency: currency,
+    useBillingProductPermissions: true,
+  );
+}
+
+Future<void> _showCustomerPurchaseHistoryForCartItem(
+  BuildContext context,
+  LocalCartItem item,
+  BillingMobileCartController controller,
+) async {
+  const settingsController = BillingMobileSettingsController();
+  final appSettingsProvider =
+      Provider.of<AppSettingsProvider>(context, listen: false);
+  final customerSelectionProvider =
+      Provider.of<CustomerSelectionProvider>(context, listen: false);
+
+  if (!settingsController.shouldShowPurchaseHistoryAction(
+    appSettings: appSettingsProvider.appSettings,
+    hasSelectedCustomer: customerSelectionProvider.hasSelectedCustomer,
+    isDefaultCustomer: customerSelectionProvider.isDefaultCustomer,
+  )) {
+    if (appSettingsProvider.appSettings?.showCustomerLastBuyedPriceList !=
+        true) {
+      showScaffoldError(
+        context: context,
+        message: 'Customer purchase history is disabled',
+      );
+      return;
+    }
+    if (customerSelectionProvider.isDefaultCustomer) {
+      showScaffoldError(
+        context: context,
+        message: 'Purchase history is not shown for the default customer',
+      );
+      return;
+    }
+    showScaffoldError(
+      context: context,
+      message: 'Select a customer to view purchase history',
+    );
+    return;
+  }
+
+  final int? customerId = customerSelectionProvider.selectedCustomerID;
+  final String? customerName = customerSelectionProvider.selectedCustomerName;
+  final int? productId = item.product.productId;
+
+  if (customerId == null || productId == null || customerName == null) {
+    showScaffoldError(
+      context: context,
+      message: 'Select a customer to view purchase history',
+    );
+    return;
+  }
+
+  final String? token =
+      BillingCrashGuards.accessTokenOrNull(
+          Provider.of<AuthModel>(context, listen: false).token);
+  if (token == null) {
+    showScaffoldError(
+      context: context,
+      message: 'Unable to load purchase history',
+    );
+    return;
+  }
+
+  try {
+    final CustomerPurchaseHistory? purchaseHistory =
+        await CustomerPurchaseProvider().getCustomerLastPurchases(
+      accessToken: token,
+      customerId: customerId,
+      productId: productId,
+    );
+
+    if (!context.mounted) return;
+
+    if (purchaseHistory == null ||
+        !purchaseHistory.success ||
+        purchaseHistory.data.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'No purchase history found for this product',
+      );
+      return;
+    }
+
+    final result = await showDialog<Map<String, dynamic>?>(
+      context: context,
+      builder: (dialogContext) => CustomerPurchaseHistoryModal(
+        product: item.product,
+        purchaseHistory: purchaseHistory.data.take(5).toList(),
+        customerName: customerName,
+      ),
+    );
+
+    if (!context.mounted || result == null || result['useCurrentPrice'] == true) {
+      return;
+    }
+
+    final rawPrice = result['price'];
+    final double? selectedPrice = rawPrice is num
+        ? rawPrice.toDouble()
+        : double.tryParse(rawPrice?.toString() ?? '');
+    if (selectedPrice == null) {
+      return;
+    }
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+
+    final priceResult = controller.applyPurchaseHistoryPrice(
+      provider: localProductProvider,
+      item: item,
+      historicalBasePrice: selectedPrice,
+    );
+
+    if (!priceResult.applied) {
+      final minBase = priceResult.belowMinimumPrice;
+      if (minBase != null && context.mounted) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Selected price is below the minimum sale price of ${minBase.toStringAsFixed(2)}.',
+        );
+      }
+      return;
+    }
+  } catch (error, stackTrace) {
+    billingDebugLog('Failed to load customer purchase history: $error');
+    assert(() {
+      debugPrint('$stackTrace');
+      return true;
+    }());
+    if (!context.mounted) return;
+    showScaffoldError(
+      context: context,
+      message: 'Unable to load purchase history',
+    );
+  }
+}
+
+class _SaleUnitSelector extends StatelessWidget {
+  const _SaleUnitSelector({
+    required this.currentLabel,
+    required this.options,
+    required this.selectedValue,
+    required this.onSelected,
+  });
+
+  final String currentLabel;
+  final List<MobileCartUnitOption> options;
+  final String selectedValue;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      initialValue: selectedValue,
+      onSelected: onSelected,
+      offset: const Offset(0, 28),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: ColorManager.kBgLightColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              currentLabel,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: ColorManager.kPrimaryColor,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(
+              Icons.arrow_drop_down,
+              size: 18,
+              color: ColorManager.kPrimaryColor,
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (context) {
+        return options
+            .map(
+              (option) => PopupMenuItem<String>(
+                value: option.value,
+                child: Text(
+                  option.label,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: option.value == selectedValue
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                    color: option.value == selectedValue
+                        ? ColorManager.kPrimaryColor
+                        : Colors.black87,
+                  ),
+                ),
+              ),
+            )
+            .toList();
+      },
     );
   }
 }
@@ -177,6 +575,8 @@ class _QuantityButton extends StatelessWidget {
     required this.onTap,
   });
 
+  static const double _size = CartItemCard._minTouchTarget;
+
   final IconData icon;
   final bool filled;
   final VoidCallback onTap;
@@ -184,18 +584,18 @@ class _QuantityButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: filled ? const Color(0xFF2E69C8) : Colors.grey.shade100,
+      color: filled ? ColorManager.kPrimaryColor : ColorManager.kBgLightColor,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
         child: SizedBox(
-          width: 36,
-          height: 36,
+          width: _size,
+          height: _size,
           child: Icon(
             icon,
-            size: 18,
-            color: filled ? Colors.white : const Color(0xFF2E69C8),
+            size: 20,
+            color: filled ? Colors.white : ColorManager.kPrimaryColor,
           ),
         ),
       ),

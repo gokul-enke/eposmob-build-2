@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/resources/asset_manager.dart';
-
 import 'package:pos_machine/responsive.dart';
 import 'package:pos_machine/widgets/side_menu_mobile.dart';
 
@@ -20,6 +18,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   late SideBarController sideBarController;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -27,25 +26,61 @@ class _MainScreenState extends State<MainScreen> {
     sideBarController = Get.find();
   }
 
+  /// On mobile, Android's left-edge back gesture overlaps the drawer drag zone.
+  /// Intercept root back: close drawer if open, otherwise open drawer (POS-safe).
+  void _handleMobileBack(bool didPop, Object? result) {
+    if (didPop) return;
+
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop(result);
+      return;
+    }
+
+    final scaffoldState = _scaffoldKey.currentState;
+    if (scaffoldState == null) return;
+
+    if (scaffoldState.isDrawerOpen) {
+      scaffoldState.closeDrawer();
+    } else {
+      scaffoldState.openDrawer();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = ResponsiveWidget.isMobile(context);
     Widget content =
         Obx(() => sideBarController.screens[sideBarController.index.value]);
 
-    return Scaffold(
+    final scaffold = Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Colors.white,
-      drawer:
-          ResponsiveWidget.isMobile(context) ? const SideMenuMobile() : null,
-      appBar: ResponsiveWidget.isMobile(context)
+      drawer: isMobile ? const SideMenuMobile() : null,
+      drawerEnableOpenDragGesture: isMobile,
+      appBar: isMobile
           ? AppBar(
               elevation: 0,
               backgroundColor: Colors.white,
               centerTitle: true,
-              title: Image.asset(
-                ImageAssets.posImageLogo,
-                height: 30,
-                fit: BoxFit.contain,
-              ),
+              title: Obx(() {
+                final title = sideBarController.billingMobileAppBarTitle.value;
+                final onBilling =
+                    sideBarController.index.value ==
+                        SideBarController.billingScreenIndex;
+                if (onBilling && title != null) {
+                  return Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  );
+                }
+                return const SidebarBrandLogo(height: 30);
+              }),
               actions: [
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -172,6 +207,14 @@ class _MainScreenState extends State<MainScreen> {
           //   ),
         ),
       ),
+    );
+
+    if (!isMobile) return scaffold;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: _handleMobileBack,
+      child: scaffold,
     );
   }
 }

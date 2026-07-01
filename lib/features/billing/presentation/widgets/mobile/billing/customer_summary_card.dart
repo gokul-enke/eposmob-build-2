@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/models/customer_list.dart';
+import 'package:pos_machine/features/billing/domain/billing_crash_guards.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/live_time_display.dart';
+import 'package:pos_machine/models/customer_list.dart';
 
 class CustomerSummaryCard extends StatelessWidget {
   final CustomerListModelData? customer;
+  final MobileCustomerBalanceDisplay? balanceDisplay;
   final VoidCallback? onClear;
   final VoidCallback? onTap;
 
   const CustomerSummaryCard({
     super.key,
     this.customer,
+    this.balanceDisplay,
     this.onClear,
     this.onTap,
   });
@@ -28,10 +32,9 @@ class CustomerSummaryCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Person Icon Badge
             const CircleAvatar(
               radius: 18,
-              backgroundColor: Color(0xFF1E5BB5), // Rich blue matching Figma
+              backgroundColor: Color(0xFF1E5BB5),
               child: Icon(
                 Icons.person,
                 color: Colors.white,
@@ -39,7 +42,6 @@ class CustomerSummaryCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Customer Name column
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,7 +58,7 @@ class CustomerSummaryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    customer?.name ?? 'Default B2C',
+                    BillingCrashGuards.customerDisplayName(customer),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -66,11 +68,53 @@ class CustomerSummaryCard extends StatelessWidget {
                       color: Color(0xFF0066CC),
                     ),
                   ),
+                  if (BillingCrashGuards.customerDisplayPhone(customer) !=
+                      null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      BillingCrashGuards.customerDisplayPhone(customer)!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                  if (balanceDisplay != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          '${balanceDisplay!.label}: ',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Flexible(
+                          child: Text(
+                            balanceDisplay!.amountText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: balanceDisplay!.color,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            // Time column
             const Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,

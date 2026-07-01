@@ -5,13 +5,18 @@ class SalesReturnRefundSummary {
   final double sessionItemsTotal;
   final double orderItemsTotal;
   final double proRataDiscount;
+  /// Suggested refund after pro-rata discount (and delivery if toggled).
   final double netRefundAmount;
+  /// Upper limit for cash paid out — returned items total (+ delivery if toggled).
+  /// Cashier may refund up to this without applying the discount reduction.
+  final double maxCashRefundAmount;
 
   const SalesReturnRefundSummary({
     required this.sessionItemsTotal,
     required this.orderItemsTotal,
     required this.proRataDiscount,
     required this.netRefundAmount,
+    required this.maxCashRefundAmount,
   });
 }
 
@@ -63,15 +68,19 @@ class SalesReturnCalculationHelper {
         : 0.0;
 
     var netRefund = sessionTotal - proRataDiscount;
+    final deliveryAmount = deliveryRefundable ? shippingCost : 0.0;
     if (deliveryRefundable) {
       netRefund += shippingCost;
     }
+
+    final maxCashRefund = sessionTotal + deliveryAmount;
 
     return SalesReturnRefundSummary(
       sessionItemsTotal: sessionTotal,
       orderItemsTotal: orderItemsTotal,
       proRataDiscount: proRataDiscount,
       netRefundAmount: netRefund < 0 ? 0 : netRefund,
+      maxCashRefundAmount: maxCashRefund < 0 ? 0 : maxCashRefund,
     );
   }
 }

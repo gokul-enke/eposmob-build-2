@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
@@ -47,7 +49,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
         _assignPaymentMethodIds(methods);
       }
     } catch (e) {
-      debugPrint('Error loading payment methods: $e');
+      billingDebugLog('Error loading payment methods: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -58,8 +60,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   }
 
   void _assignPaymentMethodIds(List<MasterDataValue> methods) {
-    final sortedMethods = _controller.sortPaymentMethods(methods);
-    final ids = _controller.paymentMethodIds(sortedMethods);
+    final sortedMethods = _controller.preparePaymentMethods(methods);
 
     if (mounted) {
       setState(() {
@@ -70,208 +71,304 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final bp = Provider.of<BillingProvider>(context, listen: false);
-        bp.updatePaymentMethodIds(
-          cashId: ids.cashId,
-          cardId: ids.cardId,
-          upiId: ids.upiId,
-          codId: ids.codId,
-        );
+        _controller.syncPaymentMethodIds(bp, sortedMethods);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final bp = Provider.of<BillingProvider>(context);
-    final items = _controller.paymentItems(bp, _paymentMethods);
-
     if (_isLoadingPaymentMethods && _paymentMethods.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // List of payment items
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: items.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final item = items[index];
-            final name = item.name;
-            final type = item.type;
-            final controller = item.controller;
-            final isSelected = item.selected;
-            final readOnly = item.readOnly;
+    return Selector<BillingProvider, _PaymentMethodsSnapshot>(
+      selector: (_, bp) => _PaymentMethodsSnapshot.from(bp),
+      builder: (context, snapshot, _) {
+        final bp = Provider.of<BillingProvider>(context, listen: false);
+        final items = _controller.paymentItems(bp, _paymentMethods);
 
-            if (!_controller.shouldShowItem(item, bp)) {
-              return const SizedBox.shrink();
-            }
-
-            if (type == 'DEBIT' && isSelected && bp.totalOrderAmount > 0) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _controller.syncDebitAmount(bp);
-              });
-            }
-
-            return Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF3B82F6)
-                      : Colors.grey.shade200,
-                  width: isSelected ? 1.5 : 1,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (snapshot.totalOrderAmount > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.payments_outlined, size: 18),
+                      label: const Text('Exact cash'),
+                      onPressed: () {
+                        _controller.fillExactCash(bp);
+                      },
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.clear_all, size: 18),
+                      label: const Text('Clear payments'),
+                      onPressed: () {
+                        _controller.clearAllCollectedPayments(bp);
+                      },
+                    ),
+                  ],
                 ),
               ),
-              child: InkWell(
-                onTap: () => _controller.toggleMethod(
-                  type,
-                  bp,
-                  methodId: item.methodId,
-                  displayValue: item.type,
-                ),
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header Row: Icon + Name
-                      Row(
+            // List of payment items
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final name = item.name;
+                final type = item.type;
+                final controller = item.controller;
+                final isSelected = item.selected;
+                final readOnly = item.readOnly;
+
+                if (!_controller.shouldShowItem(item, bp)) {
+                  return const SizedBox.shrink();
+                }
+
+                if (type == 'DEBIT' &&
+                    isSelected &&
+                    snapshot.totalOrderAmount > 0) {
+                  final expectedDebit =
+                      _controller.remainingPayable(bp).toStringAsFixed(2);
+                  if (controller.text != expectedDebit) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) _controller.syncDebitAmount(bp);
+                    });
+                  }
+                }
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF3B82F6)
+                          : Colors.grey.shade200,
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: InkWell(
+                    onTap: () => _controller.toggleMethod(
+                      type,
+                      bp,
+                      methodId: item.methodId,
+                      displayValue: item.type,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            _controller.iconForType(type),
-                            color: isSelected
-                                ? const Color(0xFF0066CC)
-                                : Colors.grey.shade700,
-                            size: 20,
+                          // Header Row: Icon + Name
+                          Row(
+                            children: [
+                              Icon(
+                                _controller.iconForType(type),
+                                color: isSelected
+                                    ? const Color(0xFF0066CC)
+                                    : Colors.grey.shade700,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                name,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? const Color(0xFF0066CC)
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Text(
-                            name,
+                          const SizedBox(height: 10),
+                          // Amount input field
+                          TextField(
+                            controller: controller,
+                            readOnly: readOnly,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: isSelected
                                   ? FontWeight.bold
-                                  : FontWeight.w500,
+                                  : FontWeight.normal,
                               color: isSelected
                                   ? const Color(0xFF0066CC)
                                   : Colors.black87,
                             ),
+                            decoration: InputDecoration(
+                              hintText: readOnly
+                                  ? 'Auto-calculated'
+                                  : 'Enter $name amount',
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: isSelected
+                                      ? const Color(0xFF3B82F6)
+                                      : ColorManager.kPrimaryColor,
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                            onTap: () {
+                              _controller.selectMethodOnTap(item, bp);
+                              if (!readOnly) {
+                                Provider.of<KeyboardProvider>(context,
+                                        listen: false)
+                                    .show(
+                                  'number',
+                                  controller,
+                                  replaceOnFirstInput: true,
+                                );
+                              }
+                            },
+                            onChanged: (value) =>
+                                _controller.onAmountChanged(item, value, bp),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      // Amount input field
-                      TextField(
-                        controller: controller,
-                        readOnly: readOnly,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected
-                              ? const Color(0xFF0066CC)
-                              : Colors.black87,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: readOnly
-                              ? 'Auto-calculated'
-                              : 'Enter $name amount',
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: isSelected
-                                  ? const Color(0xFF3B82F6)
-                                  : ColorManager.kPrimaryColor,
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                        onTap: () {
-                          _controller.selectMethodOnTap(item, bp);
-                          if (!readOnly) {
-                            Provider.of<KeyboardProvider>(context,
-                                    listen: false)
-                                .show(
-                              'number',
-                              controller,
-                              replaceOnFirstInput: true,
-                            );
-                          }
-                        },
-                        onChanged: (value) =>
-                            _controller.onAmountChanged(item, value, bp),
-                      ),
-                    ],
+                    ),
                   ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Transaction Reference Input
+            const Text(
+              'Transaction Reference',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: bp.transactionNumberController,
+              decoration: InputDecoration(
+                hintText: 'Enter transaction reference number',
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                      color: ColorManager.kPrimaryColor, width: 1.5),
                 ),
               ),
-            );
-          },
-        ),
-        const SizedBox(height: 16),
+              onTap: () {
+                Provider.of<KeyboardProvider>(context, listen: false).show(
+                  'text',
+                  bp.transactionNumberController,
+                  replaceOnFirstInput: true,
+                );
+              },
+            ),
+            const SizedBox(height: 16),
 
-        // Transaction Reference Input
-        const Text(
-          'Transaction Reference',
-          style: TextStyle(
-              fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: bp.transactionNumberController,
-          decoration: InputDecoration(
-            hintText: 'Enter transaction reference number',
-            filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                  color: ColorManager.kPrimaryColor, width: 1.5),
-            ),
-          ),
-          onTap: () {
-            Provider.of<KeyboardProvider>(context, listen: false).show(
-              'text',
-              bp.transactionNumberController,
-              replaceOnFirstInput: true,
-            );
-          },
-        ),
-        const SizedBox(height: 16),
-
-        // Integration with PineLabs terminal (keep visual separation)
-        const PineLabsSection(),
-      ],
+            // Integration with PineLabs terminal (keep visual separation)
+            const PineLabsSection(),
+          ],
+        );
+      },
     );
   }
+}
+
+@immutable
+class _PaymentMethodsSnapshot {
+  const _PaymentMethodsSnapshot({
+    required this.totalOrderAmount,
+    required this.isCashSelected,
+    required this.isCardSelected,
+    required this.isUpiSelected,
+    required this.isCodSelected,
+    required this.isDebitSelected,
+    required this.selectedCustomerId,
+    required this.selectedExtraMethodIds,
+  });
+
+  factory _PaymentMethodsSnapshot.from(BillingProvider bp) {
+    return _PaymentMethodsSnapshot(
+      totalOrderAmount: bp.totalOrderAmount,
+      isCashSelected: bp.isCashSelected,
+      isCardSelected: bp.isCardSelected,
+      isUpiSelected: bp.isUpiSelected,
+      isCodSelected: bp.isCodSelected,
+      isDebitSelected: bp.isDebitSelected,
+      selectedCustomerId: bp.selectedCustomer?.id,
+      selectedExtraMethodIds: Set<String>.from(bp.selectedExtraMethodIds),
+    );
+  }
+
+  final double totalOrderAmount;
+  final bool isCashSelected;
+  final bool isCardSelected;
+  final bool isUpiSelected;
+  final bool isCodSelected;
+  final bool isDebitSelected;
+  final int? selectedCustomerId;
+  final Set<String> selectedExtraMethodIds;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _PaymentMethodsSnapshot &&
+        other.totalOrderAmount == totalOrderAmount &&
+        other.isCashSelected == isCashSelected &&
+        other.isCardSelected == isCardSelected &&
+        other.isUpiSelected == isUpiSelected &&
+        other.isCodSelected == isCodSelected &&
+        other.isDebitSelected == isDebitSelected &&
+        other.selectedCustomerId == selectedCustomerId &&
+        setEquals(other.selectedExtraMethodIds, selectedExtraMethodIds);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        totalOrderAmount,
+        isCashSelected,
+        isCardSelected,
+        isUpiSelected,
+        isCodSelected,
+        isDebitSelected,
+        selectedCustomerId,
+        Object.hashAllUnordered(selectedExtraMethodIds),
+      );
 }

@@ -4,7 +4,6 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
-import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
@@ -88,13 +87,12 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       return const <GetProduct>[];
     }
 
-    final productProvider = Provider.of<LocalProductProvider>(context, listen: false);
     final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
     final itemCodeEnabled = appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
     final lowerQuery = query.toLowerCase();
 
-    // Search through the complete products list, not the filtered one
-    return productProvider.products.where((product) {
+    // Match desktop billing autocomplete: search sellable products only.
+    return widget.productList.where((product) {
       final nameMatch = _productSearchNames(product)
           .any((name) => name.toLowerCase().contains(lowerQuery));
       if (nameMatch) return true;

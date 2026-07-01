@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_payment_row.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/delivery_charge_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -27,44 +28,34 @@ class PaymentSummary extends StatelessWidget {
         Provider.of<DeliveryMethodsProvider>(context, listen: true);
     final currency = appSettingsProvider.appSettings?.currency ?? '';
 
-    final thresholdEnabled =
-        appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false;
-    final thresholdAmount = double.tryParse(
-          appSettingsProvider.appSettings?.freeDeliveryMinimumAmount.trim() ??
-              '',
-        ) ??
-        0.0;
+    final netTotal = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
 
-    final discountedTotalForThreshold =
-        localProductProvider.priceSummary?.netTotal ??
-            localProductProvider.cartTotal;
-
-    double deliveryCharge = 0.0;
-    if (thresholdEnabled &&
-        !(thresholdAmount > 0 &&
-            discountedTotalForThreshold >= thresholdAmount)) {
-      final selectedMethodId = billingProvider.deliveryMethodId;
-      final selectedMethodName = billingProvider.deliveryMethod;
-
-      for (final method in deliveryMethodsProvider.deliveryMethods) {
-        if ((selectedMethodId.isNotEmpty && method.id == selectedMethodId) ||
-            (selectedMethodName.isNotEmpty &&
-                method.name == selectedMethodName)) {
-          deliveryCharge = method.basePrice ?? 0.0;
-          break;
-        }
-      }
-    }
+    final deliveryCharge = computeDeliveryCharge(
+      freeDeliveryEnabled:
+          appSettingsProvider.appSettings?.freeDeliveryEnabled ?? false,
+      freeDeliveryMinimumAmount: double.tryParse(
+            appSettingsProvider.appSettings?.freeDeliveryMinimumAmount
+                    .trim() ??
+                '',
+          ) ??
+          0.0,
+      netTotal: netTotal,
+      deliveryMethodId: billingProvider.deliveryMethodId,
+      deliveryMethodName: billingProvider.deliveryMethod,
+      deliveryMethods: deliveryMethodsProvider.deliveryMethods,
+    );
 
     // Ensure priceSummary is computed
     localProductProvider.cartTotal;
 
-    // Keep provider's total order amount in sync with cart total
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final netTotal = localProductProvider.priceSummary?.netTotal ??
-          localProductProvider.cartTotal;
-      billingProvider.setTotalOrderAmount(netTotal + deliveryCharge);
-    });
+    // Keep provider's total order amount in sync with cart total (only when changed)
+    final orderTotal = netTotal + deliveryCharge;
+    if ((billingProvider.totalOrderAmount - orderTotal).abs() >= 0.001) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        billingProvider.setTotalOrderAmount(orderTotal);
+      });
+    }
 
     if (compact) {
       return Column(

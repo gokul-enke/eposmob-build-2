@@ -4,27 +4,34 @@ class StockBadge extends StatelessWidget {
   const StockBadge({
     super.key,
     required this.inStock,
+    this.compact = false,
   });
 
   final bool inStock;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final label = inStock ? 'Available' : 'Out Of Stock';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 5 : 7,
+        vertical: compact ? 2 : 4,
+      ),
       decoration: BoxDecoration(
         color: inStock ? Colors.green : Colors.red,
         borderRadius: BorderRadius.circular(100),
       ),
       child: Text(
-        inStock ? 'Available' : 'Out Of Stock',
+        compact ? (inStock ? 'In' : 'Out') : label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Poppins',
           color: Colors.white,
           fontWeight: FontWeight.w600,
-          fontSize: 8,
+          fontSize: compact ? 8 : 9,
         ),
       ),
     );

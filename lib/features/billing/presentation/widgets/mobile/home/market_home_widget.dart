@@ -1,30 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_grid.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/new_order_button.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_search_bar.dart';
 import 'package:pos_machine/features/billing/presentation/pages/add_product_mobile.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/widgets/product_autocomplete_list_mobile.dart';
 import 'package:provider/provider.dart';
 
 class MarketHomeWidget extends StatefulWidget {
   const MarketHomeWidget({
     super.key,
-    required this.onNewOrder,
+    required this.autocompleteProductKey,
+    required this.onProcessBarcode,
+    required this.onClearProductFields,
+    required this.focusTextField,
   });
 
-  final VoidCallback onNewOrder;
+  final GlobalKey autocompleteProductKey;
+  final ValueChanged<String> onProcessBarcode;
+  final VoidCallback onClearProductFields;
+  final VoidCallback focusTextField;
 
   @override
   State<MarketHomeWidget> createState() => _MarketHomeWidgetState();
 }
 
 class _MarketHomeWidgetState extends State<MarketHomeWidget> {
-  final TextEditingController _searchController = TextEditingController();
-  String _query = '';
-  String _selectedCategory = 'All products';
+  static const _controller = BillingMobileMarketController();
+  String _selectedCategory = BillingMobileMarketController.allProductsCategory;
+  String _searchQuery = '';
   ProductViewMode _viewMode = ProductViewMode.grid;
+  late final TextEditingController _searchController;
+
+  Future<void> _openAddProduct() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddProductMobileScreen(),
+      ),
+    );
+    if (mounted) {
+      widget.focusTextField();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
 
   @override
   void dispose() {
@@ -40,105 +68,170 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-          child: Consumer<LocalProductProvider>(
-            builder: (context, provider, _) {
-              final products = _visibleProducts(provider.sellableProducts);
-              final categories = _categories(provider.sellableProducts);
-
-              String layoutTitle = 'Grid Layout';
-              if (_viewMode == ProductViewMode.list) {
-                layoutTitle = 'List Layout';
-              } else if (_viewMode == ProductViewMode.dense) {
-                layoutTitle = 'Dense Layout';
+          child: Selector<AppSettingsProvider, bool?>(
+            selector: (_, provider) => provider.appSettings?.barcodeSales,
+            builder: (context, barcodeSales, _) {
+              if (barcodeSales == null) {
+                return const SizedBox.shrink();
               }
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              return Selector<LocalProductProvider, List<GetProduct>>(
+                selector: (_, provider) => provider.sellableProducts,
+                builder: (context, sellableProducts, _) {
+                  final products = _controller.visibleProducts(
+                    products: sellableProducts,
+                    query: _searchQuery,
+                    selectedCategory: _selectedCategory,
+                  );
+                  final categories = _controller.categories(sellableProducts);
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 44,
-                          child: MobileSearchBar(
-                            controller: _searchController,
-                            onChanged: (value) {
-                              setState(() => _query = value.trim());
-                            },
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _ProductEntryHeader(
+                              barcodeSales: barcodeSales,
+                              autocompleteProductKey:
+                                  widget.autocompleteProductKey,
+                              productList: sellableProducts,
+                              onProcessBarcode: widget.onProcessBarcode,
+                              onClearProductFields: widget.onClearProductFields,
+                              focusTextField: widget.focusTextField,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          NewOrderButton(
+                            onTap: _openAddProduct,
+                            compact: MediaQuery.sizeOf(context).width < 380,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 44,
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) {
+                            setState(() => _searchQuery = value);
+                          },
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            color: Colors.black87,
+                          ),
+                          decoration: _entryDecoration(
+                            hintText: 'Search products',
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.blueGrey.shade400,
+                              size: 22,
+                            ),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(
+                                      Icons.close,
+                                      size: 18,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _searchQuery = '');
+                                    },
+                                  )
+                                : null,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      NewOrderButton(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const AddProductMobileScreen(),
-                            ),
-                          );
+                      const SizedBox(height: 24),
+                      _CategoryChips(
+                        categories: categories,
+                        selectedCategory: _selectedCategory,
+                        onSelected: (category) {
+                          setState(() => _selectedCategory = category);
                         },
                       ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Products',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                if (products.isNotEmpty)
+                                  Text(
+                                    '${products.length} item${products.length == 1 ? '' : 's'}',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          _ViewModeButton(
+                            tooltip: 'Grid view',
+                            semanticsLabel: 'Grid view',
+                            icon: Icons.grid_view,
+                            selected: _viewMode == ProductViewMode.grid,
+                            onTap: () =>
+                                setState(() => _viewMode = ProductViewMode.grid),
+                          ),
+                          _ViewModeButton(
+                            tooltip: 'List view',
+                            semanticsLabel: 'List view',
+                            icon: Icons.table_rows_outlined,
+                            selected: _viewMode == ProductViewMode.list,
+                            onTap: () =>
+                                setState(() => _viewMode = ProductViewMode.list),
+                          ),
+                          _ViewModeButton(
+                            tooltip: 'Compact view',
+                            semanticsLabel: 'Compact view',
+                            icon: Icons.apps,
+                            selected: _viewMode == ProductViewMode.dense,
+                            onTap: () =>
+                                setState(() => _viewMode = ProductViewMode.dense),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Expanded(
+                        child: Selector<LocalProductProvider, bool>(
+                          selector: (_, provider) => provider.isLoading,
+                          builder: (context, isLoading, _) {
+                            if (isLoading && sellableProducts.isEmpty) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            return MarketProductGrid(
+                              products: products,
+                              viewMode: _viewMode,
+                              currency: context.select<AppSettingsProvider,
+                                      String>(
+                                  (p) => p.appSettings?.currency ?? ''),
+                            );
+                          },
+                        ),
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 36),
-                  _CategoryChips(
-                    categories: categories,
-                    selectedCategory: _selectedCategory,
-                    onSelected: (category) {
-                      setState(() => _selectedCategory = category);
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Text(
-                        layoutTitle,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 19,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => _viewMode = ProductViewMode.grid),
-                        child: _ViewModeIcon(
-                          icon: Icons.grid_view,
-                          selected: _viewMode == ProductViewMode.grid,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => _viewMode = ProductViewMode.list),
-                        child: _ViewModeIcon(
-                          icon: Icons.table_rows_outlined,
-                          selected: _viewMode == ProductViewMode.list,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => _viewMode = ProductViewMode.dense),
-                        child: _ViewModeIcon(
-                          icon: Icons.apps,
-                          selected: _viewMode == ProductViewMode.dense,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Expanded(
-                    child: MarketProductGrid(
-                      products: products,
-                      viewMode: _viewMode,
-                    ),
-                  ),
-                ],
+                  );
+                },
               );
             },
           ),
@@ -146,29 +239,160 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
       ),
     );
   }
+}
 
-  List<GetProduct> _visibleProducts(List<GetProduct> products) {
-    return products.where((product) {
-      final name = product.productName?.toLowerCase() ?? '';
-      final category = product.category?.name ?? '';
-      final matchesSearch =
-          _query.isEmpty || name.contains(_query.toLowerCase());
-      final matchesCategory = _selectedCategory == 'All products' ||
-          category.toLowerCase() == _selectedCategory.toLowerCase();
-      return matchesSearch && matchesCategory;
-    }).toList();
-  }
+/// Top product entry row — mirrors desktop [ProductEntryHeader] behaviour:
+/// barcode field when [barcodeSales] is enabled, autocomplete otherwise.
+class _ProductEntryHeader extends StatelessWidget {
+  const _ProductEntryHeader({
+    required this.barcodeSales,
+    required this.autocompleteProductKey,
+    required this.productList,
+    required this.onProcessBarcode,
+    required this.onClearProductFields,
+    required this.focusTextField,
+  });
 
-  List<String> _categories(List<GetProduct> products) {
-    final names = <String>{};
-    for (final product in products) {
-      final name = product.category?.name?.trim();
-      if (name != null && name.isNotEmpty) {
-        names.add(name);
-      }
-    }
-    return ['All products', ...names.take(8)];
+  final bool barcodeSales;
+  final GlobalKey autocompleteProductKey;
+  final List<GetProduct> productList;
+  final ValueChanged<String> onProcessBarcode;
+  final VoidCallback onClearProductFields;
+  final VoidCallback focusTextField;
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<BillingProvider, String>(
+      selector: (_, billingProvider) => billingProvider.selectedProductName,
+      builder: (context, selectedProductName, _) {
+        final billingProvider =
+            Provider.of<BillingProvider>(context, listen: false);
+        final size = MediaQuery.sizeOf(context);
+        final hasSelectedProductName = selectedProductName.isNotEmpty;
+
+        if (barcodeSales) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 44,
+                child: _MobileBarcodeField(
+                  controller: billingProvider.barcodeController,
+                  focusNode: billingProvider.barcodeNode,
+                  autofocus: barcodeSales,
+                  readOnly: hasSelectedProductName,
+                  onSubmitted: (query) {
+                    final trimmed = query.trim();
+                    if (trimmed.isEmpty) return;
+                    onProcessBarcode(trimmed);
+                  },
+                ),
+              ),
+              if (hasSelectedProductName) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 44,
+                  child: TextField(
+                    readOnly: true,
+                    controller: billingProvider.selectedProductNameController,
+                    decoration: _entryDecoration(hintText: 'Product Name'),
+                  ),
+                ),
+              ],
+            ],
+          );
+        }
+
+        return SizedBox(
+          height: 44,
+          child: MobileProductAutocomplete(
+            autocompleteProductKey: autocompleteProductKey,
+            autofocus: !barcodeSales,
+            size: size,
+            productList: productList,
+            suppressSystemKeyboardOnAndroid: true,
+            onSelected: (_, __) {
+              onClearProductFields();
+              focusTextField();
+            },
+          ),
+        );
+      },
+    );
   }
+}
+
+class _MobileBarcodeField extends StatelessWidget {
+  const _MobileBarcodeField({
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmitted,
+    this.autofocus = false,
+    this.readOnly = false,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onSubmitted;
+  final bool autofocus;
+  final bool readOnly;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      autofocus: autofocus,
+      readOnly: readOnly,
+      textInputAction: TextInputAction.done,
+      onSubmitted: onSubmitted,
+      style: const TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 14,
+        color: Colors.black87,
+      ),
+      decoration: _entryDecoration(
+        hintText: 'Barcode',
+        prefixIcon: Icon(
+          Icons.qr_code_scanner,
+          color: Colors.blueGrey.shade400,
+          size: 22,
+        ),
+      ),
+    );
+  }
+}
+
+InputDecoration _entryDecoration({
+  required String hintText,
+  Widget? prefixIcon,
+  Widget? suffixIcon,
+}) {
+  return InputDecoration(
+    hintText: hintText,
+    hintStyle: TextStyle(
+      fontFamily: 'Poppins',
+      fontSize: 13,
+      color: Colors.grey.shade500,
+    ),
+    prefixIcon: prefixIcon,
+    suffixIcon: suffixIcon,
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: Colors.grey.shade200),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: Colors.grey.shade200),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    ),
+  );
 }
 
 class _CategoryChips extends StatelessWidget {
@@ -222,28 +446,54 @@ class _CategoryChips extends StatelessWidget {
   }
 }
 
-class _ViewModeIcon extends StatelessWidget {
-  const _ViewModeIcon({
+class _ViewModeButton extends StatelessWidget {
+  const _ViewModeButton({
+    required this.tooltip,
+    required this.semanticsLabel,
     required this.icon,
     required this.selected,
+    required this.onTap,
   });
 
+  final String tooltip;
+  final String semanticsLabel;
   final IconData icon;
   final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 26,
-      height: 26,
-      decoration: BoxDecoration(
-        color: selected ? ColorManager.kPrimaryColor : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Icon(
-        icon,
-        size: 16,
-        color: selected ? Colors.white : Colors.black54,
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        label: semanticsLabel,
+        button: true,
+        selected: selected,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Center(
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? ColorManager.kPrimaryColor
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  icon,
+                  size: 17,
+                  color: selected ? Colors.white : Colors.black54,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

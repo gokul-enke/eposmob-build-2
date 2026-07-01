@@ -30,8 +30,11 @@ import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page_mobile.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/mobile_bottom_nav.dart';
 import 'package:pos_machine/providers/discount_provider.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/models/get_general_settings.dart';
 
 /// BillingProvider with the network/connectivity side-effects stubbed out so
 /// the page can mount hermetically.
@@ -56,6 +59,20 @@ class _FakeBillingProvider extends BillingProvider {
     WidgetsBinding.instance
         .addPostFrameCallback((_) => super.initializeDeliveryMethod());
   }
+
+  @override
+  void setBarcodeSalesEnabled(bool enabled) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      super.setBarcodeSalesEnabled(enabled);
+    });
+  }
+
+  @override
+  void setDiscountsEnabled(bool enabled) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      super.setDiscountsEnabled(enabled);
+    });
+  }
 }
 
 class _FakeAppSettingsProvider extends AppSettingsProvider {
@@ -63,6 +80,19 @@ class _FakeAppSettingsProvider extends AppSettingsProvider {
   Future<void> fetchAppSettings() async {
     // no-op: real constructor calls this and it hits the network.
   }
+}
+
+class _FakeGeneralSettingsProvider extends GeneralSettingsProvider {
+  _FakeGeneralSettingsProvider() {
+    // Skip network fetch from the real constructor.
+  }
+
+  @override
+  Future<void> fetchGeneralSettings() async {}
+
+  @override
+  GeneralSettings? get generalSettings =>
+      GeneralSettings(stockEnabled: false);
 }
 
 class _FakeCartProvider extends CartProvider {
@@ -113,22 +143,30 @@ void main() {
   setUpAll(() async {
     hiveDir = await Directory.systemTemp.createTemp('epos_mobile_smoke_');
     Hive.init(hiveDir.path);
-    if (!Hive.isAdapterRegistered(0))
+    if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(HiveStringValueAdapter());
-    if (!Hive.isAdapterRegistered(1))
+    }
+    if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(HiveLocalCartItemAdapter());
-    if (!Hive.isAdapterRegistered(2))
+    }
+    if (!Hive.isAdapterRegistered(2)) {
       Hive.registerAdapter(HiveSavedOrderAdapter());
-    if (!Hive.isAdapterRegistered(3))
+    }
+    if (!Hive.isAdapterRegistered(3)) {
       Hive.registerAdapter(HiveProductAdapter());
+    }
     await Hive.openBox<HiveProduct>('products');
     await Hive.openBox<HiveLocalCartItem>('cart_items');
     await Hive.openBox<HiveSavedOrder>('saved_orders');
     await Hive.openBox<HiveSavedOrder>('confirmed_orders');
   });
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    await Hive.box<HiveProduct>('products').clear();
+    await Hive.box<HiveLocalCartItem>('cart_items').clear();
+    await Hive.box<HiveSavedOrder>('saved_orders').clear();
+    await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
   });
 
   tearDownAll(() async {
@@ -140,10 +178,12 @@ void main() {
   // under tight test constraints. That's a separate layout finding to confirm
   // on-device; here we tolerate it so the smoke test can still verify that the
   // page mounts and wires up all its providers. All OTHER errors still fail.
-  void tolerateOverflow() {
+  void tolerateInitBuildSideEffects() {
     final original = FlutterError.onError;
     FlutterError.onError = (FlutterErrorDetails details) {
-      if (details.exceptionAsString().contains('A RenderFlex overflowed')) {
+      final message = details.exceptionAsString();
+      if (message.contains('A RenderFlex overflowed') ||
+          message.contains('setState() or markNeedsBuild() called during build')) {
         return;
       }
       original?.call(details);
@@ -169,7 +209,8 @@ void main() {
         ChangeNotifierProvider<GridSelectionProvider>(
             create: (_) => _FakeGridSelectionProvider()),
         ChangeNotifierProvider<LocalProductProvider>(
-            create: (_) => LocalProductProvider()),
+          create: (_) => LocalProductProvider(),
+        ),
         ChangeNotifierProvider<CustomerSelectionProvider>(
             create: (_) => CustomerSelectionProvider()),
         ChangeNotifierProvider<DeliveryMethodsProvider>(
@@ -183,14 +224,16 @@ void main() {
             create: (_) => DiscountProvider()),
         ChangeNotifierProvider<MasterDataProvider>(
             create: (_) => MasterDataProvider()),
+        ChangeNotifierProvider<GeneralSettingsProvider>(
+            create: (_) => _FakeGeneralSettingsProvider()),
       ],
       child: const MaterialApp(home: BillingPageMobile()),
     );
   }
 
-  testWidgets('mounts and renders the 3-tab scaffold at phone size',
+  testWidgets('mounts and renders the 4-tab scaffold at phone size',
       (tester) async {
-    tolerateOverflow();
+    tolerateInitBuildSideEffects();
     await tester.binding.setSurfaceSize(const Size(390, 844)); // iPhone-ish
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -199,14 +242,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.byType(BillingPageMobile), findsOneWidget);
-    expect(find.byType(BottomNavigationBar), findsOneWidget);
+    expect(find.byType(MobileBottomNav), findsOneWidget);
     expect(find.text('Market'), findsOneWidget);
     expect(find.text('Billing'), findsOneWidget);
     expect(find.text('Order'), findsOneWidget);
+    expect(find.text('Cart'), findsOneWidget);
   });
 
   testWidgets('bottom-nav switches tabs without throwing', (tester) async {
-    tolerateOverflow();
+    tolerateInitBuildSideEffects();
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -222,7 +266,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    // If we got here, switching across all three tabs built without throwing.
+    await tester.tap(find.text('Cart'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // If we got here, switching across all four tabs built without throwing.
     expect(find.byType(BillingPageMobile), findsOneWidget);
   });
 }

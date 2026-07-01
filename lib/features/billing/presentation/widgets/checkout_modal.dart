@@ -22,6 +22,7 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart'; // Re-added for delivery modal components
 import 'package:pos_machine/resources/style_manager.dart'; // Re-added for delivery modal components
 import 'package:pos_machine/components/build_dialog_box.dart'; // For showScaffoldError
+import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
 
 enum CheckoutModalMode {
@@ -277,6 +278,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
   // method id. Kept so they survive across steps and reach the parent's POST.
   Map<String, String> _lExtraAmounts = {};
   Map<String, String> _lExtraValues = {};
+  bool _paymentAutofillSynced = false;
   late DateTime _lQuotationDate;
   late DateTime _lQuotationExpiryDate;
 
@@ -475,7 +477,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         _lIsCardSelected ||
         _lIsUpiSelected ||
         _lIsCodSelected ||
-        _lIsDebitSelected) {
+        _sumLocalExtraPaidAmounts() > 0) {
       return;
     }
 
@@ -2779,11 +2781,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
     final bool anyMethodSelected = _lIsCashSelected ||
         _lIsCardSelected ||
         _lIsUpiSelected ||
-        _lIsCodSelected;
-    final double totalPaid = (double.tryParse(_lCashAmount) ?? 0) +
-        (double.tryParse(_lCardAmount) ?? 0) +
-        (double.tryParse(_lUpiAmount) ?? 0) +
-        (double.tryParse(_lCodAmount) ?? 0);
+        _lIsCodSelected ||
+        _sumLocalExtraPaidAmounts() > 0;
+    final double totalPaid = _localTotalCollected();
 
     final bool needsAutoFill = !anyMethodSelected || totalPaid == 0;
 
@@ -2801,6 +2801,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
         !shouldAutoFillCash &&
         !shouldAutoFillCard &&
         !shouldAutoFillUpi;
+
+    _syncPaymentAutofillIfNeeded(
+      effectiveTotal: effectiveTotal,
+      shouldAutoFillCash: shouldAutoFillCash,
+      shouldAutoFillCard: shouldAutoFillCard,
+      shouldAutoFillUpi: shouldAutoFillUpi,
+      shouldAutoFillCod: shouldAutoFillCod,
+    );
 
     return FocusTraversalGroup(
       policy: OrderedTraversalPolicy(),
@@ -3004,12 +3012,138 @@ class _CheckoutModalState extends State<CheckoutModal> {
     );
   }
 
-  bool _hasPaymentMethod() {
-    return _lIsCashSelected ||
-        _lIsCardSelected ||
-        _lIsUpiSelected ||
-        _lIsCodSelected ||
-        _lIsDebitSelected;
+  double _localEffectiveOrderTotal() {
+    final discountAmount = _localFlatDiscount +
+        (widget.cartTotal * _localPercentageDiscount / 100);
+    return (widget.cartTotal - discountAmount) + _getEffectiveDeliveryCharge();
+  }
+
+  double _sumLocalExtraPaidAmounts() {
+    var total = 0.0;
+    for (final amountStr in _lExtraAmounts.values) {
+      total += PaymentValidation.parseAmount(amountStr);
+    }
+    return total;
+  }
+
+  double _localTotalCollected() {
+    return PaymentValidation.sumCollected(
+      isCashSelected: _lIsCashSelected,
+      isCardSelected: _lIsCardSelected,
+      isUpiSelected: _lIsUpiSelected,
+      isCodSelected: _lIsCodSelected,
+      cashAmount: _lCashAmount,
+      cardAmount: _lCardAmount,
+      upiAmount: _lUpiAmount,
+      codAmount: _lCodAmount,
+      extraAmounts: _lExtraAmounts,
+    );
+  }
+
+  PaymentValidationResult _validateLocalPayment() {
+    final isDefaultCustomer = _isDefaultCustomer(_localSelectedCustomer);
+    return PaymentValidation.validateForOrder(
+      orderTotal: _localEffectiveOrderTotal(),
+      toCustomerCreditEnabled: _lToCustomerCreditEnabled,
+      isDefaultCustomer: isDefaultCustomer,
+      customerPrevBalance:
+          isDefaultCustomer ? 0.0 : (_localSelectedCustomer?.balance ?? 0.0),
+      isCashSelected: _lIsCashSelected,
+      isCardSelected: _lIsCardSelected,
+      isUpiSelected: _lIsUpiSelected,
+      isCodSelected: _lIsCodSelected,
+      cashAmount: _lCashAmount,
+      cardAmount: _lCardAmount,
+      upiAmount: _lUpiAmount,
+      codAmount: _lCodAmount,
+      extraAmounts: _lExtraAmounts,
+    );
+  }
+
+  bool _isPaymentStateValid() => _validateLocalPayment().isValid;
+
+  /// Payment is ready when amounts are valid and the user visited payment UI
+  /// (checkout step 3, sidebar modal, or inline payment updates).
+  bool _hasCompletedPaymentSetup() {
+    if (widget.isQuotationMode) return true;
+    final isDefaultCustomer = _isDefaultCustomer(_localSelectedCustomer);
+    return PaymentValidation.isCheckoutPaymentComplete(
+      paymentStepVisited: _hasOpenedPaymentModalOnce,
+      onPaymentStep: _currentStep == 3,
+      orderTotal: _localEffectiveOrderTotal(),
+      toCustomerCreditEnabled: _lToCustomerCreditEnabled,
+      isDefaultCustomer: isDefaultCustomer,
+      customerPrevBalance:
+          isDefaultCustomer ? 0.0 : (_localSelectedCustomer?.balance ?? 0.0),
+      isCashSelected: _lIsCashSelected,
+      isCardSelected: _lIsCardSelected,
+      isUpiSelected: _lIsUpiSelected,
+      isCodSelected: _lIsCodSelected,
+      cashAmount: _lCashAmount,
+      cardAmount: _lCardAmount,
+      upiAmount: _lUpiAmount,
+      codAmount: _lCodAmount,
+      extraAmounts: _lExtraAmounts,
+    );
+  }
+
+  String _paymentStatusLabel() {
+    if (_isPaymentStateValid()) return 'Configured';
+    if (!PaymentValidation.hasCollectedPayment(
+      isCashSelected: _lIsCashSelected,
+      isCardSelected: _lIsCardSelected,
+      isUpiSelected: _lIsUpiSelected,
+      isCodSelected: _lIsCodSelected,
+      cashAmount: _lCashAmount,
+      cardAmount: _lCardAmount,
+      upiAmount: _lUpiAmount,
+      codAmount: _lCodAmount,
+      extraAmounts: _lExtraAmounts,
+    )) {
+      return 'Not Configured';
+    }
+    return _validateLocalPayment().message ?? 'Not Configured';
+  }
+
+  void _syncPaymentAutofillIfNeeded({
+    required double effectiveTotal,
+    required bool shouldAutoFillCash,
+    required bool shouldAutoFillCard,
+    required bool shouldAutoFillUpi,
+    required bool shouldAutoFillCod,
+  }) {
+    if (_paymentAutofillSynced) return;
+    _paymentAutofillSynced = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final cash = shouldAutoFillCash ? effectiveTotal.toStringAsFixed(2) : _lCashAmount;
+      final card = shouldAutoFillCard ? effectiveTotal.toStringAsFixed(2) : _lCardAmount;
+      final upi = shouldAutoFillUpi ? effectiveTotal.toStringAsFixed(2) : _lUpiAmount;
+      final cod = shouldAutoFillCod ? effectiveTotal.toStringAsFixed(2) : _lCodAmount;
+
+      _handlePaymentUpdate(
+        shouldAutoFillCash || _lIsCashSelected,
+        shouldAutoFillCard || _lIsCardSelected,
+        shouldAutoFillUpi || _lIsUpiSelected,
+        shouldAutoFillCod || _lIsCodSelected,
+        _lIsDebitSelected,
+        cash,
+        card,
+        upi,
+        cod,
+        _lDebitAmount,
+        _lTransactionNumber,
+        _lToCustomerCreditEnabled,
+        cashMethodId: widget.cashMethodId,
+        cardMethodId: widget.cardMethodId,
+        upiMethodId: widget.upiMethodId,
+        codMethodId: widget.codMethodId,
+        extraMethodAmounts: _lExtraAmounts,
+        extraMethodValues: _lExtraValues,
+      );
+    });
   }
 
   // Check if Confirm button should be enabled
@@ -3027,9 +3161,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       return false;
     }
 
-    return _localSelectedCustomer != null &&
-        _hasOpenedPaymentModalOnce &&
-        _hasPaymentMethod();
+    return _localSelectedCustomer != null && _hasCompletedPaymentSetup();
   }
 
   // Check if Print button should be enabled (always requires payment tab visited)
@@ -3042,9 +3174,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
       return false;
     }
 
-    return _localSelectedCustomer != null &&
-        _hasOpenedPaymentModalOnce &&
-        _hasPaymentMethod();
+    return _localSelectedCustomer != null && _hasCompletedPaymentSetup();
   }
 
   String _disabledActionMessage() {
@@ -3059,6 +3189,16 @@ class _CheckoutModalState extends State<CheckoutModal> {
     }
     if (_hasQuoteOnlyCustomerNeedingSave) {
       return 'Create or select a saved customer before confirming';
+    }
+    if (_localSelectedCustomer == null) {
+      return 'Please select a customer before confirming';
+    }
+    if (!_hasOpenedPaymentModalOnce && _currentStep != 3) {
+      return 'Please configure payment before confirm';
+    }
+    final paymentResult = _validateLocalPayment();
+    if (!paymentResult.isValid) {
+      return paymentResult.message ?? 'Please configure payment before confirm';
     }
     return widget.requireCheckoutCompletion
         ? 'Please configure payment before confirm'
@@ -3328,9 +3468,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               }
                               showScaffoldError(
                                 context: context,
-                                message: widget.isQuotationMode
-                                    ? _disabledActionMessage()
-                                    : 'Please configure payment before printing',
+                                message: _disabledActionMessage(),
                               );
                             },
                       size: MediaQuery.of(context).size,
@@ -3398,10 +3536,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
         final effectiveTotal =
             baseEffectiveTotal + _getEffectiveDeliveryCharge();
 
-        final totalPaid = (double.tryParse(_lCashAmount) ?? 0) +
-            (double.tryParse(_lCardAmount) ?? 0) +
-            (double.tryParse(_lUpiAmount) ?? 0) +
-            (double.tryParse(_lCodAmount) ?? 0);
+        final totalPaid = _localTotalCollected();
 
         final isDefaultCustomer = _isDefaultCustomer(_localSelectedCustomer);
         final prevBalance =
@@ -3426,7 +3561,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
             ? _hasQuotationCustomer
             : _localSelectedCustomer != null &&
                 !_hasQuoteOnlyCustomerNeedingSave;
-        final bool hasPayment = !widget.isQuotationMode && _hasPaymentMethod();
+        final bool hasPayment =
+            !widget.isQuotationMode && _isPaymentStateValid();
         final bool hasDiscount = _localIsCouponApplied ||
             _localFlatDiscount > 0 ||
             _localPercentageDiscount > 0;
@@ -3477,7 +3613,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                 if (!widget.isQuotationMode)
                   _buildClickableCheckItem(
                     'Payment',
-                    _hasPaymentMethod() ? 'Configured' : 'Not Configured',
+                    _paymentStatusLabel(),
                     hasPayment,
                     Icons.payment_outlined,
                     3,

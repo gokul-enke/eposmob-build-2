@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -27,6 +28,42 @@ class ProductCartHelper {
   ///    - Stock used for inventory tracking (if enabled)
   ///    - Historical prices override stock prices but keep stock selection
   static Future<void> handleProductSelection({
+    required BuildContext context,
+    required GetProduct product,
+    Function(GetProduct, Stock?)? onSelected,
+    bool addToCartDirectly = true,
+    num? quantity,
+    double? customPrice,
+    double? customMrp,
+    int? customerId,
+    String? customerName,
+    SaleUnit? selectedSaleUnit,
+  }) async {
+    try {
+      await _handleProductSelectionImpl(
+        context: context,
+        product: product,
+        onSelected: onSelected,
+        addToCartDirectly: addToCartDirectly,
+        quantity: quantity,
+        customPrice: customPrice,
+        customMrp: customMrp,
+        customerId: customerId,
+        customerName: customerName,
+        selectedSaleUnit: selectedSaleUnit,
+      );
+    } catch (error) {
+      debugPrint('ProductCartHelper error: $error');
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.addToCartFailed,
+        );
+      }
+    }
+  }
+
+  static Future<void> _handleProductSelectionImpl({
     required BuildContext context,
     required GetProduct product,
     Function(GetProduct, Stock?)? onSelected,
@@ -282,8 +319,9 @@ class ProductCartHelper {
         (selectedStock.quantity ?? 0) < requestedQuantity) {
       showScaffoldError(
         context: context,
-        message:
-            'Insufficient stock for ${selectedSaleUnit.unitName ?? product.unit ?? "selected unit"}',
+        message: BillingMobileErrorMessages.insufficientStock(
+          selectedSaleUnit.unitName ?? product.unit ?? 'selected unit',
+        ),
       );
       debugPrint(
           "❌ Selected stock does not cover requested sale-unit quantity");

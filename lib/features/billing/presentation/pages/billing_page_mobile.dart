@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:pos_machine/controllers/sidebar_controller.dart';
+import 'package:pos_machine/components/build_delete_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -10,9 +13,15 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_controller.dart';
-import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/features/billing/domain/barcode_scan_queue.dart';
+import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home_tab.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/mobile_bottom_nav.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart_tab.dart';
@@ -25,7 +34,10 @@ class BillingPageMobile extends StatefulWidget {
 }
 
 class BillingPageMobileState extends State<BillingPageMobile>
-    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
+    with
+        AutomaticKeepAliveClientMixin,
+        TickerProviderStateMixin,
+        WidgetsBindingObserver {
   @override
   bool get wantKeepAlive => true;
 
@@ -42,15 +54,64 @@ class BillingPageMobileState extends State<BillingPageMobile>
   final FocusNode _focusNode = FocusNode();
   StreamSubscription<String>? _barcodeSubscription;
   String? _lastRehydratedOrderId;
+  bool _isSavingOrder = false;
   bool _isConfirmingOrder = false;
+  bool _isConfirmingAndPrinting = false;
+  bool _isLoadingOrder = false;
+  bool _isClearingCart = false;
 
   /// Business logic (restore/rehydration, etc.) lives here; the page keeps only
   /// UI orchestration.
   final BillingMobileController _controller = BillingMobileController();
+  static const _customerController = BillingMobileCustomerController();
+  static const _paymentController = BillingMobilePaymentController();
+  static const _settingsController = BillingMobileSettingsController();
+  static const _connectivityController = BillingMobileConnectivityController();
+
+  VoidCallback? _generalSettingsListener;
+  VoidCallback? _appSettingsSyncListener;
+  VoidCallback? _deliveryMethodSyncListener;
+  VoidCallback? _localProductOrderListener;
+
+  /// Set when confirm-print succeeds but printer fails; allows retry without re-order.
+  String? _pendingPrintOrderNumber;
+
+  /// FIFO queue that serialises barcode processing so burst scans are never
+  /// dropped. Instantiated in [_setupListeners] once [processBarcode] is
+  /// available; the field is late-initialised so tests can also construct it
+  /// directly by providing their own processor.
+  late final BarcodeScanQueue _barcodeScanQueue;
+
+  SideBarController? _sideBarController;
+
+  static const _billingMobileAppBarTitles = <int, String?>{
+    0: null,
+    1: 'Order Summary',
+    2: 'Orders',
+    3: 'Cart',
+  };
+
+  void _syncBillingMobileAppBarTitle(int tabIndex) {
+    _sideBarController?.setBillingMobileAppBarTitle(
+      _billingMobileAppBarTitles[tabIndex],
+    );
+  }
+
+  void _switchToTab(int index) {
+    setState(() => _currentTabIndex = index);
+    _tabController.animateTo(index);
+    _syncBillingMobileAppBarTitle(index);
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    if (Get.isRegistered<SideBarController>()) {
+      _sideBarController = Get.find<SideBarController>();
+      _syncBillingMobileAppBarTitle(_currentTabIndex);
+    }
 
     // Initialize tab controller
     _tabController = TabController(length: 4, vsync: this);
@@ -59,20 +120,49 @@ class BillingPageMobileState extends State<BillingPageMobile>
         setState(() {
           _currentTabIndex = _tabController.index;
         });
+        _syncBillingMobileAppBarTitle(_tabController.index);
       }
     });
 
     // Initialize providers and listeners (same as original)
     _initializeProviders();
     _setupListeners();
+    _setupOrderRehydrationListener();
+  }
+
+  void _setupOrderRehydrationListener() {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+
+    _localProductOrderListener ??= () {
+      if (!mounted) return;
+      final currentOrder = localProductProvider.currentOrder;
+      if (currentOrder != null && currentOrder.id != _lastRehydratedOrderId) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _rehydrateFromProvider();
+          }
+        });
+      }
+    };
+    localProductProvider.addListener(_localProductOrderListener!);
   }
 
   void _initializeProviders() {
-    String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-    int? customerId = Provider.of<AuthModel>(context, listen: false).userId;
+    final auth = Provider.of<AuthModel>(context, listen: false);
+    final accessToken = auth.token;
+    final customerId = auth.userId;
 
-    Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
-        customerId: customerId!, accessToken: accessToken ?? '');
+    if (customerId != null) {
+      _fetchCartDataSafely(customerId: customerId, accessToken: accessToken);
+    } else {
+      assert(() {
+        debugPrint(
+          'BillingPageMobile: skipping cart API fetch — auth userId is null',
+        );
+        return true;
+      }());
+    }
 
     // Initialize BillingProvider
     final billingProvider =
@@ -99,26 +189,158 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     // Initialize delivery method
     billingProvider.initializeDeliveryMethod();
-    billingProvider.fetchCustomers(accessToken: accessToken!);
+    _syncAllSettings();
+    if (accessToken != null && accessToken.isNotEmpty) {
+      billingProvider.fetchCustomers(accessToken: accessToken).then((_) {
+        if (!mounted) return;
+        _applyDefaultCustomerFromCacheIfNeeded();
+      });
+    } else {
+      assert(() {
+        debugPrint(
+          'BillingPageMobile: skipping customer fetch — auth token is null',
+        );
+        return true;
+      }());
+    }
+
+    billingProvider.registerDefaultKeyboardShortcuts(
+      onClearCart: clearCart,
+      onSaveOrder: saveOrder,
+      onCreateOrderAndPrint: createOrderAndPrint,
+      onConfirmOrder: confirmOrder,
+    );
 
     // Rehydrate UI from saved order/discounts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _setupSettingsSyncListeners();
       _rehydrateFromProvider();
     });
   }
 
+  Future<void> _fetchCartDataSafely({
+    required int customerId,
+    String? accessToken,
+  }) async {
+    try {
+      await Provider.of<CartProvider>(context, listen: false)
+          .fetchCartDataFromApi(
+        customerId: customerId,
+        accessToken: accessToken ?? '',
+      );
+    } catch (error, stackTrace) {
+      assert(() {
+        debugPrint(
+          'BillingPageMobile: cart API fetch failed — continuing with local sale: $error',
+        );
+        debugPrint('$stackTrace');
+        return true;
+      }());
+    }
+  }
+
+  void _syncAllSettings() {
+    final generalSettingsProvider =
+        Provider.of<GeneralSettingsProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    _settingsController.syncStockEnabled(
+      stockEnabled: generalSettingsProvider.generalSettings?.stockEnabled,
+      localProductProvider: localProductProvider,
+    );
+
+    final appSettings = appSettingsProvider.appSettings;
+    _settingsController.syncAppSettingsFlags(
+      appSettings: appSettings,
+      billingProvider: billingProvider,
+    );
+    _settingsController.applyDefaultPaymentMethodIfNeeded(
+      billingProvider: billingProvider,
+      appSettings: appSettings,
+    );
+    _settingsController.syncDefaultDeliveryMethod(
+      billingProvider: billingProvider,
+      deliveryMethodsProvider: deliveryMethodsProvider,
+      appSettings: appSettings,
+    );
+  }
+
+  void _setupSettingsSyncListeners() {
+    final generalSettingsProvider =
+        Provider.of<GeneralSettingsProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    _generalSettingsListener ??= () {
+      if (!mounted) return;
+      _settingsController.syncStockEnabled(
+        stockEnabled:
+            generalSettingsProvider.generalSettings?.stockEnabled,
+        localProductProvider:
+            Provider.of<LocalProductProvider>(context, listen: false),
+      );
+    };
+    generalSettingsProvider.addListener(_generalSettingsListener!);
+    _generalSettingsListener!();
+
+    _appSettingsSyncListener ??= () {
+      if (!mounted) return;
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+      final appSettings = appSettingsProvider.appSettings;
+      _settingsController.syncAppSettingsFlags(
+        appSettings: appSettings,
+        billingProvider: billingProvider,
+      );
+      _settingsController.applyDefaultPaymentMethodIfNeeded(
+        billingProvider: billingProvider,
+        appSettings: appSettings,
+      );
+      _settingsController.syncDefaultDeliveryMethod(
+        billingProvider: billingProvider,
+        deliveryMethodsProvider: deliveryMethodsProvider,
+        appSettings: appSettings,
+      );
+      setState(() {});
+    };
+    appSettingsProvider.addListener(_appSettingsSyncListener!);
+
+    _deliveryMethodSyncListener ??= () {
+      if (!mounted) return;
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+      _settingsController.syncDefaultDeliveryMethod(
+        billingProvider: billingProvider,
+        deliveryMethodsProvider: deliveryMethodsProvider,
+        appSettings: appSettingsProvider.appSettings,
+      );
+    };
+    deliveryMethodsProvider.addListener(_deliveryMethodSyncListener!);
+    appSettingsProvider.addListener(_deliveryMethodSyncListener!);
+    _deliveryMethodSyncListener!();
+  }
+
   void _setupListeners() {
+    // FIFO barcode queue: accepts rapid scanner bursts and processes them one
+    // at a time in enqueue order without ever dropping a non-empty value.
+    _barcodeScanQueue = BarcodeScanQueue(processBarcode);
+
     // Barcode listener
     final barcodeProvider =
         Provider.of<BarcodeProvider>(context, listen: false);
     _barcodeSubscription = barcodeProvider.barcodeStream.listen((barcode) {
       if (mounted) {
-        final billingProvider =
-            Provider.of<BillingProvider>(context, listen: false);
-        billingProvider.processBarcodeWithDebounce(barcode, () {
-          processBarcode(barcode);
-        });
+        _barcodeScanQueue.enqueue(barcode);
       }
     });
 
@@ -134,14 +356,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.addListener(billingProvider.onUserSwitched);
-
-      // App settings listener
-      final appSettingsProvider =
-          Provider.of<AppSettingsProvider>(context, listen: false);
-      appSettingsProvider.addListener(() {
-        debugPrint('🎫 APP SETTINGS CHANGED:');
-        debugPrint('  - New appSettings: ${appSettingsProvider.appSettings}');
-      });
     });
 
     // Mobile number controller listener
@@ -155,7 +369,28 @@ class BillingPageMobileState extends State<BillingPageMobile>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      // Reset stale in-flight UI flags if the app was backgrounded mid-operation.
+      // Cart and provider state are preserved via [AutomaticKeepAliveClientMixin].
+      setState(() {
+        _isSavingOrder = false;
+        _isConfirmingOrder = false;
+        _isConfirmingAndPrinting = false;
+        _isLoadingOrder = false;
+        _isClearingCart = false;
+      });
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+      billingProvider.setLoadingSaveOrder(false);
+      billingProvider.setLoadingConfirmOrder(false);
+    }
+  }
+
+  @override
   void dispose() {
+    _sideBarController?.setBillingMobileAppBarTitle(null);
+    WidgetsBinding.instance.removeObserver(this);
     _barcodeSubscription?.cancel();
     _focusNode.dispose();
     _tabController.dispose();
@@ -171,8 +406,33 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
       final authModel = Provider.of<AuthModel>(context, listen: false);
       authModel.removeListener(billingProvider.onUserSwitched);
+
+      final generalSettingsProvider =
+          Provider.of<GeneralSettingsProvider>(context, listen: false);
+      if (_generalSettingsListener != null) {
+        generalSettingsProvider.removeListener(_generalSettingsListener!);
+      }
+
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      if (_appSettingsSyncListener != null) {
+        appSettingsProvider.removeListener(_appSettingsSyncListener!);
+      }
+
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      if (_deliveryMethodSyncListener != null) {
+        deliveryMethodsProvider.removeListener(_deliveryMethodSyncListener!);
+        appSettingsProvider.removeListener(_deliveryMethodSyncListener!);
+      }
+
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      if (_localProductOrderListener != null) {
+        localProductProvider.removeListener(_localProductOrderListener!);
+      }
     } catch (e) {
-      debugPrint("Error removing listeners: $e");
+      billingDebugLog('Error removing listeners: $e');
     }
 
     super.dispose();
@@ -181,6 +441,33 @@ class BillingPageMobileState extends State<BillingPageMobile>
   // Rehydrate UI state from provider. Business restore logic lives in
   // [BillingMobileController]; the page only handles the surrounding setState
   // and autocomplete-key regeneration.
+  void _applyDefaultCustomerFromCacheIfNeeded() {
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final result = _customerController.applyDefaultCustomerFromCacheIfNeeded(
+      localProductProvider:
+          Provider.of<LocalProductProvider>(context, listen: false),
+      billingProvider:
+          Provider.of<BillingProvider>(context, listen: false),
+      customerSelectionProvider:
+          Provider.of<CustomerSelectionProvider>(context, listen: false),
+      appSettings: appSettingsProvider.appSettings,
+      customers: Provider.of<BillingProvider>(context, listen: false)
+          .customerList,
+    );
+    _customerController.applyDefaultCustomerResult(
+      result: result,
+      customerSelectionProvider:
+          Provider.of<CustomerSelectionProvider>(context, listen: false),
+      billingProvider: Provider.of<BillingProvider>(context, listen: false),
+      cartProvider: Provider.of<CartProvider>(context, listen: false),
+      auth: Provider.of<AuthModel>(context, listen: false),
+    );
+    if (result.applied && mounted) {
+      setState(() {});
+    }
+  }
+
   void _rehydrateFromProvider() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
@@ -210,7 +497,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         }
       });
     } catch (e) {
-      debugPrint("Error during rehydration: $e");
+      billingDebugLog('Error during rehydration: $e');
     }
   }
 
@@ -233,8 +520,12 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   // Action methods — UI shell only; business logic lives in the controller.
   void clearCart() {
+    if (_isClearingCart) return;
+
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+
+    setState(() => _isClearingCart = true);
     billingProvider.setLoadingClearCart(true);
 
     try {
@@ -247,69 +538,255 @@ class BillingPageMobileState extends State<BillingPageMobile>
       showScaffold(context: context, message: "Cart Cleared Successfully");
       _focusTextField();
     } catch (e) {
-      debugPrint("Error clearing cart: $e");
+      billingDebugLog('Error clearing cart: $e');
       showScaffoldError(
-          context: context, message: "Failed to clear cart. Please try again.");
+          context: context, message: BillingMobileErrorMessages.clearCartFailed);
     } finally {
       billingProvider.setLoadingClearCart(false);
+      if (mounted) {
+        setState(() => _isClearingCart = false);
+      }
     }
   }
 
-  void saveOrder() async {
-    await _controller.saveOrder(context);
-    // Original behaviour: clear the cart whether or not the save reported a
-    // change.
-    clearCart();
+  Future<void> saveOrder() async {
+    if (_isSavingOrder) return;
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
+    setState(() => _isSavingOrder = true);
+    billingProvider.setLoadingSaveOrder(true);
+
+    try {
+      final result = await _controller.saveOrder(context);
+      if (!mounted) return;
+      // Only clear the workspace after a genuine success.
+      // On validationFailed / failed the service has already shown an error
+      // snackbar; keeping the cart intact prevents data loss.
+      if (result == SaveOrderResult.savedNew ||
+          result == SaveOrderResult.updatedExisting) {
+        clearCart();
+      }
+    } finally {
+      billingProvider.setLoadingSaveOrder(false);
+      if (mounted) {
+        setState(() => _isSavingOrder = false);
+      }
+    }
   }
 
-  void confirmOrder() async {
+  bool _isCustomerSatisfiedForCheckout() {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
+        .appSettings;
+    return _customerController.isCustomerSatisfiedForCheckout(
+      billingProvider: billingProvider,
+      skipCustomerSelection: appSettings?.skipCustomerSelection ?? false,
+    );
+  }
+
+  bool _validatePaymentReady({bool switchToBillingTab = true}) {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
     if (!_controller.hasSelectedPayment(context)) {
       showScaffoldError(
-          context: context, message: "Please select a payment method");
-      // Switch to billing tab to show payment options
-      setState(() {
-        _currentTabIndex = 1;
-        _tabController.animateTo(1);
-      });
+          context: context, message: BillingMobileErrorMessages.selectPaymentMethod);
+      if (switchToBillingTab) {
+        _switchToTab(1);
+      }
+      return false;
+    }
+
+    final ready =
+        _paymentController.validatePaymentReadyForConfirm(billingProvider);
+    if (!ready.isValid) {
+      showScaffoldError(
+        context: context,
+        message: ready.message ?? BillingMobileErrorMessages.configurePaymentBeforeConfirm,
+      );
+      if (switchToBillingTab) {
+        _switchToTab(1);
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  void _showPrintRetrySnackBar(String orderNumber) {
+    _pendingPrintOrderNumber = orderNumber;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(BillingMobileErrorMessages.printRetryPrompt),
+        action: SnackBarAction(
+          label: 'Retry',
+          onPressed: () => _retryPendingPrint(),
+        ),
+        duration: const Duration(seconds: 12),
+      ),
+    );
+  }
+
+  Future<void> _retryPendingPrint() async {
+    final orderNumber = _pendingPrintOrderNumber;
+    if (orderNumber == null || orderNumber.isEmpty) return;
+
+    try {
+      await _controller.retryPrintOrder(context, orderNumber);
+      if (!mounted) return;
+      _pendingPrintOrderNumber = null;
+      showScaffold(context: context, message: BillingMobileErrorMessages.printRetrySuccess);
+    } catch (error) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.printRetryFailedAgain,
+      );
+    }
+  }
+
+  Future<void> confirmOrder() async {
+    if (_isConfirmingOrder || _isConfirmingAndPrinting) return;
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
+      showScaffoldError(
+        context: context,
+        message: BillingMobileConnectivityController.offlineConfirmMessage,
+      );
       return;
     }
 
-    setState(() {
-      _isConfirmingOrder = true;
-    });
+    if (!_isCustomerSatisfiedForCheckout()) {
+      showScaffoldError(
+          context: context, message: BillingMobileErrorMessages.selectCustomer);
+      _switchToTab(1);
+      return;
+    }
+
+    if (!_validatePaymentReady()) return;
+
+    setState(() => _isConfirmingOrder = true);
 
     try {
       await _controller.confirmOrder(context);
     } finally {
       if (mounted) {
-        setState(() {
-          _isConfirmingOrder = false;
-        });
+        setState(() => _isConfirmingOrder = false);
       }
     }
-    _focusTextField();
+    if (mounted) {
+      _focusTextField();
+    }
   }
 
-  void createOrderAndPrint() async {
-    await _controller.createOrderAndPrint(context);
+  Future<void> createOrderAndPrint() async {
+    if (_isConfirmingAndPrinting || _isConfirmingOrder) return;
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
+      showScaffoldError(
+        context: context,
+        message: BillingMobileConnectivityController.offlineConfirmPrintMessage,
+      );
+      return;
+    }
+
+    if (!_isCustomerSatisfiedForCheckout()) {
+      showScaffoldError(
+          context: context, message: BillingMobileErrorMessages.selectCustomer);
+      _switchToTab(1);
+      return;
+    }
+
+    if (!_validatePaymentReady()) return;
+
+    setState(() => _isConfirmingAndPrinting = true);
+
+    try {
+      final result = await _controller.createOrderAndPrint(context);
+      if (!mounted) return;
+      if (result.printFailed && result.orderNumber != null) {
+        _showPrintRetrySnackBar(result.orderNumber!);
+      } else if (result.orderCreated && result.printSucceeded) {
+        _pendingPrintOrderNumber = null;
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isConfirmingAndPrinting = false);
+      }
+    }
   }
 
-  void loadSavedOrderForEditing(String orderId) {
+  Future<void> printSavedOrder(SavedOrder order) async {
+    try {
+      await _controller.printSavedOrder(context, order);
+      if (!mounted) return;
+      showScaffold(
+        context: context,
+        message: 'Printing order ${order.orderNumber}',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.printOrderFailed,
+      );
+    }
+  }
+
+  void deleteSavedOrder(SavedOrder order) {
+    final orderLabel = order.orderNumber.trim().isNotEmpty
+        ? order.orderNumber.trim()
+        : order.id;
+
+    DeleteConfirmationDialog.show(
+      context: context,
+      title: 'Delete Order',
+      itemName: orderLabel,
+      message: 'This order will be permanently removed from your saved orders.',
+      warningIcon: Icons.receipt_long_outlined,
+      onDelete: () {
+        _controller.deleteSavedOrder(context, order.id);
+        showScaffold(
+          context: context,
+          message: 'Order deleted successfully',
+        );
+      },
+    );
+  }
+
+  Future<void> loadSavedOrderForEditing(String orderId) async {
+    if (_isLoadingOrder) return;
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
+    setState(() => _isLoadingOrder = true);
+    billingProvider.setLoadingOrder(true);
+
     try {
       _controller.loadOrderForEditing(context, orderId);
       _rehydrateFromProvider();
 
       // Switch to cart tab to show loaded cart
-      setState(() {
-        _currentTabIndex = 3;
-        _tabController.animateTo(3);
-      });
+      _switchToTab(3);
 
       showScaffold(context: context, message: "Order loaded for editing");
     } catch (error) {
-      debugPrint("Error loading order: $error");
+      billingDebugLog('Error loading order: $error');
       showScaffoldError(
-          context: context, message: "Failed to load order. Please try again.");
+          context: context, message: BillingMobileErrorMessages.loadOrderFailed);
+    } finally {
+      billingProvider.setLoadingOrder(false);
+      if (mounted) {
+        setState(() => _isLoadingOrder = false);
+      }
     }
   }
 
@@ -317,18 +794,8 @@ class BillingPageMobileState extends State<BillingPageMobile>
   Widget build(BuildContext context) {
     super.build(context);
 
-    // Check for order rehydration
-    final currentOrder =
-        Provider.of<LocalProductProvider>(context, listen: true).currentOrder;
-    if (currentOrder != null && currentOrder.id != _lastRehydratedOrderId) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _rehydrateFromProvider();
-        }
-      });
-    }
-
     return SafeArea(
+      bottom: false,
       child: KeyboardListener(
         focusNode: _focusNode,
         onKeyEvent: _handleKeyPress,
@@ -343,7 +810,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
                 // Home Tab
                 MobileHomeTab(
                   autocompleteProductKey: _autocompleteProductKey,
-                  onProcessBarcode: processBarcode,
+                  onProcessBarcode: _barcodeScanQueue.enqueue,
                   onClearProductFields: () {
                     setState(() {
                       _autocompleteProductKey = GlobalKey();
@@ -365,112 +832,30 @@ class BillingPageMobileState extends State<BillingPageMobile>
                   onSaveOrder: saveOrder,
                   onCreateOrderAndPrint: createOrderAndPrint,
                   isConfirmingOrder: _isConfirmingOrder,
-                  onBack: () {
-                    setState(() {
-                      _currentTabIndex = 3;
-                      _tabController.animateTo(3);
-                    });
-                  },
+                  isConfirmingAndPrinting: _isConfirmingAndPrinting,
                 ),
                 // Orders Tab
                 MobileOrdersTab(
                   onOrderSelected: loadSavedOrderForEditing,
+                  onPrintOrder: printSavedOrder,
+                  onDeleteOrder: deleteSavedOrder,
+                  isLoadingOrder: _isLoadingOrder,
                 ),
                 // Cart Tab
                 MobileCartTab(
-                  onBackToMarket: () {
-                    setState(() {
-                      _currentTabIndex = 0;
-                      _tabController.animateTo(0);
-                    });
-                  },
-                  onProceedToPayment: () {
-                    setState(() {
-                      _currentTabIndex = 1;
-                      _tabController.animateTo(1);
-                    });
-                  },
+                  onBackToMarket: () => _switchToTab(0),
+                  onProceedToPayment: () => _switchToTab(1),
                   onSaveOrder: saveOrder,
                   onClearCart: clearCart,
+                  isSavingOrder: _isSavingOrder,
+                  isClearingCart: _isClearingCart,
                 ),
               ],
             ),
           ),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.3),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: BottomNavigationBar(
-              currentIndex: _currentTabIndex,
-              onTap: (index) {
-                setState(() {
-                  _currentTabIndex = index;
-                  _tabController.animateTo(index);
-                });
-              },
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.white,
-              selectedItemColor: ColorManager.kPrimaryColor,
-              unselectedItemColor: Colors.grey.shade600,
-              selectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w400,
-                fontSize: 11,
-              ),
-              items: [
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.storefront_outlined),
-                  activeIcon: Icon(Icons.storefront),
-                  label: 'Market',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.payment_outlined),
-                  activeIcon: Icon(Icons.payment),
-                  label: 'Billing',
-                ),
-                const BottomNavigationBarItem(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  activeIcon: Icon(Icons.receipt_long),
-                  label: 'Order',
-                ),
-                BottomNavigationBarItem(
-                  icon: Consumer<LocalProductProvider>(
-                    builder: (context, provider, _) {
-                      final count = provider.cartItems.length;
-                      return Badge(
-                        isLabelVisible: count > 0,
-                        label: Text('$count'),
-                        backgroundColor: ColorManager.kBadgeColor,
-                        child: const Icon(Icons.shopping_cart_outlined),
-                      );
-                    },
-                  ),
-                  activeIcon: Consumer<LocalProductProvider>(
-                    builder: (context, provider, _) {
-                      final count = provider.cartItems.length;
-                      return Badge(
-                        isLabelVisible: count > 0,
-                        label: Text('$count'),
-                        backgroundColor: ColorManager.kBadgeColor,
-                        child: const Icon(Icons.shopping_cart),
-                      );
-                    },
-                  ),
-                  label: 'Cart',
-                ),
-              ],
-            ),
+          bottomNavigationBar: MobileBottomNav(
+            currentIndex: _currentTabIndex,
+            onTap: _switchToTab,
           ),
         ),
       ),

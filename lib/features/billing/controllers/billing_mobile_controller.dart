@@ -8,15 +8,32 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/services/checkout_service.dart';
+export 'package:pos_machine/services/checkout_service.dart' show SaveOrderResult;
 import 'package:pos_machine/services/print_service.dart';
-import 'package:pos_machine/widgets/add_product_modal.dart';
+import 'package:pos_machine/features/billing/presentation/pages/add_product_mobile.dart';
+import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/domain/barcode_sale_unit.dart';
 import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
+
+/// Actions dispatched by [BillingMobileController.resolveShortcutAction].
+enum MobileBillingShortcutAction {
+  clearCart,
+  saveOrder,
+  createOrderAndPrint,
+  confirmOrder,
+  restoreFocus,
+  focusBarcode,
+}
 
 /// Business logic for the mobile billing page, extracted out of
 /// `BillingPageMobile` (Phase 4) so the widget is left with pure UI
@@ -27,6 +44,8 @@ import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
 /// UI side-effects (snackbars, dialogs, key regeneration, tab switches) stay in
 /// the page.
 class BillingMobileController {
+  static const _customerController = BillingMobileCustomerController();
+
   // ---------------------------------------------------------------------------
   // Order rehydration / restore
   // ---------------------------------------------------------------------------
@@ -48,18 +67,36 @@ class BillingMobileController {
         .clearSelectedCustomer();
 
     _restoreCustomer(context, currentOrder, billingProvider);
-    restorePaymentMethods(currentOrder, billingProvider);
+
+    MasterDataProvider? masterDataProvider;
+    try {
+      masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+    } catch (_) {
+      // MasterDataProvider may be absent in isolated unit tests.
+    }
+    restorePaymentMethods(
+      currentOrder,
+      billingProvider,
+      resolvePaymentMethodValue: (methodId) {
+        final id = int.tryParse(methodId);
+        return id != null
+            ? masterDataProvider?.getPaymentMethodValue(id)
+            : null;
+      },
+    );
     restoreOrderDetails(context, currentOrder, billingProvider);
 
-    billingProvider.setTotalOrderAmount(
-        localProductProvider.priceSummary?.netTotal ?? 0.0);
+    _refreshOrderTotals(localProductProvider, billingProvider);
   }
 
   void _restoreCustomer(BuildContext context, SavedOrder currentOrder,
       BillingProvider billingProvider) {
     if (currentOrder.customerId != null ||
         (currentOrder.customerPhone != null &&
-            currentOrder.customerPhone!.isNotEmpty)) {
+            currentOrder.customerPhone!.isNotEmpty) ||
+        (currentOrder.customerName != null &&
+            currentOrder.customerName!.isNotEmpty)) {
       CustomerListModelData? customerToSet;
 
       if (currentOrder.customerId != null &&
@@ -79,13 +116,17 @@ class BillingMobileController {
       );
 
       billingProvider.setSelectedCustomer(customerToSet, isManual: true);
+      final restoredCustomer = billingProvider.selectedCustomer ?? customerToSet;
       Provider.of<CustomerSelectionProvider>(context, listen: false)
-          .setSelectedCustomer(billingProvider.selectedCustomer!);
+          .setSelectedCustomer(restoredCustomer);
     }
   }
 
   void restorePaymentMethods(
-      SavedOrder currentOrder, BillingProvider billingProvider) {
+    SavedOrder currentOrder,
+    BillingProvider billingProvider, {
+    String? Function(String methodId)? resolvePaymentMethodValue,
+  }) {
     billingProvider.clearAllPaymentMethods();
 
     if (currentOrder.paymentMethod != null) {
@@ -157,9 +198,14 @@ class BillingMobileController {
               billingProvider.setPaymentMethod('ONLINE', true);
               billingProvider.setPineLabsPaymentSuccess(true);
             }
+
+            billingProvider.restoreExtraPaymentsFromAmounts(
+              amounts,
+              resolveDisplayValue: resolvePaymentMethodValue,
+            );
           }
         } catch (e) {
-          debugPrint("Error parsing payment JSON on rehydration: $e");
+          billingDebugLog('Error parsing payment JSON on rehydration: $e');
         }
       } else {
         billingProvider.setPaymentMethod(pm.toUpperCase(), true);
@@ -218,6 +264,7 @@ class BillingMobileController {
     }
     billingProvider.commentController.text = currentOrder.comment ?? "";
     billingProvider.carNumberController.text = currentOrder.carNumber ?? "";
+    billingProvider.setOrderAddress(currentOrder.address ?? "");
 
     if (currentOrder.deliveryDate != null) {
       billingProvider.setDeliveryDateString(currentOrder.deliveryDate);
@@ -226,19 +273,33 @@ class BillingMobileController {
       billingProvider.setDeliveryTimeString(currentOrder.deliveryTime);
     }
 
-    // Restore coupon state
+    // Restore coupon / discount UI state
     if ((currentOrder.couponId != null && currentOrder.couponId!.isNotEmpty) ||
         (currentOrder.flatDiscount != null && currentOrder.flatDiscount! > 0) ||
         (currentOrder.percentageDiscount != null &&
             currentOrder.percentageDiscount! > 0)) {
-      billingProvider.coupenCodeTextController.text =
-          currentOrder.couponId ?? "";
+      billingProvider.setCouponApplied(
+        true,
+        code: currentOrder.couponId ?? "",
+      );
     } else {
-      billingProvider.coupenCodeTextController.clear();
+      billingProvider.setCouponApplied(false);
     }
 
     billingProvider
         .setToCustomerCreditEnabled(currentOrder.toCustomerCredit ?? false);
+  }
+
+  void _refreshOrderTotals(
+    LocalProductProvider localProductProvider,
+    BillingProvider billingProvider,
+  ) {
+    // loadOrderForEditing restores discount fields but may not recalculate
+    // priceSummary until cartTotal is read.
+    localProductProvider.cartTotal;
+    billingProvider.setTotalOrderAmount(
+      localProductProvider.priceSummary?.netTotal ?? 0.0,
+    );
   }
 
   void setDefaultDeliveryMethod(
@@ -262,33 +323,92 @@ class BillingMobileController {
   // Input focus / keyboard shortcuts
   // ---------------------------------------------------------------------------
 
+  /// Mobile tablet POS keyboard shortcut subset (hardware keyboard / scanner wedge).
+  ///
+  /// Supported on [BillingPageMobile] via a page-level [KeyboardListener]:
+  /// - **F6** — clear cart
+  /// - **F7** — save order
+  /// - **F8** — confirm & print
+  /// - **F9** — confirm order
+  /// - **Esc** — restore focus to barcode or product-search entry
+  /// - **Ctrl+A** — focus barcode field when `barcodeSales` is enabled
+  ///
+  /// Desktop-only shortcuts (F1–F5, F12, Ctrl+H/K/D/S/Q/P/U) are intentionally
+  /// omitted on mobile. Shortcuts are dispatched from the page focus node, so
+  /// they do not fire while a text field owns focus (text editing is preserved).
+
   void focusTextField(BuildContext context) {
     final billingProvider = Provider.of<BillingProvider>(context, listen: false);
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
-    billingProvider
-        .focusTextField(appSettingsProvider.appSettings!.barcodeSales);
+    billingProvider.focusTextField(
+      appSettingsProvider.appSettings?.barcodeSales ?? false,
+    );
     Provider.of<LocalProductProvider>(context, listen: false)
         .resetSelectedProduct();
   }
 
+  /// Pure dispatch for mobile billing shortcuts; used by [handleShortcutKey] and
+  /// unit tests.
+  static MobileBillingShortcutAction? resolveShortcutAction({
+    required LogicalKeyboardKey key,
+    required bool controlPressed,
+    required bool barcodeSalesEnabled,
+  }) {
+    if (key == LogicalKeyboardKey.escape) {
+      return MobileBillingShortcutAction.restoreFocus;
+    }
+    if (controlPressed && key == LogicalKeyboardKey.keyA) {
+      return barcodeSalesEnabled
+          ? MobileBillingShortcutAction.focusBarcode
+          : null;
+    }
+    if (key == LogicalKeyboardKey.f6) {
+      return MobileBillingShortcutAction.clearCart;
+    }
+    if (key == LogicalKeyboardKey.f7) {
+      return MobileBillingShortcutAction.saveOrder;
+    }
+    if (key == LogicalKeyboardKey.f8) {
+      return MobileBillingShortcutAction.createOrderAndPrint;
+    }
+    if (key == LogicalKeyboardKey.f9) {
+      return MobileBillingShortcutAction.confirmOrder;
+    }
+    return null;
+  }
+
   void handleShortcutKey(BuildContext context, KeyEvent event) {
-    if (event is KeyDownEvent) {
-      try {
-        final billingProvider =
-            Provider.of<BillingProvider>(context, listen: false);
-        if (event.logicalKey == LogicalKeyboardKey.f6) {
+    if (event is! KeyDownEvent) return;
+
+    try {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final action = resolveShortcutAction(
+        key: event.logicalKey,
+        controlPressed: HardwareKeyboard.instance.isControlPressed,
+        barcodeSalesEnabled:
+            appSettingsProvider.appSettings?.barcodeSales ?? false,
+      );
+      if (action == null) return;
+
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+      switch (action) {
+        case MobileBillingShortcutAction.clearCart:
           billingProvider.executeKeyboardShortcut('clearCart');
-        } else if (event.logicalKey == LogicalKeyboardKey.f7) {
+        case MobileBillingShortcutAction.saveOrder:
           billingProvider.executeKeyboardShortcut('saveOrder');
-        } else if (event.logicalKey == LogicalKeyboardKey.f8) {
+        case MobileBillingShortcutAction.createOrderAndPrint:
           billingProvider.executeKeyboardShortcut('createOrderAndPrint');
-        } else if (event.logicalKey == LogicalKeyboardKey.f9) {
+        case MobileBillingShortcutAction.confirmOrder:
           billingProvider.executeKeyboardShortcut('confirmOrder');
-        }
-      } catch (e) {
-        // Handle error
+        case MobileBillingShortcutAction.restoreFocus:
+        case MobileBillingShortcutAction.focusBarcode:
+          focusTextField(context);
       }
+    } catch (e) {
+      // Handle error
     }
   }
 
@@ -341,7 +461,7 @@ class BillingMobileController {
           quantity = EmbeddedBarcode.pieceQuantity(query);
         } else if (matchedSaleUnit != null) {
           quantity =
-              num.tryParse(matchedSaleUnit.conversionRate?.trim() ?? '') ?? 1;
+              BarcodeSaleUnit.resolveSaleUnitQuantity(matchedSaleUnit);
         }
 
         await ProductCartHelper.handleProductSelection(
@@ -351,26 +471,31 @@ class BillingMobileController {
           addToCartDirectly: true,
           customerId: billingProvider.selectedCustomerID,
           customerName: billingProvider.selectedCustomer?.name,
-          selectedSaleUnit: matchedSaleUnit,
+          selectedSaleUnit:
+              BarcodeSaleUnit.resolveBarcodeSaleUnit(matchedSaleUnit),
         );
 
         onProductKeyRegen();
         billingProvider.clearProductFieldsAndReset();
         focusTextField(context);
       } else {
-        await showDialog(
-          context: context,
-          builder: (context) =>
-              AddProductWithBarcodeModal(barcode: query, isAddToCart: true),
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AddProductMobileScreen(
+              barcode: query,
+              isAddToCart: true,
+            ),
+          ),
         );
         billingProvider.barcodeController.clear();
         focusTextField(context);
       }
     } catch (e) {
-      debugPrint("Error adding item: $e");
+      billingDebugLog('Error adding item: $e');
       showScaffoldError(
         context: context,
-        message: "Invalid Barcode. Please try again.",
+        message: BillingMobileErrorMessages.invalidBarcode,
       );
     }
   }
@@ -398,9 +523,33 @@ class BillingMobileController {
     billingProvider.setDeliveryTime(null);
     billingProvider.commentController.clear();
     billingProvider.carNumberController.clear();
-    billingProvider.setMobileNumberText("");
-    billingProvider.mobileNumberTextController.clear();
-    billingProvider.clearSelectedCustomer();
+
+    _customerController.clearSelection(
+      customerSelectionProvider:
+          Provider.of<CustomerSelectionProvider>(context, listen: false),
+      billingProvider: billingProvider,
+      cartProvider: Provider.of<CartProvider>(context, listen: false),
+      auth: Provider.of<AuthModel>(context, listen: false),
+    );
+
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final defaultResult = _customerController.applyDefaultCustomerFromCacheIfNeeded(
+      localProductProvider: localProductProvider,
+      billingProvider: billingProvider,
+      customerSelectionProvider:
+          Provider.of<CustomerSelectionProvider>(context, listen: false),
+      appSettings: appSettings,
+      customers: billingProvider.customerList,
+    );
+    _customerController.applyDefaultCustomerResult(
+      result: defaultResult,
+      customerSelectionProvider:
+          Provider.of<CustomerSelectionProvider>(context, listen: false),
+      billingProvider: billingProvider,
+      cartProvider: Provider.of<CartProvider>(context, listen: false),
+      auth: Provider.of<AuthModel>(context, listen: false),
+    );
   }
 
   bool hasSelectedPayment(BuildContext context) =>
@@ -408,7 +557,7 @@ class BillingMobileController {
           .getSelectedPaymentMethodsExcludingEmpty()
           .isNotEmpty;
 
-  Future<bool> saveOrder(BuildContext context) async {
+  Future<SaveOrderResult> saveOrder(BuildContext context) async {
     return await CheckoutService(context).saveOrder();
   }
 
@@ -416,20 +565,75 @@ class BillingMobileController {
     await CheckoutService(context).confirmOrder();
   }
 
-  Future<void> createOrderAndPrint(BuildContext context) async {
+  Future<CreateOrderAndPrintResult> createOrderAndPrint(
+      BuildContext context) async {
     final createdOrderNumber =
         await CheckoutService(context).createOrderAndPrint();
-    if (createdOrderNumber != null && createdOrderNumber.isNotEmpty) {
-      try {
-        await const PrintService().printOrderById(context, createdOrderNumber);
-      } catch (error) {
-        debugPrint("❌ Error fetching order details for print: $error");
-      }
+    if (createdOrderNumber == null || createdOrderNumber.isEmpty) {
+      return const CreateOrderAndPrintResult(
+        orderCreated: false,
+        orderNumber: null,
+        printSucceeded: false,
+      );
     }
+
+    try {
+      await const PrintService().printOrderById(context, createdOrderNumber);
+      return CreateOrderAndPrintResult(
+        orderCreated: true,
+        orderNumber: createdOrderNumber,
+        printSucceeded: true,
+      );
+    } catch (error) {
+      billingDebugCheckout(
+        'createOrderAndPrint',
+        'printFailed',
+        errorType: error.runtimeType.toString(),
+      );
+      return CreateOrderAndPrintResult(
+        orderCreated: true,
+        orderNumber: createdOrderNumber,
+        printSucceeded: false,
+        printError: error.toString(),
+      );
+    }
+  }
+
+  Future<bool> retryPrintOrder(
+      BuildContext context, String orderNumber) async {
+    await const PrintService().printOrderById(context, orderNumber);
+    return true;
+  }
+
+  Future<void> printSavedOrder(BuildContext context, SavedOrder order) async {
+    await const PrintService().printSavedOrder(context, order);
+  }
+
+  void deleteSavedOrder(BuildContext context, String orderId) {
+    Provider.of<LocalProductProvider>(context, listen: false)
+        .deleteSavedOrder(orderId);
   }
 
   void loadOrderForEditing(BuildContext context, String orderId) {
     Provider.of<LocalProductProvider>(context, listen: false)
         .loadOrderForEditing(orderId);
   }
+}
+
+/// Outcome of confirm-and-print: order may succeed while print fails.
+class CreateOrderAndPrintResult {
+  const CreateOrderAndPrintResult({
+    required this.orderCreated,
+    required this.orderNumber,
+    required this.printSucceeded,
+    this.printError,
+  });
+
+  final bool orderCreated;
+  final String? orderNumber;
+  final bool printSucceeded;
+  final String? printError;
+
+  bool get printFailed =>
+      orderCreated && orderNumber != null && !printSucceeded;
 }

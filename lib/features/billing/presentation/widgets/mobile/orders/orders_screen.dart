@@ -10,9 +10,15 @@ class OrdersScreen extends StatelessWidget {
   const OrdersScreen({
     super.key,
     required this.onOrderSelected,
+    required this.onPrintOrder,
+    required this.onDeleteOrder,
+    this.isLoadingOrder = false,
   });
 
-  final void Function(String orderId) onOrderSelected;
+  final Future<void> Function(String orderId) onOrderSelected;
+  final Future<void> Function(SavedOrder order) onPrintOrder;
+  final void Function(SavedOrder order) onDeleteOrder;
+  final bool isLoadingOrder;
 
   @override
   Widget build(BuildContext context) {
@@ -29,10 +35,6 @@ class OrdersScreen extends StatelessWidget {
 
               return Column(
                 children: [
-                  const _OrdersHeader(),
-                  const SizedBox(height: 18),
-                  Divider(height: 1, color: Colors.grey.shade100),
-                  const SizedBox(height: 14),
                   Row(
                     children: [
                       Expanded(
@@ -56,8 +58,19 @@ class OrdersScreen extends StatelessWidget {
                               final order = orders[index];
                               return OrderCard(
                                 order: order,
-                                onTap: () => _showOrderDetails(context, order),
-                                onEdit: () => onOrderSelected(order.id),
+                                onTap: isLoadingOrder
+                                    ? null
+                                    : () => _showOrderDetails(context, order),
+                                onEdit: isLoadingOrder
+                                    ? null
+                                    : () => onOrderSelected(order.id),
+                                onPrint: isLoadingOrder
+                                    ? null
+                                    : () => onPrintOrder(order),
+                                onDelete: isLoadingOrder
+                                    ? null
+                                    : () => onDeleteOrder(order),
+                                isLoadingOrder: isLoadingOrder,
                               );
                             },
                           ),
@@ -147,14 +160,49 @@ class OrdersScreen extends StatelessWidget {
                   valueColor: ColorManager.kPrimaryColor,
                 ),
                 const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isLoadingOrder
+                            ? null
+                            : () {
+                                Navigator.pop(context);
+                                onPrintOrder(order);
+                              },
+                        icon: const Icon(Icons.print, size: 18),
+                        label: const Text('Print'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isLoadingOrder
+                            ? null
+                            : () {
+                                Navigator.pop(context);
+                                onDeleteOrder(order);
+                              },
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        label: const Text('Delete'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   height: 44,
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      onOrderSelected(order.id);
-                    },
+                    onPressed: isLoadingOrder
+                        ? null
+                        : () {
+                            Navigator.pop(context);
+                            onOrderSelected(order.id);
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: ColorManager.kPrimaryColor,
                       foregroundColor: Colors.white,
@@ -176,42 +224,6 @@ class OrdersScreen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _OrdersHeader extends StatelessWidget {
-  const _OrdersHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 44,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: EdgeInsets.only(left: 2),
-              child: Icon(
-                Icons.arrow_back,
-                color: Colors.black87,
-                size: 24,
-              ),
-            ),
-          ),
-          Text(
-            'Order',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 23,
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

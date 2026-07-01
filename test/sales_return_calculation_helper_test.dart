@@ -62,6 +62,26 @@ void main() {
       expect(withReturn.sessionItemsTotal, 50);
       expect(withReturn.proRataDiscount, 10);
       expect(withReturn.netRefundAmount, 50); // 50 - 10 + 10 shipping
+      expect(withReturn.maxCashRefundAmount, 60); // 50 items + 10 delivery
+
+      final fullReturnNoDelivery = SalesReturnCalculationHelper.calculateRefund(
+        items: [
+          _item(
+            cartItemId: 1,
+            totalPrice: '100',
+            returnedTotal: '100',
+          ),
+        ],
+        initialReturnedTotals: const {1: 0.0},
+        orderDiscount: 20,
+        shippingCost: 10,
+        deliveryRefundable: false,
+      );
+
+      expect(fullReturnNoDelivery.sessionItemsTotal, 100);
+      expect(fullReturnNoDelivery.proRataDiscount, 20);
+      expect(fullReturnNoDelivery.netRefundAmount, 80);
+      expect(fullReturnNoDelivery.maxCashRefundAmount, 100);
     });
   });
 }

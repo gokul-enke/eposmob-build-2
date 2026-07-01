@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/cart_action_buttons.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/cart_item_card.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/cart_summary.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/payment_summary.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
-
-enum CartSegment { cart, saved, ongoing }
 
 class CartScreen extends StatefulWidget {
   const CartScreen({
@@ -14,58 +15,46 @@ class CartScreen extends StatefulWidget {
     required this.onProceedToPayment,
     required this.onSaveOrder,
     required this.onClearCart,
+    this.isSavingOrder = false,
+    this.isClearingCart = false,
   });
 
   final VoidCallback onBackToMarket;
   final VoidCallback onProceedToPayment;
   final VoidCallback onSaveOrder;
   final VoidCallback onClearCart;
+  final bool isSavingOrder;
+  final bool isClearingCart;
 
   @override
   State<CartScreen> createState() => _CartScreenState();
 }
 
 class _CartScreenState extends State<CartScreen> {
-  CartSegment _selectedSegment = CartSegment.cart;
+  static const _controller = BillingMobileCartController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: ColorManager.kBgLightColor,
       body: SafeArea(
         bottom: false,
-        child: Consumer<LocalProductProvider>(
-          builder: (context, provider, _) {
+        child: Consumer2<LocalProductProvider, AppSettingsProvider>(
+          builder: (context, provider, appSettingsProvider, _) {
             final cartItems = provider.getCartItems();
-            final total = provider.cartTotal;
-            final summary = provider.priceSummary;
-            final tax = summary?.totalTax ?? 0.0;
-            final subtotal = (((summary?.subTotal ?? total) - tax)
-                    .clamp(0.0, double.infinity) as num)
-                .toDouble();
+            final appSettings = appSettingsProvider.appSettings;
 
             return Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
               child: Column(
                 children: [
-                  _CartHeader(onBack: widget.onBackToMarket),
-                  const SizedBox(height: 16),
-                  Divider(height: 1, color: Colors.grey.shade100),
-                  const SizedBox(height: 16),
-                  _SegmentedTabs(
-                    selectedSegment: _selectedSegment,
-                    onChanged: (segment) {
-                      setState(() => _selectedSegment = segment);
-                    },
-                  ),
-                  const SizedBox(height: 20),
                   Expanded(
-                    child: _buildSegmentContent(
+                    child: _buildCartContent(
                       provider: provider,
                       cartItems: cartItems,
-                      subtotal: subtotal,
-                      tax: tax,
-                      total: total,
+                      showMrp: appSettings?.showMrpPos ?? false,
+                      showTaxRate: appSettings?.showTaxRatePos ?? false,
+                      showTaxAmount: appSettings?.showTaxPos ?? false,
                     ),
                   ),
                 ],
@@ -77,32 +66,18 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildSegmentContent({
+  Widget _buildCartContent({
     required LocalProductProvider provider,
     required List<LocalCartItem> cartItems,
-    required double subtotal,
-    required double tax,
-    required double total,
+    required bool showMrp,
+    required bool showTaxRate,
+    required bool showTaxAmount,
   }) {
-    switch (_selectedSegment) {
-      case CartSegment.saved:
-        return _PlaceholderSegment(
-          icon: Icons.bookmark_border,
-          title: 'No saved carts yet',
-          subtitle: 'Saved orders will appear here',
-        );
-      case CartSegment.ongoing:
-        return _PlaceholderSegment(
-          icon: Icons.access_time,
-          title: 'No ongoing carts yet',
-          subtitle: 'Active draft activity will appear here',
-        );
-      case CartSegment.cart:
-        if (cartItems.isEmpty) {
-          return _EmptyCart(onAddMoreItems: widget.onBackToMarket);
-        }
+    if (cartItems.isEmpty) {
+      return _EmptyCart(onAddMoreItems: widget.onBackToMarket);
+    }
 
-        return SingleChildScrollView(
+    return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 16),
           child: Column(
@@ -110,25 +85,35 @@ class _CartScreenState extends State<CartScreen> {
               for (final item in cartItems) ...[
                 CartItemCard(
                   item: item,
-                  onDecrease: () => _changeQuantity(provider, item, -1),
-                  onIncrease: () => _changeQuantity(provider, item, 1),
-                  onRemove: () {
-                    provider.removeFromCart(
-                      item.product.productId!,
-                      item.selectedStock,
-                      stockGroupIds: item.stockGroupIds,
-                      saleUnitId: item.saleUnitId,
-                    );
+                  controller: _controller,
+                  onDecrease: () {
+                    _controller.changeQuantity(context, provider, item, -1);
                   },
+                  onIncrease: () {
+                    _controller.changeQuantity(context, provider, item, 1);
+                  },
+                  onRemove: () => _controller.removeItem(provider, item),
+                  onSaleUnitChanged: (_) {},
+                  showMrp: showMrp,
+                  showTaxRate: showTaxRate,
+                  showTaxAmount: showTaxAmount,
                 ),
                 const SizedBox(height: 12),
               ],
               _AddMoreItemsButton(onTap: widget.onBackToMarket),
               const SizedBox(height: 20),
-              CartSummary(
-                subtotal: subtotal,
-                tax: tax,
-                total: total,
+              // Shared payment summary — same widget the Billing tab renders,
+              // so currency, tax %, discount, delivery charge and round-off
+              // can never drift between the two tabs.
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: const PaymentSummary(compact: true),
               ),
               const SizedBox(height: 18),
               CartActionButtons(
@@ -136,151 +121,12 @@ class _CartScreenState extends State<CartScreen> {
                 onProceedToPayment: widget.onProceedToPayment,
                 onSaveOrder: widget.onSaveOrder,
                 onClearCart: widget.onClearCart,
+                isSavingOrder: widget.isSavingOrder,
+                isClearingCart: widget.isClearingCart,
               ),
             ],
           ),
         );
-    }
-  }
-
-  void _changeQuantity(
-    LocalProductProvider provider,
-    LocalCartItem item,
-    int step,
-  ) {
-    final currentDisplayQty = item.displayQuantity;
-    final newDisplayQty = currentDisplayQty + step;
-    final newBaseQty =
-        item.hasSaleUnit ? item.toBaseQuantity(newDisplayQty) : newDisplayQty;
-
-    provider.setCartItemQuantity(
-      item.product.productId!,
-      item.selectedStock,
-      newBaseQty,
-      stockGroupIds: item.stockGroupIds,
-      saleUnitId: item.saleUnitId,
-    );
-  }
-}
-
-class _CartHeader extends StatelessWidget {
-  const _CartHeader({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: onBack,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-              icon:
-                  const Icon(Icons.arrow_back, color: Colors.black87, size: 26),
-            ),
-          ),
-          const Text(
-            'Cart Details',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentedTabs extends StatelessWidget {
-  const _SegmentedTabs({
-    required this.selectedSegment,
-    required this.onChanged,
-  });
-
-  final CartSegment selectedSegment;
-  final ValueChanged<CartSegment> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF2F5FA),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _SegmentButton(
-              label: 'Cart',
-              selected: selectedSegment == CartSegment.cart,
-              onTap: () => onChanged(CartSegment.cart),
-            ),
-          ),
-          Expanded(
-            child: _SegmentButton(
-              label: 'Saved',
-              selected: selectedSegment == CartSegment.saved,
-              onTap: () => onChanged(CartSegment.saved),
-            ),
-          ),
-          Expanded(
-            child: _SegmentButton(
-              label: 'Ongoing',
-              selected: selectedSegment == CartSegment.ongoing,
-              onTap: () => onChanged(CartSegment.ongoing),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentButton extends StatelessWidget {
-  const _SegmentButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? const Color(0xFF1764C0) : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: SizedBox(
-          height: 40,
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : Colors.black87,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -371,50 +217,6 @@ class _EmptyCart extends StatelessWidget {
           SizedBox(
             width: 220,
             child: _AddMoreItemsButton(onTap: onAddMoreItems),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlaceholderSegment extends StatelessWidget {
-  const _PlaceholderSegment({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
           ),
         ],
       ),

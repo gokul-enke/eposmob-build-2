@@ -7,12 +7,18 @@ class CartActionButtons extends StatelessWidget {
     required this.onProceedToPayment,
     required this.onSaveOrder,
     required this.onClearCart,
+    this.isSavingOrder = false,
+    this.isClearingCart = false,
   });
 
   final bool hasItems;
   final VoidCallback onProceedToPayment;
   final VoidCallback onSaveOrder;
   final VoidCallback onClearCart;
+  final bool isSavingOrder;
+  final bool isClearingCart;
+
+  bool get _isCartActionBusy => isSavingOrder || isClearingCart;
 
   @override
   Widget build(BuildContext context) {
@@ -48,14 +54,18 @@ class CartActionButtons extends StatelessWidget {
           icon: Icons.receipt_long_outlined,
           backgroundColor: Colors.blue.shade50,
           iconColor: const Color(0xFF2E69C8),
-          onTap: hasItems ? onSaveOrder : null,
+          isLoading: isSavingOrder,
+          semanticsLabel: 'Save Order',
+          onTap: (hasItems && !_isCartActionBusy) ? onSaveOrder : null,
         ),
         const SizedBox(width: 10),
         _IconActionButton(
           icon: Icons.delete_outline,
           backgroundColor: Colors.red.shade50,
           iconColor: Colors.red.shade400,
-          onTap: hasItems ? onClearCart : null,
+          isLoading: isClearingCart,
+          semanticsLabel: 'Clear Cart',
+          onTap: (hasItems && !_isCartActionBusy) ? onClearCart : null,
         ),
       ],
     );
@@ -68,25 +78,43 @@ class _IconActionButton extends StatelessWidget {
     required this.backgroundColor,
     required this.iconColor,
     required this.onTap,
+    required this.semanticsLabel,
+    this.isLoading = false,
   });
+
+  static const double _minTouchTarget = 44;
 
   final IconData icon;
   final Color backgroundColor;
   final Color iconColor;
   final VoidCallback? onTap;
+  final String semanticsLabel;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: backgroundColor,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      child: Material(
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(icon, color: iconColor, size: 22),
+        child: InkWell(
+          onTap: isLoading ? null : onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: _minTouchTarget,
+            height: _minTouchTarget,
+            child: isLoading
+                ? Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: iconColor,
+                    ),
+                  )
+                : Icon(icon, color: iconColor, size: 22),
+          ),
         ),
       ),
     );

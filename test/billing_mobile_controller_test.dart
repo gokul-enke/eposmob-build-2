@@ -4,6 +4,7 @@
 /// without mounting a widget.
 library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -41,6 +42,24 @@ void main() {
     expect(bp.cardAmountController.text, '50');
   });
 
+  test('multi-payment JSON restores dynamic CHEQUE method', () {
+    final bp = BillingProvider();
+    controller.restorePaymentMethods(
+      orderWith(
+        '{"isMultiPayment":true,"methods":["CASH","99"],"amounts":{"CASH":"50","99":"75"}}',
+      ),
+      bp,
+      resolvePaymentMethodValue: (id) => id == '99' ? 'CHEQUE' : null,
+    );
+
+    expect(bp.isCashSelected, isTrue);
+    expect(bp.cashAmountController.text, '50');
+    expect(bp.isExtraMethodSelected('99'), isTrue);
+    expect(bp.extraPaymentAmounts['99'], '75');
+    expect(bp.extraPaymentValues['99'], 'CHEQUE');
+    expect(bp.getExtraAmountController('99').text, '75');
+  });
+
   test('multi-payment ONLINE marks pine-labs success', () {
     final bp = BillingProvider();
     controller.restorePaymentMethods(
@@ -64,4 +83,31 @@ void main() {
     expect(bp.isCardSelected, isFalse);
     expect(bp.isOnlineSelected, isFalse);
   });
+
+  test('restoreOrderDetails rehydrates delivery date and time', () {
+    final bp = BillingProvider();
+    controller.restoreOrderDetails(
+      _FakeBuildContext(),
+      SavedOrder(
+        id: 'o-delivery',
+        orderNumber: '42',
+        items: const [],
+        createdAt: '2024-01-01',
+        total: 100,
+        deliveryMethod: 'Store Takeaway',
+        deliveryMethodId: '1',
+        deliveryDate: '2024-06-15T00:00:00.000',
+        deliveryTime: '14:30',
+      ),
+      bp,
+    );
+
+    expect(bp.deliveryDate, DateTime.parse('2024-06-15T00:00:00.000'));
+    expect(bp.deliveryTime, '14:30');
+  });
+}
+
+class _FakeBuildContext implements BuildContext {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }

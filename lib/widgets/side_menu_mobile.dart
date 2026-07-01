@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
-import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/widgets/drawer_list_tile_expandable.dart';
@@ -17,10 +18,10 @@ import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
 import '../widgets/user_switcher.dart';
-import 'side_menu.dart'; // For DrawerListTile
+import 'side_menu.dart';
 
 class SideMenuMobile extends StatefulWidget {
-  const SideMenuMobile({Key? key}) : super(key: key);
+  const SideMenuMobile({super.key});
 
   @override
   State<SideMenuMobile> createState() => _SideMenuMobileState();
@@ -34,13 +35,17 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     super.initState();
     _loadUserRole();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final roleProvider = Provider.of<RoleProvider>(context, listen: false);
       debugPrint(
-          "🟡 [SideMenuMobile] initState postFrame: userRole='$userRole'");
+          "🟡 [SideMenuMobile] initState postFrame: roles count=${roleProvider.roles.length}, userRole='$userRole'");
+      if (roleProvider.roles.isEmpty) {
+        roleProvider.fetchRoles(context);
+      }
     });
   }
 
   void _loadUserRole() async {
-    String role = await SharedPreferenceProvider().getUserRole();
+    final role = await SharedPreferenceProvider().getUserRole();
     debugPrint("🟡 [SideMenuMobile] _loadUserRole: loaded role = '$role'");
     if (mounted) {
       setState(() {
@@ -49,310 +54,848 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     }
   }
 
-  // Helper method to check if user has specific role
-  bool _hasRole(String role) {
-    return userRole == role;
-  }
-
-  // Helper method to check if user has any of the specified roles
-  bool _hasAnyRole(List<String> roles) {
-    return roles.contains(userRole);
-  }
-
   @override
   Widget build(BuildContext context) {
-    SideBarController sideBarController = Get.find<SideBarController>();
+    final sideBarController = Get.find<SideBarController>();
     debugPrint("🟡 [SideMenuMobile] build: userRole='$userRole'");
 
-    // Helper function to handle navigation and drawer closing
     void navigate(int index) {
       sideBarController.index.value = index;
       Navigator.of(context).pop();
     }
 
+    void fetchSalesOrders() {
+      final salesProvider =
+          Provider.of<SalesProvider>(context, listen: false);
+      final accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      salesProvider.fetchOrders(accessToken: accessToken ?? '', storeId: 1);
+    }
+
+    void fetchSuppliers() {
+      final supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
+      final accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
+    }
+
+    Future<void> handleLogout() async {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final token = authModel.token ?? '';
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return const Center(
+            child: CircularProgressIndicator.adaptive(),
+          );
+        },
+      );
+      await AuthenticationProvider().logout(token, context).then((value) async {
+        if (value['status'] == 'success') {
+          await SessionResetService.resetAfterLogout(context);
+          if (!context.mounted) return;
+          showScaffold(
+            context: context,
+            message: '${value['message']}',
+          );
+          Navigator.pop(context);
+          await Future.delayed(const Duration(seconds: 0)).then(
+            (value) => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SignInScreen(),
+              ),
+            ),
+          );
+        } else {
+          Navigator.pop(context);
+          showScaffoldError(
+            context: context,
+            message: '${value['message']}',
+          );
+        }
+      });
+    }
+
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: ColorManager.kSecondaryColor,
       child: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 15),
-              const Center(
-                child: SidebarBrandLogo(height: 30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _MobileDrawerHeader(),
+            const Divider(height: 1, thickness: 1),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.only(top: 4, bottom: 8),
+                children: [
+                  _buildMainSection(sideBarController, navigate),
+                  _buildSalesSection(
+                    sideBarController,
+                    navigate,
+                    fetchSalesOrders,
+                  ),
+                  _buildInventorySection(sideBarController, navigate),
+                  _buildReportsSection(sideBarController, navigate),
+                  _buildAccountsSection(sideBarController, navigate),
+                  _buildDirectorySection(
+                    sideBarController,
+                    navigate,
+                    fetchSuppliers,
+                  ),
+                  _buildSettingsSection(sideBarController, navigate),
+                ],
               ),
-              // const SizedBox(height: 5),
-              // Center(
-              //   child: RichText(
-              //     textAlign: TextAlign.center,
-              //     text: TextSpan(
-              //       text: 'Cloud',
-              //       style: buildCustomStyle(FontWeightManager.semiBold,
-              //           FontSize.s18, 0.27, ColorManager.textColor),
-              //       children: <TextSpan>[
-              //         TextSpan(
-              //           text: 'POS',
-              //           style: buildCustomStyle(FontWeightManager.semiBold,
-              //               FontSize.s18, 0.27, ColorManager.kPrimaryColor),
-              //         ),
-              //       ],
-              //     ),
-              //   ),
-              // ),
-              if (_hasRole('sales_executive')) const SizedBox(height: 20),
-              if (_hasRole('sales_executive'))
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 15.0),
-                  child: UserSwitcher(),
+            ),
+            _MobileDrawerFooter(onLogout: handleLogout),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainSection(
+    SideBarController sideBarController,
+    void Function(int index) navigate,
+  ) {
+    return Consumer<RoleProvider>(
+      builder: (context, roleProvider, child) {
+        final hasHome =
+            roleProvider.currentUserHasPermissionSync('menu.home.main.access');
+        final hasBilling = roleProvider
+            .currentUserHasPermissionSync('menu.supermarket.main.access');
+        final hasDashboard = roleProvider
+            .currentUserHasPermissionSync('menu.dashboard.main.access');
+        final hasRestaurant = roleProvider
+            .currentUserHasPermissionSync('menu.restaurant.main.access');
+        final hasAttender = roleProvider
+            .currentUserHasPermissionSync('menu.restaurant.attender.access');
+        final hasKitchen = roleProvider.currentUserHasPermissionSync(
+            'menu.restaurant.kitchen_master.access');
+
+        if (!hasHome &&
+            !hasBilling &&
+            !hasDashboard &&
+            !hasRestaurant &&
+            !hasAttender &&
+            !hasKitchen) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _MobileSectionHeader(title: 'Main'),
+            if (hasHome)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.home_rounded,
+                  title: 'Home',
+                  onTap: () => navigate(0),
+                  selected: sideBarController.index.value == 0,
                 ),
-              const SizedBox(height: 20),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.homeIcon,
-                      title: 'Home',
-                      onTap: () => navigate(0),
-                      selected: sideBarController.index.value == 0,
-                    )),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.barcodeIcon,
-                      title: 'Billing',
-                      onTap: () => navigate(90),
-                      selected: sideBarController.index.value == 90,
-                    )),
-              if (_hasAnyRole(['attender']))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.barcodeIcon,
-                      title: 'Restaurant',
-                      onTap: () => navigate(55),
-                      selected: sideBarController.index.value == 55,
-                    )),
-              if (_hasAnyRole(['kitchen_master']))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.barcodeIcon,
-                      title: 'Kitchen Master',
-                      onTap: () => navigate(56),
-                      selected: sideBarController.index.value == 56,
-                    )),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.dashBoardIcon,
-                      title: 'Dashboard',
-                      onTap: () => navigate(1),
-                      selected: sideBarController.index.value == 1,
-                    )),
-              if (_hasRole('company_admin'))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.dashBoardIcon,
-                      title: 'Dashboard',
-                      onTap: () => navigate(1),
-                      selected: sideBarController.index.value == 1,
-                    )),
-              if (_hasAnyRole(
-                  ['kitchen_master', 'attender', 'sales_executive']))
-                Obx(() => DrawerListTileExpandableColumn(
-                      onTapTitle1: () => navigate(2),
-                      onTapTitle2: () => navigate(54),
-                      onTapTitle3: () => navigate(50),
-                      listTitle1: "Sales",
-                      listTitle2: "Confirmed Orders",
-                      listTitle3: "Sales Return",
-                      iconPath: ImageAssets.saleIcon,
-                      title: 'Sales',
-                      onTap: () {
-                        final salesProvider =
-                            Provider.of<SalesProvider>(context, listen: false);
-                        String? accessToken =
-                            Provider.of<AuthModel>(context, listen: false)
-                                .token;
-                        salesProvider.fetchOrders(
-                            accessToken: accessToken ?? '', storeId: 1);
-                        navigate(2);
-                      },
-                      selected: [2, 51, 54, 50, 49, 11]
-                          .contains(sideBarController.index.value),
-                    )),
-              if (_hasRole('company_admin'))
-                Obx(() => DrawerListTileExpandableColumn(
-                      onTapTitle1: () => navigate(2),
-                      onTapTitle4: () => navigate(84),
-                      listTitle1: "Sales",
-                      listTitle4: "Admin Day Sale Records",
-                      showTitle1: true,
-                      showTitle2: false,
-                      showTitle4: true,
-                      iconPath: ImageAssets.saleIcon,
-                      title: 'Sales',
-                      onTap: () {
-                        final salesProvider =
-                            Provider.of<SalesProvider>(context, listen: false);
-                        String? accessToken =
-                            Provider.of<AuthModel>(context, listen: false)
-                                .token;
-                        salesProvider.fetchOrders(
-                            accessToken: accessToken ?? '', storeId: 1);
-                        navigate(2);
-                      },
-                      selected:
-                          [2, 54, 84].contains(sideBarController.index.value),
-                    )),
-              if (_hasRole('company_admin'))
-                Obx(() => DrawerListTileExpandableColumn(
-                      onTapTitle1: () => navigate(85),
-                      onTapTitle2: () => navigate(65),
-                      onTapTitle3: () => navigate(67),
-                      onTapTitle4: () => navigate(77),
-                      onTapTitle5: () => navigate(80),
-                      listTitle1: "Executive Reports",
-                      listTitle2: "Customer Transactions Reports",
-                      listTitle3: "Supplier Transactions Reports",
-                      listTitle4: "Non-Stock Report",
-                      listTitle5: "Consumed Stocks Report",
-                      showTitle1: true,
-                      showTitle2: true,
-                      showTitle3: true,
-                      showTitle4: true,
-                      showTitle5: true,
-                      iconPath: ImageAssets.reportIcon,
-                      title: 'Reports',
-                      onTap: () => navigate(85),
-                      selected: [85, 65, 67, 77, 80]
-                          .contains(sideBarController.index.value),
-                    )),
-              if (_hasAnyRole(['kitchen_master', 'sales_executive', 'admin']))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.creditCardIcon,
-                      title: 'Category',
-                      onTap: () => navigate(12),
-                      selected: [12, 13, 27, 16, 34]
-                          .contains(sideBarController.index.value),
-                    )),
-              if (_hasAnyRole(['kitchen_master', 'sales_executive']))
-                Obx(() => DrawerListTileExpandableColumn(
-                      onTapTitle1: () => navigate(14),
-                      onTapTitle2: () => navigate(15),
-                      listTitle1: "Product",
-                      listTitle2: "Stock",
-                      iconPath: ImageAssets.allCategoryIcon,
-                      title: 'Product',
-                      onTap: () => navigate(14),
-                      selected: [14, 15, 18, 28, 17, 33, 35]
-                          .contains(sideBarController.index.value),
-                    )),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.cardIcon,
-                      title: 'Suppliers',
-                      onTap: () {
-                        final supplierProvider = Provider.of<SupplierProvider>(
-                            context,
-                            listen: false);
-                        String? accessToken =
-                            Provider.of<AuthModel>(context, listen: false)
-                                .token;
-                        supplierProvider.fetchSuppliers(
-                            accessToken: accessToken ?? '');
-                        navigate(52);
-                      },
-                      selected: sideBarController.index.value == 52,
-                    )),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTileExpandableColumn(
-                      onTapTitle1: () => navigate(21),
-                      onTapTitle2: () => navigate(47),
-                      listTitle1: "Invoice",
-                      listTitle2: "Receipts",
-                      iconPath: ImageAssets.transactionIcon,
-                      title: 'Accounts',
-                      onTap: () => navigate(21),
-                      selected: [21, 22, 30, 31, 32, 24, 25, 48, 47]
-                          .contains(sideBarController.index.value),
-                    )),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTileExpandableColumn(
-                      onTapTitle1: () => navigate(4),
-                      onTapTitle2: () => navigate(23),
-                      listTitle1: "Supplier Transactions",
-                      listTitle2: "Customer Transactions",
-                      iconPath: ImageAssets.transactionIcon,
-                      title: 'Transactions',
-                      onTap: () => navigate(4),
-                      selected: [4, 23].contains(sideBarController.index.value),
-                    )),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.customerIcon,
-                      title: 'Customers',
-                      onTap: () => navigate(5),
-                      selected:
-                          [5, 9, 38].contains(sideBarController.index.value),
-                    )),
-              if (_hasRole('sales_executive')) const SizedBox(height: 15),
-              if (_hasRole('sales_executive'))
-                Padding(
-                  padding: const EdgeInsets.only(left: 45.0),
-                  child: Text('Other',
-                      style: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s13, 0.16, ColorManager.textColor)),
-                ),
-              if (_hasRole('sales_executive')) const SizedBox(height: 15),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.printIcon,
-                      title: 'Printer',
-                      onTap: () => navigate(53),
-                      selected: sideBarController.index.value == 53,
-                    )),
-              if (_hasRole('sales_executive'))
-                Obx(() => DrawerListTile(
-                      iconPath: ImageAssets.consultingIcon,
-                      title: 'Settings',
-                      onTap: () => navigate(62),
-                      selected:
-                          [62, 63].contains(sideBarController.index.value),
-                    )),
-              DrawerListTile(
-                iconPath: ImageAssets.logoutIcon,
-                title: 'Logout',
-                onTap: () async {
-                  final authModel =
-                      Provider.of<AuthModel>(context, listen: false);
-                  String token = authModel.token ?? '';
-                  showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) {
-                        return const Center(
-                          child: CircularProgressIndicator.adaptive(),
-                        );
-                      });
-                  await AuthenticationProvider()
-                      .logout(token, context)
-                      .then((value) async {
-                    if (value["status"] == "success") {
-                      await SessionResetService.resetAfterLogout(context);
-                      showScaffold(
-                          context: context, message: '${value["message"]}');
-                      Navigator.pop(context);
-                      await Future.delayed(const Duration(seconds: 0)).then(
-                          (value) => Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const SignInScreen())));
-                    } else {
-                      Navigator.pop(context);
-                      showScaffoldError(
-                          context: context, message: '${value["message"]}');
-                    }
-                  });
-                },
-                selected: false,
               ),
-              const SizedBox(height: 50),
-            ],
+            if (hasBilling)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.point_of_sale_rounded,
+                  title: 'Billing',
+                  onTap: () => navigate(90),
+                  selected: sideBarController.index.value == 90,
+                ),
+              ),
+            if (hasDashboard)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.dashboard_rounded,
+                  title: 'Dashboard',
+                  onTap: () => navigate(1),
+                  selected: sideBarController.index.value == 1,
+                ),
+              ),
+            if (hasRestaurant)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.restaurant_rounded,
+                  title: 'Restaurant',
+                  onTap: () => navigate(89),
+                  selected: sideBarController.index.value == 89,
+                ),
+              ),
+            if (hasAttender)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.room_service_rounded,
+                  title: 'Attender',
+                  onTap: () => navigate(55),
+                  selected: sideBarController.index.value == 55,
+                ),
+              ),
+            if (hasKitchen)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.soup_kitchen_rounded,
+                  title: 'Kitchen Master',
+                  onTap: () => navigate(56),
+                  selected: sideBarController.index.value == 56,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSalesSection(
+    SideBarController sideBarController,
+    void Function(int index) navigate,
+    VoidCallback fetchSalesOrders,
+  ) {
+    return Consumer<RoleProvider>(
+      builder: (context, roleProvider, child) {
+        final hasSalesPermission = roleProvider
+            .currentUserHasPermissionSync('menu.sales.orders.access');
+        final hasConfirmedOrdersPermission = roleProvider
+            .currentUserHasPermissionSync('menu.sales.confirmed_orders.access');
+        final hasSalesReturnPermission = roleProvider
+            .currentUserHasPermissionSync('menu.sales.returns.access');
+        final hasDayClosingPermission = roleProvider
+            .currentUserHasPermissionSync('menu.sales.day_closing.access');
+        final hasOnlineSalesPermission = roleProvider
+            .currentUserHasPermissionSync('menu.sales.online_sales.access');
+        final hasQuotationPermission = roleProvider
+            .currentUserHasPermissionSync('menu.quotation.main.access');
+        final isCompanyAdmin = userRole == 'company_admin';
+
+        final hasSalesGroup = hasSalesPermission ||
+            hasConfirmedOrdersPermission ||
+            hasSalesReturnPermission ||
+            hasDayClosingPermission ||
+            hasOnlineSalesPermission;
+
+        if (!hasSalesGroup && !hasQuotationPermission) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _MobileSectionDivider(),
+            const _MobileSectionHeader(title: 'Sales'),
+            if (hasSalesGroup)
+              Obx(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () => navigate(2),
+                  onTapTitle2: () => navigate(54),
+                  onTapTitle3: () => navigate(50),
+                  onTapTitle4: () => navigate(78),
+                  onTapTitle5: () => navigate(84),
+                  onTapTitle6: () => navigate(92),
+                  listTitle1: 'Sales',
+                  listTitle2: 'Confirmed Orders',
+                  listTitle3: 'Sales Return',
+                  listTitle4: 'Day Sale Closing',
+                  listTitle5: 'Admin Day Sale records',
+                  listTitle6: 'Online Orders',
+                  showTitle1: hasSalesPermission,
+                  showTitle2: hasConfirmedOrdersPermission,
+                  showTitle3: hasSalesReturnPermission,
+                  showTitle4: hasDayClosingPermission,
+                  showTitle5: isCompanyAdmin && hasDayClosingPermission,
+                  showTitle6: hasOnlineSalesPermission || isCompanyAdmin,
+                  icon: Icons.shopping_cart_rounded,
+                  title: 'Sales',
+                  onTap: () {
+                    fetchSalesOrders();
+                    navigate(2);
+                  },
+                  selected: [
+                    2,
+                    11,
+                    49,
+                    50,
+                    51,
+                    54,
+                    78,
+                    79,
+                    84,
+                    92,
+                  ].contains(sideBarController.index.value),
+                  iconSize: 22,
+                ),
+              ),
+            if (hasQuotationPermission)
+              Obx(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () => navigate(86),
+                  onTapTitle2: () => navigate(87),
+                  listTitle1: 'Quotations',
+                  listTitle2: 'Quotation List',
+                  icon: Icons.request_quote_rounded,
+                  title: 'Quotations',
+                  onTap: () => navigate(86),
+                  selected: [86, 87, 88]
+                      .contains(sideBarController.index.value),
+                  iconSize: 22,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInventorySection(
+    SideBarController sideBarController,
+    void Function(int index) navigate,
+  ) {
+    return Consumer<RoleProvider>(
+      builder: (context, roleProvider, child) {
+        final hasCategory = roleProvider
+            .currentUserHasPermissionSync('menu.catalog.category.access');
+        final hasProductPermission = roleProvider
+            .currentUserHasPermissionSync('menu.catalog.product.list.access');
+        final hasStockPermission = roleProvider
+            .currentUserHasPermissionSync('menu.catalog.product.stock.access');
+        final hasBarcodePermission = roleProvider
+            .currentUserHasPermissionSync('menu.catalog.product.barcode.access');
+        final hasPurchase = roleProvider
+            .currentUserHasPermissionSync('menu.purchase.orders.access');
+
+        final hasProductGroup =
+            hasProductPermission || hasStockPermission || hasBarcodePermission;
+
+        if (!hasCategory && !hasProductGroup && !hasPurchase) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _MobileSectionDivider(),
+            const _MobileSectionHeader(title: 'Inventory'),
+            if (hasCategory)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.category_rounded,
+                  title: 'Category',
+                  onTap: () => navigate(12),
+                  selected: [12, 13, 16, 27, 34]
+                      .contains(sideBarController.index.value),
+                ),
+              ),
+            if (hasProductGroup)
+              Obx(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () => navigate(14),
+                  onTapTitle2: () => navigate(15),
+                  onTapTitle3: () => navigate(83),
+                  listTitle1: 'Product',
+                  listTitle2: 'Stock',
+                  listTitle3: 'Product Barcode',
+                  showTitle1: hasProductPermission,
+                  showTitle2: hasStockPermission,
+                  showTitle3: hasBarcodePermission,
+                  icon: Icons.inventory_2_rounded,
+                  title: 'Product',
+                  onTap: () => navigate(14),
+                  selected: [14, 15, 17, 18, 28, 33, 35, 83]
+                      .contains(sideBarController.index.value),
+                  iconSize: 22,
+                ),
+              ),
+            if (hasPurchase)
+              Obx(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () => navigate(81),
+                  listTitle1: 'Purchase Orders',
+                  showTitle1: true,
+                  icon: Icons.shopping_bag_rounded,
+                  title: 'Purchase',
+                  onTap: () => navigate(81),
+                  selected: [81, 82, 36]
+                      .contains(sideBarController.index.value),
+                  iconSize: 22,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildReportsSection(
+    SideBarController sideBarController,
+    void Function(int index) navigate,
+  ) {
+    return Consumer<RoleProvider>(
+      builder: (context, roleProvider, child) {
+        final hasSalesExecutiveReportsPermission = roleProvider
+            .currentUserHasPermissionSync('menu.reports.sales_executive.access');
+        final hasExecutiveSummaryPermission = roleProvider
+            .currentUserHasPermissionSync('menu.reports.executive_summary.access');
+        final hasCustomerTransactionsPermission = roleProvider
+            .currentUserHasPermissionSync(
+                'menu.reports.customer_transactions.access');
+        final hasSupplierTransactionsPermission = roleProvider
+            .currentUserHasPermissionSync(
+                'menu.reports.supplier_transactions.access');
+        final hasNonStockPermission = roleProvider
+            .currentUserHasPermissionSync('menu.reports.non_stock.access');
+        final hasConsumedStockPermission = roleProvider
+            .currentUserHasPermissionSync('menu.reports.consumed_stock.access');
+        final isCompanyAdmin = userRole == 'company_admin';
+
+        if (!hasSalesExecutiveReportsPermission &&
+            !hasCustomerTransactionsPermission &&
+            !hasSupplierTransactionsPermission &&
+            !hasExecutiveSummaryPermission &&
+            !hasNonStockPermission &&
+            !hasConsumedStockPermission &&
+            !isCompanyAdmin) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _MobileSectionDivider(),
+            const _MobileSectionHeader(title: 'Reports'),
+            Obx(
+              () => DrawerListTileExpandableColumn(
+                onTapTitle1: () => navigate(58),
+                onTapTitle2: () => navigate(85),
+                onTapTitle3: () => navigate(65),
+                onTapTitle4: () => navigate(67),
+                onTapTitle5: () => navigate(77),
+                onTapTitle6: () => navigate(80),
+                listTitle1: 'Sales Executive Reports',
+                listTitle2: 'Executive Reports',
+                listTitle3: 'Customer Transactions Reports',
+                listTitle4: 'Supplier Transactions Reports',
+                listTitle5: 'Non-Stock Report',
+                listTitle6: 'Consumed Stocks Report',
+                showTitle1: hasSalesExecutiveReportsPermission,
+                showTitle2: isCompanyAdmin || hasExecutiveSummaryPermission,
+                showTitle3: hasCustomerTransactionsPermission,
+                showTitle4: hasSupplierTransactionsPermission,
+                showTitle5: hasNonStockPermission,
+                showTitle6: hasConsumedStockPermission,
+                icon: Icons.analytics_rounded,
+                title: 'Reports',
+                onTap: () => navigate(isCompanyAdmin ? 85 : 58),
+                selected: [
+                  39,
+                  40,
+                  41,
+                  42,
+                  58,
+                  65,
+                  66,
+                  67,
+                  68,
+                  77,
+                  80,
+                  85,
+                ].contains(sideBarController.index.value),
+                iconSize: 22,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAccountsSection(
+    SideBarController sideBarController,
+    void Function(int index) navigate,
+  ) {
+    return Consumer<RoleProvider>(
+      builder: (context, roleProvider, child) {
+        final hasInvoicePermission = roleProvider
+            .currentUserHasPermissionSync('menu.transactions.invoice.access');
+        final hasProformaPermission = roleProvider
+            .currentUserHasPermissionSync('menu.transactions.proforma.access');
+        final hasReceiptsPermission = roleProvider
+            .currentUserHasPermissionSync('menu.transactions.receipts.access');
+        final hasCustomerVouchersPermission = roleProvider
+            .currentUserHasPermissionSync(
+                'menu.transactions.customer_voucher.access');
+        final hasSupplierVouchersPermission = roleProvider
+            .currentUserHasPermissionSync(
+                'menu.transactions.supplier_voucher_purchase.access');
+        final hasPartyCustomer = roleProvider.currentUserHasPermissionSync(
+            'menu.party_accounts.customer_transactions.access');
+        final hasPartySupplier = roleProvider.currentUserHasPermissionSync(
+            'menu.party_accounts.supplier_transactions.access');
+
+        final hasTransactions = hasInvoicePermission ||
+            hasReceiptsPermission ||
+            hasCustomerVouchersPermission ||
+            hasSupplierVouchersPermission ||
+            hasProformaPermission;
+        final hasPartyAccounts = hasPartyCustomer || hasPartySupplier;
+
+        if (!hasTransactions && !hasPartyAccounts) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _MobileSectionDivider(),
+            const _MobileSectionHeader(title: 'Accounts'),
+            if (hasTransactions)
+              Obx(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () => navigate(21),
+                  onTapTitle2: () => navigate(47),
+                  onTapTitle3: () => navigate(70),
+                  onTapTitle4: () => navigate(75),
+                  onTapTitle5: () => navigate(91),
+                  listTitle1: 'Invoice',
+                  listTitle2: 'Receipts',
+                  listTitle3: 'Customer Voucher',
+                  listTitle4: 'Supplier Voucher (Purchase Entry)',
+                  listTitle5: 'Proforma Invoice',
+                  showTitle1: hasInvoicePermission,
+                  showTitle2: hasReceiptsPermission,
+                  showTitle3: hasCustomerVouchersPermission,
+                  showTitle4: hasSupplierVouchersPermission,
+                  showTitle5: hasProformaPermission,
+                  icon: Icons.receipt_long_rounded,
+                  title: 'Transactions',
+                  onTap: () => navigate(21),
+                  selected: [
+                    21,
+                    24,
+                    30,
+                    31,
+                    47,
+                    48,
+                    70,
+                    71,
+                    75,
+                    76,
+                    91,
+                  ].contains(sideBarController.index.value),
+                  iconSize: 22,
+                ),
+              ),
+            if (hasPartyAccounts)
+              Obx(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () => navigate(23),
+                  onTapTitle2: () => navigate(74),
+                  listTitle1: 'Customer Transactions',
+                  listTitle2: 'Supplier Transactions',
+                  showTitle1: hasPartyCustomer,
+                  showTitle2: hasPartySupplier,
+                  icon: Icons.account_balance_wallet_rounded,
+                  title: 'Party Accounts',
+                  onTap: () => navigate(23),
+                  selected: [23, 74].contains(sideBarController.index.value),
+                  iconSize: 22,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDirectorySection(
+    SideBarController sideBarController,
+    void Function(int index) navigate,
+    VoidCallback fetchSuppliers,
+  ) {
+    return Consumer<RoleProvider>(
+      builder: (context, roleProvider, child) {
+        final hasCustomers = roleProvider
+            .currentUserHasPermissionSync('menu.customers.main.access');
+        final hasSuppliersPermission = roleProvider
+            .currentUserHasPermissionSync('menu.suppliers.list.access');
+        final hasSupplierTransactionsPermission = roleProvider
+            .currentUserHasPermissionSync('menu.suppliers.transactions.access');
+        final hasSupplierVouchersPermission = roleProvider
+            .currentUserHasPermissionSync('menu.suppliers.voucher.access');
+
+        final hasSuppliersGroup = hasSuppliersPermission ||
+            hasSupplierTransactionsPermission ||
+            hasSupplierVouchersPermission;
+
+        if (!hasCustomers && !hasSuppliersGroup) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _MobileSectionDivider(),
+            const _MobileSectionHeader(title: 'Directory'),
+            if (hasCustomers)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.people_rounded,
+                  title: 'Customers',
+                  onTap: () => navigate(5),
+                  selected: [5, 9, 10, 38]
+                      .contains(sideBarController.index.value),
+                ),
+              ),
+            if (hasSuppliersGroup)
+              Obx(
+                () => DrawerListTileExpandableColumn(
+                  onTapTitle1: () {
+                    fetchSuppliers();
+                    navigate(52);
+                  },
+                  onTapTitle2: () => navigate(4),
+                  onTapTitle3: () => navigate(72),
+                  listTitle1: 'Suppliers',
+                  listTitle2: 'Supplier Transactions',
+                  listTitle3: 'Supplier Voucher',
+                  showTitle1: hasSuppliersPermission,
+                  showTitle2: hasSupplierTransactionsPermission,
+                  showTitle3: hasSupplierVouchersPermission,
+                  icon: Icons.local_shipping_rounded,
+                  title: 'Suppliers',
+                  onTap: () {
+                    fetchSuppliers();
+                    navigate(52);
+                  },
+                  selected: [52, 57, 69, 4, 72, 73]
+                      .contains(sideBarController.index.value),
+                  iconSize: 22,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSettingsSection(
+    SideBarController sideBarController,
+    void Function(int index) navigate,
+  ) {
+    return Consumer<RoleProvider>(
+      builder: (context, roleProvider, child) {
+        final hasPrinter = roleProvider
+            .currentUserHasPermissionSync('menu.settings.printer.access');
+        final hasSettings = roleProvider
+            .currentUserHasPermissionSync('menu.settings.main.access');
+
+        if (!hasPrinter && !hasSettings) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _MobileSectionDivider(),
+            const _MobileSectionHeader(title: 'Settings'),
+            if (hasPrinter)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.print_rounded,
+                  title: 'Printer',
+                  onTap: () => navigate(53),
+                  selected: sideBarController.index.value == 53,
+                ),
+              ),
+            if (hasSettings)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.settings_rounded,
+                  title: 'Settings',
+                  onTap: () => navigate(62),
+                  selected: [62, 63].contains(sideBarController.index.value),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MobileDrawerHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Center(child: SidebarBrandLogo(height: 28)),
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              if (!roleProvider.currentUserHasPermissionSync(
+                  'menu.utility.user_switcher.access')) {
+                return const SizedBox.shrink();
+              }
+              return const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: UserSwitcher(compact: true),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileSectionHeader extends StatelessWidget {
+  final String title;
+
+  const _MobileSectionHeader({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      child: Text(
+        title.toUpperCase(),
+        style: buildCustomStyle(
+          FontWeightManager.semiBold,
+          FontSize.s11,
+          0.6,
+          ColorManager.kGreyColor,
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileSectionDivider extends StatelessWidget {
+  const _MobileSectionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Divider(
+        height: 1,
+        thickness: 1,
+        color: ColorManager.kPrimaryColor.withOpacity(0.12),
+      ),
+    );
+  }
+}
+
+class _MobileDrawerTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _MobileDrawerTile({
+    required this.icon,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Material(
+        color: selected ? ColorManager.kPrimaryColor : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        elevation: selected ? 1 : 0,
+        shadowColor: ColorManager.kPrimaryColor.withOpacity(0.25),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 22,
+                    color: selected ? Colors.white : ColorManager.kPrimaryColor,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w500,
+                        fontSize: 15,
+                        color: selected
+                            ? Colors.white
+                            : ColorManager.kTitleTextColor,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MobileDrawerFooter extends StatelessWidget {
+  final Future<void> Function() onLogout;
+
+  const _MobileDrawerFooter({required this.onLogout});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: ColorManager.kPrimaryColor.withOpacity(0.12)),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _MobileDrawerTile(
+            icon: Icons.logout_rounded,
+            title: 'Logout',
+            selected: false,
+            onTap: () => onLogout(),
+          ),
+          const SizedBox(height: 6),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              final version = snapshot.hasData
+                  ? 'v${snapshot.data!.version}'
+                  : 'CloudPOS';
+              return Center(
+                child: Text(
+                  version,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s11,
+                    0.2,
+                    ColorManager.kGreyColor,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

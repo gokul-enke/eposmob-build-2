@@ -9,11 +9,17 @@ class OrderCard extends StatelessWidget {
     required this.order,
     required this.onTap,
     required this.onEdit,
+    this.onPrint,
+    this.onDelete,
+    this.isLoadingOrder = false,
   });
 
   final SavedOrder order;
-  final VoidCallback onTap;
-  final VoidCallback onEdit;
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onPrint;
+  final VoidCallback? onDelete;
+  final bool isLoadingOrder;
 
   bool get _isReady {
     final status = order.status?.trim().toLowerCase() ?? '';
@@ -49,7 +55,7 @@ class OrderCard extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: onTap,
+        onTap: isLoadingOrder ? null : onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -131,14 +137,35 @@ class OrderCard extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Divider(height: 1, color: Colors.grey.shade100),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               Row(
                 children: [
+                  Semantics(
+                    label: 'Print saved order',
+                    button: true,
+                    child: _OrderIconAction(
+                      icon: Icons.print_outlined,
+                      color: Colors.blue.shade700,
+                      onPressed: isLoadingOrder ? null : onPrint,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Semantics(
+                    label: 'Delete saved order',
+                    button: true,
+                    child: _OrderIconAction(
+                      icon: Icons.delete_outline,
+                      color: ColorManager.kButtonRed,
+                      onPressed: isLoadingOrder ? null : onDelete,
+                    ),
+                  ),
+                  const Spacer(),
                   Expanded(
                     child: Text(
                       '\$${order.total.toStringAsFixed(2)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
                       style: const TextStyle(
                         fontFamily: 'Poppins',
                         color: ColorManager.kPrimaryColor,
@@ -147,9 +174,14 @@ class OrderCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   _isReady
-                      ? _CompleteButton(onTap: onTap)
-                      : _EditButton(onTap: onEdit),
+                      ? _CompleteButton(
+                          onTap: isLoadingOrder ? null : onTap,
+                        )
+                      : _EditButton(
+                          onTap: isLoadingOrder ? null : onEdit,
+                        ),
                 ],
               ),
             ],
@@ -160,10 +192,40 @@ class OrderCard extends StatelessWidget {
   }
 }
 
+class _OrderIconAction extends StatelessWidget {
+  const _OrderIconAction({
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  static const double _minTouchTarget = 44;
+
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          width: _minTouchTarget,
+          height: _minTouchTarget,
+          child: Icon(icon, size: 20, color: color),
+        ),
+      ),
+    );
+  }
+}
+
 class _CompleteButton extends StatelessWidget {
   const _CompleteButton({required this.onTap});
 
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -196,19 +258,19 @@ class _CompleteButton extends StatelessWidget {
 class _EditButton extends StatelessWidget {
   const _EditButton({required this.onTap});
 
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: ColorManager.kPrimaryColor.withOpacity(0.1),
+      color: ColorManager.kPrimaryColor.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: const SizedBox(
-          height: 32,
-          width: 36,
+          height: 44,
+          width: 44,
           child: Icon(
             Icons.edit,
             color: ColorManager.kPrimaryColor,

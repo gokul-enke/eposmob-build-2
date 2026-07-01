@@ -1060,16 +1060,18 @@ class BillingPageState extends State<BillingPage>
   void _saveOrder() async {
     debugPrint("Save Order pressed");
     final service = CheckoutService(context);
-    final updated = await service.saveOrder();
-    if (updated) {
+    final result = await service.saveOrder();
+    if (result == SaveOrderResult.updatedExisting) {
       // Updated existing order -> only clear cart (matches previous UX)
       _clearCart();
-    } else {
+    } else if (result == SaveOrderResult.savedNew) {
       // New saved order -> reset and clear
       resetAutocomplete();
       _fetchCustomers();
       _clearCart();
     }
+    // validationFailed / failed: service already showed error snackbar; do not
+    // clear the workspace or cart.
   }
 
   void _saveOrderAndPrint() async {
