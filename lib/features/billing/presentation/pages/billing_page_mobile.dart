@@ -116,7 +116,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     if (Get.isRegistered<SideBarController>()) {
       _sideBarController = Get.find<SideBarController>();
-      _syncBillingMobileAppBarTitle(_currentTabIndex);
+      // Defer: updating GetX Rx during ancestor build trips markNeedsBuild on
+      // MainScreen's Obx app-bar title while BillingPageResponsive is building.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _syncBillingMobileAppBarTitle(_currentTabIndex);
+      });
     }
 
     // Initialize tab controller
@@ -193,9 +197,13 @@ class BillingPageMobileState extends State<BillingPageMobile>
     billingProvider.unitPriceFocusNode
         .addListener(billingProvider.handleUnitPriceFocusChange);
 
-    // Initialize delivery method
-    billingProvider.initializeDeliveryMethod();
-    _syncAllSettings();
+    billingProvider.registerDefaultKeyboardShortcuts(
+      onClearCart: clearCart,
+      onSaveOrder: saveOrder,
+      onCreateOrderAndPrint: createOrderAndPrint,
+      onConfirmOrder: confirmOrder,
+    );
+
     if (accessToken != null && accessToken.isNotEmpty) {
       billingProvider.fetchCustomers(accessToken: accessToken).then((_) {
         if (!mounted) return;
@@ -210,16 +218,12 @@ class BillingPageMobileState extends State<BillingPageMobile>
       }());
     }
 
-    billingProvider.registerDefaultKeyboardShortcuts(
-      onClearCart: clearCart,
-      onSaveOrder: saveOrder,
-      onCreateOrderAndPrint: createOrderAndPrint,
-      onConfirmOrder: confirmOrder,
-    );
-
-    // Rehydrate UI from saved order/discounts
+    // Defer provider mutations that notifyListeners — initState runs while
+    // BillingPageResponsive is still building this widget.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      billingProvider.initializeDeliveryMethod();
+      _syncAllSettings();
       _setupSettingsSyncListeners();
       _rehydrateFromProvider();
     });
@@ -272,6 +276,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
       billingProvider: billingProvider,
       appSettings: appSettings,
     );
+    _paymentController.syncPaymentAutofillIfNeeded(billingProvider);
     _settingsController.syncDefaultDeliveryMethod(
       billingProvider: billingProvider,
       deliveryMethodsProvider: deliveryMethodsProvider,
@@ -312,6 +317,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         billingProvider: billingProvider,
         appSettings: appSettings,
       );
+      _paymentController.syncPaymentAutofillIfNeeded(billingProvider);
       _settingsController.syncDefaultDeliveryMethod(
         billingProvider: billingProvider,
         deliveryMethodsProvider: deliveryMethodsProvider,
@@ -633,6 +639,17 @@ class BillingPageMobileState extends State<BillingPageMobile>
       return false;
     }
 
+    if (!billingProvider.validateCarNumberIfNeeded()) {
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.enterCarNumber,
+      );
+      if (switchToBillingTab) {
+        _switchToTab(1);
+      }
+      return false;
+    }
+
     return true;
   }
 
@@ -803,7 +820,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _autocompleteProductKey = GlobalKey();
         _autocompletePhoneKey = GlobalKey();
       });
-      showScaffold(context: context, message: 'New order started');
+      showScaffold(context: context, message: 'common.create_new_order'.tr);
       _switchToTab(0);
       _focusTextField();
     } catch (error) {
@@ -822,11 +839,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
   Future<void> printSavedOrder(SavedOrder order) async {
     try {
       await _controller.printSavedOrder(context, order);
-      if (!mounted) return;
-      showScaffold(
-        context: context,
-        message: 'Printing order ${order.orderNumber}',
-      );
     } catch (error) {
       if (!mounted) return;
       showScaffoldError(
@@ -869,7 +881,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     if (isSwitchingOrder && localProductProvider.cartItems.isNotEmpty) {
       try {
         _controller.saveCurrentCartAsDraft(context);
-        showScaffold(context: context, message: 'Current order saved as draft');
+        showScaffold(context: context, message: 'billing.order_saved'.tr);
       } catch (error) {
         billingDebugLog('Error preserving current order: $error');
       }
@@ -889,7 +901,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
       // Switch to cart tab to show loaded cart
       _switchToTab(3);
 
-      showScaffold(context: context, message: "Order loaded for editing");
+      showScaffold(context: context, message: 'billing.order_loaded_editing'.tr);
     } catch (error) {
       billingDebugLog('Error loading order: $error');
       showScaffoldError(
@@ -906,12 +918,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
   Widget build(BuildContext context) {
     super.build(context);
 
-    return SafeArea(
-      bottom: false,
-      child: KeyboardListener(
-        focusNode: _focusNode,
-        onKeyEvent: _handleKeyPress,
-        child: Scaffold(
+    return KeyboardListener(
+      focusNode: _focusNode,
+      onKeyEvent: _handleKeyPress,
+      child: Scaffold(
           backgroundColor: Colors.white,
           body: Form(
             key: _formKey,
@@ -948,6 +958,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
                   onSaveOrder: saveOrder,
                   onCreateOrderAndPrint: createOrderAndPrint,
                   onSaveAndPrint: saveOrderAndPrint,
+                  isSavingOrder: _isSavingOrder,
                   isConfirmingOrder: _isConfirmingOrder,
                   isConfirmingAndPrinting: _isConfirmingAndPrinting,
                   isSavingAndPrinting: _isSavingAndPrinting,
@@ -981,7 +992,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
             onTap: _switchToTab,
           ),
         ),
-      ),
     );
   }
 }

@@ -4,7 +4,8 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 
-import 'package:pos_machine/features/billing/domain/product_stock_summary.dart';
+// TODO: re-enable stock badge
+// import 'package:pos_machine/features/billing/domain/product_stock_summary.dart';
 
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 
@@ -49,6 +50,24 @@ void _showProductDetails(BuildContext context, GetProduct product) {
 }
 
 
+
+Future<void> _directAddToCart(BuildContext context, GetProduct product) async {
+  try {
+    await addProductWithVariantResolution(
+      context: context,
+      product: product,
+      quantity: 1,
+      addToCartDirectly: true,
+    );
+  } catch (_) {
+    if (context.mounted) {
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.addToCartFailed,
+      );
+    }
+  }
+}
 
 Future<void> _openAddSheet(BuildContext context, GetProduct product) async {
 
@@ -184,7 +203,7 @@ class MarketProductGrid extends StatelessWidget {
 
         itemCount: products.length,
 
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, __) => const SizedBox(height: 6),
 
         itemBuilder: (context, index) {
 
@@ -203,6 +222,8 @@ class MarketProductGrid extends StatelessWidget {
                 : null,
 
             onAddWithOptions: () => _openAddSheet(context, product),
+
+            onDirectAdd: () => _directAddToCart(context, product),
 
           );
 
@@ -228,11 +249,11 @@ class MarketProductGrid extends StatelessWidget {
 
         crossAxisCount: isDense ? 3 : 2,
 
-        mainAxisSpacing: isDense ? 10 : 16,
+        mainAxisSpacing: isDense ? 6 : 10,
 
-        crossAxisSpacing: isDense ? 8 : 14,
+        crossAxisSpacing: isDense ? 6 : 8,
 
-        childAspectRatio: isDense ? 0.62 : 0.64,
+        childAspectRatio: isDense ? 0.68 : 0.72,
 
       ),
 
@@ -258,6 +279,8 @@ class MarketProductGrid extends StatelessWidget {
 
           onAddWithOptions: () => _openAddSheet(context, product),
 
+          onDirectAdd: () => _directAddToCart(context, product),
+
         );
 
       },
@@ -278,6 +301,8 @@ class ProductListRow extends StatelessWidget {
 
   final VoidCallback? onAddWithOptions;
 
+  final VoidCallback? onDirectAdd;
+
   final String currency;
 
 
@@ -292,15 +317,16 @@ class ProductListRow extends StatelessWidget {
 
     required this.onAddWithOptions,
 
+    this.onDirectAdd,
+
     this.currency = '',
 
   });
 
 
 
-  bool get _inStock => hasAvailableStock(product.stock?.map((s) => s.quantity));
-
-
+  // TODO: re-enable stock badge
+  // bool get _inStock => hasAvailableStock(product.stock?.map((s) => s.quantity));
 
   String get _displayName => product.productName ?? 'Unnamed Product';
 
@@ -310,7 +336,7 @@ class ProductListRow extends StatelessWidget {
 
   Widget build(BuildContext context) {
 
-    final inStock = _inStock;
+    // final inStock = _inStock; // TODO: re-enable stock badge
 
     final imageUrl = resolveMarketProductImageUrl(product);
 
@@ -322,15 +348,15 @@ class ProductListRow extends StatelessWidget {
 
     return Container(
 
-      constraints: const BoxConstraints(minHeight: 88),
+      constraints: const BoxConstraints(minHeight: 72),
 
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
 
       decoration: BoxDecoration(
 
         color: Colors.white,
 
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
 
         border: Border.all(color: Colors.grey.shade200),
 
@@ -356,99 +382,172 @@ class ProductListRow extends StatelessWidget {
 
         children: [
 
-          ClipRRect(
-
-            borderRadius: BorderRadius.circular(8),
-
-            child: SizedBox(
-
-              width: 64,
-
-              height: 64,
-
-              child: imageUrl != null
-
-                  ? Image.network(
-
-                      imageUrl,
-
-                      fit: BoxFit.cover,
-
-                      errorBuilder: (context, error, stackTrace) =>
-
-                          _fallbackImage(),
-
-                    )
-
-                  : _fallbackImage(),
-
-            ),
-
-          ),
-
-          const SizedBox(width: 12),
-
           Expanded(
 
-            child: Column(
+            child: _ListBodyTapTarget(
 
-              crossAxisAlignment: CrossAxisAlignment.start,
+              onTap: onDirectAdd,
 
-              mainAxisAlignment: MainAxisAlignment.center,
+              child: Row(
 
-              children: [
+                crossAxisAlignment: CrossAxisAlignment.center,
 
-                Tooltip(
+                children: [
 
-                  message: _displayName,
+                  ClipRRect(
 
-                  waitDuration: const Duration(milliseconds: 400),
+                    borderRadius: BorderRadius.circular(6),
 
-                  child: Text(
+                    child: SizedBox(
 
-                    _displayName,
+                      width: 52,
 
-                    maxLines: 2,
+                      height: 52,
 
-                    overflow: TextOverflow.ellipsis,
+                      child: imageUrl != null
 
-                    style: const TextStyle(
+                          ? Image.network(
 
-                      fontFamily: 'Poppins',
+                              imageUrl,
 
-                      fontSize: 14,
+                              fit: BoxFit.cover,
 
-                      height: 1.2,
+                              errorBuilder: (context, error, stackTrace) =>
 
-                      fontWeight: FontWeight.w600,
+                                  _fallbackImage(),
 
-                      color: Colors.black87,
+                            )
+
+                          : _fallbackImage(),
 
                     ),
 
                   ),
 
-                ),
+                  const SizedBox(width: 8),
 
-                if (category != null) ...[
+                  Expanded(
 
-                  const SizedBox(height: 2),
+                    child: Column(
 
-                  Text(
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
-                    category,
+                      mainAxisAlignment: MainAxisAlignment.center,
 
-                    maxLines: 1,
+                      mainAxisSize: MainAxisSize.min,
 
-                    overflow: TextOverflow.ellipsis,
+                      children: [
 
-                    style: TextStyle(
+                        Tooltip(
 
-                      fontFamily: 'Poppins',
+                          message: _displayName,
 
-                      fontSize: 11,
+                          waitDuration: const Duration(milliseconds: 400),
 
-                      color: Colors.grey.shade600,
+                          child: Text(
+
+                            _displayName,
+
+                            maxLines: 2,
+
+                            overflow: TextOverflow.ellipsis,
+
+                            style: const TextStyle(
+
+                              fontFamily: 'Poppins',
+
+                              fontSize: 13,
+
+                              height: 1.15,
+
+                              fontWeight: FontWeight.w600,
+
+                              color: Colors.black87,
+
+                            ),
+
+                          ),
+
+                        ),
+
+                        if (category != null) ...[
+
+                          const SizedBox(height: 1),
+
+                          Text(
+
+                            category,
+
+                            maxLines: 1,
+
+                            overflow: TextOverflow.ellipsis,
+
+                            style: TextStyle(
+
+                              fontFamily: 'Poppins',
+
+                              fontSize: 10,
+
+                              color: Colors.grey.shade600,
+
+                            ),
+
+                          ),
+
+                        ],
+
+                        const SizedBox(height: 3),
+
+                        FittedBox(
+
+                          fit: BoxFit.scaleDown,
+
+                          alignment: Alignment.centerLeft,
+
+                          child: Text(
+
+                            price,
+
+                            style: const TextStyle(
+
+                              fontFamily: 'Poppins',
+
+                              color: ColorManager.kPrimaryColor,
+
+                              fontWeight: FontWeight.w700,
+
+                              fontSize: 14,
+
+                            ),
+
+                          ),
+
+                        ),
+
+                        // TODO: re-enable stock badge
+                        // Row(
+                        //   children: [
+                        //     Flexible(
+                        //       child: FittedBox(
+                        //         fit: BoxFit.scaleDown,
+                        //         alignment: Alignment.centerLeft,
+                        //         child: Text(
+                        //           price,
+                        //           style: const TextStyle(
+                        //             fontFamily: 'Poppins',
+                        //             color: ColorManager.kPrimaryColor,
+                        //             fontWeight: FontWeight.w700,
+                        //             fontSize: 15,
+                        //           ),
+                        //         ),
+                        //       ),
+                        //     ),
+                        //     const SizedBox(width: 8),
+                        //     _ListStockChip(inStock: inStock),
+                        //   ],
+                        // ),
+
+                      ],
 
                     ),
 
@@ -456,57 +555,13 @@ class ProductListRow extends StatelessWidget {
 
                 ],
 
-                const SizedBox(height: 6),
-
-                Row(
-
-                  children: [
-
-                    Flexible(
-
-                      child: FittedBox(
-
-                        fit: BoxFit.scaleDown,
-
-                        alignment: Alignment.centerLeft,
-
-                        child: Text(
-
-                          price,
-
-                          style: const TextStyle(
-
-                            fontFamily: 'Poppins',
-
-                            color: ColorManager.kPrimaryColor,
-
-                            fontWeight: FontWeight.w700,
-
-                            fontSize: 15,
-
-                          ),
-
-                        ),
-
-                      ),
-
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    _ListStockChip(inStock: inStock),
-
-                  ],
-
-                ),
-
-              ],
+              ),
 
             ),
 
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
 
           ProductCardActions(
 
@@ -540,7 +595,7 @@ class ProductListRow extends StatelessWidget {
 
         color: Colors.blueGrey.shade200,
 
-        size: 28,
+        size: 22,
 
       ),
 
@@ -552,58 +607,67 @@ class ProductListRow extends StatelessWidget {
 
 
 
+class _ListBodyTapTarget extends StatelessWidget {
+  const _ListBodyTapTarget({
+    required this.child,
+    this.onTap,
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (onTap == null) {
+      return child;
+    }
+
+    return Semantics(
+      label: 'Add product to cart',
+      button: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+
+
+// TODO: re-enable stock badge
+/*
 class _ListStockChip extends StatelessWidget {
-
   const _ListStockChip({required this.inStock});
-
-
 
   final bool inStock;
 
-
-
   @override
-
   Widget build(BuildContext context) {
-
     return Container(
-
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-
       decoration: BoxDecoration(
-
         color: inStock ? Colors.green.shade50 : Colors.red.shade50,
-
         borderRadius: BorderRadius.circular(4),
-
       ),
-
       child: Text(
-
         inStock ? 'Available' : 'Out of Stock',
-
         maxLines: 1,
-
         overflow: TextOverflow.ellipsis,
-
         style: TextStyle(
-
           fontFamily: 'Poppins',
-
           fontSize: 10,
-
           fontWeight: FontWeight.w600,
-
           color: inStock ? Colors.green.shade700 : Colors.red.shade700,
-
         ),
-
       ),
-
     );
-
   }
-
 }
+*/
 
 

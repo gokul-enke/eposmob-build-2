@@ -253,5 +253,120 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     });
+
+    testWidgets('does not overflow at 360dp with qty 10 and price 2000',
+        (tester) async {
+      late LocalProductProvider provider;
+
+      GetProduct buildHighValueProduct() {
+        return GetProduct(
+          productId: 99,
+          productName: 'Premium Coffee',
+          unit: 'PCS',
+          price: ProductPrice(price: '2000'),
+          mrp: '2500',
+          taxes: [ProductTax(rate: '5')],
+        );
+      }
+
+      await tester.runAsync(() async {
+        provider = LocalProductProvider();
+        provider.setStockEnabled(false);
+        final product = buildHighValueProduct();
+        provider.initializeProducts([product]);
+        provider.addToCart(
+          product: product,
+          quantity: 10,
+          price: 2000,
+          mrp: 2500,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<LocalProductProvider>.value(value: provider),
+            ChangeNotifierProvider<AppSettingsProvider>(
+              create: (_) => _FakeAppSettingsProvider(
+                AppSettings(
+                  barcodeSales: false,
+                  customerCarePhone: '',
+                  customerCareEmail: '',
+                  printTitle: '',
+                  showCustomerLastBuyedPriceList: false,
+                  askDeliveryDate: false,
+                  priceRoundOff: false,
+                  discountAndCoupon: false,
+                  autoAssignDefaultCustomer: false,
+                  autoAssignDefaultCustomerPhone: '',
+                  currency: 'SAR',
+                  zatcaPhase1Enabled: false,
+                  zatcaPhase2Enabled: false,
+                  showTaxPos: true,
+                  showMrpPos: true,
+                  showTaxRatePos: true,
+                  showConfirmOrderButton: true,
+                  enableKOTPrint: false,
+                  defaultDeliveryMethod: '',
+                  defaultPaymentMethod: '',
+                  posPrintDoubleBill: false,
+                  skipCustomerSelection: false,
+                  hideDefaultPhone: false,
+                  freeDeliveryEnabled: false,
+                  freeDeliveryMinimumAmount: '',
+                  itemCodeEnabled: true,
+                  companyB2BEnabled: false,
+                  enableSendToKitchenButton: false,
+                  enableKotBillButton: false,
+                  kotBillAutoMarkServed: false,
+                  kotBillAllowedForDineIn: false,
+                ),
+              ),
+            ),
+            ChangeNotifierProvider<RoleProvider>(
+              create: (_) =>
+                  _FakeRoleProvider(canViewProductDetails: true),
+            ),
+            ChangeNotifierProvider<CustomerSelectionProvider>(
+              create: (_) => CustomerSelectionProvider(),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: CartItemCard(
+                  item: provider.cartItems.single,
+                  controller: cartController,
+                  onDecrease: () {},
+                  onIncrease: () {},
+                  onRemove: () {},
+                  onSaleUnitChanged: (_) {},
+                  showMrp: true,
+                  showTaxRate: true,
+                  showTaxAmount: true,
+                  showItemCode: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Premium Coffee'), findsOneWidget);
+      expect(find.text('20,000.00'), findsOneWidget);
+      expect(find.text('2,000.00'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
   });
 }

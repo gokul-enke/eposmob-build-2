@@ -37,6 +37,15 @@ class CheckoutService {
   final BuildContext context;
   const CheckoutService(this.context);
 
+  /// Desktop confirm parity: a registered customer id, a typed phone, or the
+  /// sales-executive default phone all satisfy the customer requirement.
+  bool _hasCustomerForCheckout(BillingProvider billingProvider) {
+    return billingProvider.selectedCustomerID != null ||
+        (billingProvider.mobileNumberText?.trim().isNotEmpty ?? false) ||
+        (billingProvider.salesExecutivemobileNumberText?.trim().isNotEmpty ??
+            false);
+  }
+
   Future<void> confirmOrder() async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
@@ -58,9 +67,7 @@ class CheckoutService {
             listen: false,
           ).appSettings?.skipCustomerSelection ??
           false;
-      if (!skipCustomerSelection &&
-          billingProvider.selectedCustomerID == null &&
-          billingProvider.mobileNumberText == "") {
+      if (!skipCustomerSelection && !_hasCustomerForCheckout(billingProvider)) {
         showScaffoldError(
           context: context,
           message: BillingMobileErrorMessages.selectCustomer,
@@ -272,9 +279,7 @@ class CheckoutService {
             listen: false,
           ).appSettings?.skipCustomerSelection ??
           false;
-      if (!skipCustomerSelection &&
-          billingProvider.selectedCustomerID == null &&
-          billingProvider.mobileNumberText == "") {
+      if (!skipCustomerSelection && !_hasCustomerForCheckout(billingProvider)) {
         showScaffoldError(
           context: context,
           message: BillingMobileErrorMessages.selectCustomer,
@@ -440,6 +445,12 @@ class CheckoutService {
           billingProvider.commentController.clear();
           billingProvider.setDeliveryDate(null);
           billingProvider.setDeliveryTime(null);
+
+          // Match confirmOrder / desktop full reset: clear all payment method
+          // selections, amounts, to-customer-credit and Pine Labs state so the
+          // next sale starts from a clean workspace.
+          billingProvider.clearAllPaymentMethods();
+          billingProvider.setPineLabsPaymentSuccess(false);
         } else {
           showScaffoldError(
             context: context,

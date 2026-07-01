@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-/// Empty-state placeholder for the mobile Orders tab.
+/// Empty-state placeholder for the mobile Orders tab (matches desktop copy).
 class OrdersEmptyState extends StatelessWidget {
-  final bool hasSearchQuery;
-
-  const OrdersEmptyState({super.key, required this.hasSearchQuery});
+  const OrdersEmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,28 +13,26 @@ class OrdersEmptyState extends StatelessWidget {
         children: [
           Icon(
             Icons.receipt_long_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
+            size: 48,
+            color: Colors.grey.withValues(alpha: 0.5),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
-            'No orders found',
+            'common.no_saved_orders'.tr,
             style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              fontSize: 16,
+              color: Colors.grey.withValues(alpha: 0.7),
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
-            hasSearchQuery
-                ? 'Try adjusting your search or filter'
-                : 'Saved orders will appear here',
+            'common.create_first_order'.tr,
             style: TextStyle(
               fontFamily: 'Poppins',
-              fontSize: 14,
-              color: Colors.grey.shade500,
+              fontSize: 12,
+              color: Colors.grey.withValues(alpha: 0.6),
             ),
             textAlign: TextAlign.center,
           ),

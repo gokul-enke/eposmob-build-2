@@ -7,12 +7,15 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 /// Minimum recommended touch target (WCAG / Material).
 const double kBillingMinTouchTarget = 44;
 
-/// Persistent bottom action bar for the mobile Billing tab (Confirm / Confirm & Print).
+/// Persistent bottom action bar for the mobile Billing tab.
+/// Mirrors desktop [ActionButtons]: Save Order + online confirm actions, or
+/// offline Save & Print.
 class BillingActionButtons extends StatelessWidget {
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
   final VoidCallback onConfirmOrder;
   final VoidCallback onSaveAndPrint;
+  final bool isSavingOrder;
   final bool isConfirmingOrder;
   final bool isConfirmingAndPrinting;
   final bool isSavingAndPrinting;
@@ -23,13 +26,17 @@ class BillingActionButtons extends StatelessWidget {
     required this.onCreateOrderAndPrint,
     required this.onConfirmOrder,
     required this.onSaveAndPrint,
+    this.isSavingOrder = false,
     this.isConfirmingOrder = false,
     this.isConfirmingAndPrinting = false,
     this.isSavingAndPrinting = false,
   });
 
   bool get _isCheckoutBusy =>
-      isConfirmingOrder || isConfirmingAndPrinting || isSavingAndPrinting;
+      isSavingOrder ||
+      isConfirmingOrder ||
+      isConfirmingAndPrinting ||
+      isSavingAndPrinting;
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +52,58 @@ class BillingActionButtons extends StatelessWidget {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: hasInternet
-          ? _buildOnlineActions(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            label: 'Save Order',
+            button: true,
+            child: ExcludeSemantics(
+              child: ElevatedButton.icon(
+                icon: isSavingOrder
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.save_outlined,
+                        color: Colors.white, size: 18),
+                label: const Text(
+                  'Save Order',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  backgroundColor: hasItems
+                      ? const Color(0xFFEAB308)
+                      : Colors.grey.shade300,
+                  minimumSize: const Size(double.infinity, kBillingMinTouchTarget),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: (hasItems && !_isCheckoutBusy) ? onSaveOrder : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (hasInternet)
+            _buildOnlineActions(
               hasItems: hasItems,
               showConfirmButton: showConfirmButton,
             )
-          : _buildOfflineActions(hasItems: hasItems),
+          else
+            _buildOfflineActions(hasItems: hasItems),
+        ],
+      ),
     );
   }
 
@@ -81,7 +134,7 @@ class BillingActionButtons extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             elevation: 0,
             backgroundColor:
-                hasItems ? const Color(0xFFEAB308) : Colors.grey.shade300,
+                hasItems ? const Color(0xFF15803D) : Colors.grey.shade300,
             minimumSize: const Size(double.infinity, kBillingMinTouchTarget),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
@@ -161,9 +214,9 @@ class BillingActionButtons extends StatelessWidget {
                         ),
                       )
                     : const Icon(Icons.print, color: Colors.white, size: 18),
-                label: Text(
-                  showConfirmButton ? 'Confirm & Print' : 'Confirm & Print',
-                  style: const TextStyle(
+                label: const Text(
+                  'Confirm & Print',
+                  style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,

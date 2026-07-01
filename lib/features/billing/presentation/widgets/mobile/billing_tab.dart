@@ -22,12 +22,17 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing
 /// Mobile "Billing & Payment" tab. Pure layout/composition: each section is its
 /// own widget under `mobile/billing/`, and the action bar is
 /// [BillingActionButtons]. Business logic lives in `BillingMobileController`.
+///
+/// TODO(parity): Desktop [BillingPageMode.quotation] (Create Quotation / Quotation
+/// List actions and payment-disabled quotation checkout) has no dedicated mobile
+/// billing surface yet; quotation drafts still load via order rehydration.
 class MobileBillingTab extends StatefulWidget {
   final GlobalKey autocompletePhoneKey;
   final VoidCallback onConfirmOrder;
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
   final VoidCallback onSaveAndPrint;
+  final bool isSavingOrder;
   final bool isConfirmingOrder;
   final bool isConfirmingAndPrinting;
   final bool isSavingAndPrinting;
@@ -39,6 +44,7 @@ class MobileBillingTab extends StatefulWidget {
     required this.onSaveOrder,
     required this.onCreateOrderAndPrint,
     required this.onSaveAndPrint,
+    this.isSavingOrder = false,
     this.isConfirmingOrder = false,
     this.isConfirmingAndPrinting = false,
     this.isSavingAndPrinting = false,
@@ -131,11 +137,12 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
         Provider.of<AppSettingsProvider>(context).appSettings;
     final showCouponSection =
         _settingsController.shouldShowCouponSection(appSettings);
+    final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
 
     // Safe bottom padding so content can scroll fully above the persistent
     // bottomSheet buttons (padding 16 + button row height + bottom inset).
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    const double bottomActionsHeight = 88;
+    const double bottomActionsHeight = 156;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -160,57 +167,49 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                   CustomerSummaryCard(
                     customer: selectedCustomer,
                     balanceDisplay: balanceDisplay,
+                    customerType: showCustomerType
+                        ? selectedCustomer?.customerType
+                        : null,
                     onTap: () => _navigateToSelectCustomer(context),
                     onClear: selectedCustomer != null
                         ? () => _clearCustomer(context)
                         : null,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
                   // Delivery & Options Section (Select Delivery Method)
                   const BillingAccordionCard(
-                    title: 'Select Delivery Method:',
+                    title: 'Select Delivery Method',
                     initiallyExpanded: true,
                     child: DeliveryOptionsSection(),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
                   if (showCouponSection) ...[
                     const BillingAccordionCard(
-                      title: 'Coupon:',
+                      title: 'Coupon',
                       initiallyExpanded: false,
                       child: CouponSection(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                   ],
 
                   // Payment Methods Section
                   const BillingAccordionCard(
-                    title: 'Payment Methods:',
+                    title: 'Payment Methods',
                     initiallyExpanded: true,
                     child: PaymentMethodsSection(),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
-                  // Order Summary calculations
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200, width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.01),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const PaymentSummary(
+                  // Order Summary
+                  const BillingAccordionCard(
+                    title: 'Order Summary',
+                    initiallyExpanded: true,
+                    child: PaymentSummary(
                       compact: false,
                       showToCustomerCreditToggle: false,
+                      taxBreakdownEnabled: false,
                     ),
                   ),
                 ],
@@ -225,6 +224,7 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
         onCreateOrderAndPrint: widget.onCreateOrderAndPrint,
         onConfirmOrder: widget.onConfirmOrder,
         onSaveAndPrint: widget.onSaveAndPrint,
+        isSavingOrder: widget.isSavingOrder,
         isConfirmingOrder: widget.isConfirmingOrder,
         isConfirmingAndPrinting: widget.isConfirmingAndPrinting,
         isSavingAndPrinting: widget.isSavingAndPrinting,

@@ -34,7 +34,7 @@ class CartActionButtons extends StatelessWidget {
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
               ),
               icon: const Icon(Icons.arrow_forward, size: 18),
@@ -98,10 +98,10 @@ class _IconActionButton extends StatelessWidget {
       button: true,
       child: Material(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: isLoading ? null : onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           child: SizedBox(
             width: _minTouchTarget,
             height: _minTouchTarget,

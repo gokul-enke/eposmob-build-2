@@ -266,6 +266,41 @@ void main() {
       expect(bp.cashAmountController.text, '125.00');
     });
 
+    test('syncPaymentAutofillIfNeeded prefills default CARD when amounts empty',
+        () {
+      final bp = BillingProvider();
+      bp.setTotalOrderAmount(99.5);
+      bp.setPaymentMethod('CARD', true);
+
+      final applied = controller.syncPaymentAutofillIfNeeded(bp);
+
+      expect(applied, isTrue);
+      expect(bp.cardAmountController.text, '99.50');
+      expect(bp.getTotalPaidAmount(), 99.5);
+    });
+
+    test('syncPaymentAutofillIfNeeded falls back to CASH when nothing selected',
+        () {
+      final bp = BillingProvider();
+      bp.setTotalOrderAmount(42);
+
+      final applied = controller.syncPaymentAutofillIfNeeded(bp);
+
+      expect(applied, isTrue);
+      expect(bp.isCashSelected, isTrue);
+      expect(bp.cashAmountController.text, '42.00');
+    });
+
+    test('syncPaymentAutofillIfNeeded skips when amounts already entered', () {
+      final bp = BillingProvider();
+      bp.setTotalOrderAmount(50);
+      bp.setPaymentMethod('CASH', true);
+      bp.cashAmountController.text = '25';
+
+      expect(controller.syncPaymentAutofillIfNeeded(bp), isFalse);
+      expect(bp.cashAmountController.text, '25');
+    });
+
     test('fillExactCash selects cash for the full payable total', () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(88.5);

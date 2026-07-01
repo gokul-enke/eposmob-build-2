@@ -120,7 +120,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     }
 
     return Drawer(
-      backgroundColor: ColorManager.kSecondaryColor,
+      backgroundColor: Colors.white,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

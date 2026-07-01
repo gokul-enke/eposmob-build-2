@@ -7,6 +7,22 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:provider/provider.dart';
 
+double? _parseAmountText(String text) {
+  final cleaned = text.replaceAll(',', '').trim();
+  if (cleaned.isEmpty) return null;
+  return double.tryParse(cleaned);
+}
+
+String _formatAmountForDisplay(double value) => AmountHelper.formatAmount(value);
+
+String _formatAmountForEditing(double value) {
+  final roundedValue = value.roundToDouble();
+  if ((value - roundedValue).abs() < 0.0001) {
+    return roundedValue.toInt().toString();
+  }
+  return value.toString();
+}
+
 void _selectAllText(TextEditingController controller) {
   if (controller.text.isEmpty) return;
   controller.selection = TextSelection(
@@ -35,32 +51,91 @@ InputDecoration _cartFieldDecoration({
     labelText: label,
     labelStyle: TextStyle(
       fontFamily: 'Poppins',
-      fontSize: 11,
+      fontSize: 10,
       color: Colors.grey.shade600,
     ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
     filled: readOnly,
     fillColor: readOnly ? Colors.grey.shade50 : null,
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(6),
       borderSide: BorderSide(
         color: readOnly ? Colors.grey.shade200 : Colors.grey.shade300,
       ),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(6),
       borderSide: BorderSide(
         color: readOnly ? Colors.grey.shade200 : Colors.grey.shade300,
       ),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(6),
       borderSide: BorderSide(
         color: readOnly ? Colors.grey.shade200 : Colors.grey.shade400,
         width: readOnly ? 1 : 1.2,
       ),
     ),
   );
+}
+
+/// Compact grid for price, MRP, and tax fields on mobile cart cards.
+class MobileCartPriceSection extends StatelessWidget {
+  const MobileCartPriceSection({
+    super.key,
+    required this.item,
+    required this.controller,
+    required this.showMrp,
+    required this.showTaxRate,
+    required this.showTaxAmount,
+  });
+
+  final LocalCartItem item;
+  final BillingMobileCartController controller;
+  final bool showMrp;
+  final bool showTaxRate;
+  final bool showTaxAmount;
+
+  @override
+  Widget build(BuildContext context) {
+    final itemKey =
+        '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}';
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: MobileCartPriceField(
+                key: ValueKey('price-$itemKey'),
+                item: item,
+                controller: controller,
+              ),
+            ),
+            if (showMrp) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: MobileCartMrpField(
+                  key: ValueKey('mrp-$itemKey'),
+                  item: item,
+                  controller: controller,
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (showTaxRate || showTaxAmount) ...[
+          const SizedBox(height: 6),
+          MobileCartTaxDisplay(
+            item: item,
+            controller: controller,
+            showTaxRate: showTaxRate,
+            showTaxAmount: showTaxAmount,
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class MobileCartPriceField extends StatefulWidget {
@@ -91,7 +166,7 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
   void initState() {
     super.initState();
     _textController = TextEditingController(
-      text: widget.controller.formatPrice(_displayPrice()),
+      text: _formatAmountForDisplay(_displayPrice()),
     );
     _focusNode = FocusNode();
     _focusNode.addListener(_handleFocusChange);
@@ -99,15 +174,18 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
   }
 
   void _handleFocusChange() {
-    if (!_focusNode.hasFocus) {
-      _commitPrice();
+    if (_focusNode.hasFocus) {
+      _textController.text = _formatAmountForEditing(_displayPrice());
+      _selectAllText(_textController);
+      return;
     }
+    _commitPrice();
   }
 
   void _commitPrice() {
-    final parsed = double.tryParse(_textController.text);
+    final parsed = _parseAmountText(_textController.text);
     if (parsed == null) {
-      _textController.text = widget.controller.formatPrice(_displayPrice());
+      _textController.text = _formatAmountForDisplay(_displayPrice());
       return;
     }
 
@@ -120,21 +198,24 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
 
     if (result.clampedToDisplayPrice != null) {
       final clampedText =
-          widget.controller.formatPrice(result.clampedToDisplayPrice!);
+          _formatAmountForDisplay(result.clampedToDisplayPrice!);
       _textController.text = clampedText;
       showScaffoldError(
         context: context,
         message:
             'Price can\'t go below the minimum sale price of $clampedText.',
       );
+      return;
     }
+
+    _textController.text = _formatAmountForDisplay(_displayPrice());
   }
 
   @override
   void didUpdateWidget(MobileCartPriceField oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_focusNode.hasFocus && oldWidget.item.price != widget.item.price) {
-      _textController.text = widget.controller.formatPrice(_displayPrice());
+      _textController.text = _formatAmountForDisplay(_displayPrice());
     }
   }
 
@@ -157,10 +238,15 @@ class _MobileCartPriceFieldState extends State<MobileCartPriceField> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
       ],
-      onTap: () => _selectAllText(_textController),
+      onTap: () {
+        if (!_focusNode.hasFocus) {
+          _textController.text = _formatAmountForEditing(_displayPrice());
+        }
+        _selectAllText(_textController);
+      },
       style: const TextStyle(
         fontFamily: 'Poppins',
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: FontWeight.w500,
       ),
       decoration: _cartFieldDecoration(label: 'Price'),
@@ -204,22 +290,36 @@ class _MobileCartMrpFieldState extends State<MobileCartMrpField> {
   void initState() {
     super.initState();
     _textController = TextEditingController(
-      text: widget.controller.formatPrice(_displayMrp()),
+      text: _formatAmountForDisplay(_displayMrp()),
     );
     _focusNode = FocusNode();
+    _focusNode.addListener(_handleFocusChange);
     _attachSelectAllOnFocus(_focusNode, _textController);
+  }
+
+  void _handleFocusChange() {
+    if (_focusNode.hasFocus) {
+      _textController.text = _formatAmountForEditing(_displayMrp());
+      _selectAllText(_textController);
+      return;
+    }
+    final parsed = _parseAmountText(_textController.text);
+    _textController.text = _formatAmountForDisplay(
+      parsed ?? _displayMrp(),
+    );
   }
 
   @override
   void didUpdateWidget(MobileCartMrpField oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_focusNode.hasFocus && oldWidget.item.mrp != widget.item.mrp) {
-      _textController.text = widget.controller.formatPrice(_displayMrp());
+      _textController.text = _formatAmountForDisplay(_displayMrp());
     }
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -236,10 +336,15 @@ class _MobileCartMrpFieldState extends State<MobileCartMrpField> {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
       ],
-      onTap: () => _selectAllText(_textController),
+      onTap: () {
+        if (!_focusNode.hasFocus) {
+          _textController.text = _formatAmountForEditing(_displayMrp());
+        }
+        _selectAllText(_textController);
+      },
       style: const TextStyle(
         fontFamily: 'Poppins',
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: FontWeight.w500,
       ),
       decoration: _cartFieldDecoration(label: 'MRP'),
@@ -251,9 +356,11 @@ class _MobileCartMrpFieldState extends State<MobileCartMrpField> {
         );
       },
       onSubmitted: (_) {
-        final parsed = double.tryParse(_textController.text);
+        final parsed = _parseAmountText(_textController.text);
         if (parsed == null) {
-          _textController.text = widget.controller.formatPrice(_displayMrp());
+          _textController.text = _formatAmountForDisplay(_displayMrp());
+        } else {
+          _textController.text = _formatAmountForDisplay(parsed);
         }
       },
     );
@@ -364,7 +471,7 @@ class _MobileCartReadOnlyFieldState extends State<_MobileCartReadOnlyField> {
       onTap: () => _selectAllText(_textController),
       style: TextStyle(
         fontFamily: 'Poppins',
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: FontWeight.w500,
         color: Colors.grey.shade700,
       ),

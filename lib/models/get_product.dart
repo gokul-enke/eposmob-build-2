@@ -18,6 +18,41 @@ bool? _parseBool(dynamic value) {
   return null;
 }
 
+Map<String, dynamic> _parseVariantAttributes(dynamic raw) {
+  if (raw == null) return const {};
+  if (raw is Map) return Map<String, dynamic>.from(raw);
+  if (raw is List) {
+    final result = <String, dynamic>{};
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final map = Map<String, dynamic>.from(item);
+      final nameKey = map.containsKey('name')
+          ? 'name'
+          : map.containsKey('attribute')
+              ? 'attribute'
+              : map.containsKey('attribute_name')
+                  ? 'attribute_name'
+                  : map.containsKey('key')
+                      ? 'key'
+                      : null;
+      if (nameKey != null && map.containsKey('value')) {
+        final key = map[nameKey]?.toString();
+        if (key != null && key.isNotEmpty) {
+          result[key] = map['value'];
+        }
+        continue;
+      }
+      for (final entry in map.entries) {
+        final key = entry.key.toString();
+        if (key == 'id') continue;
+        result[key] = entry.value;
+      }
+    }
+    return result;
+  }
+  return const {};
+}
+
 class GetProductModel {
   final List<GetProduct>? product;
   final String? status; // this field seems to be missing in your JSON
@@ -893,12 +928,41 @@ class ProductVariant {
         })(),
         sku: json['sku']?.toString(),
         barcode: json['barcode']?.toString(),
-        price: (json['price'] as num?)?.toDouble(),
-        mrp: (json['mrp'] as num?)?.toDouble(),
-        purchasePrice: (json['purchase_price'] as num?)?.toDouble(),
-        quantity: json['quantity'] as num?,
+        price: (() {
+          final value = json['price'];
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value);
+          return null;
+        })(),
+        mrp: (() {
+          final value = json['mrp'];
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value);
+          return null;
+        })(),
+        purchasePrice: (() {
+          final value = json['purchase_price'];
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value);
+          return null;
+        })(),
+        quantity: (() {
+          final q = json['quantity'];
+          if (q == null) return null;
+          if (q is num) return q;
+          if (q is String) {
+            final i = int.tryParse(q);
+            if (i != null) return i;
+            final d = double.tryParse(q);
+            if (d != null) return d;
+          }
+          return null;
+        })(),
         active: _parseBool(json['active']) ?? true,
-        attributes: (json['attributes'] as Map<String, dynamic>?) ?? const {},
+        attributes: _parseVariantAttributes(json['attributes']),
       );
 
   Map<String, dynamic> toJson() => {

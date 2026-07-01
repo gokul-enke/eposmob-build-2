@@ -178,12 +178,11 @@ void main() {
   // under tight test constraints. That's a separate layout finding to confirm
   // on-device; here we tolerate it so the smoke test can still verify that the
   // page mounts and wires up all its providers. All OTHER errors still fail.
-  void tolerateInitBuildSideEffects() {
+  void tolerateHomeTabOverflow() {
     final original = FlutterError.onError;
     FlutterError.onError = (FlutterErrorDetails details) {
       final message = details.exceptionAsString();
-      if (message.contains('A RenderFlex overflowed') ||
-          message.contains('setState() or markNeedsBuild() called during build')) {
+      if (message.contains('A RenderFlex overflowed')) {
         return;
       }
       original?.call(details);
@@ -233,7 +232,7 @@ void main() {
 
   testWidgets('mounts and renders the 4-tab scaffold at phone size',
       (tester) async {
-    tolerateInitBuildSideEffects();
+    tolerateHomeTabOverflow();
     await tester.binding.setSurfaceSize(const Size(390, 844)); // iPhone-ish
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -250,7 +249,7 @@ void main() {
   });
 
   testWidgets('bottom-nav switches tabs without throwing', (tester) async {
-    tolerateInitBuildSideEffects();
+    tolerateHomeTabOverflow();
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 

@@ -55,6 +55,28 @@ void main() {
       expect(variant.effectivePrice(299), 349);
     });
 
+    test('fromJson accepts attributes as name/value list', () {
+      final variant = ProductVariant.fromJson({
+        'id': 1,
+        'attributes': [
+          {'name': 'COLOR', 'value': 'Red'},
+          {'name': 'SIZE', 'value': 'L'},
+        ],
+      });
+
+      expect(variant.attributes, {'COLOR': 'Red', 'SIZE': 'L'});
+      expect(variant.formattedAttributes, 'Red | L');
+    });
+
+    test('fromJson accepts empty attributes list', () {
+      final variant = ProductVariant.fromJson({
+        'id': 1,
+        'attributes': [],
+      });
+
+      expect(variant.attributes, isEmpty);
+    });
+
     test('effectivePrice falls back to product price when variant price is zero', () {
       final variant = _variant(id: 1, price: 0);
       expect(variant.effectivePrice(299), 299);

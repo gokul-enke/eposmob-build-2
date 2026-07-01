@@ -1021,6 +1021,10 @@ class SalesProvider with ChangeNotifier {
   Future<Map<String, dynamic>> createDailySalesClose({
     required String accessToken,
     required int storeId,
+    String? openingDate,
+    String? openingTime,
+    String? closingDate,
+    String? closingTime,
   }) async {
     final queryParameters = <String, String>{
       'store_id': storeId.toString(),
@@ -1031,6 +1035,22 @@ class SalesProvider with ChangeNotifier {
 
     debugPrint('=== DEBUG: createDailySalesClose START ===');
     debugPrint('Full URL: $uri');
+    debugPrint('Query Parameters: $queryParameters');
+
+    final Map<String, dynamic> requestBody = {
+      'opening_date': openingDate,
+      'opening_time': openingTime,
+      'closing_date': closingDate,
+      'closing_time': closingTime,
+    };
+    final requestBodyJson = jsonEncode(requestBody);
+    debugPrint('=== DEBUG: createDailySalesClose REQUEST BODY ===');
+    debugPrint(requestBodyJson);
+    debugPrint('opening_date: ${requestBody['opening_date']}');
+    debugPrint('opening_time: ${requestBody['opening_time']}');
+    debugPrint('closing_date: ${requestBody['closing_date']}');
+    debugPrint('closing_time: ${requestBody['closing_time']}');
+    debugPrint('=== END REQUEST BODY ===');
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1047,6 +1067,7 @@ class SalesProvider with ChangeNotifier {
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         },
+        body: requestBodyJson,
       ).timeout(const Duration(seconds: 15));
 
       debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');

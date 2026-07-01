@@ -1,16 +1,11 @@
-/// Widget tests for P0.3: Mobile product cards must not block add-to-cart
-/// based on raw stock rows.
+/// Widget tests for mobile product card tap handling:
+/// - Card body tap → direct add callback
+/// - Info button → product details callback
+/// - Add button → custom qty/price sheet callback
+/// - Button taps must not bubble to the card-body handler
 ///
-/// These are structural contract tests: they verify that [ProductCard] and
-/// [ProductListRow] always render enabled, tappable Add controls — even when
-/// a product has zero stock entries — instead of checking full helper logic
-/// (which requires a heavy provider tree and is covered by unit tests).
-///
-/// Approach chosen: pure-presentation widget test.
-///
-/// [ProductCard] and [ProductListRow] are pure presentation widgets that
-/// accept [onInfoTap] / [onAddWithOptions] as callbacks and delegate all
-/// stock decisions to [ProductCartHelper] (supplied by [MarketProductGrid]).
+/// Stock decisions are delegated to [ProductCartHelper] via
+/// [MarketProductGrid]; these are structural contract tests only.
 library;
 
 import 'package:flutter/material.dart';
@@ -68,9 +63,36 @@ void _tolerateOverflow() {
 void main() {
   group('ProductCard — action buttons are always enabled', () {
     testWidgets(
-        'tapping info button on a no-stock product calls onInfoTap',
+        'tapping card body on a no-stock product calls onDirectAdd',
+        (tester) async {
+      int directAddCount = 0;
+      final product = _noStockProduct(name: 'Body Tap Product');
+
+      await tester.pumpWidget(_wrap(
+        SizedBox(
+          width: 180,
+          height: 240,
+          child: ProductCard(
+            product: product,
+            onInfoTap: () {},
+            onAddWithOptions: () {},
+            onDirectAdd: () => directAddCount++,
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('Body Tap Product'));
+      await tester.pump();
+
+      expect(directAddCount, 1,
+          reason: 'onDirectAdd must fire when tapping the card body');
+    });
+
+    testWidgets(
+        'tapping info button on a no-stock product calls onInfoTap only',
         (tester) async {
       int infoCount = 0;
+      int directAddCount = 0;
       final product = _noStockProduct();
 
       await tester.pumpWidget(_wrap(
@@ -81,6 +103,7 @@ void main() {
             product: product,
             onInfoTap: () => infoCount++,
             onAddWithOptions: () {},
+            onDirectAdd: () => directAddCount++,
           ),
         ),
       ));
@@ -93,12 +116,15 @@ void main() {
 
       expect(infoCount, 1,
           reason: 'onInfoTap must fire even when product has no stock rows');
+      expect(directAddCount, 0,
+          reason: 'info button tap must not trigger onDirectAdd');
     });
 
     testWidgets(
-        'tapping Add on a zero-qty-stock product calls onAddWithOptions',
+        'tapping Add on a zero-qty-stock product calls onAddWithOptions only',
         (tester) async {
       int addCount = 0;
+      int directAddCount = 0;
       final product = _zeroQtyStockProduct();
 
       await tester.pumpWidget(_wrap(
@@ -109,6 +135,7 @@ void main() {
             product: product,
             onInfoTap: () {},
             onAddWithOptions: () => addCount++,
+            onDirectAdd: () => directAddCount++,
           ),
         ),
       ));
@@ -119,11 +146,14 @@ void main() {
       expect(addCount, 1,
           reason:
               'onAddWithOptions must fire even when all stock-row quantities are zero');
+      expect(directAddCount, 0,
+          reason: 'Add button tap must not trigger onDirectAdd');
     });
 
     testWidgets('dense ProductCard + icon is always tappable for no-stock',
         (tester) async {
       int addCount = 0;
+      int directAddCount = 0;
       final product = _noStockProduct(name: 'Dense Product');
 
       await tester.pumpWidget(_wrap(
@@ -135,6 +165,7 @@ void main() {
             isDense: true,
             onInfoTap: () {},
             onAddWithOptions: () => addCount++,
+            onDirectAdd: () => directAddCount++,
           ),
         ),
       ));
@@ -147,8 +178,12 @@ void main() {
 
       expect(addCount, 1,
           reason: 'Dense card onAddWithOptions must fire for no-stock product');
+      expect(directAddCount, 0,
+          reason: 'dense Add icon tap must not trigger onDirectAdd');
     });
 
+    // TODO: re-enable stock badge — badge temporarily hidden per UI request.
+    /*
     testWidgets('StockBadge still shows Out Of Stock for no-stock product',
         (tester) async {
       final product = _noStockProduct(name: 'Badge Test');
@@ -168,13 +203,46 @@ void main() {
       expect(find.text('Out Of Stock'), findsOneWidget,
           reason: 'StockBadge must stay as a visual indicator');
     });
+    */
   });
 
   group('ProductListRow — action buttons are always enabled', () {
-    testWidgets('tapping info button on a no-stock product calls onInfoTap',
+    testWidgets(
+        'tapping card body on a no-stock product calls onDirectAdd',
+        (tester) async {
+      _tolerateOverflow();
+      int directAddCount = 0;
+      final product = _noStockProduct(name: 'List Body Tap');
+
+      await tester.binding.setSurfaceSize(const Size(600, 200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_wrap(
+        SizedBox(
+          width: 560,
+          height: 80,
+          child: ProductListRow(
+            product: product,
+            onInfoTap: () {},
+            onAddWithOptions: () {},
+            onDirectAdd: () => directAddCount++,
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('List Body Tap'));
+      await tester.pump();
+
+      expect(directAddCount, 1,
+          reason: 'ProductListRow onDirectAdd must fire for card body tap');
+    });
+
+    testWidgets(
+        'tapping info button on a no-stock product calls onInfoTap only',
         (tester) async {
       _tolerateOverflow();
       int infoCount = 0;
+      int directAddCount = 0;
       final product = _noStockProduct();
 
       await tester.binding.setSurfaceSize(const Size(600, 200));
@@ -188,6 +256,7 @@ void main() {
             product: product,
             onInfoTap: () => infoCount++,
             onAddWithOptions: () {},
+            onDirectAdd: () => directAddCount++,
           ),
         ),
       ));
@@ -197,12 +266,16 @@ void main() {
 
       expect(infoCount, 1,
           reason: 'ProductListRow onInfoTap must fire for no-stock product');
+      expect(directAddCount, 0,
+          reason: 'info button tap must not trigger onDirectAdd');
     });
 
-    testWidgets('tapping Add on a zero-qty-stock product calls onAddWithOptions',
+    testWidgets(
+        'tapping Add on a zero-qty-stock product calls onAddWithOptions only',
         (tester) async {
       _tolerateOverflow();
       int addCount = 0;
+      int directAddCount = 0;
       final product = _zeroQtyStockProduct();
 
       await tester.binding.setSurfaceSize(const Size(600, 200));
@@ -216,6 +289,7 @@ void main() {
             product: product,
             onInfoTap: () {},
             onAddWithOptions: () => addCount++,
+            onDirectAdd: () => directAddCount++,
           ),
         ),
       ));
@@ -226,8 +300,12 @@ void main() {
       expect(addCount, 1,
           reason:
               'ProductListRow onAddWithOptions must fire even when stock sums to zero');
+      expect(directAddCount, 0,
+          reason: 'Add button tap must not trigger onDirectAdd');
     });
 
+    // TODO: re-enable stock badge — badge temporarily hidden per UI request.
+    /*
     testWidgets(
         'visual stock label still shows "Out of Stock" for a no-stock product',
         (tester) async {
@@ -252,5 +330,6 @@ void main() {
       expect(find.text('Out of Stock'), findsOneWidget,
           reason: 'Stock badge must remain as a visual-only indicator');
     });
+    */
   });
 }

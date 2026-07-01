@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders/order_card.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders/order_stat_card.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders/orders_empty_state.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
@@ -25,85 +24,47 @@ class OrdersScreen extends StatelessWidget {
   final bool isLoadingOrder;
   final bool isCreatingNewOrder;
 
+  bool get _isBusy => isLoadingOrder || isCreatingNewOrder;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        bottom: false,
+        top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
           child: Consumer<LocalProductProvider>(
             builder: (context, provider, _) {
-              final orders = _sortedOrders(provider.savedOrders);
-              final readyCount = orders.where(_isReadyOrder).length;
+              final orders = provider.savedOrders;
+              final selectedOrderId = provider.currentOrder?.id;
 
               return Column(
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: OutlinedButton.icon(
-                      onPressed: (isLoadingOrder || isCreatingNewOrder)
-                          ? null
-                          : () => onNewOrder(),
-                      icon: isCreatingNewOrder
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.add, size: 18),
-                      label: const Text(
-                        'New Order',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: ColorManager.kPrimaryColor,
-                        side: BorderSide(color: ColorManager.kPrimaryColor),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ActiveOrdersStatCard(value: orders.length),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ReadyOrdersStatCard(value: readyCount),
-                      ),
-                    ],
+                  _NewOrderButton(
+                    onPressed: _isBusy ? null : () => onNewOrder(),
+                    isCreatingNewOrder: isCreatingNewOrder,
                   ),
                   const SizedBox(height: 12),
                   Expanded(
                     child: orders.isEmpty
-                        ? const OrdersEmptyState(hasSearchQuery: false)
+                        ? const OrdersEmptyState()
                         : ListView.builder(
                             physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.only(top: 0, bottom: 16),
+                            padding: const EdgeInsets.only(bottom: 16),
                             itemCount: orders.length,
                             itemBuilder: (context, index) {
                               final order = orders[index];
                               return OrderCard(
                                 order: order,
-                                onTap: isLoadingOrder
-                                    ? null
-                                    : () => _showOrderDetails(context, order),
-                                onEdit: isLoadingOrder
+                                isSelected: selectedOrderId == order.id,
+                                onTap: _isBusy
                                     ? null
                                     : () => onOrderSelected(order.id),
-                                onPrint: isLoadingOrder
+                                onPrint: _isBusy
                                     ? null
                                     : () => onPrintOrder(order),
-                                onDelete: isLoadingOrder
+                                onDelete: _isBusy
                                     ? null
                                     : () => onDeleteOrder(order),
                                 isLoadingOrder: isLoadingOrder,
@@ -119,194 +80,61 @@ class OrdersScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  static List<SavedOrder> _sortedOrders(List<SavedOrder> orders) {
-    final sorted = List<SavedOrder>.from(orders);
-    sorted.sort((first, second) {
-      final firstDate = DateTime.tryParse(first.createdAt) ?? DateTime(1970);
-      final secondDate = DateTime.tryParse(second.createdAt) ?? DateTime(1970);
-      return secondDate.compareTo(firstDate);
-    });
-    return sorted;
-  }
+class _NewOrderButton extends StatelessWidget {
+  const _NewOrderButton({
+    required this.onPressed,
+    required this.isCreatingNewOrder,
+  });
 
-  static bool _isReadyOrder(SavedOrder order) {
-    final status = order.status?.trim().toLowerCase() ?? '';
-    return status.contains('ready') ||
-        status.contains('complete') ||
-        status.contains('pickup');
-  }
+  final VoidCallback? onPressed;
+  final bool isCreatingNewOrder;
 
-  static String _formatOrderTotal(BuildContext context, double total) {
-    final currency =
-        context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR';
-    return '$currency ${total.toStringAsFixed(2)}';
-  }
-
-  void _showOrderDetails(BuildContext context, SavedOrder order) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        final orderNumber = order.orderNumber.trim().isEmpty
-            ? order.id
-            : order.orderNumber.trim();
-
-        return SafeArea(
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: Material(
+        color: Colors.white,
+        elevation: 1,
+        shadowColor: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(100),
-                    ),
+                if (isCreatingNewOrder)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  const Icon(
+                    Icons.add_circle,
+                    size: 24,
+                    color: ColorManager.kPrimaryColor,
                   ),
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(width: 12),
                 Text(
-                  orderNumber.startsWith('#') ? orderNumber : '#$orderNumber',
+                  'common.create_new_order'.tr,
                   style: const TextStyle(
                     fontFamily: 'Poppins',
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  order.customerName ?? 'Walk-in Customer',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    color: Colors.blueGrey.shade700,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _DetailRow(
-                    label: 'Items', value: order.items.length.toString()),
-                _DetailRow(
-                    label: 'Delivery', value: order.deliveryMethod ?? '-'),
-                _DetailRow(
-                  label: 'Total',
-                  value: _formatOrderTotal(context, order.total),
-                  valueColor: ColorManager.kPrimaryColor,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: isLoadingOrder
-                            ? null
-                            : () {
-                                Navigator.pop(context);
-                                onPrintOrder(order);
-                              },
-                        icon: const Icon(Icons.print, size: 18),
-                        label: const Text('Print'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: isLoadingOrder
-                            ? null
-                            : () {
-                                Navigator.pop(context);
-                                onDeleteOrder(order);
-                              },
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        label: const Text('Delete'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red.shade700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed: isLoadingOrder
-                        ? null
-                        : () {
-                            Navigator.pop(context);
-                            onOrderSelected(order.id);
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ColorManager.kPrimaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: const Text(
-                      'Edit Order',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: ColorManager.kPrimaryColor,
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
-
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                color: Colors.blueGrey.shade500,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              color: valueColor ?? Colors.black87,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

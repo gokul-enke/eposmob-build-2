@@ -1,55 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders/order_status_badge.dart';
+import 'package:get/get.dart';
+import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 
+/// Compact saved-order card matching desktop [HorizontalSavedOrdersView] fields.
 class OrderCard extends StatelessWidget {
   const OrderCard({
     super.key,
     required this.order,
+    required this.isSelected,
     required this.onTap,
-    required this.onEdit,
     this.onPrint,
     this.onDelete,
     this.isLoadingOrder = false,
   });
 
   final SavedOrder order;
+  final bool isSelected;
   final VoidCallback? onTap;
-  final VoidCallback? onEdit;
   final VoidCallback? onPrint;
   final VoidCallback? onDelete;
   final bool isLoadingOrder;
 
-  bool get _isReady {
-    final status = order.status?.trim().toLowerCase() ?? '';
-    return status.contains('ready') ||
-        status.contains('complete') ||
-        status.contains('pickup');
-  }
+  String get _orderNumber =>
+      order.orderNumber.trim().isNotEmpty ? order.orderNumber.trim() : order.id;
 
-  String get _statusLabel => _isReady ? 'Ready' : 'Preparing';
-
-  Color get _statusColor => _isReady ? Colors.green : Colors.orange;
-
-  String get _orderNumber {
-    final number =
-        order.orderNumber.trim().isNotEmpty ? order.orderNumber : order.id;
-    return number.startsWith('#') ? number : '#$number';
-  }
-
-  String get _supportingText {
-    final note = order.comment?.trim();
-    final delivery = order.deliveryMethod?.trim();
-    final suffix = note?.isNotEmpty == true
-        ? note!
-        : delivery?.isNotEmpty == true
-            ? delivery!
-            : 'Special Instructions';
-    return '${order.items.length} items - $suffix';
-  }
+  String get _createdAtTime =>
+      DateHelper.formatToISOTimeOnlyFromISO(order.createdAt);
 
   @override
   Widget build(BuildContext context) {
@@ -60,12 +40,17 @@ class OrderCard extends StatelessWidget {
         onTap: isLoadingOrder ? null : onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade200),
+            border: Border.all(
+              color: isSelected
+                  ? ColorManager.kPrimaryColor
+                  : Colors.grey.withValues(alpha: 0.2),
+              width: isSelected ? 2 : 1,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.shade100,
@@ -78,91 +63,42 @@ class OrderCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Text(
                       _orderNumber,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  OrderStatusBadge(
-                    label: _statusLabel,
-                    color: _statusColor,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                order.customerName?.trim().isNotEmpty == true
-                    ? order.customerName!.trim()
-                    : 'Walk-in Customer',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.blueGrey.shade700,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Icon(
-                    _isReady ? Icons.restaurant_menu : Icons.coffee_outlined,
-                    size: 18,
-                    color: Colors.blueGrey.shade500,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _supportingText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 14,
-                        color: Colors.blueGrey.shade700,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected
+                            ? ColorManager.kPrimaryColor
+                            : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      _createdAtTime,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              Divider(height: 1, color: Colors.grey.shade100),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  Semantics(
-                    label: 'Print saved order',
-                    button: true,
-                    child: _OrderIconAction(
-                      icon: Icons.print_outlined,
-                      color: Colors.blue.shade700,
-                      onPressed: isLoadingOrder ? null : onPrint,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Semantics(
-                    label: 'Delete saved order',
-                    button: true,
-                    child: _OrderIconAction(
-                      icon: Icons.delete_outline,
-                      color: ColorManager.kButtonRed,
-                      onPressed: isLoadingOrder ? null : onDelete,
-                    ),
-                  ),
-                  const Spacer(),
                   Expanded(
+                    flex: 3,
                     child: Consumer<AppSettingsProvider>(
                       builder: (context, settings, _) {
                         final currency =
@@ -171,25 +107,48 @@ class OrderCard extends StatelessWidget {
                           '$currency ${order.total.toStringAsFixed(2)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.end,
                           style: const TextStyle(
                             fontFamily: 'Poppins',
-                            color: ColorManager.kPrimaryColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.green,
                           ),
                         );
                       },
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _isReady
-                      ? _CompleteButton(
-                          onTap: isLoadingOrder ? null : onTap,
-                        )
-                      : _EditButton(
-                          onTap: isLoadingOrder ? null : onEdit,
-                        ),
+                  Flexible(
+                    flex: 2,
+                    child: Text(
+                      '${order.items.length} ${'common.items'.tr}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _OrderIconAction(
+                    icon: Icons.print,
+                    color: Colors.blue,
+                    onPressed: isLoadingOrder ? null : onPrint,
+                    semanticLabel: 'Print saved order',
+                  ),
+                  _OrderIconAction(
+                    icon: Icons.delete_outline,
+                    color: ColorManager.kButtonRed,
+                    onPressed: isLoadingOrder ? null : onDelete,
+                    semanticLabel: 'Delete saved order',
+                  ),
                 ],
               ),
             ],
@@ -205,6 +164,7 @@ class _OrderIconAction extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onPressed,
+    required this.semanticLabel,
   });
 
   static const double _minTouchTarget = 44;
@@ -212,77 +172,22 @@ class _OrderIconAction extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback? onPressed;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          width: _minTouchTarget,
-          height: _minTouchTarget,
-          child: Icon(icon, size: 20, color: color),
-        ),
-      ),
-    );
-  }
-}
-
-class _CompleteButton extends StatelessWidget {
-  const _CompleteButton({required this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.green,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: const SizedBox(
-          height: 32,
-          width: 106,
-          child: Center(
-            child: Text(
-              'Complete',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EditButton extends StatelessWidget {
-  const _EditButton({required this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: ColorManager.kPrimaryColor.withValues(alpha: 0.1),
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: const SizedBox(
-          height: 44,
-          width: 44,
-          child: Icon(
-            Icons.edit,
-            color: ColorManager.kPrimaryColor,
-            size: 18,
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: _minTouchTarget,
+            height: _minTouchTarget,
+            child: Icon(icon, size: 20, color: color),
           ),
         ),
       ),

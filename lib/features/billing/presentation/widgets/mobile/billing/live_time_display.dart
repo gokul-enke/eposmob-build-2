@@ -3,7 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class LiveTimeDisplay extends StatefulWidget {
-  const LiveTimeDisplay({super.key});
+  const LiveTimeDisplay({
+    super.key,
+    this.fontSize = 14,
+    this.fontWeight = FontWeight.bold,
+  });
+
+  final double fontSize;
+  final FontWeight fontWeight;
 
   @override
   State<LiveTimeDisplay> createState() => _LiveTimeDisplayState();
@@ -45,10 +52,10 @@ class _LiveTimeDisplayState extends State<LiveTimeDisplay> {
   Widget build(BuildContext context) {
     return Text(
       _timeString,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'Poppins',
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
+        fontSize: widget.fontSize,
+        fontWeight: widget.fontWeight,
         color: Colors.black87,
       ),
     );

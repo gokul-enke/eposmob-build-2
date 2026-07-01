@@ -43,7 +43,7 @@ class ProductCardActions extends StatelessWidget {
       children: [
         if (onInfoTap != null) ...[
           _InfoButton(onTap: onInfoTap, compact: false),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
         ],
         if (expandAdd) Expanded(child: addButton) else addButton,
       ],
@@ -122,8 +122,8 @@ class _AddOptionsButton extends StatelessWidget {
               width: fixedWidth,
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: compact ? 0 : 12,
-                  vertical: compact ? 0 : 8,
+                  horizontal: compact ? 0 : 10,
+                  vertical: compact ? 0 : 6,
                 ),
                 child: Center(
                   child: compact
@@ -133,7 +133,7 @@ class _AddOptionsButton extends StatelessWidget {
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             color: Colors.white,
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

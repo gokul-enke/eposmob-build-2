@@ -18,6 +18,7 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
@@ -4838,12 +4839,11 @@ class BillingPageState extends State<BillingPage>
     final baseTotal = localProductProvider.priceSummary?.netTotal ??
         localProductProvider.cartTotal;
 
-    final roundedOrBaseTotal =
-        appSettingsProvider.appSettings?.priceRoundOff == true
-            ? AmountHelper.roundOffAmount(baseTotal)
-            : baseTotal;
-
-    return roundedOrBaseTotal + _getDeliveryChargeForOrder();
+    return BillingTotals.effectiveOrderTotal(
+      baseTotal: baseTotal,
+      deliveryCharge: _getDeliveryChargeForOrder(),
+      priceRoundOff: appSettingsProvider.appSettings?.priceRoundOff == true,
+    );
   }
 
   // Helper method to get formatted total

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_payment_row.dart';
+import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/delivery_charge_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -18,10 +19,14 @@ class PaymentSummary extends StatelessWidget {
   /// When false, hides the bare to-customer-credit toggle (mobile uses a
   /// dedicated section in [PaymentMethodsSection] instead).
   final bool showToCustomerCreditToggle;
+  /// When false, the tax row is plain text (no underline, no breakdown dialog).
+  /// Desktop keeps the default `true`; mobile billing passes `false`.
+  final bool taxBreakdownEnabled;
   const PaymentSummary({
     super.key,
     this.compact = false,
     this.showToCustomerCreditToggle = true,
+    this.taxBreakdownEnabled = true,
   });
 
   @override
@@ -56,11 +61,24 @@ class PaymentSummary extends StatelessWidget {
     // Ensure priceSummary is computed
     localProductProvider.cartTotal;
 
-    // Keep provider's total order amount in sync with cart total (only when changed)
+    // Keep provider's total order amount in sync with cart total (only when
+    // changed). The raw total drives discount remapping; the effective
+    // (round-off adjusted) total drives payment validation, balance and
+    // autofill — mirroring desktop `_getEffectiveOrderTotal()`.
     final orderTotal = netTotal + deliveryCharge;
-    if ((billingProvider.totalOrderAmount - orderTotal).abs() >= 0.001) {
+    final effectiveOrderTotal = BillingTotals.effectiveOrderTotal(
+      baseTotal: netTotal,
+      deliveryCharge: deliveryCharge,
+      priceRoundOff: appSettingsProvider.appSettings?.priceRoundOff == true,
+    );
+    if ((billingProvider.totalOrderAmount - orderTotal).abs() >= 0.001 ||
+        (billingProvider.effectiveOrderTotal - effectiveOrderTotal).abs() >=
+            0.001) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        billingProvider.setTotalOrderAmount(orderTotal);
+        billingProvider.setOrderTotals(
+          totalOrderAmount: orderTotal,
+          effectiveOrderTotal: effectiveOrderTotal,
+        );
       });
     }
 
@@ -215,41 +233,55 @@ class PaymentSummary extends StatelessWidget {
         ),
         const SizedBox(height: 10),
 
-        // Tax row (tappable for details)
-        GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) {
-                return Center(
-                  child: TaxDetailsDialog(
-                    taxAmounts: billingProvider.taxNames,
+        // Tax row (tappable for details on desktop when enabled)
+        Builder(
+          builder: (context) {
+            final taxPercent = ((localProductProvider.priceSummary!.subTotal > 0)
+                    ? (localProductProvider.priceSummary!.totalTax /
+                            localProductProvider.priceSummary!.subTotal *
+                            100)
+                    : 15.0)
+                .toStringAsFixed(0);
+            final taxRow = Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Tax (VAT $taxPercent%)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w500,
+                    decoration: taxBreakdownEnabled
+                        ? TextDecoration.underline
+                        : TextDecoration.none,
                   ),
+                ),
+                Text(
+                  '$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}',
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87),
+                ),
+              ],
+            );
+            if (!taxBreakdownEnabled) return taxRow;
+            return GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return Center(
+                      child: TaxDetailsDialog(
+                        taxAmounts: billingProvider.taxNames,
+                      ),
+                    );
+                  },
                 );
               },
+              child: taxRow,
             );
           },
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Tax (VAT ${((localProductProvider.priceSummary!.subTotal > 0) ? (localProductProvider.priceSummary!.totalTax / localProductProvider.priceSummary!.subTotal * 100) : 15.0).toStringAsFixed(0)}%)',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w500,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-              Text(
-                '$currency ${AmountHelper.formatAmount(localProductProvider.priceSummary!.totalTax)}',
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
-              ),
-            ],
-          ),
         ),
         const SizedBox(height: 10),
 

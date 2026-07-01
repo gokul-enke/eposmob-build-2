@@ -89,8 +89,44 @@ void main() {
 
     await tester.pump();
 
+    expect(find.text('Save Order'), findsOneWidget);
     expect(find.text('Save & Print'), findsOneWidget);
     expect(find.text('Confirm'), findsNothing);
     expect(find.text('Confirm & Print'), findsNothing);
+  });
+
+  testWidgets('online shows Save Order plus confirm actions', (tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<LocalProductProvider>(
+            create: (_) => LocalProductProvider(),
+          ),
+          ChangeNotifierProvider<BillingProvider>(
+            create: (_) => BillingProvider(),
+          ),
+          ChangeNotifierProvider<AppSettingsProvider>(
+            create: (_) => _FakeAppSettingsProvider(),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: BillingActionButtons(
+              onSaveOrder: () {},
+              onCreateOrderAndPrint: () {},
+              onConfirmOrder: () {},
+              onSaveAndPrint: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(find.text('Save Order'), findsOneWidget);
+    expect(find.text('Confirm'), findsOneWidget);
+    expect(find.text('Confirm & Print'), findsOneWidget);
+    expect(find.text('Save & Print'), findsNothing);
   });
 }

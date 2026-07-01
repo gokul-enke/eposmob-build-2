@@ -37,7 +37,7 @@ class CartItemCard extends StatelessWidget {
   });
 
   static const _settingsController = BillingMobileSettingsController();
-  static const double _minTouchTarget = 44;
+  static const double _qtyButtonSize = 40;
 
   final LocalCartItem item;
   final BillingMobileCartController controller;
@@ -90,242 +90,210 @@ class CartItemCard extends StatelessWidget {
     );
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: isLowStock
             ? ColorManager.kOrange.withValues(alpha: 0.06)
             : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isLowStock
               ? ColorManager.kOrange.withValues(alpha: 0.35)
               : Colors.grey.shade200,
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: ColorManager.containerShadowColorForList,
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 72,
-              height: 72,
-              child: _imageUrl == null
-                  ? _fallbackImage()
-                  : Image.network(
-                      _imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return _fallbackImage();
-                      },
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: _imageUrl == null
+                      ? _fallbackImage()
+                      : Image.network(
+                          _imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _fallbackImage();
+                          },
+                        ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.displayName,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 14,
-                              height: 1.3,
-                              fontWeight: FontWeight.w600,
-                              color: ColorManager.kTitleTextColor,
-                            ),
-                          ),
-                          if (showItemCode) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              item.product.itemCode ?? '-',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: ColorManager.kGreyColor,
-                              ),
-                            ),
-                          ],
-                          if (isLowStock) ...[
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: ColorManager.kOrange.withValues(
-                                  alpha: 0.12,
-                                ),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'Low stock',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: ColorManager.kOrange,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    if (canViewBillingProductDetails)
-                      _CardIconButton(
-                        key: const ValueKey('cart_product_details_action'),
-                        tooltip: 'Product details',
-                        icon: Icons.info_outline,
-                        iconColor: ColorManager.kGreyColor,
-                        onTap: () => _showProductDetailsDialog(context, item),
-                      ),
-                    if (canShowPurchaseHistoryAction)
-                      _CardIconButton(
-                        key: const ValueKey('cart_purchase_history_action'),
-                        tooltip: 'Customer purchase history',
-                        icon: Icons.history,
-                        iconColor: ColorManager.kPrimaryColor,
-                        onTap: () => _showCustomerPurchaseHistoryForCartItem(
-                          context,
-                          item,
-                          controller,
-                        ),
-                      ),
-                    _CardIconButton(
-                      tooltip: 'Remove item',
-                      icon: Icons.delete_outline,
-                      iconColor: ColorManager.kButtonRed,
-                      onTap: onRemove,
-                    ),
-                  ],
-                ),
-                if (canChangeUnit) ...[
-                  const SizedBox(height: 6),
-                  _SaleUnitSelector(
-                    currentLabel: item.displayUnitName,
-                    options: unitOptions,
-                    selectedValue: selectedUnit,
-                    onSelected: (value) {
-                      final result = controller.changeSaleUnit(
-                        provider: context.read<LocalProductProvider>(),
-                        item: item,
-                        value: value,
-                      );
-                      onSaleUnitChanged(result);
-                      if (!result.success && result.errorMessage != null) {
-                        showScaffoldError(
-                          context: context,
-                          message: result.errorMessage!,
-                        );
-                      }
-                    },
-                  ),
-                ] else if (item.hasSaleUnit) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    item.displayUnitName,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: ColorManager.kGreyColor,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _QuantityButton(
-                      icon: Icons.remove,
-                      filled: false,
-                      onTap: onDecrease,
-                    ),
-                    _MobileCartQuantityField(
-                      key: ValueKey(
-                        'qty-field-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
-                      ),
-                      item: item,
-                    ),
-                    _QuantityButton(
-                      icon: Icons.add,
-                      filled: true,
-                      onTap: onIncrease,
-                    ),
-                    const Spacer(),
                     Text(
-                      _lineTotal,
-                      maxLines: 1,
+                      item.displayName,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontFamily: 'Poppins',
-                        color: ColorManager.kPrimaryColor,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        height: 1.25,
+                        fontWeight: FontWeight.w600,
+                        color: ColorManager.kTitleTextColor,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Divider(height: 1, color: Colors.grey.shade200),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: MobileCartPriceField(
-                        key: ValueKey(
-                          'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                    if (showItemCode) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        item.product.itemCode ?? '-',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: ColorManager.kGreyColor,
                         ),
-                        item: item,
-                        controller: controller,
                       ),
-                    ),
-                    if (showMrp) ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: MobileCartMrpField(
-                          key: ValueKey(
-                            'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                    ],
+                    if (isLowStock) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ColorManager.kOrange.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Low stock',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: ColorManager.kOrange,
                           ),
-                          item: item,
-                          controller: controller,
+                        ),
+                      ),
+                    ],
+                    if (canChangeUnit) ...[
+                      const SizedBox(height: 6),
+                      _SaleUnitSelector(
+                        currentLabel: item.displayUnitName,
+                        options: unitOptions,
+                        selectedValue: selectedUnit,
+                        onSelected: (value) {
+                          final result = controller.changeSaleUnit(
+                            provider: context.read<LocalProductProvider>(),
+                            item: item,
+                            value: value,
+                          );
+                          onSaleUnitChanged(result);
+                          if (!result.success && result.errorMessage != null) {
+                            showScaffoldError(
+                              context: context,
+                              message: result.errorMessage!,
+                            );
+                          }
+                        },
+                      ),
+                    ] else if (item.hasSaleUnit) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        item.displayUnitName,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: ColorManager.kGreyColor,
                         ),
                       ),
                     ],
                   ],
                 ),
-                if (showTaxRate || showTaxAmount) ...[
-                  const SizedBox(height: 8),
-                  MobileCartTaxDisplay(
-                    item: item,
-                    controller: controller,
-                    showTaxRate: showTaxRate,
-                    showTaxAmount: showTaxAmount,
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (canViewBillingProductDetails)
+                    _CardIconButton(
+                      key: const ValueKey('cart_product_details_action'),
+                      tooltip: 'Product details',
+                      icon: Icons.info_outline,
+                      iconColor: ColorManager.kGreyColor,
+                      onTap: () => _showProductDetailsDialog(context, item),
+                    ),
+                  if (canShowPurchaseHistoryAction)
+                    _CardIconButton(
+                      key: const ValueKey('cart_purchase_history_action'),
+                      tooltip: 'Customer purchase history',
+                      icon: Icons.history,
+                      iconColor: ColorManager.kPrimaryColor,
+                      onTap: () => _showCustomerPurchaseHistoryForCartItem(
+                        context,
+                        item,
+                        controller,
+                      ),
+                    ),
+                  _CardIconButton(
+                    tooltip: 'Remove item',
+                    icon: Icons.delete_outline,
+                    iconColor: ColorManager.kButtonRed,
+                    onTap: onRemove,
                   ),
                 ],
-              ],
-            ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _QuantityButton(
+                icon: Icons.remove,
+                filled: false,
+                onTap: onDecrease,
+              ),
+              _MobileCartQuantityField(
+                key: ValueKey(
+                  'qty-field-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                ),
+                item: item,
+              ),
+              _QuantityButton(
+                icon: Icons.add,
+                filled: true,
+                onTap: onIncrease,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      _lineTotal,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        color: ColorManager.kPrimaryColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          MobileCartPriceSection(
+            item: item,
+            controller: controller,
+            showMrp: showMrp,
+            showTaxRate: showTaxRate,
+            showTaxAmount: showTaxAmount,
           ),
         ],
       ),
@@ -338,7 +306,7 @@ class CartItemCard extends StatelessWidget {
       alignment: Alignment.center,
       child: Icon(
         Icons.inventory_2_outlined,
-        size: 28,
+        size: 24,
         color: Colors.blueGrey.shade200,
       ),
     );
@@ -354,7 +322,7 @@ class _CardIconButton extends StatelessWidget {
     required this.onTap,
   });
 
-  static const double _size = CartItemCard._minTouchTarget;
+  static const double _size = 36;
 
   final String tooltip;
   final IconData icon;
@@ -369,11 +337,11 @@ class _CardIconButton extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           child: SizedBox(
             width: _size,
             height: _size,
-            child: Icon(icon, size: 20, color: iconColor),
+            child: Icon(icon, size: 18, color: iconColor),
           ),
         ),
       ),
@@ -516,7 +484,7 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
         showScaffoldError(
           context: context,
           message:
-              'Selected price is below the minimum sale price of ${minBase.toStringAsFixed(2)}.',
+              'Selected price is below the minimum sale price of ${AmountHelper.formatAmount(minBase)}.',
         );
       }
       return;
@@ -555,10 +523,10 @@ class _SaleUnitSelector extends StatelessWidget {
       onSelected: onSelected,
       offset: const Offset(0, 28),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: ColorManager.kBgLightColor,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Colors.grey.shade200),
         ),
         child: Row(
@@ -615,7 +583,7 @@ class _QuantityButton extends StatelessWidget {
     required this.onTap,
   });
 
-  static const double _size = CartItemCard._minTouchTarget;
+  static const double _size = CartItemCard._qtyButtonSize;
 
   final IconData icon;
   final bool filled;
@@ -625,16 +593,16 @@ class _QuantityButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: filled ? ColorManager.kPrimaryColor : ColorManager.kBgLightColor,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         child: SizedBox(
           width: _size,
           height: _size,
           child: Icon(
             icon,
-            size: 20,
+            size: 18,
             color: filled ? Colors.white : ColorManager.kPrimaryColor,
           ),
         ),
@@ -767,7 +735,7 @@ class _MobileCartQuantityFieldState extends State<_MobileCartQuantityField> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 48,
+      width: 44,
       child: TextField(
         key: const ValueKey('cart_quantity_text_field'),
         controller: _controller,
@@ -776,7 +744,7 @@ class _MobileCartQuantityFieldState extends State<_MobileCartQuantityField> {
         textAlign: TextAlign.center,
         style: const TextStyle(
           fontFamily: 'Poppins',
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           color: ColorManager.kTitleTextColor,
         ),
@@ -784,7 +752,7 @@ class _MobileCartQuantityFieldState extends State<_MobileCartQuantityField> {
         decoration: const InputDecoration(
           border: InputBorder.none,
           isDense: true,
-          contentPadding: EdgeInsets.symmetric(vertical: 10),
+          contentPadding: EdgeInsets.symmetric(vertical: 8),
         ),
         onTap: _beginEditing,
         onSubmitted: (_) => _commitQuantity(),

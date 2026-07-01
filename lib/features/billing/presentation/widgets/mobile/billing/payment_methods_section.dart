@@ -93,6 +93,14 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
         final bp = Provider.of<BillingProvider>(context, listen: false);
         final items = _controller.paymentItems(bp, _paymentMethods);
 
+        if (snapshot.totalOrderAmount > 0) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _controller.syncPaymentAutofillIfNeeded(bp);
+            }
+          });
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -15,6 +15,7 @@ Future<ProductVariant?> showMobileVariantPickerSheet({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -62,7 +63,9 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
         minChildSize: 0.35,
         maxChildSize: 0.9,
         builder: (context, scrollController) {
-          return Column(
+          return ColoredBox(
+            color: Colors.white,
+            child: Column(
             children: [
               MobileSheetHeader(
                 title: widget.product.productName ?? 'Select variant',
@@ -224,6 +227,7 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
                 ),
               ),
             ],
+          ),
           );
         },
       ),

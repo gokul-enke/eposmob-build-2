@@ -221,6 +221,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     return showModalBottomSheet<GetProduct>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       isDismissible: false,
       enableDrag: false,
       shape: const RoundedRectangleBorder(
@@ -1070,6 +1071,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       body: Stack(
         children: [
           SafeArea(
+            top: false,
             child: Column(
               children: [
                 Expanded(

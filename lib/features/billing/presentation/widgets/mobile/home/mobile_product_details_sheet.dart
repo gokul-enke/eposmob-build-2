@@ -46,6 +46,7 @@ Future<void> showMobileProductDetailsSheet({
     isScrollControlled: true,
     useSafeArea: true,
     isDismissible: true,
+    backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -1672,18 +1673,22 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               ),
             ),
             const SizedBox(width: 12),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(
-                foregroundColor: ColorManager.kPrimaryColor,
-                minimumSize: const Size.fromHeight(48),
-              ),
-              child: const Text(
-                'Close',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+            Flexible(
+              fit: FlexFit.loose,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  minimumSize: const Size.fromHeight(48),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Close',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -1699,7 +1704,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     final sheetHeight = MediaQuery.sizeOf(context).height * 0.92;
 
     if (isLoading) {
-      return SizedBox(
+      return ColoredBox(
+        color: Colors.white,
+        child: SizedBox(
         height: sheetHeight,
         child: const Center(
           child: Column(
@@ -1711,11 +1718,14 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             ],
           ),
         ),
+      ),
       );
     }
 
     if (selectedProduct == null) {
-      return SizedBox(
+      return ColoredBox(
+        color: Colors.white,
+        child: SizedBox(
         height: sheetHeight,
         child: Center(
           child: Column(
@@ -1735,6 +1745,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             ],
           ),
         ),
+      ),
       );
     }
 
@@ -1748,7 +1759,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
     final showFooter = canEditProduct && _tabController.index == 1;
 
-    return Padding(
+    return ColoredBox(
+      color: Colors.white,
+      child: Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: SizedBox(
         height: sheetHeight,
@@ -1784,6 +1797,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             if (showFooter) _buildStickyFooter(),
           ],
         ),
+      ),
       ),
     );
   }

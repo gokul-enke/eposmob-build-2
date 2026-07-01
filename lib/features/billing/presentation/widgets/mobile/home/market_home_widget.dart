@@ -111,11 +111,9 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-          child: Selector<AppSettingsProvider, bool?>(
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+        child: Selector<AppSettingsProvider, bool?>(
             selector: (_, provider) => provider.appSettings?.barcodeSales,
             builder: (context, barcodeSales, _) {
               if (barcodeSales == null) {
@@ -300,7 +298,6 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
             },
           ),
         ),
-      ),
     );
   }
 }

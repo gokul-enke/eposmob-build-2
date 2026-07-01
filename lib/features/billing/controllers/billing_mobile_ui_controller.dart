@@ -1296,13 +1296,13 @@ class BillingMobilePaymentController {
   /// Transaction excess before customer-credit allocation (mirrors desktop
   /// `_computeBaseBalance`).
   double computeTransactionExcess(BillingProvider bp) {
-    final excess = bp.getTotalPaidAmount() - bp.totalOrderAmount;
+    final excess = bp.getTotalPaidAmount() - bp.effectiveOrderTotal;
     return excess > 0 ? excess : 0.0;
   }
 
   /// Maximum allocatable credit (mirrors desktop balance clamping).
   double maxToCustomerCreditAmount(BillingProvider bp) {
-    final cartTotal = bp.totalOrderAmount;
+    final cartTotal = bp.effectiveOrderTotal;
     final totalCollected = bp.getTotalPaidAmount();
     final customerPrevBalance = bp.selectedCustomer?.balance ?? 0.0;
 
@@ -1372,7 +1372,7 @@ class BillingMobilePaymentController {
   }
 
   double remainingPayable(BillingProvider bp) {
-    final remaining = bp.totalOrderAmount - bp.getTotalPaidAmount();
+    final remaining = bp.effectiveOrderTotal - bp.getTotalPaidAmount();
     return remaining > 0 ? remaining : 0.0;
   }
 
@@ -1441,12 +1441,59 @@ class BillingMobilePaymentController {
     }
   }
 
+  bool _hasAnyCollectedPayment(BillingProvider bp) {
+    if ((double.tryParse(bp.cashAmountController.text) ?? 0) > 0) return true;
+    if ((double.tryParse(bp.cardAmountController.text) ?? 0) > 0) return true;
+    if ((double.tryParse(bp.upiAmountController.text) ?? 0) > 0) return true;
+    if ((double.tryParse(bp.codAmountController.text) ?? 0) > 0) return true;
+    if ((double.tryParse(bp.debitAmountController.text) ?? 0) > 0) return true;
+    for (final entry in bp.extraPaymentAmounts.entries) {
+      if ((double.tryParse(entry.value) ?? 0) > 0) return true;
+    }
+    return bp.pineLabsPaymentSuccess || bp.isOnlineSelected;
+  }
+
+  /// Mirrors desktop payment-modal autofill: when a method is selected but no
+  /// amounts are entered yet, prefill the selected method with the full total.
+  /// Falls back to CASH when nothing is selected (desktop safety net).
+  bool syncPaymentAutofillIfNeeded(BillingProvider bp) {
+    final total = bp.effectiveOrderTotal;
+    if (total <= 0) return false;
+    if (_hasAnyCollectedPayment(bp)) return false;
+
+    final totalStr = total.toStringAsFixed(2);
+
+    if (bp.isCashSelected) {
+      bp.cashAmountController.text = totalStr;
+    } else if (bp.isCardSelected) {
+      bp.cardAmountController.text = totalStr;
+    } else if (bp.isUpiSelected) {
+      bp.upiAmountController.text = totalStr;
+    } else if (bp.isCodSelected) {
+      bp.codAmountController.text = totalStr;
+    } else if (bp.isDebitSelected) {
+      bp.debitAmountController.text = totalStr;
+    } else if (bp.selectedExtraMethodIds.isNotEmpty) {
+      final methodId = bp.selectedExtraMethodIds.first;
+      bp.setExtraPaymentAmount(
+        methodId,
+        totalStr,
+        displayValue: bp.extraPaymentValues[methodId],
+      );
+    } else {
+      bp.setPaymentMethod('CASH', true);
+      bp.cashAmountController.text = totalStr;
+    }
+    bp.calculateBalance();
+    return true;
+  }
+
   /// Fills CASH with the full payable total (quick cashier action).
   void fillExactCash(BillingProvider bp) {
     bp.clearAllPaymentMethods();
     bp.setPaymentMethod('CASH', true);
-    if (bp.totalOrderAmount > 0) {
-      bp.cashAmountController.text = bp.totalOrderAmount.toStringAsFixed(2);
+    if (bp.effectiveOrderTotal > 0) {
+      bp.cashAmountController.text = bp.effectiveOrderTotal.toStringAsFixed(2);
     }
     bp.calculateBalance();
   }
@@ -1458,7 +1505,7 @@ class BillingMobilePaymentController {
   }
 
   bool syncDebitAmount(BillingProvider bp) {
-    if (!bp.isDebitSelected || bp.totalOrderAmount <= 0) return false;
+    if (!bp.isDebitSelected || bp.effectiveOrderTotal <= 0) return false;
 
     final autoDebit = remainingPayable(bp);
     final nextText = autoDebit.toStringAsFixed(2);

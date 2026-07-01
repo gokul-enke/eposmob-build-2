@@ -62,9 +62,9 @@ class _BillingPageResponsiveState extends State<BillingPageResponsive> {
       isMobileWidth: isMobileWidth,
     )) {
       case BillingResponsiveRoute.loading:
-        return const Scaffold(
-          backgroundColor: Color(0xFFF8FAFC),
-          body: SizedBox.expand(),
+        return Scaffold(
+          backgroundColor: isMobileWidth ? Colors.white : const Color(0xFFF8FAFC),
+          body: const SizedBox.expand(),
         );
       case BillingResponsiveRoute.restaurant:
         return const RestaurantPage(

@@ -72,9 +72,11 @@ class _BillingAccordionCardState extends State<BillingAccordionCard> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
+                        fontFamily: 'Poppins',
                         fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         color: Color(0xFF0066CC),
+                        letterSpacing: 0.1,
                       ),
                     ),
                   ),

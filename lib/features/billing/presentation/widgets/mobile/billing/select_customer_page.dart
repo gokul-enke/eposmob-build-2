@@ -9,12 +9,12 @@ import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/screens/customers/add_customer_modal.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/add_customer_mobile_page.dart';
 
 /// Full-screen "Select Customer" page matching the Figma design.
-/// Displays a search bar, frequent-customer horizontal cards, a scrollable
-/// customer list with radio selection, a floating "add customer" button,
-/// and bottom Close / Done actions.
+/// Displays a search bar, a scrollable customer list with radio selection,
+/// a floating "add customer" button, and bottom Close / Done actions.
 class SelectCustomerPage extends StatefulWidget {
   const SelectCustomerPage({super.key});
 
@@ -91,16 +91,6 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
     });
   }
 
-  /// First 10 customers act as "Frequent Customers" for the horizontal cards.
-  List<CustomerListModelData> get _frequentCustomers {
-    return _controller.frequentCustomers(_allCustomers);
-  }
-
-  void _selectAndDone(CustomerListModelData customer) {
-    _applyCustomerSelection(customer);
-    Navigator.of(context).pop(customer);
-  }
-
   void _applyCustomerSelection(CustomerListModelData customer) {
     _controller.applySelection(
       customer: customer,
@@ -115,10 +105,8 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
   }
 
   Future<void> _onAddCustomer() async {
-    final size = MediaQuery.of(context).size;
-    final result = await showAddCustomerModal(
+    final result = await openAddCustomerMobilePage(
       context,
-      size,
       mobileNumber: '',
     );
 
@@ -186,12 +174,17 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final customerSelection =
         Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final isQuotationDraft = Provider.of<LocalProductProvider>(context,
+            listen: false)
+        .currentOrder
+        ?.quotationId !=
+        null;
     final shouldShow = _controller.shouldShowCustomerBalance(
       customer: customer,
       customerSelectionProvider: customerSelection,
       defaultCustomerPhone:
           appSettings?.autoAssignDefaultCustomerPhone ?? '',
-      isQuotationDraft: false,
+      isQuotationDraft: isQuotationDraft,
     );
     if (!shouldShow) return null;
 
@@ -202,14 +195,38 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
   }
 
   Widget _buildBalanceChip(MobileCustomerBalanceDisplay display) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
+    return Text(
+      '${display.label}: ${display.amountText}',
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: display.color,
+      ),
+    );
+  }
+
+  /// Mirrors desktop `checkout_modal.dart` customer-type badge styling.
+  Widget _buildCustomerTypeBadge(String? customerType) {
+    final type = (customerType == null || customerType.trim().isEmpty)
+        ? 'B2C'
+        : customerType.trim().toUpperCase();
+    final isB2B = type == 'B2B';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: isB2B ? Colors.green.shade50 : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isB2B ? Colors.green.shade300 : Colors.blue.shade300,
+        ),
+      ),
       child: Text(
-        '${display.label}: ${display.amountText}',
+        type,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: display.color,
+          color: isB2B ? Colors.green.shade700 : Colors.blue.shade700,
         ),
       ),
     );
@@ -229,6 +246,10 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final showCustomerType = Provider.of<AppSettingsProvider>(context)
+            .appSettings
+            ?.companyB2BEnabled ??
+        false;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -274,28 +295,6 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                             parent: AlwaysScrollableScrollPhysics(),
                           ),
                           slivers: [
-                            if (_frequentCustomers.isNotEmpty) ...[
-                              const SliverToBoxAdapter(
-                                child: Padding(
-                                  padding:
-                                      EdgeInsets.fromLTRB(20, 16, 20, 12),
-                                  child: Text(
-                                    'Frequent Customers',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SliverToBoxAdapter(
-                                child: _buildFrequentCustomerCards(),
-                              ),
-                              const SliverToBoxAdapter(
-                                child: SizedBox(height: 8),
-                              ),
-                            ],
                             if (_filteredCustomers.isEmpty)
                               SliverFillRemaining(
                                 hasScrollBody: false,
@@ -328,6 +327,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                                   itemBuilder: (context, index) {
                                     return _buildCustomerRow(
                                       _filteredCustomers[index],
+                                      showCustomerType: showCustomerType,
                                     );
                                   },
                                 ),
@@ -388,7 +388,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
@@ -429,157 +429,12 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // FREQUENT CUSTOMER CARDS (HORIZONTAL)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Widget _buildFrequentCustomerCards() {
-    return SizedBox(
-      height: 168,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: _frequentCustomers.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final customer = _frequentCustomers[index];
-          final initial = _avatarInitial(customer);
-          final isSelected = _selectedCustomer?.id == customer.id;
-          final hasVip = customer.membershipName != null &&
-              customer.membershipName!.isNotEmpty;
-          final balanceDisplay = _balanceDisplayForCustomer(customer);
-
-          return GestureDetector(
-            onTap: () => _selectAndDone(customer),
-            child: Container(
-              width: 160,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF1D4ED8)
-                      : Colors.grey.shade200,
-                  width: isSelected ? 2 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Avatar + VIP badge row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      CircleAvatar(
-                        radius: 22,
-                        backgroundColor:
-                            _avatarColor(initial).withValues(alpha: 0.12),
-                        child: Icon(
-                          Icons.person,
-                          size: 22,
-                          color: _avatarColor(initial),
-                        ),
-                      ),
-                      if (hasVip)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFF059669).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            customer.membershipName!,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF059669),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  // Name
-                  Text(
-                    customer.name ?? 'Unknown',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  // Phone
-                  Row(
-                    children: [
-                      Icon(Icons.phone, size: 13, color: Colors.grey.shade500),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          customer.phone ?? '',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (balanceDisplay != null)
-                    _buildBalanceChip(balanceDisplay),
-                  const Spacer(),
-                  // Select button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 32,
-                    child: ElevatedButton(
-                      onPressed: () => _selectAndDone(customer),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1D4ED8),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: EdgeInsets.zero,
-                      ),
-                      child: const Text(
-                        'Select customer',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // CUSTOMER LIST
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Widget _buildCustomerRow(CustomerListModelData customer) {
+  Widget _buildCustomerRow(
+    CustomerListModelData customer, {
+    required bool showCustomerType,
+  }) {
     final initial = _avatarInitial(customer);
     final isSelected = _selectedCustomer?.id == customer.id;
     final balanceDisplay = _balanceDisplayForCustomer(customer);
@@ -589,80 +444,100 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
         setState(() => _selectedCustomer = customer);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF1D4ED8).withValues(alpha: 0.04)
+              : null,
           border: Border(
             bottom: BorderSide(color: Colors.grey.shade100, width: 1),
           ),
         ),
         child: Row(
           children: [
-            // Avatar circle with initial
             CircleAvatar(
-              radius: 20,
+              radius: 18,
               backgroundColor: _avatarColor(initial).withValues(alpha: 0.12),
               child: Text(
                 initial,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: _avatarColor(initial),
                 ),
               ),
             ),
-            const SizedBox(width: 14),
-            // Name + Phone
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    customer.name ?? 'Unknown',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          customer.name ?? 'Unknown',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (showCustomerType) ...[
+                        const SizedBox(width: 6),
+                        _buildCustomerTypeBadge(customer.customerType),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    customer.phone ?? '',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade500,
-                    ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          customer.phone ?? '',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (balanceDisplay != null) ...[
+                        const SizedBox(width: 8),
+                        _buildBalanceChip(balanceDisplay),
+                      ],
+                    ],
                   ),
-                  if (balanceDisplay != null)
-                    _buildBalanceChip(balanceDisplay),
                 ],
               ),
             ),
-            // Selection indicator
-            isSelected
-                ? Container(
-                    width: 26,
-                    height: 26,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF22C55E),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  )
-                : Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
+            const SizedBox(width: 10),
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF22C55E) : Colors.transparent,
+                shape: BoxShape.circle,
+                border: isSelected
+                    ? null
+                    : Border.all(
                         color: Colors.grey.shade300,
                         width: 2,
                       ),
-                    ),
-                  ),
+              ),
+              child: isSelected
+                  ? const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 14,
+                    )
+                  : null,
+            ),
           ],
         ),
       ),

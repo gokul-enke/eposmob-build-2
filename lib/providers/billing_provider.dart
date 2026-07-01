@@ -903,9 +903,22 @@ class BillingProvider extends ChangeNotifier {
   double _totalPaidAmount = 0.0;
   double _totalOrderAmount = 0.0;
 
+  /// Order total used for payment validation, balance/change and autofill.
+  ///
+  /// Matches desktop `BillingPage._getEffectiveOrderTotal()` — i.e. the net
+  /// total is round-off adjusted (when `priceRoundOff` is enabled) before the
+  /// delivery charge is added. [_totalOrderAmount] stays the raw (unrounded)
+  /// net + delivery so that discount-driven payment remapping keeps using the
+  /// same unrounded ratio as desktop.
+  double _effectiveOrderTotal = 0.0;
+
   double get balanceAmount => _balanceAmount;
   double get totalPaidAmount => _totalPaidAmount;
   double get totalOrderAmount => _totalOrderAmount;
+
+  /// Effective (round-off adjusted) order total. Falls back to the raw total
+  /// so callers that only set [setTotalOrderAmount] keep their prior behaviour.
+  double get effectiveOrderTotal => _effectiveOrderTotal;
 
   // 25. To Customer Credit Toggle - Handle excess payment allocation
   bool _hasExcessPayment = false;
@@ -1231,7 +1244,7 @@ class BillingProvider extends ChangeNotifier {
     if (_isOnlineSelected) {
       paidMethods.add({
         "method": "ONLINE",
-        "amount": totalOrderAmount,
+        "amount": _effectiveOrderTotal,
       });
     }
 
@@ -1268,7 +1281,7 @@ class BillingProvider extends ChangeNotifier {
         customerType == 'default' || customerType == 'b2c';
 
     final result = PaymentValidation.validateForOrder(
-      orderTotal: _totalOrderAmount,
+      orderTotal: _effectiveOrderTotal,
       toCustomerCreditEnabled: _toCustomerCreditEnabled,
       isDefaultCustomer: isDefaultCustomer,
       customerPrevBalance: _selectedCustomer?.balance ?? 0.0,
@@ -1292,7 +1305,7 @@ class BillingProvider extends ChangeNotifier {
   void calculateBalance() {
     // Use the new getTotalPaidAmount() method that excludes debit/customer credit
     final newTotalPaid = getTotalPaidAmount();
-    final newBalance = calculateBalanceAmount(_totalOrderAmount);
+    final newBalance = calculateBalanceAmount(_effectiveOrderTotal);
     final newHasExcess = newBalance > 0;
 
     if ((newTotalPaid - _totalPaidAmount).abs() < 0.001 &&
@@ -1314,8 +1327,33 @@ class BillingProvider extends ChangeNotifier {
   }
 
   void setTotalOrderAmount(double amount) {
-    if ((_totalOrderAmount - amount).abs() < 0.001) return;
+    // Keep the effective total in lock-step for callers that only know a single
+    // total (tests, legacy screens). Rounding-aware callers use [setOrderTotals].
+    if ((_totalOrderAmount - amount).abs() < 0.001 &&
+        (_effectiveOrderTotal - amount).abs() < 0.001) {
+      return;
+    }
     _totalOrderAmount = amount;
+    _effectiveOrderTotal = amount;
+    calculateBalance();
+  }
+
+  /// Sets the raw and effective (round-off adjusted) order totals together.
+  ///
+  /// [totalOrderAmount] is the raw net + delivery total (used for discount
+  /// remapping); [effectiveOrderTotal] is the round-off adjusted total used for
+  /// payment validation, balance/change and autofill — mirroring desktop's
+  /// `_getEffectiveOrderTotal()`.
+  void setOrderTotals({
+    required double totalOrderAmount,
+    required double effectiveOrderTotal,
+  }) {
+    if ((_totalOrderAmount - totalOrderAmount).abs() < 0.001 &&
+        (_effectiveOrderTotal - effectiveOrderTotal).abs() < 0.001) {
+      return;
+    }
+    _totalOrderAmount = totalOrderAmount;
+    _effectiveOrderTotal = effectiveOrderTotal;
     calculateBalance();
   }
 
@@ -2694,7 +2732,7 @@ class BillingProvider extends ChangeNotifier {
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-    double onlineAmount = _isOnlineSelected ? totalOrderAmount : 0.0;
+    double onlineAmount = _isOnlineSelected ? _effectiveOrderTotal : 0.0;
     // Note: We don't include debit/toCustomerCredit in total paid amount
     // as it represents money going to customer credit, not money collected
     return cashAmount +
