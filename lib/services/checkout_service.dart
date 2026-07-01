@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
+import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/helpers/delivery_charge_helper.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -46,7 +47,10 @@ class CheckoutService {
             false);
   }
 
-  Future<void> confirmOrder() async {
+  /// Confirms the current order via the API. Returns `true` when the server
+  /// accepted the order (an `order_id` was returned), so callers can run the
+  /// post-confirm workspace reset (default-customer re-apply, etc.).
+  Future<bool> confirmOrder() async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
 
@@ -55,11 +59,12 @@ class CheckoutService {
         context: context,
         message: BillingMobileErrorMessages.noInternetConfirm,
       );
-      return;
+      return false;
     }
 
     billingDebugCheckout('confirmOrder', 'started');
 
+    bool orderConfirmed = false;
     billingProvider.setLoadingConfirmOrder(true);
     try {
       final skipCustomerSelection = Provider.of<AppSettingsProvider>(
@@ -72,7 +77,7 @@ class CheckoutService {
           context: context,
           message: BillingMobileErrorMessages.selectCustomer,
         );
-        return;
+        return false;
       }
 
       // Check if any payment method is selected (provider-level helper)
@@ -91,7 +96,7 @@ class CheckoutService {
           context: context,
           message: BillingMobileErrorMessages.selectPaymentMethod,
         );
-        return;
+        return false;
       }
 
       if (!billingProvider.validateCarNumberIfNeeded()) {
@@ -99,7 +104,7 @@ class CheckoutService {
           context: context,
           message: BillingMobileErrorMessages.enterCarNumber,
         );
-        return;
+        return false;
       }
 
       String? accessToken =
@@ -115,7 +120,7 @@ class CheckoutService {
           context: context,
           message: BillingMobileErrorMessages.emptyCart,
         );
-        return;
+        return false;
       }
 
       // Validate that all items have valid pricing before API call
@@ -130,7 +135,7 @@ class CheckoutService {
           context: context,
           message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
         );
-        return;
+        return false;
       }
 
       final items = localProductProvider.buildOrderItemsPayload();
@@ -197,6 +202,7 @@ class CheckoutService {
           response["order_id"] != null ? 'succeeded' : 'apiFailed',
         );
         if (response["order_id"] != null) {
+          orderConfirmed = true;
           showScaffold(
             context: context,
             message: "Order Confirmed Successfully",
@@ -256,6 +262,7 @@ class CheckoutService {
       billingProvider.setLoadingConfirmOrder(false);
       billingDebugCheckout('confirmOrder', 'completed');
     }
+    return orderConfirmed;
   }
 
   Future<String?> createOrderAndPrint() async {
@@ -511,9 +518,15 @@ class CheckoutService {
       final paidAmount = orderData['paidAmount']?.toString() ?? "0";
 
       final currentOrder = localProductProvider.currentOrder;
-      final customerNameToSave = billingProvider.selectedCustomer?.name;
-      final customerPhoneToSave = billingProvider.selectedCustomerPhone ??
-          billingProvider.mobileNumberText;
+      final customerNameToSave =
+          OrderCustomerFields.nameForOrder(billingProvider.selectedCustomer?.name);
+      final customerPhoneToSave = OrderCustomerFields.phoneForOrder(
+        selectedPhone: billingProvider.selectedCustomerPhone,
+        customerPhone: billingProvider.selectedCustomer?.phone,
+        mobileNumberText: billingProvider.mobileNumberText,
+        controllerText: billingProvider.mobileNumberTextController.text,
+      );
+      final customerTypeToSave = billingProvider.selectedCustomer?.customerType;
       final deliveryCharge = resolveDeliveryCharge(context);
 
       if (currentOrder != null) {
@@ -543,6 +556,7 @@ class CheckoutService {
               ? billingProvider.orderAddress
               : null,
           deliveryCharge: deliveryCharge,
+          customerType: customerTypeToSave,
         );
         showScaffold(context: context, message: "Order Updated Successfully");
         return SaveOrderResult.updatedExisting;
@@ -572,6 +586,7 @@ class CheckoutService {
               ? billingProvider.orderAddress
               : null,
           deliveryCharge: deliveryCharge,
+          customerType: customerTypeToSave,
         );
         showScaffold(context: context, message: "Order Saved Successfully");
         return SaveOrderResult.savedNew;
@@ -626,6 +641,7 @@ class CheckoutService {
       final customerNameToSave = billingProvider.selectedCustomer?.name;
       final customerPhoneToSave = billingProvider.selectedCustomerPhone ??
           billingProvider.mobileNumberText;
+      final customerTypeToSave = billingProvider.selectedCustomer?.customerType;
       final deliveryCharge = resolveDeliveryCharge(context);
 
       if (currentOrder != null) {
@@ -655,6 +671,7 @@ class CheckoutService {
               ? billingProvider.orderAddress
               : null,
           deliveryCharge: deliveryCharge,
+          customerType: customerTypeToSave,
         );
         result = localProductProvider.moveToConfirmedOrders(currentOrderId);
         if (result != null) {
@@ -688,6 +705,7 @@ class CheckoutService {
                 ? billingProvider.orderAddress
                 : null,
             deliveryCharge: deliveryCharge,
+            customerType: customerTypeToSave,
           );
           showScaffold(
             context: context,
@@ -719,6 +737,7 @@ class CheckoutService {
               ? billingProvider.orderAddress
               : null,
           deliveryCharge: deliveryCharge,
+          customerType: customerTypeToSave,
         );
         showScaffold(
           context: context,

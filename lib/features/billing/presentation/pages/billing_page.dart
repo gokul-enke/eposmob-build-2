@@ -19,6 +19,7 @@ import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
+import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
@@ -5807,13 +5808,16 @@ class BillingPageState extends State<BillingPage>
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
-  String? _customerNameForOrder() => _trimToNull(selectedCustomer?.name);
+  String? _customerNameForOrder() =>
+      OrderCustomerFields.nameForOrder(selectedCustomer?.name);
 
   String? _customerPhoneForOrder() {
-    return _trimToNull(selectedCustomerPhone) ??
-        _trimToNull(selectedCustomer?.phone) ??
-        _trimToNull(mobileNumberText) ??
-        _trimToNull(mobileNumberTextController.text);
+    return OrderCustomerFields.phoneForOrder(
+      selectedPhone: selectedCustomerPhone,
+      customerPhone: selectedCustomer?.phone,
+      mobileNumberText: mobileNumberText,
+      controllerText: mobileNumberTextController.text,
+    );
   }
 
   SavedOrder _saveCurrentCartAsDraft(

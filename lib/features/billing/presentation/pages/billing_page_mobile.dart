@@ -706,16 +706,26 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     setState(() => _isConfirmingOrder = true);
 
+    bool confirmed = false;
     try {
-      await _controller.confirmOrder(context);
+      confirmed = await _controller.confirmOrder(context);
     } finally {
       if (mounted) {
         setState(() => _isConfirmingOrder = false);
       }
     }
-    if (mounted) {
-      _focusTextField();
+    if (!mounted) return;
+    if (confirmed) {
+      // Mirror desktop `_confirmOrder`: reset the workspace and re-apply the
+      // default customer (when configured) after a successful confirm.
+      setState(() {
+        _controller.resetBillingWorkspaceAfterOrder(context);
+        _lastRehydratedOrderId = null;
+        _autocompleteProductKey = GlobalKey();
+        _autocompletePhoneKey = GlobalKey();
+      });
     }
+    _focusTextField();
   }
 
   Future<void> createOrderAndPrint() async {
@@ -746,6 +756,17 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _showPrintRetrySnackBar(result.orderNumber!);
       } else if (result.orderCreated && result.printSucceeded) {
         _pendingPrintOrderNumber = null;
+      }
+      if (result.orderCreated) {
+        // Mirror desktop `_createOrderAndPrint`: reset the workspace and
+        // re-apply the default customer (when configured) once the order has
+        // been created, regardless of whether printing succeeded.
+        setState(() {
+          _controller.resetBillingWorkspaceAfterOrder(context);
+          _lastRehydratedOrderId = null;
+          _autocompleteProductKey = GlobalKey();
+          _autocompletePhoneKey = GlobalKey();
+        });
       }
     } finally {
       if (mounted) {

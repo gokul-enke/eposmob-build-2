@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
+import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -515,6 +516,10 @@ class BillingMobileController {
     localProductProvider.clearCurrentOrder();
 
     billingProvider.coupenCodeTextController.clear();
+    // Desktop `_resetBillingWorkspaceUi` also clears the coupon-applied flag and
+    // the delivery address, not just the coupon text field.
+    billingProvider.setCouponApplied(false);
+    billingProvider.setOrderAddress('');
     billingProvider.transactionNumberController.clear();
     billingProvider.paidAmountController.clear();
     billingProvider.clearAllPaymentMethods();
@@ -562,8 +567,8 @@ class BillingMobileController {
     return await CheckoutService(context).saveOrder();
   }
 
-  Future<void> confirmOrder(BuildContext context) async {
-    await CheckoutService(context).confirmOrder();
+  Future<bool> confirmOrder(BuildContext context) async {
+    return await CheckoutService(context).confirmOrder();
   }
 
   Future<CreateOrderAndPrintResult> createOrderAndPrint(
@@ -635,9 +640,14 @@ class BillingMobileController {
     final orderData = billingProvider.createOrderData();
     final paymentMethod = orderData['paymentMethod']?.toString() ?? '';
     final paidAmount = orderData['paidAmount']?.toString() ?? '0';
-    final customerNameToSave = billingProvider.selectedCustomer?.name;
-    final customerPhoneToSave = billingProvider.selectedCustomerPhone ??
-        billingProvider.mobileNumberText;
+    final customerNameToSave =
+        OrderCustomerFields.nameForOrder(billingProvider.selectedCustomer?.name);
+    final customerPhoneToSave = OrderCustomerFields.phoneForOrder(
+      selectedPhone: billingProvider.selectedCustomerPhone,
+      customerPhone: billingProvider.selectedCustomer?.phone,
+      mobileNumberText: billingProvider.mobileNumberText,
+      controllerText: billingProvider.mobileNumberTextController.text,
+    );
     final deliveryCharge = resolveDeliveryCharge(context);
     final currentOrder = localProductProvider.currentOrder;
 
@@ -712,6 +722,10 @@ class BillingMobileController {
     localProductProvider.clearCurrentOrder();
 
     billingProvider.coupenCodeTextController.clear();
+    // Desktop `_resetBillingWorkspaceUi` also clears the coupon-applied flag and
+    // the delivery address, not just the coupon text field.
+    billingProvider.setCouponApplied(false);
+    billingProvider.setOrderAddress('');
     billingProvider.transactionNumberController.clear();
     billingProvider.paidAmountController.clear();
     billingProvider.clearAllPaymentMethods();
