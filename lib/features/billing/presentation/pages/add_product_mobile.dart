@@ -1810,13 +1810,17 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       children: [
         Icon(icon, color: Colors.blue.shade700, size: 22),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontFamily: 'Poppins',
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
           ),
         ),
       ],
