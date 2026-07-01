@@ -7,6 +7,7 @@ import 'package:pos_machine/helpers/api_response_helper.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
+import 'package:pos_machine/models/sales_return_refund_breakdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/list_sales_order.dart';
@@ -18,6 +19,7 @@ class SalesProvider with ChangeNotifier {
   List<SalesReturnOrder> _salesReturnOrders = [];
   List<SalesReturnCart> _salesReturnItems = [];
   SalesReturnOrderInfo? _currentReturnOrder;
+  SalesReturnRefundBreakdown? _serverRefundBreakdown;
   List<DailySalesCloseData> dailySalesCloseList = [];
   Pagination? dailySalesClosePagination;
   int currentPage = 1;
@@ -29,6 +31,19 @@ class SalesProvider with ChangeNotifier {
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
   List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
   SalesReturnOrderInfo? get currentReturnOrder => _currentReturnOrder;
+  SalesReturnRefundBreakdown? get serverRefundBreakdown => _serverRefundBreakdown;
+
+  void clearServerRefundBreakdown() {
+    _serverRefundBreakdown = null;
+    notifyListeners();
+  }
+
+  void _storeRefundBreakdownFromBody(String body) {
+    final breakdown = SalesReturnRefundBreakdown.fromResponseBody(body);
+    if (breakdown != null) {
+      _serverRefundBreakdown = breakdown;
+    }
+  }
 
   String _orderNumber = "";
   String _orderId = "";
@@ -576,6 +591,7 @@ class SalesProvider with ChangeNotifier {
     required num quantity,
     required int cartItemId,
     required String reason,
+    bool isDeliveryRefundable = false,
   }) async {
     final url =
         Uri.parse(APPUrl.salesReturn); // Update with your server base URL
@@ -600,6 +616,7 @@ class SalesProvider with ChangeNotifier {
         'quantity': quantity,
         'cart_item_id': cartItemId,
         'reason': reason,
+        'is_delivery_refundable': isDeliveryRefundable,
       }),
     );
 
@@ -617,6 +634,7 @@ class SalesProvider with ChangeNotifier {
       response.body,
       fallback: 'Failed to submit sales return',
     );
+    _storeRefundBreakdownFromBody(response.body);
     notifyListeners();
   }
 
@@ -677,6 +695,7 @@ class SalesProvider with ChangeNotifier {
       response.body,
       fallback: 'Failed to complete sales return',
     );
+    _storeRefundBreakdownFromBody(response.body);
     debugPrint('Sales return completed successfully: ${response.body}');
     notifyListeners();
   }

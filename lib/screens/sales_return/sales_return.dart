@@ -16,6 +16,7 @@ import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/helpers/sales_return_calculation_helper.dart';
+import 'package:pos_machine/models/sales_return_refund_breakdown.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
@@ -436,6 +437,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
       // Only reset initial state when loading a NEW order, not after individual return submissions
       if (resetInitialState) {
+        Provider.of<SalesProvider>(context, listen: false)
+            .clearServerRefundBreakdown();
         _initialReturnedQuantities.clear();
         _initialReturnedTotals.clear();
         for (var item in _salesReturnItems) {
@@ -1571,6 +1574,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                               quantity: returnQty,
                               cartItemId: cartItemId,
                               reason: reasonController.text,
+                              isDeliveryRefundable: _deliveryChargeRefundable,
                             );
 
                             if (!dialogContext.mounted) return;
@@ -1891,13 +1895,43 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     );
   }
 
-  SalesReturnRefundSummary _refundSummaryFor(List<SalesReturnCart> items) {
+  SalesReturnRefundSummary _refundSummaryFor(
+    List<SalesReturnCart> items, {
+    SalesReturnRefundBreakdown? serverBreakdown,
+  }) {
+    final shippingCost =
+        (orderDetailsModelData?.deliveryCharge ?? 0).toDouble();
+    final orderDiscount =
+        (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble();
+
+    if (serverBreakdown != null) {
+      return serverBreakdown.toRefundSummary(
+        deliveryRefundable: _deliveryChargeRefundable,
+        shippingCost: shippingCost,
+      );
+    }
+
+    if (_draftReturnOrderId != null) {
+      final draftTotal = items.fold<double>(
+        0,
+        (sum, item) =>
+            sum + (double.tryParse(item.returnedTotal.toString()) ?? 0),
+      );
+      if (draftTotal > 0) {
+        return SalesReturnCalculationHelper.calculateFromDraftTotals(
+          items: items,
+          orderDiscount: orderDiscount,
+          shippingCost: shippingCost,
+          deliveryRefundable: _deliveryChargeRefundable,
+        );
+      }
+    }
+
     return SalesReturnCalculationHelper.calculateRefund(
       items: items,
       initialReturnedTotals: _initialReturnedTotals,
-      orderDiscount:
-          (orderDetailsModelData?.priceSummary?.discount ?? 0).toDouble(),
-      shippingCost: (orderDetailsModelData?.deliveryCharge ?? 0).toDouble(),
+      orderDiscount: orderDiscount,
+      shippingCost: shippingCost,
       deliveryRefundable: _deliveryChargeRefundable,
     );
   }
@@ -1969,7 +2003,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               return;
             }
 
-            final refundSummary = _refundSummaryFor(_salesReturnItems);
+            final refundSummary = _refundSummaryFor(
+              _salesReturnItems,
+              serverBreakdown: Provider.of<SalesProvider>(context, listen: false)
+                  .serverRefundBreakdown,
+            );
             final maxCashRefund = refundSummary.maxCashRefundAmount;
             final paidAmount =
                 double.tryParse(paidAmountController.text) ?? 0.0;
@@ -2135,7 +2173,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         }
       }
 
-      final refundSummary = _refundSummaryFor(salesReturnItems);
+      final refundSummary = _refundSummaryFor(
+        salesReturnItems,
+        serverBreakdown: salesProvider.serverRefundBreakdown,
+      );
       final returnDiscount = refundSummary.proRataDiscount;
       final returnedTotal = refundSummary.netRefundAmount;
       final shippingCost =
@@ -2298,7 +2339,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       }
 
       // Calculate return total (ONLY from this session) via shared helper
-      final refundSummary = _refundSummaryFor(salesReturnItems);
+      final refundSummary = _refundSummaryFor(
+        salesReturnItems,
+        serverBreakdown: salesProvider.serverRefundBreakdown,
+      );
       final suggestedRefund = refundSummary.netRefundAmount;
       final maxCashRefund = refundSummary.maxCashRefundAmount;
 
@@ -2628,7 +2672,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Items total (this session): ${refundSummary.sessionItemsTotal.toStringAsFixed(2)}',
+                refundSummary.isFromServer
+                    ? 'Returned items total: ${refundSummary.sessionItemsTotal.toStringAsFixed(2)}'
+                    : 'Items total (this session): ${refundSummary.sessionItemsTotal.toStringAsFixed(2)}',
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s11,
@@ -2636,6 +2682,18 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   Colors.grey.shade600,
                 ),
               ),
+              if (refundSummary.isFromServer) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Amounts calculated by server',
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s10,
+                    0.25,
+                    ColorManager.kPrimaryColor.withOpacity(0.8),
+                  ),
+                ),
+              ],
               if (refundSummary.proRataDiscount > 0) ...[
                 const SizedBox(height: 4),
                 Text(

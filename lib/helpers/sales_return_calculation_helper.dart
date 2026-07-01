@@ -10,6 +10,7 @@ class SalesReturnRefundSummary {
   /// Upper limit for cash paid out — returned items total (+ delivery if toggled).
   /// Cashier may refund up to this without applying the discount reduction.
   final double maxCashRefundAmount;
+  final bool isFromServer;
 
   const SalesReturnRefundSummary({
     required this.sessionItemsTotal,
@@ -17,6 +18,7 @@ class SalesReturnRefundSummary {
     required this.proRataDiscount,
     required this.netRefundAmount,
     required this.maxCashRefundAmount,
+    this.isFromServer = false,
   });
 }
 
@@ -77,6 +79,40 @@ class SalesReturnCalculationHelper {
 
     return SalesReturnRefundSummary(
       sessionItemsTotal: sessionTotal,
+      orderItemsTotal: orderItemsTotal,
+      proRataDiscount: proRataDiscount,
+      netRefundAmount: netRefund < 0 ? 0 : netRefund,
+      maxCashRefundAmount: maxCashRefund < 0 ? 0 : maxCashRefund,
+    );
+  }
+
+  /// Fallback when no server breakdown: use cumulative returned line totals
+  /// (full draft on order), e.g. completing an existing draft without new submits.
+  static SalesReturnRefundSummary calculateFromDraftTotals({
+    required List<SalesReturnCart> items,
+    required double orderDiscount,
+    required double shippingCost,
+    required bool deliveryRefundable,
+  }) {
+    var orderItemsTotal = 0.0;
+    var returnedItemsTotal = 0.0;
+    for (final item in items) {
+      orderItemsTotal +=
+          double.tryParse(item.totalPrice.toString()) ?? 0.0;
+      returnedItemsTotal +=
+          double.tryParse(item.returnedTotal.toString()) ?? 0.0;
+    }
+
+    final proRataDiscount = orderItemsTotal > 0 && orderDiscount > 0
+        ? (returnedItemsTotal / orderItemsTotal) * orderDiscount
+        : 0.0;
+
+    final deliveryAmount = deliveryRefundable ? shippingCost : 0.0;
+    var netRefund = returnedItemsTotal - proRataDiscount + deliveryAmount;
+    final maxCashRefund = returnedItemsTotal + deliveryAmount;
+
+    return SalesReturnRefundSummary(
+      sessionItemsTotal: returnedItemsTotal,
       orderItemsTotal: orderItemsTotal,
       proRataDiscount: proRataDiscount,
       netRefundAmount: netRefund < 0 ? 0 : netRefund,
