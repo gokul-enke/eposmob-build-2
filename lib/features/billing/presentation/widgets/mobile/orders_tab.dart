@@ -6,14 +6,18 @@ class MobileOrdersTab extends StatefulWidget {
   final Future<void> Function(String orderId) onOrderSelected;
   final Future<void> Function(SavedOrder order) onPrintOrder;
   final void Function(SavedOrder order) onDeleteOrder;
+  final Future<void> Function() onNewOrder;
   final bool isLoadingOrder;
+  final bool isCreatingNewOrder;
 
   const MobileOrdersTab({
     super.key,
     required this.onOrderSelected,
     required this.onPrintOrder,
     required this.onDeleteOrder,
+    required this.onNewOrder,
     this.isLoadingOrder = false,
+    this.isCreatingNewOrder = false,
   });
 
   @override
@@ -27,7 +31,9 @@ class _MobileOrdersTabState extends State<MobileOrdersTab> {
       onOrderSelected: widget.onOrderSelected,
       onPrintOrder: widget.onPrintOrder,
       onDeleteOrder: widget.onDeleteOrder,
+      onNewOrder: widget.onNewOrder,
       isLoadingOrder: widget.isLoadingOrder,
+      isCreatingNewOrder: widget.isCreatingNewOrder,
     );
   }
 }

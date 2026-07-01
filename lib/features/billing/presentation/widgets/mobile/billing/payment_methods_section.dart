@@ -6,9 +6,13 @@ import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_contr
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/pine_labs_section.dart';
+
+// To-customer-credit UX lives in [_ToCustomerCreditSection] below.
 
 class PaymentMethodsSection extends StatefulWidget {
   const PaymentMethodsSection({super.key});
@@ -19,6 +23,7 @@ class PaymentMethodsSection extends StatefulWidget {
 
 class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   static const _controller = BillingMobilePaymentController();
+  static const _customerController = BillingMobileCustomerController();
   bool _isLoadingPaymentMethods = false;
   List<MasterDataValue> _paymentMethods = [];
 
@@ -135,7 +140,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
 
                 if (type == 'DEBIT' &&
                     isSelected &&
-                    snapshot.totalOrderAmount > 0) {
+                    snapshot.totalOrderAmount > 0 &&
+                    !snapshot.toCustomerCreditEnabled) {
                   final expectedDebit =
                       _controller.remainingPayable(bp).toStringAsFixed(2);
                   if (controller.text != expectedDebit) {
@@ -262,6 +268,12 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
             ),
             const SizedBox(height: 16),
 
+            _ToCustomerCreditSection(
+              controller: _controller,
+              customerController: _customerController,
+            ),
+            const SizedBox(height: 16),
+
             // Transaction Reference Input
             const Text(
               'Transaction Reference',
@@ -321,6 +333,7 @@ class _PaymentMethodsSnapshot {
     required this.isUpiSelected,
     required this.isCodSelected,
     required this.isDebitSelected,
+    required this.toCustomerCreditEnabled,
     required this.selectedCustomerId,
     required this.selectedExtraMethodIds,
   });
@@ -333,6 +346,7 @@ class _PaymentMethodsSnapshot {
       isUpiSelected: bp.isUpiSelected,
       isCodSelected: bp.isCodSelected,
       isDebitSelected: bp.isDebitSelected,
+      toCustomerCreditEnabled: bp.toCustomerCreditEnabled,
       selectedCustomerId: bp.selectedCustomer?.id,
       selectedExtraMethodIds: Set<String>.from(bp.selectedExtraMethodIds),
     );
@@ -344,6 +358,7 @@ class _PaymentMethodsSnapshot {
   final bool isUpiSelected;
   final bool isCodSelected;
   final bool isDebitSelected;
+  final bool toCustomerCreditEnabled;
   final int? selectedCustomerId;
   final Set<String> selectedExtraMethodIds;
 
@@ -356,6 +371,7 @@ class _PaymentMethodsSnapshot {
         other.isUpiSelected == isUpiSelected &&
         other.isCodSelected == isCodSelected &&
         other.isDebitSelected == isDebitSelected &&
+        other.toCustomerCreditEnabled == toCustomerCreditEnabled &&
         other.selectedCustomerId == selectedCustomerId &&
         setEquals(other.selectedExtraMethodIds, selectedExtraMethodIds);
   }
@@ -368,7 +384,224 @@ class _PaymentMethodsSnapshot {
         isUpiSelected,
         isCodSelected,
         isDebitSelected,
+        toCustomerCreditEnabled,
         selectedCustomerId,
         Object.hashAllUnordered(selectedExtraMethodIds),
+      );
+}
+
+class _ToCustomerCreditSection extends StatelessWidget {
+  const _ToCustomerCreditSection({
+    required this.controller,
+    required this.customerController,
+  });
+
+  final BillingMobilePaymentController controller;
+  final BillingMobileCustomerController customerController;
+
+  @override
+  Widget build(BuildContext context) {
+    final customerSelection =
+        Provider.of<CustomerSelectionProvider>(context, listen: true);
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: true).appSettings;
+    final defaultCustomerPhone =
+        appSettings?.autoAssignDefaultCustomerPhone ?? '';
+    final currency = appSettings?.currency ?? '';
+
+    return Selector<BillingProvider, _ToCustomerCreditSnapshot>(
+      selector: (_, bp) => _ToCustomerCreditSnapshot.from(bp),
+      builder: (context, snapshot, _) {
+        final bp = Provider.of<BillingProvider>(context, listen: false);
+        final customer = customerSelection.selectedCustomer;
+
+        if (!controller.shouldShowToCustomerCreditSection(
+          customer: customer,
+          customerSelectionProvider: customerSelection,
+          defaultCustomerPhone: defaultCustomerPhone,
+        )) {
+          return const SizedBox.shrink();
+        }
+
+        final balanceDisplay = customerController.balanceDisplay(
+          balance: customer?.balance ?? 0.0,
+          currency: currency,
+        );
+        final maxAllowed = controller.maxToCustomerCreditAmount(bp);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: snapshot.toCustomerCreditEnabled
+                  ? const Color(0xFF3B82F6)
+                  : Colors.grey.shade200,
+              width: snapshot.toCustomerCreditEnabled ? 1.5 : 1,
+            ),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: snapshot.toCustomerCreditEnabled
+                        ? const Color(0xFF0066CC)
+                        : Colors.grey.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'To Customer Credit',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0066CC),
+                      ),
+                    ),
+                  ),
+                  Switch(
+                    value: snapshot.toCustomerCreditEnabled,
+                    activeColor: const Color(0xFF3B82F6),
+                    onChanged: (value) {
+                      controller.toggleToCustomerCredit(bp, value);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    balanceDisplay.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: balanceDisplay.color,
+                    ),
+                  ),
+                  Text(
+                    balanceDisplay.amountText,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: balanceDisplay.color,
+                    ),
+                  ),
+                ],
+              ),
+              if (snapshot.toCustomerCreditEnabled) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: bp.debitAmountController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0066CC),
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Enter amount to add as customer credit',
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(
+                        color: ColorManager.kPrimaryColor,
+                        width: 1.5,
+                      ),
+                    ),
+                    helperText: maxAllowed > 0
+                        ? 'Max: $currency ${maxAllowed.toStringAsFixed(2)}'
+                        : 'No excess payment available',
+                    helperStyle: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  onTap: () {
+                    Provider.of<KeyboardProvider>(context, listen: false).show(
+                      'number',
+                      bp.debitAmountController,
+                      replaceOnFirstInput: true,
+                    );
+                  },
+                  onChanged: (value) {
+                    controller.onToCustomerCreditAmountChanged(bp, value);
+                  },
+                  onEditingComplete: () {
+                    controller.clampToCustomerCreditAmount(bp);
+                  },
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+@immutable
+class _ToCustomerCreditSnapshot {
+  const _ToCustomerCreditSnapshot({
+    required this.toCustomerCreditEnabled,
+    required this.totalPaidAmount,
+    required this.totalOrderAmount,
+    required this.debitAmountText,
+    required this.customerBalance,
+  });
+
+  factory _ToCustomerCreditSnapshot.from(BillingProvider bp) {
+    return _ToCustomerCreditSnapshot(
+      toCustomerCreditEnabled: bp.toCustomerCreditEnabled,
+      totalPaidAmount: bp.totalPaidAmount,
+      totalOrderAmount: bp.totalOrderAmount,
+      debitAmountText: bp.debitAmountController.text,
+      customerBalance: bp.selectedCustomer?.balance ?? 0.0,
+    );
+  }
+
+  final bool toCustomerCreditEnabled;
+  final double totalPaidAmount;
+  final double totalOrderAmount;
+  final String debitAmountText;
+  final double customerBalance;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _ToCustomerCreditSnapshot &&
+        other.toCustomerCreditEnabled == toCustomerCreditEnabled &&
+        other.totalPaidAmount == totalPaidAmount &&
+        other.totalOrderAmount == totalOrderAmount &&
+        other.debitAmountText == debitAmountText &&
+        other.customerBalance == customerBalance;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        toCustomerCreditEnabled,
+        totalPaidAmount,
+        totalOrderAmount,
+        debitAmountText,
+        customerBalance,
       );
 }

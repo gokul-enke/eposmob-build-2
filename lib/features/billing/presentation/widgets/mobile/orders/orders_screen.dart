@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders/order_card.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders/order_stat_card.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders/orders_empty_state.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
@@ -12,13 +13,17 @@ class OrdersScreen extends StatelessWidget {
     required this.onOrderSelected,
     required this.onPrintOrder,
     required this.onDeleteOrder,
+    required this.onNewOrder,
     this.isLoadingOrder = false,
+    this.isCreatingNewOrder = false,
   });
 
   final Future<void> Function(String orderId) onOrderSelected;
   final Future<void> Function(SavedOrder order) onPrintOrder;
   final void Function(SavedOrder order) onDeleteOrder;
+  final Future<void> Function() onNewOrder;
   final bool isLoadingOrder;
+  final bool isCreatingNewOrder;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +40,37 @@ class OrdersScreen extends StatelessWidget {
 
               return Column(
                 children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: (isLoadingOrder || isCreatingNewOrder)
+                          ? null
+                          : () => onNewOrder(),
+                      icon: isCreatingNewOrder
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.add, size: 18),
+                      label: const Text(
+                        'New Order',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: ColorManager.kPrimaryColor,
+                        side: BorderSide(color: ColorManager.kPrimaryColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -101,6 +137,12 @@ class OrdersScreen extends StatelessWidget {
         status.contains('pickup');
   }
 
+  static String _formatOrderTotal(BuildContext context, double total) {
+    final currency =
+        context.read<AppSettingsProvider>().appSettings?.currency ?? 'INR';
+    return '$currency ${total.toStringAsFixed(2)}';
+  }
+
   void _showOrderDetails(BuildContext context, SavedOrder order) {
     showModalBottomSheet(
       context: context,
@@ -156,7 +198,7 @@ class OrdersScreen extends StatelessWidget {
                     label: 'Delivery', value: order.deliveryMethod ?? '-'),
                 _DetailRow(
                   label: 'Total',
-                  value: '\$${order.total.toStringAsFixed(2)}',
+                  value: _formatOrderTotal(context, order.total),
                   valueColor: ColorManager.kPrimaryColor,
                 ),
                 const SizedBox(height: 16),

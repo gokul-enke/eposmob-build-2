@@ -1271,7 +1271,104 @@ class BillingMobilePaymentController {
   }
 
   bool shouldShowItem(MobilePaymentItem item, BillingProvider bp) {
-    return item.type != 'DEBIT' || bp.selectedCustomer != null;
+    if (item.type == 'DEBIT') {
+      // Pay-from-credit row conflicts with to-customer-credit amount field.
+      if (bp.toCustomerCreditEnabled) return false;
+      return bp.selectedCustomer != null;
+    }
+    return true;
+  }
+
+  /// Whether the to-customer-credit section should appear (non-walk-in customer).
+  bool shouldShowToCustomerCreditSection({
+    required CustomerListModelData? customer,
+    required CustomerSelectionProvider customerSelectionProvider,
+    required String defaultCustomerPhone,
+  }) {
+    if (customer == null) return false;
+    return !const BillingMobileCustomerController().isDefaultCustomer(
+      customer: customer,
+      customerSelectionProvider: customerSelectionProvider,
+      defaultCustomerPhone: defaultCustomerPhone,
+    );
+  }
+
+  /// Transaction excess before customer-credit allocation (mirrors desktop
+  /// `_computeBaseBalance`).
+  double computeTransactionExcess(BillingProvider bp) {
+    final excess = bp.getTotalPaidAmount() - bp.totalOrderAmount;
+    return excess > 0 ? excess : 0.0;
+  }
+
+  /// Maximum allocatable credit (mirrors desktop balance clamping).
+  double maxToCustomerCreditAmount(BillingProvider bp) {
+    final cartTotal = bp.totalOrderAmount;
+    final totalCollected = bp.getTotalPaidAmount();
+    final customerPrevBalance = bp.selectedCustomer?.balance ?? 0.0;
+
+    if (customerPrevBalance < 0) {
+      final transactionExcess = totalCollected - cartTotal;
+      return transactionExcess > 0 ? transactionExcess : 0.0;
+    }
+
+    final netDue =
+        (cartTotal - customerPrevBalance).clamp(0.0, double.infinity);
+    final availableBalance = totalCollected - netDue;
+    return availableBalance > 0 ? availableBalance : 0.0;
+  }
+
+  /// Prefill when enabling the toggle (mirrors desktop `_setToCustomerCreditEnabled`).
+  double prefillToCustomerCreditAmount(BillingProvider bp) {
+    final transactionExcess = computeTransactionExcess(bp);
+    if (transactionExcess <= 0) return 0.0;
+
+    final customerPrevBalance = bp.selectedCustomer?.balance ?? 0.0;
+    if (customerPrevBalance < 0) {
+      final customerDebt = customerPrevBalance.abs();
+      return customerDebt <= transactionExcess
+          ? customerDebt
+          : transactionExcess;
+    }
+    return transactionExcess;
+  }
+
+  void toggleToCustomerCredit(BillingProvider bp, bool enabled) {
+    bp.setToCustomerCreditEnabled(enabled);
+    if (enabled) {
+      final prefill = prefillToCustomerCreditAmount(bp);
+      if (prefill > 0) {
+        bp.debitAmountController.text = prefill.toStringAsFixed(2);
+      } else {
+        bp.debitAmountController.clear();
+      }
+    } else {
+      bp.debitAmountController.clear();
+    }
+    bp.calculateBalance();
+    bp.validatePayment();
+  }
+
+  void onToCustomerCreditAmountChanged(BillingProvider bp, String value) {
+    if (value.isNotEmpty && (double.tryParse(value) ?? 0.0) > 0) {
+      if (!bp.toCustomerCreditEnabled) {
+        bp.setToCustomerCreditEnabled(true);
+      }
+    }
+    bp.calculateBalance();
+    bp.validatePayment();
+  }
+
+  /// Clamps the entered credit to the allowed excess (on field commit).
+  void clampToCustomerCreditAmount(BillingProvider bp) {
+    if (!bp.toCustomerCreditEnabled) return;
+
+    final amount = double.tryParse(bp.debitAmountController.text) ?? 0.0;
+    final maxAllowed = maxToCustomerCreditAmount(bp);
+    if (amount > maxAllowed) {
+      bp.debitAmountController.text = maxAllowed.toStringAsFixed(2);
+      bp.calculateBalance();
+      bp.validatePayment();
+    }
   }
 
   double remainingPayable(BillingProvider bp) {

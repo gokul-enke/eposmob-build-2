@@ -92,7 +92,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
     final lowerQuery = query.toLowerCase();
 
     // Match desktop billing autocomplete: search sellable products only.
-    return widget.productList.where((product) {
+    final results = widget.productList.where((product) {
       final nameMatch = _productSearchNames(product)
           .any((name) => name.toLowerCase().contains(lowerQuery));
       if (nameMatch) return true;
@@ -104,6 +104,24 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       }
       return false;
     }).toList();
+
+    final indexedResults = results.indexed.toList();
+    indexedResults.sort((first, second) {
+      final rankCompare = _productSearchRank(first.$2, lowerQuery)
+          .compareTo(_productSearchRank(second.$2, lowerQuery));
+      if (rankCompare != 0) return rankCompare;
+      return first.$1.compareTo(second.$1);
+    });
+
+    return indexedResults.map((entry) => entry.$2).toList();
+  }
+
+  int _productSearchRank(GetProduct product, String lowerQuery) {
+    final productNames = _productSearchNames(product)
+        .map((name) => name.trim().toLowerCase())
+        .where((name) => name.isNotEmpty);
+    if (productNames.any((name) => name.startsWith(lowerQuery))) return 0;
+    return 1;
   }
 
   List<String> _productSearchNames(GetProduct product) {

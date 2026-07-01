@@ -989,6 +989,41 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears collected payment amounts while keeping method selections.
+  /// Mirrors desktop `_clearPaymentAmountsOnly` when the cart changes.
+  void clearCollectedPaymentAmountsOnly() {
+    cashAmountController.clear();
+    cardAmountController.clear();
+    upiAmountController.clear();
+    codAmountController.clear();
+    debitAmountController.clear();
+
+    for (final controller in _extraAmountControllers.values) {
+      controller.clear();
+    }
+    _extraPaymentAmounts.clear();
+    _extraPaymentValues.clear();
+
+    calculateBalance();
+    validatePayment();
+    notifyListeners();
+  }
+
+  /// Whether any collected payment amount is present (standard + extra methods).
+  bool hasCollectedPaymentAmounts() {
+    return PaymentValidation.hasCollectedPayment(
+      isCashSelected: _isCashSelected,
+      isCardSelected: _isCardSelected,
+      isUpiSelected: _isUpiSelected,
+      isCodSelected: _isCodSelected,
+      cashAmount: cashAmountController.text,
+      cardAmount: cardAmountController.text,
+      upiAmount: upiAmountController.text,
+      codAmount: codAmountController.text,
+      extraAmounts: _extraPaymentAmounts,
+    );
+  }
+
   TextEditingController getExtraAmountController(
     String methodId, {
     String? displayValue,
@@ -1245,6 +1280,7 @@ class BillingProvider extends ChangeNotifier {
       cardAmount: cardAmountController.text,
       upiAmount: upiAmountController.text,
       codAmount: codAmountController.text,
+      extraAmounts: _extraPaymentAmounts,
     );
 
     _paymentValidationError = result.message;

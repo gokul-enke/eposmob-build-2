@@ -27,8 +27,10 @@ class MobileBillingTab extends StatefulWidget {
   final VoidCallback onConfirmOrder;
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
+  final VoidCallback onSaveAndPrint;
   final bool isConfirmingOrder;
   final bool isConfirmingAndPrinting;
+  final bool isSavingAndPrinting;
 
   const MobileBillingTab({
     super.key,
@@ -36,8 +38,10 @@ class MobileBillingTab extends StatefulWidget {
     required this.onConfirmOrder,
     required this.onSaveOrder,
     required this.onCreateOrderAndPrint,
+    required this.onSaveAndPrint,
     this.isConfirmingOrder = false,
     this.isConfirmingAndPrinting = false,
+    this.isSavingAndPrinting = false,
   });
 
   @override
@@ -204,7 +208,10 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                         ),
                       ],
                     ),
-                    child: const PaymentSummary(compact: false),
+                    child: const PaymentSummary(
+                      compact: false,
+                      showToCustomerCreditToggle: false,
+                    ),
                   ),
                 ],
               ),
@@ -217,8 +224,10 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
         onSaveOrder: widget.onSaveOrder,
         onCreateOrderAndPrint: widget.onCreateOrderAndPrint,
         onConfirmOrder: widget.onConfirmOrder,
+        onSaveAndPrint: widget.onSaveAndPrint,
         isConfirmingOrder: widget.isConfirmingOrder,
         isConfirmingAndPrinting: widget.isConfirmingAndPrinting,
+        isSavingAndPrinting: widget.isSavingAndPrinting,
       ),
     );
   }

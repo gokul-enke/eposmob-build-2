@@ -2,6 +2,15 @@ import 'dart:io';
 
 import 'package:hive/hive.dart';
 
+/// Drains async Hive box writes kicked off without `await` (e.g.
+/// [LocalProductProvider] `_saveProductsToHive` calling `box.clear()`).
+/// Call from unit-test `tearDown` so pending I/O finishes before
+/// [closeHiveAndDeleteTestDir] runs.
+Future<void> awaitPendingHiveBoxWrites() async {
+  await Future<void>.delayed(Duration.zero);
+  await Future<void>.delayed(const Duration(milliseconds: 25));
+}
+
 /// Closes Hive and deletes its temp test directory, tolerating the Windows
 /// file-lock race where the OS briefly holds a handle on the directory right
 /// after `Hive.close()` returns (antivirus/indexer scan). This is test

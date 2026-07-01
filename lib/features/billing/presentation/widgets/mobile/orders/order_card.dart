@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders/order_status_badge.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:provider/provider.dart';
 
 class OrderCard extends StatelessWidget {
   const OrderCard({
@@ -161,17 +163,23 @@ class OrderCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Expanded(
-                    child: Text(
-                      '\$${order.total.toStringAsFixed(2)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        color: ColorManager.kPrimaryColor,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 22,
-                      ),
+                    child: Consumer<AppSettingsProvider>(
+                      builder: (context, settings, _) {
+                        final currency =
+                            settings.appSettings?.currency ?? 'INR';
+                        return Text(
+                          '$currency ${order.total.toStringAsFixed(2)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.end,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            color: ColorManager.kPrimaryColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 8),

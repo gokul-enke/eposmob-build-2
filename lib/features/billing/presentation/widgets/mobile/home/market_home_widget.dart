@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_grid.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/new_order_button.dart';
@@ -7,6 +9,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list_mobile.dart';
 import 'package:provider/provider.dart';
@@ -34,7 +37,51 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
   String _selectedCategory = BillingMobileMarketController.allProductsCategory;
   String _searchQuery = '';
   ProductViewMode _viewMode = ProductViewMode.grid;
+  bool _isResyncingProducts = false;
   late final TextEditingController _searchController;
+
+  Future<void> _resyncProductsFromEmptyState() async {
+    if (_isResyncingProducts) return;
+
+    setState(() => _isResyncingProducts = true);
+
+    try {
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+      await localProductProvider.fetchProductsFromAPI(refresh: true);
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        await syncProvider.syncAllData(context);
+      }
+
+      if (!mounted) return;
+
+      if (localProductProvider.sellableProducts.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Resync finished but no products were returned. Check tenant/API key or internet.',
+        );
+      } else {
+        showScaffold(
+          context: context,
+          message: 'Products resynced successfully',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Failed to resync products: ${e.toString()}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isResyncingProducts = false);
+      }
+    }
+  }
 
   Future<void> _openAddProduct() async {
     await Navigator.push(
@@ -78,10 +125,15 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
               return Selector<LocalProductProvider, List<GetProduct>>(
                 selector: (_, provider) => provider.sellableProducts,
                 builder: (context, sellableProducts, _) {
-                  final products = _controller.visibleProducts(
+                  final itemCodeEnabled = context.select<AppSettingsProvider,
+                          bool>(
+                      (p) => p.appSettings?.itemCodeEnabled ?? false);
+                  final products = filterMarketHomeProducts(
+                    controller: _controller,
                     products: sellableProducts,
                     query: _searchQuery,
                     selectedCategory: _selectedCategory,
+                    itemCodeEnabled: itemCodeEnabled,
                   );
                   final categories = _controller.categories(sellableProducts);
 
@@ -211,14 +263,26 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
                       ),
                       const SizedBox(height: 18),
                       Expanded(
-                        child: Selector<LocalProductProvider, bool>(
-                          selector: (_, provider) => provider.isLoading,
-                          builder: (context, isLoading, _) {
-                            if (isLoading && sellableProducts.isEmpty) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
+                        child: Builder(
+                          builder: (context) {
+                            final isLoading = context
+                                .select<LocalProductProvider, bool>(
+                                    (p) => p.isLoading);
+                            final catalogLoading =
+                                isLoading || _isResyncingProducts;
+
+                            if (sellableProducts.isEmpty) {
+                              if (catalogLoading) {
+                                return _EmptyCatalogLoading(
+                                  resyncing: _isResyncingProducts,
+                                );
+                              }
+                              return _EmptyCatalogResync(
+                                isResyncing: _isResyncingProducts,
+                                onResync: _resyncProductsFromEmptyState,
                               );
                             }
+
                             return MarketProductGrid(
                               products: products,
                               viewMode: _viewMode,
@@ -235,6 +299,149 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
               );
             },
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Category filter via [BillingMobileMarketController]; search (name + optional
+/// item code) applied in-widget so desktop grid parity does not require
+/// controller edits.
+List<GetProduct> filterMarketHomeProducts({
+  required BillingMobileMarketController controller,
+  required List<GetProduct> products,
+  required String query,
+  required String selectedCategory,
+  required bool itemCodeEnabled,
+}) {
+  final categoryFiltered = controller.visibleProducts(
+    products: products,
+    query: '',
+    selectedCategory: selectedCategory,
+  );
+
+  final normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.isEmpty) {
+    return categoryFiltered;
+  }
+
+  return categoryFiltered.where((product) {
+    final name = product.productName?.toLowerCase() ?? '';
+    if (name.contains(normalizedQuery)) return true;
+    if (itemCodeEnabled) {
+      final itemCode = product.itemCode ?? '';
+      if (itemCode.isNotEmpty &&
+          itemCode.toLowerCase().contains(normalizedQuery)) {
+        return true;
+      }
+    }
+    return false;
+  }).toList();
+}
+
+class _EmptyCatalogLoading extends StatelessWidget {
+  const _EmptyCatalogLoading({required this.resyncing});
+
+  final bool resyncing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              resyncing ? 'Resyncing products...' : 'Loading products...',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              resyncing
+                  ? 'Please wait while products are being loaded.'
+                  : 'Please wait.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyCatalogResync extends StatelessWidget {
+  const _EmptyCatalogResync({
+    required this.isResyncing,
+    required this.onResync,
+  });
+
+  final bool isResyncing;
+  final VoidCallback onResync;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 40,
+              color: Colors.grey.shade500,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'No products loaded',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Try resyncing products. Check internet and tenant if this continues.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 11,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 14),
+            CustomRoundButton(
+              title: isResyncing ? 'Resyncing...' : 'Resync Products',
+              fct: isResyncing ? () {} : onResync,
+              width: 170,
+              height: 36,
+              fontSize: 11,
+              boxColor: ColorManager.kPrimaryColor,
+              borderColor: ColorManager.kPrimaryColor,
+              textColor: Colors.white,
+              radius: 8,
+            ),
+          ],
         ),
       ),
     );

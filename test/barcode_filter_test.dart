@@ -47,6 +47,8 @@ void main() {
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
   });
 
+  tearDown(() => awaitPendingHiveBoxWrites());
+
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   group('Barcode Index & Filtering', () {

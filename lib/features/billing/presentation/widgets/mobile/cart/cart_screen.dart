@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/cart_action_buttons.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/cart_item_card.dart';
@@ -55,6 +56,8 @@ class _CartScreenState extends State<CartScreen> {
                       showMrp: appSettings?.showMrpPos ?? false,
                       showTaxRate: appSettings?.showTaxRatePos ?? false,
                       showTaxAmount: appSettings?.showTaxPos ?? false,
+                      showItemCode: appSettings?.itemCodeEnabled ?? false,
+                      stockEnabled: provider.isStockEnabled,
                     ),
                   ),
                 ],
@@ -72,6 +75,8 @@ class _CartScreenState extends State<CartScreen> {
     required bool showMrp,
     required bool showTaxRate,
     required bool showTaxAmount,
+    required bool showItemCode,
+    required bool stockEnabled,
   }) {
     if (cartItems.isEmpty) {
       return _EmptyCart(onAddMoreItems: widget.onBackToMarket);
@@ -97,6 +102,12 @@ class _CartScreenState extends State<CartScreen> {
                   showMrp: showMrp,
                   showTaxRate: showTaxRate,
                   showTaxAmount: showTaxAmount,
+                  showItemCode: showItemCode,
+                  isLowStock: stockEnabled &&
+                      isProductLowStock(
+                        productAvailableQuantity(item.product),
+                        item.product.reorderLevel,
+                      ),
                 ),
                 const SizedBox(height: 12),
               ],

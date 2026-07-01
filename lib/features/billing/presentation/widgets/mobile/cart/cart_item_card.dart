@@ -5,6 +5,8 @@ import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart/mobile_cart_price_fields.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
+import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
+import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -30,6 +32,8 @@ class CartItemCard extends StatelessWidget {
     this.showMrp = false,
     this.showTaxRate = false,
     this.showTaxAmount = false,
+    this.showItemCode = false,
+    this.isLowStock = false,
   });
 
   static const _settingsController = BillingMobileSettingsController();
@@ -44,6 +48,8 @@ class CartItemCard extends StatelessWidget {
   final bool showMrp;
   final bool showTaxRate;
   final bool showTaxAmount;
+  final bool showItemCode;
+  final bool isLowStock;
 
   String? get _imageUrl {
     final attachments = item.product.attachment ?? const <Attachment>[];
@@ -54,14 +60,6 @@ class CartItemCard extends StatelessWidget {
     if (raw == null || raw.isEmpty) return null;
     if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
     return null;
-  }
-
-  String get _displayQuantity {
-    final quantity = item.displayQuantity;
-    if (quantity % 1 == 0) {
-      return quantity.toInt().toString();
-    }
-    return quantity.toStringAsFixed(1).replaceAll(RegExp(r'0$'), '');
   }
 
   String get _lineTotal {
@@ -94,9 +92,15 @@ class CartItemCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isLowStock
+            ? ColorManager.kOrange.withValues(alpha: 0.06)
+            : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isLowStock
+              ? ColorManager.kOrange.withValues(alpha: 0.35)
+              : Colors.grey.shade200,
+        ),
         boxShadow: const [
           BoxShadow(
             color: ColorManager.containerShadowColorForList,
@@ -133,17 +137,60 @@ class CartItemCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
-                        item.displayName,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          height: 1.3,
-                          fontWeight: FontWeight.w600,
-                          color: ColorManager.kTitleTextColor,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.displayName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              height: 1.3,
+                              fontWeight: FontWeight.w600,
+                              color: ColorManager.kTitleTextColor,
+                            ),
+                          ),
+                          if (showItemCode) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              item.product.itemCode ?? '-',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: ColorManager.kGreyColor,
+                              ),
+                            ),
+                          ],
+                          if (isLowStock) ...[
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: ColorManager.kOrange.withValues(
+                                  alpha: 0.12,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Low stock',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: ColorManager.kOrange,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     if (canViewBillingProductDetails)
@@ -215,18 +262,11 @@ class CartItemCard extends StatelessWidget {
                       filled: false,
                       onTap: onDecrease,
                     ),
-                    SizedBox(
-                      width: 36,
-                      child: Text(
-                        _displayQuantity,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: ColorManager.kTitleTextColor,
-                        ),
+                    _MobileCartQuantityField(
+                      key: ValueKey(
+                        'qty-field-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
                       ),
+                      item: item,
                     ),
                     _QuantityButton(
                       icon: Icons.add,
@@ -598,6 +638,156 @@ class _QuantityButton extends StatelessWidget {
             color: filled ? Colors.white : ColorManager.kPrimaryColor,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MobileCartQuantityField extends StatefulWidget {
+  const _MobileCartQuantityField({
+    super.key,
+    required this.item,
+  });
+
+  final LocalCartItem item;
+
+  @override
+  State<_MobileCartQuantityField> createState() =>
+      _MobileCartQuantityFieldState();
+}
+
+class _MobileCartQuantityFieldState extends State<_MobileCartQuantityField> {
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+  bool _isEditing = false;
+  bool _isSyncing = false;
+
+  String? get _unit {
+    final unitName = widget.item.displayUnitName;
+    if (unitName != '-') return unitName;
+    return widget.item.product.unit;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: _formatDisplay(widget.item.displayQuantity),
+    );
+    _focusNode = FocusNode();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant _MobileCartQuantityField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_isEditing && !_isSyncing) {
+      final nextText = _formatDisplay(widget.item.displayQuantity);
+      if (_controller.text != nextText) {
+        _controller.text = nextText;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus && _isEditing) {
+      _commitQuantity();
+    }
+  }
+
+  void _beginEditing() {
+    _isEditing = true;
+    _focusNode.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_focusNode.hasFocus) return;
+      if (_controller.text.isNotEmpty) {
+        _controller.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _controller.text.length,
+        );
+      }
+    });
+  }
+
+  Future<void> _commitQuantity() async {
+    _isEditing = false;
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      _controller.text = _formatDisplay(widget.item.displayQuantity);
+      return;
+    }
+
+    final parsed = num.tryParse(text);
+    if (parsed == null || parsed < 0) {
+      _controller.text = _formatDisplay(widget.item.displayQuantity);
+      return;
+    }
+
+    final normalized = normalizeQuantityForUnit(parsed, _unit);
+    if (normalized == widget.item.displayQuantity) {
+      _controller.text = _formatDisplay(widget.item.displayQuantity);
+      return;
+    }
+
+    _isSyncing = true;
+    try {
+      final provider = context.read<LocalProductProvider>();
+      final baseQty = widget.item.hasSaleUnit
+          ? widget.item.toBaseQuantity(normalized)
+          : normalized;
+
+      await CartQuantityStockHelper.syncCartItemQuantity(
+        context: context,
+        cartItem: widget.item,
+        newQuantity: baseQty,
+        localProductProvider: provider,
+      );
+      if (!mounted) return;
+      _controller.text = _formatDisplay(widget.item.displayQuantity);
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  String _formatDisplay(num value) {
+    if (value is int || value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 48,
+      child: TextField(
+        key: const ValueKey('cart_quantity_text_field'),
+        controller: _controller,
+        focusNode: _focusNode,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: ColorManager.kTitleTextColor,
+        ),
+        inputFormatters: quantityInputFormattersForUnit(_unit),
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(vertical: 10),
+        ),
+        onTap: _beginEditing,
+        onSubmitted: (_) => _commitQuantity(),
       ),
     );
   }

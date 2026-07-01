@@ -15,7 +15,14 @@ import 'package:pos_machine/components/build_tax_modal.dart';
 
 class PaymentSummary extends StatelessWidget {
   final bool compact;
-  const PaymentSummary({super.key, this.compact = false});
+  /// When false, hides the bare to-customer-credit toggle (mobile uses a
+  /// dedicated section in [PaymentMethodsSection] instead).
+  final bool showToCustomerCreditToggle;
+  const PaymentSummary({
+    super.key,
+    this.compact = false,
+    this.showToCustomerCreditToggle = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -271,7 +278,8 @@ class PaymentSummary extends StatelessWidget {
         const SizedBox(height: 10),
 
         // To Customer Credit toggle (only show when a customer is selected)
-        if (billingProvider.selectedCustomer != null) ...[
+        if (showToCustomerCreditToggle &&
+            billingProvider.selectedCustomer != null) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

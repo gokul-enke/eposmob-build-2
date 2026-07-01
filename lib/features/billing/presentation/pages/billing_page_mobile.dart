@@ -20,6 +20,8 @@ import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_contr
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/features/billing/domain/barcode_scan_queue.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/billing_status_header.dart';
+import 'package:pos_machine/services/checkout_service.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/mobile_bottom_nav.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing_tab.dart';
@@ -59,6 +61,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
   bool _isConfirmingAndPrinting = false;
   bool _isLoadingOrder = false;
   bool _isClearingCart = false;
+  bool _isSavingAndPrinting = false;
+  bool _isCreatingNewOrder = false;
+
+  VoidCallback? _cartChangeListener;
 
   /// Business logic (restore/rehydration, etc.) lives here; the page keeps only
   /// UI orchestration.
@@ -366,6 +372,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
         setState(() {});
       }
     });
+
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    _cartChangeListener ??= () {
+      if (!mounted) return;
+      _controller.onCartChanged(context);
+    };
+    localProductProvider.addListener(_cartChangeListener!);
   }
 
   @override
@@ -379,11 +393,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _isConfirmingAndPrinting = false;
         _isLoadingOrder = false;
         _isClearingCart = false;
+        _isSavingAndPrinting = false;
+        _isCreatingNewOrder = false;
       });
       final billingProvider =
           Provider.of<BillingProvider>(context, listen: false);
       billingProvider.setLoadingSaveOrder(false);
       billingProvider.setLoadingConfirmOrder(false);
+      billingProvider.setLoadingSaveOrderAndPrint(false);
     }
   }
 
@@ -430,6 +447,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
           Provider.of<LocalProductProvider>(context, listen: false);
       if (_localProductOrderListener != null) {
         localProductProvider.removeListener(_localProductOrderListener!);
+      }
+      if (_cartChangeListener != null) {
+        localProductProvider.removeListener(_cartChangeListener!);
       }
     } catch (e) {
       billingDebugLog('Error removing listeners: $e');
@@ -654,10 +674,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileConnectivityController.offlineConfirmMessage,
-      );
+      await saveOrderAndPrint();
       return;
     }
 
@@ -690,10 +707,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileConnectivityController.offlineConfirmPrintMessage,
-      );
+      await saveOrderAndPrint();
       return;
     }
 
@@ -719,6 +733,88 @@ class BillingPageMobileState extends State<BillingPageMobile>
     } finally {
       if (mounted) {
         setState(() => _isConfirmingAndPrinting = false);
+      }
+    }
+  }
+
+  Future<void> saveOrderAndPrint() async {
+    if (_isSavingAndPrinting ||
+        _isConfirmingOrder ||
+        _isConfirmingAndPrinting) {
+      return;
+    }
+
+    if (!_isCustomerSatisfiedForCheckout()) {
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.selectCustomer,
+      );
+      _switchToTab(1);
+      return;
+    }
+
+    if (!_validatePaymentReady()) return;
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
+    setState(() => _isSavingAndPrinting = true);
+    billingProvider.setLoadingSaveOrderAndPrint(true);
+
+    try {
+      final order =
+          await CheckoutService(context).saveOrderAndReturnConfirmed();
+      if (!mounted || order == null) return;
+
+      try {
+        await _controller.printSavedOrder(context, order);
+        if (!mounted) return;
+        _pendingPrintOrderNumber = null;
+      } catch (error) {
+        if (!mounted) return;
+        _showPrintRetrySnackBar(order.orderNumber);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _controller.resetBillingWorkspaceAfterOrder(context);
+        _lastRehydratedOrderId = null;
+        _autocompleteProductKey = GlobalKey();
+        _autocompletePhoneKey = GlobalKey();
+      });
+      _focusTextField();
+    } finally {
+      billingProvider.setLoadingSaveOrderAndPrint(false);
+      if (mounted) {
+        setState(() => _isSavingAndPrinting = false);
+      }
+    }
+  }
+
+  Future<void> createNewOrder() async {
+    if (_isCreatingNewOrder || _isLoadingOrder) return;
+
+    setState(() => _isCreatingNewOrder = true);
+    try {
+      await _controller.createNewOrder(context);
+      if (!mounted) return;
+      setState(() {
+        _lastRehydratedOrderId = null;
+        _autocompleteProductKey = GlobalKey();
+        _autocompletePhoneKey = GlobalKey();
+      });
+      showScaffold(context: context, message: 'New order started');
+      _switchToTab(0);
+      _focusTextField();
+    } catch (error) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.saveOrderFailed,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isCreatingNewOrder = false);
       }
     }
   }
@@ -766,6 +862,18 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+
+    final isSwitchingOrder = localProductProvider.currentOrder?.id != orderId;
+    if (isSwitchingOrder && localProductProvider.cartItems.isNotEmpty) {
+      try {
+        _controller.saveCurrentCartAsDraft(context);
+        showScaffold(context: context, message: 'Current order saved as draft');
+      } catch (error) {
+        billingDebugLog('Error preserving current order: $error');
+      }
+    }
 
     setState(() => _isLoadingOrder = true);
     billingProvider.setLoadingOrder(true);
@@ -773,6 +881,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
     try {
       _controller.loadOrderForEditing(context, orderId);
       _rehydrateFromProvider();
+
+      unawaited(
+        _controller.refreshPaymentMethodIdsThenRehydrate(context, orderId),
+      );
 
       // Switch to cart tab to show loaded cart
       _switchToTab(3);
@@ -803,10 +915,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
           backgroundColor: Colors.white,
           body: Form(
             key: _formKey,
-            child: TabBarView(
-              controller: _tabController,
-              physics: const NeverScrollableScrollPhysics(), // Disable swipe
+            child: Column(
               children: [
+                const BillingStatusHeader(),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
                 // Home Tab
                 MobileHomeTab(
                   autocompleteProductKey: _autocompleteProductKey,
@@ -831,15 +947,19 @@ class BillingPageMobileState extends State<BillingPageMobile>
                   onConfirmOrder: confirmOrder,
                   onSaveOrder: saveOrder,
                   onCreateOrderAndPrint: createOrderAndPrint,
+                  onSaveAndPrint: saveOrderAndPrint,
                   isConfirmingOrder: _isConfirmingOrder,
                   isConfirmingAndPrinting: _isConfirmingAndPrinting,
+                  isSavingAndPrinting: _isSavingAndPrinting,
                 ),
                 // Orders Tab
                 MobileOrdersTab(
                   onOrderSelected: loadSavedOrderForEditing,
                   onPrintOrder: printSavedOrder,
                   onDeleteOrder: deleteSavedOrder,
+                  onNewOrder: createNewOrder,
                   isLoadingOrder: _isLoadingOrder,
+                  isCreatingNewOrder: _isCreatingNewOrder,
                 ),
                 // Cart Tab
                 MobileCartTab(
@@ -849,6 +969,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
                   onClearCart: clearCart,
                   isSavingOrder: _isSavingOrder,
                   isClearingCart: _isClearingCart,
+                ),
+                    ],
+                  ),
                 ),
               ],
             ),

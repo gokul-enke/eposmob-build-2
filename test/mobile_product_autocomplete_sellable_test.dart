@@ -10,6 +10,8 @@ import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_home_widget.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -154,6 +156,100 @@ void main() {
 
       // Guard: non-sellable product exists in fixture but is excluded from list.
       expect(nonSellable.sellable, isFalse);
+    });
+
+    testWidgets('prefix matches rank before contains matches', (tester) async {
+      final products = [
+        _namedProduct(id: 1, name: 'Sweet Tea'),
+        _namedProduct(id: 2, name: 'Tea Premium'),
+        _namedProduct(id: 3, name: 'Teapot'),
+      ];
+
+      await tester.pumpWidget(
+        _wrap(
+          sellableList: products,
+          child: SizedBox(
+            width: 400,
+            height: 400,
+            child: MobileProductAutocomplete(
+              size: const Size(400, 400),
+              productList: products,
+              onSelected: (_, __) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Tea');
+      await tester.pump();
+
+      final optionFinder = find.byType(ListTile);
+      expect(optionFinder, findsNWidgets(3));
+      expect(
+        tester.widget<ListTile>(optionFinder.at(0)).title,
+        isA<Text>().having((t) => t.data, 'data', 'Tea Premium'),
+      );
+      expect(
+        tester.widget<ListTile>(optionFinder.at(1)).title,
+        isA<Text>().having((t) => t.data, 'data', 'Teapot'),
+      );
+      expect(
+        tester.widget<ListTile>(optionFinder.at(2)).title,
+        isA<Text>().having((t) => t.data, 'data', 'Sweet Tea'),
+      );
+    });
+  });
+
+  group('filterMarketHomeProducts item-code grid search', () {
+    const controller = BillingMobileMarketController();
+
+    test('matches item code when itemCodeEnabled is true', () {
+      final products = [
+        GetProduct(
+          productId: 1,
+          productName: 'Mystery Box',
+          itemCode: 'SKU-42',
+          price: ProductPrice(price: '10'),
+        ),
+        GetProduct(
+          productId: 2,
+          productName: 'Other Item',
+          itemCode: 'SKU-99',
+          price: ProductPrice(price: '10'),
+        ),
+      ];
+
+      final result = filterMarketHomeProducts(
+        controller: controller,
+        products: products,
+        query: 'sku-42',
+        selectedCategory: BillingMobileMarketController.allProductsCategory,
+        itemCodeEnabled: true,
+      );
+
+      expect(result.map((p) => p.productId), [1]);
+    });
+
+    test('ignores item code when itemCodeEnabled is false', () {
+      final products = [
+        GetProduct(
+          productId: 1,
+          productName: 'Mystery Box',
+          itemCode: 'SKU-42',
+          price: ProductPrice(price: '10'),
+        ),
+      ];
+
+      final result = filterMarketHomeProducts(
+        controller: controller,
+        products: products,
+        query: 'sku-42',
+        selectedCategory: BillingMobileMarketController.allProductsCategory,
+        itemCodeEnabled: false,
+      );
+
+      expect(result, isEmpty);
     });
   });
 }

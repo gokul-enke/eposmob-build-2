@@ -447,6 +447,50 @@ void main() {
       expect(bp.debitAmountController.text, '0.00');
       expect(bp.getTotalPaidAmount(), 80);
     });
+
+    test('toggleToCustomerCredit prefills excess and hides pay-from-credit row',
+        () {
+      final bp = BillingProvider();
+      bp.setSelectedCustomer(
+        CustomerListModelData(id: 3, name: 'Ali', phone: '555', balance: 0),
+      );
+      bp.setTotalOrderAmount(80);
+      bp.cashAmountController.text = '100';
+      bp.setPaymentMethod('CASH', true);
+
+      controller.toggleToCustomerCredit(bp, true);
+
+      expect(bp.toCustomerCreditEnabled, isTrue);
+      expect(bp.debitAmountController.text, '20.00');
+      expect(
+        controller.shouldShowItem(
+          MobilePaymentItem(
+            name: 'Credit',
+            type: 'DEBIT',
+            controller: bp.debitAmountController,
+            selected: false,
+          ),
+          bp,
+        ),
+        isFalse,
+      );
+    });
+
+    test('toggleToCustomerCredit off clears debit allocation amount', () {
+      final bp = BillingProvider();
+      bp.setSelectedCustomer(
+        CustomerListModelData(id: 4, name: 'Sara', phone: '666'),
+      );
+      bp.setTotalOrderAmount(50);
+      bp.cashAmountController.text = '60';
+      bp.setPaymentMethod('CASH', true);
+
+      controller.toggleToCustomerCredit(bp, true);
+      controller.toggleToCustomerCredit(bp, false);
+
+      expect(bp.toCustomerCreditEnabled, isFalse);
+      expect(bp.debitAmountController.text, isEmpty);
+    });
   });
 
   group('BillingMobileDeliveryController', () {
