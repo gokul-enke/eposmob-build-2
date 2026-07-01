@@ -4,8 +4,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 
-// TODO: re-enable stock badge
-// import 'package:pos_machine/features/billing/domain/product_stock_summary.dart';
+import 'package:pos_machine/features/billing/domain/product_stock_summary.dart';
 
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 
@@ -325,8 +324,8 @@ class ProductListRow extends StatelessWidget {
 
 
 
-  // TODO: re-enable stock badge
-  // bool get _inStock => hasAvailableStock(product.stock?.map((s) => s.quantity));
+  bool get _inStock =>
+      hasAvailableStock(product.stock?.map((s) => s.quantity));
 
   String get _displayName => product.productName ?? 'Unnamed Product';
 
@@ -336,7 +335,7 @@ class ProductListRow extends StatelessWidget {
 
   Widget build(BuildContext context) {
 
-    // final inStock = _inStock; // TODO: re-enable stock badge
+    final inStock = _inStock;
 
     final imageUrl = resolveMarketProductImageUrl(product);
 
@@ -498,54 +497,27 @@ class ProductListRow extends StatelessWidget {
 
                         const SizedBox(height: 3),
 
-                        FittedBox(
-
-                          fit: BoxFit.scaleDown,
-
-                          alignment: Alignment.centerLeft,
-
-                          child: Text(
-
-                            price,
-
-                            style: const TextStyle(
-
-                              fontFamily: 'Poppins',
-
-                              color: ColorManager.kPrimaryColor,
-
-                              fontWeight: FontWeight.w700,
-
-                              fontSize: 14,
-
+                        Row(
+                          children: [
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  price,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    color: ColorManager.kPrimaryColor,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
                             ),
-
-                          ),
-
+                            const SizedBox(width: 8),
+                            _ListStockChip(inStock: inStock),
+                          ],
                         ),
-
-                        // TODO: re-enable stock badge
-                        // Row(
-                        //   children: [
-                        //     Flexible(
-                        //       child: FittedBox(
-                        //         fit: BoxFit.scaleDown,
-                        //         alignment: Alignment.centerLeft,
-                        //         child: Text(
-                        //           price,
-                        //           style: const TextStyle(
-                        //             fontFamily: 'Poppins',
-                        //             color: ColorManager.kPrimaryColor,
-                        //             fontWeight: FontWeight.w700,
-                        //             fontSize: 15,
-                        //           ),
-                        //         ),
-                        //       ),
-                        //     ),
-                        //     const SizedBox(width: 8),
-                        //     _ListStockChip(inStock: inStock),
-                        //   ],
-                        // ),
 
                       ],
 
@@ -639,8 +611,6 @@ class _ListBodyTapTarget extends StatelessWidget {
 
 
 
-// TODO: re-enable stock badge
-/*
 class _ListStockChip extends StatelessWidget {
   const _ListStockChip({required this.inStock});
 
@@ -668,6 +638,5 @@ class _ListStockChip extends StatelessWidget {
     );
   }
 }
-*/
 
 

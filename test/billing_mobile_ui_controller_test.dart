@@ -697,6 +697,92 @@ void main() {
       expect(cartProvider.fetchedAccessToken, 'token-2');
     });
 
+    test('handleSalesExecutiveChanged clears auto-assigned customer', () {
+      final customer = CustomerListModelData(id: 9, name: 'Sam', phone: '111');
+      final selectionProvider = CustomerSelectionProvider();
+      final billingProvider = BillingProvider()
+        ..setSalesExecutiveMobileNumberText('111')
+        ..setMobileNumberText('111');
+
+      selectionProvider.setSelectedCustomer(customer, isDefault: true);
+      billingProvider.setSelectedCustomer(customer, isManual: false);
+
+      final changed = controller.handleSalesExecutiveChanged(
+        billingProvider: billingProvider,
+        customerSelectionProvider: selectionProvider,
+        autoAssignEnabled: true,
+      );
+
+      expect(changed, isTrue);
+      expect(selectionProvider.hasSelectedCustomer, isFalse);
+      expect(billingProvider.selectedCustomer, isNull);
+      expect(billingProvider.salesExecutivemobileNumberText, isEmpty);
+      expect(billingProvider.isCustomerManuallySelected, isFalse);
+    });
+
+    test('handleSalesExecutiveChanged skips manually selected customer', () {
+      final customer = CustomerListModelData(id: 9, name: 'Sam', phone: '111');
+      final selectionProvider = CustomerSelectionProvider();
+      final billingProvider = BillingProvider();
+
+      selectionProvider.setSelectedCustomer(customer);
+      billingProvider.setSelectedCustomer(customer, isManual: true);
+
+      final changed = controller.handleSalesExecutiveChanged(
+        billingProvider: billingProvider,
+        customerSelectionProvider: selectionProvider,
+        autoAssignEnabled: true,
+      );
+
+      expect(changed, isFalse);
+      expect(selectionProvider.selectedCustomer?.id, 9);
+      expect(billingProvider.selectedCustomer?.id, 9);
+    });
+
+    test('handleUserSwitched clears customer but keeps manual flag', () {
+      final customer = CustomerListModelData(id: 9, name: 'Sam', phone: '111');
+      final selectionProvider = CustomerSelectionProvider();
+      final billingProvider = BillingProvider();
+
+      selectionProvider.setSelectedCustomer(customer);
+      billingProvider.setSelectedCustomer(customer, isManual: true);
+
+      final changed = controller.handleUserSwitched(
+        billingProvider: billingProvider,
+        customerSelectionProvider: selectionProvider,
+        autoAssignEnabled: true,
+      );
+
+      expect(changed, isTrue);
+      expect(selectionProvider.hasSelectedCustomer, isFalse);
+      expect(billingProvider.selectedCustomer, isNull);
+      expect(billingProvider.isCustomerManuallySelected, isTrue);
+    });
+
+    test('defaultSalesExecutivePhoneCustomer mirrors read-only phone field', () {
+      final selectionProvider = CustomerSelectionProvider();
+      final billingProvider = BillingProvider()
+        ..setSalesExecutiveMobileNumberText('5555')
+        ..setMobileNumberText('5555');
+      final localProvider = LocalProductProvider();
+
+      final customer = controller.defaultSalesExecutivePhoneCustomer(
+        billingProvider: billingProvider,
+        localProductProvider: localProvider,
+        customerSelectionProvider: selectionProvider,
+      );
+
+      expect(customer?.phone, '5555');
+      expect(
+        controller.shouldShowDefaultSalesExecutivePhone(
+          billingProvider: billingProvider,
+          localProductProvider: localProvider,
+          customerSelectionProvider: selectionProvider,
+        ),
+        isTrue,
+      );
+    });
+
     test('applyDefaultCustomerFromCacheIfNeeded assigns matched default customer',
         () {
       final localProvider = LocalProductProvider();

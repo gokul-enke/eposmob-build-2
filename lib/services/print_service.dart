@@ -9,6 +9,7 @@ import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/features/billing/domain/receipt_customer_balance.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
 
 class PrintService {
@@ -44,12 +45,24 @@ class PrintService {
     return defaultPhone.isNotEmpty && phone == defaultPhone;
   }
 
-  /// Fetch order details by order id and navigate to PrintPage
-  Future<void> printOrderById(BuildContext context, String ordersId) async {
+  /// Fetch order details by order id and navigate to PrintPage.
+  ///
+  /// When [checkoutOldBalance] and [checkoutTotalPaid] are supplied (mobile /
+  /// checkout flows), receipt balance fields mirror desktop
+  /// `_createOrderAndPrint`. Otherwise [customerCurrentBalance] falls back to
+  /// the API `BALANCE` order prop when present.
+  Future<bool> printOrderById(
+    BuildContext context,
+    String ordersId, {
+    bool useCheckoutBalanceFields = false,
+    double? checkoutOldBalance,
+    double? checkoutTotalPaid,
+    bool checkoutIsDefaultCustomer = false,
+  }) async {
     try {
       final accessToken = Provider.of<AuthModel>(context, listen: false).token;
       if (accessToken == null) {
-        return; // Not authenticated
+        return false; // Not authenticated
       }
 
       final orderDetailsResponse = await SalesProvider()
@@ -58,7 +71,7 @@ class PrintService {
       final orderDetails = OrderDetailsModel.fromJson(orderDetailsResponse);
       final cart = orderDetails.data?.cart;
       if (orderDetails.data == null || cart?.cartItems == null) {
-        return;
+        return false;
       }
 
       final formattedTotal =
@@ -101,6 +114,7 @@ class PrintService {
       }
 
       String? orderComment;
+      double? customerOldBalance;
       double? customerCurrentBalance;
       if (orderDetails.data?.orderProps != null) {
         try {
@@ -110,7 +124,18 @@ class PrintService {
           );
           orderComment = commentProp.propsValue;
         } catch (_) {}
+      }
 
+      if (useCheckoutBalanceFields && checkoutTotalPaid != null) {
+        final receiptBalance = ReceiptCustomerBalance.compute(
+          isDefaultCustomer: checkoutIsDefaultCustomer,
+          customerBalance: checkoutOldBalance,
+          cartTotal: double.tryParse(formattedTotal) ?? 0.0,
+          totalPaid: checkoutTotalPaid,
+        );
+        customerOldBalance = receiptBalance.oldBalance;
+        customerCurrentBalance = receiptBalance.currentBalance;
+      } else if (orderDetails.data?.orderProps != null) {
         try {
           final balanceProp = orderDetails.data!.orderProps!.firstWhere(
             (prop) => prop.propsCode == "BALANCE",
@@ -125,7 +150,12 @@ class PrintService {
       final netExcTax =
           orderDetails.data?.cart?.priceSummary?.netExcTax?.toString();
 
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
+
+      final isDefaultCustomer = useCheckoutBalanceFields
+          ? (checkoutIsDefaultCustomer ||
+              _isDefaultCustomerPhone(context, customerPhone))
+          : _isDefaultCustomerPhone(context, customerPhone);
 
       // Try auto-print with default printer first
       final autoPrintSuccess = await PrintPage.autoPrint(
@@ -153,8 +183,9 @@ class PrintService {
         deliveryMethod: deliveryMethod,
         orderReturns: orderDetails.data?.orderReturns,
         paidAmount: paidAmount,
+        customerOldBalance: customerOldBalance,
         customerCurrentBalance: customerCurrentBalance,
-        isDefaultCustomer: _isDefaultCustomerPhone(context, customerPhone),
+        isDefaultCustomer: isDefaultCustomer,
         netExcTax: netExcTax,
         apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
       );
@@ -189,17 +220,20 @@ class PrintService {
               deliveryMethod: deliveryMethod,
               orderReturns: orderDetails.data?.orderReturns,
               paidAmount: paidAmount,
+              customerOldBalance: customerOldBalance,
               customerCurrentBalance: customerCurrentBalance,
-              isDefaultCustomer:
-                  _isDefaultCustomerPhone(context, customerPhone),
+              isDefaultCustomer: isDefaultCustomer,
               netExcTax: netExcTax,
               apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
             ),
           ),
         );
       }
+
+      return autoPrintSuccess;
     } catch (_) {
       // Swallow errors; original code logged and continued
+      return false;
     }
   }
 

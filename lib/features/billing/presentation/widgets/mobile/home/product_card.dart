@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/domain/product_stock_summary.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/product_card_actions.dart';
-// TODO: re-enable stock badge
-// import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/stock_badge.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/stock_badge.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
@@ -29,14 +29,14 @@ class ProductCard extends StatelessWidget {
   /// parent grid. Defaults to empty so this stays a provider-free widget.
   final String currency;
 
-  // TODO: re-enable stock badge
-  // bool get _inStock => hasAvailableStock(product.stock?.map((s) => s.quantity));
+  bool get _inStock =>
+      hasAvailableStock(product.stock?.map((s) => s.quantity));
 
   String get _displayName => product.productName ?? 'Unnamed Product';
 
   @override
   Widget build(BuildContext context) {
-    // final inStock = _inStock; // TODO: re-enable stock badge
+    final inStock = _inStock;
     final imageUrl = resolveMarketProductImageUrl(product);
     final price = formatMarketProductPrice(product, currency);
     final category = resolveMarketProductCategory(product);
@@ -66,22 +66,23 @@ class ProductCard extends StatelessWidget {
                 children: [
                   Expanded(
                     flex: 3,
-                    child: _ProductImage(
-                      imageUrl: imageUrl,
-                      compact: isDense,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _ProductImage(
+                          imageUrl: imageUrl,
+                          compact: isDense,
+                        ),
+                        Positioned(
+                          top: isDense ? 4 : 6,
+                          right: isDense ? 4 : 6,
+                          child: StockBadge(
+                            inStock: inStock,
+                            compact: isDense,
+                          ),
+                        ),
+                      ],
                     ),
-                    // TODO: re-enable stock badge
-                    // child: Stack(
-                    //   fit: StackFit.expand,
-                    //   children: [
-                    //     _ProductImage(imageUrl: imageUrl, compact: isDense),
-                    //     Positioned(
-                    //       top: isDense ? 4 : 6,
-                    //       right: isDense ? 4 : 6,
-                    //       child: StockBadge(inStock: inStock, compact: isDense),
-                    //     ),
-                    //   ],
-                    // ),
                   ),
                   Padding(
                     padding: EdgeInsets.fromLTRB(

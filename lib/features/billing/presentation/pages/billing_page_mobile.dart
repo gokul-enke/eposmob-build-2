@@ -26,10 +26,14 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/home_ta
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/mobile_bottom_nav.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/orders_tab.dart';
+import 'package:pos_machine/features/billing/presentation/pages/billing_page.dart';
+
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/cart_tab.dart';
 
 class BillingPageMobile extends StatefulWidget {
-  const BillingPageMobile({super.key});
+  final BillingPageMode mode;
+
+  const BillingPageMobile({super.key, this.mode = BillingPageMode.normal});
 
   @override
   State<BillingPageMobile> createState() => BillingPageMobileState();
@@ -64,6 +68,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
   bool _isSavingAndPrinting = false;
   bool _isCreatingNewOrder = false;
 
+  bool get _isQuotationPage => widget.mode == BillingPageMode.quotation;
+
+  DateTime _quotationDate = DateTime.now();
+  DateTime _quotationExpiryDate =
+      DateTime.now().add(const Duration(days: 30));
+  late final TextEditingController _quotationInlineNameController;
+  late final TextEditingController _quotationInlinePhoneController;
+
   VoidCallback? _cartChangeListener;
 
   /// Business logic (restore/rehydration, etc.) lives here; the page keeps only
@@ -78,6 +90,8 @@ class BillingPageMobileState extends State<BillingPageMobile>
   VoidCallback? _appSettingsSyncListener;
   VoidCallback? _deliveryMethodSyncListener;
   VoidCallback? _localProductOrderListener;
+  VoidCallback? _salesExecutiveListener;
+  VoidCallback? _authUserListener;
 
   /// Set when confirm-print succeeds but printer fails; allows retry without re-order.
   String? _pendingPrintOrderNumber;
@@ -112,6 +126,8 @@ class BillingPageMobileState extends State<BillingPageMobile>
   @override
   void initState() {
     super.initState();
+    _quotationInlineNameController = TextEditingController();
+    _quotationInlinePhoneController = TextEditingController();
     WidgetsBinding.instance.addObserver(this);
 
     if (Get.isRegistered<SideBarController>()) {
@@ -120,6 +136,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
       // MainScreen's Obx app-bar title while BillingPageResponsive is building.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _syncBillingMobileAppBarTitle(_currentTabIndex);
+      });
+    }
+
+    if (_isQuotationPage) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _sideBarController?.setBillingMobileAppBarTitle('Quotations');
+        }
       });
     }
 
@@ -202,12 +226,18 @@ class BillingPageMobileState extends State<BillingPageMobile>
       onSaveOrder: saveOrder,
       onCreateOrderAndPrint: createOrderAndPrint,
       onConfirmOrder: confirmOrder,
+      onNewOrder: createNewOrder,
+      onSaveOrderAndPrint: saveOrderAndPrint,
     );
 
     if (accessToken != null && accessToken.isNotEmpty) {
       billingProvider.fetchCustomers(accessToken: accessToken).then((_) {
         if (!mounted) return;
-        _applyDefaultCustomerFromCacheIfNeeded();
+        if (_isQuotationPage) {
+          _controller.clearAutomaticDefaultCustomerForQuotation(context);
+        } else {
+          _applyDefaultCustomerFromCacheIfNeeded();
+        }
       });
     } else {
       assert(() {
@@ -225,6 +255,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
       billingProvider.initializeDeliveryMethod();
       _syncAllSettings();
       _setupSettingsSyncListeners();
+      if (_isQuotationPage) {
+        _controller.clearAutomaticDefaultCustomerForQuotation(context);
+      } else {
+        _applyDefaultCustomerFromCacheIfNeeded();
+      }
       _rehydrateFromProvider();
     });
   }
@@ -358,16 +393,49 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     // Sales executive and auth listeners
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
       final salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
-      final billingProvider =
-          Provider.of<BillingProvider>(context, listen: false);
-
-      salesExecutiveProvider
-          .addListener(billingProvider.onSalesExecutiveChanged);
-
       final authModel = Provider.of<AuthModel>(context, listen: false);
-      authModel.addListener(billingProvider.onUserSwitched);
+
+      _salesExecutiveListener ??= () {
+        if (!mounted) return;
+        final changed = _customerController.handleSalesExecutiveChanged(
+          billingProvider:
+              Provider.of<BillingProvider>(context, listen: false),
+          customerSelectionProvider:
+              Provider.of<CustomerSelectionProvider>(context, listen: false),
+          autoAssignEnabled: Provider.of<AppSettingsProvider>(context,
+                      listen: false)
+                  .appSettings
+                  ?.autoAssignDefaultCustomer ??
+              true,
+        );
+        if (changed) {
+          setState(() => _autocompletePhoneKey = GlobalKey());
+        }
+      };
+      salesExecutiveProvider.addListener(_salesExecutiveListener!);
+
+      _authUserListener ??= () {
+        if (!mounted) return;
+        final changed = _customerController.handleUserSwitched(
+          billingProvider:
+              Provider.of<BillingProvider>(context, listen: false),
+          customerSelectionProvider:
+              Provider.of<CustomerSelectionProvider>(context, listen: false),
+          autoAssignEnabled: Provider.of<AppSettingsProvider>(context,
+                      listen: false)
+                  .appSettings
+                  ?.autoAssignDefaultCustomer ??
+              true,
+        );
+        if (changed) {
+          setState(() => _autocompletePhoneKey = GlobalKey());
+        }
+      };
+      authModel.addListener(_authUserListener!);
     });
 
     // Mobile number controller listener
@@ -417,18 +485,21 @@ class BillingPageMobileState extends State<BillingPageMobile>
     _barcodeSubscription?.cancel();
     _focusNode.dispose();
     _tabController.dispose();
+    _quotationInlineNameController.dispose();
+    _quotationInlinePhoneController.dispose();
 
     // Remove listeners
     try {
-      final billingProvider =
-          Provider.of<BillingProvider>(context, listen: false);
       final salesExecutiveProvider =
           Provider.of<SalesExecutiveProvider>(context, listen: false);
-      salesExecutiveProvider
-          .removeListener(billingProvider.onSalesExecutiveChanged);
+      if (_salesExecutiveListener != null) {
+        salesExecutiveProvider.removeListener(_salesExecutiveListener!);
+      }
 
       final authModel = Provider.of<AuthModel>(context, listen: false);
-      authModel.removeListener(billingProvider.onUserSwitched);
+      if (_authUserListener != null) {
+        authModel.removeListener(_authUserListener!);
+      }
 
       final generalSettingsProvider =
           Provider.of<GeneralSettingsProvider>(context, listen: false);
@@ -775,6 +846,76 @@ class BillingPageMobileState extends State<BillingPageMobile>
     }
   }
 
+  void _handleQuotationInlineCustomerChanged() {
+    _controller.handleQuotationInlineCustomerChanged(
+      context,
+      inlineName: _quotationInlineNameController.text,
+      inlinePhone: _quotationInlinePhoneController.text,
+    );
+    setState(() {});
+  }
+
+  void _openQuotationList() {
+    if (Get.isRegistered<SideBarController>()) {
+      Get.find<SideBarController>().index.value = 87;
+    }
+  }
+
+  Future<void> createQuotation({required bool shouldPrint}) async {
+    if (_isSavingOrder || _isConfirmingAndPrinting) return;
+
+    setState(() {
+      if (shouldPrint) {
+        _isConfirmingAndPrinting = true;
+      } else {
+        _isSavingOrder = true;
+      }
+    });
+
+    try {
+      final result = await _controller.createQuotationFromCheckout(
+        context,
+        shouldPrint: shouldPrint,
+        quotationDate: _quotationDate,
+        expiryDate: _quotationExpiryDate,
+        inlineCustomerName: _quotationInlineNameController.text,
+        inlineCustomerPhone: _quotationInlinePhoneController.text,
+      );
+      if (!mounted) return;
+
+      if (!result.success) {
+        showScaffoldError(
+          context: context,
+          message: result.errorMessage ?? BillingMobileErrorMessages.quotationCreateFailed,
+        );
+        return;
+      }
+
+      showScaffold(context: context, message: 'Quotation created successfully!');
+      if (result.printError != null) {
+        showScaffoldError(context: context, message: result.printError!);
+      }
+
+      final now = DateTime.now();
+      setState(() {
+        _quotationDate = now;
+        _quotationExpiryDate = now.add(const Duration(days: 30));
+        _quotationInlineNameController.clear();
+        _quotationInlinePhoneController.clear();
+      });
+      clearCart();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingOrder = false;
+          _isConfirmingAndPrinting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> createQuotationAndPrint() => createQuotation(shouldPrint: true);
+
   Future<void> saveOrderAndPrint() async {
     if (_isSavingAndPrinting ||
         _isConfirmingOrder ||
@@ -805,7 +946,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
       if (!mounted || order == null) return;
 
       try {
-        await _controller.printSavedOrder(context, order);
+        await _controller.printSavedOrder(
+          context,
+          order,
+          offerCustomerCopy: true,
+        );
         if (!mounted) return;
         _pendingPrintOrderNumber = null;
       } catch (error) {
@@ -974,11 +1119,33 @@ class BillingPageMobileState extends State<BillingPageMobile>
                 ),
                 // Billing Tab
                 MobileBillingTab(
+                  isQuotationMode: _isQuotationPage,
                   autocompletePhoneKey: _autocompletePhoneKey,
                   onConfirmOrder: confirmOrder,
                   onSaveOrder: saveOrder,
                   onCreateOrderAndPrint: createOrderAndPrint,
                   onSaveAndPrint: saveOrderAndPrint,
+                  onCreateQuotation: () => createQuotation(shouldPrint: false),
+                  onCreateQuotationAndPrint: createQuotationAndPrint,
+                  onOpenQuotationList: _openQuotationList,
+                  quotationDate: _quotationDate,
+                  quotationExpiryDate: _quotationExpiryDate,
+                  onQuotationDateChanged: (date) {
+                    setState(() {
+                      _quotationDate = date;
+                      if (_quotationExpiryDate.isBefore(date)) {
+                        _quotationExpiryDate =
+                            date.add(const Duration(days: 30));
+                      }
+                    });
+                  },
+                  onQuotationExpiryDateChanged: (date) {
+                    setState(() => _quotationExpiryDate = date);
+                  },
+                  quotationInlineNameController: _quotationInlineNameController,
+                  quotationInlinePhoneController: _quotationInlinePhoneController,
+                  onQuotationInlineCustomerChanged:
+                      _handleQuotationInlineCustomerChanged,
                   isSavingOrder: _isSavingOrder,
                   isConfirmingOrder: _isConfirmingOrder,
                   isConfirmingAndPrinting: _isConfirmingAndPrinting,

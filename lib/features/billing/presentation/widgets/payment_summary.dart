@@ -22,11 +22,15 @@ class PaymentSummary extends StatelessWidget {
   /// When false, the tax row is plain text (no underline, no breakdown dialog).
   /// Desktop keeps the default `true`; mobile billing passes `false`.
   final bool taxBreakdownEnabled;
+  /// When true (and [taxBreakdownEnabled] is true), opens tax details in a
+  /// bottom sheet instead of a centered dialog — intended for mobile billing.
+  final bool taxBreakdownUseBottomSheet;
   const PaymentSummary({
     super.key,
     this.compact = false,
     this.showToCustomerCreditToggle = true,
     this.taxBreakdownEnabled = true,
+    this.taxBreakdownUseBottomSheet = false,
   });
 
   @override
@@ -268,15 +272,10 @@ class PaymentSummary extends StatelessWidget {
             if (!taxBreakdownEnabled) return taxRow;
             return GestureDetector(
               onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    return Center(
-                      child: TaxDetailsDialog(
-                        taxAmounts: billingProvider.taxNames,
-                      ),
-                    );
-                  },
+                showTaxDetailsBreakdown(
+                  context,
+                  billingProvider.taxNames,
+                  useBottomSheet: taxBreakdownUseBottomSheet,
                 );
               },
               child: taxRow,

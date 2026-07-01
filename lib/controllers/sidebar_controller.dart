@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:pos_machine/features/billing/presentation/pages/billing_page.dart';
+import 'package:pos_machine/features/billing/presentation/pages/billing_quotation_page_responsive.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page_responsive.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
 import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
@@ -202,7 +202,7 @@ class SideBarController extends GetxController {
     ProductBarcodeScreen(), // 83 Product Barcode Screen
     AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
-    BillingPage(mode: BillingPageMode.quotation), // 86 Quotations
+    BillingQuotationPageResponsive(), // 86 Quotations
     QuotationsListScreen(), // 87 Quotation List
     QuotationDetailsScreen(
         quotationId: null), // 88 Quotation Details (ID from Provider)

@@ -17,21 +17,29 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/delivery_options_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/coupon_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/billing_action_buttons.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/quotation_checkout_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/select_customer_page.dart';
 
 /// Mobile "Billing & Payment" tab. Pure layout/composition: each section is its
 /// own widget under `mobile/billing/`, and the action bar is
 /// [BillingActionButtons]. Business logic lives in `BillingMobileController`.
-///
-/// TODO(parity): Desktop [BillingPageMode.quotation] (Create Quotation / Quotation
-/// List actions and payment-disabled quotation checkout) has no dedicated mobile
-/// billing surface yet; quotation drafts still load via order rehydration.
 class MobileBillingTab extends StatefulWidget {
+  final bool isQuotationMode;
   final GlobalKey autocompletePhoneKey;
   final VoidCallback onConfirmOrder;
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
   final VoidCallback onSaveAndPrint;
+  final VoidCallback? onCreateQuotation;
+  final VoidCallback? onCreateQuotationAndPrint;
+  final VoidCallback? onOpenQuotationList;
+  final DateTime? quotationDate;
+  final DateTime? quotationExpiryDate;
+  final ValueChanged<DateTime>? onQuotationDateChanged;
+  final ValueChanged<DateTime>? onQuotationExpiryDateChanged;
+  final TextEditingController? quotationInlineNameController;
+  final TextEditingController? quotationInlinePhoneController;
+  final VoidCallback? onQuotationInlineCustomerChanged;
   final bool isSavingOrder;
   final bool isConfirmingOrder;
   final bool isConfirmingAndPrinting;
@@ -39,11 +47,22 @@ class MobileBillingTab extends StatefulWidget {
 
   const MobileBillingTab({
     super.key,
+    this.isQuotationMode = false,
     required this.autocompletePhoneKey,
     required this.onConfirmOrder,
     required this.onSaveOrder,
     required this.onCreateOrderAndPrint,
     required this.onSaveAndPrint,
+    this.onCreateQuotation,
+    this.onCreateQuotationAndPrint,
+    this.onOpenQuotationList,
+    this.quotationDate,
+    this.quotationExpiryDate,
+    this.onQuotationDateChanged,
+    this.onQuotationExpiryDateChanged,
+    this.quotationInlineNameController,
+    this.quotationInlinePhoneController,
+    this.onQuotationInlineCustomerChanged,
     this.isSavingOrder = false,
     this.isConfirmingOrder = false,
     this.isConfirmingAndPrinting = false,
@@ -74,12 +93,20 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
   }
 
   /// Navigate to the full-screen Select Customer page.
-  void _navigateToSelectCustomer(BuildContext context) {
-    Navigator.of(context).push(
+  Future<void> _navigateToSelectCustomer(BuildContext context) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => const SelectCustomerPage(),
       ),
     );
+    if (!mounted) return;
+    final selected = Provider.of<CustomerSelectionProvider>(context, listen: false)
+        .selectedCustomer;
+    if (selected?.id != null) {
+      widget.quotationInlineNameController?.clear();
+      widget.quotationInlinePhoneController?.clear();
+      setState(() {});
+    }
   }
 
   void _clearCustomer(BuildContext context) {
@@ -90,6 +117,8 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
       cartProvider: Provider.of<CartProvider>(context, listen: false),
       auth: Provider.of<AuthModel>(context, listen: false),
     );
+    widget.quotationInlineNameController?.clear();
+    widget.quotationInlinePhoneController?.clear();
   }
 
   MobileCustomerBalanceDisplay? _balanceDisplayForCustomer(
@@ -130,19 +159,31 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
   @override
   Widget build(BuildContext context) {
     final customerSelection = Provider.of<CustomerSelectionProvider>(context);
+    final billingProvider = Provider.of<BillingProvider>(context);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
     final selectedCustomer = customerSelection.selectedCustomer;
+    final defaultPhoneCustomer = _customerController
+        .defaultSalesExecutivePhoneCustomer(
+      billingProvider: billingProvider,
+      localProductProvider: localProductProvider,
+      customerSelectionProvider: customerSelection,
+    );
+    final displayCustomer = selectedCustomer ?? defaultPhoneCustomer;
+    final showDefaultPhoneOnly = defaultPhoneCustomer != null;
     final balanceDisplay =
-        _balanceDisplayForCustomer(context, selectedCustomer);
+        _balanceDisplayForCustomer(context, displayCustomer);
     final appSettings =
         Provider.of<AppSettingsProvider>(context).appSettings;
     final showCouponSection =
         _settingsController.shouldShowCouponSection(appSettings);
     final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
+    final isQuotationMode = widget.isQuotationMode;
 
     // Safe bottom padding so content can scroll fully above the persistent
     // bottomSheet buttons (padding 16 + button row height + bottom inset).
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    const double bottomActionsHeight = 156;
+    final bottomActionsHeight = isQuotationMode ? 156.0 : 156.0;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -163,19 +204,52 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Customer Section
-                  CustomerSummaryCard(
-                    customer: selectedCustomer,
-                    balanceDisplay: balanceDisplay,
-                    customerType: showCustomerType
-                        ? selectedCustomer?.customerType
-                        : null,
-                    onTap: () => _navigateToSelectCustomer(context),
-                    onClear: selectedCustomer != null
-                        ? () => _clearCustomer(context)
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
+                  if (isQuotationMode &&
+                      widget.quotationDate != null &&
+                      widget.quotationExpiryDate != null &&
+                      widget.quotationInlineNameController != null &&
+                      widget.quotationInlinePhoneController != null) ...[
+                    const Text(
+                      'Quotation Details',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    QuotationCheckoutSection(
+                      quotationDate: widget.quotationDate!,
+                      expiryDate: widget.quotationExpiryDate!,
+                      onQuotationDateChanged:
+                          widget.onQuotationDateChanged ?? (_) {},
+                      onExpiryDateChanged:
+                          widget.onQuotationExpiryDateChanged ?? (_) {},
+                      inlineNameController:
+                          widget.quotationInlineNameController!,
+                      inlinePhoneController:
+                          widget.quotationInlinePhoneController!,
+                      onInlineCustomerChanged:
+                          widget.onQuotationInlineCustomerChanged ?? () {},
+                      onSelectCustomer: () => _navigateToSelectCustomer(context),
+                    ),
+                    const SizedBox(height: 12),
+                  ] else ...[
+                    // Customer Section
+                    CustomerSummaryCard(
+                      customer: displayCustomer,
+                      balanceDisplay: balanceDisplay,
+                      customerType: showCustomerType
+                          ? displayCustomer?.customerType
+                          : null,
+                      onTap: showDefaultPhoneOnly
+                          ? null
+                          : () => _navigateToSelectCustomer(context),
+                      onClear: displayCustomer != null
+                          ? () => _clearCustomer(context)
+                          : null,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Delivery & Options Section (Select Delivery Method)
                   const BillingAccordionCard(
@@ -194,13 +268,15 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                     const SizedBox(height: 12),
                   ],
 
-                  // Payment Methods Section
-                  const BillingAccordionCard(
-                    title: 'Payment Methods',
-                    initiallyExpanded: true,
-                    child: PaymentMethodsSection(),
-                  ),
-                  const SizedBox(height: 12),
+                  if (!isQuotationMode) ...[
+                    // Payment Methods Section
+                    const BillingAccordionCard(
+                      title: 'Payment Methods',
+                      initiallyExpanded: true,
+                      child: PaymentMethodsSection(),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
 
                   // Order Summary
                   const BillingAccordionCard(
@@ -209,7 +285,8 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                     child: PaymentSummary(
                       compact: false,
                       showToCustomerCreditToggle: false,
-                      taxBreakdownEnabled: false,
+                      taxBreakdownEnabled: true,
+                      taxBreakdownUseBottomSheet: true,
                     ),
                   ),
                 ],
@@ -220,10 +297,14 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
       ),
       // Bottom Action Buttons
       bottomSheet: BillingActionButtons(
+        isQuotationMode: isQuotationMode,
         onSaveOrder: widget.onSaveOrder,
         onCreateOrderAndPrint: widget.onCreateOrderAndPrint,
         onConfirmOrder: widget.onConfirmOrder,
         onSaveAndPrint: widget.onSaveAndPrint,
+        onCreateQuotation: widget.onCreateQuotation,
+        onCreateQuotationAndPrint: widget.onCreateQuotationAndPrint,
+        onOpenQuotationList: widget.onOpenQuotationList,
         isSavingOrder: widget.isSavingOrder,
         isConfirmingOrder: widget.isConfirmingOrder,
         isConfirmingAndPrinting: widget.isConfirmingAndPrinting,

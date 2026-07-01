@@ -182,8 +182,6 @@ void main() {
           reason: 'dense Add icon tap must not trigger onDirectAdd');
     });
 
-    // TODO: re-enable stock badge — badge temporarily hidden per UI request.
-    /*
     testWidgets('StockBadge still shows Out Of Stock for no-stock product',
         (tester) async {
       final product = _noStockProduct(name: 'Badge Test');
@@ -203,7 +201,6 @@ void main() {
       expect(find.text('Out Of Stock'), findsOneWidget,
           reason: 'StockBadge must stay as a visual indicator');
     });
-    */
   });
 
   group('ProductListRow — action buttons are always enabled', () {
@@ -304,8 +301,6 @@ void main() {
           reason: 'Add button tap must not trigger onDirectAdd');
     });
 
-    // TODO: re-enable stock badge — badge temporarily hidden per UI request.
-    /*
     testWidgets(
         'visual stock label still shows "Out of Stock" for a no-stock product',
         (tester) async {
@@ -330,6 +325,5 @@ void main() {
       expect(find.text('Out of Stock'), findsOneWidget,
           reason: 'Stock badge must remain as a visual-only indicator');
     });
-    */
   });
 }

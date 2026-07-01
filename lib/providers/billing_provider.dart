@@ -467,6 +467,26 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Resets billing customer fields when the sales executive or auth user
+  /// changes. Mirrors desktop `BillingPage._onSalesExecutiveChanged` /
+  /// `BillingPage._onUserSwitched` state clears.
+  void resetCustomerForExecutiveOrUserChange({
+    required bool resetManualSelectionFlag,
+  }) {
+    _selectedCustomer = null;
+    _selectedCustomerID = null;
+    _selectedCustomerPhone = null;
+    _isCustomerFound = false;
+    _mobileNumberText = '';
+    _salesExecutivemobileNumberText = '';
+    mobileNumberTextController.clear();
+    _highlightedCustomerIndex = null;
+    if (resetManualSelectionFlag) {
+      _isCustomerManuallySelected = false;
+    }
+    notifyListeners();
+  }
+
   void setMobileNumberText(String? text) {
     _mobileNumberText = text;
     notifyListeners();
@@ -2086,6 +2106,8 @@ class BillingProvider extends ChangeNotifier {
     VoidCallback? onSaveOrder,
     VoidCallback? onCreateOrderAndPrint,
     VoidCallback? onConfirmOrder,
+    VoidCallback? onNewOrder,
+    VoidCallback? onSaveOrderAndPrint,
   }) {
     if (onClearCart != null) {
       registerKeyboardShortcut('clearCart', onClearCart);
@@ -2098,6 +2120,12 @@ class BillingProvider extends ChangeNotifier {
     }
     if (onConfirmOrder != null) {
       registerKeyboardShortcut('confirmOrder', onConfirmOrder);
+    }
+    if (onNewOrder != null) {
+      registerKeyboardShortcut('newOrder', onNewOrder);
+    }
+    if (onSaveOrderAndPrint != null) {
+      registerKeyboardShortcut('saveOrderAndPrint', onSaveOrderAndPrint);
     }
   }
 

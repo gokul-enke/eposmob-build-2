@@ -46,6 +46,13 @@ class BillingMobileErrorMessages {
   static const noInternetCreateOrder =
       'No internet connection. Cannot create order online.';
 
+  // Quotation
+  static const quotationCreateFailed = 'Failed to create quotation';
+  static const quotationPrintMissingId =
+      'Quotation created, but print failed because the API response did not include quotation id.';
+  static const quotationPrintDetailsFailed =
+      'Quotation created, but details could not be loaded for printing.';
+
   // Print
   static const printOrderFailed =
       'Failed to print order. Check printer and try again.';
@@ -2073,6 +2080,86 @@ class BillingMobileCustomerController {
     cartProvider.fetchCartDataFromApi(
       customerId: userId,
       accessToken: auth.token ?? '',
+    );
+  }
+
+  /// Mirrors desktop `BillingPage._onSalesExecutiveChanged`.
+  ///
+  /// Returns `true` when customer state was cleared.
+  bool handleSalesExecutiveChanged({
+    required BillingProvider billingProvider,
+    required CustomerSelectionProvider customerSelectionProvider,
+    required bool autoAssignEnabled,
+  }) {
+    if (!autoAssignEnabled) {
+      return false;
+    }
+
+    if (billingProvider.isCustomerManuallySelected &&
+        (billingProvider.selectedCustomerID != null ||
+            billingProvider.mobileNumberText?.isNotEmpty == true)) {
+      return false;
+    }
+
+    customerSelectionProvider.clearSelectedCustomer();
+    billingProvider.resetCustomerForExecutiveOrUserChange(
+      resetManualSelectionFlag: true,
+    );
+    return true;
+  }
+
+  /// Mirrors desktop `BillingPage._onUserSwitched`.
+  ///
+  /// Returns `true` when customer state was cleared.
+  bool handleUserSwitched({
+    required BillingProvider billingProvider,
+    required CustomerSelectionProvider customerSelectionProvider,
+    required bool autoAssignEnabled,
+  }) {
+    if (!autoAssignEnabled) {
+      return false;
+    }
+
+    customerSelectionProvider.clearSelectedCustomer();
+    billingProvider.resetCustomerForExecutiveOrUserChange(
+      resetManualSelectionFlag: false,
+    );
+    return true;
+  }
+
+  /// Mirrors desktop read-only default sales-exec phone field visibility.
+  bool shouldShowDefaultSalesExecutivePhone({
+    required BillingProvider billingProvider,
+    required LocalProductProvider localProductProvider,
+    required CustomerSelectionProvider customerSelectionProvider,
+  }) {
+    final phone = billingProvider.salesExecutivemobileNumberText?.trim();
+    if (phone == null || phone.isEmpty) return false;
+    if (billingProvider.isCustomerManuallySelected) return false;
+    if (localProductProvider.currentOrder != null) return false;
+    if (customerSelectionProvider.hasSelectedCustomer) return false;
+    if (billingProvider.selectedCustomer != null) return false;
+    return true;
+  }
+
+  CustomerListModelData? defaultSalesExecutivePhoneCustomer({
+    required BillingProvider billingProvider,
+    required LocalProductProvider localProductProvider,
+    required CustomerSelectionProvider customerSelectionProvider,
+  }) {
+    if (!shouldShowDefaultSalesExecutivePhone(
+      billingProvider: billingProvider,
+      localProductProvider: localProductProvider,
+      customerSelectionProvider: customerSelectionProvider,
+    )) {
+      return null;
+    }
+
+    final phone = billingProvider.salesExecutivemobileNumberText!.trim();
+    final label = billingProvider.mobileNumberText?.trim();
+    return CustomerListModelData(
+      phone: phone,
+      name: label != null && label.isNotEmpty && label != phone ? label : null,
     );
   }
 

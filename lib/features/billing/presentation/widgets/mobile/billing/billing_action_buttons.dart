@@ -9,12 +9,17 @@ const double kBillingMinTouchTarget = 44;
 
 /// Persistent bottom action bar for the mobile Billing tab.
 /// Mirrors desktop [ActionButtons]: Save Order + online confirm actions, or
-/// offline Save & Print.
+/// offline Save & Print. In quotation mode shows Create Quotation + Quotation
+/// List instead (payment-disabled checkout path).
 class BillingActionButtons extends StatelessWidget {
+  final bool isQuotationMode;
   final VoidCallback onSaveOrder;
   final VoidCallback onCreateOrderAndPrint;
   final VoidCallback onConfirmOrder;
   final VoidCallback onSaveAndPrint;
+  final VoidCallback? onCreateQuotation;
+  final VoidCallback? onCreateQuotationAndPrint;
+  final VoidCallback? onOpenQuotationList;
   final bool isSavingOrder;
   final bool isConfirmingOrder;
   final bool isConfirmingAndPrinting;
@@ -22,10 +27,14 @@ class BillingActionButtons extends StatelessWidget {
 
   const BillingActionButtons({
     super.key,
+    this.isQuotationMode = false,
     required this.onSaveOrder,
     required this.onCreateOrderAndPrint,
     required this.onConfirmOrder,
     required this.onSaveAndPrint,
+    this.onCreateQuotation,
+    this.onCreateQuotationAndPrint,
+    this.onOpenQuotationList,
     this.isSavingOrder = false,
     this.isConfirmingOrder = false,
     this.isConfirmingAndPrinting = false,
@@ -48,6 +57,10 @@ class BillingActionButtons extends StatelessWidget {
             .appSettings
             ?.showConfirmOrderButton ??
         true;
+
+    if (isQuotationMode) {
+      return _buildQuotationActions(hasItems: hasItems);
+    }
 
     return Container(
       color: Colors.white,
@@ -102,6 +115,134 @@ class BillingActionButtons extends StatelessWidget {
             )
           else
             _buildOfflineActions(hasItems: hasItems),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotationActions({required bool hasItems}) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            label: 'Create Quotation',
+            button: true,
+            child: ExcludeSemantics(
+              child: ElevatedButton.icon(
+                icon: isSavingOrder
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.request_quote_outlined,
+                        color: Colors.white, size: 18),
+                label: const Text(
+                  'Create Quotation',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  elevation: 0,
+                  backgroundColor:
+                      hasItems ? const Color(0xFF14B8A6) : Colors.grey.shade300,
+                  minimumSize: const Size(double.infinity, kBillingMinTouchTarget),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: (hasItems && !_isCheckoutBusy)
+                    ? onCreateQuotation
+                    : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  label: 'Create Quotation and Print',
+                  button: true,
+                  child: ExcludeSemantics(
+                    child: ElevatedButton.icon(
+                      icon: isConfirmingAndPrinting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.print,
+                              color: Colors.white, size: 18),
+                      label: const Text(
+                        'Create & Print',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: hasItems
+                            ? const Color(0xFF15803D)
+                            : Colors.grey.shade300,
+                        minimumSize: const Size(0, kBillingMinTouchTarget),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: (hasItems && !_isCheckoutBusy)
+                          ? onCreateQuotationAndPrint
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Semantics(
+                  label: 'Quotation List',
+                  button: true,
+                  child: ExcludeSemantics(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.list_alt, size: 18),
+                      label: const Text(
+                        'Quotation List',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, kBillingMinTouchTarget),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed:
+                          !_isCheckoutBusy ? onOpenQuotationList : null,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

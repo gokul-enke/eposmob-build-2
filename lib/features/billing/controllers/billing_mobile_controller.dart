@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'package:pos_machine/components/build_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
+import 'package:pos_machine/features/billing/domain/quotation_checkout.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -25,13 +27,19 @@ import 'package:pos_machine/features/billing/domain/embedded_barcode.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/helpers/delivery_charge_helper.dart';
+import 'package:pos_machine/models/quotation_model.dart';
+import 'package:pos_machine/providers/quotations_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/services/quotation_print_service.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 
 enum MobileBillingShortcutAction {
   clearCart,
-  saveOrder,
-  createOrderAndPrint,
   confirmOrder,
+  createOrderAndPrint,
+  newOrder,
+  saveOrder,
+  saveOrderAndPrint,
   restoreFocus,
   focusBarcode,
 }
@@ -46,6 +54,7 @@ enum MobileBillingShortcutAction {
 /// the page.
 class BillingMobileController {
   static const _customerController = BillingMobileCustomerController();
+  static const _settingsController = BillingMobileSettingsController();
 
   // ---------------------------------------------------------------------------
   // Order rehydration / restore
@@ -326,17 +335,22 @@ class BillingMobileController {
 
   /// Mobile tablet POS keyboard shortcut subset (hardware keyboard / scanner wedge).
   ///
-  /// Supported on [BillingPageMobile] via a page-level [KeyboardListener]:
-  /// - **F6** — clear cart
-  /// - **F7** — save order
-  /// - **F8** — confirm & print
-  /// - **F9** — confirm order
+  /// F-key mappings match desktop [BillingPage._handleKeyPress] for actions that
+  /// exist on mobile. Supported on [BillingPageMobile] via a page-level
+  /// [KeyboardListener]:
+  /// - **F1** — clear cart
+  /// - **F2** — confirm order
+  /// - **F6** — confirm & print
+  /// - **F7** — create new order
+  /// - **F8** — save order
+  /// - **F9** — save & print (offline save & print when checkout is blocked)
   /// - **Esc** — restore focus to barcode or product-search entry
   /// - **Ctrl+A** — focus barcode field when `barcodeSales` is enabled
   ///
-  /// Desktop-only shortcuts (F1–F5, F12, Ctrl+H/K/D/S/Q/P/U) are intentionally
-  /// omitted on mobile. Shortcuts are dispatched from the page focus node, so
-  /// they do not fire while a text field owns focus (text editing is preserved).
+  /// Desktop-only shortcuts (F3–F5, F10, F12, Ctrl+H/K/D/S/Q/P/U, Alt+D) are
+  /// intentionally omitted on mobile. Shortcuts are dispatched from the page
+  /// focus node, so they do not fire while a text field owns focus (text editing
+  /// is preserved).
 
   void focusTextField(BuildContext context) {
     final billingProvider = Provider.of<BillingProvider>(context, listen: false);
@@ -364,17 +378,23 @@ class BillingMobileController {
           ? MobileBillingShortcutAction.focusBarcode
           : null;
     }
-    if (key == LogicalKeyboardKey.f6) {
+    if (key == LogicalKeyboardKey.f1) {
       return MobileBillingShortcutAction.clearCart;
     }
-    if (key == LogicalKeyboardKey.f7) {
-      return MobileBillingShortcutAction.saveOrder;
+    if (key == LogicalKeyboardKey.f2) {
+      return MobileBillingShortcutAction.confirmOrder;
     }
-    if (key == LogicalKeyboardKey.f8) {
+    if (key == LogicalKeyboardKey.f6) {
       return MobileBillingShortcutAction.createOrderAndPrint;
     }
+    if (key == LogicalKeyboardKey.f7) {
+      return MobileBillingShortcutAction.newOrder;
+    }
+    if (key == LogicalKeyboardKey.f8) {
+      return MobileBillingShortcutAction.saveOrder;
+    }
     if (key == LogicalKeyboardKey.f9) {
-      return MobileBillingShortcutAction.confirmOrder;
+      return MobileBillingShortcutAction.saveOrderAndPrint;
     }
     return null;
   }
@@ -398,12 +418,16 @@ class BillingMobileController {
       switch (action) {
         case MobileBillingShortcutAction.clearCart:
           billingProvider.executeKeyboardShortcut('clearCart');
-        case MobileBillingShortcutAction.saveOrder:
-          billingProvider.executeKeyboardShortcut('saveOrder');
-        case MobileBillingShortcutAction.createOrderAndPrint:
-          billingProvider.executeKeyboardShortcut('createOrderAndPrint');
         case MobileBillingShortcutAction.confirmOrder:
           billingProvider.executeKeyboardShortcut('confirmOrder');
+        case MobileBillingShortcutAction.createOrderAndPrint:
+          billingProvider.executeKeyboardShortcut('createOrderAndPrint');
+        case MobileBillingShortcutAction.newOrder:
+          billingProvider.executeKeyboardShortcut('newOrder');
+        case MobileBillingShortcutAction.saveOrder:
+          billingProvider.executeKeyboardShortcut('saveOrder');
+        case MobileBillingShortcutAction.saveOrderAndPrint:
+          billingProvider.executeKeyboardShortcut('saveOrderAndPrint');
         case MobileBillingShortcutAction.restoreFocus:
         case MobileBillingShortcutAction.focusBarcode:
           focusTextField(context);
@@ -573,6 +597,24 @@ class BillingMobileController {
 
   Future<CreateOrderAndPrintResult> createOrderAndPrint(
       BuildContext context) async {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
+        .appSettings;
+    final selectedCustomer =
+        customerSelectionProvider.selectedCustomer ??
+            billingProvider.selectedCustomer;
+    final isDefaultCustomer = _customerController.isDefaultCustomer(
+      customer: selectedCustomer,
+      customerSelectionProvider: customerSelectionProvider,
+      defaultCustomerPhone: appSettings?.autoAssignDefaultCustomerPhone ?? '',
+    );
+    final checkoutOldBalance =
+        isDefaultCustomer ? null : selectedCustomer?.balance;
+    final checkoutTotalPaid = billingProvider.getTotalPaidAmount();
+
     final createdOrderNumber =
         await CheckoutService(context).createOrderAndPrint();
     if (createdOrderNumber == null || createdOrderNumber.isEmpty) {
@@ -583,12 +625,28 @@ class BillingMobileController {
       );
     }
 
+    Future<bool> printOnce() => const PrintService().printOrderById(
+          context,
+          createdOrderNumber,
+          useCheckoutBalanceFields: true,
+          checkoutOldBalance: checkoutOldBalance,
+          checkoutTotalPaid: checkoutTotalPaid,
+          checkoutIsDefaultCustomer: isDefaultCustomer,
+        );
+
     try {
-      await const PrintService().printOrderById(context, createdOrderNumber);
+      final printSucceeded = await printOnce();
+      if (context.mounted) {
+        await maybePrintCustomerCopy(
+          context: context,
+          canPrompt: printSucceeded,
+          printAction: printOnce,
+        );
+      }
       return CreateOrderAndPrintResult(
         orderCreated: true,
         orderNumber: createdOrderNumber,
-        printSucceeded: true,
+        printSucceeded: printSucceeded,
       );
     } catch (error) {
       billingDebugCheckout(
@@ -607,12 +665,24 @@ class BillingMobileController {
 
   Future<bool> retryPrintOrder(
       BuildContext context, String orderNumber) async {
-    await const PrintService().printOrderById(context, orderNumber);
-    return true;
+    return const PrintService().printOrderById(context, orderNumber);
   }
 
-  Future<void> printSavedOrder(BuildContext context, SavedOrder order) async {
-    await const PrintService().printSavedOrder(context, order);
+  Future<void> printSavedOrder(
+    BuildContext context,
+    SavedOrder order, {
+    bool offerCustomerCopy = false,
+  }) async {
+    Future<bool> printOnce() =>
+        const PrintService().printSavedOrder(context, order);
+    final autoPrintSuccess = await printOnce();
+    if (offerCustomerCopy && context.mounted) {
+      await maybePrintCustomerCopy(
+        context: context,
+        canPrompt: autoPrintSuccess,
+        printAction: printOnce,
+      );
+    }
   }
 
   void deleteSavedOrder(BuildContext context, String orderId) {
@@ -775,6 +845,48 @@ class BillingMobileController {
     clearCartData(context);
   }
 
+  /// Mirrors desktop `BillingPage.resetToDefaultSalesExecutive` for external
+  /// callers (e.g. saved-orders "new order" flows).
+  void resetToDefaultSalesExecutive(BuildContext context) {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
+        .appSettings;
+
+    localProductProvider.clearCurrentOrder();
+
+    billingProvider.coupenCodeTextController.clear();
+    billingProvider.setCouponApplied(false);
+    billingProvider.setOrderAddress('');
+    billingProvider.transactionNumberController.clear();
+    billingProvider.paidAmountController.clear();
+    billingProvider.clearAllPaymentMethods();
+    billingProvider.clearProductFields();
+    billingProvider.setToCustomerCreditEnabled(false);
+    billingProvider.setDeliveryDate(null);
+    billingProvider.setDeliveryTime(null);
+    billingProvider.commentController.clear();
+    billingProvider.carNumberController.clear();
+
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    _settingsController.syncDefaultDeliveryMethod(
+      billingProvider: billingProvider,
+      deliveryMethodsProvider: deliveryMethodsProvider,
+      appSettings: appSettings,
+    );
+
+    _customerController.handleSalesExecutiveChanged(
+      billingProvider: billingProvider,
+      customerSelectionProvider: customerSelectionProvider,
+      autoAssignEnabled: appSettings?.autoAssignDefaultCustomer ?? true,
+    );
+  }
+
   Future<void> refreshPaymentMethodIdsThenRehydrate(
     BuildContext context,
     String orderId,
@@ -834,6 +946,281 @@ class BillingMobileController {
 
     billingProvider.clearCollectedPaymentAmountsOnly();
   }
+
+  /// Clears auto-assigned default customer when opening quotation checkout.
+  /// Mirrors desktop `_clearAutomaticDefaultCustomerForQuotation`.
+  void clearAutomaticDefaultCustomerForQuotation(BuildContext context) {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    if (localProductProvider.currentOrder?.quotationId != null) {
+      return;
+    }
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
+        .appSettings;
+    final defaultPhone = appSettings?.autoAssignDefaultCustomerPhone ?? '';
+
+    final isAutoDefault = customerSelectionProvider.isDefaultCustomer ||
+        (defaultPhone.isNotEmpty &&
+            (billingProvider.selectedCustomerPhone == defaultPhone ||
+                billingProvider.mobileNumberText == defaultPhone));
+    if (!isAutoDefault) return;
+
+    _customerController.clearSelection(
+      customerSelectionProvider: customerSelectionProvider,
+      billingProvider: billingProvider,
+      cartProvider: Provider.of<CartProvider>(context, listen: false),
+      auth: Provider.of<AuthModel>(context, listen: false),
+    );
+  }
+
+  /// When inline quotation fields are edited, clear any saved customer selection
+  /// so the payload uses `customer_type: new` (desktop checkout modal behaviour).
+  void handleQuotationInlineCustomerChanged(
+    BuildContext context, {
+    required String inlineName,
+    required String inlinePhone,
+  }) {
+    if (inlineName.trim().isEmpty && inlinePhone.trim().isEmpty) return;
+
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+
+    customerSelectionProvider.clearSelectedCustomer();
+    billingProvider.clearSelectedCustomer();
+  }
+
+  /// Syncs inline quotation customer into selection providers before POST.
+  void syncInlineQuotationCustomer(
+    BuildContext context, {
+    required String inlineName,
+    required String inlinePhone,
+  }) {
+    final name = inlineName.trim();
+    if (name.isEmpty) return;
+
+    final inlineCustomer = CustomerListModelData(
+      name: name,
+      phone: inlinePhone.trim().isEmpty ? null : inlinePhone.trim(),
+      customerType: 'new',
+      balance: 0,
+    );
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    customerSelectionProvider.setSelectedCustomer(inlineCustomer);
+    billingProvider.setSelectedCustomer(inlineCustomer, isManual: true);
+  }
+
+  Future<CreateQuotationResult> createQuotationFromCheckout(
+    BuildContext context, {
+    required bool shouldPrint,
+    required DateTime quotationDate,
+    required DateTime expiryDate,
+    required String inlineCustomerName,
+    required String inlineCustomerPhone,
+  }) async {
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthModel>(context, listen: false);
+    final customerProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final quotationsProvider =
+        Provider.of<QuotationsProvider>(context, listen: false);
+    final storeProvider =
+        Provider.of<StoreSessionProvider>(context, listen: false);
+
+    if (inlineCustomerName.trim().isNotEmpty) {
+      syncInlineQuotationCustomer(
+        context,
+        inlineName: inlineCustomerName,
+        inlinePhone: inlineCustomerPhone,
+      );
+    }
+
+    final quoteCustomer =
+        customerProvider.selectedCustomer ?? billingProvider.selectedCustomer;
+    final quoteCustomerId = customerProvider.selectedCustomerID ??
+        billingProvider.selectedCustomerID ??
+        quoteCustomer?.id;
+    final quoteCustomerName = inlineCustomerName.trim().isNotEmpty
+        ? inlineCustomerName.trim()
+        : quoteCustomer?.name?.trim();
+    final quoteCustomerPhone = inlineCustomerPhone.trim().isNotEmpty
+        ? inlineCustomerPhone.trim()
+        : ((customerProvider.selectedCustomerPhone ??
+                        billingProvider.selectedCustomerPhone)
+                    ?.trim()
+                    .isNotEmpty ==
+                true
+            ? (customerProvider.selectedCustomerPhone ??
+                billingProvider.selectedCustomerPhone)
+                ?.trim()
+            : quoteCustomer?.phone?.trim());
+    final hasExistingCustomer = quoteCustomerId != null;
+    final hasInlineCustomer = quoteCustomerName?.isNotEmpty ?? false;
+
+    final validationError = QuotationCheckout.validate(
+      cartIsEmpty: localProductProvider.cartItems.isEmpty,
+      hasExistingCustomer: hasExistingCustomer,
+      hasInlineCustomer: hasInlineCustomer,
+      quotationDate: quotationDate,
+      expiryDate: expiryDate,
+    );
+    if (validationError != null) {
+      return CreateQuotationResult.failure(validationError);
+    }
+
+    try {
+      final deliveryMethodIdValue =
+          int.tryParse(billingProvider.deliveryMethodId);
+      final deliveryChargeValue = resolveDeliveryCharge(context);
+      final priceSummary = localProductProvider.priceSummary;
+      final discountValue = priceSummary?.discount ?? 0.0;
+      final payload = QuotationCheckout.buildPayload(
+        hasExistingCustomer: hasExistingCustomer,
+        customerId: quoteCustomerId,
+        customerName: quoteCustomerName,
+        customerPhone: quoteCustomerPhone,
+        storeId: storeProvider.activeStore?.storeId,
+        deliveryMethodId: deliveryMethodIdValue,
+        deliveryCharge: deliveryChargeValue,
+        quotationDate: quotationDate,
+        expiryDate: expiryDate,
+        discount: discountValue,
+        comment: billingProvider.commentController.text,
+        cartItems: localProductProvider.cartItems,
+      );
+
+      final response = await quotationsProvider.createQuotation(
+        accessToken: authProvider.token ?? '',
+        data: payload,
+      );
+
+      if (!context.mounted) {
+        return const CreateQuotationResult(success: true);
+      }
+
+      if (response['success'] == true || response['status'] == 'success') {
+        var printSucceeded = false;
+        String? printError;
+
+        if (shouldPrint) {
+          final quotationId = QuotationCheckout.extractCreatedQuotationId(response);
+          if (quotationId == null) {
+            printError = BillingMobileErrorMessages.quotationPrintMissingId;
+          } else {
+            final details = await quotationsProvider.fetchQuotationDetails(
+              accessToken: authProvider.token ?? '',
+              quotationId: quotationId,
+            );
+            if (!context.mounted) {
+              return const CreateQuotationResult(success: true);
+            }
+            if (details == null) {
+              printError = BillingMobileErrorMessages.quotationPrintDetailsFailed;
+            } else {
+              Future<bool> printOnce() => printQuotationDetails(context, details);
+              printSucceeded = await printOnce();
+              if (!context.mounted) {
+                return const CreateQuotationResult(success: true);
+              }
+              await maybePrintCustomerCopy(
+                context: context,
+                canPrompt: printSucceeded,
+                printAction: printOnce,
+              );
+            }
+          }
+        }
+
+        return CreateQuotationResult(
+          success: true,
+          printSucceeded: shouldPrint ? printSucceeded : null,
+          printError: printError,
+        );
+      }
+
+      return CreateQuotationResult.failure(
+        response['message']?.toString() ??
+            BillingMobileErrorMessages.quotationCreateFailed,
+      );
+    } catch (_) {
+      return const CreateQuotationResult.failure(
+        BillingMobileErrorMessages.quotationCreateFailed,
+      );
+    }
+  }
+
+  Future<bool> printQuotationDetails(
+    BuildContext context,
+    QuotationDetailsData details,
+  ) {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
+        .appSettings;
+    final selectedCustomer =
+        customerSelectionProvider.selectedCustomer ??
+            billingProvider.selectedCustomer;
+    final isDefaultCustomer = _customerController.isDefaultCustomer(
+      customer: selectedCustomer,
+      customerSelectionProvider: customerSelectionProvider,
+      defaultCustomerPhone: appSettings?.autoAssignDefaultCustomerPhone ?? '',
+    );
+
+    return const QuotationPrintService().printQuotationDetails(
+      context,
+      details,
+      customerOldBalance: isDefaultCustomer
+          ? null
+          : selectedCustomer?.balance,
+      paidAmount: null,
+      paymentMethod: null,
+      paymentBreakdown: null,
+      customerType: selectedCustomer?.customerType,
+      deliveryMethod: billingProvider.deliveryMethod,
+      isDefaultCustomer: isDefaultCustomer,
+    );
+  }
+
+  Future<void> maybePrintCustomerCopy({
+    required BuildContext context,
+    required bool canPrompt,
+    required Future<bool> Function() printAction,
+  }) async {
+    if (!canPrompt || !context.mounted) return;
+
+    final shouldDoublePrint = Provider.of<AppSettingsProvider>(
+          context,
+          listen: false,
+        ).appSettings?.posPrintDoubleBill ??
+        false;
+    if (!shouldDoublePrint) return;
+
+    final shouldPrintCustomerCopy = await ConfirmationDialog.show(
+          context: context,
+          title: 'Print customer copy?',
+          message: 'Do you want to print a customer copy now?',
+          confirmText: 'Yes, print',
+          cancelText: 'No',
+        ) ??
+        false;
+    if (!shouldPrintCustomerCopy || !context.mounted) return;
+
+    await printAction();
+  }
 }
 
 /// Outcome of confirm-and-print: order may succeed while print fails.
@@ -852,4 +1239,24 @@ class CreateOrderAndPrintResult {
 
   bool get printFailed =>
       orderCreated && orderNumber != null && !printSucceeded;
+}
+
+class CreateQuotationResult {
+  const CreateQuotationResult({
+    required this.success,
+    this.errorMessage,
+    this.printSucceeded,
+    this.printError,
+  });
+
+  const CreateQuotationResult.failure(String message)
+      : success = false,
+        errorMessage = message,
+        printSucceeded = null,
+        printError = null;
+
+  final bool success;
+  final String? errorMessage;
+  final bool? printSucceeded;
+  final String? printError;
 }
