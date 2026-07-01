@@ -180,4 +180,20 @@ void main() {
       reason: 'Opening stock field defaults to 0; cart add must still use 1',
     );
   });
+
+  test('P-02 sign-off: parsed qty 3 adds single cart line with quantity 3', () {
+    final provider = LocalProductProvider()..setStockEnabled(false);
+    final product = makeProduct(id: 101, barcode: 'BC-101', name: 'Created Qty3');
+    provider.addProduct(product);
+
+    final quantity = AddProductFormHelpers.parseAddToCartQuantity('3');
+    final price = AddProductFormHelpers.parseAddToCartSellingPrice('120');
+
+    provider.addToCart(product: product, quantity: quantity, price: price);
+
+    expect(quantity, 3);
+    expect(provider.cartItems, hasLength(1));
+    expect(provider.cartItems.single.quantity, 3);
+    expect(provider.cartItems.single.price, 120);
+  });
 }

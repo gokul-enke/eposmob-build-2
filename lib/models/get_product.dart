@@ -97,7 +97,7 @@ class GetProduct {
   final WeightInfo? weightInfo;
   final List<Stock>? stock;
   final List<SaleUnit>? saleUnits;
-  final List<dynamic>? variants;
+  final List<ProductVariant>? variants;
   final String? sku;
   final dynamic offerPrice;
   final dynamic productLocation;
@@ -166,7 +166,7 @@ class GetProduct {
     WeightInfo? weightInfo,
     List<Stock>? stock,
     List<SaleUnit>? saleUnits,
-    List<dynamic>? variants,
+    List<ProductVariant>? variants,
     String? sku,
     dynamic offerPrice,
     dynamic productLocation,
@@ -288,10 +288,8 @@ class GetProduct {
               )),
         variants: json["variants"] == null
             ? []
-            : List<dynamic>.from((json["variants"] as List).map(
-                (x) => x is Map<String, dynamic>
-                    ? Map<String, dynamic>.from(x)
-                    : x,
+            : List<ProductVariant>.from((json["variants"] as List).map(
+                (x) => ProductVariant.fromJson(x as Map<String, dynamic>),
               )),
         sku: json["sku"],
         offerPrice: json["offer_price"]?.toString(),
@@ -320,6 +318,11 @@ class GetProduct {
     return taxes!.fold(
         0.0, (sum, tax) => sum + (double.tryParse(tax.rate ?? "0") ?? 0.0));
   }
+
+  bool get hasVariants => variants != null && variants!.isNotEmpty;
+
+  List<ProductVariant> get activeVariants =>
+      variants?.where((variant) => variant.active).toList() ?? const [];
 
   Map<String, dynamic> toJson() => {
         "product_id": productId,
@@ -356,7 +359,9 @@ class GetProduct {
         "sale_units": saleUnits == null
             ? []
             : List<dynamic>.from(saleUnits!.map((x) => x.toJson())),
-        "variants": variants == null ? [] : List<dynamic>.from(variants!),
+        "variants": variants == null
+            ? []
+            : List<dynamic>.from(variants!.map((x) => x.toJson())),
         "sku": sku,
         "offer_price": offerPrice,
         "product_location": productLocation,
@@ -854,6 +859,70 @@ class Pagination {
         "per_page": perPage,
         "total": total,
       };
+}
+
+class ProductVariant {
+  final int id;
+  final String? sku;
+  final String? barcode;
+  final double? price;
+  final double? mrp;
+  final double? purchasePrice;
+  final num? quantity;
+  final bool active;
+  final Map<String, dynamic> attributes;
+
+  ProductVariant({
+    required this.id,
+    this.sku,
+    this.barcode,
+    this.price,
+    this.mrp,
+    this.purchasePrice,
+    this.quantity,
+    this.active = true,
+    this.attributes = const {},
+  });
+
+  factory ProductVariant.fromJson(Map<String, dynamic> json) => ProductVariant(
+        id: (() {
+          final raw = json['id'];
+          if (raw is int) return raw;
+          if (raw is String) return int.tryParse(raw) ?? 0;
+          return 0;
+        })(),
+        sku: json['sku']?.toString(),
+        barcode: json['barcode']?.toString(),
+        price: (json['price'] as num?)?.toDouble(),
+        mrp: (json['mrp'] as num?)?.toDouble(),
+        purchasePrice: (json['purchase_price'] as num?)?.toDouble(),
+        quantity: json['quantity'] as num?,
+        active: _parseBool(json['active']) ?? true,
+        attributes: (json['attributes'] as Map<String, dynamic>?) ?? const {},
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'sku': sku,
+        'barcode': barcode,
+        'price': price,
+        'mrp': mrp,
+        'purchase_price': purchasePrice,
+        'quantity': quantity,
+        'active': active,
+        'attributes': attributes,
+      };
+
+  String get formattedAttributes =>
+      attributes.values.map((value) => value.toString()).join(' | ');
+
+  String displayName(String productName) {
+    final attrs = formattedAttributes;
+    return attrs.isEmpty ? productName : '$productName ($attrs)';
+  }
+
+  double effectivePrice(double productPrice) =>
+      (price != null && price! > 0) ? price! : productPrice;
 }
 
 class ProductTax {

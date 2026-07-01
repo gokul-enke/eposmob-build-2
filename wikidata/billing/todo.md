@@ -192,12 +192,14 @@ Acceptance:
 - [x] Confirm deletes current saved draft if confirming an edited saved order.
 - [x] Confirm resets customer/payment/delivery/product/coupon state after success.
 - [x] Add tests for each validation failure.
+- [x] Add mixed-cart `items[]` payload contract test (plain + variant + sale-unit + combo). → `test/mobile_checkout_payload_contract_test.dart`
 
 Acceptance:
 
 - [x] Failed validation never mutates cart, stock reservations, or saved orders.
 - [x] Successful online order does not restore stock.
-- [ ] API payload matches desktop payload for the same cart and payment state. *(integration/manual parity QA)*
+- [x] `items[]` payload keys for variant/sale-unit lines match contract (`product_variant_id`, `sale_unit_id`, etc.). → `test/mobile_checkout_payload_contract_test.dart`, `test/variant_payload_test.dart`, `test/sale_unit_payload_test.dart`
+- [ ] Full API envelope byte-for-byte matches desktop payload for the same cart and payment state. *(integration/manual parity QA)*
 
 ### P0.9 Delivery Charge Must Be Computed Once And Sent Correctly
 
@@ -458,7 +460,7 @@ Acceptance:
 ### P2.3 Rehydration Must Restore Every Field
 
 - [x] Rehydrate customer id, phone, name, and default/manual flag.
-- [x] Rehydrate cart items including stock JSON, group ids, reservations, sale-unit metadata, manual overrides, and comments.
+- [x] Rehydrate cart items including stock JSON, group ids, reservations, sale-unit metadata, variant id/attributes, manual overrides, and comments.
 - [x] Rehydrate typed payments.
 - [x] Rehydrate dynamic payment methods.
 - [x] Rehydrate debit/customer credit.
@@ -608,6 +610,7 @@ Acceptance:
 | Delivery method | ✅ Date/time, charge, car number, address | Must include date/time and delivery charge persistence |
 | Coupon | ✅ Full local/API/remap semantics | Must fully match local/API/payment remap semantics |
 | Confirm order | ✅ Shared `CheckoutService` + mobile guards | Must pass full validation and payload parity |
+| Product variants | ✅ Mobile P-05 complete: picker, cart identity, Hive rehydration, OOS block, sale-unit combo, `product_variant_id` payload | Desktop `billing_page.dart` picker deferred |
 | Confirm & Print | ✅ Print retry snackbar on failure | Must handle print retry/customer copy |
 | Save draft | ✅ `SaveOrderResult`; no clear on failure | Must not clear cart on failure |
 | Orders screen | ✅ Saved/edit/print/delete/rehydrate | Saved/edit/print/delete/confirmed/ongoing as scoped |
@@ -633,6 +636,15 @@ Acceptance:
 - [x] Unknown-barcode create-and-add via `ProductCartHelper`. → `test/add_created_product_to_cart_test.dart`, P-02
 - [x] Mobile autocomplete sellable products only. → `test/mobile_product_autocomplete_sellable_test.dart`, P-03
 - [x] Desktop unknown-barcode create-and-add via `ProductCartHelper`. → `test/add_created_product_to_cart_test.dart`, P-04
+- [x] Mobile variant model, resolver, picker, cart identity, and order payload. → `test/product_variant_selection_test.dart`, `test/mobile_variant_picker_test.dart`, `test/mobile_variant_cart_identity_test.dart`, `test/billing_mobile_barcode_resolution_test.dart`, P-05
+- [x] Mobile barcode resolution chain (sale-unit + embedded + variant barcode). → `test/billing_mobile_barcode_resolution_test.dart`, P-01 / §2 / P-05
+- [x] P-02 qty-3 create-and-add cart line. → `test/add_product_local_sync_test.dart`
+- [x] P-03 sellableProducts provider filter. → `test/mobile_product_autocomplete_sellable_test.dart` slice 1
+- [x] Variant cart Hive rehydration (active cart + saved draft). → `test/variant_cart_rehydration_test.dart`, P-05 slice 2
+- [x] Out-of-stock variant block at picker and add path. → `ProductVariantSelection.isOutOfStock`, P-05 slice 3
+- [x] Variant + sale-unit payload and cart identity. → `test/variant_payload_test.dart`, `test/mobile_variant_cart_identity_test.dart`, P-05 slices 4–5
+- [x] P0.8 mixed-cart checkout `items[]` payload contract. → `test/mobile_checkout_payload_contract_test.dart`
+- [x] OOS variant barcode resolution (mobile barcode path). → `test/billing_mobile_barcode_resolution_test.dart`
 - [x] Customer selection controller writes all required providers. → `test/billing_mobile_ui_controller_test.dart`
 
 ### Widget Tests
@@ -654,7 +666,7 @@ Acceptance:
 
 - [ ] Add product by product card, pay cash, confirm. *(hermetic harness — manual golden scenarios)*
 - [ ] Add product by barcode scanner, pay card, confirm-print. *(manual)*
-- [ ] Add sale-unit product, edit quantity, confirm API payload. *(unit tests cover payload; E2E manual)*
+- [x] Add sale-unit / variant / mixed cart → confirm `items[]` API payload shape. → `test/mobile_checkout_payload_contract_test.dart`, `test/variant_payload_test.dart`, `test/sale_unit_payload_test.dart`
 - [ ] Add stock-group product, choose stock, save draft, load draft, confirm. *(manual)*
 - [x] Apply coupon, dynamic payment method, confirm. → CHEQUE in `billing_mobile_ui_controller_test.dart`
 - [ ] Door Delivery with address and delivery charge. *(manual)*
@@ -668,7 +680,7 @@ Acceptance:
 
 > **Executable sign-off sheet:** `wikidata/billing/DEVICE_QA_SIGNOFF.md` — a per-device
 > PASS/FAIL checklist with the exact expected result for each step (derived from the current
-> code). Parity fix traceability: `wikidata/billing/MOBILE_DESKTOP_PARITY.md`.
+> code). Parity fix traceability and **test coverage map:** `wikidata/billing/MOBILE_DESKTOP_PARITY.md`.
 
 - [ ] Android small phone portrait.
 - [ ] Android small phone landscape.

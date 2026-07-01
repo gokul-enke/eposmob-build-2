@@ -12,6 +12,7 @@ import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/widgets/product_autocomplete_list_mobile.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -103,6 +104,22 @@ void main() {
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   group('MobileProductAutocomplete sellable parity', () {
+    test('LocalProductProvider.sellableProducts excludes non-sellable catalog rows',
+        () {
+      final provider = LocalProductProvider();
+      provider.addProduct(_namedProduct(id: 1, name: 'Retail Item'));
+      provider.addProduct(
+        _namedProduct(id: 2, name: 'Wholesale Only', sellable: false),
+      );
+
+      expect(provider.products, hasLength(2));
+      expect(provider.sellableProducts.map((p) => p.productId), [1]);
+      expect(
+        provider.sellableProducts.any((p) => p.productName == 'Wholesale Only'),
+        isFalse,
+      );
+    });
+
     testWidgets('suggestions come only from productList (sellable), not all products',
         (tester) async {
       final sellable = _namedProduct(id: 1, name: 'Sellable Tea');

@@ -10,10 +10,14 @@ The backend already fully supports product variants. This document covers all Fl
 
 | Area | Status |
 |---|---|
-| `GetProduct.variants` field | Exists but typed as `List<dynamic>` — unused |
-| `LocalCartItem` variant fields | Not present |
-| Billing page variant picker | Not present |
-| `add-to-order` payload `product_variant_id` | Not sent |
+| `GetProduct.variants` field | ✅ Typed as `List<ProductVariant>` (P-05 slice 1) |
+| `LocalCartItem` variant fields | ✅ `variantId`, `variantAttributes`, `displayName` (P-05 slice 1) |
+| Mobile billing variant picker | ✅ `mobile_variant_picker_sheet.dart` + `addProductWithVariantResolution` (P-05 slice 1) |
+| `add-to-order` payload `product_variant_id` | ✅ Via `buildOrderItemsPayload` when `variantId` set (P-05 slice 1) |
+| Variant Hive rehydration (cart + saved draft) | ✅ Fields 16–17; `test/variant_cart_rehydration_test.dart` (P-05 slice 2) |
+| Out-of-stock variant block | ✅ Picker + `addProductWithVariantResolution` + `ProductCartHelper` guard (P-05 slice 3) |
+| Variant + sale-unit cart identity | ✅ Independent merge keys; payload tests (P-05 slice 4) |
+| Desktop `billing_page.dart` variant picker | Not present — **deferred** (desktop-only) |
 | Add Product Modal variant creation | Not needed — variants managed in Filament UI only |
 
 ---
@@ -574,3 +578,29 @@ if (product != null && product.hasVariants) {
 | Step 7 — Cart display name | 30 min |
 | Edge cases + testing | 2–3 hours |
 | **Total** | **~2 days** |
+
+---
+
+## Progress (2026-07-01)
+
+**P-05 slice 1 (mobile)** — shipped:
+
+- Step 1 — `ProductVariant` model + `GetProduct.hasVariants` / `activeVariants`
+- Step 2 — `LocalCartItem.variantId` / `variantAttributes` + Hive fields 16–17
+- Step 3 — Mobile variant picker bottom sheet (desktop dialog deferred)
+- Step 5 — Variant-aware cart merge + `ProductCartHelper.selectedVariant`
+- Step 6 — `product_variant_id` in `buildOrderItemsPayload`
+- Step 7 — Cart `displayName` on mobile cart rows
+- Mobile entry points: market grid Add sheet, autocomplete, barcode scan
+
+**P-05 slices 2–5 (mobile)** — shipped:
+
+- Slice 2 — Saved-draft + active-cart Hive rehydration QA (`test/variant_cart_rehydration_test.dart`)
+- Slice 3 — Out-of-stock variant hard block (`ProductVariantSelection.isOutOfStock`, picker + add guards)
+- Slice 4 — Variant + sale-unit independent cart identity (`test/variant_payload_test.dart`)
+- Slice 5 — Mobile payload contract tests for `product_variant_id` (+ sale-unit combo)
+
+**Remaining (desktop-only / integration):**
+
+- Step 4 — Desktop `billing_page.dart` variant picker integration
+- P0.8 — Byte-for-byte mobile vs desktop payload compare on device

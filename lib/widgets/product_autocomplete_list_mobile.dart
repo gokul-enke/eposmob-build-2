@@ -5,7 +5,7 @@ import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
@@ -169,7 +169,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
     debugPrint(
         "  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
 
-    await ProductCartHelper.handleProductSelection(
+    await addProductWithVariantResolution(
       context: context,
       product: product,
       onSelected: widget.onSelected,

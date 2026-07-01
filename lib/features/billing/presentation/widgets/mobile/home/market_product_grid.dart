@@ -14,7 +14,7 @@ import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/pr
 
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/product_card_actions.dart';
 
-import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
 
 import 'package:pos_machine/models/get_product.dart';
 
@@ -66,7 +66,7 @@ Future<void> _openAddSheet(BuildContext context, GetProduct product) async {
 
   try {
 
-    await ProductCartHelper.handleProductSelection(
+    await addProductWithVariantResolution(
 
       context: context,
 

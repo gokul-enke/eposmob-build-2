@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -464,9 +464,10 @@ class BillingMobileController {
               BarcodeSaleUnit.resolveSaleUnitQuantity(matchedSaleUnit);
         }
 
-        await ProductCartHelper.handleProductSelection(
+        await addProductWithVariantResolution(
           context: context,
           product: product,
+          scannedBarcode: query,
           quantity: quantity,
           addToCartDirectly: true,
           customerId: billingProvider.selectedCustomerID,

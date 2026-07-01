@@ -113,7 +113,8 @@ void main() {
   });
 
   group('addCreatedProductToCart', () {
-    testWidgets('routes through ProductCartHelper with form quantity and price',
+    testWidgets(
+        'routes through ProductCartHelper with form quantity and opening-stock zero',
         (tester) async {
       final localProductProvider = LocalProductProvider();
       final product = _product();
@@ -159,66 +160,27 @@ void main() {
         sellingPriceText: '175',
       );
       await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
 
       expect(localProductProvider.cartItems, hasLength(1));
       expect(localProductProvider.cartItems.first.product.productId, 99);
       expect(localProductProvider.cartItems.first.quantity, 4);
       expect(localProductProvider.cartItems.first.price, 175);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    });
-
-    testWidgets('uses opening-stock zero as cart quantity 1', (tester) async {
-      final localProductProvider = LocalProductProvider();
-      final product = _product(id: 100);
-      localProductProvider.addProduct(product);
-
-      late BuildContext capturedContext;
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<LocalProductProvider>.value(
-              value: localProductProvider,
-            ),
-            ChangeNotifierProvider<GeneralSettingsProvider>(
-              create: (_) => _FakeGeneralSettingsProvider(stockEnabled: false),
-            ),
-            ChangeNotifierProvider<MasterDataProvider>(
-              create: (_) => MasterDataProvider(),
-            ),
-            ChangeNotifierProvider<StoreSessionProvider>(
-              create: (_) => StoreSessionProvider(),
-            ),
-            ChangeNotifierProvider<CustomerSelectionProvider>(
-              create: (_) => CustomerSelectionProvider(),
-            ),
-          ],
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) {
-                capturedContext = context;
-                return const SizedBox.shrink();
-              },
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
+      localProductProvider.clearCart();
+      final zeroStockProduct = _product(id: 100);
+      localProductProvider.addProduct(zeroStockProduct);
 
       await addCreatedProductToCart(
         context: capturedContext,
-        product: product,
+        product: zeroStockProduct,
         quantityText: '0',
         sellingPriceText: '150',
       );
       await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
 
       expect(localProductProvider.cartItems.single.quantity, 1);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
     });
   });
 }

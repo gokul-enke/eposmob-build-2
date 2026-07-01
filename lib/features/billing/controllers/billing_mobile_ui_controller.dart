@@ -63,6 +63,9 @@ class BillingMobileErrorMessages {
   static String insufficientStock(String unitLabel) =>
       'Insufficient stock for $unitLabel';
 
+  static String variantOutOfStock(String variantLabel) =>
+      '$variantLabel is out of stock';
+
   // Coupon / discount
   static const emptyCartDiscount = 'Cannot apply discount to empty cart';
   static const discountNegative = 'Discount cannot be negative';

@@ -78,6 +78,15 @@
 | `askDeliveryDate` ON | Delivery date + time controls show and persist | ☐ P ☐ F |
 | `barcodeSales` OFF → product search | Autocomplete shows **sellable** products only (P-03) | ☐ P ☐ F |
 | Desktop: unknown barcode → create with qty **3** | Cart line qty **3** after save (P-04; same path as P-02) | ☐ P ☐ F |
+| Product with 2+ variants → Add | Variant picker sheet; in-stock variant added at variant price (P-05) | ☐ P ☐ F |
+| Single-variant product, variant qty 0 → Add | Blocked with out-of-stock message; no cart line (P-05 slice 3) | ☐ P ☐ F |
+| Out-of-stock variant in picker | Row greyed, not tappable; Add disabled until in-stock variant chosen (P-05) | ☐ P ☐ F |
+| Scan variant barcode on multi-variant product | Adds that variant directly, no picker (P-05) | ☐ P ☐ F |
+| Scan OOS variant barcode (multi-variant product) | Does not auto-add OOS line; picker or alternate path (P-05) | ☐ P ☐ F |
+| Variant cart line → Confirm | API `items[]` includes `product_variant_id` (P-05) | ☐ P ☐ F |
+| Save draft with variant → reload from Orders | `variantId`, display name `(Red \| L)`, price/qty restored (P-05 slice 2) | ☐ P ☐ F |
+| App kill/reopen with variant in active cart | Cart line still shows variant label (Hive fields 16–17) (P-05 slice 2) | ☐ P ☐ F |
+| Product with variants **and** sale units | Separate lines per variant; sale-unit qty/price conversion intact (P-05 slice 4) | ☐ P ☐ F |
 | Customer with previous balance | Balance shown; credit toggle feeds payment correctly | ☐ P ☐ F |
 | Save draft → reopen from Orders → edit | Customer, delivery, coupon, payments, dynamic methods, stock all rehydrate | ☐ P ☐ F |
 | Save draft with **invalid** price | Save blocked; **cart NOT cleared** | ☐ P ☐ F |

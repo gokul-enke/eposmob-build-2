@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/quantity_input_helper.dart';
+import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/get_product.dart';
@@ -89,6 +90,10 @@ class LocalCartItem {
   final String? saleUnitName;
   final double? saleUnitConversionRate;
 
+  /// Selected product variant (when product has variants).
+  final int? variantId;
+  final Map<String, dynamic>? variantAttributes;
+
   LocalCartItem({
     required this.product,
     this.price,
@@ -105,6 +110,8 @@ class LocalCartItem {
     this.saleUnitId,
     this.saleUnitName,
     this.saleUnitConversionRate,
+    this.variantId,
+    this.variantAttributes,
   })  : stockGroupIds = stockGroupIds ?? <int>[],
         stockReservations = stockReservations ?? <StockReservation>[];
 
@@ -122,6 +129,11 @@ class LocalCartItem {
     }
     return candidate.trim();
   }
+
+  String get displayName => ProductVariantSelection.cartDisplayName(
+        productName: product.productName,
+        variantAttributes: variantAttributes,
+      );
 
   num get displayQuantity => toDisplayQuantity(quantity);
 
@@ -778,6 +790,10 @@ class LocalProductProvider extends ChangeNotifier {
       saleUnitId: hiveCartItem.saleUnitId,
       saleUnitName: hiveCartItem.saleUnitName,
       saleUnitConversionRate: hiveCartItem.saleUnitConversionRate,
+      variantId: hiveCartItem.variantId,
+      variantAttributes: _deserializeVariantAttributes(
+        hiveCartItem.serializedVariantAttributes?.value,
+      ),
     );
   }
 
@@ -813,6 +829,10 @@ class LocalProductProvider extends ChangeNotifier {
       saleUnitId: item.saleUnitId,
       saleUnitName: item.saleUnitName,
       saleUnitConversionRate: item.saleUnitConversionRate,
+      variantId: item.variantId,
+      serializedVariantAttributes: _serializeVariantAttributes(
+        item.variantAttributes,
+      ),
     );
   }
 
@@ -833,7 +853,38 @@ class LocalProductProvider extends ChangeNotifier {
       saleUnitId: item.saleUnitId,
       saleUnitName: item.saleUnitName,
       saleUnitConversionRate: item.saleUnitConversionRate,
+      variantId: item.variantId,
+      variantAttributes: item.variantAttributes == null
+          ? null
+          : Map<String, dynamic>.from(item.variantAttributes!),
     );
+  }
+
+  Map<String, dynamic>? _deserializeVariantAttributes(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(decoded);
+      }
+      if (decoded is Map) {
+        return decoded.map(
+          (key, value) => MapEntry(key.toString(), value),
+        );
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  HiveStringValue? _serializeVariantAttributes(
+    Map<String, dynamic>? attributes,
+  ) {
+    if (attributes == null || attributes.isEmpty) {
+      return null;
+    }
+    return HiveStringValue(json.encode(attributes));
   }
 
   List<Stock> _sortStocksForReservation(List<Stock> stocks) {
@@ -1076,6 +1127,7 @@ class LocalProductProvider extends ChangeNotifier {
     Stock? selectedStock,
     List<int>? stockGroupIds,
     int? saleUnitId,
+    int? variantId,
   }) {
     final normalizedIncomingGroupIds = _normalizeStockGroupIds(stockGroupIds);
 
@@ -1085,6 +1137,10 @@ class LocalProductProvider extends ChangeNotifier {
       }
 
       if (item.saleUnitId != saleUnitId) {
+        return false;
+      }
+
+      if (item.variantId != variantId) {
         return false;
       }
 
@@ -1155,6 +1211,7 @@ class LocalProductProvider extends ChangeNotifier {
             'sale_unit_id': item.saleUnitId,
             'product_sale_unit_id': item.saleUnitId,
           },
+          if (item.variantId != null) 'product_variant_id': item.variantId,
         });
         reservedQuantity += reservation.quantity;
       }
@@ -1182,6 +1239,7 @@ class LocalProductProvider extends ChangeNotifier {
             'sale_unit_id': item.saleUnitId,
             'product_sale_unit_id': item.saleUnitId,
           },
+          if (item.variantId != null) 'product_variant_id': item.variantId,
         });
       }
     }
@@ -1199,6 +1257,9 @@ class LocalProductProvider extends ChangeNotifier {
       _indexProductBarcode(product.barcode, product);
       for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
         _indexProductBarcode(saleUnit.barcode, product);
+      }
+      for (final variant in product.variants ?? const <ProductVariant>[]) {
+        _indexProductBarcode(variant.barcode, product);
       }
     }
   }
@@ -2296,6 +2357,8 @@ class LocalProductProvider extends ChangeNotifier {
     int? saleUnitId,
     String? saleUnitName,
     double? saleUnitConversionRate,
+    int? variantId,
+    Map<String, dynamic>? variantAttributes,
   }) {
     debugPrint("🛒 ADD TO CART STARTED");
     debugPrint("Product: ${product?.productName}");
@@ -2323,6 +2386,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: selectedStock,
       stockGroupIds: normalizedStockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     bool didMutateStock = false;
@@ -2437,6 +2501,10 @@ class LocalProductProvider extends ChangeNotifier {
             saleUnitId: saleUnitId,
             saleUnitName: saleUnitName,
             saleUnitConversionRate: saleUnitConversionRate,
+            variantId: variantId,
+            variantAttributes: variantAttributes == null
+                ? null
+                : Map<String, dynamic>.from(variantAttributes),
           ));
     }
 
@@ -2570,6 +2638,10 @@ class LocalProductProvider extends ChangeNotifier {
         saleUnitId: targetSaleUnitId,
         saleUnitName: targetSaleUnitName,
         saleUnitConversionRate: targetSaleUnitRate,
+        variantId: sourceItem.variantId,
+        variantAttributes: sourceItem.variantAttributes == null
+            ? null
+            : Map<String, dynamic>.from(sourceItem.variantAttributes!),
       );
       _refreshCartItemPricing(_cartItems[currentIndex]);
     }
@@ -2784,6 +2856,10 @@ class LocalProductProvider extends ChangeNotifier {
             saleUnitId: item.saleUnitId,
             saleUnitName: item.saleUnitName,
             saleUnitConversionRate: item.saleUnitConversionRate,
+            variantId: item.variantId,
+            variantAttributes: item.variantAttributes == null
+                ? null
+                : Map<String, dynamic>.from(item.variantAttributes!),
           );
         } else {
           if (!item.isManualPriceOverride) {
@@ -2836,6 +2912,10 @@ class LocalProductProvider extends ChangeNotifier {
               saleUnitId: orderItem.saleUnitId,
               saleUnitName: orderItem.saleUnitName,
               saleUnitConversionRate: orderItem.saleUnitConversionRate,
+              variantId: orderItem.variantId,
+              variantAttributes: orderItem.variantAttributes == null
+                  ? null
+                  : Map<String, dynamic>.from(orderItem.variantAttributes!),
             );
           } else {
             if (!orderItem.isManualPriceOverride) {
@@ -2920,6 +3000,10 @@ class LocalProductProvider extends ChangeNotifier {
           saleUnitId: item.saleUnitId,
           saleUnitName: item.saleUnitName,
           saleUnitConversionRate: item.saleUnitConversionRate,
+          variantId: item.variantId,
+          variantAttributes: item.variantAttributes == null
+              ? null
+              : Map<String, dynamic>.from(item.variantAttributes!),
         );
         cartUpdated = true;
         cartUpdatedCount++;
@@ -2963,6 +3047,10 @@ class LocalProductProvider extends ChangeNotifier {
             saleUnitId: orderItem.saleUnitId,
             saleUnitName: orderItem.saleUnitName,
             saleUnitConversionRate: orderItem.saleUnitConversionRate,
+            variantId: orderItem.variantId,
+            variantAttributes: orderItem.variantAttributes == null
+                ? null
+                : Map<String, dynamic>.from(orderItem.variantAttributes!),
           );
           savedOrdersUpdated = true;
           savedOrderItemUpdatedCount++;
