@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/return_bill_print.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'sales_return_responsive.dart';
 
 class SalesReturnDetailModal extends StatelessWidget {
   final SalesReturnOrder order;
@@ -15,259 +18,424 @@ class SalesReturnDetailModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = salesReturnIsPhone(context);
+    final screenSize = MediaQuery.of(context).size;
+
     return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isPhone ? 12 : 40,
+        vertical: isPhone ? 16 : 24,
+      ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isPhone ? 16 : 20),
       ),
       elevation: 8,
       backgroundColor: Colors.white,
-      child: Container(
+      child: ConstrainedBox(
         constraints: BoxConstraints(
-            maxWidth: 600, maxHeight: MediaQuery.of(context).size.height * 0.8),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header with close button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Return Details",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+          maxWidth: isPhone ? screenSize.width : 640,
+          maxHeight: screenSize.height * (isPhone ? 0.92 : 0.85),
+        ),
+        child: Padding(
+          padding: EdgeInsetsDirectional.all(isPhone ? 16 : 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Return Details',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s20,
+                        0.28,
+                        ColorManager.textColor,
+                      ),
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Order Information Card
-            Card(
-              elevation: 2,
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey[300]!),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Order Information",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildInfoRow("Order Number", order.order?.orderNumber ?? "#${order.orderId}"),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("Customer", order.order?.customer?.user?.name ?? "N/A"),
-                    const SizedBox(height: 8),
-                    Consumer<AppSettingsProvider>(
-                      builder: (context, settings, _) {
-                        final currency = settings.appSettings?.currency ?? 'INR';
-                        final raw = order.order?.grandTotal ?? '0.00';
-                        final parsed = double.tryParse(raw);
-                        final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
-                        return _buildInfoRow("Grand Total", "$currency $amount");
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("Payment Method", order.order?.paymentMethod?.join(", ") ?? "N/A"),
-                    const SizedBox(height: 8),
-                    _buildInfoRow("Date",
-                        DateHelper.formatDate(order.createdAt).toString()),
-                    const SizedBox(height: 8),
-                    Consumer<AppSettingsProvider>(
-                      builder: (context, settings, _) {
-                        final currency =
-                            settings.appSettings?.currency ?? 'INR';
-                        final parsed = double.tryParse(order.totalAmount);
-                        final amount = parsed != null
-                            ? parsed.toStringAsFixed(2)
-                            : order.totalAmount;
-                        return _buildInfoRow(
-                            "Return Total", "$currency $amount");
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(
-                      "Status",
-                      order.status.toString() == '1' ? 'Completed' : 'Pending',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Return Items Section
-            const Text(
-              "Return Items",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Table with return items
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      headingTextStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                      dataTextStyle: const TextStyle(
-                        color: Colors.black,
-                      ),
-                      horizontalMargin: 16,
-                      columnSpacing: 24,
-                      columns: const [
-                        DataColumn(label: Text('Product')),
-                        DataColumn(label: Text('Qty'), numeric: true),
-                        DataColumn(label: Text('Price'), numeric: true),
-                        DataColumn(label: Text('Reason')),
-                      ],
-                      rows: order.items.map((item) {
-                        return DataRow(cells: [
-                          DataCell(Text(
-                            item.cartItem.product?.name ?? 'Unknown Product',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black,
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SalesReturnContentCard(
+                        padding: const EdgeInsetsDirectional.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SalesReturnLabelPill(label: 'ORDER INFORMATION'),
+                            const SizedBox(height: 14),
+                            _buildInfoRow(
+                              'Order Number',
+                              order.order?.orderNumber ??
+                                  '#${order.orderId}',
                             ),
-                          )),
-                          DataCell(Text(
-                            item.quantity.toString(),
-                            style: const TextStyle(color: Colors.black),
-                          )),
-                          DataCell(
+                            _buildInfoRow(
+                              'Customer',
+                              order.order?.customer?.user?.name ?? 'N/A',
+                            ),
                             Consumer<AppSettingsProvider>(
                               builder: (context, settings, _) {
-                                final currency = settings.appSettings?.currency ?? 'INR';
-                                final raw = item.price; // string
+                                final currency =
+                                    settings.appSettings?.currency ?? 'INR';
+                                final raw =
+                                    order.order?.grandTotal ?? '0.00';
                                 final parsed = double.tryParse(raw);
-                                final amount = parsed != null ? parsed.toStringAsFixed(2) : raw;
-                                return Text(
-                                  '$currency $amount',
-                                  style: const TextStyle(color: Colors.black),
-                                );
+                                final amount = parsed != null
+                                    ? parsed.toStringAsFixed(2)
+                                    : raw;
+                                return _buildInfoRow(
+                                    'Grand Total', '$currency $amount');
                               },
                             ),
-                          ),
-                          DataCell(
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              child: Text(
-                                item.reason,
-                                style: const TextStyle(color: Colors.black),
-                              ),
+                            _buildInfoRow(
+                              'Payment Method',
+                              order.order?.paymentMethod?.join(', ') ??
+                                  'N/A',
                             ),
-                          ),
-                        ]);
-                      }).toList(),
-                    ),
+                            _buildInfoRow(
+                              'Date',
+                              DateHelper.formatDate(order.createdAt)
+                                  .toString(),
+                            ),
+                            Consumer<AppSettingsProvider>(
+                              builder: (context, settings, _) {
+                                final currency =
+                                    settings.appSettings?.currency ?? 'INR';
+                                final parsed =
+                                    double.tryParse(order.totalAmount);
+                                final amount = parsed != null
+                                    ? parsed.toStringAsFixed(2)
+                                    : order.totalAmount;
+                                return _buildInfoRow(
+                                    'Return Total', '$currency $amount');
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Text(
+                                  'Status: ',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s13,
+                                    0.20,
+                                    Colors.grey.shade600,
+                                  ),
+                                ),
+                                SalesReturnStatusBadge(
+                                  label: order.status.toString() == '1'
+                                      ? 'Completed'
+                                      : 'Pending',
+                                  isCompleted:
+                                      order.status.toString() == '1',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Return Items',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s16,
+                          0.22,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (isPhone)
+                        ...order.items.map(_buildMobileItemCard)
+                      else
+                        _buildItemsTable(context),
+                    ],
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              SalesReturnActionRow(
+                children: [
+                  CustomRoundButton(
+                    fct: () {
+                      List<OrderReturnItem> returnItems =
+                          order.items.map((item) {
+                        return OrderReturnItem(
+                          id: item.id,
+                          productName:
+                              item.cartItem.product?.name ?? 'Unknown',
+                          quantity: item.quantity is int
+                              ? item.quantity as int
+                              : (item.quantity as double).toInt(),
+                          reason: item.reason,
+                        );
+                      }).toList();
 
-            // Action Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                CustomRoundButton(
-                  fct: () {
-                    // Convert SalesReturnOrder items to OrderReturnItem list
-                    List<OrderReturnItem> returnItems = order.items.map((item) {
-                      return OrderReturnItem(
-                        id: item.id,
-                        productName: item.cartItem.product?.name ?? 'Unknown',
-                        quantity: item.quantity is int ? item.quantity as int : (item.quantity as double).toInt(),
-                        reason: item.reason,
-                      );
-                    }).toList();
-
-                    // Navigate to Return Bill Print Page
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ReturnBillPrintPage(
-                          returnItems: returnItems,
-                          returnTotalAmount: order.totalAmount,
-                          orderDate: order.createdAt.toString(),
-                          orderNumber: order.order?.orderNumber ?? order.orderId.toString(),
-                          customerName: order.order?.customer?.user?.name,
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ReturnBillPrintPage(
+                            returnItems: returnItems,
+                            returnTotalAmount: order.totalAmount,
+                            orderDate: order.createdAt.toString(),
+                            orderNumber: order.order?.orderNumber ??
+                                order.orderId.toString(),
+                            customerName:
+                                order.order?.customer?.user?.name,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  title: "Print",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 80,
-                ),
-                const SizedBox(width: 12),
-                CustomRoundButton(
-                  fct: () => Navigator.of(context).pop(),
-                  title: "Close",
-                  fontSize: FontSize.s12,
-                  height: MediaQuery.of(context).size.height * .05,
-                  width: 80,
-                ),
-              ],
-            ),
-          ],
+                      );
+                    },
+                    title: 'Print',
+                    fontSize: FontSize.s12,
+                    height: 44,
+                    width: isPhone ? double.infinity : 100,
+                  ),
+                  CustomRoundButton(
+                    fct: () => Navigator.of(context).pop(),
+                    title: 'Close',
+                    fontSize: FontSize.s12,
+                    height: 44,
+                    width: isPhone ? double.infinity : 100,
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildInfoRow(String label, String value) {
-    return Row(
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(bottom: 10),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isStacked = constraints.maxWidth < 400;
+          if (isStacked) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.18,
+                    Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s13,
+                    0.20,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 130,
+                child: Text(
+                  '$label:',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s13,
+                    0.20,
+                    Colors.grey.shade600,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s13,
+                    0.20,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMobileItemCard(SalesReturnItem item) {
+    return Container(
+      margin: const EdgeInsetsDirectional.only(bottom: 10),
+      padding: const EdgeInsetsDirectional.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.cartItem.product?.name ?? 'Unknown Product',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s13,
+              0.20,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildItemMetric('Qty', item.quantity.toString()),
+              ),
+              Expanded(
+                child: Consumer<AppSettingsProvider>(
+                  builder: (context, settings, _) {
+                    final currency =
+                        settings.appSettings?.currency ?? 'INR';
+                    final raw = item.price;
+                    final parsed = double.tryParse(raw);
+                    final amount = parsed != null
+                        ? parsed.toStringAsFixed(2)
+                        : raw;
+                    return _buildItemMetric('Price', '$currency $amount');
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Reason: ${item.reason}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s12,
+              0.18,
+              Colors.grey.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemMetric(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "$label: ",
-          style: const TextStyle(
-            color: Colors.black54,
-            fontWeight: FontWeight.w500,
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s10,
+            0.15,
+            Colors.grey.shade600,
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s12,
+            0.15,
+            ColorManager.textColor,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildItemsTable(BuildContext context) {
+    return SalesReturnResponsiveTable(
+      minWidth: 560,
+      table: DataTable(
+        headingTextStyle: buildCustomStyle(
+          FontWeightManager.semiBold,
+          FontSize.s12,
+          0.18,
+          ColorManager.kPrimaryColor,
+        ),
+        dataTextStyle: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.15,
+          ColorManager.textColor,
+        ),
+        horizontalMargin: 16,
+        columnSpacing: 20,
+        columns: const [
+          DataColumn(label: Text('Product')),
+          DataColumn(label: Text('Qty'), numeric: true),
+          DataColumn(label: Text('Price'), numeric: true),
+          DataColumn(label: Text('Reason')),
+        ],
+        rows: order.items.map((item) {
+          return DataRow(cells: [
+            DataCell(Text(
+              item.cartItem.product?.name ?? 'Unknown Product',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            )),
+            DataCell(Text(item.quantity.toString())),
+            DataCell(
+              Consumer<AppSettingsProvider>(
+                builder: (context, settings, _) {
+                  final currency =
+                      settings.appSettings?.currency ?? 'INR';
+                  final raw = item.price;
+                  final parsed = double.tryParse(raw);
+                  final amount = parsed != null
+                      ? parsed.toStringAsFixed(2)
+                      : raw;
+                  return Text('$currency $amount');
+                },
+              ),
+            ),
+            DataCell(Text(
+              item.reason,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            )),
+          ]);
+        }).toList(),
+      ),
     );
   }
 }
