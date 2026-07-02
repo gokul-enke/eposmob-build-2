@@ -9,6 +9,7 @@ import 'package:pos_machine/models/get_suppliers.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/screens/product/widgets/mobile_filters.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:pos_machine/widgets/product_details_dialog.dart';
 import 'package:provider/provider.dart';
@@ -53,6 +54,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String? selectedSupplierId;
   int page = 1;
   bool initLoading = false;
+  bool _showFilters = false;
 
   String? selectedProperty;
   final List<String> propertyList = [
@@ -64,10 +66,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   @override
   void initState() {
+    super.initState();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      final isMobile = MediaQuery.of(context).size.width < 600;
+      setState(() {
+        _showFilters = !isMobile;
+      });
       loadInitData();
     });
-    super.initState();
   }
 
   void loadInitData() async {
@@ -170,6 +176,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
       supplier = null;
 
       page = 1;
+      if (_isMobile(context)) {
+        _showFilters = false;
+      }
     });
     loadInitData();
   }
@@ -346,6 +355,60 @@ class _AddProductScreenState extends State<AddProductScreen> {
   bool _isMobile(BuildContext context) =>
       MediaQuery.of(context).size.width < 600;
 
+  bool _hasActiveFilters() {
+    return productNameController.text.isNotEmpty ||
+        amountController.text.isNotEmpty ||
+        barcodeController.text.isNotEmpty ||
+        hsnCodeController.text.isNotEmpty ||
+        itemCodeController.text.isNotEmpty ||
+        selectedCategoryId != null ||
+        selectedProperty != null;
+  }
+
+  Widget _buildFilterToggleButton() {
+    final hasFilters = _hasActiveFilters();
+
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          IconButton(
+            icon: Icon(
+              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+              color: ColorManager.kPrimaryColor,
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(
+              minWidth: 44,
+              minHeight: 44,
+            ),
+            onPressed: () {
+              setState(() {
+                _showFilters = !_showFilters;
+              });
+            },
+            tooltip: _showFilters ? 'Hide Filters' : 'Show Filters',
+          ),
+          if (hasFilters)
+            PositionedDirectional(
+              end: 6,
+              top: 6,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
@@ -387,16 +450,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text(
-                                "Product List",
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s20,
-                                  0.30,
-                                  ColorManager.kTitleTextColor,
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      "Product List",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s20,
+                                        0.30,
+                                        ColorManager.kTitleTextColor,
+                                      ),
+                                    ),
+                                  ),
+                                  _buildFilterToggleButton(),
+                                ],
                               ),
                               const SizedBox(height: 12),
                               CustomRoundButton(
@@ -446,7 +516,35 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ],
                           ),
                     const SizedBox(height: 15),
-                    LayoutBuilder(
+                    if (isMobile && !_showFilters) const SizedBox.shrink()
+                    else if (isMobile)
+                      ProductMobileFilters(
+                        productNameController: productNameController,
+                        amountController: amountController,
+                        barcodeController: barcodeController,
+                        hsnCodeController: hsnCodeController,
+                        itemCodeController: itemCodeController,
+                        propertySearchController: propertySearchController,
+                        selectedProperty: selectedProperty,
+                        propertyList: propertyList,
+                        categoryField: Consumer<CategoryProvider>(
+                          builder: (context, categoryProvider, child) {
+                            return _buildCategoryDropdown(categoryProvider);
+                          },
+                        ),
+                        onSearch: (value) {
+                          searchProducts(1);
+                        },
+                        onPropertyChanged: (String? newValue) {
+                          setState(() {
+                            selectedProperty = newValue;
+                          });
+                          searchProducts(1);
+                        },
+                        onReset: resetSearch,
+                      )
+                    else
+                      LayoutBuilder(
                       builder: (context, constraints) {
                         final bool stackFilters = constraints.maxWidth < 700;
                         Widget wrapField(Widget child) => stackFilters
@@ -687,6 +785,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         );
                       },
                     ),
+                    if (isMobile && _showFilters) const SizedBox(height: 20),
                   ],
                 ),
               ),
