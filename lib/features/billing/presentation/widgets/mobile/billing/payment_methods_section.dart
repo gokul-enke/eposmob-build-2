@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
@@ -31,6 +32,12 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   void initState() {
     super.initState();
     _loadPaymentMethods();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<BillingProvider>(context, listen: false)
+            .markPaymentStepVisited();
+      }
+    });
   }
 
   Future<void> _loadPaymentMethods() async {
@@ -113,14 +120,14 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                   children: [
                     OutlinedButton.icon(
                       icon: const Icon(Icons.payments_outlined, size: 18),
-                      label: const Text('Exact cash'),
+                      label: Text('billing.exact_cash'.tr),
                       onPressed: () {
                         _controller.fillExactCash(bp);
                       },
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.clear_all, size: 18),
-                      label: const Text('Clear payments'),
+                      label: Text('billing.clear_payments'.tr),
                       onPressed: () {
                         _controller.clearAllCollectedPayments(bp);
                       },

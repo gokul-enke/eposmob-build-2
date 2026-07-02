@@ -428,7 +428,8 @@ class BillingProvider extends ChangeNotifier {
     _isCustomerFound = customer != null;
 
     if (customer != null) {
-      // Update mobile number text based on customer data
+      // Store phone only for order payloads; controller may show "name phone".
+      _mobileNumberText = customer.phone ?? '';
       if (customer.id != null &&
           customer.name != null &&
           customer.name!.isNotEmpty) {
@@ -437,7 +438,6 @@ class BillingProvider extends ChangeNotifier {
         _isCustomerFound = true;
       } else {
         mobileNumberTextController.text = customer.phone ?? '';
-        _mobileNumberText = customer.phone ?? '';
         _isCustomerFound = false;
       }
     }
@@ -923,6 +923,20 @@ class BillingProvider extends ChangeNotifier {
   double _totalPaidAmount = 0.0;
   double _totalOrderAmount = 0.0;
 
+  /// Saved-order delivery charge override (mirrors desktop `_selectedDeliveryCharge`).
+  double? _deliveryChargeOverride;
+
+  /// Desktop parity: true default customer via provider + configured phone.
+  bool _paymentValidationIsDefaultCustomer = false;
+  String _configuredDefaultCustomerPhone = '';
+
+  /// Split-payment pristine tracking (mirrors payment_method_modal).
+  String? _pristinePaymentMethodKey;
+  String? _pristinePaymentAmount;
+
+  /// Whether the cashier opened the payment section (confirm gate).
+  bool _paymentStepVisited = false;
+
   /// Order total used for payment validation, balance/change and autofill.
   ///
   /// Matches desktop `BillingPage._getEffectiveOrderTotal()` — i.e. the net
@@ -939,6 +953,63 @@ class BillingProvider extends ChangeNotifier {
   /// Effective (round-off adjusted) order total. Falls back to the raw total
   /// so callers that only set [setTotalOrderAmount] keep their prior behaviour.
   double get effectiveOrderTotal => _effectiveOrderTotal;
+
+  double? get deliveryChargeOverride => _deliveryChargeOverride;
+
+  String? get pristinePaymentMethodKey => _pristinePaymentMethodKey;
+
+  String? get pristinePaymentAmount => _pristinePaymentAmount;
+
+  bool get paymentStepVisited => _paymentStepVisited;
+
+  void setDeliveryChargeOverride(double? charge) {
+    _deliveryChargeOverride = charge;
+    notifyListeners();
+  }
+
+  void setPaymentValidationCustomerContext({
+    required bool isDefaultCustomer,
+    required String configuredDefaultCustomerPhone,
+  }) {
+    _paymentValidationIsDefaultCustomer = isDefaultCustomer;
+    _configuredDefaultCustomerPhone = configuredDefaultCustomerPhone.trim();
+  }
+
+  void setPristinePaymentState(String? methodKey, String? amount) {
+    _pristinePaymentMethodKey = methodKey;
+    _pristinePaymentAmount = amount;
+  }
+
+  void clearPristinePaymentState() {
+    _pristinePaymentMethodKey = null;
+    _pristinePaymentAmount = null;
+  }
+
+  void markPaymentStepVisited() {
+    if (_paymentStepVisited) return;
+    _paymentStepVisited = true;
+    notifyListeners();
+  }
+
+  void resetPaymentStepVisited() {
+    if (!_paymentStepVisited) return;
+    _paymentStepVisited = false;
+    notifyListeners();
+  }
+
+  void restoreBalanceAmount(double amount) {
+    _balanceAmount = amount;
+    notifyListeners();
+  }
+
+  bool _resolveIsDefaultCustomerForPayment() {
+    if (_paymentValidationIsDefaultCustomer) return true;
+    final customer = _selectedCustomer;
+    if (customer == null) return false;
+    final defaultPhone = _configuredDefaultCustomerPhone;
+    final customerPhone = customer.phone?.trim() ?? '';
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
 
   // 25. To Customer Credit Toggle - Handle excess payment allocation
   bool _hasExcessPayment = false;
@@ -1018,6 +1089,7 @@ class BillingProvider extends ChangeNotifier {
     _balanceAmount = 0.0;
     _totalPaidAmount = 0.0;
     _hasExcessPayment = false;
+    clearPristinePaymentState();
 
     notifyListeners();
   }
@@ -1100,6 +1172,16 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Selects an extra method without autofill (mobile pristine-switch flow).
+  void selectExtraMethod(String methodId, {String? displayValue}) {
+    _selectedExtraMethodIds.add(methodId);
+    if (displayValue != null && displayValue.isNotEmpty) {
+      _extraPaymentValues[methodId] = displayValue;
+    }
+    getExtraAmountController(methodId, displayValue: displayValue);
+    notifyListeners();
+  }
+
   void toggleExtraMethod(String methodId, {String? displayValue}) {
     if (_selectedExtraMethodIds.contains(methodId)) {
       _selectedExtraMethodIds.remove(methodId);
@@ -1114,7 +1196,7 @@ class BillingProvider extends ChangeNotifier {
 
     final controller = getExtraAmountController(methodId, displayValue: displayValue);
     if (controller.text.isEmpty || (double.tryParse(controller.text) ?? 0.0) == 0.0) {
-      final remaining = _totalOrderAmount - getTotalPaidAmount();
+      final remaining = _effectiveOrderTotal - getTotalPaidAmount();
       if (remaining > 0) {
         setExtraPaymentAmount(
           methodId,
@@ -1296,15 +1378,16 @@ class BillingProvider extends ChangeNotifier {
       return true;
     }
 
-    final customerType = _selectedCustomer?.customerType?.toLowerCase() ?? '';
-    final isDefaultCustomer =
-        customerType == 'default' || customerType == 'b2c';
+    final isDefaultCustomer = _resolveIsDefaultCustomerForPayment();
+    final customerPrevBalance = isDefaultCustomer
+        ? 0.0
+        : (_selectedCustomer?.balance ?? 0.0);
 
     final result = PaymentValidation.validateForOrder(
       orderTotal: _effectiveOrderTotal,
       toCustomerCreditEnabled: _toCustomerCreditEnabled,
       isDefaultCustomer: isDefaultCustomer,
-      customerPrevBalance: _selectedCustomer?.balance ?? 0.0,
+      customerPrevBalance: customerPrevBalance,
       isCashSelected: _isCashSelected,
       isCardSelected: _isCardSelected,
       isUpiSelected: _isUpiSelected,

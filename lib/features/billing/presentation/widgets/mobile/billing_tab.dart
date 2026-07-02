@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -80,9 +81,9 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
   @override
   void initState() {
     super.initState();
-    // Proactively bind Pine Labs so the first payment attempt doesn't need to bind.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _syncPaymentValidationContext();
       try {
         final terminalProvider = context.read<PineLabsTerminalProvider>();
         terminalProvider.ensureBinding();
@@ -90,6 +91,24 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
         // Ignore; UI will still allow manual binding on first attempt.
       }
     });
+  }
+
+  void _syncPaymentValidationContext() {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final customerSelection =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    _customerController.syncPaymentValidationCustomerContext(
+      billingProvider: billingProvider,
+      customerSelectionProvider: customerSelection,
+      appSettings: appSettings,
+    );
+  }
+
+  void _markPaymentStepVisited() {
+    Provider.of<BillingProvider>(context, listen: false).markPaymentStepVisited();
   }
 
   /// Navigate to the full-screen Select Customer page.
@@ -100,13 +119,50 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
       ),
     );
     if (!mounted) return;
+    _syncPaymentValidationContext();
     final selected = Provider.of<CustomerSelectionProvider>(context, listen: false)
         .selectedCustomer;
     if (selected?.id != null) {
       widget.quotationInlineNameController?.clear();
       widget.quotationInlinePhoneController?.clear();
-      setState(() {});
     }
+    _syncPaymentValidationContext();
+    setState(() {});
+  }
+
+  Widget _buildWalkInPhoneField(BuildContext context) {
+    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final customerSelection =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+
+    return TextField(
+      controller: billingProvider.mobileNumberTextController,
+      keyboardType: TextInputType.phone,
+      decoration: InputDecoration(
+        hintText: 'billing.enter_mobile_hint'.tr,
+        prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      onChanged: (value) {
+        _customerController.applyWalkInPhone(
+          billingProvider: billingProvider,
+          customerSelectionProvider: customerSelection,
+          phone: value,
+        );
+        _syncPaymentValidationContext();
+      },
+    );
   }
 
   void _clearCustomer(BuildContext context) {
@@ -180,6 +236,13 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
     final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
     final isQuotationMode = widget.isQuotationMode;
 
+    final showWalkInPhone =
+        !isQuotationMode && !showDefaultPhoneOnly && selectedCustomer?.id == null;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncPaymentValidationContext();
+    });
+
     // Safe bottom padding so content can scroll fully above the persistent
     // bottomSheet buttons (padding 16 + button row height + bottom inset).
     final bottomInset = MediaQuery.of(context).padding.bottom;
@@ -248,6 +311,10 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                           ? () => _clearCustomer(context)
                           : null,
                     ),
+                    if (showWalkInPhone) ...[
+                      const SizedBox(height: 8),
+                      _buildWalkInPhoneField(context),
+                    ],
                     const SizedBox(height: 12),
                   ],
 
@@ -269,11 +336,13 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                   ],
 
                   if (!isQuotationMode) ...[
-                    // Payment Methods Section
-                    const BillingAccordionCard(
-                      title: 'Payment Methods',
+                    BillingAccordionCard(
+                      title: 'billing.payment_methods'.tr,
                       initiallyExpanded: true,
-                      child: PaymentMethodsSection(),
+                      onExpandedChanged: (expanded) {
+                        if (expanded) _markPaymentStepVisited();
+                      },
+                      child: const PaymentMethodsSection(),
                     ),
                     const SizedBox(height: 12),
                   ],

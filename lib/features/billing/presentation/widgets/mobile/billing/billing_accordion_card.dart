@@ -4,12 +4,14 @@ class BillingAccordionCard extends StatefulWidget {
   final String title;
   final Widget child;
   final bool initiallyExpanded;
+  final ValueChanged<bool>? onExpandedChanged;
 
   const BillingAccordionCard({
     super.key,
     required this.title,
     required this.child,
     this.initiallyExpanded = false,
+    this.onExpandedChanged,
   });
 
   @override
@@ -49,6 +51,7 @@ class _BillingAccordionCardState extends State<BillingAccordionCard> {
               setState(() {
                 _isExpanded = !_isExpanded;
               });
+              widget.onExpandedChanged?.call(_isExpanded);
             },
             borderRadius: BorderRadius.vertical(
               top: const Radius.circular(12),

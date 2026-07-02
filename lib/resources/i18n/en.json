@@ -126,7 +126,14 @@
     "unit_price": "Unit Price",
     "empty_cart": "Cart is empty",
     "confirming_order": "Confirming order...",
-    "printing_bill": "Printing bill..."
+    "printing_bill": "Printing bill...",
+    "exact_cash": "Exact cash",
+    "clear_payments": "Clear payments",
+    "configure_payment_before_confirm": "Please configure payment before confirm",
+    "quote_customer_save_required": "Create or select a saved customer before confirming",
+    "mobile_select_customer": "Select Customer",
+    "mobile_search_customers": "Search customers by name or phone",
+    "mobile_customer_label": "Customer"
   },
   "customers": {
     "title": "Customers"

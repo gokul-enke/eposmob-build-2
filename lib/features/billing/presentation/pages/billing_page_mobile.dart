@@ -568,6 +568,8 @@ class BillingPageMobileState extends State<BillingPageMobile>
   void _rehydrateFromProvider() {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     final SavedOrder? currentOrder = localProductProvider.currentOrder;
 
     if (currentOrder != null) {
@@ -576,8 +578,13 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     try {
       if (currentOrder == null) {
-        // No saved order to restore; trigger a rebuild so any cleared coupon
-        // state is reflected.
+        final summary = localProductProvider.priceSummary;
+        if (summary != null &&
+            (summary.flatDiscount > 0 || summary.percentageDiscount > 0)) {
+          billingProvider.setCouponApplied(true);
+        } else if (!billingProvider.isCouponApplied) {
+          billingProvider.setCouponApplied(false);
+        }
         setState(() {});
         return;
       }
@@ -585,6 +592,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
       setState(() {
         _controller.restoreOrderState(context);
       });
+
+      _customerController.syncPaymentValidationCustomerContext(
+        billingProvider: billingProvider,
+        customerSelectionProvider:
+            Provider.of<CustomerSelectionProvider>(context, listen: false),
+        appSettings: Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings,
+      );
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -687,6 +702,27 @@ class BillingPageMobileState extends State<BillingPageMobile>
   bool _validatePaymentReady({bool switchToBillingTab = true}) {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
+    final customerSelection =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final currentOrder = localProductProvider.currentOrder;
+    final requireSavedCustomer = currentOrder?.quotationId != null;
+
+    if (_customerController.hasQuoteOnlyCustomerNeedingSave(
+      customer: customerSelection.selectedCustomer ??
+          billingProvider.selectedCustomer,
+      requireSavedCustomer: requireSavedCustomer,
+    )) {
+      showScaffoldError(
+        context: context,
+        message: 'billing.quote_customer_save_required'.tr,
+      );
+      if (switchToBillingTab) {
+        _switchToTab(1);
+      }
+      return false;
+    }
 
     if (!_controller.hasSelectedPayment(context)) {
       showScaffoldError(
@@ -697,8 +733,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
       return false;
     }
 
-    final ready =
-        _paymentController.validatePaymentReadyForConfirm(billingProvider);
+    final ready = _paymentController.validatePaymentReadyForConfirm(
+      billingProvider,
+      paymentStepVisited: billingProvider.paymentStepVisited,
+    );
     if (!ready.isValid) {
       showScaffoldError(
         context: context,
@@ -787,6 +825,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     }
     if (!mounted) return;
     if (confirmed) {
+      _controller.refreshCustomersInBackgroundAfterSale(context);
       // Mirror desktop `_confirmOrder`: reset the workspace and re-apply the
       // default customer (when configured) after a successful confirm.
       setState(() {
@@ -829,6 +868,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _pendingPrintOrderNumber = null;
       }
       if (result.orderCreated) {
+        _controller.refreshCustomersInBackgroundAfterSale(context);
         // Mirror desktop `_createOrderAndPrint`: reset the workspace and
         // re-apply the default customer (when configured) once the order has
         // been created, regardless of whether printing succeeded.

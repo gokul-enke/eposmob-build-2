@@ -34,6 +34,7 @@ void main() {
       bp.setPaymentMethod('ONLINE', true);
       bp.setPineLabsPaymentSuccess(true);
       bp.transactionNumberController.text = 'TXN-123';
+      bp.markPaymentStepVisited();
 
       final result = controller.validatePaymentReadyForConfirm(bp);
       expect(result.isValid, isTrue);

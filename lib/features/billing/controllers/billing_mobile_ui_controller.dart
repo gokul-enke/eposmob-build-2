@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/helpers/delivery_charge_helper.dart';
@@ -24,10 +25,10 @@ class BillingMobileErrorMessages {
   BillingMobileErrorMessages._();
 
   // Checkout / save / confirm
-  static const selectCustomer = 'Please select a customer';
-  static const selectPaymentMethod = 'Please select a payment method';
-  static const configurePaymentBeforeConfirm =
-      'Please configure payment before confirming';
+  static String get selectCustomer => 'billing.select_customer'.tr;
+  static String get selectPaymentMethod => 'billing.select_payment_method'.tr;
+  static String get configurePaymentBeforeConfirm =>
+      'billing.configure_payment_before_confirm'.tr;
   static const emptyCart = 'Please add items to cart';
   static const clearCartFailed = 'Failed to clear cart. Please try again.';
   static const saveOrderFailed = 'Failed to save order. Please try again.';
@@ -40,7 +41,7 @@ class BillingMobileErrorMessages {
       'Please ensure all items have valid prices and MRP before confirming order';
   static const invalidPricingBeforeSave =
       'Please ensure all items have valid prices before saving';
-  static const enterCarNumber = 'Please enter Car Number';
+  static String get enterCarNumber => 'billing.enter_car_number'.tr;
   static const noInternetConfirm =
       'No internet connection. Cannot confirm order online.';
   static const noInternetCreateOrder =
@@ -1383,6 +1384,153 @@ class BillingMobilePaymentController {
     return remaining > 0 ? remaining : 0.0;
   }
 
+  bool _amountsEqual(String a, String b) {
+    final da = double.tryParse(a) ?? 0;
+    final db = double.tryParse(b) ?? 0;
+    return (da - db).abs() < 0.001;
+  }
+
+  bool _isFullCartTotal(BillingProvider bp, String text) {
+    final amount = double.tryParse(text) ?? 0;
+    return amount > 0 && (amount - bp.effectiveOrderTotal).abs() < 0.001;
+  }
+
+  String _extraMethodKey(String methodId) => 'extra_$methodId';
+
+  String _methodKeyForType(String type, {String? methodId}) {
+    if (methodId != null) return _extraMethodKey(methodId);
+    return type.toUpperCase();
+  }
+
+  bool _isMethodActive(String methodKey, BillingProvider bp) {
+    switch (methodKey.toUpperCase()) {
+      case 'CASH':
+        return bp.isCashSelected;
+      case 'CARD':
+        return bp.isCardSelected;
+      case 'UPI':
+        return bp.isUpiSelected;
+      case 'COD':
+        return bp.isCodSelected;
+      case 'DEBIT':
+        return bp.isDebitSelected;
+      default:
+        if (methodKey.startsWith('extra_')) {
+          final id = methodKey.substring('extra_'.length);
+          return bp.selectedExtraMethodIds.contains(id);
+        }
+        return false;
+    }
+  }
+
+  TextEditingController? _controllerForKey(String methodKey, BillingProvider bp) {
+    if (methodKey.startsWith('extra_')) {
+      final id = methodKey.substring('extra_'.length);
+      return bp.getExtraAmountController(
+        id,
+        displayValue: bp.extraPaymentValues[id],
+      );
+    }
+    return _controllerFor(methodKey, bp);
+  }
+
+  void _deselectMethod(String methodKey, BillingProvider bp) {
+    if (methodKey.startsWith('extra_')) {
+      final id = methodKey.substring('extra_'.length);
+      bp.toggleExtraMethod(id, displayValue: bp.extraPaymentValues[id]);
+      return;
+    }
+    bp.setPaymentMethod(methodKey, false);
+  }
+
+  void _recordPristineIfFullTotal(
+    String methodKey,
+    BillingProvider bp,
+    TextEditingController controller,
+  ) {
+    if (_isFullCartTotal(bp, controller.text)) {
+      bp.setPristinePaymentState(methodKey, controller.text);
+    }
+  }
+
+  bool _applyPristineSwitch(
+    String newMethodKey,
+    BillingProvider bp,
+    TextEditingController targetController,
+  ) {
+    if (newMethodKey == 'DEBIT' || newMethodKey == 'credit') return false;
+    final pristineKey = bp.pristinePaymentMethodKey;
+    if (pristineKey == null || pristineKey == newMethodKey) return false;
+
+    final pristineController = _controllerForKey(pristineKey, bp);
+    if (pristineController == null || !_isMethodActive(pristineKey, bp)) {
+      return false;
+    }
+    if (!_amountsEqual(pristineController.text, bp.pristinePaymentAmount ?? '')) {
+      return false;
+    }
+
+    _deselectMethod(pristineKey, bp);
+    targetController.text = bp.effectiveOrderTotal.toStringAsFixed(2);
+    bp.setPristinePaymentState(newMethodKey, targetController.text);
+    return true;
+  }
+
+  List<({String key, TextEditingController controller})>
+      _listActiveCollectedMethodEntries(BillingProvider bp) {
+    final entries = <({String key, TextEditingController controller})>[];
+    if (bp.isCashSelected) {
+      entries.add((key: 'CASH', controller: bp.cashAmountController));
+    }
+    if (bp.isCardSelected) {
+      entries.add((key: 'CARD', controller: bp.cardAmountController));
+    }
+    if (bp.isUpiSelected) {
+      entries.add((key: 'UPI', controller: bp.upiAmountController));
+    }
+    if (bp.isCodSelected) {
+      entries.add((key: 'COD', controller: bp.codAmountController));
+    }
+    for (final methodId in bp.selectedExtraMethodIds) {
+      entries.add((
+        key: _extraMethodKey(methodId),
+        controller: bp.getExtraAmountController(
+          methodId,
+          displayValue: bp.extraPaymentValues[methodId],
+        ),
+      ));
+    }
+    return entries;
+  }
+
+  void _refillIfSingleCollectedMethodRemaining(BillingProvider bp) {
+    final active = _listActiveCollectedMethodEntries(bp);
+    if (active.length != 1) return;
+
+    final only = active.first;
+    only.controller.text = bp.effectiveOrderTotal.toStringAsFixed(2);
+    _recordPristineIfFullTotal(only.key, bp, only.controller);
+  }
+
+  /// Keeps to-customer-credit amount in sync as other payment amounts change.
+  void syncCreditAmountWithRemaining(BillingProvider bp) {
+    if (!bp.toCustomerCreditEnabled) return;
+
+    final remainingAmount = bp.effectiveOrderTotal - bp.getTotalPaidAmount();
+    if (remainingAmount > 0) {
+      bp.debitAmountController.text = remainingAmount.toStringAsFixed(2);
+    } else {
+      bp.debitAmountController.clear();
+    }
+    bp.calculateBalance();
+  }
+
+  void _finalizePaymentMutation(BillingProvider bp) {
+    bp.calculateBalance();
+    syncCreditAmountWithRemaining(bp);
+    bp.validatePayment();
+  }
+
   void toggleMethod(
     String type,
     BillingProvider bp, {
@@ -1390,27 +1538,68 @@ class BillingMobilePaymentController {
     String? displayValue,
   }) {
     if (methodId != null) {
-      bp.toggleExtraMethod(methodId, displayValue: displayValue ?? type);
+      final methodKey = _extraMethodKey(methodId);
+      final controller = bp.getExtraAmountController(
+        methodId,
+        displayValue: displayValue ?? type,
+      );
+      final wasSelected = bp.selectedExtraMethodIds.contains(methodId);
+
+      if (wasSelected) {
+        bp.toggleExtraMethod(methodId, displayValue: displayValue ?? type);
+        if (bp.pristinePaymentMethodKey == methodKey) {
+          bp.clearPristinePaymentState();
+        }
+        _refillIfSingleCollectedMethodRemaining(bp);
+        _finalizePaymentMutation(bp);
+        return;
+      }
+
+      bp.selectExtraMethod(methodId, displayValue: displayValue ?? type);
+      if (!_applyPristineSwitch(methodKey, bp, controller)) {
+        if (controller.text.isEmpty ||
+            (double.tryParse(controller.text) ?? 0.0) == 0.0) {
+          final remaining = remainingPayable(bp);
+          if (remaining > 0) {
+            bp.setExtraPaymentAmount(
+              methodId,
+              remaining.toStringAsFixed(2),
+              displayValue: displayValue ?? type,
+            );
+          }
+        }
+      }
+      _recordPristineIfFullTotal(methodKey, bp, controller);
+      _finalizePaymentMutation(bp);
       return;
     }
 
+    final methodKey = type.toUpperCase();
     final controller = _controllerFor(type, bp);
     if (controller == null) return;
 
     final isSelected = _isSelected(type, bp);
     if (isSelected) {
       bp.setPaymentMethod(type, false);
+      if (bp.pristinePaymentMethodKey == methodKey) {
+        bp.clearPristinePaymentState();
+      }
+      _refillIfSingleCollectedMethodRemaining(bp);
+      _finalizePaymentMutation(bp);
       return;
     }
 
     bp.setPaymentMethod(type, true);
-    if (controller.text.isEmpty || double.tryParse(controller.text) == 0.0) {
-      final remaining = remainingPayable(bp);
-      if (remaining > 0) {
-        controller.text = remaining.toStringAsFixed(2);
-        bp.calculateBalance();
+    if (!_applyPristineSwitch(methodKey, bp, controller)) {
+      if (controller.text.isEmpty || double.tryParse(controller.text) == 0.0) {
+        final remaining = remainingPayable(bp);
+        if (remaining > 0) {
+          controller.text = remaining.toStringAsFixed(2);
+        }
       }
     }
+    _recordPristineIfFullTotal(methodKey, bp, controller);
+    _finalizePaymentMutation(bp);
   }
 
   void onAmountChanged(
@@ -1418,12 +1607,19 @@ class BillingMobilePaymentController {
     String value,
     BillingProvider bp,
   ) {
+    final methodKey = _methodKeyForType(item.type, methodId: item.methodId);
+    if (bp.pristinePaymentMethodKey == methodKey &&
+        !_amountsEqual(value, bp.pristinePaymentAmount ?? '')) {
+      bp.clearPristinePaymentState();
+    }
+
     if (item.isDynamic && item.methodId != null) {
       bp.setExtraPaymentAmount(
         item.methodId!,
         value,
         displayValue: item.type,
       );
+      _finalizePaymentMutation(bp);
       return;
     }
 
@@ -1432,20 +1628,16 @@ class BillingMobilePaymentController {
         bp.setPaymentMethod(item.type, true);
       }
     }
-    bp.calculateBalance();
+    _finalizePaymentMutation(bp);
   }
 
   void selectMethodOnTap(MobilePaymentItem item, BillingProvider bp) {
-    if (item.isDynamic && item.methodId != null) {
-      if (!item.selected) {
-        bp.toggleExtraMethod(item.methodId!, displayValue: item.type);
-      }
-      return;
-    }
-
-    if (!item.selected) {
-      bp.setPaymentMethod(item.type, true);
-    }
+    toggleMethod(
+      item.type,
+      bp,
+      methodId: item.methodId,
+      displayValue: item.type,
+    );
   }
 
   bool _hasAnyCollectedPayment(BillingProvider bp) {
@@ -1469,17 +1661,23 @@ class BillingMobilePaymentController {
     if (_hasAnyCollectedPayment(bp)) return false;
 
     final totalStr = total.toStringAsFixed(2);
+    String pristineKey = 'CASH';
 
     if (bp.isCashSelected) {
       bp.cashAmountController.text = totalStr;
+      pristineKey = 'CASH';
     } else if (bp.isCardSelected) {
       bp.cardAmountController.text = totalStr;
+      pristineKey = 'CARD';
     } else if (bp.isUpiSelected) {
       bp.upiAmountController.text = totalStr;
+      pristineKey = 'UPI';
     } else if (bp.isCodSelected) {
       bp.codAmountController.text = totalStr;
+      pristineKey = 'COD';
     } else if (bp.isDebitSelected) {
       bp.debitAmountController.text = totalStr;
+      pristineKey = 'DEBIT';
     } else if (bp.selectedExtraMethodIds.isNotEmpty) {
       final methodId = bp.selectedExtraMethodIds.first;
       bp.setExtraPaymentAmount(
@@ -1487,10 +1685,13 @@ class BillingMobilePaymentController {
         totalStr,
         displayValue: bp.extraPaymentValues[methodId],
       );
+      pristineKey = _extraMethodKey(methodId);
     } else {
       bp.setPaymentMethod('CASH', true);
       bp.cashAmountController.text = totalStr;
+      pristineKey = 'CASH';
     }
+    bp.setPristinePaymentState(pristineKey, totalStr);
     bp.calculateBalance();
     return true;
   }
@@ -1501,6 +1702,7 @@ class BillingMobilePaymentController {
     bp.setPaymentMethod('CASH', true);
     if (bp.effectiveOrderTotal > 0) {
       bp.cashAmountController.text = bp.effectiveOrderTotal.toStringAsFixed(2);
+      bp.setPristinePaymentState('CASH', bp.cashAmountController.text);
     }
     bp.calculateBalance();
   }
@@ -1618,7 +1820,10 @@ class BillingMobilePaymentController {
 
   /// Gates confirm / confirm-print when ONLINE is selected without a successful
   /// terminal payment (mirrors desktop `_ensurePaymentReadyForConfirm` for Pine Labs).
-  MobilePaymentReadyResult validatePaymentReadyForConfirm(BillingProvider bp) {
+  MobilePaymentReadyResult validatePaymentReadyForConfirm(
+    BillingProvider bp, {
+    bool paymentStepVisited = false,
+  }) {
     if (bp.isOnlineSelected) {
       if (!bp.pineLabsPaymentSuccess) {
         return const MobilePaymentReadyResult(
@@ -1641,6 +1846,13 @@ class BillingMobilePaymentController {
         isValid: false,
         message: bp.paymentValidationError ??
             'Please configure payment before confirm',
+      );
+    }
+
+    if (!paymentStepVisited && !bp.paymentStepVisited) {
+      return const MobilePaymentReadyResult(
+        isValid: false,
+        message: 'Please configure payment before confirm',
       );
     }
 
@@ -2037,7 +2249,7 @@ class BillingMobileCustomerController {
         isDefault: result.isDefaultAssignment,
       );
       final label = '${customer.name ?? ''} ${customer.phone ?? ''}'.trim();
-      billingProvider.setMobileNumberText(label);
+      billingProvider.setMobileNumberText(customer.phone ?? '');
       billingProvider.setSelectedCustomer(customer, isManual: false);
       billingProvider.mobileNumberTextController.text = label;
       billingProvider.setSalesExecutiveMobileNumberText(customer.phone ?? '');
@@ -2232,6 +2444,48 @@ class BillingMobileCustomerController {
     return null;
   }
 
+  /// Blocks confirm when a quotation-only inline customer has not been saved.
+  bool hasQuoteOnlyCustomerNeedingSave({
+    required CustomerListModelData? customer,
+    required bool requireSavedCustomer,
+  }) {
+    if (!requireSavedCustomer) return false;
+    if (customer == null || customer.id != null) return false;
+    return customer.name?.trim().isNotEmpty == true;
+  }
+
+  void syncPaymentValidationCustomerContext({
+    required BillingProvider billingProvider,
+    required CustomerSelectionProvider customerSelectionProvider,
+    required AppSettings? appSettings,
+  }) {
+    final customer = customerSelectionProvider.selectedCustomer ??
+        billingProvider.selectedCustomer;
+    final isDefault = isDefaultCustomer(
+      customer: customer,
+      customerSelectionProvider: customerSelectionProvider,
+      defaultCustomerPhone: appSettings?.autoAssignDefaultCustomerPhone ?? '',
+    );
+    billingProvider.setPaymentValidationCustomerContext(
+      isDefaultCustomer: isDefault,
+      configuredDefaultCustomerPhone:
+          appSettings?.autoAssignDefaultCustomerPhone ?? '',
+    );
+  }
+
+  /// Walk-in phone entry without creating a full customer record.
+  void applyWalkInPhone({
+    required BillingProvider billingProvider,
+    required CustomerSelectionProvider customerSelectionProvider,
+    required String phone,
+  }) {
+    final trimmed = phone.trim();
+    billingProvider.setMobileNumberText(trimmed);
+    billingProvider.mobileNumberTextController.text = trimmed;
+    billingProvider.clearSelectedCustomerButKeepText();
+    customerSelectionProvider.clearSelectedCustomer();
+  }
+
   List<CustomerListModelData> filterCustomers(
     List<CustomerListModelData> customers,
     String query,
@@ -2239,10 +2493,27 @@ class BillingMobileCustomerController {
     final lowerQuery = query.trim().toLowerCase();
     if (lowerQuery.isEmpty) return List<CustomerListModelData>.from(customers);
 
+    final normalizedQuery = lowerQuery.replaceAll(RegExp(r'[^0-9]'), '');
+
     return customers.where((customer) {
       final name = (customer.name ?? '').toLowerCase();
       final phone = (customer.phone ?? '').toLowerCase();
-      return name.contains(lowerQuery) || phone.contains(lowerQuery);
+      final altPhone = (customer.altPhone ?? '').toLowerCase();
+
+      if (name.contains(lowerQuery) ||
+          phone.contains(lowerQuery) ||
+          altPhone.contains(lowerQuery)) {
+        return true;
+      }
+
+      if (normalizedQuery.isEmpty) return false;
+
+      final normalizedPhone =
+          (customer.phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+      final normalizedAltPhone =
+          (customer.altPhone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+      return normalizedPhone.contains(normalizedQuery) ||
+          normalizedAltPhone.contains(normalizedQuery);
     }).toList();
   }
 
@@ -2289,7 +2560,7 @@ class BillingMobileCustomerController {
     );
 
     final label = '${customer.name ?? ''} ${customer.phone ?? ''}'.trim();
-    billingProvider.setMobileNumberText(label);
+    billingProvider.setMobileNumberText(customer.phone ?? '');
     billingProvider.setSelectedCustomer(customer, isManual: isManual);
     billingProvider.mobileNumberTextController.text = label;
     billingProvider.setCustomerBalance(customer.balance ?? 0.0);

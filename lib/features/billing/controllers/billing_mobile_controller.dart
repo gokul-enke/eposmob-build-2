@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
+import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/services/checkout_service.dart';
@@ -150,61 +152,77 @@ class BillingMobileController {
             final Map<String, dynamic> amounts =
                 Map<String, dynamic>.from(multi['amounts'] ?? {});
 
-            if (methods.contains('CASH')) {
+            bool hasMethodOrAmount(List<String> candidates) {
+              final hasMethod = methods.any(candidates.contains);
+              final hasAmount = candidates.any((key) {
+                final amount =
+                    double.tryParse((amounts[key] ?? '0').toString()) ?? 0;
+                return amount > 0;
+              });
+              return hasMethod || hasAmount;
+            }
+
+            String firstAmount(List<String> candidates) {
+              for (final key in candidates) {
+                if (amounts.containsKey(key)) {
+                  return (amounts[key] ?? '0').toString();
+                }
+              }
+              return '0';
+            }
+
+            if (hasMethodOrAmount(['CASH'])) {
               billingProvider.setPaymentMethod('CASH', true);
               billingProvider.cashAmountController.text =
-                  (amounts['CASH'] ?? '0').toString();
+                  firstAmount(['CASH']);
             }
-            if (methods.contains('CARD')) {
+            if (hasMethodOrAmount(['CARD'])) {
               billingProvider.setPaymentMethod('CARD', true);
               billingProvider.cardAmountController.text =
-                  (amounts['CARD'] ?? '0').toString();
+                  firstAmount(['CARD']);
             }
-            if (methods.contains('UPI')) {
+            if (hasMethodOrAmount(['UPI'])) {
               billingProvider.setPaymentMethod('UPI', true);
               billingProvider.upiAmountController.text =
-                  (amounts['UPI'] ?? '0').toString();
+                  firstAmount(['UPI']);
             }
-            if (methods.contains('DEBIT')) {
+            if (hasMethodOrAmount(['DEBIT'])) {
               billingProvider.setPaymentMethod('DEBIT', true);
               billingProvider.debitAmountController.text =
                   (amounts['DEBIT'] ?? '0').toString();
             }
+            final cashId = billingProvider.cashPaymentMethodId ?? 'CASH';
+            final cardId = billingProvider.cardPaymentMethodId ?? 'CARD';
+            final upiId = billingProvider.upiPaymentMethodId ?? 'UPI';
+            final codId = billingProvider.codPaymentMethodId ?? 'COD';
+
             if (!methods.contains('CASH') &&
-                (methods.contains(billingProvider.cashPaymentMethodId) ||
-                    amounts.containsKey(billingProvider.cashPaymentMethodId))) {
+                hasMethodOrAmount(['CASH', cashId])) {
               billingProvider.setPaymentMethod('CASH', true);
               billingProvider.cashAmountController.text =
-                  (amounts[billingProvider.cashPaymentMethodId] ?? '0')
-                      .toString();
+                  firstAmount(['CASH', cashId]);
             }
             if (!methods.contains('CARD') &&
-                (methods.contains(billingProvider.cardPaymentMethodId) ||
-                    amounts.containsKey(billingProvider.cardPaymentMethodId))) {
+                hasMethodOrAmount(['CARD', cardId])) {
               billingProvider.setPaymentMethod('CARD', true);
               billingProvider.cardAmountController.text =
-                  (amounts[billingProvider.cardPaymentMethodId] ?? '0')
-                      .toString();
+                  firstAmount(['CARD', cardId]);
             }
             if (!methods.contains('UPI') &&
-                (methods.contains(billingProvider.upiPaymentMethodId) ||
-                    amounts.containsKey(billingProvider.upiPaymentMethodId))) {
+                hasMethodOrAmount(['UPI', upiId])) {
               billingProvider.setPaymentMethod('UPI', true);
               billingProvider.upiAmountController.text =
-                  (amounts[billingProvider.upiPaymentMethodId] ?? '0')
-                      .toString();
+                  firstAmount(['UPI', upiId]);
             }
-            if (methods.contains('COD') ||
-                methods.contains(billingProvider.codPaymentMethodId) ||
-                amounts.containsKey('COD') ||
-                amounts.containsKey(billingProvider.codPaymentMethodId)) {
+            if (hasMethodOrAmount(['COD', codId])) {
               billingProvider.setPaymentMethod('COD', true);
-              billingProvider.codAmountController.text = (amounts['COD'] ??
-                      amounts[billingProvider.codPaymentMethodId] ??
-                      '0')
-                  .toString();
+              billingProvider.codAmountController.text =
+                  firstAmount(['COD', codId]);
             }
-            if (methods.contains('ONLINE') || amounts.containsKey('ONLINE')) {
+            if (methods.contains('ONLINE') ||
+                ((double.tryParse((amounts['ONLINE'] ?? '0').toString()) ??
+                            0) >
+                        0)) {
               billingProvider.setPaymentMethod('ONLINE', true);
               billingProvider.setPineLabsPaymentSuccess(true);
             }
@@ -298,6 +316,16 @@ class BillingMobileController {
 
     billingProvider
         .setToCustomerCreditEnabled(currentOrder.toCustomerCredit ?? false);
+
+    billingProvider.setDeliveryChargeOverride(currentOrder.deliveryCharge);
+    final restoredBalance =
+        double.tryParse(currentOrder.balanceAmount ?? '0.0') ?? 0.0;
+    billingProvider.restoreBalanceAmount(restoredBalance);
+  }
+
+  static String? _trimToNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
   void _refreshOrderTotals(
@@ -530,18 +558,29 @@ class BillingMobileController {
   // Cart / checkout
   // ---------------------------------------------------------------------------
 
-  /// Clears cart + order provider state (the page handles the surrounding
-  /// `setState`, autocomplete-key regeneration and snackbar).
-  void clearCartData(BuildContext context) {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+  /// Shared billing workspace reset used by clear-cart, post-order, and
+  /// sales-executive flows.
+  void _resetBillingWorkspaceCore(
+    BuildContext context, {
+    required bool clearCart,
+    required bool syncDefaultDelivery,
+    required bool syncSalesExecutive,
+  }) {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
-    localProductProvider.clearCart();
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+
+    if (clearCart) {
+      localProductProvider.clearCart();
+    }
     localProductProvider.clearCurrentOrder();
 
     billingProvider.coupenCodeTextController.clear();
-    // Desktop `_resetBillingWorkspaceUi` also clears the coupon-applied flag and
-    // the delivery address, not just the coupon text field.
     billingProvider.setCouponApplied(false);
     billingProvider.setOrderAddress('');
     billingProvider.transactionNumberController.clear();
@@ -553,32 +592,60 @@ class BillingMobileController {
     billingProvider.setDeliveryTime(null);
     billingProvider.commentController.clear();
     billingProvider.carNumberController.clear();
+    billingProvider.setDeliveryChargeOverride(null);
+    billingProvider.resetPaymentStepVisited();
+    billingProvider.clearPristinePaymentState();
 
-    _customerController.clearSelection(
-      customerSelectionProvider:
-          Provider.of<CustomerSelectionProvider>(context, listen: false),
-      billingProvider: billingProvider,
-      cartProvider: Provider.of<CartProvider>(context, listen: false),
-      auth: Provider.of<AuthModel>(context, listen: false),
-    );
+    if (syncDefaultDelivery) {
+      final deliveryMethodsProvider =
+          Provider.of<DeliveryMethodsProvider>(context, listen: false);
+      _settingsController.syncDefaultDeliveryMethod(
+        billingProvider: billingProvider,
+        deliveryMethodsProvider: deliveryMethodsProvider,
+        appSettings: appSettings,
+      );
+    }
 
-    final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-    final defaultResult = _customerController.applyDefaultCustomerFromCacheIfNeeded(
-      localProductProvider: localProductProvider,
-      billingProvider: billingProvider,
-      customerSelectionProvider:
-          Provider.of<CustomerSelectionProvider>(context, listen: false),
-      appSettings: appSettings,
-      customers: billingProvider.customerList,
-    );
-    _customerController.applyDefaultCustomerResult(
-      result: defaultResult,
-      customerSelectionProvider:
-          Provider.of<CustomerSelectionProvider>(context, listen: false),
-      billingProvider: billingProvider,
-      cartProvider: Provider.of<CartProvider>(context, listen: false),
-      auth: Provider.of<AuthModel>(context, listen: false),
+    if (syncSalesExecutive) {
+      _customerController.handleSalesExecutiveChanged(
+        billingProvider: billingProvider,
+        customerSelectionProvider: customerSelectionProvider,
+        autoAssignEnabled: appSettings?.autoAssignDefaultCustomer ?? true,
+      );
+    } else {
+      _customerController.clearSelection(
+        customerSelectionProvider: customerSelectionProvider,
+        billingProvider: billingProvider,
+        cartProvider: Provider.of<CartProvider>(context, listen: false),
+        auth: Provider.of<AuthModel>(context, listen: false),
+      );
+
+      final defaultResult =
+          _customerController.applyDefaultCustomerFromCacheIfNeeded(
+        localProductProvider: localProductProvider,
+        billingProvider: billingProvider,
+        customerSelectionProvider: customerSelectionProvider,
+        appSettings: appSettings,
+        customers: billingProvider.customerList,
+      );
+      _customerController.applyDefaultCustomerResult(
+        result: defaultResult,
+        customerSelectionProvider: customerSelectionProvider,
+        billingProvider: billingProvider,
+        cartProvider: Provider.of<CartProvider>(context, listen: false),
+        auth: Provider.of<AuthModel>(context, listen: false),
+      );
+    }
+  }
+
+  /// Clears cart + order provider state (the page handles the surrounding
+  /// `setState`, autocomplete-key regeneration and snackbar).
+  void clearCartData(BuildContext context) {
+    _resetBillingWorkspaceCore(
+      context,
+      clearCart: true,
+      syncDefaultDelivery: true,
+      syncSalesExecutive: true,
     );
   }
 
@@ -734,12 +801,12 @@ class BillingMobileController {
         balanceAmount: billingProvider.balanceAmount.toString(),
         transactionId: billingProvider.transactionNumberController.text,
         couponId: billingProvider.isCouponApplied
-            ? billingProvider.coupenCodeTextController.text
+            ? _trimToNull(billingProvider.coupenCodeTextController.text)
             : null,
         deliveryMethodId: billingProvider.deliveryMethodId,
         carNumber: billingProvider.carNumberController.text,
         context: context,
-        status: 'saved',
+        status: currentOrder.status ?? 'saved',
         deliveryDate: billingProvider.deliveryDate?.toIso8601String(),
         deliveryTime: billingProvider.deliveryTime,
         toCustomerCredit: billingProvider.toCustomerCreditEnabled,
@@ -764,7 +831,7 @@ class BillingMobileController {
       balanceAmount: billingProvider.balanceAmount.toString(),
       transactionId: billingProvider.transactionNumberController.text,
       couponId: billingProvider.isCouponApplied
-          ? billingProvider.coupenCodeTextController.text
+          ? _trimToNull(billingProvider.coupenCodeTextController.text)
           : null,
       deliveryMethodId: billingProvider.deliveryMethodId,
       carNumber: billingProvider.carNumberController.text,
@@ -784,53 +851,11 @@ class BillingMobileController {
   /// Resets billing UI after checkout/save-and-print when the cart is already
   /// cleared by [LocalProductProvider.clearCartAfterOrder].
   void resetBillingWorkspaceAfterOrder(BuildContext context) {
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-
-    localProductProvider.clearCurrentOrder();
-
-    billingProvider.coupenCodeTextController.clear();
-    // Desktop `_resetBillingWorkspaceUi` also clears the coupon-applied flag and
-    // the delivery address, not just the coupon text field.
-    billingProvider.setCouponApplied(false);
-    billingProvider.setOrderAddress('');
-    billingProvider.transactionNumberController.clear();
-    billingProvider.paidAmountController.clear();
-    billingProvider.clearAllPaymentMethods();
-    billingProvider.clearProductFields();
-    billingProvider.setToCustomerCreditEnabled(false);
-    billingProvider.setDeliveryDate(null);
-    billingProvider.setDeliveryTime(null);
-    billingProvider.commentController.clear();
-    billingProvider.carNumberController.clear();
-
-    _customerController.clearSelection(
-      customerSelectionProvider:
-          Provider.of<CustomerSelectionProvider>(context, listen: false),
-      billingProvider: billingProvider,
-      cartProvider: Provider.of<CartProvider>(context, listen: false),
-      auth: Provider.of<AuthModel>(context, listen: false),
-    );
-
-    final appSettings =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
-    final defaultResult = _customerController.applyDefaultCustomerFromCacheIfNeeded(
-      localProductProvider: localProductProvider,
-      billingProvider: billingProvider,
-      customerSelectionProvider:
-          Provider.of<CustomerSelectionProvider>(context, listen: false),
-      appSettings: appSettings,
-      customers: billingProvider.customerList,
-    );
-    _customerController.applyDefaultCustomerResult(
-      result: defaultResult,
-      customerSelectionProvider:
-          Provider.of<CustomerSelectionProvider>(context, listen: false),
-      billingProvider: billingProvider,
-      cartProvider: Provider.of<CartProvider>(context, listen: false),
-      auth: Provider.of<AuthModel>(context, listen: false),
+    _resetBillingWorkspaceCore(
+      context,
+      clearCart: false,
+      syncDefaultDelivery: true,
+      syncSalesExecutive: false,
     );
   }
 
@@ -848,43 +873,58 @@ class BillingMobileController {
   /// Mirrors desktop `BillingPage.resetToDefaultSalesExecutive` for external
   /// callers (e.g. saved-orders "new order" flows).
   void resetToDefaultSalesExecutive(BuildContext context) {
-    final billingProvider =
-        Provider.of<BillingProvider>(context, listen: false);
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
-    final customerSelectionProvider =
-        Provider.of<CustomerSelectionProvider>(context, listen: false);
-    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
-        .appSettings;
-
-    localProductProvider.clearCurrentOrder();
-
-    billingProvider.coupenCodeTextController.clear();
-    billingProvider.setCouponApplied(false);
-    billingProvider.setOrderAddress('');
-    billingProvider.transactionNumberController.clear();
-    billingProvider.paidAmountController.clear();
-    billingProvider.clearAllPaymentMethods();
-    billingProvider.clearProductFields();
-    billingProvider.setToCustomerCreditEnabled(false);
-    billingProvider.setDeliveryDate(null);
-    billingProvider.setDeliveryTime(null);
-    billingProvider.commentController.clear();
-    billingProvider.carNumberController.clear();
-
-    final deliveryMethodsProvider =
-        Provider.of<DeliveryMethodsProvider>(context, listen: false);
-    _settingsController.syncDefaultDeliveryMethod(
-      billingProvider: billingProvider,
-      deliveryMethodsProvider: deliveryMethodsProvider,
-      appSettings: appSettings,
+    _resetBillingWorkspaceCore(
+      context,
+      clearCart: false,
+      syncDefaultDelivery: true,
+      syncSalesExecutive: true,
     );
+  }
 
-    _customerController.handleSalesExecutiveChanged(
-      billingProvider: billingProvider,
-      customerSelectionProvider: customerSelectionProvider,
-      autoAssignEnabled: appSettings?.autoAssignDefaultCustomer ?? true,
-    );
+  /// Refreshes the cached customer list after a sale so the next order sees
+  /// updated balances (mirrors desktop `_refreshCustomersInBackgroundAfterSale`).
+  void refreshCustomersInBackgroundAfterSale(BuildContext context) {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+      final billingProvider =
+          Provider.of<BillingProvider>(context, listen: false);
+      final accessToken = authModel.token;
+
+      if (accessToken == null || accessToken.isEmpty) {
+        billingDebugLog(
+          'Skipping background customer refresh: access token unavailable',
+        );
+        return;
+      }
+
+      unawaited(() async {
+        try {
+          billingDebugLog('Background customer refresh started after sale');
+          await customerProvider.fetchCustomers(
+            accessToken: accessToken,
+            listAll: true,
+          );
+
+          final refreshedCustomers = customerProvider.allCustomers;
+          if (refreshedCustomers == null || refreshedCustomers.isEmpty) {
+            return;
+          }
+
+          billingProvider.setCustomerList(
+            List<CustomerListModelData>.from(refreshedCustomers),
+          );
+          billingDebugLog(
+            'Background customer refresh completed: ${refreshedCustomers.length} customers',
+          );
+        } catch (error) {
+          billingDebugLog('Background customer refresh failed: $error');
+        }
+      }());
+    } catch (error) {
+      billingDebugLog('Failed to start background customer refresh: $error');
+    }
   }
 
   Future<void> refreshPaymentMethodIdsThenRehydrate(

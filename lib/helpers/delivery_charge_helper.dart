@@ -74,7 +74,7 @@ double resolveDeliveryCharge(
     deliveryMethodId: deliveryMethodId ?? billingProvider.deliveryMethodId,
     deliveryMethodName: deliveryMethodName ?? billingProvider.deliveryMethod,
     deliveryMethods: deliveryMethodsProvider.deliveryMethods,
-    overrideCharge: overrideCharge,
+    overrideCharge: overrideCharge ?? billingProvider.deliveryChargeOverride,
   );
 }
 

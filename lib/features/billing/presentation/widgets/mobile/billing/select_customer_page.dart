@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
@@ -10,6 +11,7 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/add_customer_mobile_page.dart';
 
 /// Full-screen "Select Customer" page matching the Figma design.
@@ -179,12 +181,16 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
         .currentOrder
         ?.quotationId !=
         null;
+    final salesExecutive = Provider.of<SalesExecutiveProvider>(context,
+            listen: false)
+        .getCurrentUser(context);
     final shouldShow = _controller.shouldShowCustomerBalance(
       customer: customer,
       customerSelectionProvider: customerSelection,
       defaultCustomerPhone:
           appSettings?.autoAssignDefaultCustomerPhone ?? '',
       isQuotationDraft: isQuotationDraft,
+      salesExecutivePhone: salesExecutive?.phone,
     );
     if (!shouldShow) return null;
 
@@ -365,11 +371,11 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
             icon: const Icon(Icons.arrow_back, color: Colors.black87),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
-                'Select Customer',
-                style: TextStyle(
+                'billing.mobile_select_customer'.tr,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -399,7 +405,8 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
           controller: _searchController,
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
-            hintText: 'Search ${_allCustomers.length.toString()} customers....',
+            hintText:
+                '${'billing.mobile_search_customers'.tr} (${_allCustomers.length})',
             hintStyle: TextStyle(
               color: Colors.grey.shade400,
               fontSize: 14,
