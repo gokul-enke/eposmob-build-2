@@ -150,6 +150,7 @@ void main() {
         find.widgetWithText(ElevatedButton, 'Add to Cart'),
       );
       expect(addButton.onPressed, isNull);
+      expect(selected, isNull);
     });
   });
 }

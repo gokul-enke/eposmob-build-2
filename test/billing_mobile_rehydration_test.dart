@@ -16,7 +16,6 @@ import 'package:pos_machine/features/billing/controllers/billing_mobile_controll
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
-import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';

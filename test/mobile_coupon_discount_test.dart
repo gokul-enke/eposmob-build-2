@@ -15,7 +15,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/coupon_section.dart';
 import 'package:pos_machine/helpers/payment_auto_fill_helper.dart';
-import 'package:pos_machine/models/discount_list_model.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/auth_model.dart';

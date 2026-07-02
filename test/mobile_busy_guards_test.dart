@@ -109,7 +109,7 @@ void main() {
       const hasItems = true;
       const isConfirmingOrder = true;
       const isConfirmingAndPrinting = false;
-      final isCheckoutBusy = isConfirmingOrder || isConfirmingAndPrinting;
+      const isCheckoutBusy = isConfirmingAndPrinting || isConfirmingOrder;
 
       expect(hasItems && !isCheckoutBusy, isFalse);
     });
@@ -118,7 +118,7 @@ void main() {
       const hasItems = true;
       const isConfirmingOrder = false;
       const isConfirmingAndPrinting = true;
-      final isCheckoutBusy = isConfirmingOrder || isConfirmingAndPrinting;
+      const isCheckoutBusy = isConfirmingOrder || isConfirmingAndPrinting;
 
       expect(hasItems && !isCheckoutBusy, isFalse);
     });

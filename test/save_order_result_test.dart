@@ -38,7 +38,6 @@ library;
 
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -230,7 +229,7 @@ void main() {
 
       // … and that for a manually-crafted invalid item the guard fires:
       const negativePrice = -1.0;
-      final invalidPriceDetected = negativePrice < 0;
+      const invalidPriceDetected = negativePrice < 0;
       expect(invalidPriceDetected, isTrue,
           reason:
               'Service correctly identifies price < 0 as invalid, '
