@@ -20,6 +20,7 @@ class CustomCalendarPickerTableCell extends StatefulWidget {
   final bool allowTextInput;
   final double? height;
   final FocusNode? focusNode;
+  final bool autoDismiss;
 
   const CustomCalendarPickerTableCell({
     Key? key,
@@ -35,6 +36,7 @@ class CustomCalendarPickerTableCell extends StatefulWidget {
     this.allowTextInput = false,
     this.height,
     this.focusNode,
+    this.autoDismiss = true,
   }) : super(key: key);
 
   @override
@@ -139,68 +141,172 @@ class _CustomCalendarPickerTableCellState
       }
     }
 
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate.isBefore(firstDate)
-          ? firstDate
-          : initialDate.isAfter(lastDate)
-              ? lastDate
-              : initialDate,
-      firstDate: firstDate,
-      lastDate: lastDate,
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: ColorManager.kPrimaryColor,
-              onPrimary: Colors.white,
-              onSurface: ColorManager.textColor,
-              surface: Colors.white,
-              background: Colors.white,
-            ),
-            dialogBackgroundColor: Colors.white,
-            canvasColor: Colors.white,
-            cardColor: Colors.white,
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: ColorManager.kPrimaryColor,
+    final DateTime? picked;
+    debugPrint("=== AUTODISMISS STATUS: ${widget.autoDismiss} ===");
+    if (widget.autoDismiss) {
+      DateTime currentSelected = initialDate;
+      picked = await showDialog<DateTime>(
+        context: context,
+        builder: (BuildContext context) {
+          return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: ColorScheme.light(
+                    primary: ColorManager.kPrimaryColor,
+                    onPrimary: Colors.white,
+                    onSurface: ColorManager.textColor,
+                    surface: Colors.white,
+                    background: Colors.white,
+                  ),
+                  dialogBackgroundColor: Colors.white,
+                  canvasColor: Colors.white,
+                  cardColor: Colors.white,
+                  datePickerTheme: DatePickerThemeData(
+                    backgroundColor: Colors.white,
+                    surfaceTintColor: Colors.white,
+                    headerBackgroundColor: ColorManager.kPrimaryColor,
+                    headerForegroundColor: Colors.white,
+                    dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return ColorManager.kPrimaryColor;
+                      }
+                      return Colors.white;
+                    }),
+                    dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return Colors.white;
+                      }
+                      return ColorManager.textColor;
+                    }),
+                    dividerColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    elevation: 0,
+                  ),
+                ),
+                child: Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Container(
+                    color: Colors.white,
+                    width: 320,
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CalendarDatePicker(
+                          key: ValueKey(currentSelected),
+                          initialDate: currentSelected.isBefore(firstDate)
+                              ? firstDate
+                              : currentSelected.isAfter(lastDate)
+                                  ? lastDate
+                                  : currentSelected,
+                          firstDate: firstDate,
+                          lastDate: lastDate,
+                          onDateChanged: (DateTime date) {
+                            if (date.year != currentSelected.year) {
+                              setState(() {
+                                currentSelected = date;
+                              });
+                            } else {
+                              Navigator.of(context).pop(date);
+                            }
+                          },
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16.0),
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  color: ColorManager.textColor.withOpacity(0.6),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } else {
+      picked = await showDatePicker(
+        context: context,
+        initialDate: initialDate.isBefore(firstDate)
+            ? firstDate
+            : initialDate.isAfter(lastDate)
+                ? lastDate
+                : initialDate,
+        firstDate: firstDate,
+        lastDate: lastDate,
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: ColorManager.kPrimaryColor,
+                onPrimary: Colors.white,
+                onSurface: ColorManager.textColor,
+                surface: Colors.white,
+                background: Colors.white,
+              ),
+              dialogBackgroundColor: Colors.white,
+              canvasColor: Colors.white,
+              cardColor: Colors.white,
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+              datePickerTheme: DatePickerThemeData(
                 backgroundColor: Colors.white,
+                surfaceTintColor: Colors.white,
+                headerBackgroundColor: ColorManager.kPrimaryColor,
+                headerForegroundColor: Colors.white,
+                dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) {
+                    return ColorManager.kPrimaryColor;
+                  }
+                  return Colors.white;
+                }),
+                dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) {
+                    return Colors.white;
+                  }
+                  return ColorManager.textColor;
+                }),
+                dividerColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                elevation: 0,
+              ),
+              inputDecorationTheme: const InputDecorationTheme(
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
               ),
             ),
-            datePickerTheme: DatePickerThemeData(
-              backgroundColor: Colors.white,
-              surfaceTintColor: Colors.white,
-              headerBackgroundColor: ColorManager.kPrimaryColor,
-              headerForegroundColor: Colors.white,
-              dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return ColorManager.kPrimaryColor;
-                }
-                return Colors.white;
-              }),
-              dayForegroundColor: MaterialStateProperty.resolveWith((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return Colors.white;
-                }
-                return ColorManager.textColor;
-              }),
-              dividerColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              elevation: 0,
-            ),
-            inputDecorationTheme: const InputDecorationTheme(
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              disabledBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              focusedErrorBorder: InputBorder.none,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
+            child: child!,
+          );
+        },
+      );
+    }
 
     if (picked != null && picked != selectedDate) {
       _updateSelectedDate(picked);

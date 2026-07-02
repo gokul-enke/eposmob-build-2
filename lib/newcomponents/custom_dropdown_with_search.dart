@@ -77,6 +77,11 @@ class _CustomDropDownWithSearchState<T>
   KeyEventResult _onSearchKey(FocusNode node, RawKeyEvent event) {
     // Only react on key down to avoid duplicate handling
     if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.tab) {
+      Navigator.of(context).pop();
+      FocusScope.of(context).nextFocus();
+      return KeyEventResult.handled;
+    }
     if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
       final BuildContext? searchCtx = node.context;
       if (searchCtx != null) {
@@ -286,31 +291,59 @@ class _CustomDropDownWithSearchState<T>
                     borderRadius: BorderRadius.circular(7),
                   ),
                   itemBuilder: (context, item, isDisabled, isSelected) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? Colors.blue.shade50
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        widget.displayText(item),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isSelected
-                              ? Colors.blue.shade800
-                              : Colors.black87,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.normal,
-                        ),
-                        maxLines: null,
-                        softWrap: true,
+                    return Focus(
+                      onKey: (node, event) {
+                        if (event is RawKeyDownEvent) {
+                          if (event.logicalKey == LogicalKeyboardKey.enter ||
+                              event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+                            widget.onChanged(item);
+                            Navigator.of(context).pop();
+                            return KeyEventResult.handled;
+                          }
+                          if (event.logicalKey == LogicalKeyboardKey.tab) {
+                            Navigator.of(context).pop();
+                            FocusScope.of(context).nextFocus();
+                            return KeyEventResult.handled;
+                          }
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: Builder(
+                        builder: (context) {
+                          final hasFocus = Focus.of(context).hasFocus;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: hasFocus || isSelected
+                                  ? Colors.blue.shade50
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: hasFocus ? Colors.blue.shade600 : Colors.transparent,
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              widget.displayText(item),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: hasFocus || isSelected
+                                    ? Colors.blue.shade800
+                                    : Colors.black87,
+                                fontWeight: hasFocus || isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
+                              ),
+                              maxLines: null,
+                              softWrap: true,
+                            ),
+                          );
+                        }
                       ),
                     );
                   },

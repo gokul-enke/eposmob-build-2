@@ -12,6 +12,7 @@ import '../../../models/transaction_model.dart';
 import '../../../resources/color_manager.dart';
 import '../../../resources/font_manager.dart';
 import '../../../resources/style_manager.dart';
+import '../widgets/common_details_dialog.dart';
 
 class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key});
@@ -261,84 +262,24 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 8,
-        backgroundColor: Colors.white,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width / 2,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Transaction Details',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildDetailRow(
-                        'Supplier Name', transaction.supplier.user.name),
-                    _buildDetailRow(
-                        'Date', DateHelper.formatISODate(transaction.date)),
-                    _buildDetailRow('Type', transaction.type),
-                    _buildDetailRow(
-                        'Transaction Type', transaction.transactionType),
-                    _buildDetailRow('Payment Mode', transaction.paymentMode),
-                    _buildDetailRow('Amount',
-                        '${transaction.currency} ${transaction.amount}'),
-                    _buildDetailRow(
-                        'Tax Amount', transaction.taxAmount ?? 'N/A'),
-                    _buildDetailRow('Reference', transaction.reference),
-                    _buildDetailRow('Status', transaction.status),
-                    _buildDetailRow(
-                        'Comment', transaction.transactionComment ?? 'N/A'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: "Close",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => Navigator.pop(context),
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => CommonDetailsDialog(
+        title: 'Transaction Details',
+        gridColumns: [
+          [
+            CommonDetailsDialog.buildKeyValueRow('Supplier Name', transaction.supplier.user.name),
+            CommonDetailsDialog.buildKeyValueRow('Date', DateHelper.formatISODate(transaction.date)),
+            CommonDetailsDialog.buildKeyValueRow('Type', transaction.type),
+            CommonDetailsDialog.buildKeyValueRow('Transaction Type', transaction.transactionType),
+            CommonDetailsDialog.buildKeyValueRow('Payment Mode', transaction.paymentMode),
+          ],
+          [
+            CommonDetailsDialog.buildKeyValueRow('Amount', '${transaction.currency} ${transaction.amount}'),
+            CommonDetailsDialog.buildKeyValueRow('Tax Amount', transaction.taxAmount ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('Reference', transaction.reference),
+            CommonDetailsDialog.buildKeyValueRow('Status', transaction.status),
+            CommonDetailsDialog.buildKeyValueRow('Comment', transaction.transactionComment ?? 'N/A'),
+          ],
+        ],
       ),
     );
   }

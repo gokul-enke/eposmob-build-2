@@ -10,6 +10,7 @@ import '../../providers/quotations_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/common_details_dialog.dart';
 
 class ProformaInvoiceListScreen extends StatefulWidget {
   const ProformaInvoiceListScreen({super.key});
@@ -161,95 +162,47 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760, maxHeight: 620),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Proforma Invoice Details',
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s18,
-                        0,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const Divider(),
-                Wrap(
-                  spacing: 24,
-                  runSpacing: 12,
-                  children: [
-                    _detailTile('Invoice #', _text(data['invoice_number'])),
-                    _detailTile('Status', _text(data['status'])),
-                    _detailTile('Amount', _text(data['amount'])),
-                    _detailTile('Invoice Date', _text(data['invoice_date'])),
-                    _detailTile('Due Date', _text(data['due_date'])),
-                    _detailTile('Customer', _text(customer['name'])),
-                    _detailTile('Phone', _text(customer['phone'])),
-                    _detailTile(
-                      'Quotation #',
-                      _text(quotation['quotation_number']),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Items',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s14,
-                    0,
-                    ColorManager.textColor,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: items.isEmpty
-                      ? const Center(child: Text('No items found'))
-                      : SingleChildScrollView(
-                          child: Table(
-                            columnWidths: const {
-                              0: FlexColumnWidth(2.4),
-                              1: FlexColumnWidth(1),
-                              2: FlexColumnWidth(1.2),
-                              3: FlexColumnWidth(1.2),
-                            },
-                            children: [
-                              _detailsHeaderRow(),
-                              ...items.map((item) {
-                                final row = _mapValue(item);
-                                return TableRow(
-                                  children: [
-                                    _dialogCell(_text(row['item_name'])),
-                                    _dialogCell(_text(row['quantity'])),
-                                    _dialogCell(_text(row['unit_amount'])),
-                                    _dialogCell(_text(row['total_amount'])),
-                                  ],
-                                );
-                              }),
-                            ],
-                          ),
-                        ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      builder: (context) => CommonDetailsDialog(
+        title: 'Proforma Invoice Details',
+        gridColumns: [
+          [
+            CommonDetailsDialog.buildKeyValueRow('Invoice #', _text(data['invoice_number'])),
+            CommonDetailsDialog.buildKeyValueRow('Status', _text(data['status'])),
+            CommonDetailsDialog.buildKeyValueRow('Amount', _text(data['amount'])),
+            CommonDetailsDialog.buildKeyValueRow('Invoice Date', _text(data['invoice_date'])),
+          ],
+          [
+            CommonDetailsDialog.buildKeyValueRow('Due Date', _text(data['due_date'])),
+            CommonDetailsDialog.buildKeyValueRow('Customer', _text(customer['name'])),
+            CommonDetailsDialog.buildKeyValueRow('Phone', _text(customer['phone'])),
+            CommonDetailsDialog.buildKeyValueRow('Quotation #', _text(quotation['quotation_number'])),
+          ],
+        ],
+        sectionTitle: 'Items',
+        tableContent: items.isEmpty
+            ? const Center(child: Text('No items found'))
+            : Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(2.4),
+                  1: FlexColumnWidth(1),
+                  2: FlexColumnWidth(1.2),
+                  3: FlexColumnWidth(1.2),
+                },
+                children: [
+                  _detailsHeaderRow(),
+                  ...items.map((item) {
+                    final row = _mapValue(item);
+                    return TableRow(
+                      children: [
+                        _dialogCell(_text(row['item_name'])),
+                        _dialogCell(_text(row['quantity'])),
+                        _dialogCell(_text(row['unit_amount'])),
+                        _dialogCell(_text(row['total_amount'])),
+                      ],
+                    );
+                  }),
+                ],
+              ),
       ),
     );
   }
@@ -652,7 +605,7 @@ class _StaticTableCell extends StatelessWidget {
           FontWeightManager.medium,
           FontSize.s12,
           0.18,
-          ColorManager.kPrimaryColor,
+          ColorManager.kTitleTextColor,
         ),
       ),
     );

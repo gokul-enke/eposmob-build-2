@@ -252,6 +252,44 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                             children: [
                               Row(
                                 children: [
+                                  BuildErrorText(
+                                    errorText: _categoryNameError != null
+                                        ? _categoryNameError!
+                                        : "",
+                                    padding: const EdgeInsets.only(left: 10.0),
+                                    child: buildColumnWidgetForTextFields(
+                                      onchanged: ((value) {
+                                        categoryNameEnglishController.text = value ?? '';
+                                        categorySlugController.text = categoryNameController
+                                            .text
+                                            .toLowerCase() // Convert to lowercase
+                                            .replaceAll(RegExp(r'\s+'),
+                                                '-') // Replace spaces with hyphens
+                                            .replaceAll(RegExp(r'[^a-z0-9-]'),
+                                                ''); // Remove non-alphanumeric characters except hyphens
+                                      }),
+                                      isLeft: false,
+                                      isStarRed: true,
+                                      readOnly: false,
+                                      controller: categoryNameController,
+                                      size: size,
+                                      title: 'Category Name',
+                                      hintText: 'Category Name',
+                                    ),
+                                  ),
+                                  buildColumnWidgetForTextFields(
+                                    onchanged: (value) {},
+                                    isLeft: true,
+                                    readOnly: true,
+                                    controller: categoryNameEnglishController,
+                                    size: size,
+                                    title: "Category Name - English (US)*",
+                                    hintText: '',
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
                                   SizedBox(
                                     height: size.height * .17,
                                     child: Column(
@@ -368,44 +406,6 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ),
-                                  buildColumnWidgetForTextFields(
-                                    onchanged: (value) {},
-                                    isLeft: true,
-                                    readOnly: false,
-                                    controller: categoryNameEnglishController,
-                                    size: size,
-                                    title: "Category Name - English (US)*",
-                                    hintText: 'Enter...',
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  BuildErrorText(
-                                    errorText: _categoryNameError != null
-                                        ? _categoryNameError!
-                                        : "",
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: buildColumnWidgetForTextFields(
-                                      onchanged: ((value) {
-                                        categoryNameEnglishController.text = value ?? '';
-                                        categorySlugController.text = categoryNameController
-                                            .text
-                                            .toLowerCase() // Convert to lowercase
-                                            .replaceAll(RegExp(r'\s+'),
-                                                '-') // Replace spaces with hyphens
-                                            .replaceAll(RegExp(r'[^a-z0-9-]'),
-                                                ''); // Remove non-alphanumeric characters except hyphens
-                                      }),
-                                      isLeft: false,
-                                      isStarRed: true,
-                                      readOnly: false,
-                                      controller: categoryNameController,
-                                      size: size,
-                                      title: 'Category Name',
-                                      hintText: 'Category Name',
                                     ),
                                   ),
                                   buildColumnWidgetForTextFields(

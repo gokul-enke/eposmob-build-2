@@ -37,29 +37,28 @@ class InvoiceDetails {
   });
 
   factory InvoiceDetails.fromJson(Map<String, dynamic> json) {
-    var itemsJson = json['invoice_items'] as List;
+    var itemsJson = json['invoice_items'] as List? ?? [];
     List<InvoiceItem> itemsList =
         itemsJson.map((item) => InvoiceItem.fromJson(item)).toList();
 
     return InvoiceDetails(
-      id: json['id'],
+      id: json['id'] ?? 0,
       userId: json['user_id'],
-      customerId: json['customer_id'],
-      invoiceNumber: json['invoice_number'],
-      type: json['type'],
-      companyId: json['company_id'],
-      amount: json['amount'],
-      invoiceDate: json['invoice_date'],
-      dueDate: json['due_date'],
-      status: json['status'],
-      createdBy: json['created_by'],
-      createdAt: json['created_at'],
-      updatedAt: json['updated_at'],
+      customerId: json['customer_id'] ?? 0,
+      invoiceNumber: json['invoice_number']?.toString() ?? "",
+      type: json['type']?.toString() ?? "",
+      companyId: json['company_id'] ?? 0,
+      amount: json['amount']?.toString() ?? "0.00",
+      invoiceDate: json['invoice_date']?.toString() ?? "",
+      dueDate: json['due_date']?.toString() ?? "",
+      status: json['status']?.toString() ?? "",
+      createdBy: json['created_by'] ?? 0,
+      createdAt: json['created_at']?.toString() ?? "",
+      updatedAt: json['updated_at']?.toString() ?? "",
       company: Company.fromJson(json['company'] ?? {}),
       customer: Customer.fromJson(json['customer']),
       invoiceItems: itemsList,
     );
-
   }
 }
 
@@ -121,13 +120,23 @@ class Customer {
     required this.phone,
   });
 
-  factory Customer.fromJson(Map<String, dynamic> json) {
+  factory Customer.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return Customer(
+        id: 0,
+        userId: null,
+        name: "Walk-in Customer",
+        email: "",
+        phone: "",
+      );
+    }
+    final userMap = json['user'] as Map<String, dynamic>?;
     return Customer(
-      id: json['id'],
+      id: json['id'] ?? 0,
       userId: json['user_id'],
-      name: json['user']['name'],
-      email: json['user']['email'],
-      phone: json['user']['phone'],
+      name: userMap != null ? (userMap['name']?.toString() ?? "Walk-in Customer") : "Walk-in Customer",
+      email: userMap != null ? (userMap['email']?.toString() ?? "") : "",
+      phone: userMap != null ? (userMap['phone']?.toString() ?? "") : "",
     );
   }
 }
@@ -153,13 +162,13 @@ class InvoiceItem {
 
   factory InvoiceItem.fromJson(Map<String, dynamic> json) {
     return InvoiceItem(
-      id: json['id'],
-      invoiceId: json['invoice_id'],
-      itemName: json['item_name'],
-      quantity: json['quantity'],
-      unitAmount: json['unit_amount'],
-      tax: json['tax'],
-      totalAmount: json['total_amount'],
+      id: json['id'] ?? 0,
+      invoiceId: json['invoice_id'] ?? 0,
+      itemName: json['item_name']?.toString() ?? "",
+      quantity: json['quantity'] ?? 0,
+      unitAmount: json['unit_amount']?.toString() ?? "0.00",
+      tax: json['tax']?.toString() ?? "0.00",
+      totalAmount: json['total_amount']?.toString() ?? "0.00",
     );
   }
 }

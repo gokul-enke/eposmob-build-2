@@ -33,6 +33,7 @@ class VoucherItem {
   final FocusNode taxFocus = FocusNode();
   final FocusNode quantityFocus = FocusNode();
   final FocusNode totalFocus = FocusNode();
+  final FocusNode plusFocus = FocusNode();
 
   VoucherItem() {
     unitAmountController.text = "0";
@@ -53,6 +54,7 @@ class VoucherItem {
     taxFocus.dispose();
     quantityFocus.dispose();
     totalFocus.dispose();
+    plusFocus.dispose();
   }
 }
 
@@ -77,6 +79,14 @@ class _CreateSupplierVoucherScreenState
   // Date controllers
   DateTime selectedVoucherDate = DateTime.now();
   DateTime selectedDueDate = DateTime.now(); // Changed to today's date
+
+  // Focus Nodes for keyboard navigation
+  final FocusNode typeFocus = FocusNode();
+  final FocusNode voucherDateFocus = FocusNode();
+  final FocusNode dueDateFocus = FocusNode();
+  final FocusNode statusFocus = FocusNode();
+  final FocusNode paymentMethodFocus = FocusNode();
+  final FocusNode supplierFocus = FocusNode();
 
   // Dropdown selections
   String? selectedType;
@@ -384,6 +394,7 @@ class _CreateSupplierVoucherScreenState
                               selectedVoucherDate,
                               (DateTime date) =>
                                   setState(() => selectedVoucherDate = date),
+                              voucherDateFocus,
                             ),
                           ),
                         ],
@@ -631,6 +642,7 @@ class _CreateSupplierVoucherScreenState
         ),
         const SizedBox(height: 8),
         BuildDropDownWithSearch<String>(
+          focusNode: typeFocus,
           title: null,
           showName: false,
           hintText: 'Select Type',
@@ -663,6 +675,7 @@ class _CreateSupplierVoucherScreenState
         ),
         const SizedBox(height: 8),
         BuildDropDownWithSearch<String>(
+          focusNode: statusFocus,
           title: null,
           showName: false,
           hintText: 'Select Status',
@@ -688,6 +701,7 @@ class _CreateSupplierVoucherScreenState
     String label,
     DateTime selectedDate,
     Function(DateTime) onDateSelected,
+    FocusNode focusNode,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,6 +715,7 @@ class _CreateSupplierVoucherScreenState
         SizedBox(
           height: 45,
           child: CalendarPickerTableCell(
+            focusNode: focusNode,
             onDateSelected: onDateSelected,
           ),
         ),
@@ -719,6 +734,7 @@ class _CreateSupplierVoucherScreenState
         ),
         const SizedBox(height: 8),
         BuildDropDownWithSearch<String>(
+          focusNode: paymentMethodFocus,
           title: null,
           showName: false,
           hintText:
@@ -768,6 +784,7 @@ class _CreateSupplierVoucherScreenState
         ),
         const SizedBox(height: 8),
         BuildDropDownWithSearch<int>(
+          focusNode: supplierFocus,
           title: null,
           showName: false,
           hintText: 'Select a supplier',
@@ -878,116 +895,184 @@ class _CreateSupplierVoucherScreenState
           children: [
             Expanded(
               flex: 2,
-              child: BuildBoxShadowContainer(
-                height: 45,
-                circleRadius: 7,
-                child: TextFormField(
-                  controller: item.itemNameController,
-                  focusNode: item.itemNameFocus,
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) {
-                    FocusScope.of(context).requestFocus(item.unitAmountFocus);
-                  },
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'Item name',
-                    contentPadding: EdgeInsets.only(left: 15),
-                  ),
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s12, 0.27, ColorManager.textColor),
-                ),
+              child: ListenableBuilder(
+                listenable: item.itemNameFocus,
+                builder: (context, _) {
+                  final hasFocus = item.itemNameFocus.hasFocus;
+                  return BuildBoxShadowContainer(
+                    height: 45,
+                    circleRadius: 7,
+                    border: hasFocus
+                        ? Border.all(color: ColorManager.kPrimaryColor, width: 1.2)
+                        : null,
+                    showShadow: !hasFocus,
+                    boxShadow: hasFocus ? [
+                      BoxShadow(
+                        color: ColorManager.kPrimaryColor.withOpacity(0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1.5,
+                      ),
+                    ] : null,
+                    child: TextFormField(
+                      controller: item.itemNameController,
+                      focusNode: item.itemNameFocus,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) {
+                        FocusScope.of(context).requestFocus(item.unitAmountFocus);
+                      },
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Item name',
+                        contentPadding: EdgeInsets.only(left: 15),
+                      ),
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s12, 0.27, ColorManager.textColor),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: BuildBoxShadowContainer(
-                height: 45,
-                circleRadius: 7,
-                child: TextFormField(
-                  controller: item.unitAmountController,
-                  focusNode: item.unitAmountFocus,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) {
-                    FocusScope.of(context).requestFocus(item.taxFocus);
-                  },
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '0',
-                    contentPadding: EdgeInsets.only(left: 15),
-                  ),
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s12, 0.27, ColorManager.textColor),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-                  ],
-                ),
+              child: ListenableBuilder(
+                listenable: item.unitAmountFocus,
+                builder: (context, _) {
+                  final hasFocus = item.unitAmountFocus.hasFocus;
+                  return BuildBoxShadowContainer(
+                    height: 45,
+                    circleRadius: 7,
+                    border: hasFocus
+                        ? Border.all(color: ColorManager.kPrimaryColor, width: 1.2)
+                        : null,
+                    showShadow: !hasFocus,
+                    boxShadow: hasFocus ? [
+                      BoxShadow(
+                        color: ColorManager.kPrimaryColor.withOpacity(0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1.5,
+                      ),
+                    ] : null,
+                    child: TextFormField(
+                      controller: item.unitAmountController,
+                      focusNode: item.unitAmountFocus,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) {
+                        FocusScope.of(context).requestFocus(item.taxFocus);
+                      },
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '0',
+                        contentPadding: EdgeInsets.only(left: 15),
+                      ),
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s12, 0.27, ColorManager.textColor),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: BuildBoxShadowContainer(
-                height: 45,
-                circleRadius: 7,
-                child: TextFormField(
-                  controller: item.taxController,
-                  focusNode: item.taxFocus,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) {
-                    FocusScope.of(context).requestFocus(item.quantityFocus);
-                  },
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '0',
-                    contentPadding: EdgeInsets.only(left: 15),
-                  ),
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s12, 0.27, ColorManager.textColor),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-                  ],
-                ),
+              child: ListenableBuilder(
+                listenable: item.taxFocus,
+                builder: (context, _) {
+                  final hasFocus = item.taxFocus.hasFocus;
+                  return BuildBoxShadowContainer(
+                    height: 45,
+                    circleRadius: 7,
+                    border: hasFocus
+                        ? Border.all(color: ColorManager.kPrimaryColor, width: 1.2)
+                        : null,
+                    showShadow: !hasFocus,
+                    boxShadow: hasFocus ? [
+                      BoxShadow(
+                        color: ColorManager.kPrimaryColor.withOpacity(0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1.5,
+                      ),
+                    ] : null,
+                    child: TextFormField(
+                      controller: item.taxController,
+                      focusNode: item.taxFocus,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) {
+                        FocusScope.of(context).requestFocus(item.quantityFocus);
+                      },
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '0',
+                        contentPadding: EdgeInsets.only(left: 15),
+                      ),
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s12, 0.27, ColorManager.textColor),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: BuildBoxShadowContainer(
-                height: 45,
-                circleRadius: 7,
-                child: TextFormField(
-                  controller: item.quantityController,
-                  focusNode: item.quantityFocus,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) {
-                    // When Enter is pressed on quantity field, add new item and focus on its name field
-                    if (isLastItem && item.itemNameController.text.isNotEmpty) {
-                      setState(() {
-                        var newItem = VoucherItem();
-                        _addItemListeners(newItem);
-                        voucherItems.add(newItem);
-                      });
-                      // Focus on the new item's name field after a short delay
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (voucherItems.length > index + 1) {
-                          FocusScope.of(context).requestFocus(
-                              voucherItems[index + 1].itemNameFocus);
+              child: ListenableBuilder(
+                listenable: item.quantityFocus,
+                builder: (context, _) {
+                  final hasFocus = item.quantityFocus.hasFocus;
+                  return BuildBoxShadowContainer(
+                    height: 45,
+                    circleRadius: 7,
+                    border: hasFocus
+                        ? Border.all(color: ColorManager.kPrimaryColor, width: 1.2)
+                        : null,
+                    showShadow: !hasFocus,
+                    boxShadow: hasFocus ? [
+                      BoxShadow(
+                        color: ColorManager.kPrimaryColor.withOpacity(0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1.5,
+                      ),
+                    ] : null,
+                    child: TextFormField(
+                      controller: item.quantityController,
+                      focusNode: item.quantityFocus,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) {
+                        // When Enter is pressed on quantity field, add new item and focus on its name field
+                        if (isLastItem && item.itemNameController.text.isNotEmpty) {
+                          setState(() {
+                            var newItem = VoucherItem();
+                            _addItemListeners(newItem);
+                            voucherItems.add(newItem);
+                          });
+                          // Focus on the new item's name field after a short delay
+                          Future.delayed(const Duration(milliseconds: 100), () {
+                            if (voucherItems.length > index + 1) {
+                              FocusScope.of(context).requestFocus(
+                                  voucherItems[index + 1].itemNameFocus);
+                            }
+                          });
                         }
-                      });
-                    }
-                  },
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '1',
-                    contentPadding: EdgeInsets.only(left: 15),
-                  ),
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s12, 0.27, ColorManager.textColor),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
-                  ],
-                ),
+                      },
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '1',
+                        contentPadding: EdgeInsets.only(left: 15),
+                      ),
+                      style: buildCustomStyle(FontWeightManager.medium,
+                          FontSize.s12, 0.27, ColorManager.textColor),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(width: 8),
@@ -1006,34 +1091,52 @@ class _CreateSupplierVoucherScreenState
             ),
             const SizedBox(width: 8),
             voucherItems.length <= 1 || voucherItems.length == index + 1
-                ? InkWell(
-                    onTap: () {
-                      setState(() {
-                        var newItem = VoucherItem();
-                        _addItemListeners(newItem);
-                        voucherItems.add(newItem);
-                      });
-                    },
-                    child: Container(
-                      height: 40,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: ColorManager.kPrimaryColor,
-                        borderRadius: BorderRadius.circular(5),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: ColorManager.boxShadowColor,
-                            blurRadius: 3,
-                            offset: Offset(1, 1),
+                ? ListenableBuilder(
+                    listenable: item.plusFocus,
+                    builder: (context, _) {
+                      final hasFocus = item.plusFocus.hasFocus;
+                      return InkWell(
+                        focusNode: item.plusFocus,
+                        onTap: () {
+                          setState(() {
+                            var newItem = VoucherItem();
+                            _addItemListeners(newItem);
+                            voucherItems.add(newItem);
+                          });
+                        },
+                        child: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                            color: ColorManager.kPrimaryColor,
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(
+                              color: hasFocus ? Colors.white : Colors.transparent,
+                              width: hasFocus ? 2 : 1,
+                            ),
+                            boxShadow: [
+                              if (hasFocus)
+                                BoxShadow(
+                                  color: ColorManager.kPrimaryColor.withOpacity(0.55),
+                                  blurRadius: 8,
+                                  spreadRadius: 2.5,
+                                )
+                              else
+                                const BoxShadow(
+                                  color: ColorManager.boxShadowColor,
+                                  blurRadius: 3,
+                                  offset: Offset(1, 1),
+                                ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                    ),
+                          child: const Icon(
+                            Icons.add,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      );
+                    },
                   )
                 : IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
@@ -1061,6 +1164,12 @@ class _CreateSupplierVoucherScreenState
     netTotalController.dispose();
     totalTaxController.dispose();
     totalAmountController.dispose();
+    typeFocus.dispose();
+    voucherDateFocus.dispose();
+    dueDateFocus.dispose();
+    statusFocus.dispose();
+    paymentMethodFocus.dispose();
+    supplierFocus.dispose();
 
     // Dispose all voucher items
     for (var item in voucherItems) {

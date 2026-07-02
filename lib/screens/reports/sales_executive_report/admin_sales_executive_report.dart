@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
@@ -141,25 +142,11 @@ class _AdminSalesExecutiveReportScreenState
 
   Future<void> _selectDateTime(BuildContext context,
       {required bool isFromDate}) async {
-    final DateTime? pickedDate = await showDatePicker(
+    final DateTime? pickedDate = await showAutoDismissDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: ColorManager.kPrimaryColor,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-            dialogBackgroundColor: Colors.white,
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (pickedDate != null) {
