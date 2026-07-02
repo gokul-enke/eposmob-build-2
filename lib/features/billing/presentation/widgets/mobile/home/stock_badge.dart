@@ -1,35 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
+import 'package:pos_machine/resources/color_manager.dart';
 
 class StockBadge extends StatelessWidget {
   const StockBadge({
     super.key,
-    required this.inStock,
+    required this.status,
     this.compact = false,
   });
 
-  final bool inStock;
+  final ProductStockDisplayStatus status;
   final bool compact;
+
+  String get _label {
+    switch (status) {
+      case ProductStockDisplayStatus.available:
+        return 'Available';
+      case ProductStockDisplayStatus.lowStock:
+        return 'Low Stock';
+      case ProductStockDisplayStatus.atReorderLevel:
+        return 'At Reorder Level';
+      case ProductStockDisplayStatus.outOfStock:
+        return 'Out Of Stock';
+    }
+  }
+
+  String get _compactLabel {
+    switch (status) {
+      case ProductStockDisplayStatus.available:
+        return 'In';
+      case ProductStockDisplayStatus.lowStock:
+      case ProductStockDisplayStatus.atReorderLevel:
+        return 'Low';
+      case ProductStockDisplayStatus.outOfStock:
+        return 'Out';
+    }
+  }
+
+  Color get _backgroundColor {
+    switch (status) {
+      case ProductStockDisplayStatus.available:
+        return Colors.green;
+      case ProductStockDisplayStatus.lowStock:
+        return ColorManager.kOrange;
+      case ProductStockDisplayStatus.atReorderLevel:
+        return ColorManager.kButtonYellow;
+      case ProductStockDisplayStatus.outOfStock:
+        return Colors.red;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final label = inStock ? 'Available' : 'Out Of Stock';
-
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 5 : 7,
         vertical: compact ? 2 : 4,
       ),
       decoration: BoxDecoration(
-        color: inStock ? Colors.green : Colors.red,
+        color: _backgroundColor,
         borderRadius: BorderRadius.circular(100),
       ),
       child: Text(
-        compact ? (inStock ? 'In' : 'Out') : label,
+        compact ? _compactLabel : _label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontFamily: 'Poppins',
-          color: Colors.white,
+          color: status == ProductStockDisplayStatus.atReorderLevel
+              ? Colors.black87
+              : Colors.white,
           fontWeight: FontWeight.w600,
           fontSize: compact ? 8 : 9,
         ),

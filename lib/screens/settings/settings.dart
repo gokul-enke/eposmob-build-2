@@ -10,6 +10,7 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/helpers/orientation_helper.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
@@ -264,6 +265,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showScaffold(context: context, message: 'Notification position updated');
   }
 
+  Future<void> _showOrientationModePicker() async {
+    final prefs = SharedPreferenceProvider();
+    final current = await prefs.getOrientationMode();
+    if (!mounted) return;
+
+    String selected = current;
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Screen Orientation'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Auto'),
+                subtitle: const Text('Portrait on phones, landscape on tablets'),
+                value: OrientationHelper.modeAuto,
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
+              ),
+              RadioListTile<String>(
+                title: const Text('Portrait'),
+                value: OrientationHelper.modePortrait,
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
+              ),
+              RadioListTile<String>(
+                title: const Text('Landscape'),
+                value: OrientationHelper.modeLandscape,
+                groupValue: selected,
+                onChanged: (v) => setState(() => selected = v!),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(selected),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null) return;
+
+    await prefs.saveOrientationMode(result);
+    await OrientationHelper.apply(modeOverride: result);
+    if (!mounted) return;
+    setState(() {});
+    showScaffold(context: context, message: 'Screen orientation updated');
+  }
+
   List<Widget> _buildSettingsCards(BuildContext context) {
     return [
       // _SettingsCard(
@@ -361,6 +421,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         },
       ),
+      if (!kIsWeb)
+        FutureBuilder<String>(
+          future: SharedPreferenceProvider().getOrientationMode(),
+          builder: (context, snapshot) {
+            final current = snapshot.data ?? OrientationHelper.modeAuto;
+            return _SettingsInfoCard(
+              title: 'Screen Orientation',
+              subtitle: OrientationHelper.labelForMode(current),
+              icon: Icons.screen_rotation,
+              backgroundColor: const Color(0xFFE8EAF6),
+              iconColor: const Color(0xFF3949AB),
+              onTap: () async {
+                await _showOrientationModePicker();
+              },
+            );
+          },
+        ),
       _SettingsCardWithIcon(
         title: 'Clear Local Storage',
         icon: FontAwesomeIcons.trashCan,
