@@ -698,11 +698,97 @@ class _DayCloseModalState extends State<DayCloseModal> {
   bool isSubmitting = false;
   DailySalesCloseSummary? summary;
   String? errorMessage;
+  final TextEditingController _businessDateController =
+      TextEditingController();
+  final TextEditingController _shiftNameController = TextEditingController();
+  final TextEditingController _openingTimeController = TextEditingController();
+  final TextEditingController _closingTimeController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _cashRefundsController = TextEditingController();
+  final TextEditingController _cashExpensesController = TextEditingController();
+  final TextEditingController _cashDropAmountController =
+      TextEditingController();
+  final TextEditingController _openingCashInHandController =
+      TextEditingController();
+  final TextEditingController _closingCashInHandController =
+      TextEditingController();
+  final List<TextEditingController> _openingDenominationControllers = [];
+  final List<TextEditingController> _openingCountControllers = [];
+  final List<TextEditingController> _closingDenominationControllers = [];
+  final List<TextEditingController> _closingCountControllers = [];
 
   @override
   void initState() {
     super.initState();
     _fetchSummary();
+    _ensureBreakdownRows();
+  }
+
+  void _ensureBreakdownRows() {
+    if (_openingDenominationControllers.isEmpty) {
+      _addOpeningBreakdownRow();
+    }
+    if (_closingDenominationControllers.isEmpty) {
+      _addClosingBreakdownRow();
+    }
+  }
+
+  void _addOpeningBreakdownRow({String denomination = '', String count = ''}) {
+    _openingDenominationControllers
+        .add(TextEditingController(text: denomination));
+    _openingCountControllers.add(TextEditingController(text: count));
+  }
+
+  void _addClosingBreakdownRow({String denomination = '', String count = ''}) {
+    _closingDenominationControllers
+        .add(TextEditingController(text: denomination));
+    _closingCountControllers.add(TextEditingController(text: count));
+  }
+
+  List<Map<String, dynamic>> _buildBreakdownPayload(
+    List<TextEditingController> denominationControllers,
+    List<TextEditingController> countControllers,
+  ) {
+    final breakdown = <Map<String, dynamic>>[];
+    for (var index = 0; index < denominationControllers.length; index++) {
+      final denomination = denominationControllers[index].text.trim();
+      final countText = countControllers[index].text.trim();
+      if (denomination.isEmpty && countText.isEmpty) {
+        continue;
+      }
+      breakdown.add({
+        'denomination': denomination,
+        'count': int.tryParse(countText) ?? 0,
+      });
+    }
+    return breakdown;
+  }
+
+  @override
+  void dispose() {
+    _businessDateController.dispose();
+    _shiftNameController.dispose();
+    _openingTimeController.dispose();
+    _closingTimeController.dispose();
+    _notesController.dispose();
+    _cashRefundsController.dispose();
+    _cashExpensesController.dispose();
+    _cashDropAmountController.dispose();
+    _openingCashInHandController.dispose();
+    _closingCashInHandController.dispose();
+    for (final controller in _openingDenominationControllers) {
+      controller.dispose();
+    }
+    for (final controller in _openingCountControllers) {
+      controller.dispose();
+    }
+    for (final controller in _closingDenominationControllers) {
+      controller.dispose();
+    }
+    for (final controller in _closingCountControllers) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _fetchSummary() async {
@@ -726,6 +812,18 @@ class _DayCloseModalState extends State<DayCloseModal> {
 
       setState(() {
         summary = result;
+        _businessDateController.text = result?.businessDate ?? '';
+        _shiftNameController.text = result?.shiftName ?? '';
+        _openingTimeController.text = result?.openingTime ?? '';
+        _closingTimeController.text = result?.closingTime ?? '';
+        _notesController.text = result?.notes ?? '';
+        _cashRefundsController.text = result?.cashRefunds?.toString() ?? '';
+        _cashExpensesController.text = result?.cashExpenses?.toString() ?? '';
+        _cashDropAmountController.text = result?.cashDropAmount?.toString() ?? '';
+        _openingCashInHandController.text =
+            result?.openingCashInHand?.toString() ?? '';
+        _closingCashInHandController.text =
+            result?.closingCashInHand?.toString() ?? '';
         isLoadingSummary = false;
       });
     } catch (e) {
@@ -743,11 +841,61 @@ class _DayCloseModalState extends State<DayCloseModal> {
 
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
+      final appSettings =
+          Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
       final storeSession =
           Provider.of<StoreSessionProvider>(context, listen: false);
       final salesProvider = Provider.of<SalesProvider>(context, listen: false);
 
       final storeId = storeSession.activeStore?.storeId ?? 0;
+      debugPrint('=== DAY CLOSE OPENING CHECK DEBUG START ===');
+      debugPrint('storeId: $storeId');
+      debugPrint('raw summary.openingTime: ${summary?.openingTime}');
+      debugPrint('raw summary.closingTime: ${summary?.closingTime}');
+      debugPrint('controller openingTime text: "${_openingTimeController.text}"');
+      debugPrint('controller closingTime text: "${_closingTimeController.text}"');
+      debugPrint('controller businessDate text: "${_businessDateController.text}"');
+      debugPrint('controller shiftName text: "${_shiftNameController.text}"');
+      debugPrint('controller notes text: "${_notesController.text}"');
+      debugPrint('appSettings is null: ${appSettings == null}');
+      debugPrint('appSettings.workingTime: "${appSettings?.workingTime}"');
+
+      final workingTimeText = appSettings?.workingTime ?? '';
+      debugPrint('workingTimeText length: ${workingTimeText.length}');
+      final workingStartTime = _extractWorkingStartTime(workingTimeText);
+      debugPrint('parsed workingStartTime: "$workingStartTime"');
+
+      final openingTimeText = _openingTimeController.text.trim().isEmpty
+          ? summary?.openingTime
+          : _openingTimeController.text.trim();
+      debugPrint('final openingTimeText for validation: "$openingTimeText"');
+
+      if (workingStartTime != null && openingTimeText != null) {
+        final selectedOpeningTime = _parseTimeOfDay(openingTimeText);
+        debugPrint('parsed selectedOpeningTime: $selectedOpeningTime');
+        if (selectedOpeningTime != null) {
+          final isBefore = _isTimeBefore(selectedOpeningTime, workingStartTime);
+          debugPrint('comparison result selected < workingStart: $isBefore');
+          if (isBefore) {
+            debugPrint('BLOCKED: opening time is before working start time');
+            if (mounted) {
+              showScaffoldError(
+                context: context,
+                message:
+                    'Opening time cannot be before working time start ($workingStartTime).',
+              );
+            }
+            debugPrint('=== DAY CLOSE OPENING CHECK DEBUG END (BLOCKED) ===');
+            return;
+          }
+        } else {
+          debugPrint('WARNING: selectedOpeningTime parsed as null');
+        }
+      } else {
+        debugPrint(
+          'SKIP CHECK: workingStartTime or openingTimeText is null/empty',
+        );
+      }
 
       debugPrint('=== DEBUG: createDailySalesClose CALLER CONTEXT ===');
       debugPrint('store_id: $storeId');
@@ -755,14 +903,68 @@ class _DayCloseModalState extends State<DayCloseModal> {
       debugPrint('Summary closing_time: ${summary?.closingTime}');
       debugPrint('Summary opening_date: ${summary?.openingDate}');
       debugPrint('Summary closing_date: ${summary?.closingDate}');
+      debugPrint('selected shift_name: ${_shiftNameController.text.trim()}');
+      debugPrint('selected business_date: ${_businessDateController.text.trim()}');
+      debugPrint('selected opening_time: ${_openingTimeController.text.trim()}');
+      debugPrint('selected closing_time: ${_closingTimeController.text.trim()}');
+      debugPrint('selected cash_refunds: ${_cashRefundsController.text.trim()}');
+      debugPrint('selected cash_expenses: ${_cashExpensesController.text.trim()}');
+      debugPrint('selected cash_drop_amount: ${_cashDropAmountController.text.trim()}');
+      debugPrint('selected opening_cash_in_hand: ${_openingCashInHandController.text.trim()}');
+      debugPrint('selected closing_cash_in_hand: ${_closingCashInHandController.text.trim()}');
+      debugPrint('opening breakdown rows: ${_openingDenominationControllers.length}');
+      for (var i = 0; i < _openingDenominationControllers.length; i++) {
+        debugPrint(
+          'opening row $i => denom="${_openingDenominationControllers[i].text}" count="${_openingCountControllers[i].text}"',
+        );
+      }
+      debugPrint('closing breakdown rows: ${_closingDenominationControllers.length}');
+      for (var i = 0; i < _closingDenominationControllers.length; i++) {
+        debugPrint(
+          'closing row $i => denom="${_closingDenominationControllers[i].text}" count="${_closingCountControllers[i].text}"',
+        );
+      }
 
       final result = await salesProvider.createDailySalesClose(
         accessToken: authModel.token ?? '',
         storeId: storeId,
+        shiftName: _shiftNameController.text.trim().isEmpty
+            ? summary?.shiftName
+            : _shiftNameController.text.trim(),
+        businessDate: _businessDateController.text.trim().isEmpty
+            ? summary?.businessDate
+            : _businessDateController.text.trim(),
         openingDate: summary?.openingDate,
-        openingTime: summary?.openingTime,
+        openingTime: _openingTimeController.text.trim().isEmpty
+            ? summary?.openingTime
+            : _openingTimeController.text.trim(),
         closingDate: summary?.closingDate,
-        closingTime: summary?.closingTime,
+        closingTime: _closingTimeController.text.trim().isEmpty
+            ? summary?.closingTime
+            : _closingTimeController.text.trim(),
+        cashRefunds: num.tryParse(_cashRefundsController.text.trim()) ??
+            summary?.cashRefunds,
+        cashExpenses: num.tryParse(_cashExpensesController.text.trim()) ??
+            summary?.cashExpenses,
+        cashDropAmount: num.tryParse(_cashDropAmountController.text.trim()) ??
+            summary?.cashDropAmount,
+        openingCashInHand:
+            num.tryParse(_openingCashInHandController.text.trim()) ??
+                summary?.openingCashInHand,
+        openingCashBreakdown: _buildBreakdownPayload(
+          _openingDenominationControllers,
+          _openingCountControllers,
+        ),
+        closingCashInHand:
+            num.tryParse(_closingCashInHandController.text.trim()) ??
+                summary?.closingCashInHand,
+        closingCashBreakdown: _buildBreakdownPayload(
+          _closingDenominationControllers,
+          _closingCountControllers,
+        ),
+        notes: _notesController.text.trim().isEmpty
+            ? summary?.notes
+            : _notesController.text.trim(),
       );
 
       if (result['success'] == true) {
@@ -775,6 +977,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
           widget.onSuccess();
         }
       } else {
+        debugPrint('DAY CLOSE RESULT FAILURE: ${result['message']}');
         if (mounted) {
           showScaffoldError(
             context: context,
@@ -783,6 +986,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
         }
       }
     } catch (e) {
+      debugPrint('=== DAY CLOSE SUBMIT EXCEPTION ===');
+      debugPrint('error: $e');
       if (mounted) {
         showScaffoldError(
           context: context,
@@ -795,6 +1000,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
           isSubmitting = false;
         });
       }
+      debugPrint('=== DAY CLOSE OPENING CHECK DEBUG END ===');
     }
   }
 
@@ -949,6 +1155,383 @@ class _DayCloseModalState extends State<DayCloseModal> {
     );
   }
 
+  Widget _buildAmountField({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 6),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 12),
+          height: 42,
+          width: double.infinity,
+          child: TextFormField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            cursorColor: ColorManager.kPrimaryColor,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: '',
+              hintStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.27,
+              ColorManager.textColor.withOpacity(.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateField({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 6),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 12),
+          height: 42,
+          width: double.infinity,
+          child: CalendarPickerTableCell(
+            initialDate: _parseDate(controller.text) ?? DateTime.now(),
+            onDateSelected: (picked) {
+              setState(() {
+                controller.text = DateFormat('yyyy-MM-dd').format(picked);
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTwoColumnRow({
+    required bool isNarrow,
+    required Widget left,
+    required Widget right,
+  }) {
+    if (isNarrow) {
+      return Column(
+        children: [
+          left,
+          const SizedBox(height: 12),
+          right,
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: 12),
+        Expanded(child: right),
+      ],
+    );
+  }
+
+  DateTime? _parseDate(String value) {
+    try {
+      return DateTime.parse(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _extractWorkingStartTime(String workingTime) {
+    final match = RegExp(r'(\d{2}:\d{2})(?::\d{2})?\s*-\s*\d{2}:\d{2}')
+        .firstMatch(workingTime);
+    return match?.group(1);
+  }
+
+  TimeOfDay? _parseTimeOfDay(String timeValue) {
+    final match = RegExp(r'^(\d{2}):(\d{2})').firstMatch(timeValue);
+    if (match == null) return null;
+    final hour = int.tryParse(match.group(1) ?? '');
+    final minute = int.tryParse(match.group(2) ?? '');
+    if (hour == null || minute == null) return null;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  bool _isTimeBefore(TimeOfDay a, String b) {
+    final parsedB = _parseTimeOfDay(b);
+    if (parsedB == null) return false;
+    return a.hour < parsedB.hour ||
+        (a.hour == parsedB.hour && a.minute < parsedB.minute);
+  }
+
+  Widget _buildTimePickerField({
+    required String label,
+    required TextEditingController controller,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 6),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 12),
+          height: 42,
+          width: double.infinity,
+          child: TimePickerTableCell(
+            initialTime: _parseTimeOfDay(controller.text),
+            onTimeSelected: (picked) {
+              setState(() {
+                controller.text =
+                    '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}:00';
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextAreaField({
+    required String label,
+    required TextEditingController controller,
+    int maxLines = 3,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 6),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 12, top: 6, right: 10),
+          height: maxLines > 1 ? 92 : 42,
+          width: double.infinity,
+          child: TextFormField(
+            controller: controller,
+            maxLines: maxLines,
+            cursorColor: ColorManager.kPrimaryColor,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: '',
+              hintStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.27,
+              ColorManager.textColor.withOpacity(.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBreakdownSection({
+    required String title,
+    required List<TextEditingController> denominationControllers,
+    required List<TextEditingController> countControllers,
+    required VoidCallback onAddRow,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s12,
+                0.21,
+                Colors.grey.shade800,
+              ),
+            ),
+            TextButton(
+              onPressed: onAddRow,
+              child: const Text('Add Row'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...List.generate(denominationControllers.length, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildDenominationRow(
+                    denominationController: denominationControllers[index],
+                    countController: countControllers[index],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Remove row',
+                    onPressed: denominationControllers.length == 1
+                        ? null
+                        : () {
+                            setState(() {
+                              denominationControllers[index].dispose();
+                              countControllers[index].dispose();
+                              denominationControllers.removeAt(index);
+                              countControllers.removeAt(index);
+                            });
+                          },
+                    icon: const Icon(Icons.remove_circle_outline,
+                        size: 18, color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildDenominationRow({
+    required TextEditingController denominationController,
+    required TextEditingController countController,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildCompactField(
+                label: 'Denomination',
+                controller: denominationController,
+                keyboardType: TextInputType.text,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _buildCompactField(
+                label: 'Count',
+                controller: countController,
+                keyboardType: TextInputType.number,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactField({
+    required String label,
+    required TextEditingController controller,
+    required TextInputType keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s10,
+            0.20,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 36,
+          width: double.infinity,
+          child: TextFormField(
+            controller: controller,
+            keyboardType: keyboardType,
+            cursorColor: ColorManager.kPrimaryColor,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+              hintText: '',
+              hintStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.20,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
+              style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s10,
+              0.20,
+              ColorManager.textColor.withOpacity(.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -961,8 +1544,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
       child: BuildBoxShadowContainer(
         circleRadius: 20,
         color: Colors.white,
-        width: isMobile ? size.width * 0.95 : 520,
-        padding: EdgeInsets.all(isMobile ? 16 : 24),
+        width: isMobile ? size.width * 0.98 : 760,
+        padding: EdgeInsets.all(isMobile ? 8 : 16),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isNarrow = constraints.maxWidth < 420;
@@ -1102,6 +1685,53 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                         ],
                                       ),
                                     ),
+                                    const SizedBox(height: 16),
+                                    _buildTwoColumnRow(
+                                      isNarrow: isNarrow,
+                                      left: _buildDateField(
+                                        label: 'Business Date',
+                                        controller: _businessDateController,
+                                      ),
+                                      right: _buildAmountField(
+                                        label: 'Shift Name',
+                                        controller: _shiftNameController,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildTwoColumnRow(
+                                      isNarrow: isNarrow,
+                                      left: _buildTimePickerField(
+                                        label: 'Opening Time',
+                                        controller: _openingTimeController,
+                                      ),
+                                      right: _buildTimePickerField(
+                                        label: 'Closing Time',
+                                        controller: _closingTimeController,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildTwoColumnRow(
+                                      isNarrow: isNarrow,
+                                      left: _buildAmountField(
+                                        label: 'Cash Refunds',
+                                        controller: _cashRefundsController,
+                                      ),
+                                      right: _buildAmountField(
+                                        label: 'Cash Expenses',
+                                        controller: _cashExpensesController,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildAmountField(
+                                      label: 'Cash Drop Amount',
+                                      controller: _cashDropAmountController,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildTextAreaField(
+                                      label: 'Notes',
+                                      controller: _notesController,
+                                      maxLines: 3,
+                                    ),
                                     const SizedBox(height: 20),
 
                                     Text(
@@ -1192,6 +1822,27 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     ),
                                     const SizedBox(height: 16),
 
+                                    Text(
+                                      'Cash In Hand',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s12,
+                                        0.21,
+                                        Colors.grey.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildAmountField(
+                                      label: 'Opening Cash In Hand',
+                                      controller: _openingCashInHandController,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildAmountField(
+                                      label: 'Closing Cash In Hand',
+                                      controller: _closingCashInHandController,
+                                    ),
+                                    const SizedBox(height: 16),
+
                                     // Returns & Refunds Section
                                     Text(
                                       'Returns & Refunds',
@@ -1210,6 +1861,32 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       '$currency ${summary?.totalRefunds ?? '0.00'}',
                                       color1: Colors.red.shade600,
                                       color2: Colors.red.shade600,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _buildBreakdownSection(
+                                      title: 'Opening Cash Breakdown',
+                                      denominationControllers:
+                                          _openingDenominationControllers,
+                                      countControllers:
+                                          _openingCountControllers,
+                                      onAddRow: () {
+                                        setState(() {
+                                          _addOpeningBreakdownRow();
+                                        });
+                                      },
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _buildBreakdownSection(
+                                      title: 'Closing Cash Breakdown',
+                                      denominationControllers:
+                                          _closingDenominationControllers,
+                                      countControllers:
+                                          _closingCountControllers,
+                                      onAddRow: () {
+                                        setState(() {
+                                          _addClosingBreakdownRow();
+                                        });
+                                      },
                                     ),
                                   ],
                                 );
