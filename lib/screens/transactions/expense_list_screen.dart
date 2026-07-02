@@ -40,7 +40,6 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   String? selectedCategory;
   String? selectedDebitAccount;
   String? selectedStatus;
-  bool _showFilters = true;
 
   @override
   void initState() {
@@ -57,11 +56,6 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         provider.fetchGeneralPayments(accessToken: token, type: 'EXPENSE');
         provider.fetchAccountOptions(accessToken: token);
         _loadCategoriesFromMasterData();
-      }
-      if (mounted) {
-        setState(() {
-          _showFilters = !expenseListIsPhone(context);
-        });
       }
       _categoryFilterFocus.requestFocus();
     });
@@ -129,7 +123,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         children: [
           _buildHeader(isPhone),
           const SizedBox(height: 12),
-          if (!isPhone || _showFilters) ...[
+          if (!isPhone) ...[
             _buildFilterSection(isPhone),
             const SizedBox(height: 12),
           ],
@@ -172,30 +166,136 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     return ExpenseListPageHeader(
       title: 'Expenses',
       breadcrumb: _buildBreadcrumb(),
-      leading: isPhone
+      filterAction: isPhone
           ? ExpenseListFilterToggle(
-              showFilters: _showFilters,
+              showFilters: false,
               hasActiveFilters: _hasActiveFilters(),
-              onPressed: () {
-                setState(() {
-                  _showFilters = !_showFilters;
-                });
-              },
+              onPressed: _openMobileFilterSheet,
             )
           : null,
       trailing: SizedBox(
-        width: isPhone ? double.infinity : 140,
+        width: isPhone ? 108 : 140,
         child: CustomRoundButtonAdvanced(
           title: 'New Entry',
           fct: () {
             sideBarController.index.value = 94;
           },
-          width: isPhone ? double.infinity : 140,
-          height: 44,
+          width: isPhone ? 108 : 140,
+          height: isPhone ? 40 : 44,
           fontSize: 12,
           radius: 8,
         ),
       ),
+    );
+  }
+
+  void _openMobileFilterSheet() {
+    final provider = Provider.of<ExpenseProvider>(context, listen: false);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final bottomInset = MediaQuery.viewInsetsOf(sheetContext).bottom;
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.48,
+            minChildSize: 0.35,
+            maxChildSize: 0.82,
+            expand: false,
+            builder: (_, scrollController) {
+              return Material(
+                color: Colors.white,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 4, 0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsetsDirectional.only(start: 8),
+                              child: Text(
+                                'Filters',
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s16,
+                                  0.25,
+                                  ColorManager.textColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(sheetContext),
+                            tooltip: 'Close',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                        children: [
+                          _buildMobileFilterFields(provider),
+                          const SizedBox(height: 16),
+                          _buildResetButton(
+                            provider,
+                            fullWidth: true,
+                            popSheet: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMobileFilterFields(ExpenseProvider provider) {
+    final List<String> categoriesList = [
+      'All',
+      ...provider.categoryOptions
+          .map((e) => e['name']?.toString() ?? '')
+          .where((e) => e.isNotEmpty),
+    ];
+
+    final List<String> debitAccountsList = [
+      'All',
+      ...provider.debitAccountOptions
+          .map((e) => e['name']?.toString() ?? '')
+          .where((e) => e.isNotEmpty),
+    ];
+
+    final List<String> statusOptions = provider.availableStatuses;
+
+    return ExpenseListMobileFilterFields(
+      categoryFilter: _buildCategoryFilter(categoriesList, provider),
+      referenceFilter: _buildReferenceFilter(),
+      debitFilter: _buildDebitFilter(debitAccountsList, provider),
+      statusFilter: _buildStatusFilter(statusOptions, provider),
     );
   }
 
@@ -373,7 +473,11 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     );
   }
 
-  Widget _buildResetButton(ExpenseProvider provider, {required bool fullWidth}) {
+  Widget _buildResetButton(
+    ExpenseProvider provider, {
+    required bool fullWidth,
+    bool popSheet = false,
+  }) {
     return FocusTraversalOrder(
       order: const NumericFocusOrder(5),
       child: Focus(
@@ -382,7 +486,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           if (event is RawKeyDownEvent &&
               (event.logicalKey == LogicalKeyboardKey.enter ||
                   event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
-            _resetFilters(provider);
+            _resetFilters(provider, popSheet: popSheet);
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;
@@ -392,7 +496,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
           boxColor: Colors.white,
           textColor: ColorManager.kPrimaryColor,
           borderColor: ColorManager.kPrimaryColor,
-          fct: () => _resetFilters(provider),
+          fct: () => _resetFilters(provider, popSheet: popSheet),
           height: 44,
           width: fullWidth ? double.infinity : 150,
           fontSize: 12,
@@ -402,7 +506,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     );
   }
 
-  void _resetFilters(ExpenseProvider provider) {
+  void _resetFilters(ExpenseProvider provider, {bool popSheet = false}) {
     searchTextController.clear();
     setState(() {
       selectedCategory = null;
@@ -411,6 +515,9 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     });
     provider.resetFilters();
     _categoryFilterFocus.requestFocus();
+    if (popSheet && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _openExpenseView(String referenceNumber) {
@@ -480,7 +587,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const DashboardSectionHeader(title: 'Expense records'),
+            if (!isPhone) const DashboardSectionHeader(title: 'Expense records'),
             Expanded(
               child: isPhone
                   ? _buildMobileList(expenseList, currency)
@@ -494,7 +601,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   Widget _buildMobileList(List<Expense> expenseList, String currency) {
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: expenseList.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {

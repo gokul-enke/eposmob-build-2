@@ -82,18 +82,18 @@ class ExpenseListContentCard extends StatelessWidget {
   }
 }
 
-/// Page title with optional breadcrumb and trailing action.
+/// Page title with optional breadcrumb, filter action, and trailing action.
 class ExpenseListPageHeader extends StatelessWidget {
   final String title;
   final Widget? breadcrumb;
-  final Widget? leading;
+  final Widget? filterAction;
   final Widget? trailing;
 
   const ExpenseListPageHeader({
     super.key,
     required this.title,
     this.breadcrumb,
-    this.leading,
+    this.filterAction,
     this.trailing,
   });
 
@@ -123,23 +123,19 @@ class ExpenseListPageHeader extends StatelessWidget {
     );
 
     if (isPhone) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (leading != null) ...[
-                leading!,
-                const SizedBox(width: 4),
+          Expanded(child: titleColumn),
+          if (filterAction != null || trailing != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (trailing != null) trailing!,
+                if (filterAction != null) filterAction!,
               ],
-              Expanded(child: titleColumn),
-            ],
-          ),
-          if (trailing != null) ...[
-            const SizedBox(height: 10),
-            trailing!,
-          ],
+            ),
         ],
       );
     }
@@ -147,11 +143,11 @@ class ExpenseListPageHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (leading != null) ...[
-          leading!,
-          const SizedBox(width: 8),
-        ],
         Expanded(child: titleColumn),
+        if (filterAction != null) ...[
+          filterAction!,
+          if (trailing != null) const SizedBox(width: 8),
+        ],
         if (trailing != null) trailing!,
       ],
     );
@@ -178,7 +174,91 @@ class ExpenseListSectionTitle extends StatelessWidget {
   }
 }
 
-/// Filter toggle with >=44px tap target and optional active-indicator dot.
+/// Compact two-column mobile filter layout (matches sales MobileFilters pattern).
+class ExpenseListMobileFilterFields extends StatelessWidget {
+  final Widget categoryFilter;
+  final Widget referenceFilter;
+  final Widget debitFilter;
+  final Widget statusFilter;
+
+  const ExpenseListMobileFilterFields({
+    super.key,
+    required this.categoryFilter,
+    required this.referenceFilter,
+    required this.debitFilter,
+    required this.statusFilter,
+  });
+
+  Widget _labeledField(String label, Widget child) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 4, bottom: 6),
+          child: Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.27,
+              Colors.black.withOpacity(0.7),
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 400;
+
+        if (narrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _labeledField('Category', categoryFilter),
+              const SizedBox(height: 10),
+              _labeledField('Reference No', referenceFilter),
+              const SizedBox(height: 10),
+              _labeledField('Debit account', debitFilter),
+              const SizedBox(height: 10),
+              _labeledField('Status', statusFilter),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _labeledField('Category', categoryFilter)),
+                const SizedBox(width: 10),
+                Expanded(child: _labeledField('Reference No', referenceFilter)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _labeledField('Debit account', debitFilter)),
+                const SizedBox(width: 10),
+                Expanded(child: _labeledField('Status', statusFilter)),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Filter icon on the right of the title row (matches sales.dart).
 class ExpenseListFilterToggle extends StatelessWidget {
   final bool showFilters;
   final bool hasActiveFilters;
@@ -201,13 +281,14 @@ class ExpenseListFilterToggle extends StatelessWidget {
         children: [
           IconButton(
             icon: Icon(
-              showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+              showFilters
+                  ? Icons.filter_alt
+                  : Icons.filter_alt_outlined,
               color: ColorManager.kPrimaryColor,
             ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: onPressed,
-            tooltip: showFilters ? 'Hide Filters' : 'Show Filters',
           ),
           if (hasActiveFilters)
             PositionedDirectional(
@@ -372,18 +453,15 @@ class ExpenseListViewAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'View expense',
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: IconButton(
-          icon: const Icon(Icons.visibility_outlined,
-              color: ColorManager.kPrimaryColor, size: 20),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          onPressed: onPressed,
-        ),
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: IconButton(
+        icon: const Icon(Icons.visibility_outlined,
+            color: ColorManager.kPrimaryColor, size: 20),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        onPressed: onPressed,
       ),
     );
   }

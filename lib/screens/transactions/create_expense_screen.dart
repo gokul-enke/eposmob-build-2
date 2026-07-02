@@ -2,6 +2,7 @@
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
+import '../../components/build_back_button.dart';
 import '../../newcomponents/custom_round_button.dart';
 import '../../newcomponents/custom_container_box.dart';
 import '../../newcomponents/custom_dropdown_with_search.dart';
@@ -253,28 +254,36 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     if (selectedCreditAccount == null) {
       return provider.paymentMethodOptions;
     }
-    
-    final creditName = (selectedCreditAccount!['name']?.toString() ?? '').toLowerCase();
+
+    final creditName =
+        (selectedCreditAccount!['name']?.toString() ?? '').toLowerCase();
     final isCashAccount = creditName.contains('cash');
-    
+
     final filtered = provider.paymentMethodOptions.where((method) {
       final methodName = (method['name']?.toString() ?? '').toLowerCase();
       final isCashMethod = methodName.contains('cash');
-      
+
       return isCashAccount ? isCashMethod : !isCashMethod;
     }).toList();
 
     return filtered.isNotEmpty ? filtered : provider.paymentMethodOptions;
   }
 
+  bool _isPhone(BuildContext context) =>
+      MediaQuery.of(context).size.width < 600;
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ExpenseProvider>(context);
+    final isPhone = _isPhone(context);
 
     return SafeArea(
       child: CustomBoxShadowContainer(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-        padding: const EdgeInsets.all(20),
+        margin: EdgeInsets.symmetric(
+          horizontal: isPhone ? 4 : 10,
+          vertical: isPhone ? 8 : 20,
+        ),
+        padding: EdgeInsets.all(isPhone ? 14 : 20),
         circleRadius: 22,
         offsetValue: const Offset(1, 1),
         blurRadius: 6,
@@ -289,118 +298,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
                 const SizedBox(height: 20),
                 _buildSectionTitle("Entry Details"),
                 const SizedBox(height: 15),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel("Reference No."),
-                          _buildDisabledTextField(referenceNo),
-                          const SizedBox(height: 15),
-                          _buildLabel("Expense Category*", isRequired: true),
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(2),
-                            child: _buildDropdownField<Map<String, dynamic>>(
-                              key: const ValueKey('expense_category_dropdown'),
-                              focusNode: categoryFocus,
-                              hint: "Select an option",
-                              value: selectedCategory,
-                              items: provider.categoryOptions,
-                              displayText: (item) => item['name'] ?? '',
-                              onChanged: (val) => setState(() => selectedCategory = val),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          _buildLabel("Expense Account (Debit)*", isRequired: true),
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(4),
-                            child: _buildDropdownField<Map<String, dynamic>>(
-                              key: const ValueKey('expense_debit_account_dropdown'),
-                              focusNode: debitAccountFocus,
-                              hint: "Select an option",
-                              value: selectedDebitAccount,
-                              items: provider.debitAccountOptions,
-                              displayText: (item) => item['name'] ?? '',
-                              onChanged: (val) => setState(() => selectedDebitAccount = val),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          _buildLabel("Amount*", isRequired: true),
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(6),
-                            child: _buildAmountField(amountFocus),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 30),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel("Payment Date*", isRequired: true),
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(1),
-                            child: _buildDatePickerField(dateFocus),
-                          ),
-                          const SizedBox(height: 15),
-                          _buildLabel("Description / Vendor"),
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(3),
-                            child: _buildTextField(
-                              controller: descriptionController,
-                              hint: "e.g. Office rent",
-                              focusNode: descriptionFocus,
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          _buildLabel("Paid From / Source (Credit)*", isRequired: true),
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(5),
-                            child: _buildDropdownField<Map<String, dynamic>>(
-                              key: const ValueKey('expense_credit_account_dropdown'),
-                              focusNode: creditAccountFocus,
-                              hint: "Select an option",
-                              value: selectedCreditAccount,
-                              items: provider.creditAccountOptions,
-                              displayText: (item) => item['name'] ?? '',
-                              onChanged: (val) {
-                                setState(() {
-                                  selectedCreditAccount = val;
-                                  if (val != null && selectedPaymentMethod != null) {
-                                    final creditName = (val['name']?.toString() ?? '').toLowerCase();
-                                    final isCashAccount = creditName.contains('cash');
-                                    final methodName = (selectedPaymentMethod!['name']?.toString() ?? '').toLowerCase();
-                                    final isCashMethod = methodName.contains('cash');
-                                    if (isCashAccount != isCashMethod) {
-                                      selectedPaymentMethod = null;
-                                    }
-                                  }
-                                });
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          _buildLabel("Payment Method*", isRequired: true),
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(7),
-                            child: _buildDropdownField<Map<String, dynamic>>(
-                              key: const ValueKey('expense_payment_method_dropdown'),
-                              focusNode: paymentMethodFocus,
-                              hint: "Select an option",
-                              value: selectedPaymentMethod,
-                              items: _getFilteredPaymentMethods(provider),
-                              displayText: (item) => item['name'] ?? '',
-                              onChanged: (val) => setState(() => selectedPaymentMethod = val),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                _buildFormFields(provider, isPhone),
                 const SizedBox(height: 15),
                 _buildLabel("Notes"),
                 FocusTraversalOrder(
@@ -420,10 +318,146 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     );
   }
 
+  Widget _buildFormFields(ExpenseProvider provider, bool isPhone) {
+    final leftColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel("Reference No."),
+        _buildDisabledTextField(referenceNo),
+        const SizedBox(height: 15),
+        _buildLabel("Expense Category*", isRequired: true),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(2),
+          child: _buildDropdownField<Map<String, dynamic>>(
+            key: const ValueKey('expense_category_dropdown'),
+            focusNode: categoryFocus,
+            hint: "Select an option",
+            value: selectedCategory,
+            items: provider.categoryOptions,
+            displayText: (item) => item['name'] ?? '',
+            onChanged: (val) => setState(() => selectedCategory = val),
+          ),
+        ),
+        const SizedBox(height: 15),
+        _buildLabel("Expense Account (Debit)*", isRequired: true),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(4),
+          child: _buildDropdownField<Map<String, dynamic>>(
+            key: const ValueKey('expense_debit_account_dropdown'),
+            focusNode: debitAccountFocus,
+            hint: "Select an option",
+            value: selectedDebitAccount,
+            items: provider.debitAccountOptions,
+            displayText: (item) => item['name'] ?? '',
+            onChanged: (val) => setState(() => selectedDebitAccount = val),
+          ),
+        ),
+        const SizedBox(height: 15),
+        _buildLabel("Amount*", isRequired: true),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(6),
+          child: _buildAmountField(amountFocus),
+        ),
+      ],
+    );
+
+    final rightColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel("Payment Date*", isRequired: true),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(1),
+          child: _buildDatePickerField(dateFocus),
+        ),
+        const SizedBox(height: 15),
+        _buildLabel("Description / Vendor"),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(3),
+          child: _buildTextField(
+            controller: descriptionController,
+            hint: "e.g. Office rent",
+            focusNode: descriptionFocus,
+          ),
+        ),
+        const SizedBox(height: 15),
+        _buildLabel("Paid From / Source (Credit)*", isRequired: true),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(5),
+          child: _buildDropdownField<Map<String, dynamic>>(
+            key: const ValueKey('expense_credit_account_dropdown'),
+            focusNode: creditAccountFocus,
+            hint: "Select an option",
+            value: selectedCreditAccount,
+            items: provider.creditAccountOptions,
+            displayText: (item) => item['name'] ?? '',
+            onChanged: (val) {
+              setState(() {
+                selectedCreditAccount = val;
+                if (val != null && selectedPaymentMethod != null) {
+                  final creditName =
+                      (val['name']?.toString() ?? '').toLowerCase();
+                  final isCashAccount = creditName.contains('cash');
+                  final methodName = (selectedPaymentMethod!['name']
+                              ?.toString() ??
+                          '')
+                      .toLowerCase();
+                  final isCashMethod = methodName.contains('cash');
+                  if (isCashAccount != isCashMethod) {
+                    selectedPaymentMethod = null;
+                  }
+                }
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 15),
+        _buildLabel("Payment Method*", isRequired: true),
+        FocusTraversalOrder(
+          order: const NumericFocusOrder(7),
+          child: _buildDropdownField<Map<String, dynamic>>(
+            key: const ValueKey('expense_payment_method_dropdown'),
+            focusNode: paymentMethodFocus,
+            hint: "Select an option",
+            value: selectedPaymentMethod,
+            items: _getFilteredPaymentMethods(provider),
+            displayText: (item) => item['name'] ?? '',
+            onChanged: (val) => setState(() => selectedPaymentMethod = val),
+          ),
+        ),
+      ],
+    );
+
+    if (isPhone) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          leftColumn,
+          const SizedBox(height: 15),
+          rightColumn,
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: leftColumn),
+        const SizedBox(width: 30),
+        Expanded(child: rightColumn),
+      ],
+    );
+  }
+
   Widget _buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        CustomBackButton(
+          onPressed: () {
+            sideBarController.index.value = 93;
+          },
+          text: 'All Expenses',
+        ),
         Text(
           "Create Expense",
           style: buildCustomStyle(
@@ -436,13 +470,22 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
         const SizedBox(height: 4),
         Row(
           children: [
-            Text(
-              "Expenses",
-              style: buildCustomStyle(
-                FontWeightManager.medium,
-                FontSize.s12,
-                0.20,
-                Colors.grey,
+            InkWell(
+              onTap: () {
+                sideBarController.index.value = 93;
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  "Expenses",
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.20,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
               ),
             ),
             const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
@@ -697,47 +740,68 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
+    final isPhone = _isPhone(context);
+
+    final createButton = CustomRoundButtonAdvanced(
+      title: "Create",
+      fct: () => _submitForm(createAnother: false),
+      width: isPhone ? double.infinity : 100,
+      height: 40,
+      fontSize: 12,
+      radius: 5,
+      isLoading: _isSubmitting,
+      focusNode: createBtnFocus,
+    );
+
+    final createAnotherButton = CustomRoundButtonAdvanced(
+      title: "Create & create another",
+      fct: () => _submitForm(createAnother: true),
+      width: isPhone ? double.infinity : 170,
+      height: 40,
+      fontSize: 12,
+      radius: 5,
+      boxColor: Colors.white,
+      textColor: ColorManager.textColor,
+      borderColor: Colors.grey.shade300,
+      isLoading: _isSubmitting,
+      focusNode: createAnotherBtnFocus,
+    );
+
+    final cancelButton = CustomRoundButtonAdvanced(
+      title: "Cancel",
+      fct: () {
+        sideBarController.index.value = 93;
+      },
+      width: isPhone ? double.infinity : 100,
+      height: 40,
+      fontSize: 12,
+      radius: 5,
+      boxColor: Colors.transparent,
+      textColor: ColorManager.textColor,
+      borderColor: Colors.transparent,
+      focusNode: cancelBtnFocus,
+    );
+
+    if (isPhone) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          createButton,
+          const SizedBox(height: 10),
+          createAnotherButton,
+          const SizedBox(height: 10),
+          cancelButton,
+        ],
+      );
+    }
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
       children: [
-        CustomRoundButtonAdvanced(
-          title: "Create",
-          fct: () => _submitForm(createAnother: false),
-          width: 100,
-          height: 40,
-          fontSize: 12,
-          radius: 5,
-          isLoading: _isSubmitting,
-          focusNode: createBtnFocus,
-        ),
-        const SizedBox(width: 10),
-        CustomRoundButtonAdvanced(
-          title: "Create & create another",
-          fct: () => _submitForm(createAnother: true),
-          width: 170,
-          height: 40,
-          fontSize: 12,
-          radius: 5,
-          boxColor: Colors.white,
-          textColor: ColorManager.textColor,
-          borderColor: Colors.grey.shade300,
-          isLoading: _isSubmitting,
-          focusNode: createAnotherBtnFocus,
-        ),
-        const SizedBox(width: 10),
-        CustomRoundButtonAdvanced(
-          title: "Cancel",
-          fct: () {
-            sideBarController.index.value = 93;
-          },
-          width: 100,
-          height: 40,
-          fontSize: 12,
-          radius: 5,
-          boxColor: Colors.transparent,
-          textColor: ColorManager.textColor,
-          borderColor: Colors.transparent,
-          focusNode: cancelBtnFocus,
-        ),
+        createButton,
+        createAnotherButton,
+        cancelButton,
       ],
     );
   }
