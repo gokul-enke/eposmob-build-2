@@ -30,7 +30,7 @@ Future<dynamic> showCreateInvoiceModal(BuildContext context, Size size) {
         ),
         backgroundColor: Colors.transparent,
         child: Container(
-          width: size.width * 0.7,
+          width: size.width < 700 ? size.width * 0.95 : size.width * 0.7,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -663,12 +663,11 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Row 1: Type | Total Invoice Amount
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: Column(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 500;
+                    if (isMobile) {
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildLabel("Type"),
@@ -688,132 +687,138 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                             showName: false,
                             height: 48,
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Expanded(
-                    //   child: Column(
-                    //     crossAxisAlignment: CrossAxisAlignment.start,
-                    //     children: [
-                    //       _buildLabel("Total Invoice Amount"),
-                    //       const SizedBox(height: 4),
-                    //       Container(
-                    //         height: 48,
-                    //         decoration: BoxDecoration(
-                    //           color: Colors.grey.shade100,
-                    //           borderRadius: BorderRadius.circular(8),
-                    //           border: Border.all(color: Colors.grey.shade300),
-                    //         ),
-                    //         alignment: Alignment.centerLeft,
-                    //         padding: const EdgeInsets.symmetric(horizontal: 12),
-                    //         child: Text(
-                    //           _totalAmountController.text.isEmpty
-                    //               ? "0"
-                    //               : _totalAmountController.text,
-                    //           style: buildCustomStyle(
-                    //             FontWeightManager.regular,
-                    //             FontSize.s14,
-                    //             0.27,
-                    //             ColorManager.textColor,
-                    //           ),
-                    //         ),
-                    //       ),
-                    //     ],
-                    //   ),
-                    // ),
-
-                    Expanded(
-                      flex: 3,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildLabel("Due date"),
-                                const SizedBox(height: 4),
-                                CustomCalendarPickerTableCell(
-                                  initialDate: DateTime.tryParse(
-                                          _dueDateController.text) ??
-                                      DateTime.now()
-                                          .add(const Duration(days: 30)),
-                                  onDateSelected: (date) {
-                                    setState(() {
-                                      _dueDateController.text =
-                                          date.toIso8601String().split('T')[0];
-                                    });
-                                    FocusScope.of(context)
-                                        .requestFocus(_invoiceDateFocus);
-                                  },
-                                  hintText: "Select due date",
-                                  height: 48,
-                                  focusNode: _dueDateFocus,
-                                ),
-                              ],
-                            ),
+                          const SizedBox(height: 10),
+                          _buildLabel("Due date"),
+                          const SizedBox(height: 4),
+                          CustomCalendarPickerTableCell(
+                            initialDate: DateTime.tryParse(_dueDateController.text) ??
+                                DateTime.now().add(const Duration(days: 30)),
+                            onDateSelected: (date) {
+                              setState(() {
+                                _dueDateController.text =
+                                    date.toIso8601String().split('T')[0];
+                              });
+                              FocusScope.of(context)
+                                  .requestFocus(_invoiceDateFocus);
+                            },
+                            hintText: "Select due date",
+                            height: 48,
+                            focusNode: _dueDateFocus,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildLabel("Invoice date"),
-                                const SizedBox(height: 4),
-                                CustomCalendarPickerTableCell(
-                                  initialDate: DateTime.tryParse(
-                                          _invoiceDateController.text) ??
-                                      DateTime.now(),
-                                  onDateSelected: (date) {
-                                    setState(() {
-                                      _invoiceDateController.text =
-                                          date.toIso8601String().split('T')[0];
-                                    });
-                                    FocusScope.of(context)
-                                        .requestFocus(_statusFocus);
-                                  },
-                                  hintText: "Select invoice date",
-                                  height: 48,
-                                  focusNode: _invoiceDateFocus,
-                                ),
-                              ],
-                            ),
+                          const SizedBox(height: 10),
+                          _buildLabel("Invoice date"),
+                          const SizedBox(height: 4),
+                          CustomCalendarPickerTableCell(
+                            initialDate: DateTime.tryParse(_invoiceDateController.text) ??
+                                DateTime.now(),
+                            onDateSelected: (date) {
+                              setState(() {
+                                _invoiceDateController.text =
+                                    date.toIso8601String().split('T')[0];
+                              });
+                              FocusScope.of(context)
+                                  .requestFocus(_statusFocus);
+                            },
+                            hintText: "Select invoice date",
+                            height: 48,
+                            focusNode: _invoiceDateFocus,
                           ),
-                          // const SizedBox(width: 12),
-                          // Expanded(
-                          //   child: Column(
-                          //     crossAxisAlignment: CrossAxisAlignment.start,
-                          //     children: [
-                          //       _buildLabel("Status"),
-                          //       const SizedBox(height: 4),
-                          //       CustomDropDownWithSearch<String>(
-                          //         hintText: "Select status",
-                          //         title: "",
-                          //         value: _selectedStatus,
-                          //         items: const [
-                          //           "Pending",
-                          //           "Paid",
-                          //           "Overdue",
-                          //           "Cancelled"
-                          //         ],
-                          //         focusNode: _statusFocus,
-                          //         onChanged: (value) {
-                          //           setState(() => _selectedStatus = value);
-                          //           FocusScope.of(context)
-                          //               .requestFocus(_customerFocus);
-                          //         },
-                          //         displayText: (item) => item,
-                          //         showName: false,
-                          //         height: 48,
-                          //       ),
-                          //     ],
-                          //   ),
-                          // ),
                         ],
-                      ),
-                    ),
-                  ],
+                      );
+                    }
+                    // original desktop Row unchanged below
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel("Type"),
+                              const SizedBox(height: 4),
+                              CustomDropDownWithSearch<String>(
+                                hintText: "Select type",
+                                title: "",
+                                value: _selectedType,
+                                items: const ["order", "other"],
+                                focusNode: _typeFocus,
+                                onChanged: (value) {
+                                  setState(() => _selectedType = value);
+                                  FocusScope.of(context)
+                                      .requestFocus(_dueDateFocus);
+                                },
+                                displayText: (item) => item,
+                                showName: false,
+                                height: 48,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 3,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildLabel("Due date"),
+                                    const SizedBox(height: 4),
+                                    CustomCalendarPickerTableCell(
+                                      initialDate: DateTime.tryParse(
+                                              _dueDateController.text) ??
+                                          DateTime.now()
+                                              .add(const Duration(days: 30)),
+                                      onDateSelected: (date) {
+                                        setState(() {
+                                          _dueDateController.text =
+                                              date.toIso8601String().split('T')[0];
+                                        });
+                                        FocusScope.of(context)
+                                            .requestFocus(_invoiceDateFocus);
+                                      },
+                                      hintText: "Select due date",
+                                      height: 48,
+                                      focusNode: _dueDateFocus,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildLabel("Invoice date"),
+                                    const SizedBox(height: 4),
+                                    CustomCalendarPickerTableCell(
+                                      initialDate: DateTime.tryParse(
+                                              _invoiceDateController.text) ??
+                                          DateTime.now(),
+                                      onDateSelected: (date) {
+                                        setState(() {
+                                          _invoiceDateController.text =
+                                              date.toIso8601String().split('T')[0];
+                                        });
+                                        FocusScope.of(context)
+                                            .requestFocus(_statusFocus);
+                                      },
+                                      hintText: "Select invoice date",
+                                      height: 48,
+                                      focusNode: _invoiceDateFocus,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
 
@@ -896,18 +901,22 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
           CustomBoxShadowContainer(
             circleRadius: 12,
             padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-            child: Column(
-              children: [
-                const SizedBox(height: 5),
-                Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 500;
+                final tableMinWidth = 560.0;
+                final tableContent = Column(
                   children: [
-                    _buildTableHeader("Item name", flex: 2),
-                    _buildTableHeader("Unit amount"),
-                    _buildTableHeader("Tax %"),
-                    _buildTableHeader("Quantity"),
-                    _buildTableHeader("Total"),
-                  ],
-                ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        _buildTableHeader("Item name", flex: 2),
+                        _buildTableHeader("Unit amount"),
+                        _buildTableHeader("Tax %"),
+                        _buildTableHeader("Quantity"),
+                        _buildTableHeader("Total"),
+                      ],
+                    ),
                 const SizedBox(height: 5),
                 if (_invoiceItemCards.isNotEmpty)
                   Column(
@@ -1067,7 +1076,19 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                     ],
                   ),
                 ),
-              ],
+                  ],
+                );
+                if (isMobile) {
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: tableMinWidth,
+                      child: tableContent,
+                    ),
+                  );
+                }
+                return tableContent;
+              },
             ),
           ),
 
@@ -1076,177 +1097,118 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
           CustomBoxShadowContainer(
             circleRadius: 12,
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 500;
+                if (isMobile) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildLabel("Status"),
-                            const SizedBox(height: 4),
-                            CustomDropDownWithSearch<String>(
-                              hintText: "Select status",
-                              title: "",
-                              value: _selectedStatus,
-                              items: const [
-                                "Paid",
-                                "Pending",
-                              ],
-                              focusNode: _statusFocus,
-                              onChanged: (value) {
-                                setState(() => _selectedStatus = value);
-                                FocusScope.of(context)
-                                    .requestFocus(_paymentMethodFocus);
-                              },
-                              displayText: (item) => item,
-                              showName: false,
-                              height: 48,
-                            ),
-                          ],
-                        ),
+                      _buildLabel("Status"),
+                      const SizedBox(height: 4),
+                      CustomDropDownWithSearch<String>(
+                        hintText: "Select status",
+                        title: "",
+                        value: _selectedStatus,
+                        items: const ["Paid", "Pending"],
+                        focusNode: _statusFocus,
+                        onChanged: (value) {
+                          setState(() => _selectedStatus = value);
+                          FocusScope.of(context).requestFocus(_paymentMethodFocus);
+                        },
+                        displayText: (item) => item,
+                        showName: false,
+                        height: 48,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildLabel("Payment Method"),
-                            const SizedBox(height: 4),
-                            CustomDropDownWithSearch<String>(
-                              hintText: _isLoadingPaymentMethods
-                                  ? "Loading..."
-                                  : "Payment Method",
-                              title: "",
-                              value: _selectedPaymentMethod,
-                              items:
-                                  _paymentMethods.map((m) => m.value).toList(),
-                              focusNode: _paymentMethodFocus,
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedPaymentMethod = value;
-                                });
-                              },
-                              displayText: (item) {
-                                try {
-                                  return _paymentMethods
-                                      .firstWhere((m) => m.value == item)
-                                      .description;
-                                } catch (e) {
-                                  return item;
+                      const SizedBox(height: 10),
+                      _buildLabel("Payment Method"),
+                      const SizedBox(height: 4),
+                      CustomDropDownWithSearch<String>(
+                        hintText: _isLoadingPaymentMethods
+                            ? "Loading..."
+                            : "Payment Method",
+                        title: "",
+                        value: _selectedPaymentMethod,
+                        items: _paymentMethods.map((m) => m.value).toList(),
+                        focusNode: _paymentMethodFocus,
+                        onChanged: (value) =>
+                            setState(() => _selectedPaymentMethod = value),
+                        displayText: (item) {
+                          try {
+                            return _paymentMethods
+                                .firstWhere((m) => m.value == item)
+                                .description;
+                          } catch (e) {
+                            return item;
+                          }
+                        },
+                        showName: false,
+                        height: 48,
+                      ),
+                      const SizedBox(height: 10),
+                      // Discount button
+                      InkWell(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => CouponModal(
+                              subTotal: _netTotal + _totalTax,
+                              initialFlatDiscount: _discount,
+                              initialPercentageDiscount: _discountPercentage,
+                              initialCouponCode: _couponCode,
+                              isCouponApplied: _isCouponApplied,
+                              onCouponAction: (couponCode, shouldApply,
+                                  {double? flatDiscount,
+                                  double? percentageDiscount}) async {
+                                if (shouldApply) {
+                                  setState(() {
+                                    _couponCode = couponCode;
+                                    _isCouponApplied = true;
+                                    if (percentageDiscount != null &&
+                                        percentageDiscount > 0) {
+                                      _discountPercentage = percentageDiscount;
+                                      _discount = 0;
+                                    } else {
+                                      _discountPercentage = 0;
+                                      _discount = flatDiscount ?? 0;
+                                    }
+                                  });
+                                  _calculateInvoiceTotal();
+                                } else {
+                                  setState(() {
+                                    _couponCode = "";
+                                    _isCouponApplied = false;
+                                    _discount = 0;
+                                    _discountPercentage = 0;
+                                  });
+                                  _calculateInvoiceTotal();
                                 }
                               },
-                              showName: false,
-                              height: 48,
                             ),
-                          ],
+                          );
+                        },
+                        child: Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.discount_outlined,
+                                  size: 18, color: Colors.blue),
+                              const SizedBox(width: 10),
+                              Text('Discount',
+                                  style: buildCustomStyle(FontWeightManager.medium,
+                                      FontSize.s14, 0.14, Colors.blue)),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildLabel(""), // Empty label to align with Status
-                          const SizedBox(height: 4),
-                          InkWell(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => CouponModal(
-                                  subTotal: _netTotal + _totalTax,
-                                  initialFlatDiscount: _discount,
-                                  initialPercentageDiscount:
-                                      _discountPercentage,
-                                  initialCouponCode: _couponCode,
-                                  isCouponApplied: _isCouponApplied,
-                                  onCouponAction: (couponCode, shouldApply,
-                                      {double? flatDiscount,
-                                      double? percentageDiscount}) async {
-                                    if (shouldApply) {
-                                      setState(() {
-                                        _couponCode = couponCode;
-                                        _isCouponApplied = true;
-                                        if (percentageDiscount != null &&
-                                            percentageDiscount > 0) {
-                                          _discountPercentage =
-                                              percentageDiscount;
-                                          _discount = 0; // Recalculated below
-                                        } else {
-                                          _discountPercentage = 0;
-                                          _discount = flatDiscount ?? 0;
-                                        }
-                                      });
-                                      _calculateInvoiceTotal();
-                                    } else {
-                                      setState(() {
-                                        _couponCode = "";
-                                        _isCouponApplied = false;
-                                        _discount = 0;
-                                        _discountPercentage = 0;
-                                      });
-                                      _calculateInvoiceTotal();
-                                    }
-                                  },
-                                ),
-                              );
-                            },
-                            child: Container(
-                              height: 48, // Match dropdown height
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: ColorManager.boxShadowColor,
-                                    blurRadius: 3,
-                                    offset: Offset(1, 1),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.discount_outlined,
-                                    size: 18,
-                                    color: Colors.blue,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    'Discount',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s14,
-                                      0.14,
-                                      Colors.blue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const Expanded(flex: 2, child: SizedBox()),
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+                      const SizedBox(height: 10),
                       _buildSummaryRow('Total Amount', _netTotal),
                       const SizedBox(height: 5),
                       _buildSummaryRow('All Tax Amount', _totalTax),
@@ -1258,9 +1220,193 @@ class _CreateInvoiceModalState extends State<CreateInvoiceModal> {
                       ),
                       _buildNetTotalRow('Total Payable', _totalPayable),
                     ],
-                  ),
-                )
-              ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildLabel("Status"),
+                                const SizedBox(height: 4),
+                                CustomDropDownWithSearch<String>(
+                                  hintText: "Select status",
+                                  title: "",
+                                  value: _selectedStatus,
+                                  items: const [
+                                    "Paid",
+                                    "Pending",
+                                  ],
+                                  focusNode: _statusFocus,
+                                  onChanged: (value) {
+                                    setState(() => _selectedStatus = value);
+                                    FocusScope.of(context)
+                                        .requestFocus(_paymentMethodFocus);
+                                  },
+                                  displayText: (item) => item,
+                                  showName: false,
+                                  height: 48,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildLabel("Payment Method"),
+                                const SizedBox(height: 4),
+                                CustomDropDownWithSearch<String>(
+                                  hintText: _isLoadingPaymentMethods
+                                      ? "Loading..."
+                                      : "Payment Method",
+                                  title: "",
+                                  value: _selectedPaymentMethod,
+                                  items: _paymentMethods.map((m) => m.value).toList(),
+                                  focusNode: _paymentMethodFocus,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedPaymentMethod = value;
+                                    });
+                                  },
+                                  displayText: (item) {
+                                    try {
+                                      return _paymentMethods
+                                          .firstWhere((m) => m.value == item)
+                                          .description;
+                                    } catch (e) {
+                                      return item;
+                                    }
+                                  },
+                                  showName: false,
+                                  height: 48,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildLabel(""),
+                              const SizedBox(height: 4),
+                              InkWell(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => CouponModal(
+                                      subTotal: _netTotal + _totalTax,
+                                      initialFlatDiscount: _discount,
+                                      initialPercentageDiscount:
+                                          _discountPercentage,
+                                      initialCouponCode: _couponCode,
+                                      isCouponApplied: _isCouponApplied,
+                                      onCouponAction: (couponCode, shouldApply,
+                                          {double? flatDiscount,
+                                          double? percentageDiscount}) async {
+                                        if (shouldApply) {
+                                          setState(() {
+                                            _couponCode = couponCode;
+                                            _isCouponApplied = true;
+                                            if (percentageDiscount != null &&
+                                                percentageDiscount > 0) {
+                                              _discountPercentage =
+                                                  percentageDiscount;
+                                              _discount = 0;
+                                            } else {
+                                              _discountPercentage = 0;
+                                              _discount = flatDiscount ?? 0;
+                                            }
+                                          });
+                                          _calculateInvoiceTotal();
+                                        } else {
+                                          setState(() {
+                                            _couponCode = "";
+                                            _isCouponApplied = false;
+                                            _discount = 0;
+                                            _discountPercentage = 0;
+                                          });
+                                          _calculateInvoiceTotal();
+                                        }
+                                      },
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  height: 48,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: ColorManager.boxShadowColor,
+                                        blurRadius: 3,
+                                        offset: Offset(1, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.discount_outlined,
+                                        size: 18,
+                                        color: Colors.blue,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Discount',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s14,
+                                          0.14,
+                                          Colors.blue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Expanded(flex: 2, child: SizedBox()),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildSummaryRow('Total Amount', _netTotal),
+                          const SizedBox(height: 5),
+                          _buildSummaryRow('All Tax Amount', _totalTax),
+                          const SizedBox(height: 5),
+                          _buildSummaryRow('Discount', _discount, isDiscount: true),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10.0),
+                            child: Divider(thickness: 1, height: 1),
+                          ),
+                          _buildNetTotalRow('Total Payable', _totalPayable),
+                        ],
+                      ),
+                    )
+                  ],
+                );
+              },
             ),
           ),
 

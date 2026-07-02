@@ -62,6 +62,23 @@ Located at [`lib/screens/transactions/widgets/share_helper.dart`](file:///c:/Use
 
 Each method displays a customized `BottomSheet` with three primary sharing channels: **Share as PDF**, **Share to Email**, and **Share via WhatsApp**.
 
+#### Why Separate Share Methods for Each Document Type?
+Rather than using a single unified "generic" share handler, the system implements dedicated methods for Invoices, Receipts, and Vouchers. This is driven by several key technical and design requirements:
+
+1. **Distinct Data Models & Compile-Time Type Safety:**
+   Each document type depends on a completely different model structure:
+   * Invoices require `InvoiceDetails` (with customer info, itemized grids, taxes, and terms).
+   * Receipts require `lr.Receipt` (with payment references and methods).
+   * Customer/Supplier Vouchers require their respective ledger and payment account data models.
+   Dedicated methods enforce compile-time checks, preventing runtime type matching issues.
+
+2. **Custom Document Templates & Configurations:**
+   Each document loads layout definitions from the backend using different template config types (`Invoice` maps to `type: 'default'`, whereas `Receipt` maps to `type: 'receipt'`, etc.). Separating these methods simplifies parameter maps and config retrieval.
+
+3. **Different Communication Contexts & Templates:**
+   * **Subject and Message Formatting:** Email and message text dynamically change depending on the document type (e.g., invoice reminders vs. payment receipts vs. voucher adjustments).
+   * **Sharing Channel Payloads:** Invoices send a web URL link via WhatsApp (allowing the customer to view/pay the invoice online), whereas Receipts and Vouchers generate the PDF file locally and attach it directly via WhatsApp.
+
 ### B. PDF Document Template Builders
 Located under [`lib/screens/transactions/widgets/pdf_builders/`](file:///c:/Users/Mubashir/eposmob/lib/screens/transactions/widgets/pdf_builders/), these builders construct custom A4 PDF documents. They integrate layout definitions, dynamic tables, totals calculation, and accents fetched from document settings:
 

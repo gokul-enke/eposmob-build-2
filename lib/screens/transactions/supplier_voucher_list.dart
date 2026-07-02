@@ -20,6 +20,7 @@ import '../../resources/style_manager.dart';
 import 'widgets/supplier_voucher_print.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
+import 'supplier_voucher_list_mobile.dart'; 
 
 class SupplierVoucherListScreen extends StatefulWidget {
   const SupplierVoucherListScreen({super.key});
@@ -119,10 +120,71 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
         .listAllSupplierVouchers(accessToken: accessToken);
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final bool isMobile = size.width < 700;
 
+    if (isMobile) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Consumer<SupplierVoucherProvider>(
+            builder: (context, voucherProvider, child) {
+              // Build supplier map from allVouchers
+              final supplierMap = <int, String>{};
+              for (final v in voucherProvider.allVouchers ?? []) {
+                supplierMap[v.supplier.id] = v.supplier.name;
+              }
+              return SupplierVoucherMobileView(
+                vouchers: voucherProvider.voucherListDetails ?? const <SupplierVoucher>[],
+                isLoading: voucherProvider.isLoading,
+                voucherNumberController: voucherNumberController,
+                supplierFocusNode: supplierFocusNode,
+                typeFocusNode: typeFocusNode,
+                statusFocusNode: statusFocusNode,
+                selectedSupplierId: selectedSupplierId,
+                selectedType: selectedType,
+                selectedStatus: selectedStatus,
+                supplierOptions: supplierMap,
+                typeOptions: voucherProvider.getTypeOptions()
+                    .where((t) => t != 'All Types').toList(),
+                statusOptions: voucherProvider.getStatusOptions()
+                    .where((s) => s != 'All Status').toList(),
+                onSearchChanged: searchVouchers,
+                onReset: resetSearch,
+                onSupplierChanged: (v) {
+                  setState(() => selectedSupplierId = v);
+                  searchVouchers();
+                },
+                onTypeChanged: (v) {
+                  setState(() => selectedType = v);
+                  searchVouchers();
+                },
+                onStatusChanged: (v) {
+                  setState(() => selectedStatus = v);
+                  searchVouchers();
+                },
+                onViewDetails: _showVoucherDetails,
+                onShare: (voucher) => ShareHelper.showShareSupplierVoucherSheet(
+                  context: context,
+                  voucher: voucher,
+                ),
+                currentPage: voucherProvider.currentPage,
+                totalPages: voucherProvider.totalPages,
+                onPageChanged: (page) => voucherProvider.goToPage(page),
+                onCreateVoucher: () {
+                  final controller = Get.find<SideBarController>();
+                  controller.index.value =
+                      (controller.index.value == 75) ? 76 : 73;
+                },
+                onRefresh: refreshData,
+              );
+            },
+          ),
+        ),
+      );
+    }
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: refreshData,

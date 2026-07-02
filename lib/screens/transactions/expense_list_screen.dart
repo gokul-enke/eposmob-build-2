@@ -16,6 +16,7 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import '../../models/master_data.dart';
 import '../../providers/master_data_provider.dart';
+import 'expense_list_mobile.dart';
 
 class ExpenseListScreen extends StatefulWidget {
   const ExpenseListScreen({super.key});
@@ -103,8 +104,67 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     super.dispose();
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 700;
+
+    if (isMobile) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Consumer<ExpenseProvider>(
+            builder: (context, provider, child) {
+              final currency =
+                  Provider.of<AppSettingsProvider>(context, listen: false)
+                          .appSettings
+                          ?.currency ??
+                      '';
+              final categoryList = [
+                'All',
+                ...provider.categoryOptions
+                    .map((e) => e['name']?.toString() ?? '')
+                    .where((e) => e.isNotEmpty),
+              ];
+              final debitList = [
+                'All',
+                ...provider.debitAccountOptions
+                    .map((e) => e['name']?.toString() ?? '')
+                    .where((e) => e.isNotEmpty),
+              ];
+              return ExpenseMobileView(
+                expenses: provider.expenses,
+                isLoading: provider.isLoading,
+                selectedCategory: selectedCategory,
+                selectedDebitAccount: selectedDebitAccount,
+                selectedStatus: selectedStatus,
+                categoryOptions: categoryList,
+                debitAccountOptions: debitList,
+                statusOptions: provider.availableStatuses,
+                searchTextController: searchTextController,
+                onCategoryChanged: (val) {
+                  setState(() => selectedCategory = val);
+                  provider.setCategory(val ?? 'All');
+                },
+                onDebitAccountChanged: (val) {
+                  setState(() => selectedDebitAccount = val);
+                  provider.setDebitAccount(val ?? 'All');
+                },
+                onStatusChanged: (val) {
+                  setState(() => selectedStatus = val);
+                  provider.setStatus(val ?? 'All');
+                },
+                onReset: () => _resetFilters(provider),
+                onCreateExpense: () => sideBarController.index.value = 94,
+                currentPage: provider.currentPage,
+                totalPages: provider.totalPages,
+                onPageChanged: (page) => provider.setPage(page),
+              );
+            },
+          ),
+        ),
+      );
+    }
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),

@@ -19,6 +19,7 @@ import '../../resources/style_manager.dart';
 import 'create_receipt_modal.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
+import 'receipt_list_mobile.dart';
 
 class ReceiptListScreen extends StatefulWidget {
   const ReceiptListScreen({super.key});
@@ -165,7 +166,62 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final bool isMobile = size.width < 700;
 
+    if (isMobile) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Consumer<InvoiceProvider>(
+            builder: (context, invoiceProvider, child) {
+              return ReceiptMobileView(
+                receipts: invoiceProvider.getListReceipt ?? const <Receipt>[],
+                isLoading: invoiceProvider.isLoading,
+                receiptNumberController: receiptNumberController,
+                paymentReferenceController: paymentReferenceController,
+                searchTextController: searchTextController,
+                phoneController: phoneController,
+                emailController: emailController,
+                receiptNoFocusNode: receiptNoFocusNode,
+                referenceNoFocusNode: referenceNoFocusNode,
+                nameFocusNode: nameFocusNode,
+                phoneFocusNode: phoneFocusNode,
+                emailFocusNode: emailFocusNode,
+                selectedStatus: selectedStatus,
+                selectedPaymentMethod: paymentMethod,
+                statusOptions: invoiceProvider.getReceiptStatusOptions()
+                    .where((s) => s != 'All Status').toList(),
+                paymentMethodOptions: invoiceProvider.getPaymentMethodOptions()
+                    .where((m) => m != 'All Payment Methods').toList(),
+                onSearchChanged: searchReceipts,
+                onReset: resetSearch,
+                onStatusChanged: (v) {
+                  setState(() => selectedStatus = v);
+                  searchReceipts();
+                },
+                onPaymentMethodChanged: (v) {
+                  setState(() => paymentMethod = v);
+                  searchReceipts();
+                },
+                onViewDetails: _showReceiptDetails,
+                onShare: (receipt) => ShareHelper.showShareReceiptSheet(
+                  context: context,
+                  receipt: receipt,
+                ),
+                currentPage: invoiceProvider.receiptCurrentPage,
+                totalPages: invoiceProvider.receiptTotalPages,
+                onPageChanged: (page) => invoiceProvider.goToReceiptPage(page),
+                onCreateReceipt: () async {
+                  final result = await showCreateReceiptModal(context, size);
+                  if (result == true) await refreshReceipts();
+                },
+                onRefresh: refreshData,
+              );
+            },
+          ),
+        ),
+      );
+    }
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: refreshData,
