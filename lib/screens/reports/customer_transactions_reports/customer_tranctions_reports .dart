@@ -21,7 +21,7 @@ import 'customer_transaction_details_screen.dart';
 // Add imports for customer autocomplete and date filtering
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
-// components/build_calendar_selection.dart removed as we now use standard pickers
+import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'dart:async';
 
 class CustomerTransactionsReportScreen extends StatefulWidget {
@@ -265,26 +265,11 @@ class _CustomerTransactionsReportScreenState
   // Combined Date and Time selection method
   Future<void> _selectDateTime(BuildContext context,
       {required bool isFromDate}) async {
-    final DateTime? pickedDate = await showDatePicker(
+    final DateTime? pickedDate = await showAutoDismissDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: ColorManager.kPrimaryColor, // Header background color
-              onPrimary: Colors.white, // Header text color
-              surface: Colors.white, // Calendar background
-              onSurface: Colors.black, // Calendar text color
-            ),
-            dialogBackgroundColor: Colors.white, // Dialog background
-            cardColor: Colors.white, // Card background
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (pickedDate != null) {

@@ -43,6 +43,7 @@ import 'package:pos_machine/providers/supplier_voucher_provider.dart';
 import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/providers/expense_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/providers/app_font_provider.dart';
@@ -395,6 +396,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SupplierVoucherProvider()),
         ChangeNotifierProvider(create: (_) => AppFontProvider()),
         ChangeNotifierProvider(create: (_) => QuotationsProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: KeyboardDispatcher(
         child: Consumer<KeyboardFocusHighlightProvider>(

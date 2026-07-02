@@ -18,6 +18,8 @@ class CalendarPickerTableCell extends StatefulWidget {
   final bool isForExpiry;
   final bool isAllowEdit;
   final bool allowTextInput;
+  final bool autoDismiss;
+  final FocusNode? focusNode;
 
   const CalendarPickerTableCell({
     Key? key, 
@@ -31,6 +33,8 @@ class CalendarPickerTableCell extends StatefulWidget {
     this.isForExpiry = false,
     this.isAllowEdit = true,
     this.allowTextInput = false,
+    this.autoDismiss = true,
+    this.focusNode,
   }) : super(key: key);
 
   @override
@@ -77,6 +81,8 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
   final FocusNode textFocusNode = FocusNode();
   Timer? _debounceTimer;
 
+  bool _isPickerOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -108,6 +114,10 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
         });
       }
     });
+
+    if (widget.focusNode != null) {
+      widget.focusNode!.addListener(_handleFocusChange);
+    }
   }
 
   @override
@@ -115,7 +125,25 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
     _debounceTimer?.cancel();
     textController.dispose();
     textFocusNode.dispose();
+    if (widget.focusNode != null) {
+      widget.focusNode!.removeListener(_handleFocusChange);
+    }
     super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (widget.focusNode?.hasFocus ?? false) {
+      if (!_isPickerOpen) {
+        _isPickerOpen = true;
+        _selectDate(context).then((_) {
+          // Advance focus so it doesn't loop
+          FocusScope.of(context).nextFocus();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            _isPickerOpen = false;
+          });
+        });
+      }
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -132,65 +160,166 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
       }
     }
 
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate.isBefore(firstDate) ? firstDate :
-                  initialDate.isAfter(lastDate) ? lastDate : initialDate,
-      firstDate: firstDate,
-      lastDate: lastDate,
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: ColorManager.kPrimaryColor,
-              onPrimary: Colors.white,
-              onSurface: ColorManager.textColor,
-              surface: Colors.white,
-              background: Colors.white,
-            ),
-            dialogBackgroundColor: Colors.white,
-            canvasColor: Colors.white,
-            cardColor: Colors.white,
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: ColorManager.kPrimaryColor,
+    final DateTime? picked;
+    debugPrint("=== AUTODISMISS STATUS: ${widget.autoDismiss} ===");
+    if (widget.autoDismiss) {
+      DateTime currentSelected = initialDate;
+      picked = await showDialog<DateTime>(
+        context: context,
+        builder: (BuildContext context) {
+          return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: ColorScheme.light(
+                    primary: ColorManager.kPrimaryColor,
+                    onPrimary: Colors.white,
+                    onSurface: ColorManager.textColor,
+                    surface: Colors.white,
+                    background: Colors.white,
+                  ),
+                  dialogBackgroundColor: Colors.white,
+                  canvasColor: Colors.white,
+                  cardColor: Colors.white,
+                  datePickerTheme: DatePickerThemeData(
+                    backgroundColor: Colors.white,
+                    surfaceTintColor: Colors.white,
+                    headerBackgroundColor: ColorManager.kPrimaryColor,
+                    headerForegroundColor: Colors.white,
+                    dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return ColorManager.kPrimaryColor;
+                      }
+                      return Colors.white;
+                    }),
+                    dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+                      if (states.contains(MaterialState.selected)) {
+                        return Colors.white;
+                      }
+                      return ColorManager.textColor;
+                    }),
+                    dividerColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    elevation: 0,
+                  ),
+                ),
+                child: Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Container(
+                    color: Colors.white,
+                    width: 320,
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CalendarDatePicker(
+                          key: ValueKey(currentSelected),
+                          initialDate: currentSelected.isBefore(firstDate) ? firstDate :
+                                      currentSelected.isAfter(lastDate) ? lastDate : currentSelected,
+                          firstDate: firstDate,
+                          lastDate: lastDate,
+                          onDateChanged: (DateTime date) {
+                            if (date.year != currentSelected.year) {
+                              setState(() {
+                                currentSelected = date;
+                              });
+                            } else {
+                              Navigator.of(context).pop(date);
+                            }
+                          },
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16.0),
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  color: ColorManager.textColor.withOpacity(0.6),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } else {
+      picked = await showDatePicker(
+        context: context,
+        initialDate: initialDate.isBefore(firstDate) ? firstDate :
+                    initialDate.isAfter(lastDate) ? lastDate : initialDate,
+        firstDate: firstDate,
+        lastDate: lastDate,
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: ColorManager.kPrimaryColor,
+                onPrimary: Colors.white,
+                onSurface: ColorManager.textColor,
+                surface: Colors.white,
+                background: Colors.white,
+              ),
+              dialogBackgroundColor: Colors.white,
+              canvasColor: Colors.white,
+              cardColor: Colors.white,
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+              datePickerTheme: DatePickerThemeData(
                 backgroundColor: Colors.white,
+                surfaceTintColor: Colors.white,
+                headerBackgroundColor: ColorManager.kPrimaryColor,
+                headerForegroundColor: Colors.white,
+                dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) {
+                    return ColorManager.kPrimaryColor;
+                  }
+                  return Colors.white;
+                }),
+                dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) {
+                    return Colors.white;
+                  }
+                  return ColorManager.textColor;
+                }),
+                dividerColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                elevation: 0,
+              ),
+              inputDecorationTheme: const InputDecorationTheme(
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
               ),
             ),
-            datePickerTheme: DatePickerThemeData(
-              backgroundColor: Colors.white,
-              surfaceTintColor: Colors.white,
-              headerBackgroundColor: ColorManager.kPrimaryColor,
-              headerForegroundColor: Colors.white,
-              dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return ColorManager.kPrimaryColor;
-                }
-                return Colors.white;
-              }),
-              dayForegroundColor: MaterialStateProperty.resolveWith((states) {
-                if (states.contains(MaterialState.selected)) {
-                  return Colors.white;
-                }
-                return ColorManager.textColor;
-              }),
-              dividerColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              elevation: 0,
-            ),
-            inputDecorationTheme: const InputDecorationTheme(
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              disabledBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              focusedErrorBorder: InputBorder.none,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
+            child: child!,
+          );
+        },
+      );
+    }
     
     if (picked != null && picked != selectedDate) {
       _updateSelectedDate(picked);
@@ -470,113 +599,136 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
   Widget build(BuildContext context) {
     final hasDate = selectedDate != null || widget.initialDate != null;
     
-    return GestureDetector(
-      onTap: () => _selectDate(context),
-      child: BuildBoxShadowContainer(
-        circleRadius: 7,
-        blurRadius: 6,
-        offsetValue: const Offset(1, 1),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Calendar icon
-            Icon(
-              Icons.calendar_today,
-              size: 16,
-              color: Colors.grey.shade600,
-            ),
-            const SizedBox(width: 12),
-            // Date display/text input area
-            Expanded(
-              child: isTextInputMode && widget.allowTextInput
-                ? TextFormField(
-                    controller: textController,
-                    focusNode: textFocusNode,
-                    inputFormatters: [DateInputFormatter()],
-                    decoration: InputDecoration(
-                      hintText: 'Type: 20250205',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                      isDense: true,
-                      hintStyle: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.27,
-                        Colors.black87,
-                      ),
-                    ),
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s12,
-                      0.27,
-                      ColorManager.textColor.withOpacity(.5),
-                    ),
-                    onFieldSubmitted: _handleTextInput,
-                    onChanged: _onTextChanged,
-                    keyboardType: TextInputType.number,
-                  )
-                : Container(
-                    width: double.infinity,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _getFormattedDate(),
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s12,
-                        0.27,
-                        Colors.black87,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-            ),
-            // Mode toggle icon (edit icon for text input) - only show if allowTextInput is true
-            if (!isTextInputMode && widget.allowTextInput)
-              InkWell(
-                onTap: _toggleInputMode,
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: Icon(
-                    Icons.edit,
-                    size: 14,
+    final focusNode = widget.focusNode ?? FocusNode();
+    
+    return Focus(
+      focusNode: focusNode,
+      onKey: (node, event) {
+        if (event is RawKeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.enter ||
+             event.logicalKey == LogicalKeyboardKey.space)) {
+          _selectDate(context);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: ListenableBuilder(
+        listenable: focusNode,
+        builder: (context, _) {
+          final hasFocus = focusNode.hasFocus;
+          return GestureDetector(
+            onTap: () => _selectDate(context),
+            child: BuildBoxShadowContainer(
+              circleRadius: 7,
+              blurRadius: 6,
+              offsetValue: const Offset(1, 1),
+              border: hasFocus
+                  ? Border.all(color: ColorManager.kPrimaryColor, width: 1.2)
+                  : null,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Calendar icon
+                  Icon(
+                    Icons.calendar_today,
+                    size: 16,
                     color: Colors.grey.shade600,
                   ),
-                ),
-              ),
-            // Close icon when in text input mode
-            if (isTextInputMode && widget.allowTextInput)
-              InkWell(
-                onTap: _toggleInputMode,
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: Icon(
-                    Icons.close,
-                    size: 14,
-                    color: Colors.grey.shade600,
+                  const SizedBox(width: 12),
+                  // Date display/text input area
+                  Expanded(
+                    child: isTextInputMode && widget.allowTextInput
+                      ? TextFormField(
+                          controller: textController,
+                          focusNode: textFocusNode,
+                          inputFormatters: [DateInputFormatter()],
+                          decoration: InputDecoration(
+                            hintText: 'Type: 20250205',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            isDense: true,
+                            hintStyle: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.27,
+                              Colors.black87,
+                            ),
+                          ),
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s12,
+                            0.27,
+                            ColorManager.textColor.withOpacity(.5),
+                          ),
+                          onFieldSubmitted: _handleTextInput,
+                          onChanged: _onTextChanged,
+                          keyboardType: TextInputType.number,
+                        )
+                      : Container(
+                          width: double.infinity,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _getFormattedDate(),
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.27,
+                              Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                   ),
-                ),
+                  // Mode toggle icon (edit icon for text input) - only show if allowTextInput is true
+                  if (!isTextInputMode && widget.allowTextInput)
+                    InkWell(
+                      onTap: _toggleInputMode,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2.0),
+                        child: Icon(
+                          Icons.edit,
+                          size: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  // Close icon when in text input mode
+                  if (isTextInputMode && widget.allowTextInput)
+                    InkWell(
+                      onTap: _toggleInputMode,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(2.0),
+                        child: Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  // Required indicator
+                  if (widget.isRequired && !hasDate)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        '*',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.27,
+                          Colors.red,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            // Required indicator
-            if (widget.isRequired && !hasDate)
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text(
-                  '*',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.27,
-                    Colors.red,
-                  ),
-                ),
-              ),
-          ],
-        ),
+            ),
+          );
+        }
       ),
     );
   }
@@ -642,4 +794,108 @@ class _TimePickerTableCellState extends State<TimePickerTableCell> {
       ),
     );
   }
+}
+
+Future<DateTime?> showAutoDismissDatePicker({
+  required BuildContext context,
+  required DateTime initialDate,
+  required DateTime firstDate,
+  required DateTime lastDate,
+}) async {
+  DateTime currentSelected = initialDate;
+  return await showDialog<DateTime>(
+    context: context,
+    builder: (BuildContext context) {
+      return StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: ColorManager.kPrimaryColor,
+                onPrimary: Colors.white,
+                onSurface: ColorManager.textColor,
+                surface: Colors.white,
+                background: Colors.white,
+              ),
+              dialogBackgroundColor: Colors.white,
+              canvasColor: Colors.white,
+              cardColor: Colors.white,
+              datePickerTheme: DatePickerThemeData(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.white,
+                headerBackgroundColor: ColorManager.kPrimaryColor,
+                headerForegroundColor: Colors.white,
+                dayBackgroundColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) {
+                    return ColorManager.kPrimaryColor;
+                  }
+                  return Colors.white;
+                }),
+                dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) {
+                    return Colors.white;
+                  }
+                  return ColorManager.textColor;
+                }),
+                dividerColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                elevation: 0,
+              ),
+            ),
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Container(
+                color: Colors.white,
+                width: 320,
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CalendarDatePicker(
+                      key: ValueKey(currentSelected),
+                      initialDate: currentSelected.isBefore(firstDate) ? firstDate :
+                                  currentSelected.isAfter(lastDate) ? lastDate : currentSelected,
+                      firstDate: firstDate,
+                      lastDate: lastDate,
+                      onDateChanged: (DateTime date) {
+                        if (date.year != currentSelected.year) {
+                          setState(() {
+                            currentSelected = date;
+                          });
+                        } else {
+                          Navigator.of(context).pop(date);
+                        }
+                      },
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 16.0),
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
+                              color: ColorManager.textColor.withOpacity(0.6),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }

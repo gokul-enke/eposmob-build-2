@@ -333,22 +333,6 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       ],
                                     ),
                                   ),
-                                  SizedBox(
-                                    height: size.height * .17,
-                                    child: buildColumnWidgetForTextFields(
-                                      onchanged: (value) {},
-                                      isLeft: true,
-                                      readOnly: false,
-                                      controller: categoryNameEnglishController,
-                                      size: size,
-                                      title: "Category Name - English (US)*",
-                                      hintText: 'Enter...',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
                                   buildColumnWidgetForTextFields(
                                     onchanged: ((value) {
                                       categoryNameEnglishController.text = value ?? '';
@@ -366,6 +350,140 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                     size: size,
                                     title: 'Category Name',
                                     hintText: 'Category Name',
+                                  ),
+                                  SizedBox(
+                                    height: size.height * .17,
+                                    child: buildColumnWidgetForTextFields(
+                                      onchanged: (value) {},
+                                      isLeft: true,
+                                      readOnly: true,
+                                      controller: categoryNameEnglishController,
+                                      size: size,
+                                      title: "Category Name - English (US)*",
+                                      hintText: '',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  SizedBox(
+                                    height: size.height * .17,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        BuildTextTile(
+                                          isStarRed: false,
+                                          isTextField: true,
+                                          title: "Select Parent Category",
+                                          textStyle: buildCustomStyle(
+                                            FontWeightManager.regular,
+                                            FontSize.s14,
+                                            0.27,
+                                            Colors.black.withOpacity(0.6),
+                                          ),
+                                        ),
+                                        //**************** For Category Listing ****************
+                                        BuildBoxShadowContainer(
+                                          circleRadius: 7,
+                                          alignment: Alignment.centerLeft,
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 5, vertical: 0),
+                                          padding:
+                                              const EdgeInsets.only(left: 15),
+                                          height: size.height * .07,
+                                          width: size.width / 3,
+                                          child:
+                                              DropdownButtonFormField<Category>(
+                                            decoration: const InputDecoration(
+                                              border: InputBorder
+                                                  .none, // Remove the underline
+                                            ),
+                                            value: categoryProvider
+                                                        .selectedCategoryIndex >=
+                                                    0
+                                                ? categoryList![categoryProvider
+                                                    .selectedCategoryIndex]
+                                                : null,
+                                            hint: Text(
+                                              'Select Category',
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.27,
+                                                ColorManager.textColor
+                                                    .withOpacity(.5),
+                                              ),
+                                            ),
+                                            items: categoryList!
+                                                .map((Category category) {
+                                                  return DropdownMenuItem<
+                                                          Category>(
+                                                      value: category,
+                                                      child: category
+                                                                  .categoryName ==
+                                                              "ALL"
+                                                          ? Text(
+                                                              ' New Category',
+                                                              style:
+                                                                  buildCustomStyle(
+                                                                FontWeightManager
+                                                                    .medium,
+                                                                FontSize.s12,
+                                                                0.27,
+                                                                ColorManager
+                                                                    .textColor
+                                                                    .withOpacity(
+                                                                        .5),
+                                                              ),
+                                                            )
+                                                          : Text(
+                                                              category.categoryName ??
+                                                                  '',
+                                                              style:
+                                                                  buildCustomStyle(
+                                                                FontWeightManager
+                                                                    .medium,
+                                                                FontSize.s12,
+                                                                0.27,
+                                                                ColorManager
+                                                                    .textColor
+                                                                    .withOpacity(
+                                                                        .5),
+                                                              ),
+                                                            ));
+                                                })
+                                                .toSet()
+                                                .toList(),
+                                            onChanged:
+                                                (Category? selectedCategory) {
+                                              if (selectedCategory != null) {
+                                                // Update the selected category in the provider
+                                                categoryProvider.selectCategory(
+                                                  categoryList.indexOf(
+                                                      selectedCategory),
+                                                  selectedCategory
+                                                          .categoryName ??
+                                                      '',
+                                                  selectedCategory
+                                                          .productsCount ??
+                                                      0,
+                                                );
+                                                debugPrint(
+                                                    "onChanged ${selectedCategory.categoryId}");
+                                                categoryIDController.text =
+                                                    "${selectedCategory.categoryId}";
+                                                debugPrint(
+                                                    "categoryIdController ${categoryIDController.text}");
+                                                categoryProvider.setParentCategory(
+                                                    "${selectedCategory.categoryId ?? 0}");
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   buildColumnWidgetForTextFields(
                                     onchanged: (value) {},

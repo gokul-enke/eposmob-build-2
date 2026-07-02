@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
+import '../../components/build_calendar_selection.dart';
 import '../../components/build_container_box.dart';
 import '../transactions/create_invoice_modal.dart';
 import '../../components/build_dropdown_with_search.dart';
@@ -23,6 +24,8 @@ import '../../providers/app_settings_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/common_details_dialog.dart';
+import 'widgets/share_helper.dart';
 
 class InvoiceListScreen extends StatefulWidget {
   const InvoiceListScreen({super.key});
@@ -50,6 +53,16 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   String? activeBulkSyncType;
   Timer? _invoiceSearchDebounce;
 
+  final FocusNode invoiceNoFocusNode = FocusNode();
+  final FocusNode nameFocusNode = FocusNode();
+  final FocusNode phoneFocusNode = FocusNode();
+  final FocusNode zatcaFocusNode = FocusNode();
+  final FocusNode statusFocusNode = FocusNode();
+  final FocusNode dateFromFocusNode = FocusNode();
+  final FocusNode dateToFocusNode = FocusNode();
+
+  bool _isPickerOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -66,6 +79,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         );
       }
     });
+
+    dateFromFocusNode.addListener(_handleDateFromFocusChange);
+    dateToFocusNode.addListener(_handleDateToFocusChange);
   }
 
   void _resetInvoiceFilters({
@@ -98,6 +114,28 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     });
   }
 
+  void _handleDateFromFocusChange() {
+    if (dateFromFocusNode.hasFocus && !_isPickerOpen) {
+      _openDatePicker(isFromDate: true);
+    }
+  }
+
+  void _handleDateToFocusChange() {
+    if (dateToFocusNode.hasFocus && !_isPickerOpen) {
+      _openDatePicker(isFromDate: false);
+    }
+  }
+
+  Future<void> _openDatePicker({required bool isFromDate}) async {
+    _isPickerOpen = true;
+    await _selectDate(context, isFromDate: isFromDate);
+    // Advance focus so when date dialog dismisses, it doesn't land back and loop
+    FocusScope.of(context).nextFocus();
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _isPickerOpen = false;
+    });
+  }
+
   void _debounceInvoiceSearch() {
     _invoiceSearchDebounce?.cancel();
     _invoiceSearchDebounce =
@@ -116,6 +154,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     emailController.dispose();
     dateFromController.dispose();
     dateToController.dispose();
+    dateFromFocusNode.removeListener(_handleDateFromFocusChange);
+    dateToFocusNode.removeListener(_handleDateToFocusChange);
+    invoiceNoFocusNode.dispose();
+    nameFocusNode.dispose();
+    phoneFocusNode.dispose();
+    zatcaFocusNode.dispose();
+    statusFocusNode.dispose();
+    dateFromFocusNode.dispose();
+    dateToFocusNode.dispose();
     super.dispose();
   }
 
@@ -292,6 +339,31 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           (zatcaRequestStatus == null || zatcaRequestStatus == 'not_sent');
 
         final List<Widget> dynamicItems = [];
+
+        // Always show Share option
+        dynamicItems.add(
+          ListTile(
+            leading: CircleAvatar(
+              radius: 18,
+              backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+              child: const Icon(Icons.share, color: ColorManager.kPrimaryColor),
+            ),
+            title: const Text('Share'),
+            onTap: () async {
+              Navigator.pop(ctx);
+              await ShareHelper.showShareInvoiceSheet(
+                context: context,
+                invoiceId: invoice.id,
+                invoiceNumber: invoice.invoiceNumber,
+                customerName: invoice.customer.user.name,
+                customerPhone: invoice.customer.user.phone,
+                customerEmail: invoice.customer.user.email,
+                amount: invoice.amount,
+                invoiceHash: null,
+              );
+            },
+          ),
+        );
 
         // Always show Phase 1 print when enabled, regardless of status
         if (phase1) {
@@ -624,27 +696,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   // Date selection method
   Future<void> _selectDate(BuildContext context,
       {required bool isFromDate}) async {
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showAutoDismissDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: ColorManager.kPrimaryColor, // Header background color
-              onPrimary: Colors.white, // Header text color
-              surface: Colors.white, // Calendar background
-              onSurface: Colors.black, // Calendar text color
-            ), // Dialog background
-            cardColor: Colors.white,
-            dialogTheme: const DialogThemeData(
-                backgroundColor: Colors.white), // Card background
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null) {
@@ -1117,9 +1173,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           circleRadius: 7,
           child: TextFormField(
             controller: invoiceNumberController,
+            focusNode: invoiceNoFocusNode,
+            autofocus: true,
             onChanged: (value) => _debounceInvoiceSearch(),
             cursorColor: ColorManager.kPrimaryColor,
             cursorHeight: 13,
+            textInputAction: TextInputAction.next,
+            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                 0.18, ColorManager.textColor),
             decoration: decoration.copyWith(
@@ -1127,6 +1187,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               hintStyle: buildCustomStyle(FontWeightManager.medium,
                   FontSize.s10, 0.18, ColorManager.textColor),
               prefixIconColor: Colors.black,
+              focusedBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                borderRadius: BorderRadius.circular(7),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(7),
+              ),
             ),
           ),
         ),
@@ -1155,10 +1223,13 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             circleRadius: 7,
             child: TextFormField(
               controller: phoneController,
+              focusNode: phoneFocusNode,
               onChanged: (value) => _debounceInvoiceSearch(),
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
               keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
@@ -1166,6 +1237,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(7),
+                ),
               ),
             ),
           ),
@@ -1238,9 +1317,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   circleRadius: 7,
                   child: TextFormField(
                     controller: dateFromController,
+                    focusNode: dateFromFocusNode,
                     onTap: () => _selectDate(context, isFromDate: true),
                     readOnly: true,
                     cursorColor: ColorManager.kPrimaryColor,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) => _selectDate(context, isFromDate: true),
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
@@ -1257,6 +1339,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
                     ),
                   ),
                 ),
@@ -1283,9 +1373,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   circleRadius: 7,
                   child: TextFormField(
                     controller: dateToController,
+                    focusNode: dateToFocusNode,
                     onTap: () => _selectDate(context, isFromDate: false),
                     readOnly: true,
                     cursorColor: ColorManager.kPrimaryColor,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) => _selectDate(context, isFromDate: false),
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
@@ -1302,6 +1395,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
                     ),
                   ),
                 ),
@@ -1355,6 +1456,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               displayText: (status) => status.toUpperCase(),
               height: 45,
               margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+              focusNode: statusFocusNode,
             );
           },
         ),
@@ -1386,6 +1488,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             displayText: (status) => status.toUpperCase(),
             height: 45,
             margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            focusNode: zatcaFocusNode,
           );
         },
       ),
@@ -1431,88 +1534,175 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   //   );
   // }
 
-  void _showInvoiceDetails(Invoice invoice) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          elevation: 8,
-          backgroundColor: Colors.white,
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width / 2,
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Invoice Details',
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s24,
-                        0.36,
-                        Colors.black,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _buildDetailRow(
-                            'Invoice Number', invoice.invoiceNumber),
-                        _buildDetailRow(
-                            'Customer Name', invoice.customer.user.name),
-                        _buildDetailRow(
-                            'Customer Phone', invoice.customer.user.phone),
-                        _buildDetailRow('Order Number', ""), //no order number
+  Future<void> _showInvoiceDetails(Invoice invoice) async {
+    final String? token = Provider.of<AuthModel>(context, listen: false).token;
+    if (token == null || token.isEmpty) {
+      showScaffoldError(context: context, message: 'Missing authentication token');
+      return;
+    }
 
-                        _buildDetailRow('Type', invoice.type),
-                        _buildDetailRow('Invoice Date', invoice.invoiceDate),
-                        _buildDetailRow('Due Date', invoice.dueDate),
-                        _buildDetailRow('Amount', invoice.amount.toString()),
-                        _buildDetailRow('Status', invoice.status),
-                      ],
-                    ),
+    showLoadingOverlay(context, message: 'Loading details...');
+    try {
+      final provider = Provider.of<InvoiceProvider>(context, listen: false);
+      await provider.callDetailsOfInvoice(id: invoice.id, accessToken: token);
+      final details = provider.getInvoiceDetails;
+      hideLoadingOverlay();
+
+      if (details == null) {
+        showScaffoldError(context: context, message: 'Failed to load details');
+        return;
+      }
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => CommonDetailsDialog(
+          title: 'Invoice details',
+          gridColumns: [
+            [
+              CommonDetailsDialog.buildKeyValueRow('Invoice Number', details.invoiceNumber),
+              CommonDetailsDialog.buildKeyValueRow('Customer Name', details.customer.name),
+              CommonDetailsDialog.buildKeyValueRow('Customer Phone', details.customer.phone),
+              CommonDetailsDialog.buildKeyValueRow('Amount', details.amount),
+              CommonDetailsDialog.buildKeyValueRow('Type', details.type),
+            ],
+            [
+              CommonDetailsDialog.buildKeyValueRow('Invoice Date', details.invoiceDate),
+              CommonDetailsDialog.buildKeyValueRow('Due Date', details.dueDate),
+              CommonDetailsDialog.buildKeyValueRow('Status', details.status),
+              CommonDetailsDialog.buildKeyValueRow('Order Number', 'N/A'),
+            ],
+          ],
+          sectionTitle: 'Items',
+          tableContent: Column(
+            children: [
+              // Table Header
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade200, width: 1),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                child: Row(
                   children: [
-                    CustomRoundButton(
-                      title: "Close",
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      borderColor: ColorManager.kPrimaryColor,
-                      fct: () => Navigator.pop(context),
-                      height: 45,
-                      width: 120,
-                      fontSize: FontSize.s12,
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        'Item',
+                        style: TextStyle(
+                          fontWeight: FontWeightManager.bold,
+                          fontSize: FontSize.s12,
+                          color: ColorManager.kTitleTextColor,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Quantity',
+                        style: TextStyle(
+                          fontWeight: FontWeightManager.bold,
+                          fontSize: FontSize.s12,
+                          color: ColorManager.kTitleTextColor,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Price',
+                        style: TextStyle(
+                          fontWeight: FontWeightManager.bold,
+                          fontSize: FontSize.s12,
+                          color: ColorManager.kTitleTextColor,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Total',
+                        style: TextStyle(
+                          fontWeight: FontWeightManager.bold,
+                          fontSize: FontSize.s12,
+                          color: ColorManager.kTitleTextColor,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              // Table Rows
+              ...details.invoiceItems.map((item) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          item.itemName,
+                          style: TextStyle(
+                            fontSize: FontSize.s12,
+                            color: ColorManager.textColor,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.quantity.toString(),
+                          style: TextStyle(
+                            fontSize: FontSize.s12,
+                            color: ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.unitAmount,
+                          style: TextStyle(
+                            fontSize: FontSize.s12,
+                            color: ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.totalAmount,
+                          style: TextStyle(
+                            fontSize: FontSize.s12,
+                            color: ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    } catch (e) {
+      hideLoadingOverlay();
+      showScaffoldError(context: context, message: 'Error loading invoice details: $e');
+    }
   }
 
 //------------------------------------------------------debug-------------------------------------------
@@ -1628,11 +1818,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             circleRadius: 7,
             child: TextFormField(
               controller: searchTextController,
+              focusNode: nameFocusNode,
               onChanged: (value) {
                 _debounceInvoiceSearch();
               },
               cursorColor: ColorManager.kPrimaryColor,
               cursorHeight: 13,
+              textInputAction: TextInputAction.next,
+              onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
                   0.18, ColorManager.textColor),
               decoration: decoration.copyWith(
@@ -1640,6 +1833,14 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 hintStyle: buildCustomStyle(FontWeightManager.medium,
                     FontSize.s10, 0.18, ColorManager.textColor),
                 prefixIconColor: Colors.black,
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(7),
+                ),
               ),
             ),
           ),
