@@ -11,7 +11,6 @@ import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_controller.dart';
-import 'package:pos_machine/features/billing/controllers/coordinators/payment_coordinator.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing_tab.dart';
@@ -478,5 +477,3 @@ class BillingPageMobileState extends State<BillingPageMobile>
     );
   }
 }
-
-

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
-import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/models/master_data.dart';
@@ -32,7 +31,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   }
 
   Future<void> _loadPaymentMethods() async {
-    final masterDataProvider = Provider.of<MasterDataProvider>(context, listen: false);
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
     final cachedMethods = masterDataProvider.paymentMethods;
     if (cachedMethods != null && cachedMethods.isNotEmpty) {
       _assignPaymentMethodIds(cachedMethods);
@@ -108,7 +108,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
     if (lower.contains('card')) return Icons.credit_card;
     if (lower.contains('upi')) return Icons.qr_code;
     if (lower.contains('cod')) return Icons.local_shipping;
-    if (lower.contains('debit') || lower.contains('credit')) return Icons.account_balance_wallet;
+    if (lower.contains('debit') || lower.contains('credit'))
+      return Icons.account_balance_wallet;
     return Icons.payment;
   }
 
@@ -172,11 +173,37 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
 
     // Prepare list of payment items: CASH, CARD, UPI, COD, CREDIT (DEBIT)
     final List<Map<String, dynamic>> items = [
-      {'name': 'Cash', 'type': 'CASH', 'controller': bp.cashAmountController, 'selected': bp.isCashSelected},
-      {'name': 'Card', 'type': 'CARD', 'controller': bp.cardAmountController, 'selected': bp.isCardSelected},
-      {'name': 'UPI', 'type': 'UPI', 'controller': bp.upiAmountController, 'selected': bp.isUpiSelected},
-      {'name': 'COD', 'type': 'COD', 'controller': bp.codAmountController, 'selected': bp.isCodSelected},
-      {'name': 'Credit', 'type': 'DEBIT', 'controller': bp.debitAmountController, 'selected': bp.isDebitSelected, 'readOnly': true},
+      {
+        'name': 'Cash',
+        'type': 'CASH',
+        'controller': bp.cashAmountController,
+        'selected': bp.isCashSelected
+      },
+      {
+        'name': 'Card',
+        'type': 'CARD',
+        'controller': bp.cardAmountController,
+        'selected': bp.isCardSelected
+      },
+      {
+        'name': 'UPI',
+        'type': 'UPI',
+        'controller': bp.upiAmountController,
+        'selected': bp.isUpiSelected
+      },
+      {
+        'name': 'COD',
+        'type': 'COD',
+        'controller': bp.codAmountController,
+        'selected': bp.isCodSelected
+      },
+      {
+        'name': 'Credit',
+        'type': 'DEBIT',
+        'controller': bp.debitAmountController,
+        'selected': bp.isDebitSelected,
+        'readOnly': true
+      },
     ];
 
     if (_isLoadingPaymentMethods && _paymentMethods.isEmpty) {
@@ -207,11 +234,16 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
 
             // Sync debit amount with auto-calculated balance if DEBIT is selected
             if (type == 'DEBIT' && isSelected && bp.totalOrderAmount > 0) {
-              final cashAmount = double.tryParse(bp.cashAmountController.text) ?? 0.0;
-              final cardAmount = double.tryParse(bp.cardAmountController.text) ?? 0.0;
-              final upiAmount = double.tryParse(bp.upiAmountController.text) ?? 0.0;
-              final codAmount = double.tryParse(bp.codAmountController.text) ?? 0.0;
-              final remaining = bp.totalOrderAmount - (cashAmount + cardAmount + upiAmount + codAmount);
+              final cashAmount =
+                  double.tryParse(bp.cashAmountController.text) ?? 0.0;
+              final cardAmount =
+                  double.tryParse(bp.cardAmountController.text) ?? 0.0;
+              final upiAmount =
+                  double.tryParse(bp.upiAmountController.text) ?? 0.0;
+              final codAmount =
+                  double.tryParse(bp.codAmountController.text) ?? 0.0;
+              final remaining = bp.totalOrderAmount -
+                  (cashAmount + cardAmount + upiAmount + codAmount);
               final autoDebit = remaining > 0 ? remaining : 0.0;
               if (controller.text != autoDebit.toStringAsFixed(2)) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -226,7 +258,9 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.shade200,
+                  color: isSelected
+                      ? const Color(0xFF3B82F6)
+                      : Colors.grey.shade200,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
@@ -243,7 +277,9 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                         children: [
                           Icon(
                             _getPaymentIcon(type),
-                            color: isSelected ? const Color(0xFF0066CC) : Colors.grey.shade700,
+                            color: isSelected
+                                ? const Color(0xFF0066CC)
+                                : Colors.grey.shade700,
                             size: 20,
                           ),
                           const SizedBox(width: 12),
@@ -251,8 +287,12 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                             name,
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              color: isSelected ? const Color(0xFF0066CC) : Colors.black87,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                              color: isSelected
+                                  ? const Color(0xFF0066CC)
+                                  : Colors.black87,
                             ),
                           ),
                         ],
@@ -262,17 +302,24 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                       TextField(
                         controller: controller,
                         readOnly: readOnly,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? const Color(0xFF0066CC) : Colors.black87,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? const Color(0xFF0066CC)
+                              : Colors.black87,
                         ),
                         decoration: InputDecoration(
-                          hintText: readOnly ? 'Auto-calculated' : 'Enter $name amount',
+                          hintText: readOnly
+                              ? 'Auto-calculated'
+                              : 'Enter $name amount',
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Colors.grey.shade300),
@@ -284,7 +331,9 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(
-                              color: isSelected ? const Color(0xFF3B82F6) : ColorManager.kPrimaryColor,
+                              color: isSelected
+                                  ? const Color(0xFF3B82F6)
+                                  : ColorManager.kPrimaryColor,
                               width: 1.5,
                             ),
                           ),
@@ -295,7 +344,9 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                             bp.setPaymentMethod(type, true);
                           }
                           if (!readOnly) {
-                            Provider.of<KeyboardProvider>(context, listen: false).show(
+                            Provider.of<KeyboardProvider>(context,
+                                    listen: false)
+                                .show(
                               'number',
                               controller,
                               replaceOnFirstInput: true,
@@ -304,7 +355,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                         },
                         onChanged: (value) {
                           // Update payment selections & calculate balance on input changes
-                          if (value.isNotEmpty && double.tryParse(value) != 0.0) {
+                          if (value.isNotEmpty &&
+                              double.tryParse(value) != 0.0) {
                             if (!isSelected) bp.setPaymentMethod(type, true);
                           }
                           bp.calculateBalance();
@@ -322,7 +374,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
         // Transaction Reference Input
         const Text(
           'Transaction Reference',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+          style: TextStyle(
+              fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         const SizedBox(height: 6),
         TextField(
@@ -331,7 +384,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
             hintText: 'Enter transaction reference number',
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -342,7 +396,8 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.5),
+              borderSide: const BorderSide(
+                  color: ColorManager.kPrimaryColor, width: 1.5),
             ),
           ),
           onTap: () {

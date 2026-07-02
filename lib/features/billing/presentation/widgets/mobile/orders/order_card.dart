@@ -40,7 +40,7 @@ class OrderCard extends StatelessWidget {
         : delivery?.isNotEmpty == true
             ? delivery!
             : 'Special Instructions';
-    return '${order.items.length} items • $suffix';
+    return '${order.items.length} items - $suffix';
   }
 
   @override

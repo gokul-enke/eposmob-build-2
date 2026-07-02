@@ -115,13 +115,11 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
     final bp = Provider.of<BillingProvider>(context, listen: false);
     bp.setMobileNumberText('${customer.name} ${customer.phone}');
     bp.setSelectedCustomer(customer, isManual: true);
-    bp.mobileNumberTextController.text =
-        '${customer.name} ${customer.phone}';
+    bp.mobileNumberTextController.text = '${customer.name} ${customer.phone}';
 
     final accessToken =
         Provider.of<AuthModel>(context, listen: false).token ?? '';
-    Provider.of<CartProvider>(context, listen: false)
-        .fetchCartDataFromApi(
+    Provider.of<CartProvider>(context, listen: false).fetchCartDataFromApi(
       customerId: customer.id ?? 0,
       accessToken: accessToken,
     );
@@ -215,8 +213,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                       : SingleChildScrollView(
                           physics: const BouncingScrollPhysics(
                               parent: AlwaysScrollableScrollPhysics()),
-                          padding: EdgeInsets.only(
-                              bottom: 80 + bottomPadding),
+                          padding: EdgeInsets.only(bottom: 80 + bottomPadding),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -307,8 +304,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
           controller: _searchController,
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
-            hintText:
-                'Search ${_allCustomers.length.toString()} customers....',
+            hintText: 'Search ${_allCustomers.length.toString()} customers....',
             hintStyle: TextStyle(
               color: Colors.grey.shade400,
               fontSize: 14,
@@ -432,8 +428,7 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
                   // Phone
                   Row(
                     children: [
-                      Icon(Icons.phone,
-                          size: 13, color: Colors.grey.shade500),
+                      Icon(Icons.phone, size: 13, color: Colors.grey.shade500),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(

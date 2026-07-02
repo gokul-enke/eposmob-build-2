@@ -40,7 +40,9 @@ class _CartScreenState extends State<CartScreen> {
             final total = provider.cartTotal;
             final summary = provider.priceSummary;
             final tax = summary?.totalTax ?? 0.0;
-            final subtotal = (((summary?.subTotal ?? total) - tax).clamp(0.0, double.infinity) as num).toDouble();
+            final subtotal = (((summary?.subTotal ?? total) - tax)
+                    .clamp(0.0, double.infinity) as num)
+                .toDouble();
 
             return Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
@@ -148,9 +150,8 @@ class _CartScreenState extends State<CartScreen> {
   ) {
     final currentDisplayQty = item.displayQuantity;
     final newDisplayQty = currentDisplayQty + step;
-    final newBaseQty = item.hasSaleUnit
-        ? item.toBaseQuantity(newDisplayQty)
-        : newDisplayQty;
+    final newBaseQty =
+        item.hasSaleUnit ? item.toBaseQuantity(newDisplayQty) : newDisplayQty;
 
     provider.setCartItemQuantity(
       item.product.productId!,
@@ -180,7 +181,8 @@ class _CartHeader extends StatelessWidget {
               onPressed: onBack,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-              icon: const Icon(Icons.arrow_back, color: Colors.black87, size: 26),
+              icon:
+                  const Icon(Icons.arrow_back, color: Colors.black87, size: 26),
             ),
           ),
           const Text(
@@ -309,7 +311,8 @@ class _AddMoreItemsButton extends StatelessWidget {
           child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.add_circle_outline, color: Color(0xFF2E69C8), size: 22),
+              Icon(Icons.add_circle_outline,
+                  color: Color(0xFF2E69C8), size: 22),
               SizedBox(width: 8),
               Text(
                 'Add More Items',
@@ -418,4 +421,3 @@ class _PlaceholderSegment extends StatelessWidget {
     );
   }
 }
-

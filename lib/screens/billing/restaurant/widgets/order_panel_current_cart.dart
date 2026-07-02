@@ -148,13 +148,17 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                         ),
                       ),
                     ),
-                    Container(
-                      width: widget.isCompact ? 32 : 40,
-                      alignment: Alignment.center,
-                      child: Text(
-                        quantity.toStringAsFixed(0),
-                        style: buildCustomStyle(FontWeightManager.bold,
-                            FontSize.s14, 0.21, const Color(0xFF1E293B)),
+                    GestureDetector(
+                      onTap: () => _showEditItemQuantityDialog(cartItem,
+                          isLocal: true),
+                      child: Container(
+                        width: widget.isCompact ? 32 : 40,
+                        alignment: Alignment.center,
+                        child: Text(
+                          quantity.toStringAsFixed(0),
+                          style: buildCustomStyle(FontWeightManager.bold,
+                              FontSize.s14, 0.21, const Color(0xFF059669)),
+                        ),
                       ),
                     ),
                     Material(

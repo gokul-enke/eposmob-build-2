@@ -113,10 +113,14 @@ void main() {
   setUpAll(() async {
     hiveDir = await Directory.systemTemp.createTemp('epos_mobile_smoke_');
     Hive.init(hiveDir.path);
-    if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(HiveStringValueAdapter());
-    if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(HiveLocalCartItemAdapter());
-    if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(HiveSavedOrderAdapter());
-    if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(HiveProductAdapter());
+    if (!Hive.isAdapterRegistered(0))
+      Hive.registerAdapter(HiveStringValueAdapter());
+    if (!Hive.isAdapterRegistered(1))
+      Hive.registerAdapter(HiveLocalCartItemAdapter());
+    if (!Hive.isAdapterRegistered(2))
+      Hive.registerAdapter(HiveSavedOrderAdapter());
+    if (!Hive.isAdapterRegistered(3))
+      Hive.registerAdapter(HiveProductAdapter());
     await Hive.openBox<HiveProduct>('products');
     await Hive.openBox<HiveLocalCartItem>('cart_items');
     await Hive.openBox<HiveSavedOrder>('saved_orders');
@@ -152,20 +156,33 @@ void main() {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthModel>.value(value: auth),
-        ChangeNotifierProvider<CartProvider>(create: (_) => _FakeCartProvider()),
-        ChangeNotifierProvider<BillingProvider>(create: (_) => _FakeBillingProvider()),
-        ChangeNotifierProvider<BarcodeProvider>(create: (_) => BarcodeProvider()),
-        ChangeNotifierProvider<SalesExecutiveProvider>(create: (_) => SalesExecutiveProvider()),
-        ChangeNotifierProvider<AppSettingsProvider>(create: (_) => _FakeAppSettingsProvider()),
-        ChangeNotifierProvider<GridSelectionProvider>(create: (_) => _FakeGridSelectionProvider()),
-        ChangeNotifierProvider<LocalProductProvider>(create: (_) => LocalProductProvider()),
-        ChangeNotifierProvider<CustomerSelectionProvider>(create: (_) => CustomerSelectionProvider()),
-        ChangeNotifierProvider<DeliveryMethodsProvider>(create: (_) => DeliveryMethodsProvider()),
-        ChangeNotifierProvider<KeyboardProvider>(create: (_) => KeyboardProvider()),
+        ChangeNotifierProvider<CartProvider>(
+            create: (_) => _FakeCartProvider()),
+        ChangeNotifierProvider<BillingProvider>(
+            create: (_) => _FakeBillingProvider()),
+        ChangeNotifierProvider<BarcodeProvider>(
+            create: (_) => BarcodeProvider()),
+        ChangeNotifierProvider<SalesExecutiveProvider>(
+            create: (_) => SalesExecutiveProvider()),
+        ChangeNotifierProvider<AppSettingsProvider>(
+            create: (_) => _FakeAppSettingsProvider()),
+        ChangeNotifierProvider<GridSelectionProvider>(
+            create: (_) => _FakeGridSelectionProvider()),
+        ChangeNotifierProvider<LocalProductProvider>(
+            create: (_) => LocalProductProvider()),
+        ChangeNotifierProvider<CustomerSelectionProvider>(
+            create: (_) => CustomerSelectionProvider()),
+        ChangeNotifierProvider<DeliveryMethodsProvider>(
+            create: (_) => DeliveryMethodsProvider()),
+        ChangeNotifierProvider<KeyboardProvider>(
+            create: (_) => KeyboardProvider()),
         ChangeNotifierProvider<SyncProvider>(create: (_) => SyncProvider()),
-        ChangeNotifierProvider<PineLabsTerminalProvider>(create: (_) => PineLabsTerminalProvider()),
-        ChangeNotifierProvider<DiscountProvider>(create: (_) => DiscountProvider()),
-        ChangeNotifierProvider<MasterDataProvider>(create: (_) => MasterDataProvider()),
+        ChangeNotifierProvider<PineLabsTerminalProvider>(
+            create: (_) => PineLabsTerminalProvider()),
+        ChangeNotifierProvider<DiscountProvider>(
+            create: (_) => DiscountProvider()),
+        ChangeNotifierProvider<MasterDataProvider>(
+            create: (_) => MasterDataProvider()),
       ],
       child: const MaterialApp(home: BillingPageMobile()),
     );

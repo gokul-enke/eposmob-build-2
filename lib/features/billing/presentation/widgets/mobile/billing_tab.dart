@@ -124,7 +124,8 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                     onClear: selectedCustomer != null
                         ? () {
                             customerSelection.clearSelectedCustomer();
-                            final bp = Provider.of<BillingProvider>(context, listen: false);
+                            final bp = Provider.of<BillingProvider>(context,
+                                listen: false);
                             bp.mobileNumberTextController.clear();
                             bp.setMobileNumberText("");
                             bp.clearSelectedCustomer();

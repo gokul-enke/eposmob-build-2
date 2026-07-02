@@ -30,24 +30,32 @@ class BillingActionButtons extends StatelessWidget {
           // Confirm Button
           Expanded(
             child: ElevatedButton.icon(
-              icon: isConfirmingOrder 
+              icon: isConfirmingOrder
                   ? const SizedBox(
-                      width: 16, 
-                      height: 16, 
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
                     )
-                  : const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                  : const Icon(Icons.check_circle,
+                      color: Colors.white, size: 18),
               label: const Text(
                 'Confirm',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
-                backgroundColor: hasItems ? const Color(0xFF0056B3) : Colors.grey.shade300,
+                backgroundColor:
+                    hasItems ? const Color(0xFF0056B3) : Colors.grey.shade300,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: (hasItems && !isConfirmingOrder) ? onConfirmOrder : null,
+              onPressed:
+                  (hasItems && !isConfirmingOrder) ? onConfirmOrder : null,
             ),
           ),
           const SizedBox(width: 12),
@@ -57,15 +65,22 @@ class BillingActionButtons extends StatelessWidget {
               icon: const Icon(Icons.print, color: Colors.white, size: 18),
               label: const Text(
                 'Confirm & Print',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
-                backgroundColor: hasItems ? const Color(0xFF15803D) : Colors.grey.shade300,
+                backgroundColor:
+                    hasItems ? const Color(0xFF15803D) : Colors.grey.shade300,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: (hasItems && !isConfirmingOrder) ? onCreateOrderAndPrint : null,
+              onPressed: (hasItems && !isConfirmingOrder)
+                  ? onCreateOrderAndPrint
+                  : null,
             ),
           ),
         ],

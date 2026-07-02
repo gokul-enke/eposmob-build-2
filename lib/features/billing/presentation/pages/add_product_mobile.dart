@@ -72,13 +72,14 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     setState(() => _isLoading = true);
     try {
       final token = Provider.of<AuthModel>(context, listen: false).token ?? '';
-      
+
       // Fetch languages
       await Provider.of<LanguageProvider>(context, listen: false)
           .fetchLanguages(accessToken: token);
 
       // Initialize default unit
-      final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
+      final purchaseProvider =
+          Provider.of<PurchaseProvider>(context, listen: false);
       final unitList = purchaseProvider.getUnitList ?? const <String, String>{};
       if (unitList.isNotEmpty && _selectedUnit == null) {
         setState(() {
@@ -98,10 +99,13 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
 
     try {
       final token = Provider.of<AuthModel>(context, listen: false).token ?? '';
-      final gridProvider = Provider.of<GridSelectionProvider>(context, listen: false);
+      final gridProvider =
+          Provider.of<GridSelectionProvider>(context, listen: false);
       final result = await gridProvider.generateBarcodeAPI(accessToken: token);
 
-      if (result != null && result['status'] == 'success' && result['data'] != null) {
+      if (result != null &&
+          result['status'] == 'success' &&
+          result['data'] != null) {
         final generatedBarcode = result['data']['barcode'];
         setState(() {
           _barcodeController.text = generatedBarcode;
@@ -144,7 +148,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
 
     try {
       final token = Provider.of<AuthModel>(context, listen: false).token ?? '';
-      final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+      final languageProvider =
+          Provider.of<LanguageProvider>(context, listen: false);
 
       final translated = await languageProvider.translateText(
         accessToken: token,
@@ -184,7 +189,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
 
   List<Map<String, dynamic>> _buildProductNamesPayload() {
     final payload = <Map<String, dynamic>>[];
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
 
     for (final language in languageProvider.languages) {
       if (language.code.toLowerCase() == 'en') continue;
@@ -202,7 +208,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
 
   void _submitForm() async {
     if (!_formKeyStep3.currentState!.validate() || _selectedUnit == null) {
-      showScaffoldError(context: context, message: 'Please fix validation errors.');
+      showScaffoldError(
+          context: context, message: 'Please fix validation errors.');
       return;
     }
 
@@ -210,7 +217,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
 
     try {
       final token = Provider.of<AuthModel>(context, listen: false).token ?? '';
-      final gridProvider = Provider.of<GridSelectionProvider>(context, listen: false);
+      final gridProvider =
+          Provider.of<GridSelectionProvider>(context, listen: false);
       final productNames = _buildProductNamesPayload();
 
       final result = await gridProvider.createProductAPI(
@@ -225,8 +233,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         purchasePrice: _purchasePriceController.text.trim(),
         productNames: productNames.isNotEmpty ? productNames : null,
         conversionRateBase: '1',
-        itemCode: _itemCodeController.text.trim().isNotEmpty 
-            ? _itemCodeController.text.trim() 
+        itemCode: _itemCodeController.text.trim().isNotEmpty
+            ? _itemCodeController.text.trim()
             : null,
       );
 
@@ -235,12 +243,14 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       if (result is Map<String, dynamic> && result.containsKey('data')) {
         try {
           GetProduct product = GetProduct.fromJson(result['data']);
-          Provider.of<LocalProductProvider>(context, listen: false).addProduct(product);
+          Provider.of<LocalProductProvider>(context, listen: false)
+              .addProduct(product);
         } catch (e) {
           debugPrint('Error parsing added product: $e');
         }
 
-        Provider.of<LocalProductProvider>(context, listen: false).refreshProducts();
+        Provider.of<LocalProductProvider>(context, listen: false)
+            .refreshProducts();
         showScaffold(context: context, message: 'Product added successfully');
         Navigator.pop(context);
       } else {
@@ -251,7 +261,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         showScaffoldError(context: context, message: errMsg);
       }
     } catch (e) {
-      showScaffoldError(context: context, message: 'Error creating product: $e');
+      showScaffoldError(
+          context: context, message: 'Error creating product: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -375,7 +386,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               color: Colors.grey.shade400,
               fontSize: 14,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             filled: true,
             fillColor: Colors.grey.shade50,
             suffixIcon: suffixIcon,
@@ -385,7 +397,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.5),
+              borderSide: const BorderSide(
+                  color: ColorManager.kPrimaryColor, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -483,7 +496,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               color: Colors.black26,
               child: const Center(
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(ColorManager.kPrimaryColor),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(ColorManager.kPrimaryColor),
                 ),
               ),
             ),
@@ -553,10 +567,12 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Icon(Icons.qr_code_scanner, color: Colors.white, size: 20),
+                        : const Icon(Icons.qr_code_scanner,
+                            color: Colors.white, size: 20),
                     onPressed: _generateBarcode,
                   ),
                 ),
@@ -641,7 +657,6 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
               ],
             ),
             const SizedBox(height: 20),
-
             Consumer<LanguageProvider>(
               builder: (context, langProvider, child) {
                 final activeLangs = langProvider.languages
@@ -672,10 +687,10 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                     final language = activeLangs[index];
                     _languageNameControllers.putIfAbsent(
                         language.id, () => TextEditingController());
-                    _languageTranslating.putIfAbsent(
-                        language.id, () => false);
+                    _languageTranslating.putIfAbsent(language.id, () => false);
 
-                    final isTranslating = _languageTranslating[language.id] == true;
+                    final isTranslating =
+                        _languageTranslating[language.id] == true;
 
                     return _buildInputField(
                       label: 'Product Name (${language.name})',
@@ -695,7 +710,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                                   height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 )
                               : const Text(
@@ -725,7 +741,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.account_balance_wallet, color: Colors.blue.shade700, size: 22),
+                  Icon(Icons.account_balance_wallet,
+                      color: Colors.blue.shade700, size: 22),
                   const SizedBox(width: 8),
                   const Text(
                     'Pricing & Stock',
@@ -769,8 +786,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                   const SizedBox(height: 8),
                   Consumer<PurchaseProvider>(
                     builder: (context, purchaseProvider, child) {
-                      final unitList = purchaseProvider.getUnitList ?? const <String, String>{};
-                      
+                      final unitList = purchaseProvider.getUnitList ??
+                          const <String, String>{};
+
                       return CustomDropDownWithSearch<String>(
                         hintText: 'Select Unit...',
                         value: _selectedUnit,
@@ -798,10 +816,10 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                       label: 'Purchase Price',
                       hintText: '0.00',
                       controller: _purchasePriceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (val) => val == null || val.trim().isEmpty
-                          ? 'Required'
-                          : null,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      validator: (val) =>
+                          val == null || val.trim().isEmpty ? 'Required' : null,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -810,10 +828,10 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                       label: 'Max Sale Price / Mrp',
                       hintText: '0.00',
                       controller: _mrpController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (val) => val == null || val.trim().isEmpty
-                          ? 'Required'
-                          : null,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      validator: (val) =>
+                          val == null || val.trim().isEmpty ? 'Required' : null,
                     ),
                   ),
                 ],
@@ -828,10 +846,10 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                       label: 'Selling Price',
                       hintText: '0.00',
                       controller: _sellingPriceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (val) => val == null || val.trim().isEmpty
-                          ? 'Required'
-                          : null,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      validator: (val) =>
+                          val == null || val.trim().isEmpty ? 'Required' : null,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -840,10 +858,10 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                       label: 'Initial Quantity',
                       hintText: '0.00',
                       controller: _quantityController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (val) => val == null || val.trim().isEmpty
-                          ? 'Required'
-                          : null,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      validator: (val) =>
+                          val == null || val.trim().isEmpty ? 'Required' : null,
                     ),
                   ),
                 ],
@@ -877,12 +895,14 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           elevation: 0,
         ),
         onPressed: () {
-          if (_formKeyStep1.currentState!.validate() && _selectedCategory != null) {
+          if (_formKeyStep1.currentState!.validate() &&
+              _selectedCategory != null) {
             setState(() {
               _currentStep = 2;
             });
           } else if (_selectedCategory == null) {
-            showScaffoldError(context: context, message: 'Please select a Category.');
+            showScaffoldError(
+                context: context, message: 'Please select a Category.');
           }
         },
         child: const Row(

@@ -27,7 +27,8 @@ class _CouponSectionState extends State<CouponSection> {
   @override
   void initState() {
     super.initState();
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
     final bp = Provider.of<BillingProvider>(context, listen: false);
     final currentDiscounts = localProductProvider.getCurrentDiscount();
 
@@ -43,7 +44,8 @@ class _CouponSectionState extends State<CouponSection> {
     percentageDiscountController.addListener(_onManualDiscountChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final discountProvider = Provider.of<DiscountProvider>(context, listen: false);
+      final discountProvider =
+          Provider.of<DiscountProvider>(context, listen: false);
       if (discountProvider.discounts.isEmpty && !discountProvider.isLoading) {
         await discountProvider.fetchDiscounts();
       }
@@ -62,7 +64,8 @@ class _CouponSectionState extends State<CouponSection> {
 
   void _findDiscountByCode(String code) {
     if (code.isEmpty) return;
-    final discountProvider = Provider.of<DiscountProvider>(context, listen: false);
+    final discountProvider =
+        Provider.of<DiscountProvider>(context, listen: false);
     for (final discount in discountProvider.discounts) {
       if (discount.couponCode.toLowerCase() == code.toLowerCase()) {
         if (mounted) {
@@ -76,7 +79,8 @@ class _CouponSectionState extends State<CouponSection> {
   }
 
   void _onManualDiscountChanged() {
-    if (flatDiscountController.text.isNotEmpty || percentageDiscountController.text.isNotEmpty) {
+    if (flatDiscountController.text.isNotEmpty ||
+        percentageDiscountController.text.isNotEmpty) {
       if (_selectedDiscount != null) {
         setState(() {
           _selectedDiscount = null;
@@ -104,18 +108,22 @@ class _CouponSectionState extends State<CouponSection> {
 
   bool _validateDiscountInputs(double originalSubTotal) {
     final flatDiscount = double.tryParse(flatDiscountController.text) ?? 0.0;
-    final percentageDiscount = double.tryParse(percentageDiscountController.text) ?? 0.0;
+    final percentageDiscount =
+        double.tryParse(percentageDiscountController.text) ?? 0.0;
 
     if (flatDiscount < 0 || percentageDiscount < 0) {
-      showScaffoldError(context: context, message: 'Discount cannot be negative');
+      showScaffoldError(
+          context: context, message: 'Discount cannot be negative');
       return false;
     }
     if (percentageDiscount > 100) {
-      showScaffoldError(context: context, message: 'Percentage discount cannot exceed 100%');
+      showScaffoldError(
+          context: context, message: 'Percentage discount cannot exceed 100%');
       return false;
     }
     if (flatDiscount > originalSubTotal && originalSubTotal > 0) {
-      showScaffoldError(context: context, message: 'Flat discount cannot exceed cart total');
+      showScaffoldError(
+          context: context, message: 'Flat discount cannot exceed cart total');
       return false;
     }
     return true;
@@ -123,12 +131,16 @@ class _CouponSectionState extends State<CouponSection> {
 
   Future<void> _applyDiscount() async {
     final bp = Provider.of<BillingProvider>(context, listen: false);
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
-    final discountProvider = Provider.of<DiscountProvider>(context, listen: false);
-    final originalSubTotal = localProductProvider.priceSummary?.originalSubTotal ?? 0.0;
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final discountProvider =
+        Provider.of<DiscountProvider>(context, listen: false);
+    final originalSubTotal =
+        localProductProvider.priceSummary?.originalSubTotal ?? 0.0;
 
     if (originalSubTotal == 0) {
-      showScaffoldError(context: context, message: 'Cannot apply discount to empty cart');
+      showScaffoldError(
+          context: context, message: 'Cannot apply discount to empty cart');
       return;
     }
     if (!_validateDiscountInputs(originalSubTotal)) {
@@ -136,11 +148,13 @@ class _CouponSectionState extends State<CouponSection> {
     }
 
     if (_selectedDiscount != null) {
-      final validity = discountProvider.getValidityForDiscount(_selectedDiscount!, originalSubTotal);
+      final validity = discountProvider.getValidityForDiscount(
+          _selectedDiscount!, originalSubTotal);
       if (validity != DiscountValidity.valid) {
         showScaffoldError(
           context: context,
-          message: 'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
+          message:
+              'Cannot apply ${_selectedDiscount!.couponName}: Coupon is not valid',
         );
         return;
       }
@@ -149,14 +163,18 @@ class _CouponSectionState extends State<CouponSection> {
     double flat = double.tryParse(flatDiscountController.text) ?? 0.0;
     double percent = double.tryParse(percentageDiscountController.text) ?? 0.0;
 
-    localProductProvider.applyDiscount(flatDiscount: flat, percentageDiscount: percent);
+    localProductProvider.applyDiscount(
+        flatDiscount: flat, percentageDiscount: percent);
     if (_selectedDiscount != null) {
       bp.coupenCodeTextController.text = _selectedDiscount!.couponCode;
       await PaymentCoordinator.applyCoupon(context);
-      bp.setCouponApplied(true, code: _selectedDiscount!.couponCode, discount: flat > 0 ? flat : percent);
+      bp.setCouponApplied(true,
+          code: _selectedDiscount!.couponCode,
+          discount: flat > 0 ? flat : percent);
     } else {
       bp.coupenCodeTextController.text = '';
-      bp.setCouponApplied(flat > 0 || percent > 0, code: '', discount: flat > 0 ? flat : percent);
+      bp.setCouponApplied(flat > 0 || percent > 0,
+          code: '', discount: flat > 0 ? flat : percent);
     }
     if (mounted) {
       showScaffold(context: context, message: 'Discount applied successfully');
@@ -165,7 +183,8 @@ class _CouponSectionState extends State<CouponSection> {
 
   void _clearDiscount() {
     final bp = Provider.of<BillingProvider>(context, listen: false);
-    final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
 
     localProductProvider.clearDiscount();
     bp.clearDiscounts();
@@ -197,7 +216,10 @@ class _CouponSectionState extends State<CouponSection> {
     final currentDiscounts = localProductProvider.getCurrentDiscount();
     final flat = currentDiscounts['flatDiscount'] ?? 0.0;
     final pct = currentDiscounts['percentageDiscount'] ?? 0.0;
-    if (flat == 0.0 && pct == 0.0 && (flatDiscountController.text.isNotEmpty || percentageDiscountController.text.isNotEmpty)) {
+    if (flat == 0.0 &&
+        pct == 0.0 &&
+        (flatDiscountController.text.isNotEmpty ||
+            percentageDiscountController.text.isNotEmpty)) {
       flatDiscountController.clear();
       percentageDiscountController.clear();
       _selectedDiscount = null;
@@ -215,17 +237,22 @@ class _CouponSectionState extends State<CouponSection> {
                 children: [
                   const Text(
                     'Flat Discount',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87),
                   ),
                   const SizedBox(height: 6),
                   TextField(
                     controller: flatDiscountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       hintText: '0.00',
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -236,11 +263,13 @@ class _CouponSectionState extends State<CouponSection> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.5),
+                        borderSide: const BorderSide(
+                            color: ColorManager.kPrimaryColor, width: 1.5),
                       ),
                     ),
                     onTap: () {
-                      Provider.of<KeyboardProvider>(context, listen: false).show(
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .show(
                         'number',
                         flatDiscountController,
                         replaceOnFirstInput: true,
@@ -257,17 +286,22 @@ class _CouponSectionState extends State<CouponSection> {
                 children: [
                   const Text(
                     'Percentage Discount (%)',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87),
                   ),
                   const SizedBox(height: 6),
                   TextField(
                     controller: percentageDiscountController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       hintText: '0',
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide(color: Colors.grey.shade300),
@@ -278,11 +312,13 @@ class _CouponSectionState extends State<CouponSection> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: ColorManager.kPrimaryColor, width: 1.5),
+                        borderSide: const BorderSide(
+                            color: ColorManager.kPrimaryColor, width: 1.5),
                       ),
                     ),
                     onTap: () {
-                      Provider.of<KeyboardProvider>(context, listen: false).show(
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .show(
                         'number',
                         percentageDiscountController,
                         replaceOnFirstInput: true,
@@ -299,14 +335,16 @@ class _CouponSectionState extends State<CouponSection> {
         // Select Coupon Dropdown
         const Text(
           'Select Coupon',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+          style: TextStyle(
+              fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         const SizedBox(height: 6),
         CustomDropDownWithSearch<DiscountData>(
           hintText: 'Search or select a discount',
           value: _selectedDiscount,
           items: discountProvider.discounts,
-          displayText: (discount) => '${discount.couponName} (${discount.couponCode})',
+          displayText: (discount) =>
+              '${discount.couponName} (${discount.couponCode})',
           onChanged: _onDiscountSelected,
           showName: false,
           isRequired: false,
@@ -323,7 +361,8 @@ class _CouponSectionState extends State<CouponSection> {
                   elevation: 0,
                   backgroundColor: const Color(0xFFE2E8F0), // Light grey
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: _clearDiscount,
                 child: const Text(
@@ -343,7 +382,8 @@ class _CouponSectionState extends State<CouponSection> {
                   elevation: 0,
                   backgroundColor: const Color(0xFF0066CC), // Primary blue
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: _applyDiscount,
                 child: const Text(
