@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:pos_machine/components/build_back_button.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
@@ -12,10 +10,9 @@ import 'package:pos_machine/providers/sales_executive_provider.dart'; // Add sal
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/resources/style_manager.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/get_store.dart';
+import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
 
 class CompanyInfoScreen extends StatefulWidget {
   const CompanyInfoScreen({super.key});
@@ -225,162 +222,78 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   Widget build(BuildContext context) {
     final sideBarController = Get.find<SideBarController>();
 
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: ColorManager.boxShadowColor,
-              blurRadius: 6,
-              offset: Offset(1, 1),
-            ),
-          ],
-          color: Colors.white,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return SettingsPageShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SettingsSubPageHeader(
+            backLabel: 'Settings',
+            onBack: () {
+              sideBarController.index.value =
+                  62; // Navigate back to Settings
+            },
+            onClose: () {
+              sideBarController.index.value =
+                  62; // Navigate back to Settings
+            },
+            title: 'Company Information',
+            subtitle: 'Account, tenant, and app configuration details',
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator.adaptive())
+                : SingleChildScrollView(
+                    child: SettingsInfoList(
+                      entries: [
+                        MapEntry('Admin User Info', _userName ?? 'Loading...'),
+                        MapEntry('Company Name', _companyName ?? 'Loading...'),
+                        MapEntry(
+                          'Logged In Username',
+                          _loggedInUserName ?? 'Loading...',
+                        ),
+                        MapEntry(
+                          'Logged In Email',
+                          _loggedInUserEmail ?? 'Loading...',
+                        ),
+                        MapEntry('User Role', _userRole ?? 'Loading...'),
+                        MapEntry(
+                          'Customer ID',
+                          _customerId?.toString() ?? 'Loading...',
+                        ),
+                        MapEntry(
+                          'Company ID',
+                          _companyId?.toString() ?? 'Loading...',
+                        ),
+                        MapEntry('Token Type', _tokenType ?? 'Loading...'),
+                        MapEntry('Timezone', _timeZone ?? 'Not available'),
+                        MapEntry('Base URL', APPUrl.baseURL),
+                        MapEntry('App Version', _appVersion ?? 'Loading...'),
+                        MapEntry('API Key', _apiKey ?? 'Not available'),
+                      ],
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 20),
+          SettingsActionRow(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CustomBackButton(
-                    onPressed: () {
-                      sideBarController.index.value =
-                          62; // Navigate back to Settings
-                    },
-                    text: 'Settings',
-                  ),
-                  BuildBoxShadowContainer(
-                    width: 15,
-                    height: 15,
-                    circleRadius: 10,
-                    color: ColorManager.kPrimaryColor,
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () {
-                        sideBarController.index.value =
-                            62; // Navigate back to Settings
-                      },
-                      icon: const Icon(Icons.close_rounded,
-                          size: 10, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Company Information',
-                style: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s20,
-                  0.30,
-                  ColorManager.textColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: BuildBoxShadowContainer(
-                  circleRadius: 12,
-                  color: Colors.white,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildInfoTable(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: 'Back to Settings',
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () {
-                      sideBarController.index.value =
-                          62; // Navigate back to Settings
-                    },
-                    height: 45,
-                    width: 150,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
+              CustomRoundButton(
+                title: 'Back to Settings',
+                boxColor: Colors.white,
+                textColor: ColorManager.kPrimaryColor,
+                borderColor: ColorManager.kPrimaryColor,
+                fct: () {
+                  sideBarController.index.value =
+                      62; // Navigate back to Settings
+                },
+                height: 48,
+                width: 180,
+                fontSize: FontSize.s12,
               ),
             ],
           ),
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildInfoTable() {
-    return Table(
-      border: TableBorder.all(
-        color: Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      columnWidths: const {
-        0: FlexColumnWidth(1),
-        1: FlexColumnWidth(2),
-      },
-      children: [
-        _buildTableRow('Admin User Info', _userName ?? 'Loading...'),
-        _buildTableRow('Company Name', _companyName ?? 'Loading...'),
-        _buildTableRow('Logged In Username', _loggedInUserName ?? 'Loading...'),
-        _buildTableRow('Logged In Email', _loggedInUserEmail ?? 'Loading...'),
-        _buildTableRow('User Role', _userRole ?? 'Loading...'),
-        _buildTableRow('Customer ID', _customerId?.toString() ?? 'Loading...'),
-        _buildTableRow('Company ID', _companyId?.toString() ?? 'Loading...'),
-        _buildTableRow('Token Type', _tokenType ?? 'Loading...'),
-        _buildTableRow('Timezone', _timeZone ?? 'Not available'),
-        _buildTableRow('Base URL', APPUrl.baseURL),
-        _buildTableRow('App Version', _appVersion ?? 'Loading...'),
-        _buildTableRow('API Key', _apiKey ?? 'Not available'),
-      ],
-    );
-  }
-
-  TableRow _buildTableRow(String label, String value) {
-    return TableRow(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Text(
-            label,
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s14,
-              0.27,
-              Colors.black.withOpacity(0.8),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Text(
-            value,
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.27,
-              Colors.black.withOpacity(0.6),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
