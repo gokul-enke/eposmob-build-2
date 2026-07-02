@@ -26,6 +26,7 @@ import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
+import 'invoice_list_mobile.dart';
 
 class InvoiceListScreen extends StatefulWidget {
   const InvoiceListScreen({super.key});
@@ -715,9 +716,91 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final bool isMobile = size.width < 700;
+
+    if (isMobile) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Consumer<InvoiceProvider>(
+            builder: (context, invoiceProvider, child) {
+              return InvoiceMobileView(
+                invoices: invoiceProvider.invoiceListDetails ?? const <Invoice>[],
+                isLoading: invoiceProvider.isLoading,
+                selectedInvoiceIds: selectedInvoiceIds,
+                onToggleSelect: (id, selected) => setState(() {
+                  if (selected) selectedInvoiceIds.add(id);
+                  else selectedInvoiceIds.remove(id);
+                }),
+                onViewDetails: _showInvoiceDetails,
+                onShowActions: _showInvoiceActionsSheet,
+                searchTextController: searchTextController,
+                invoiceNumberController: invoiceNumberController,
+                phoneController: phoneController,
+                dateFromController: dateFromController,
+                dateToController: dateToController,
+                invoiceNoFocusNode: invoiceNoFocusNode,
+                nameFocusNode: nameFocusNode,
+                phoneFocusNode: phoneFocusNode,
+                dateFromFocusNode: dateFromFocusNode,
+                dateToFocusNode: dateToFocusNode,
+                onSearchChanged: _debounceInvoiceSearch,
+                onReset: resetSearch,
+                onSelectDate: ({required isFromDate}) =>
+                    _selectDate(context, isFromDate: isFromDate),
+                selectedStatus: selectedStatus,
+                selectedZatcaStatus: selectedZatcaStatus,
+                statusOptions: invoiceProvider.getStatusOptions(),
+                zatcaStatusOptions: invoiceProvider.getZatcaStatusOptions(),
+                onStatusChanged: (v) {
+                  setState(() => selectedStatus = v);
+                  searchInvoices();
+                },
+                onZatcaStatusChanged: (v) {
+                  setState(() => selectedZatcaStatus = v);
+                  searchInvoices();
+                },
+                currentPage: invoiceProvider.currentPage,
+                totalPages: invoiceProvider.totalPages,
+                onPageChanged: (page) {
+                  _invoiceSearchDebounce?.cancel();
+                  _clearSelectedInvoices();
+                  invoiceProvider.goToPage(page);
+                },
+                isBulkSending: isBulkSending,
+                activeBulkSyncType: activeBulkSyncType,
+                onBulkSync: (syncType, ids) async {
+                  final token = Provider.of<AuthModel>(context, listen: false).token;
+                  if (token == null || token.isEmpty) return;
+                  await _performBulkZatcaSync(
+                    idsToSync: ids,
+                    syncType: syncType,
+                    accessToken: token,
+                  );
+                },
+                onSelectPage: () => setState(() {
+                  for (final inv in invoiceProvider.invoiceListDetails ?? const <Invoice>[]) {
+                    selectedInvoiceIds.add(inv.id);
+                  }
+                }),
+                onUnselectAll: () => setState(() => selectedInvoiceIds.clear()),
+                onCreateInvoice: () async {
+                  final result = await showCreateInvoiceModal(context, size);
+                  if (result == true) {
+                    await refreshData();
+                    if (mounted) setState(() {});
+                  }
+                },
+                onRefresh: refreshData,
+              );
+            },
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       child: RefreshIndicator(
