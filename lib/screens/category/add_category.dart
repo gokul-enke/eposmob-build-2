@@ -167,164 +167,51 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     }
   }
 
+  bool _isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < 600;
+
   @override
   Widget build(BuildContext context) {
     final categoryProvider =
         Provider.of<CategoryProvider>(context, listen: false);
     final SideBarController sideBarController = Get.put(SideBarController());
     Size size = MediaQuery.of(context).size;
+    final bool isMobile = _isMobile(context);
+    final double horizontalMargin = isMobile ? 8 : 12;
 
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin:
-              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: horizontalMargin,
+            vertical: isMobile ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(isMobile ? 4 : 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+            border: Border.all(color: Colors.grey.withOpacity(0.12)),
             boxShadow: const [
               BoxShadow(
                 color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
+                blurRadius: 10,
+                offset: Offset(0, 3),
               ),
             ],
             color: Colors.white,
           ),
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: EdgeInsets.symmetric(
+              vertical: isMobile ? 12.0 : 20.0,
+              horizontal: isMobile ? 12.0 : 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Text(
-                //   "Category List",
-                //   style: buildCustomStyle(FontWeightManager.semiBold,
-                //       FontSize.s20, 0.30, ColorManager.textColor),
-                // ),
-                _buildHeader(categoryProvider, sideBarController),
-                const SizedBox(
-                  height: 15,
-                ),
-                SizedBox(
-                  height: 90,
-                  child: Row(
-                    children: [
-                      // Search Category - Takes available space
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Text(
-                                "Search Category",
-                                style: buildCustomStyle(
-                                  FontWeightManager.regular,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black.withOpacity(0.6),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              height: 45,
-                              child: BuildBoxShadowContainer(
-                                circleRadius: 7,
-                                alignment: Alignment.centerLeft,
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 0, vertical: 0),
-                                padding: const EdgeInsets.only(left: 15),
-                                color: Colors.white,
-                                child: TextField(
-                                  controller: _searchController,
-                                  textAlign: TextAlign.left,
-                                  textAlignVertical: TextAlignVertical.center,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s10,
-                                    0.27,
-                                    ColorManager.textColor,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Type to search...',
-                                    hintStyle: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s10,
-                                      0.27,
-                                      ColorManager.textColor.withOpacity(.5),
-                                    ),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 0, vertical: 0),
-                                    isDense: true,
-                                    suffixIcon: _searchController
-                                            .text.isNotEmpty
-                                        ? IconButton(
-                                            icon: Icon(Icons.clear, size: 18),
-                                            onPressed: () {
-                                              _searchController.clear();
-                                              resetSearch();
-                                            },
-                                          )
-                                        : null,
-                                  ),
-                                  onChanged: (value) {
-                                    if (value.isEmpty) {
-                                      resetSearch();
-                                    } else {
-                                      searchCategory(1);
-                                    }
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(width: 15),
-
-                      // First empty space
-                      Expanded(
-                        child: Container(), // Empty container for spacing
-                      ),
-
-                      const SizedBox(width: 15),
-
-                      // Second empty space
-                      Expanded(
-                        child: Container(), // Empty container for spacing
-                      ),
-
-                      const SizedBox(width: 15),
-
-                      // Reset button
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(
-                                height:
-                                    35), // Space to align with the text field
-                            CustomRoundButton(
-                              title: "Reset",
-                              boxColor: Colors.white,
-                              textColor: ColorManager.kPrimaryColor,
-                              fct: resetSearch,
-                              height: 45,
-                              width: double
-                                  .infinity, // Take full width of the container
-                              fontSize: FontSize.s12,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
+                _buildHeader(categoryProvider, sideBarController, isMobile),
+                const SizedBox(height: 15),
+                _buildSearchRow(isMobile, size),
+                const SizedBox(height: 16),
                 Expanded(
                   child:
                       _buildCategoryTable(categoryProvider, sideBarController),
@@ -338,20 +225,172 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     );
   }
 
-  Widget _buildHeader(
-      CategoryProvider categoryProvider, SideBarController sideBarController) {
+  Widget _buildSearchRow(bool isMobile, Size size) {
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildSearchField(size),
+          const SizedBox(height: 12),
+          CustomRoundButton(
+            title: "Reset",
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            fct: resetSearch,
+            height: 45,
+            width: double.infinity,
+            fontSize: FontSize.s12,
+          ),
+        ],
+      );
+    }
+
+    return SizedBox(
+      height: 90,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(flex: 3, child: _buildSearchField(size)),
+          const SizedBox(width: 15),
+          Expanded(
+            flex: 1,
+            child: CustomRoundButton(
+              title: "Reset",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              fct: resetSearch,
+              height: 45,
+              width: double.infinity,
+              fontSize: FontSize.s12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchField(Size size) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 4, bottom: 6),
+          child: Text(
+            "Search Category",
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.27,
+              Colors.black.withOpacity(0.7),
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 45,
+          child: BuildBoxShadowContainer(
+            circleRadius: 10,
+            alignment: Alignment.centerLeft,
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsetsDirectional.only(start: 15),
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.withOpacity(0.12)),
+            child: TextField(
+              controller: _searchController,
+              textAlign: TextAlign.start,
+              textAlignVertical: TextAlignVertical.center,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Type to search...',
+                hintStyle: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          resetSearch();
+                        },
+                      )
+                    : null,
+              ),
+              onChanged: (value) {
+                if (value.isEmpty) {
+                  resetSearch();
+                } else {
+                  searchCategory(1);
+                }
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader(CategoryProvider categoryProvider,
+      SideBarController sideBarController, bool isMobile) {
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            "Category List",
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s20,
+              0.30,
+              ColorManager.kTitleTextColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          CustomRoundButton(
+            title: "Add Category",
+            fct: () {
+              sideBarController.index.value = 16;
+            },
+            fontSize: 12,
+            height: 45,
+            width: double.infinity,
+          ),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          "Category List",
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s20,
-            0.30,
-            ColorManager.textColor,
+        Expanded(
+          child: Text(
+            "Category List",
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s20,
+              0.30,
+              ColorManager.kTitleTextColor,
+            ),
           ),
         ),
+        const SizedBox(width: 12),
         CustomRoundButton(
           title: "Add Category",
           fct: () {
@@ -371,177 +410,244 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       CategoryProvider categoryProvider, SideBarController sideBarController) {
     return Consumer<CategoryProvider>(
       builder: (context, categoryProvider, child) {
-        return BuildBoxShadowContainer(
-          margin: const EdgeInsets.only(top: 5),
-          circleRadius: 7,
-          offsetValue: const Offset(2, 2),
-          blurRadius: 8.0,
-          color: Colors.white,
-          child: Column(
-            children: [
-              // Fixed table header
-              Container(
-                decoration: const BoxDecoration(
-                  color: ColorManager.tableBGColor,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      offset: Offset(0, 2),
-                      blurRadius: 2.0,
-                    ),
-                  ],
+        final categories = categoryProvider.searchCategory;
+        final bool isMobile = _isMobile(context);
+
+        if (categories == null || categories.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  height: 88,
+                  width: 88,
+                  decoration: BoxDecoration(
+                    color: ColorManager.kPrimaryColor.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.category_outlined,
+                    size: 40,
+                    color: ColorManager.kPrimaryColor.withOpacity(0.8),
+                  ),
                 ),
-                child: Table(
-                  columnWidths: const {
-                    0: FlexColumnWidth(1.0), // No
-                    1: FlexColumnWidth(3.0), // Category Name
-                    2: FlexColumnWidth(3.0), // Slug
-                    3: FlexColumnWidth(1.2), // Action
-                  },
-                  border: null,
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: [
-                    TableRow(
-                      children: [
-                        _buildTableHeader("No"),
-                        _buildTableHeader("Category Name"),
-                        _buildTableHeader("Slug"),
-                        _buildTableHeader("Action"),
-                      ],
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                Text(
+                  'No categories available',
+                  textAlign: TextAlign.center,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s16,
+                    0.27,
+                    ColorManager.kTitleTextColor,
+                  ),
                 ),
-              ),
-              // Scrollable table body
-              Expanded(
-                child: categoryProvider.searchCategory == null ||
-                        categoryProvider.searchCategory!.isEmpty
-                    ? Center(
+              ],
+            ),
+          );
+        }
+
+        if (isMobile) {
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: BuildBoxShadowContainer(
+                  circleRadius: 14,
+                  padding: const EdgeInsets.all(16),
+                  showShadow: true,
+                  blurRadius: 10,
+                  offsetValue: const Offset(0, 3),
+                  border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                  color: Colors.white,
+                  child: Row(
+                    children: [
+                      Expanded(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.category,
-                              size: 60,
-                              color:
-                                  ColorManager.kPrimaryColor.withOpacity(0.7),
-                            ),
-                            const SizedBox(height: 15),
                             Text(
-                              'No categories available',
+                              category.categoryName ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s18,
-                                0.27,
-                                ColorManager.textColor,
+                                FontWeightManager.semiBold,
+                                FontSize.s14,
+                                0.18,
+                                ColorManager.kPrimaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              category.categorySlug ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s11,
+                                0.13,
+                                ColorManager.kGreyColor,
                               ),
                             ),
                           ],
                         ),
-                      )
-                    : MouseRegion(
-                        cursor: SystemMouseCursors.grab,
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(
-                            dragDevices: {
-                              PointerDeviceKind.mouse,
-                              PointerDeviceKind.touch,
-                              PointerDeviceKind.stylus,
-                              PointerDeviceKind.trackpad,
-                            },
-                          ),
-                          child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
-                            scrollDirection: Axis.vertical,
-                            child: Table(
-                              columnWidths: const {
-                                0: FlexColumnWidth(1.0), // No
-                                1: FlexColumnWidth(3.0), // Category Name
-                                2: FlexColumnWidth(3.0), // Slug
-                                3: FlexColumnWidth(1.2), // Action
-                              },
-                              border: null,
-                              defaultVerticalAlignment:
-                                  TableCellVerticalAlignment.middle,
-                              children: [
-                                ...categoryProvider.searchCategory!
-                                    .toList()
-                                    .asMap()
-                                    .entries
-                                    .map((entry) {
-                                  final int index = entry.key;
-                                  final category = entry.value;
-                                  return TableRow(
-                                    // Set minimum row height
-                                    decoration: BoxDecoration(
-                                      color: index % 2 == 0
-                                          ? Colors.white
-                                          : Colors.grey.withOpacity(0.1),
+                      ),
+                      _buildActionButton(
+                        Icons.edit_outlined,
+                        Colors.blue.shade50,
+                        Colors.blue,
+                        () {
+                          sideBarController.index.value = 34;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        }
+
+        return BuildBoxShadowContainer(
+          margin: const EdgeInsets.only(top: 5),
+          circleRadius: 14,
+          offsetValue: const Offset(0, 3),
+          blurRadius: 10.0,
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.withOpacity(0.12)),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Column(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    color: ColorManager.tableBGColor,
+                    border: Border(
+                      bottom: BorderSide(color: Color(0x1F000000), width: 1),
+                    ),
+                  ),
+                  child: Table(
+                    columnWidths: const {
+                      0: FlexColumnWidth(1.0),
+                      1: FlexColumnWidth(3.0),
+                      2: FlexColumnWidth(3.0),
+                      3: FlexColumnWidth(1.2),
+                    },
+                    border: null,
+                    defaultVerticalAlignment:
+                        TableCellVerticalAlignment.middle,
+                    children: [
+                      TableRow(
+                        children: [
+                          _buildTableHeader("No"),
+                          _buildTableHeader("Category Name"),
+                          _buildTableHeader("Slug"),
+                          _buildTableHeader("Action"),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        scrollDirection: Axis.vertical,
+                        child: Table(
+                          columnWidths: const {
+                            0: FlexColumnWidth(1.0),
+                            1: FlexColumnWidth(3.0),
+                            2: FlexColumnWidth(3.0),
+                            3: FlexColumnWidth(1.2),
+                          },
+                          border: null,
+                          defaultVerticalAlignment:
+                              TableCellVerticalAlignment.middle,
+                          children: [
+                            ...categories.toList().asMap().entries.map((entry) {
+                              final int index = entry.key;
+                              final category = entry.value;
+                              return TableRow(
+                                decoration: BoxDecoration(
+                                  color: index % 2 == 0
+                                      ? Colors.white
+                                      : Colors.grey.withOpacity(0.1),
+                                ),
+                                children: [
+                                  _buildTableCell((index + 1).toString()),
+                                  _buildTableCell(category.categoryName ?? ""),
+                                  _buildTableCell(category.categorySlug ?? ""),
+                                  Center(
+                                    child: _buildActionButton(
+                                      Icons.edit_outlined,
+                                      Colors.blue.shade50,
+                                      Colors.blue,
+                                      () {
+                                        sideBarController.index.value = 34;
+                                      },
                                     ),
-                                    children: [
-                                      _buildTableCell((index + 1).toString()),
-                                      _buildTableCell(
-                                          category.categoryName ?? ""),
-                                      _buildTableCell(
-                                          category.categorySlug ?? ""),
-                                      Center(
-                                        child: _buildActionButton(
-                                          Icons.edit,
-                                          Colors.blue.shade50,
-                                          Colors.blue,
-                                          () {
-                                            sideBarController.index.value = 34;
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
-                              ],
-                            ),
-                          ),
+                                  ),
+                                ],
+                              );
+                            }),
+                          ],
                         ),
                       ),
-              ),
-            ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-// Updated _buildTableHeader with larger padding and font
   Widget _buildTableHeader(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          vertical: 18.0, horizontal: 12.0), // Increased padding
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
       child: Text(
         text,
         textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12, // Increased font size
+          FontWeightManager.semiBold,
+          FontSize.s12,
           0.18,
-          ColorManager.kPrimaryColor,
+          ColorManager.kTitleTextColor,
         ),
       ),
     );
   }
 
-// Updated _buildTableCell with larger padding and font
   Widget _buildTableCell(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          vertical: 20.0, horizontal: 12.0), // Increased padding
+      padding: const EdgeInsets.symmetric(vertical: 18.0, horizontal: 12.0),
       child: Text(
         text,
         textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
           FontWeightManager.medium,
-          FontSize.s9, // Increased font size
+          FontSize.s11,
           0.13,
-          Colors.black,
+          ColorManager.kTextColor,
         ),
       ),
     );
@@ -550,16 +656,18 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
   Widget _buildActionButton(
       IconData icon, Color bgColor, Color iconColor, VoidCallback onPressed) {
     return BuildBoxShadowContainer(
-      margin: const EdgeInsets.only(left: 5, right: 5),
+      margin: const EdgeInsetsDirectional.symmetric(horizontal: 5),
       color: bgColor,
-      circleRadius: 5,
-      child: IconButton(
-        icon: Icon(
-          icon,
-          size: 18,
-          color: iconColor,
+      circleRadius: 10,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: IconButton(
+          icon: Icon(icon, size: 18, color: iconColor),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          onPressed: onPressed,
         ),
-        onPressed: onPressed,
       ),
     );
   }
