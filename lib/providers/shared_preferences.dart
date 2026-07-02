@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPreferenceProvider extends ChangeNotifier {
   static const String _notificationPositionKey = 'notification_position';
+  static const String _orientationModeKey = 'screen_orientation_mode';
   static const String _billingSidebarWidthKey =
       'billing_sidebar_width_fraction';
   static const String _restaurantTablesPanelVisibleKey =
@@ -317,6 +318,16 @@ class SharedPreferenceProvider extends ChangeNotifier {
   Future<String> getNotificationPosition() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString(_notificationPositionKey) ?? 'left';
+  }
+
+  Future<void> saveOrientationMode(String mode) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_orientationModeKey, mode);
+  }
+
+  Future<String> getOrientationMode() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_orientationModeKey) ?? 'auto';
   }
 
   Future<void> saveBillingSidebarWidthFraction(

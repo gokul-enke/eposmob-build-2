@@ -23,6 +23,7 @@ import '../../providers/category_providers.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/category_responsive.dart';
 
 class AddCategoryPageScreen extends StatefulWidget {
   const AddCategoryPageScreen({super.key});
@@ -99,6 +100,119 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   String? _categoryNameArabicError;
   String? _categorySlugError;
 
+  bool _isMobile(BuildContext context) => categoryIsPhone(context);
+
+  Future<void> _handleSubmit(
+    BuildContext context,
+    CategoryProvider categoryProvider,
+    SideBarController sideBarController,
+    VoidCallback clearText,
+  ) async {
+    idController.text = categoryProvider.getParentCategory;
+    debugPrint("categoryIdController.text ${idController.text}");
+    if (_validateForm(context)) {
+      debugPrint("categoryIdController.text ${idController.text}");
+      debugPrint(
+          "categoryNameArabicController.text ${categoryNameArabicController.text}");
+
+      if (categorySlugController.text.isEmpty ||
+          categoryNameController.text.isEmpty) {
+        debugPrint("isEmptycategorySlugController");
+        showScaffoldError(
+          context: context,
+          message: 'Please Fill the Required Fields',
+        );
+      } else {
+        debugPrint("categoryIdController ${categoryIDController.text}");
+        showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              return const Center(
+                child: CircularProgressIndicator.adaptive(),
+              );
+            });
+
+        String? accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
+        debugPrint("accessToken From AuthModel $accessToken");
+        categoryProvider
+            .addCategory(
+                categoryName: categoryNameController.text,
+                slug: categorySlugController.text,
+                parentCategory: idController.text,
+                categoryNameEnglish: categoryNameEnglishController.text,
+                categoryNameHindi: categoryNameHindiController.text,
+                categoryNameArabic: categoryNameArabicController.text,
+                imagePath: imageFilePathController.text,
+                iconPath: iconFilePathController.text,
+                accessToken: accessToken ?? "")
+            .then((value) {
+          if (value["status"] == "success") {
+            showScaffold(
+              context: context,
+              message: '${value["message"]}',
+            );
+
+            final categoryProvider =
+                Provider.of<CategoryProvider>(context, listen: false);
+            categoryProvider.refreshCategories();
+
+            Navigator.pop(context);
+            clearText();
+            sideBarController.index.value = 12;
+          } else {
+            debugPrint("errors.password !=null");
+            Navigator.pop(context);
+            showScaffold(
+              context: context,
+              message: '${value["message"]}',
+            );
+          }
+        });
+      }
+    }
+  }
+
+  bool _validateForm(BuildContext context) {
+    bool isValid = true;
+
+    if (_formKey.currentState != null) {
+      isValid = _formKey.currentState!.validate() && isValid;
+    }
+
+    if (categoryNameController.text.isEmpty) {
+      setState(() {
+        _categoryNameError = "Category Name is required";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _categoryNameError = null;
+      });
+    }
+
+    if (categorySlugController.text.isEmpty) {
+      setState(() {
+        _categorySlugError = "Category Slug is required";
+      });
+      isValid = false;
+    } else {
+      setState(() {
+        _categorySlugError = null;
+      });
+    }
+
+    if (!isValid) {
+      showScaffoldError(
+        context: context,
+        message: 'Please fill all required fields',
+      );
+    }
+
+    return isValid;
+  }
+
   @override
   Widget build(BuildContext context) {
     GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -122,97 +236,105 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
       categorySlugController.clear();
     }
 
-    bool validateForm() {
-      bool isValid = true;
+    final bool isMobile = _isMobile(context);
+    final double horizontalMargin = categoryHorizontalMargin(size.width);
+    final double fieldGap = isMobile ? 14.0 : 20.0;
 
-      // Check if _formKey.currentState is not null before calling validate()
-      if (_formKey.currentState != null) {
-        isValid = _formKey.currentState!.validate() && isValid;
-      }
+    Widget buildActionButtons(double maxWidth) {
+      final double buttonWidth =
+          isMobile ? maxWidth : size.width * 0.19;
 
-      // if (categoryNameEnglishController.text.isEmpty) {
-      //   setState(() {
-      //     _categoryNameEnglishError = "Category Name in English is required";
-      //   });
-      //   isValid = false;
-      // } else {
-      //   setState(() {
-      //     _categoryNameEnglishError = null;
-      //   });
-      // }
-
-      if (categoryNameController.text.isEmpty) {
-        setState(() {
-          _categoryNameError = "Category Name is required";
-        });
-        isValid = false;
-      } else {
-        setState(() {
-          _categoryNameError = null;
-        });
-      }
-
-      // if (categoryNameHindiController.text.isEmpty) {
-      //   setState(() {
-      //     _categoryNameHindiError = "Category Name in Hindi is required";
-      //   });
-      //   isValid = false;
-      // } else {
-      //   setState(() {
-      //     _categoryNameHindiError = null;
-      //   });
-      // }
-
-      // if (categoryNameArabicController.text.isEmpty) {
-      //   setState(() {
-      //     _categoryNameArabicError = "Category Name in Arabic is required";
-      //   });
-      //   isValid = false;
-      // } else {
-      //   setState(() {
-      //     _categoryNameArabicError = null;
-      //   });
-      // }
-
-      if (categorySlugController.text.isEmpty) {
-        setState(() {
-          _categorySlugError = "Category Slug is required";
-        });
-        isValid = false;
-      } else {
-        setState(() {
-          _categorySlugError = null;
-        });
-      }
-
-
-      if (!isValid) {
-        showScaffoldError(
-          context: context,
-          message: 'Please fill all required fields',
+      if (isMobile) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            CustomRoundButton(
+              title: "Submit",
+              fct: () => _handleSubmit(
+                context,
+                categoryProvider,
+                sideBarController,
+                clearText,
+              ),
+              height: 50,
+              width: double.infinity,
+              fontSize: FontSize.s12,
+            ),
+            const SizedBox(height: 10),
+            CustomRoundButton(
+              title: "Back",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              fct: () async {
+                sideBarController.index.value = 12;
+              },
+              height: 50,
+              width: double.infinity,
+              fontSize: FontSize.s12,
+            ),
+          ],
         );
       }
 
-      return isValid;
+      return Row(
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 10.0),
+            child: CustomRoundButton(
+              title: "Submit",
+              fct: () => _handleSubmit(
+                context,
+                categoryProvider,
+                sideBarController,
+                clearText,
+              ),
+              height: 50,
+              width: buttonWidth,
+              fontSize: FontSize.s12,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 10.0),
+            child: CustomRoundButton(
+              title: "Back",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              fct: () async {
+                sideBarController.index.value = 12;
+              },
+              height: 50,
+              width: buttonWidth,
+              fontSize: FontSize.s12,
+            ),
+          ),
+        ],
+      );
     }
 
     return SafeArea(
       child: Container(
-          margin:
-              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: horizontalMargin,
+            vertical: categoryVerticalMargin(size.width),
+          ),
+          padding: EdgeInsets.all(isMobile ? 4 : 8),
           decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+              border: Border.all(color: Colors.grey.withOpacity(0.12)),
               boxShadow: const [
                 BoxShadow(
                   color: ColorManager.boxShadowColor,
-                  blurRadius: 6,
-                  offset: Offset(1, 1),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
                 ),
               ],
               color: Colors.white),
           child: Padding(
-            padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
+            padding: EdgeInsets.symmetric(
+              vertical: isMobile ? 12.0 : 20.0,
+              horizontal: isMobile ? 12.0 : 10.0,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,229 +344,146 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                       sideBarController.index.value = 12;
                     },
                     text: 'All Categories',
-                    // Optionally, you can customize the color and size
-                    // color: ColorManager.customColor,
-                    // size: 20.0,
                   ),
-                  Text(
-                    'Add New Category',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
+                  const SizedBox(height: 12),
+                  const CategoryPageHeader(
+                    title: 'Add New Category',
+                    subtitle:
+                        'Fill in the details below to create a new product category.',
                   ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  SizedBox(
-                    height: size.height * 0.8,
-                    width: double.infinity,
-                    child: BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      // margin: const EdgeInsets.only(bottom: 10),
-                      blurRadius: 6,
-                      padding: const EdgeInsets.only(
-                          left: 10.0, right: 20, top: 30, bottom: 10),
-                      offsetValue: const Offset(1, 1),
-                      child: SingleChildScrollView(
-                        child: Form(
+                  SizedBox(height: isMobile ? 16 : 20),
+                  CategoryFormCard(
+                    child: Form(
                           key: formKey,
-                          child: Column(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final double fieldWidth = categoryFieldWidth(
+                                constraints.maxWidth,
+                              );
+
+                              Widget fieldPair({
+                                required Widget first,
+                                required Widget second,
+                              }) {
+                                if (isMobile) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      first,
+                                      SizedBox(height: fieldGap),
+                                      second,
+                                    ],
+                                  );
+                                }
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: first),
+                                    SizedBox(width: fieldGap),
+                                    Expanded(child: second),
+                                  ],
+                                );
+                              }
+
+                              return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  BuildErrorText(
-                                    errorText: _categoryNameError != null
-                                        ? _categoryNameError!
-                                        : "",
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: buildColumnWidgetForTextFields(
-                                      onchanged: ((value) {
-                                        categoryNameEnglishController.text = value ?? '';
-                                        categorySlugController.text = categoryNameController
-                                            .text
-                                            .toLowerCase() // Convert to lowercase
-                                            .replaceAll(RegExp(r'\s+'),
-                                                '-') // Replace spaces with hyphens
-                                            .replaceAll(RegExp(r'[^a-z0-9-]'),
-                                                ''); // Remove non-alphanumeric characters except hyphens
-                                      }),
-                                      isLeft: false,
-                                      isStarRed: true,
-                                      readOnly: false,
-                                      controller: categoryNameController,
-                                      size: size,
-                                      title: 'Category Name',
-                                      hintText: 'Category Name',
-                                    ),
-                                  ),
-                                  buildColumnWidgetForTextFields(
-                                    onchanged: (value) {},
-                                    isLeft: true,
-                                    readOnly: true,
-                                    controller: categoryNameEnglishController,
-                                    size: size,
-                                    title: "Category Name - English (US)*",
-                                    hintText: '',
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    height: size.height * .17,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        BuildTextTile(
-                                          isStarRed: false,
-                                          isTextField: true,
-                                          title: "Select Parent Category",
-                                          textStyle: buildCustomStyle(
-                                            FontWeightManager.regular,
-                                            FontSize.s14,
-                                            0.27,
-                                            Colors.black.withOpacity(0.6),
-                                          ),
-                                        ),
-                                        //**************** For Category Listing ****************
-                                        BuildBoxShadowContainer(
-                                          circleRadius: 7,
-                                          alignment: Alignment.centerLeft,
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 5, vertical: 0),
+                              fieldPair(
+                                first: BuildErrorText(
+                                          errorText: _categoryNameError != null
+                                              ? _categoryNameError!
+                                              : "",
                                           padding:
-                                              const EdgeInsets.only(left: 15),
-                                          height: size.height * .07,
-                                          width: size.width / 3,
+                                              const EdgeInsetsDirectional.only(
+                                                  start: 10.0),
                                           child:
-                                              DropdownButtonFormField<Category>(
-                                            decoration: const InputDecoration(
-                                              border: InputBorder
-                                                  .none, // Remove the underline
-                                            ),
-                                            value: categoryProvider
-                                                        .selectedCategoryIndex >=
-                                                    0
-                                                ? categoryList![categoryProvider
-                                                    .selectedCategoryIndex]
-                                                : null,
-                                            hint: Text(
-                                              'Select Category',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                            ),
-                                            items: categoryList!
-                                                .map((Category category) {
-                                                  return DropdownMenuItem<
-                                                          Category>(
-                                                      value: category,
-                                                      child: category
-                                                                  .categoryName ==
-                                                              "ALL"
-                                                          ? Text(
-                                                              ' New Category',
-                                                              style:
-                                                                  buildCustomStyle(
-                                                                FontWeightManager
-                                                                    .medium,
-                                                                FontSize.s12,
-                                                                0.27,
-                                                                ColorManager
-                                                                    .textColor
-                                                                    .withOpacity(
-                                                                        .5),
-                                                              ),
-                                                            )
-                                                          : Text(
-                                                              category.categoryName ??
-                                                                  '',
-                                                              style:
-                                                                  buildCustomStyle(
-                                                                FontWeightManager
-                                                                    .medium,
-                                                                FontSize.s12,
-                                                                0.27,
-                                                                ColorManager
-                                                                    .textColor
-                                                                    .withOpacity(
-                                                                        .5),
-                                                              ),
-                                                            ));
-                                                })
-                                                .toSet()
-                                                .toList(),
-                                            onChanged:
-                                                (Category? selectedCategory) {
-                                              if (selectedCategory != null) {
-                                                // Update the selected category in the provider
-                                                categoryProvider.selectCategory(
-                                                  categoryList.indexOf(
-                                                      selectedCategory),
-                                                  selectedCategory
-                                                          .categoryName ??
-                                                      '',
-                                                  selectedCategory
-                                                          .productsCount ??
-                                                      0,
-                                                );
-                                                debugPrint(
-                                                    "onChanged ${selectedCategory.categoryId}");
-                                                categoryIDController.text =
-                                                    "${selectedCategory.categoryId}";
-                                                debugPrint(
-                                                    "categoryIdController ${categoryIDController.text}");
-                                                categoryProvider.setParentCategory(
-                                                    "${selectedCategory.categoryId ?? 0}");
-                                              }
-                                            },
+                                              buildColumnWidgetForTextFields(
+                                            onchanged: ((value) {
+                                              categoryNameEnglishController
+                                                  .text = value ?? '';
+                                              categorySlugController.text =
+                                                  categoryNameController.text
+                                                      .toLowerCase()
+                                                      .replaceAll(
+                                                          RegExp(r'\s+'), '-')
+                                                      .replaceAll(
+                                                          RegExp(
+                                                              r'[^a-z0-9-]'),
+                                                          '');
+                                            }),
+                                            isLeft: false,
+                                            isStarRed: true,
+                                            readOnly: false,
+                                            controller: categoryNameController,
+                                            size: size,
+                                            width: fieldWidth,
+                                            title: 'Category Name',
+                                            hintText: 'Category Name',
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  buildColumnWidgetForTextFields(
-                                    onchanged: (value) {},
-                                    isLeft: true,
-                                    readOnly: false,
-                                    controller: categoryNameHindiController,
-                                    size: size,
-                                    title: "Category Name - Hindi(IND)",
-                                    hintText: 'Enter...',
-                                  ),
-                                ],
+                                second: buildColumnWidgetForTextFields(
+                                          onchanged: (value) {},
+                                          isLeft: false,
+                                          readOnly: true,
+                                          controller:
+                                              categoryNameEnglishController,
+                                          size: size,
+                                          width: fieldWidth,
+                                          title: "Category Name - English (US)*",
+                                          hintText: '',
+                                        ),
                               ),
-                              Row(
-                                children: [
-                                  BuildErrorText(
-                                    errorText: _categorySlugError != null
-                                        ? _categorySlugError!
-                                        : "",
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: buildColumnWidgetForTextFields(
-                                        onchanged: (value) {},
-                                        isLeft: false,
-                                        controller: categorySlugController,
-                                        size: size,
-                                        isStarRed: true,
-                                        title: "Category Slug",
-                                        hintText: 'Url Slug',
-                                        readOnly: true),
-                                  ),
-                                  buildColumnWidgetForTextFields(
-                                      onchanged: (value) {},
-                                      isLeft: true,
-                                      controller: categoryNameArabicController,
-                                      size: size,
-                                      title: "Category Name - Arabic(AR)",
-                                      hintText: 'Enter...',
-                                      readOnly: false),
-                                ],
+                              SizedBox(height: fieldGap),
+                              fieldPair(
+                                first: _buildParentCategoryField(
+                                            categoryProvider,
+                                            categoryList,
+                                            fieldWidth),
+                                second: buildColumnWidgetForTextFields(
+                                          onchanged: (value) {},
+                                          isLeft: false,
+                                          readOnly: false,
+                                          controller:
+                                              categoryNameHindiController,
+                                          size: size,
+                                          width: fieldWidth,
+                                          title: "Category Name - Hindi(IND)",
+                                          hintText: 'Enter...',
+                                        ),
+                              ),
+                              SizedBox(height: fieldGap),
+                              fieldPair(
+                                first: BuildErrorText(
+                                          errorText: _categorySlugError != null
+                                              ? _categorySlugError!
+                                              : "",
+                                          padding:
+                                              const EdgeInsetsDirectional.only(
+                                                  start: 10.0),
+                                          child: buildColumnWidgetForTextFields(
+                                            onchanged: (value) {},
+                                            isLeft: false,
+                                            controller: categorySlugController,
+                                            size: size,
+                                            width: fieldWidth,
+                                            isStarRed: true,
+                                            title: "Category Slug",
+                                            hintText: 'Url Slug',
+                                            readOnly: true,
+                                          ),
+                                        ),
+                                second: buildColumnWidgetForTextFields(
+                                          onchanged: (value) {},
+                                          isLeft: false,
+                                          controller:
+                                              categoryNameArabicController,
+                                          size: size,
+                                          width: fieldWidth,
+                                          title: "Category Name - Arabic(AR)",
+                                          hintText: 'Enter...',
+                                          readOnly: false,
+                                        ),
                               ),
                               /*
                               Row(
@@ -589,146 +628,113 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                               ),
                               */
                               const SizedBox(height: 25),
-                              Row(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: CustomRoundButton(
-                                      title: "Submit",
-                                      fct: () async {
-                                        idController.text =
-                                            categoryProvider.getParentCategory;
-                                        debugPrint(
-                                            "categoryIdController.text ${idController.text}");
-                                        if (validateForm()) {
-                                          // formKey.currentState!.save();
-                                          // debugPrint("submit");
-                                          debugPrint(
-                                              "categoryIdController.text ${idController.text}");
-                                          debugPrint(
-                                              "categoryNameArabicController.text ${categoryNameArabicController.text}");
-
-                                          if (categorySlugController
-                                                  .text.isEmpty ||
-                                              categoryNameController
-                                                  .text.isEmpty) {
-                                            debugPrint(
-                                                "isEmptycategorySlugController");
-                                            showScaffoldError(
-                                              context: context,
-                                              message:
-                                                  'Please Fill the Required Fields',
-                                            );
-                                          } else {
-                                            debugPrint(
-                                                "categoryIdController ${categoryIDController.text}");
-                                            showDialog(
-                                                context: context,
-                                                barrierDismissible: false,
-                                                builder: (context) {
-                                                  return const Center(
-                                                    child:
-                                                        CircularProgressIndicator
-                                                            .adaptive(),
-                                                  );
-                                                });
-
-                                            String? accessToken =
-                                                Provider.of<AuthModel>(context,
-                                                        listen: false)
-                                                    .token;
-                                            debugPrint(
-                                                "accessToken From AuthModel $accessToken");
-                                            categoryProvider
-                                                .addCategory(
-                                                    categoryName:
-                                                        categoryNameController
-                                                            .text,
-                                                    slug: categorySlugController
-                                                        .text,
-                                                    parentCategory:
-                                                        idController.text,
-                                                    categoryNameEnglish:
-                                                        categoryNameEnglishController
-                                                            .text,
-                                                    categoryNameHindi:
-                                                        categoryNameHindiController
-                                                            .text,
-                                                    categoryNameArabic:
-                                                        categoryNameArabicController
-                                                            .text,
-                                                    imagePath:
-                                                        imageFilePathController
-                                                            .text,
-                                                    iconPath:
-                                                        iconFilePathController
-                                                            .text,
-                                                    accessToken:
-                                                        accessToken ?? "")
-                                                .then((value) {
-                                              if (value["status"] ==
-                                                  "success") {
-                                                showScaffold(
-                                                  context: context,
-                                                  message:
-                                                      '${value["message"]}',
-                                                );
-
-                                                // Refresh category cache to include new category
-                                                final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
-                                                categoryProvider.refreshCategories();
-
-                                                Navigator.pop(context);
-                                                clearText();
-                                                sideBarController.index.value =
-                                                    12;
-                                              } else {
-                                                debugPrint(
-                                                    "errors.password !=null");
-                                                Navigator.pop(context);
-                                                showScaffold(
-                                                  context: context,
-                                                  message:
-                                                      '${value["message"]}',
-                                                );
-                                              }
-                                            });
-                                          }
-                                        }
-                                      },
-                                      height: 50,
-                                      width: size.width * 0.19,
-                                      fontSize: FontSize.s12,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 10.0),
-                                    child: CustomRoundButton(
-                                      title: "Back",
-                                      boxColor: Colors.white,
-                                      textColor: ColorManager.kPrimaryColor,
-                                      fct: () async {
-                                        sideBarController.index.value = 12;
-                                      },
-                                      height: 50,
-                                      width: size.width * 0.19,
-                                      fontSize: FontSize.s12,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              buildActionButtons(constraints.maxWidth),
                               const SizedBox(height: 25),
                             ],
+                          );
+                            },
                           ),
                         ),
                       ),
-                    ),
-                  )
                 ],
               ),
             ),
-          )),
+          ),
+        ),
+    );
+  }
+
+  Widget _buildParentCategoryField(CategoryProvider categoryProvider,
+      List<Category>? categoryList, double fieldWidth) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BuildTextTile(
+          isStarRed: false,
+          isTextField: true,
+          title: "Select Parent Category",
+          textStyle: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        BuildBoxShadowContainer(
+          circleRadius: 10,
+          alignment: Alignment.centerLeft,
+          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+          padding: const EdgeInsetsDirectional.only(start: 15),
+          height: 45,
+          width: fieldWidth,
+          border: Border.all(color: Colors.grey.withOpacity(0.12)),
+          child: DropdownButtonFormField<Category>(
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+            ),
+            isExpanded: true,
+            value: categoryProvider.selectedCategoryIndex >= 0
+                ? categoryList![categoryProvider.selectedCategoryIndex]
+                : null,
+            hint: Text(
+              'Select Category',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.27,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
+            items: categoryList!
+                .map((Category category) {
+                  return DropdownMenuItem<Category>(
+                      value: category,
+                      child: category.categoryName == "ALL"
+                          ? Text(
+                              ' New Category',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.27,
+                                ColorManager.textColor.withOpacity(.5),
+                              ),
+                            )
+                          : Text(
+                              category.categoryName ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.27,
+                                ColorManager.textColor.withOpacity(.5),
+                              ),
+                            ));
+                })
+                .toSet()
+                .toList(),
+            onChanged: (Category? selectedCategory) {
+              if (selectedCategory != null) {
+                categoryProvider.selectCategory(
+                  categoryList.indexOf(selectedCategory),
+                  selectedCategory.categoryName ?? '',
+                  selectedCategory.productsCount ?? 0,
+                );
+                debugPrint("onChanged ${selectedCategory.categoryId}");
+                categoryIDController.text = "${selectedCategory.categoryId}";
+                debugPrint(
+                    "categoryIdController ${categoryIDController.text}");
+                categoryProvider.setParentCategory(
+                    "${selectedCategory.categoryId ?? 0}");
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -741,65 +747,51 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
         barrierLabel: "",
         builder: (context) {
           return StatefulBuilder(builder: (context, setState) {
+            final isPhone = categoryIsPhone(context);
+            final dialogWidth = categoryDialogWidth(context);
+            final dialogHeight = categoryDialogHeight(context);
+            final uploadButtonWidth =
+                isPhone ? dialogWidth - 32 : size.width * 0.12;
+            final actionButtonWidth =
+                isPhone ? dialogWidth - 32 : size.width * 0.19;
+
             return Center(
               child: SizedBox(
-                //  padding: const EdgeInsets.all(120.0),
-                height: 600,
-                width: 700,
+                height: dialogHeight,
+                width: dialogWidth,
                 child: Material(
                   type: MaterialType.transparency,
                   child: BuildBoxShadowContainer(
-                      circleRadius: 10,
-                      padding: const EdgeInsets.all(12),
-                      //  height: 380,
+                      circleRadius: 14,
+                      padding: EdgeInsets.all(isPhone ? 12 : 16),
                       border: Border.all(
-                          color: ColorManager.kPrimaryColor.withOpacity(0.7)),
-                      // width: 250, //MediaQuery.of(context).size.width * 0.7,
+                          color: Colors.grey.withOpacity(0.12)),
+                      color: Colors.white,
                       child: SingleChildScrollView(
                         child: SizedBox(
                           width: double.infinity,
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      "Select Image",
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s14,
-                                        0.18,
-                                        ColorManager.kPrimaryColor,
+                                    Expanded(
+                                      child: Text(
+                                        "Select Image",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          FontSize.s16,
+                                          0.18,
+                                          ColorManager.kTitleTextColor,
+                                        ),
                                       ),
                                     ),
-                                    SizedBox(
-                                      height: 15,
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          BuildBoxShadowContainer(
-                                            width: 15,
-                                            height: 15,
-                                            circleRadius: 10,
-                                            color: ColorManager.kPrimaryColor,
-                                            child: IconButton(
-                                                padding: EdgeInsets.zero,
-                                                onPressed: () {
-                                                  Navigator.pop(context);
-                                                },
-                                                icon: const Icon(
-                                                  Icons.close_rounded,
-                                                  size: 10,
-                                                  color: Colors.white,
-                                                )),
-                                          ),
-                                        ],
-                                      ),
+                                    CategoryDialogCloseButton(
+                                      onPressed: () => Navigator.pop(context),
                                     ),
                                   ],
                                 ),
@@ -807,43 +799,156 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                               const SizedBox(height: 10),
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 12.0),
-                                child: Row(
-                                  children: [
-                                    CustomRoundButton(
-                                      title: "Upload from Device",
-                                      fct: () async {
-                                        FilePickerResult? result = await FilePicker.platform.pickFiles(
-                                          type: FileType.image,
-                                        );
-                                        if (result != null) {
-                                          this.setState(() {
-                                            imageFilePathController.text = result.files.single.path ?? '';
-                                            _selectedImagePath = result.files.single.path;
-                                            _imageError = null;
-                                          });
-                                          setState(() {});
-                                        }
-                                      },
-                                      height: 40,
-                                      width: size.width * 0.12,
-                                      fontSize: FontSize.s12,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    if (_selectedImagePath != null)
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.file(
-                                          File(_selectedImagePath!),
-                                          height: 60,
-                                          width: 60,
-                                          fit: BoxFit.cover,
-                                        ),
+                                child: isPhone
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          CustomRoundButton(
+                                            title: "Upload from Device",
+                                            fct: () async {
+                                              FilePickerResult? result =
+                                                  await FilePicker.platform
+                                                      .pickFiles(
+                                                type: FileType.image,
+                                              );
+                                              if (result != null) {
+                                                this.setState(() {
+                                                  imageFilePathController.text =
+                                                      result.files.single.path ??
+                                                          '';
+                                                  _selectedImagePath =
+                                                      result.files.single.path;
+                                                  _imageError = null;
+                                                });
+                                                setState(() {});
+                                              }
+                                            },
+                                            height: 44,
+                                            width: uploadButtonWidth,
+                                            fontSize: FontSize.s12,
+                                          ),
+                                          if (_selectedImagePath != null) ...[
+                                            const SizedBox(height: 12),
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.file(
+                                                File(_selectedImagePath!),
+                                                height: 60,
+                                                width: 60,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      )
+                                    : Row(
+                                        children: [
+                                          CustomRoundButton(
+                                            title: "Upload from Device",
+                                            fct: () async {
+                                              FilePickerResult? result =
+                                                  await FilePicker.platform
+                                                      .pickFiles(
+                                                type: FileType.image,
+                                              );
+                                              if (result != null) {
+                                                this.setState(() {
+                                                  imageFilePathController.text =
+                                                      result.files.single.path ??
+                                                          '';
+                                                  _selectedImagePath =
+                                                      result.files.single.path;
+                                                  _imageError = null;
+                                                });
+                                                setState(() {});
+                                              }
+                                            },
+                                            height: 44,
+                                            width: uploadButtonWidth,
+                                            fontSize: FontSize.s12,
+                                          ),
+                                          const SizedBox(width: 16),
+                                          if (_selectedImagePath != null)
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.file(
+                                                File(_selectedImagePath!),
+                                                height: 60,
+                                                width: 60,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                  ],
-                                ),
                               ),
+                              if (isPhone && attachment != null)
+                                ...attachment.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final image = entry.value;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: BuildBoxShadowContainer(
+                                      circleRadius: 10,
+                                      border: Border.all(
+                                          color:
+                                              Colors.grey.withOpacity(0.12)),
+                                      padding: const EdgeInsets.all(12),
+                                      child: Row(
+                                        children: [
+                                          Radio<int>(
+                                            value: index,
+                                            groupValue: selectedImageIndex,
+                                            onChanged: (int? value) {
+                                              setState(() {
+                                                selectedImageIndex =
+                                                    value ?? 0;
+                                              });
+                                              debugPrint(
+                                                  "showDialog $index $selectedImageIndex");
+                                              imageFilePathController.text =
+                                                  image.id.toString();
+                                              imageAltController.text =
+                                                  image.alt ?? "";
+                                              imageTitleController.text =
+                                                  image.title ?? "";
+                                            },
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              "${image.title}",
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.13,
+                                                Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          BuildBoxShadowContainer(
+                                            margin: const EdgeInsetsDirectional
+                                                .only(start: 5, end: 5),
+                                            circleRadius: 5,
+                                            height: 48,
+                                            width: 48,
+                                            child: Image.network(
+                                              image.s3Url ?? "",
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              if (!isPhone)
                               SizedBox(
-                                width: 700,
+                                width: dialogWidth,
                                 child: Table(
                                   columnWidths: const {
                                     0: FractionColumnWidth(0.01),
@@ -1020,50 +1125,74 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                               ),
                               Padding(
                                 padding: const EdgeInsets.only(top: 12.0),
-                                child: Row(
-                                  children: [
-                                    // Padding(
-                                    //   padding: const EdgeInsets.only(left: 10.0),
-                                    //   child: CustomRoundButton(
-                                    //     title: "Create New Image",
-                                    //     fct: () async {},
-                                    //     height: 50,
-                                    //     width: size.width * 0.19,
-                                    //     fontSize: FontSize.s12,
-                                    //   ),
-                                    // ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(left: 10.0),
-                                      child: CustomRoundButton(
-                                        title: "Cancel",
-                                        boxColor: Colors.white,
-                                        textColor: ColorManager.kPrimaryColor,
-                                        fct: () async {
-                                          Navigator.pop(context);
-                                        },
-                                        height: 50,
-                                        width: size.width * 0.19,
-                                        fontSize: FontSize.s12,
+                                child: isPhone
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          CustomRoundButton(
+                                            title: "Cancel",
+                                            boxColor: Colors.white,
+                                            textColor:
+                                                ColorManager.kPrimaryColor,
+                                            fct: () async {
+                                              Navigator.pop(context);
+                                            },
+                                            height: 50,
+                                            width: actionButtonWidth,
+                                            fontSize: FontSize.s12,
+                                          ),
+                                          const SizedBox(height: 10),
+                                          CustomRoundButton(
+                                            title: "Choose",
+                                            boxColor: Colors.white,
+                                            textColor:
+                                                ColorManager.kPrimaryColor,
+                                            fct: () async {
+                                              Navigator.pop(context);
+                                            },
+                                            height: 50,
+                                            width: actionButtonWidth,
+                                            fontSize: FontSize.s12,
+                                          ),
+                                        ],
+                                      )
+                                    : Row(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsetsDirectional
+                                                .only(start: 10.0),
+                                            child: CustomRoundButton(
+                                              title: "Cancel",
+                                              boxColor: Colors.white,
+                                              textColor:
+                                                  ColorManager.kPrimaryColor,
+                                              fct: () async {
+                                                Navigator.pop(context);
+                                              },
+                                              height: 50,
+                                              width: actionButtonWidth,
+                                              fontSize: FontSize.s12,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsetsDirectional
+                                                .only(start: 10.0),
+                                            child: CustomRoundButton(
+                                              title: "Choose",
+                                              boxColor: Colors.white,
+                                              textColor:
+                                                  ColorManager.kPrimaryColor,
+                                              fct: () async {
+                                                Navigator.pop(context);
+                                              },
+                                              height: 50,
+                                              width: actionButtonWidth,
+                                              fontSize: FontSize.s12,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(left: 10.0),
-                                      child: CustomRoundButton(
-                                        title: "Choose",
-                                        boxColor: Colors.white,
-                                        textColor: ColorManager.kPrimaryColor,
-                                        fct: () async {
-                                          Navigator.pop(context);
-                                        },
-                                        height: 50,
-                                        width: size.width * 0.19,
-                                        fontSize: FontSize.s12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
                             ],
                           ),
@@ -1085,65 +1214,51 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
         barrierLabel: "",
         builder: (context) {
           return StatefulBuilder(builder: (context, setState) {
+            final isPhone = categoryIsPhone(context);
+            final dialogWidth = categoryDialogWidth(context);
+            final dialogHeight = categoryDialogHeight(context);
+            final uploadButtonWidth =
+                isPhone ? dialogWidth - 32 : size.width * 0.12;
+            final actionButtonWidth =
+                isPhone ? dialogWidth - 32 : size.width * 0.19;
+
             return Center(
               child: SizedBox(
-                //  padding: const EdgeInsets.all(120.0),
-                height: 600,
-                width: 700,
+                height: dialogHeight,
+                width: dialogWidth,
                 child: Material(
                   type: MaterialType.transparency,
                   child: BuildBoxShadowContainer(
-                      circleRadius: 10,
-                      padding: const EdgeInsets.all(12),
-                      //  height: 380,
+                      circleRadius: 14,
+                      padding: EdgeInsets.all(isPhone ? 12 : 16),
                       border: Border.all(
-                          color: ColorManager.kPrimaryColor.withOpacity(0.7)),
-                      // width: 250, //MediaQuery.of(context).size.width * 0.7,
+                          color: Colors.grey.withOpacity(0.12)),
+                      color: Colors.white,
                       child: SingleChildScrollView(
                         child: SizedBox(
                           width: double.infinity,
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      "Select Image",
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s14,
-                                        0.18,
-                                        ColorManager.kPrimaryColor,
+                                    Expanded(
+                                      child: Text(
+                                        "Select Icon",
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: buildCustomStyle(
+                                          FontWeightManager.semiBold,
+                                          FontSize.s16,
+                                          0.18,
+                                          ColorManager.kTitleTextColor,
+                                        ),
                                       ),
                                     ),
-                                    SizedBox(
-                                      height: 15,
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          BuildBoxShadowContainer(
-                                            width: 15,
-                                            height: 15,
-                                            circleRadius: 10,
-                                            color: ColorManager.kPrimaryColor,
-                                            child: IconButton(
-                                                padding: EdgeInsets.zero,
-                                                onPressed: () {
-                                                  Navigator.pop(context);
-                                                },
-                                                icon: const Icon(
-                                                  Icons.close_rounded,
-                                                  size: 10,
-                                                  color: Colors.white,
-                                                )),
-                                          ),
-                                        ],
-                                      ),
+                                    CategoryDialogCloseButton(
+                                      onPressed: () => Navigator.pop(context),
                                     ),
                                   ],
                                 ),
@@ -1151,43 +1266,156 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                               const SizedBox(height: 10),
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 12.0),
-                                child: Row(
-                                  children: [
-                                    CustomRoundButton(
-                                      title: "Upload from Device",
-                                      fct: () async {
-                                        FilePickerResult? result = await FilePicker.platform.pickFiles(
-                                          type: FileType.image,
-                                        );
-                                        if (result != null) {
-                                          this.setState(() {
-                                            iconFilePathController.text = result.files.single.path ?? '';
-                                            _selectedIconPath = result.files.single.path;
-                                            _iconError = null;
-                                          });
-                                          setState(() {});
-                                        }
-                                      },
-                                      height: 40,
-                                      width: size.width * 0.12,
-                                      fontSize: FontSize.s12,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    if (_selectedIconPath != null)
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Image.file(
-                                          File(_selectedIconPath!),
-                                          height: 60,
-                                          width: 60,
-                                          fit: BoxFit.cover,
-                                        ),
+                                child: isPhone
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          CustomRoundButton(
+                                            title: "Upload from Device",
+                                            fct: () async {
+                                              FilePickerResult? result =
+                                                  await FilePicker.platform
+                                                      .pickFiles(
+                                                type: FileType.image,
+                                              );
+                                              if (result != null) {
+                                                this.setState(() {
+                                                  iconFilePathController.text =
+                                                      result.files.single.path ??
+                                                          '';
+                                                  _selectedIconPath =
+                                                      result.files.single.path;
+                                                  _iconError = null;
+                                                });
+                                                setState(() {});
+                                              }
+                                            },
+                                            height: 44,
+                                            width: uploadButtonWidth,
+                                            fontSize: FontSize.s12,
+                                          ),
+                                          if (_selectedIconPath != null) ...[
+                                            const SizedBox(height: 12),
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.file(
+                                                File(_selectedIconPath!),
+                                                height: 60,
+                                                width: 60,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      )
+                                    : Row(
+                                        children: [
+                                          CustomRoundButton(
+                                            title: "Upload from Device",
+                                            fct: () async {
+                                              FilePickerResult? result =
+                                                  await FilePicker.platform
+                                                      .pickFiles(
+                                                type: FileType.image,
+                                              );
+                                              if (result != null) {
+                                                this.setState(() {
+                                                  iconFilePathController.text =
+                                                      result.files.single.path ??
+                                                          '';
+                                                  _selectedIconPath =
+                                                      result.files.single.path;
+                                                  _iconError = null;
+                                                });
+                                                setState(() {});
+                                              }
+                                            },
+                                            height: 44,
+                                            width: uploadButtonWidth,
+                                            fontSize: FontSize.s12,
+                                          ),
+                                          const SizedBox(width: 16),
+                                          if (_selectedIconPath != null)
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: Image.file(
+                                                File(_selectedIconPath!),
+                                                height: 60,
+                                                width: 60,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                  ],
-                                ),
                               ),
+                              if (isPhone && attachment != null)
+                                ...attachment.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final image = entry.value;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: BuildBoxShadowContainer(
+                                      circleRadius: 10,
+                                      border: Border.all(
+                                          color:
+                                              Colors.grey.withOpacity(0.12)),
+                                      padding: const EdgeInsets.all(12),
+                                      child: Row(
+                                        children: [
+                                          Radio<int>(
+                                            value: index,
+                                            groupValue: selectedIconIndex,
+                                            onChanged: (int? value) {
+                                              setState(() {
+                                                selectedIconIndex =
+                                                    value ?? 0;
+                                              });
+                                              debugPrint(
+                                                  "showDialog $index $selectedIconIndex");
+                                              iconFilePathController.text =
+                                                  image.id.toString();
+                                              iconAltController.text =
+                                                  image.alt ?? "";
+                                              iconTitleController.text =
+                                                  image.title ?? "";
+                                            },
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              "${image.title}",
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: buildCustomStyle(
+                                                FontWeightManager.medium,
+                                                FontSize.s12,
+                                                0.13,
+                                                Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          BuildBoxShadowContainer(
+                                            margin: const EdgeInsetsDirectional
+                                                .only(start: 5, end: 5),
+                                            circleRadius: 5,
+                                            height: 48,
+                                            width: 48,
+                                            child: Image.network(
+                                              image.s3Url ?? "",
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              if (!isPhone)
                               SizedBox(
-                                width: 700,
+                                width: dialogWidth,
                                 child: Table(
                                   columnWidths: const {
                                     0: FractionColumnWidth(0.01),
@@ -1363,50 +1591,74 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                               ),
                               Padding(
                                 padding: const EdgeInsets.only(top: 12.0),
-                                child: Row(
-                                  children: [
-                                    // Padding(
-                                    //   padding: const EdgeInsets.only(left: 10.0),
-                                    //   child: CustomRoundButton(
-                                    //     title: "Create New Image",
-                                    //     fct: () async {},
-                                    //     height: 50,
-                                    //     width: size.width * 0.19,
-                                    //     fontSize: FontSize.s12,
-                                    //   ),
-                                    // ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(left: 10.0),
-                                      child: CustomRoundButton(
-                                        title: "Cancel",
-                                        boxColor: Colors.white,
-                                        textColor: ColorManager.kPrimaryColor,
-                                        fct: () async {
-                                          Navigator.pop(context);
-                                        },
-                                        height: 50,
-                                        width: size.width * 0.19,
-                                        fontSize: FontSize.s12,
+                                child: isPhone
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          CustomRoundButton(
+                                            title: "Cancel",
+                                            boxColor: Colors.white,
+                                            textColor:
+                                                ColorManager.kPrimaryColor,
+                                            fct: () async {
+                                              Navigator.pop(context);
+                                            },
+                                            height: 50,
+                                            width: actionButtonWidth,
+                                            fontSize: FontSize.s12,
+                                          ),
+                                          const SizedBox(height: 10),
+                                          CustomRoundButton(
+                                            title: "Choose",
+                                            boxColor: Colors.white,
+                                            textColor:
+                                                ColorManager.kPrimaryColor,
+                                            fct: () async {
+                                              Navigator.pop(context);
+                                            },
+                                            height: 50,
+                                            width: actionButtonWidth,
+                                            fontSize: FontSize.s12,
+                                          ),
+                                        ],
+                                      )
+                                    : Row(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsetsDirectional
+                                                .only(start: 10.0),
+                                            child: CustomRoundButton(
+                                              title: "Cancel",
+                                              boxColor: Colors.white,
+                                              textColor:
+                                                  ColorManager.kPrimaryColor,
+                                              fct: () async {
+                                                Navigator.pop(context);
+                                              },
+                                              height: 50,
+                                              width: actionButtonWidth,
+                                              fontSize: FontSize.s12,
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsetsDirectional
+                                                .only(start: 10.0),
+                                            child: CustomRoundButton(
+                                              title: "Choose",
+                                              boxColor: Colors.white,
+                                              textColor:
+                                                  ColorManager.kPrimaryColor,
+                                              fct: () async {
+                                                Navigator.pop(context);
+                                              },
+                                              height: 50,
+                                              width: actionButtonWidth,
+                                              fontSize: FontSize.s12,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.only(left: 10.0),
-                                      child: CustomRoundButton(
-                                        title: "Choose",
-                                        boxColor: Colors.white,
-                                        textColor: ColorManager.kPrimaryColor,
-                                        fct: () async {
-                                          Navigator.pop(context);
-                                        },
-                                        height: 50,
-                                        width: size.width * 0.19,
-                                        fontSize: FontSize.s12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
                             ],
                           ),

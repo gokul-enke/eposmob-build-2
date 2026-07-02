@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/barcode_layout_settings.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const String kBarcodeLayoutSettingsKey = 'barcode_layout_settings';
@@ -86,77 +89,66 @@ class _BarcodeLayoutSettingsPanelState
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Left: Controls (scrollable)
-        Expanded(
-          flex: 2,
-          child: SingleChildScrollView(
-            child: _buildControls(),
-          ),
-        ),
-        const SizedBox(width: 24),
-        // Right: Preview + Printer list (fixed)
-        Expanded(
-          flex: 3,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildPreviewCard(),
-                if (widget.printerListWidget != null) ...[
-                  const SizedBox(height: 24),
-                  widget.printerListWidget!,
-                ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isStacked = constraints.maxWidth < kPrinterPhoneBreakpoint;
+
+        final controls = SingleChildScrollView(
+          child: _buildControls(),
+        );
+
+        final previewColumn = SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildPreviewCard(),
+              if (widget.printerListWidget != null) ...[
+                const SizedBox(height: 16),
+                widget.printerListWidget!,
               ],
-            ),
+            ],
           ),
-        ),
-      ],
+        );
+
+        if (isStacked) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              controls,
+              const SizedBox(height: 16),
+              previewColumn,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 2, child: controls),
+            const SizedBox(width: 16),
+            Expanded(flex: 3, child: previewColumn),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildControls() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    final isCompact =
+        MediaQuery.of(context).size.width < kPrinterPhoneBreakpoint;
+
+    return PrinterSettingsCard(
+      padding: EdgeInsets.all(isCompact ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.tune_rounded,
-                    color: ColorManager.kPrimaryColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Barcode Sticker Layout',
-                  style: TextStyle(
-                    color: ColorManager.kPrimaryColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              TextButton.icon(
+          PrinterSectionHeader(
+            icon: Icons.tune_rounded,
+            title: 'Barcode Sticker Layout',
+            subtitle: 'Adjust sticker size, spacing and font sizes',
+            trailing: SizedBox(
+              height: 44,
+              child: TextButton.icon(
                 onPressed: _resetDefaults,
                 icon: const Icon(Icons.restore, size: 18),
                 label: const Text('Reset'),
@@ -164,7 +156,7 @@ class _BarcodeLayoutSettingsPanelState
                   foregroundColor: Colors.red[600],
                 ),
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -251,13 +243,13 @@ class _BarcodeLayoutSettingsPanelState
           const Divider(),
           const SizedBox(height: 12),
 
-          // ---- Font Sizes ----
-          const Text(
+          Text(
             'Font Sizes',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: ColorManager.kTitleTextColor,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s14,
+              0.18,
+              ColorManager.textColor,
             ),
           ),
           const SizedBox(height: 16),
@@ -300,71 +292,48 @@ class _BarcodeLayoutSettingsPanelState
   }
 
   Widget _buildPreviewCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    final isCompact =
+        MediaQuery.of(context).size.width < kPrinterPhoneBreakpoint;
+
+    return PrinterSettingsCard(
+      padding: EdgeInsets.all(isCompact ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.preview_rounded,
-                    color: ColorManager.kPrimaryColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Sticker Preview',
-                style: TextStyle(
-                  color: ColorManager.kPrimaryColor,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          const PrinterSectionHeader(
+            icon: Icons.preview_rounded,
+            title: 'Sticker Preview',
+            subtitle: 'Approximate layout based on current settings',
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Margin: ${_settings.pageMargin.toStringAsFixed(1)}mm  ·  Gap: ${_settings.stickerGap.toStringAsFixed(1)}mm',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          const SizedBox(height: 10),
+          PrinterInfoStrip(
+            text:
+                'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Margin: ${_settings.pageMargin.toStringAsFixed(1)}mm  ·  Gap: ${_settings.stickerGap.toStringAsFixed(1)}mm',
+            icon: Icons.straighten_rounded,
           ),
           const SizedBox(height: 20),
-
-          // Preview area
           Center(
-            child: Container(
-              padding: EdgeInsets.all(_settings.pageMargin * 3),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(
-                    _settings.stickersPerRow.clamp(1, 3),
-                    (i) => Padding(
-                      padding: EdgeInsets.only(
-                        right: i < _settings.stickersPerRow.clamp(1, 3) - 1
-                            ? _settings.stickerGap * 3
-                            : 0,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
+                padding: EdgeInsets.all(_settings.pageMargin * 3),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(
+                      _settings.stickersPerRow.clamp(1, 3),
+                      (i) => Padding(
+                        padding: EdgeInsets.only(
+                          right: i < _settings.stickersPerRow.clamp(1, 3) - 1
+                              ? _settings.stickerGap * 3
+                              : 0,
+                        ),
+                        child: _buildStickerPreview(),
                       ),
-                      child: _buildStickerPreview(),
                     ),
                   ),
                 ),
@@ -375,7 +344,13 @@ class _BarcodeLayoutSettingsPanelState
           Center(
             child: Text(
               'This is an approximate preview. Actual PDF output may vary.',
-              style: TextStyle(color: Colors.grey[500], fontSize: 11, fontStyle: FontStyle.italic),
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s10,
+                0.10,
+                Colors.grey.shade500,
+              ).copyWith(fontStyle: FontStyle.italic),
             ),
           ),
         ],
@@ -492,10 +467,11 @@ class _BarcodeLayoutSettingsPanelState
   Widget _sectionLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: ColorManager.kTitleTextColor,
+      style: buildCustomStyle(
+        FontWeightManager.semiBold,
+        FontSize.s12,
+        0.15,
+        ColorManager.textColor,
       ),
     );
   }
@@ -534,35 +510,55 @@ class _BarcodeLayoutSettingsPanelState
     required String label,
     required ValueChanged<double> onChanged,
   }) {
-    return Row(
-      children: [
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: ColorManager.kPrimaryColor,
-              thumbColor: ColorManager.kPrimaryColor,
-              overlayColor: ColorManager.kPrimaryColor.withValues(alpha: 0.15),
-              inactiveTrackColor: Colors.grey[300],
-            ),
-            child: Slider(
-              value: value.clamp(min, max),
-              min: min,
-              max: max,
-              divisions: divisions,
-              label: label,
-              onChanged: onChanged,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 360;
+
+        final slider = SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: ColorManager.kPrimaryColor,
+            thumbColor: ColorManager.kPrimaryColor,
+            overlayColor: ColorManager.kPrimaryColor.withValues(alpha: 0.15),
+            inactiveTrackColor: Colors.grey[300],
           ),
-        ),
-        SizedBox(
-          width: 60,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            textAlign: TextAlign.right,
+          child: Slider(
+            value: value.clamp(min, max),
+            min: min,
+            max: max,
+            divisions: divisions,
+            label: label,
+            onChanged: onChanged,
           ),
-        ),
-      ],
+        );
+
+        final valueLabel = Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.15,
+            ColorManager.textColor,
+          ),
+          textAlign: TextAlign.right,
+        );
+
+        if (isCompact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              slider,
+              Align(alignment: Alignment.centerRight, child: valueLabel),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: slider),
+            SizedBox(width: 60, child: valueLabel),
+          ],
+        );
+      },
     );
   }
 
@@ -571,42 +567,68 @@ class _BarcodeLayoutSettingsPanelState
     required double value,
     required ValueChanged<double> onChanged,
   }) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 120,
-          child: Text(
-            label,
-            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 420;
+
+        final labelWidget = Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.15,
+            Colors.grey.shade700,
           ),
-        ),
-        Expanded(
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: ColorManager.kPrimaryColor,
-              thumbColor: ColorManager.kPrimaryColor,
-              overlayColor: ColorManager.kPrimaryColor.withValues(alpha: 0.15),
-              inactiveTrackColor: Colors.grey[300],
-            ),
-            child: Slider(
-              value: value.clamp(4, 24),
-              min: 4,
-              max: 24,
-              divisions: 40,
-              label: '${value.toStringAsFixed(1)}pt',
-              onChanged: onChanged,
-            ),
+        );
+
+        final slider = SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: ColorManager.kPrimaryColor,
+            thumbColor: ColorManager.kPrimaryColor,
+            overlayColor: ColorManager.kPrimaryColor.withValues(alpha: 0.15),
+            inactiveTrackColor: Colors.grey[300],
           ),
-        ),
-        SizedBox(
-          width: 50,
-          child: Text(
-            value.toStringAsFixed(1),
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            textAlign: TextAlign.right,
+          child: Slider(
+            value: value.clamp(4, 24),
+            min: 4,
+            max: 24,
+            divisions: 40,
+            label: '${value.toStringAsFixed(1)}pt',
+            onChanged: onChanged,
           ),
-        ),
-      ],
+        );
+
+        final valueLabel = Text(
+          value.toStringAsFixed(1),
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.15,
+            ColorManager.textColor,
+          ),
+          textAlign: TextAlign.right,
+        );
+
+        if (isCompact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              labelWidget,
+              const SizedBox(height: 4),
+              slider,
+              Align(alignment: Alignment.centerRight, child: valueLabel),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            SizedBox(width: 120, child: labelWidget),
+            Expanded(child: slider),
+            SizedBox(width: 50, child: valueLabel),
+          ],
+        );
+      },
     );
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -68,37 +67,14 @@ import 'screens/login/base_url_wrapper.dart';
 import 'screens/login/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
 import 'helpers/date_helper.dart';
+import 'helpers/orientation_helper.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'resources/localization_service.dart';
 import 'resources/app_translations.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
-Future<void> _lockOrientation() async {
-  // Phones (width < 600 logical px on the shorter axis) → portrait only.
-  // Tablets and desktops → landscape only.
-  // On web/desktop platforms that don't support this API it is a no-op.
-  if (kIsWeb) return;
-
-  final view = WidgetsBinding.instance.platformDispatcher.views.first;
-  final shortestSide = view.physicalSize.shortestSide / view.devicePixelRatio;
-
-  if (shortestSide < 600) {
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-  } else {
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-  }
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await _lockOrientation();
 
   await _initializeBaseUrlFromPreferences();
   await _initializeNotificationPosition();
@@ -398,8 +374,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => QuotationsProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
-      child: KeyboardDispatcher(
-        child: Consumer<KeyboardFocusHighlightProvider>(
+      child: OrientationLock(
+        child: KeyboardDispatcher(
+          child: Consumer<KeyboardFocusHighlightProvider>(
           builder: (context, focusHighlightProvider, child) {
             return GetMaterialApp(
           debugShowCheckedModeBanner: false,
@@ -442,6 +419,7 @@ class MyApp extends StatelessWidget {
         );
           },
         ),
+      ),
       ),
     );
   }
@@ -498,6 +476,9 @@ ThemeData _buildAppTheme(bool focusHighlightEnabled) {
     iconButtonTheme: IconButtonThemeData(
       style: ButtonStyle(overlayColor: overlayForButtons()),
     ),
+
+    // ---- Dialogs ----
+    dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
 
     // ---- Text fields ----
     // Bold the focused border so the active TextField is unmistakable.

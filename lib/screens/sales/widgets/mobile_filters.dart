@@ -59,7 +59,7 @@ class MobileFilters extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 6),
+          padding: const EdgeInsetsDirectional.only(start: 4, bottom: 6),
           child: Text(
             label,
             style: buildCustomStyle(
@@ -75,67 +75,132 @@ class MobileFilters extends StatelessWidget {
     );
   }
 
+  Widget _buildTextFilter({
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    required Size size,
+  }) {
+    return _buildFilterField(
+      label: label,
+      child: buildColumnWidgetForTextFields(
+        height: 45,
+        onchanged: onSearch,
+        controller: controller,
+        size: size,
+        hintText: hint,
+      ),
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return _buildFilterField(
+      label: "Status",
+      child: SizedBox(
+        height: 45,
+        child: BuildBoxShadowContainer(
+          circleRadius: 10,
+          alignment: Alignment.centerLeft,
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsetsDirectional.only(start: 15),
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.withOpacity(0.12)),
+          child: DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            value: selectedStatus,
+            isExpanded: true,
+            dropdownColor: Colors.white,
+            hint: Text(
+              'Select Status',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s10,
+                0.27,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
+            items: [
+              DropdownMenuItem<String>(
+                value: null,
+                child: Text(
+                  'All',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s10,
+                    0.27,
+                    ColorManager.textColor.withOpacity(.5),
+                  ),
+                ),
+              ),
+              ...statusOptions.map((String status) {
+                return DropdownMenuItem<String>(
+                  value: status,
+                  child: Text(
+                    status.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s10,
+                      0.27,
+                      ColorManager.textColor.withOpacity(.5),
+                    ),
+                  ),
+                );
+              }),
+            ],
+            onChanged: onStatusChanged,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Row 1: Order # and Customer
-        Row(
-          children: [
-            Expanded(
-              child: _buildFilterField(
-                label: "Order #",
-                child: buildColumnWidgetForTextFields(
-                  height: 45,
-                  onchanged: onSearch,
-                  controller: orderNumberController,
-                  size: size,
-                  hintText: 'Order Number',
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildFilterField(
-                label: "Customer",
-                child: buildColumnWidgetForTextFields(
-                  height: 45,
-                  onchanged: onSearch,
-                  controller: customerNameController,
-                  size: size,
-                  hintText: 'Customer Name',
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool narrow = constraints.maxWidth < 400;
 
-        // Row 2: Phone and Date
-        Row(
-          children: [
-            Expanded(
-              child: _buildFilterField(
-                label: "Phone",
-                child: buildColumnWidgetForTextFields(
-                  height: 45,
-                  onchanged: onSearch,
-                  controller: phoneController,
-                  size: size,
-                  hintText: 'Phone',
-                ),
+        if (narrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildTextFilter(
+                label: "Order #",
+                hint: 'Order Number',
+                controller: orderNumberController,
+                size: size,
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildFilterField(
+              const SizedBox(height: 12),
+              _buildTextFilter(
+                label: "Customer",
+                hint: 'Customer Name',
+                controller: customerNameController,
+                size: size,
+              ),
+              const SizedBox(height: 12),
+              _buildTextFilter(
+                label: "Phone",
+                hint: 'Phone',
+                controller: phoneController,
+                size: size,
+              ),
+              const SizedBox(height: 12),
+              _buildFilterField(
                 label: "Date",
                 child: BuildBoxShadowContainer(
-                  circleRadius: 7,
+                  circleRadius: 10,
                   height: 45,
+                  border: Border.all(color: Colors.grey.withOpacity(0.12)),
                   child: Center(
                     child: CalendarPickerTableCell(
                       key: calendarPickerKey,
@@ -144,106 +209,107 @@ class MobileFilters extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Row 3: Price and Store
-        Row(
-          children: [
-            Expanded(
-              child: _buildFilterField(
+              const SizedBox(height: 12),
+              _buildTextFilter(
                 label: "Price",
-                child: buildColumnWidgetForTextFields(
-                  height: 45,
-                  onchanged: onSearch,
-                  controller: amountController,
-                  size: size,
-                  hintText: 'Price',
-                ),
+                hint: 'Price',
+                controller: amountController,
+                size: size,
               ),
-            ),
-            const SizedBox(width: 10),
-            const Spacer(),
-          ],
-        ),
-        const SizedBox(height: 12),
+              const SizedBox(height: 12),
+              _buildStatusDropdown(),
+              const SizedBox(height: 16),
+              CustomRoundButton(
+                title: "Reset Filters",
+                boxColor: Colors.white,
+                textColor: ColorManager.kPrimaryColor,
+                fct: onReset,
+                height: 45,
+                width: double.infinity,
+                fontSize: FontSize.s12,
+              ),
+            ],
+          );
+        }
 
-        // Row 4: Status (full width)
-        _buildFilterField(
-          label: "Status",
-          child: SizedBox(
-            height: 45,
-            child: BuildBoxShadowContainer(
-              circleRadius: 7,
-              alignment: Alignment.centerLeft,
-              margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              padding: const EdgeInsets.only(left: 15),
-              color: Colors.white,
-              child: DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                value: selectedStatus,
-                dropdownColor: Colors.white,
-                hint: Text(
-                  'Select Status',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s10,
-                    0.27,
-                    ColorManager.textColor.withOpacity(.5),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildTextFilter(
+                    label: "Order #",
+                    hint: 'Order Number',
+                    controller: orderNumberController,
+                    size: size,
                   ),
                 ),
-                items: [
-                  DropdownMenuItem<String>(
-                    value: null,
-                    child: Text(
-                      'All',
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s10,
-                        0.27,
-                        ColorManager.textColor.withOpacity(.5),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildTextFilter(
+                    label: "Customer",
+                    hint: 'Customer Name',
+                    controller: customerNameController,
+                    size: size,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildTextFilter(
+                    label: "Phone",
+                    hint: 'Phone',
+                    controller: phoneController,
+                    size: size,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildFilterField(
+                    label: "Date",
+                    child: BuildBoxShadowContainer(
+                      circleRadius: 10,
+                      height: 45,
+                      border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                      child: Center(
+                        child: CalendarPickerTableCell(
+                          key: calendarPickerKey,
+                          onDateSelected: onDateSelected,
+                        ),
                       ),
                     ),
                   ),
-                  ...statusOptions.map((String status) {
-                    return DropdownMenuItem<String>(
-                      value: status,
-                      child: Text(
-                        status.toUpperCase(),
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s10,
-                          0.27,
-                          ColorManager.textColor.withOpacity(.5),
-                        ),
-                      ),
-                    );
-                  }).toList()
-                ],
-                onChanged: onStatusChanged,
-              ),
+                ),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Reset button
-        CustomRoundButton(
-          title: "Reset Filters",
-          boxColor: Colors.white,
-          textColor: ColorManager.kPrimaryColor,
-          fct: onReset,
-          height: 45,
-          width: double.infinity,
-          fontSize: FontSize.s12,
-        ),
-      ],
+            const SizedBox(height: 12),
+            _buildTextFilter(
+              label: "Price",
+              hint: 'Price',
+              controller: amountController,
+              size: size,
+            ),
+            const SizedBox(height: 12),
+            _buildStatusDropdown(),
+            const SizedBox(height: 16),
+            CustomRoundButton(
+              title: "Reset Filters",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              fct: onReset,
+              height: 45,
+              width: double.infinity,
+              fontSize: FontSize.s12,
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -4,7 +4,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 
-import 'package:pos_machine/features/billing/domain/product_stock_summary.dart';
+import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 
@@ -19,6 +19,8 @@ import 'package:pos_machine/features/billing/domain/add_product_with_variant.dar
 import 'package:pos_machine/models/get_product.dart';
 
 import 'package:pos_machine/providers/app_settings_provider.dart';
+
+import 'package:pos_machine/providers/local_product_provider.dart';
 
 import 'package:pos_machine/providers/role_provider.dart';
 
@@ -162,6 +164,12 @@ class MarketProductGrid extends StatelessWidget {
 
     );
 
+    final stockEnabled = context.select<LocalProductProvider, bool>(
+
+      (p) => p.isStockEnabled,
+
+    );
+
 
 
     if (products.isEmpty) {
@@ -213,6 +221,8 @@ class MarketProductGrid extends StatelessWidget {
             product: product,
 
             currency: currency,
+
+            stockEnabled: stockEnabled,
 
             onInfoTap: canViewDetails
 
@@ -270,6 +280,8 @@ class MarketProductGrid extends StatelessWidget {
 
           currency: currency,
 
+          stockEnabled: stockEnabled,
+
           onInfoTap: canViewDetails
 
               ? () => _showProductDetails(context, product)
@@ -304,6 +316,8 @@ class ProductListRow extends StatelessWidget {
 
   final String currency;
 
+  final bool stockEnabled;
+
 
 
   const ProductListRow({
@@ -320,12 +334,11 @@ class ProductListRow extends StatelessWidget {
 
     this.currency = '',
 
+    this.stockEnabled = false,
+
   });
 
 
-
-  bool get _inStock =>
-      hasAvailableStock(product.stock?.map((s) => s.quantity));
 
   String get _displayName => product.productName ?? 'Unnamed Product';
 
@@ -335,7 +348,10 @@ class ProductListRow extends StatelessWidget {
 
   Widget build(BuildContext context) {
 
-    final inStock = _inStock;
+    final stockStatus = resolveProductStockDisplayStatus(
+      product,
+      stockEnabled: stockEnabled,
+    );
 
     final imageUrl = resolveMarketProductImageUrl(product);
 
@@ -515,7 +531,7 @@ class ProductListRow extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            _ListStockChip(inStock: inStock),
+                            _ListStockChip(status: stockStatus),
                           ],
                         ),
 
@@ -612,27 +628,66 @@ class _ListBodyTapTarget extends StatelessWidget {
 
 
 class _ListStockChip extends StatelessWidget {
-  const _ListStockChip({required this.inStock});
+  const _ListStockChip({required this.status});
 
-  final bool inStock;
+  final ProductStockDisplayStatus status;
+
+  String get _label {
+    switch (status) {
+      case ProductStockDisplayStatus.available:
+        return 'Available';
+      case ProductStockDisplayStatus.lowStock:
+        return 'Low Stock';
+      case ProductStockDisplayStatus.atReorderLevel:
+        return 'At Reorder Level';
+      case ProductStockDisplayStatus.outOfStock:
+        return 'Out of Stock';
+    }
+  }
+
+  Color get _backgroundColor {
+    switch (status) {
+      case ProductStockDisplayStatus.available:
+        return Colors.green.shade50;
+      case ProductStockDisplayStatus.lowStock:
+        return ColorManager.kOrange.withValues(alpha: 0.12);
+      case ProductStockDisplayStatus.atReorderLevel:
+        return ColorManager.kButtonYellow.withValues(alpha: 0.18);
+      case ProductStockDisplayStatus.outOfStock:
+        return Colors.red.shade50;
+    }
+  }
+
+  Color get _textColor {
+    switch (status) {
+      case ProductStockDisplayStatus.available:
+        return Colors.green.shade700;
+      case ProductStockDisplayStatus.lowStock:
+        return ColorManager.kOrange;
+      case ProductStockDisplayStatus.atReorderLevel:
+        return Colors.black87;
+      case ProductStockDisplayStatus.outOfStock:
+        return Colors.red.shade700;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: inStock ? Colors.green.shade50 : Colors.red.shade50,
+        color: _backgroundColor,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        inStock ? 'Available' : 'Out of Stock',
+        _label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontFamily: 'Poppins',
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: inStock ? Colors.green.shade700 : Colors.red.shade700,
+          color: _textColor,
         ),
       ),
     );

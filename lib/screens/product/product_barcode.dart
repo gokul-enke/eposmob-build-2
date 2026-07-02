@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
+import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 
 import 'package:pos_machine/providers/auth_model.dart';
@@ -13,13 +14,14 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 
-import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'package:pos_machine/screens/print/barcode_printer_service.dart';
+import 'widgets/barcode_mobile_filters.dart';
 import 'widgets/confirm_barcode_print_modal.dart';
+import 'widgets/product_barcode_responsive.dart';
 
 class ProductBarcodeScreen extends StatefulWidget {
   const ProductBarcodeScreen({super.key});
@@ -37,6 +39,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   GetProduct? selectedProduct;
   bool initLoading = false;
   bool isInitialized = false;
+  bool _showFilters = false;
   List<String> categories = ["All Categories"];
 
   // Track selected products by stable key so selection survives pagination.
@@ -48,6 +51,13 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     super.initState();
     loadInitData();
     categoryController.text = "All Categories";
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _showFilters = !_isMobile(context);
+        });
+      }
+    });
   }
 
   // ── ALL ORIGINAL LOGIC BELOW — UNTOUCHED ──
@@ -153,6 +163,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     });
     Provider.of<LocalProductProvider>(context, listen: false)
         .listAllProducts(categoryId: 0);
+
+    if (_isMobile(context)) {
+      setState(() {
+        _showFilters = false;
+      });
+    }
   }
 
   String _productSelectionKey(GetProduct product) {
@@ -182,43 +198,58 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       selectedProduct = product;
     });
 
+    final isPhone = productBarcodeIsPhone(context);
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(isPhone ? 16 : 24),
         ),
         elevation: 8,
         backgroundColor: Colors.white,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: isPhone ? 16 : 40,
+          vertical: isPhone ? 24 : 40,
+        ),
         child: Container(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width / 2,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
+            maxWidth: isPhone
+                ? MediaQuery.of(context).size.width
+                : MediaQuery.of(context).size.width / 2,
+            maxHeight: MediaQuery.of(context).size.height * 0.75,
           ),
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsetsDirectional.all(isPhone ? 16 : 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Stock Details',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                  Expanded(
+                    child: Text(
+                      'Stock Details',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        isPhone ? FontSize.s18 : FontSize.s20,
+                        0.30,
+                        ColorManager.textColor,
+                      ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Expanded(
                 child: ListView(
                   shrinkWrap: true,
@@ -227,7 +258,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                     _buildDetailRow('Product Name', product.productName ?? 'N/A'),
                     _buildDetailRow(
                         'Category', product.category?.name ?? 'N/A'),
-                    _buildDetailRow('Store Name', 'N/A'), // Product API doesn't return generic store info easily here
+                    _buildDetailRow('Store Name', 'N/A'),
                     _buildDetailRow('Supplier', 'N/A'),
                     _buildDetailRow('Unit', product.unit ?? 'N/A'),
                     _buildDetailRow('Retail Price',
@@ -243,21 +274,19 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: "Close",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => Navigator.pop(context),
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
+              const SizedBox(height: 12),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: CustomRoundButton(
+                  title: "Close",
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  borderColor: ColorManager.kPrimaryColor,
+                  fct: () => Navigator.pop(context),
+                  height: 45,
+                  width: isPhone ? double.infinity : 120,
+                  fontSize: FontSize.s12,
+                ),
               ),
             ],
           ),
@@ -265,8 +294,6 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       ),
     );
   }
-
-
 
   void _handlePrintSelected(List<GetProduct> selectedProducts) async {
     debugPrint('🖨️ PRINT triggered for ${selectedProducts.length} items');
@@ -374,7 +401,51 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     }
   }
 
+  // ── UI HELPERS ──
+
+  bool _isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < kProductBarcodePhoneBreakpoint;
+
+  bool _hasActiveFilters() {
+    return productNameController.text.isNotEmpty ||
+        barcodeController.text.isNotEmpty ||
+        categoryController.text != "All Categories";
+  }
+
+  Widget _buildCategoryDropdown() {
+    return BuildDropDownWithSearch<String>(
+      title: null,
+      showName: false,
+      hintText: 'Category',
+      value: categoryController.text == "All Categories"
+          ? null
+          : categoryController.text,
+      items: categories
+          .where((category) => category != "All Categories")
+          .toList(),
+      onChanged: (String? newValue) {
+        setState(() {
+          categoryController.text = newValue ?? "All Categories";
+        });
+        searchProducts(1);
+      },
+      displayText: (category) => category,
+      searchController: categorySearchController,
+      height: 45,
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+    );
+  }
+
   Widget _buildDetailRow(String label, String value) {
+    final isPhone = productBarcodeIsPhone(context);
+
+    if (isPhone) {
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(bottom: 10),
+        child: ProductBarcodeInfoChip(label: label, value: value),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -395,6 +466,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           Expanded(
             child: Text(
               value,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -414,11 +487,13 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       child: Text(
         text,
         textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s14,
+          FontWeightManager.semiBold,
+          FontSize.s12,
           0.18,
-          ColorManager.kPrimaryColor,
+          ColorManager.kTitleTextColor,
         ),
       ),
     );
@@ -437,8 +512,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           child: Text(
             text,
             textAlign: TextAlign.center,
-            overflow: TextOverflow.visible,
-            softWrap: false,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -451,217 +526,554 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
   }
 
+  Widget _buildHeaderActions(bool isMobile) {
+    if (_selectedProductKeys.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final printButton = CustomRoundButton(
+      title: "Print Selected (${_selectedProductKeys.length})",
+      fct: () {
+        final selected = _selectedProductsByKey.values.toList();
+        _handlePrintSelected(selected);
+      },
+      fontSize: 12,
+      height: 45,
+      width: isMobile ? double.infinity : 180,
+    );
+
+    final clearButton = CustomRoundButton(
+      title: "Clear Selected",
+      fct: () {
+        setState(() {
+          _selectedProductKeys.clear();
+          _selectedProductsByKey.clear();
+        });
+      },
+      fontSize: 12,
+      height: 45,
+      width: isMobile ? double.infinity : 150,
+      boxColor: Colors.white,
+      textColor: ColorManager.kPrimaryColor,
+      borderColor: ColorManager.kPrimaryColor,
+    );
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              ProductBarcodeSelectionBadge(count: _selectedProductKeys.length),
+            ],
+          ),
+          const SizedBox(height: 10),
+          printButton,
+          const SizedBox(height: 10),
+          clearButton,
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        printButton,
+        const SizedBox(width: 10),
+        clearButton,
+      ],
+    );
+  }
+
+  Widget _buildFilterSection(Size size, bool isMobile) {
+    if (isMobile && !_showFilters) {
+      return const SizedBox.shrink();
+    }
+
+    if (isMobile) {
+      return BarcodeMobileFilters(
+        productNameController: productNameController,
+        barcodeController: barcodeController,
+        categoryField: _buildCategoryDropdown(),
+        onSearch: (value) {
+          searchProducts(1);
+        },
+        onReset: resetSearch,
+      );
+    }
+
+    return ProductBarcodeFilterLayout(
+      children: [
+        _buildCategoryDropdown(),
+        buildColumnWidgetForTextFields(
+          height: 45,
+          onchanged: (value) {
+            searchProducts(1);
+          },
+          controller: productNameController,
+          size: size,
+          hintText: 'Product Name',
+        ),
+        buildColumnWidgetForTextFields(
+          height: 45,
+          onchanged: (value) {
+            searchProducts(1);
+          },
+          controller: barcodeController,
+          size: size,
+          hintText: 'Barcode',
+        ),
+        CustomRoundButton(
+          title: "Reset",
+          boxColor: Colors.white,
+          textColor: ColorManager.kPrimaryColor,
+          borderColor: ColorManager.kPrimaryColor,
+          fct: resetSearch,
+          height: 45,
+          width: double.infinity,
+          fontSize: FontSize.s12,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileProductCard({
+    required GetProduct product,
+    required int serialNumber,
+    required bool isSelected,
+  }) {
+    final categoryName = product.category?.name ?? 'N/A';
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(bottom: 12),
+      child: ProductBarcodeContentCard(
+        padding: const EdgeInsetsDirectional.all(14),
+        color: isSelected
+            ? ColorManager.kPrimaryColor.withOpacity(0.04)
+            : Colors.white,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Checkbox(
+                    value: isSelected,
+                    onChanged: (val) {
+                      setState(() {
+                        _setProductSelected(product, val == true);
+                      });
+                    },
+                    activeColor: ColorManager.kPrimaryColor,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.productName ?? 'Unnamed',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s14,
+                          0.18,
+                          ColorManager.kPrimaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        categoryName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s11,
+                          0.13,
+                          Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '#$serialNumber',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.13,
+                    ColorManager.kGreyColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ProductBarcodeTwoColumnLayout(
+              start: ProductBarcodeInfoChip(
+                label: 'Barcode',
+                value: product.barcode ?? 'N/A',
+              ),
+              end: ProductBarcodeInfoChip(
+                label: 'Qty',
+                value: product.numberOfProductsAvailable ?? 'N/A',
+              ),
+            ),
+            const SizedBox(height: 10),
+            ProductBarcodeTwoColumnLayout(
+              start: ProductBarcodeInfoChip(
+                label: 'Price',
+                value: product.price?.price?.toString() ?? 'N/A',
+              ),
+              end: ProductBarcodeInfoChip(
+                label: 'MRP',
+                value: product.mrp?.toString() ?? 'N/A',
+              ),
+            ),
+            if (product.sku != null && product.sku!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              ProductBarcodeInfoChip(
+                label: 'SKU',
+                value: product.sku!,
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                ProductBarcodeIconAction(
+                  icon: Icons.visibility,
+                  backgroundColor: Colors.green.withOpacity(0.12),
+                  iconColor: Colors.green.shade700,
+                  tooltip: 'View Details',
+                  onPressed: () => _showProductDetails(product),
+                ),
+                const SizedBox(width: 8),
+                ProductBarcodeIconAction(
+                  icon: Icons.print,
+                  backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+                  iconColor: ColorManager.kPrimaryColor,
+                  tooltip: 'Print Barcode',
+                  onPressed: () => _handlePrintSingle(product),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopTable(
+    LocalProductProvider gridProvider,
+    List<GetProduct> listProductModelDataList,
+  ) {
+    const Map<int, TableColumnWidth> colWidths = {
+      0: FixedColumnWidth(55),
+      1: FixedColumnWidth(48),
+      2: FlexColumnWidth(2.0),
+      3: FlexColumnWidth(1.3),
+      4: FlexColumnWidth(1.3),
+      5: FlexColumnWidth(0.7),
+      6: FlexColumnWidth(1.0),
+      7: FlexColumnWidth(1.0),
+      8: FlexColumnWidth(1.1),
+      9: FlexColumnWidth(0.8),
+    };
+
+    final allSelected = listProductModelDataList.isNotEmpty &&
+        listProductModelDataList.every((product) => _isProductSelected(product));
+
+    return ProductBarcodeResponsiveTable(
+      minWidth: 960,
+      table: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: ColorManager.tableBGColor.withOpacity(0.5),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.withOpacity(0.15)),
+              ),
+            ),
+            child: Table(
+              columnWidths: colWidths,
+              border: null,
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                TableRow(
+                  children: [
+                    _buildTableHeader('No'),
+                    Center(
+                      child: Checkbox(
+                        value: allSelected,
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true) {
+                              for (final product in listProductModelDataList) {
+                                _setProductSelected(product, true);
+                              }
+                            } else {
+                              for (final product in listProductModelDataList) {
+                                _setProductSelected(product, false);
+                              }
+                            }
+                          });
+                        },
+                        activeColor: ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                    _buildTableHeader('Product Name'),
+                    _buildTableHeader('Barcode'),
+                    _buildTableHeader('Category'),
+                    _buildTableHeader('Qty'),
+                    _buildTableHeader('Price'),
+                    _buildTableHeader('MRP'),
+                    _buildTableHeader('SKU'),
+                    _buildTableHeader('Action'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.trackpad,
+                  },
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  scrollDirection: Axis.vertical,
+                  child: Table(
+                    columnWidths: colWidths,
+                    border: null,
+                    defaultVerticalAlignment:
+                        TableCellVerticalAlignment.middle,
+                    children: [
+                      ...listProductModelDataList.asMap().entries.map((entry) {
+                        final int index = entry.key;
+                        final product = entry.value;
+                        final isSelected = _isProductSelected(product);
+                        final serialNumber =
+                            gridProvider.paginationFrom + index;
+
+                        return TableRow(
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? ColorManager.kPrimaryColor.withOpacity(0.07)
+                                : index % 2 == 0
+                                    ? Colors.white
+                                    : Colors.grey.withOpacity(0.06),
+                          ),
+                          children: [
+                            _buildTableCell(serialNumber.toString()),
+                            Center(
+                              child: Checkbox(
+                                value: isSelected,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _setProductSelected(product, val == true);
+                                  });
+                                },
+                                activeColor: ColorManager.kPrimaryColor,
+                              ),
+                            ),
+                            _buildTableCell(product.productName ?? ''),
+                            _buildTableCell(product.barcode ?? 'N/A'),
+                            _buildTableCell(product.category?.name ?? 'N/A'),
+                            _buildTableCell(
+                                product.numberOfProductsAvailable ?? 'N/A'),
+                            _buildTableCell(
+                                product.price?.price?.toString() ?? 'N/A'),
+                            _buildTableCell(
+                                product.mrp?.toString() ?? 'N/A'),
+                            _buildTableCell(product.sku ?? 'N/A'),
+                            Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ProductBarcodeIconAction(
+                                    icon: Icons.visibility,
+                                    backgroundColor:
+                                        Colors.green.withOpacity(0.12),
+                                    iconColor: Colors.green.shade700,
+                                    tooltip: 'View Details',
+                                    onPressed: () =>
+                                        _showProductDetails(product),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  ProductBarcodeIconAction(
+                                    icon: Icons.print,
+                                    backgroundColor: ColorManager.kPrimaryColor
+                                        .withOpacity(0.12),
+                                    iconColor: ColorManager.kPrimaryColor,
+                                    tooltip: 'Print Barcode',
+                                    onPressed: () =>
+                                        _handlePrintSingle(product),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileList(
+    LocalProductProvider gridProvider,
+    List<GetProduct> listProductModelDataList,
+  ) {
+    final allSelected = listProductModelDataList.isNotEmpty &&
+        listProductModelDataList.every((product) => _isProductSelected(product));
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.only(bottom: 8),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: Checkbox(
+                  value: allSelected,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        for (final product in listProductModelDataList) {
+                          _setProductSelected(product, true);
+                        }
+                      } else {
+                        for (final product in listProductModelDataList) {
+                          _setProductSelected(product, false);
+                        }
+                      }
+                    });
+                  },
+                  activeColor: ColorManager.kPrimaryColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Select all on page',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.15,
+                  ColorManager.textColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsetsDirectional.symmetric(vertical: 4),
+            itemCount: listProductModelDataList.length,
+            itemBuilder: (context, index) {
+              final product = listProductModelDataList[index];
+              final serialNumber = gridProvider.paginationFrom + index;
+              return _buildMobileProductCard(
+                product: product,
+                serialNumber: serialNumber,
+                isSelected: _isProductSelected(product),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     final SideBarController sideBarController = Get.put(SideBarController());
+    final bool isMobile = _isMobile(context);
+    final double horizontalMargin = isMobile ? 8 : 12;
 
     return SafeArea(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        padding: const EdgeInsets.all(8),
+        margin: EdgeInsetsDirectional.only(
+          start: horizontalMargin,
+          end: horizontalMargin,
+          top: isMobile ? 10 : 20,
+          bottom: isMobile ? 10 : 20,
+        ),
+        padding: EdgeInsets.all(isMobile ? 4 : 8),
         decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white),
+          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+          border: Border.all(color: Colors.grey.withOpacity(0.12)),
+          boxShadow: const [
+            BoxShadow(
+              color: ColorManager.boxShadowColor,
+              blurRadius: 10,
+              offset: Offset(0, 3),
+            ),
+          ],
+          color: Colors.white,
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
+          padding: EdgeInsetsDirectional.symmetric(
+            vertical: isMobile ? 12.0 : 5.0,
+            horizontal: isMobile ? 12.0 : 20.0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Print Barcodes",
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
-                  ),
-                  Row(
-                    children: [
-                      if (_selectedProductKeys.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: CustomRoundButton(
-                            title:
-                                "Print Selected (${_selectedProductKeys.length})",
-                            fct: () {
-                              final selected =
-                                  _selectedProductsByKey.values.toList();
-                              _handlePrintSelected(selected);
-                            },
-                            fontSize: 12,
-                            height: 45,
-                            width: 180,
-                          ),
-                        ),
-                      if (_selectedProductKeys.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: CustomRoundButton(
-                            title: "Clear Selected",
-                            fct: () {
-                              setState(() {
-                                _selectedProductKeys.clear();
-                                _selectedProductsByKey.clear();
-                              });
-                            },
-                            fontSize: 12,
-                            height: 45,
-                            width: 150,
-                            boxColor: Colors.white,
-                            textColor: ColorManager.kPrimaryColor,
-                            borderColor: ColorManager.kPrimaryColor,
-                          ),
-                        ),
-                      // CustomRoundButton(
-                      //   title: "Print Barcode",
-                      //   fct: () async {
-                      //     sideBarController.index.value = 18;
-                      //   },
-                      //   fontSize: 12,
-                      //   height: 45,
-                      //   width: 150,
-                      // ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // ── FILTERS — ORIGINAL, UNTOUCHED ──
-              Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            BuildDropDownWithSearch<String>(
-                              title: null,
-                              showName: false,
-                              hintText: 'Category',
-                              value: categoryController.text == "All Categories"
-                                  ? null
-                                  : categoryController.text,
-                              items: categories
-                                  .where((category) =>
-                                      category != "All Categories")
-                                  .toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  categoryController.text =
-                                      newValue ?? "All Categories";
-                                });
-                                searchProducts(1);
-                              },
-                              displayText: (category) => category,
-                              searchController: categorySearchController,
-                              height: 45,
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 0, vertical: 0),
-                            ),
-                          ],
-                        ),
+              if (isMobile)
+                Row(
+                  children: [
+                    Expanded(
+                      child: ProductBarcodePageHeader(
+                        title: 'Print Barcodes',
+                        subtitle: 'Select products to print barcode labels',
                       ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            BuildBoxShadowContainer(
-                              circleRadius: 7,
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.only(left: 15),
-                              height: 45,
-                              child: TextField(
-                                controller: productNameController,
-                                onChanged: (value) {
-                                  searchProducts(1);
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'Product Name',
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.27,
-                                  ColorManager.textColor.withOpacity(.5),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            BuildBoxShadowContainer(
-                              circleRadius: 7,
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.only(left: 15),
-                              height: 45,
-                              child: TextField(
-                                controller: barcodeController,
-                                onChanged: (value) {
-                                  searchProducts(1);
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'Barcode',
-                                  hintStyle: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.27,
-                                    ColorManager.textColor.withOpacity(.5),
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.27,
-                                  ColorManager.textColor.withOpacity(.5),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: CustomRoundButton(
-                          title: "Reset",
-                          boxColor: Colors.white,
-                          textColor: ColorManager.kPrimaryColor,
-                          borderColor: ColorManager.kPrimaryColor,
-                          fct: resetSearch,
-                          height: 45,
-                          width: double.infinity,
-                          fontSize: FontSize.s12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                    ),
+                    ProductBarcodeFilterToggle(
+                      showFilters: _showFilters,
+                      hasActiveFilters: _hasActiveFilters(),
+                      onToggle: () {
+                        setState(() {
+                          _showFilters = !_showFilters;
+                        });
+                      },
+                    ),
+                  ],
+                )
+              else
+                ProductBarcodePageHeader(
+                  title: 'Print Barcodes',
+                  subtitle: 'Select products to print barcode labels',
+                  trailing: _buildHeaderActions(false),
+                ),
+              if (isMobile) ...[
+                const SizedBox(height: 12),
+                _buildHeaderActions(true),
+              ],
+              const SizedBox(height: 15),
+              _buildFilterSection(size, isMobile),
+              if (isMobile && _showFilters) const SizedBox(height: 12),
+              if (!isMobile) const SizedBox(height: 10),
               Expanded(
                 child: Column(
                   children: [
@@ -670,263 +1082,40 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                               Provider.of<LocalProductProvider>(context,
                                       listen: true)
                                   .isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator.adaptive())
+                          ? const ProductBarcodeLoadingState()
                           : Consumer<LocalProductProvider>(
                               builder: (context, gridProvider, child) {
                                 List<GetProduct>? listProductModelDataList =
                                     gridProvider.paginatedProducts;
 
                                 if (listProductModelDataList.isEmpty) {
-                                  return const Center(
-                                      child: Text("No product data available"));
+                                  return const ProductBarcodeEmptyState(
+                                    title: 'No product data available',
+                                    subtitle:
+                                        'Try adjusting your filters or search terms',
+                                  );
                                 }
 
-                                // column widths — shared between header and body
-                                const Map<int, TableColumnWidth> colWidths = {
-                                  0: FixedColumnWidth(55), // No
-                                  1: FixedColumnWidth(48), // Checkbox
-                                  2: FlexColumnWidth(2.0), // Product Name
-                                  3: FlexColumnWidth(1.3), // Barcode
-                                  4: FlexColumnWidth(1.3), // Category
-                                  5: FlexColumnWidth(0.7), // Qty
-                                  6: FlexColumnWidth(1.0), // Price
-                                  7: FlexColumnWidth(1.0), // MRP
-                                  8: FlexColumnWidth(1.1), // SKU
-                                  9: FlexColumnWidth(0.8), // Action
-                                };
+                                if (isMobile) {
+                                  return _buildMobileList(
+                                    gridProvider,
+                                    listProductModelDataList,
+                                  );
+                                }
 
-                                final allSelected =
-                                    listProductModelDataList.isNotEmpty &&
-                                        listProductModelDataList.every((product) =>
-                                            _isProductSelected(product));
-
-                                return BuildBoxShadowContainer(
-                                  margin: const EdgeInsets.only(top: 5),
-                                  circleRadius: 7,
-                                  offsetValue: const Offset(2, 2),
-                                  blurRadius: 8.0,
-                                  color: Colors.white,
-                                  child: Column(
-                                    children: [
-                                      // ── CHANGED: new table header ──
-                                      Container(
-                                        decoration: const BoxDecoration(
-                                          color: ColorManager.tableBGColor,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black12,
-                                              offset: Offset(0, 2),
-                                              blurRadius: 2.0,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Table(
-                                          columnWidths: colWidths,
-                                          border: null,
-                                          defaultVerticalAlignment:
-                                              TableCellVerticalAlignment.middle,
-                                          children: [
-                                          TableRow(
-                                            children: [
-                                              _buildTableHeader('No'),
-                                              // Select-all checkbox
-                                              Center(
-                                                child: Checkbox(
-                                                  value: allSelected,
-                                                  onChanged: (val) {
-                                                    setState(() {
-                                                      if (val == true) {
-                                                        for (final product
-                                                            in listProductModelDataList) {
-                                                          _setProductSelected(
-                                                              product, true);
-                                                        }
-                                                      } else {
-                                                        for (final product
-                                                            in listProductModelDataList) {
-                                                          _setProductSelected(
-                                                              product, false);
-                                                        }
-                                                      }
-                                                    });
-                                                  },
-                                                  activeColor: ColorManager
-                                                      .kPrimaryColor,
-                                                ),
-                                              ),
-                                              _buildTableHeader(
-                                                  'Product Name'),
-                                              _buildTableHeader('Barcode'),
-                                              _buildTableHeader('Category'),
-                                              _buildTableHeader('Qty'),
-                                              _buildTableHeader('Price'),
-                                              _buildTableHeader('MRP'),
-                                              _buildTableHeader('SKU'),
-                                              _buildTableHeader('Action'),
-                                            ],
-                                          ),
-                                          ],
-                                        ),
-                                      ),
-                                      // ── CHANGED: new table body ──
-                                      Expanded(
-                                        child: MouseRegion(
-                                          cursor: SystemMouseCursors.grab,
-                                          child: ScrollConfiguration(
-                                            behavior:
-                                                ScrollConfiguration.of(context)
-                                                    .copyWith(
-                                              dragDevices: {
-                                                PointerDeviceKind.mouse,
-                                                PointerDeviceKind.touch,
-                                                PointerDeviceKind.stylus,
-                                                PointerDeviceKind.trackpad,
-                                              },
-                                            ),
-                                            child: SingleChildScrollView(
-                                              physics:
-                                                  const BouncingScrollPhysics(),
-                                              scrollDirection: Axis.vertical,
-                                              child: Table(
-                                                columnWidths: colWidths,
-                                                border: null,
-                                                defaultVerticalAlignment:
-                                                    TableCellVerticalAlignment
-                                                        .middle,
-                                                children: [
-                                                  ...listProductModelDataList
-                                                      .asMap()
-                                                      .entries
-                                                      .map((entry) {
-                                                    final int index = entry.key;
-                                                    final product = entry.value;
-                                                    final isSelected =
-                                                        _isProductSelected(product);
-                                                    
-                                                    // Calculate serial number based on pagination
-                                                    final serialNumber =
-                                                        gridProvider.paginationFrom +
-                                                            index;
-
-                                                    return TableRow(
-                                                      decoration: BoxDecoration(
-                                                        color: isSelected
-                                                            ? ColorManager
-                                                                .kPrimaryColor
-                                                                .withOpacity(
-                                                                    0.07)
-                                                            : index % 2 == 0
-                                                                ? Colors.white
-                                                                : Colors.grey
-                                                                    .withOpacity(
-                                                                        0.1),
-                                                      ),
-                                                      children: [
-                                                        _buildTableCell(
-                                                            serialNumber.toString()),
-                                                        // Row checkbox
-                                                        Center(
-                                                          child: Checkbox(
-                                                            value: isSelected,
-                                                            onChanged: (val) {
-                                                              setState(() {
-                                                                _setProductSelected(
-                                                                  product,
-                                                                  val == true,
-                                                                );
-                                                              });
-                                                            },
-                                                            activeColor:
-                                                                ColorManager
-                                                                    .kPrimaryColor,
-                                                          ),
-                                                        ),
-                                                        _buildTableCell(
-                                                            product.productName ??
-                                                                ''),
-                                                        _buildTableCell(
-                                                            product.barcode ??
-                                                                'N/A'),
-                                                        _buildTableCell(product
-                                                                .category?.name ??
-                                                            'N/A'),
-                                                        _buildTableCell(product
-                                                                .numberOfProductsAvailable ??
-                                                            'N/A'),
-                                                        _buildTableCell(
-                                                            product.price?.price?.toString() ??
-                                                                'N/A'),
-                                                        _buildTableCell(
-                                                            product.mrp?.toString() ?? 'N/A'),
-                                                        _buildTableCell(
-                                                            product.sku ?? 'N/A'),
-                                                        // ── Print icon ──
-                                                        Center(
-                                                          child: Row(
-                                                            mainAxisAlignment:
-                                                                MainAxisAlignment
-                                                                    .center,
-                                                            children: [
-                                                              IconButton(
-                                                                icon: const Icon(
-                                                                    Icons.visibility,
-                                                                    size: 18,
-                                                                    color: Colors
-                                                                        .green),
-                                                                onPressed: () =>
-                                                                    _showProductDetails(
-                                                                        product),
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                                constraints:
-                                                                    const BoxConstraints(),
-                                                                tooltip:
-                                                                    "View Details",
-                                                              ),
-                                                              const SizedBox(
-                                                                  width: 8),
-                                                              IconButton(
-                                                                icon: const Icon(
-                                                                    Icons.print,
-                                                                    size: 18,
-                                                                    color: Colors
-                                                                        .blue),
-                                                                onPressed: () =>
-                                                                    _handlePrintSingle(
-                                                                        product),
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                                constraints:
-                                                                    const BoxConstraints(),
-                                                                tooltip:
-                                                                    "Print Barcode",
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    );
-                                                  }),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                return _buildDesktopTable(
+                                  gridProvider,
+                                  listProductModelDataList,
                                 );
                               },
                             ),
                     ),
                     const SizedBox(height: 10),
-                    // Pagination Always at Bottom
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20.0, vertical: 10),
+                      padding: EdgeInsetsDirectional.symmetric(
+                        horizontal: isMobile ? 0 : 20.0,
+                        vertical: 10,
+                      ),
                       child: Consumer<LocalProductProvider>(
                         builder: (context, productProvider, child) {
                           if (productProvider.paginatedProducts.isEmpty) {

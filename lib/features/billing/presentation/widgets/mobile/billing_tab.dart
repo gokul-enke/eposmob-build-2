@@ -130,40 +130,41 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
     setState(() {});
   }
 
-  Widget _buildWalkInPhoneField(BuildContext context) {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
-    final customerSelection =
-        Provider.of<CustomerSelectionProvider>(context, listen: false);
-
-    return TextField(
-      controller: billingProvider.mobileNumberTextController,
-      keyboardType: TextInputType.phone,
-      decoration: InputDecoration(
-        hintText: 'billing.enter_mobile_hint'.tr,
-        prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-        filled: true,
-        fillColor: const Color(0xFFF8FAFC),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-      ),
-      onChanged: (value) {
-        _customerController.applyWalkInPhone(
-          billingProvider: billingProvider,
-          customerSelectionProvider: customerSelection,
-          phone: value,
-        );
-        _syncPaymentValidationContext();
-      },
-    );
-  }
+  // TODO(temporary): restore with walk-in phone field block in build().
+  // Widget _buildWalkInPhoneField(BuildContext context) {
+  //   final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+  //   final customerSelection =
+  //       Provider.of<CustomerSelectionProvider>(context, listen: false);
+  //
+  //   return TextField(
+  //     controller: billingProvider.mobileNumberTextController,
+  //     keyboardType: TextInputType.phone,
+  //     decoration: InputDecoration(
+  //       hintText: 'billing.enter_mobile_hint'.tr,
+  //       prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+  //       filled: true,
+  //       fillColor: const Color(0xFFF8FAFC),
+  //       contentPadding:
+  //           const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+  //       border: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(8),
+  //         borderSide: BorderSide(color: Colors.grey.shade300),
+  //       ),
+  //       enabledBorder: OutlineInputBorder(
+  //         borderRadius: BorderRadius.circular(8),
+  //         borderSide: BorderSide(color: Colors.grey.shade300),
+  //       ),
+  //     ),
+  //     onChanged: (value) {
+  //       _customerController.applyWalkInPhone(
+  //         billingProvider: billingProvider,
+  //         customerSelectionProvider: customerSelection,
+  //         phone: value,
+  //       );
+  //       _syncPaymentValidationContext();
+  //     },
+  //   );
+  // }
 
   void _clearCustomer(BuildContext context) {
     _customerController.clearSelection(
@@ -236,8 +237,15 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
     final bool showCustomerType = appSettings?.companyB2BEnabled ?? false;
     final isQuotationMode = widget.isQuotationMode;
 
-    final showWalkInPhone =
-        !isQuotationMode && !showDefaultPhoneOnly && selectedCustomer?.id == null;
+    // TODO(temporary): walk-in mobile number field hidden on mobile billing.
+    // Re-enable with:
+    // final showWalkInPhone = !isQuotationMode &&
+    //     !showDefaultPhoneOnly &&
+    //     selectedCustomer?.id == null;
+    // if (showWalkInPhone) ...[
+    //   const SizedBox(height: 8),
+    //   _buildWalkInPhoneField(context),
+    // ],
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _syncPaymentValidationContext();
@@ -311,10 +319,6 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                           ? () => _clearCustomer(context)
                           : null,
                     ),
-                    if (showWalkInPhone) ...[
-                      const SizedBox(height: 8),
-                      _buildWalkInPhoneField(context),
-                    ],
                     const SizedBox(height: 12),
                   ],
 

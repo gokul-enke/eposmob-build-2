@@ -245,6 +245,33 @@ void main() {
       expect(provider.cartItems.first.quantity, 6);
       expect(provider.cartItems.first.price, 9.5);
     });
+
+    test(
+        'reverts wholesale price after spurious manual override on quantity decrease',
+        () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(true);
+      final stock = buildStock(
+        id: 1,
+        quantity: 10,
+        price: '10',
+        mrp: '12',
+        wholesalePrice: '8',
+        wholesaleMinUnit: 5,
+      );
+      final product = buildProduct(productId: 1, stocks: [stock]);
+      provider.initializeProducts([product]);
+      provider.addToCart(product: product, quantity: 8, selectedStock: stock);
+      expect(provider.cartItems.first.price, 8.0);
+
+      // Simulates PriceTextField syncing wholesale price and marking manual override.
+      provider.updateItemPrice(1, stock, 8.0);
+      expect(provider.cartItems.first.isManualPriceOverride, isTrue);
+
+      provider.setCartItemQuantity(1, stock, 3);
+      expect(provider.cartItems.first.price, 10.0);
+      expect(provider.cartItems.first.isManualPriceOverride, isFalse);
+    });
   });
 
   group('Tax Calculation', () {

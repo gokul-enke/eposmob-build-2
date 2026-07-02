@@ -18,7 +18,10 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
-import '../../responsive.dart';
+import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
+import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
+import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
 
 class PrinterSettings extends StatefulWidget {
   const PrinterSettings({super.key});
@@ -1149,10 +1152,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+    return PrinterSettingsPageShell(
+      scrollable: selectedSettingsType != 'Barcode',
+      child: isLoading
+          ? const PrinterSettingsLoadingState()
           : selectedSettingsType == 'Barcode'
               ? _buildBarcodeBody()
               : _buildDefaultBody(),
@@ -1161,291 +1164,149 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   /// Body for Barcode tab — header & tabs fixed, barcode panel fills remaining space
   Widget _buildBarcodeBody() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 24),
-          _buildTabToggle(),
-          Expanded(
-            child: BarcodeLayoutSettingsPanel(
-              printerListWidget: _buildPrinterList(),
-            ),
+    final gap = printerSectionGap(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(),
+        SizedBox(height: gap),
+        _buildTabToggle(),
+        Expanded(
+          child: BarcodeLayoutSettingsPanel(
+            printerListWidget: _buildPrinterList(),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   /// Body for Billing / Kitchen tabs — everything scrolls
   Widget _buildDefaultBody() {
-    bool isMobile = ResponsiveWidget.isMobile(context);
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(isMobile ? 12 : 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 24),
-          _buildTabToggle(),
-          if (selectedSettingsType == 'Billing') _buildSegmentToggle(),
-          if (isMobile)
-            Column(
-              children: [
-                _buildSettingsSection(),
-                const SizedBox(height: 24),
-                _buildPrinterList(),
-              ],
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _buildSettingsSection(),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  flex: 3,
-                  child: _buildPrinterList(),
-                ),
-              ],
-            ),
+    final gap = printerSectionGap(context);
+    final isCompact = printerIsCompact(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(),
+        SizedBox(height: gap),
+        _buildTabToggle(),
+        if (selectedSettingsType == 'Billing') ...[
+          SizedBox(height: isCompact ? 8 : 4),
+          _buildSegmentToggle(),
         ],
-      ),
+        SizedBox(height: gap),
+        PrinterSettingsSplitLayout(
+          settingsColumn: _buildSettingsSection(),
+          printerColumn: _buildPrinterList(),
+        ),
+      ],
     );
   }
 
   Widget _buildSettingsSection() {
+    final cardPadding = printerCardPadding(context);
+    final fieldGap = printerIsCompact(context) ? 12.0 : 20.0;
+    final cardGap = printerSectionGap(context);
+
     return Column(
       children: [
-        // Paper Size Selection
-
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+        PrinterSettingsCard(
+          padding: cardPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.description_rounded,
-                      color: ColorManager.kPrimaryColor,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Paper Size Settings',
-                    style: TextStyle(
-                      color: ColorManager.kPrimaryColor,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              const PrinterSectionHeader(
+                icon: Icons.description_rounded,
+                title: 'Paper Size Settings',
+                subtitle: 'Choose the default paper width for receipts',
               ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Paper Size:',
-                      style: TextStyle(
-                        color: ColorManager.kTitleTextColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButton<String>(
-                          value: paperSizes.contains(selectedPaperSize)
-                              ? selectedPaperSize
-                              : '80mm',
-                          isExpanded: true,
-                          underline: const SizedBox(),
-                          items: paperSizes.map((String size) {
-                            return DropdownMenuItem<String>(
-                              value: size,
-                              child: Text(size),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              final wasThermal = selectedPaperSize == '112mm' ||
-                                  selectedPaperSize == '80mm' ||
-                                  selectedPaperSize == '58mm';
-                              final willBeThermal = newValue == '112mm' ||
-                                  newValue == '80mm' ||
-                                  newValue == '58mm';
+              SizedBox(height: fieldGap),
+              PrinterDropdownField(
+                label: 'Paper Size',
+                value: paperSizes.contains(selectedPaperSize)
+                    ? selectedPaperSize
+                    : '80mm',
+                items: paperSizes.map((String size) {
+                  return DropdownMenuItem<String>(
+                    value: size,
+                    child: Text(size),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    final wasThermal = selectedPaperSize == '112mm' ||
+                        selectedPaperSize == '80mm' ||
+                        selectedPaperSize == '58mm';
+                    final willBeThermal = newValue == '112mm' ||
+                        newValue == '80mm' ||
+                        newValue == '58mm';
 
-                              setState(() {
-                                selectedPaperSize = newValue;
+                    setState(() {
+                      selectedPaperSize = newValue;
 
-                                // Reset theme if crossing thermal↔standard boundary
-                                // and current theme doesn't exist in the new list
-                                if (wasThermal != willBeThermal) {
-                                  final newThemes = _activeThemes;
-                                  final themeExists = newThemes.any(
-                                      (t) => t['id'] == selectedReceiptTheme);
-                                  if (!themeExists) {
-                                    selectedReceiptTheme = 'classic';
-                                    _saveReceiptTheme('classic');
-                                  }
-                                }
-                              });
-                              _saveDefaultPaperSize(newValue);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                      // Reset theme if crossing thermal↔standard boundary
+                      // and current theme doesn't exist in the new list
+                      if (wasThermal != willBeThermal) {
+                        final newThemes = _activeThemes;
+                        final themeExists = newThemes
+                            .any((t) => t['id'] == selectedReceiptTheme);
+                        if (!themeExists) {
+                          selectedReceiptTheme = 'classic';
+                          _saveReceiptTheme('classic');
+                        }
+                      }
+                    });
+                    _saveDefaultPaperSize(newValue);
+                  }
+                },
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
-
-        // Receipt Theme Selection
+        SizedBox(height: cardGap),
         if (_usesReceiptSettings)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+          PrinterSettingsCard(
+            padding: cardPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color:
-                            ColorManager.kPrimaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.palette_outlined,
-                        color: ColorManager.kPrimaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Receipt Theme',
-                      style: TextStyle(
-                        color: ColorManager.kPrimaryColor,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                const PrinterSectionHeader(
+                  icon: Icons.palette_outlined,
+                  title: 'Receipt Theme',
+                  subtitle: 'Select the visual layout for printed receipts',
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Theme:',
-                        style: TextStyle(
-                          color: ColorManager.kTitleTextColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DropdownButton<String>(
-                            value: selectedReceiptTheme,
-                            isExpanded: true,
-                            underline: const SizedBox(),
-                            items:
-                                _activeThemes.map((Map<String, String> theme) {
-                              return DropdownMenuItem<String>(
-                                value: theme['id'],
-                                child: Text(theme['name']!),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              if (newValue != null) {
-                                setState(() {
-                                  selectedReceiptTheme = newValue;
-                                });
-                                _saveReceiptTheme(newValue);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                SizedBox(height: fieldGap),
+                PrinterDropdownField(
+                  label: 'Theme',
+                  value: selectedReceiptTheme,
+                  items: _activeThemes.map((Map<String, String> theme) {
+                    return DropdownMenuItem<String>(
+                      value: theme['id'],
+                      child: Text(theme['name']!),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        selectedReceiptTheme = newValue;
+                      });
+                      _saveReceiptTheme(newValue);
+                    }
+                  },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text(
                   _getThemeDescription(selectedReceiptTheme),
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s11,
+                    0.10,
+                    Colors.grey.shade600,
                   ),
                 ),
               ],
             ),
           ),
-        if (_usesReceiptSettings) const SizedBox(height: 24),
 
         // Font Style Selection
         // Container(
@@ -1570,281 +1431,103 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   }
 
   Widget _buildHeader() {
-    bool isMobile = ResponsiveWidget.isMobile(context);
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    final isCompact = printerIsCompact(context);
+    final cardPadding = printerCardPadding(context);
+
+    return PrinterSettingsCard(
+      padding: cardPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: isCompact ? 40 : 48,
+                width: isCompact ? 40 : 48,
+                decoration: BoxDecoration(
+                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
+                ),
+                child: Icon(
+                  Icons.print_rounded,
+                  color: ColorManager.kPrimaryColor,
+                  size: isCompact ? 22 : 26,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Printer Settings',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        isCompact ? FontSize.s18 : FontSize.s20,
+                        0.30,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Configure printers, paper sizes and receipt themes',
+                      maxLines: isCompact ? 2 : 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s12,
+                        0.10,
+                        Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isCompact ? 12 : 16),
+          SettingsActionRow(
+            children: [
+              CustomRoundButton(
+                fct: _isResyncingDocConfig ? () {} : _resyncDocumentConfigurations,
+                title: _isResyncingDocConfig
+                    ? 'Resyncing...'
+                    : (isCompact ? 'Resync Doc' : 'Resync Doc Config'),
+                height: 44,
+                width: isCompact ? double.infinity : 210,
+                fontSize: isCompact ? 13 : 14,
+                borderColor: ColorManager.kPrimaryColor,
+                boxColor: ColorManager.kPrimaryColor,
+                textColor: Colors.white,
+                isLoading: _isResyncingDocConfig,
+              ),
+              CustomRoundButton(
+                fct: () => {clearDefaultPrinter()},
+                title: isCompact ? 'Clear' : 'Clear Default Printer',
+                height: 44,
+                width: isCompact ? double.infinity : 180,
+                fontSize: isCompact ? 13 : 14,
+                borderColor: ColorManager.kButtonRed,
+                boxColor: ColorManager.kButtonRed,
+                textColor: Colors.white,
+              ),
+            ],
           ),
         ],
       ),
-      child: isMobile
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color:
-                            ColorManager.kPrimaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.print_rounded,
-                        color: ColorManager.kPrimaryColor,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Printer Settings',
-                        style: TextStyle(
-                          color: ColorManager.kTitleTextColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomRoundButton(
-                        fct: _isResyncingDocConfig
-                            ? () {}
-                            : _resyncDocumentConfigurations,
-                        title: _isResyncingDocConfig
-                            ? 'Resyncing...'
-                            : 'Resync Doc',
-                        height: 40,
-                        width: double.infinity,
-                        fontSize: 13,
-                        borderColor: ColorManager.kPrimaryColor,
-                        boxColor: ColorManager.kPrimaryColor,
-                        textColor: Colors.white,
-                        isLoading: _isResyncingDocConfig,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CustomRoundButton(
-                        fct: () => {clearDefaultPrinter()},
-                        title: 'Clear',
-                        height: 40,
-                        width: double.infinity,
-                        fontSize: 13,
-                        borderColor: ColorManager.kButtonRed,
-                        boxColor: ColorManager.kButtonRed,
-                        textColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color:
-                            ColorManager.kPrimaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.print_rounded,
-                        color: ColorManager.kPrimaryColor,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Text(
-                      'Printer Settings',
-                      style: TextStyle(
-                        color: ColorManager.kTitleTextColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    CustomRoundButton(
-                      fct: _isResyncingDocConfig
-                          ? () {}
-                          : _resyncDocumentConfigurations,
-                      title: _isResyncingDocConfig
-                          ? 'Resyncing...'
-                          : 'Resync Doc Config',
-                      height: 44,
-                      width: 210,
-                      fontSize: 14,
-                      borderColor: ColorManager.kPrimaryColor,
-                      boxColor: ColorManager.kPrimaryColor,
-                      textColor: Colors.white,
-                      isLoading: _isResyncingDocConfig,
-                    ),
-                    const SizedBox(width: 16),
-                    CustomRoundButton(
-                      fct: () => {clearDefaultPrinter()},
-                      title: 'Clear Default Printer',
-                      height: 44,
-                      width: 180,
-                      fontSize: 14,
-                      borderColor: ColorManager.kButtonRed,
-                      boxColor: ColorManager.kButtonRed,
-                      textColor: Colors.white,
-                    ),
-                    const SizedBox(width: 16),
-                  ],
-                ),
-              ],
-            ),
     );
   }
 
   Widget _buildTabToggle() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedSettingsType = 'Billing';
-                });
-                _loadSettings();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: selectedSettingsType == 'Billing'
-                      ? ColorManager.kPrimaryColor
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  'Billing Printer',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: selectedSettingsType == 'Billing'
-                        ? Colors.white
-                        : ColorManager.kTitleTextColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedSettingsType = 'Quotation';
-                });
-                _loadSettings();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: selectedSettingsType == 'Quotation'
-                      ? ColorManager.kPrimaryColor
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  'Quotation Printer',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: selectedSettingsType == 'Quotation'
-                        ? Colors.white
-                        : ColorManager.kTitleTextColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedSettingsType = 'Kitchen';
-                });
-                _loadSettings();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: selectedSettingsType == 'Kitchen'
-                      ? ColorManager.kPrimaryColor
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  'Kitchen Printer',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: selectedSettingsType == 'Kitchen'
-                        ? Colors.white
-                        : ColorManager.kTitleTextColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedSettingsType = 'Barcode';
-                });
-                _loadSettings();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: selectedSettingsType == 'Barcode'
-                      ? ColorManager.kPrimaryColor
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  'Barcode Printer',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: selectedSettingsType == 'Barcode'
-                        ? Colors.white
-                        : ColorManager.kTitleTextColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return PrinterTabSelector(
+      selectedType: selectedSettingsType,
+      onSelected: (type) {
+        setState(() {
+          selectedSettingsType = type;
+        });
+        _loadSettings();
+      },
     );
   }
 
@@ -1852,314 +1535,266 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   /// keeps its own printer, paper size and receipt theme. B2B falls back to the
   /// B2C settings at print time when not separately configured.
   Widget _buildSegmentToggle() {
-    Widget segmentButton(String segment, String label) {
-      final bool isActive = selectedSegment == segment;
-      return GestureDetector(
-        onTap: () {
-          if (selectedSegment == segment) return;
-          setState(() {
-            selectedSegment = segment;
-          });
-          _loadSettings();
-        },
-        child: Container(
-          width: 140,
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isActive
-                ? ColorManager.kPrimaryColor.withValues(alpha: 0.12)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color:
-                  isActive ? ColorManager.kPrimaryColor : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isActive
-                  ? ColorManager.kPrimaryColor
-                  : ColorManager.kTitleTextColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    segmentButton('B2C', 'B2C (Retail)'),
-                    const SizedBox(width: 4),
-                    segmentButton('B2B', 'B2B (Business)'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Configure a separate printer, paper size and theme for '
-            '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
-            'bills. B2B uses the B2C settings when left unconfigured.',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-          ),
-        ],
-      ),
+    return PrinterSegmentSelector(
+      selectedSegment: selectedSegment,
+      onSelected: (segment) {
+        if (selectedSegment == segment) return;
+        setState(() {
+          selectedSegment = segment;
+        });
+        _loadSettings();
+      },
+      helperText:
+          'Configure a separate printer, paper size and theme for '
+          '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
+          'bills. B2B uses the B2C settings when left unconfigured.',
     );
   }
 
   Widget _buildPrinterList() {
-    bool isMobile = ResponsiveWidget.isMobile(context);
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    final isCompact = printerIsCompact(context);
+    final cardPadding = printerCardPadding(context);
+    final listGap = printerSectionGap(context);
+
+    return PrinterSettingsCard(
+      padding: cardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          isMobile
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.devices_rounded,
-                            color: ColorManager.kPrimaryColor,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Available Printers',
-                          style: TextStyle(
-                            color: ColorManager.kPrimaryColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    CustomRoundButton(
-                      fct: () => _isScanning ? null : _checkPermissions(),
-                      title: _isScanning ? 'Scanning...' : 'Scan for Printers',
-                      height: 44,
-                      width: double.infinity,
-                      fontSize: 14,
-                      borderColor: _isScanning
-                          ? ColorManager.kGreyColor
-                          : ColorManager.kPrimaryColor,
-                      boxColor: _isScanning
-                          ? ColorManager.kGreyColor
-                          : ColorManager.kPrimaryColor,
-                      textColor: Colors.white,
-                      isLoading: _isScanning,
-                    ),
-                  ],
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.devices_rounded,
-                            color: ColorManager.kPrimaryColor,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Available Printers',
-                          style: TextStyle(
-                            color: ColorManager.kPrimaryColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    CustomRoundButton(
-                      fct: () => _isScanning ? null : _checkPermissions(),
-                      title: _isScanning ? 'Scanning...' : 'Scan for Printers',
-                      height: 44,
-                      width: 160,
-                      fontSize: 14,
-                      borderColor: _isScanning
-                          ? ColorManager.kGreyColor
-                          : ColorManager.kPrimaryColor,
-                      boxColor: _isScanning
-                          ? ColorManager.kGreyColor
-                          : ColorManager.kPrimaryColor,
-                      textColor: Colors.white,
-                      isLoading: _isScanning,
-                    ),
-                  ],
-                ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              _isScanning
-                  ? 'Scanning for printers...'
-                  : '${devices.length} devices found',
-              style: const TextStyle(
-                color: ColorManager.kGreyColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
+          PrinterSectionHeader(
+            icon: Icons.devices_rounded,
+            title: 'Available Printers',
+            subtitle: 'Scan and select a default printer',
+            trailing: CustomRoundButton(
+              fct: () => _isScanning ? null : _checkPermissions(),
+              title: _isScanning ? 'Scanning...' : 'Scan for Printers',
+              height: 44,
+              width: isCompact ? double.infinity : 160,
+              fontSize: 14,
+              borderColor: _isScanning
+                  ? ColorManager.kGreyColor
+                  : ColorManager.kPrimaryColor,
+              boxColor: _isScanning
+                  ? ColorManager.kGreyColor
+                  : ColorManager.kPrimaryColor,
+              textColor: Colors.white,
+              isLoading: _isScanning,
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: listGap),
+          PrinterInfoStrip(
+            text: _isScanning
+                ? 'Scanning for printers...'
+                : '${devices.length} devices found',
+            icon: _isScanning
+                ? Icons.bluetooth_searching_rounded
+                : Icons.devices_other_rounded,
+          ),
+          if (selectedPrinter != null) ...[
+            const SizedBox(height: 10),
+            SettingsStatusBadge(
+              label: selectedPrinter!.deviceName ?? 'Printer selected',
+              isPositive: true,
+              icon: Icons.check_circle_outline_rounded,
+            ),
+          ],
+          SizedBox(height: listGap),
           devices.isEmpty
-              ? Container(
-                  padding: const EdgeInsets.all(40),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.print_disabled_rounded,
-                          size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No printers found',
-                        style: TextStyle(
-                          color: ColorManager.kGreyColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Click the scan button above to search for printers',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                    ],
-                  ),
+              ? const PrinterEmptyState(
+                  title: 'No printers found',
+                  subtitle:
+                      'Tap the scan button above to search for nearby printers',
                 )
               : ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: devices.length,
                   separatorBuilder: (context, index) =>
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final printer = devices[index];
                     final isSelected =
                         selectedPrinter?.deviceName == printer.deviceName &&
                             selectedPrinter?.address == printer.address;
 
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? ColorManager.kPrimaryColor.withOpacity(0.04)
-                            : Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        leading: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? ColorManager.kPrimaryColor.withOpacity(0.1)
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.print,
-                            color: isSelected
-                                ? ColorManager.kPrimaryColor
-                                : ColorManager.kGreyColor,
-                            size: 24,
-                          ),
-                        ),
-                        title: Text(
-                          printer.deviceName ?? 'Unknown device',
-                          style: TextStyle(
-                            color: ColorManager.kTitleTextColor,
-                            fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.w500,
-                            fontSize: 16,
-                          ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            printer.address ?? printer.typePrinter.name,
-                            style: TextStyle(
-                                color: Colors.grey[600], fontSize: 14),
-                          ),
-                        ),
-                        trailing: CustomRoundButton(
-                          fct: () => selectPrinter(printer),
-                          title: isSelected ? 'Selected' : 'Select',
-                          height: 36,
-                          width: 100,
-                          fontSize: 14,
-                          borderColor: isSelected
-                              ? ColorManager.kPrimaryColor
-                              : ColorManager.kGreyColor,
-                          boxColor: isSelected
-                              ? ColorManager.kPrimaryColor
-                              : Colors.white,
-                          textColor: isSelected
-                              ? Colors.white
-                              : ColorManager.kGreyColor,
-                        ),
-                      ),
+                    return _buildPrinterDeviceTile(
+                      printer: printer,
+                      isSelected: isSelected,
+                      isCompact: isCompact,
                     );
                   },
                 ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPrinterDeviceTile({
+    required BluetoothPrinter printer,
+    required bool isSelected,
+    required bool isCompact,
+  }) {
+    final deviceName = printer.deviceName ?? 'Unknown device';
+    final subtitle = printer.address ?? printer.typePrinter.name;
+
+    if (isCompact) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? ColorManager.kPrimaryColor.withValues(alpha: 0.05)
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? ColorManager.kPrimaryColor.withValues(alpha: 0.35)
+                : Colors.grey.shade200,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 44,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? ColorManager.kPrimaryColor.withValues(alpha: 0.12)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Icon(
+                    Icons.print_rounded,
+                    color: isSelected
+                        ? ColorManager.kPrimaryColor
+                        : ColorManager.kGreyColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        deviceName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          isSelected
+                              ? FontWeightManager.semiBold
+                              : FontWeightManager.medium,
+                          FontSize.s14,
+                          0.18,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s11,
+                          0.10,
+                          Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            CustomRoundButton(
+              fct: () => selectPrinter(printer),
+              title: isSelected ? 'Selected' : 'Select',
+              height: 44,
+              width: double.infinity,
+              fontSize: 14,
+              borderColor: isSelected
+                  ? ColorManager.kPrimaryColor
+                  : ColorManager.kGreyColor,
+              boxColor:
+                  isSelected ? ColorManager.kPrimaryColor : Colors.white,
+              textColor:
+                  isSelected ? Colors.white : ColorManager.kGreyColor,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected
+            ? ColorManager.kPrimaryColor.withValues(alpha: 0.05)
+            : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected
+              ? ColorManager.kPrimaryColor.withValues(alpha: 0.35)
+              : Colors.grey.shade200,
+        ),
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        minVerticalPadding: 0,
+        leading: Container(
+          height: 44,
+          width: 44,
+          decoration: BoxDecoration(
+            color: isSelected
+                ? ColorManager.kPrimaryColor.withValues(alpha: 0.12)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Icon(
+            Icons.print_rounded,
+            color: isSelected
+                ? ColorManager.kPrimaryColor
+                : ColorManager.kGreyColor,
+          ),
+        ),
+        title: Text(
+          deviceName,
+          style: buildCustomStyle(
+            isSelected ? FontWeightManager.semiBold : FontWeightManager.medium,
+            FontSize.s14,
+            0.18,
+            ColorManager.textColor,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            subtitle,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.10,
+              Colors.grey.shade600,
+            ),
+          ),
+        ),
+        trailing: CustomRoundButton(
+          fct: () => selectPrinter(printer),
+          title: isSelected ? 'Selected' : 'Select',
+          height: 44,
+          width: 108,
+          fontSize: 14,
+          borderColor: isSelected
+              ? ColorManager.kPrimaryColor
+              : ColorManager.kGreyColor,
+          boxColor: isSelected ? ColorManager.kPrimaryColor : Colors.white,
+          textColor: isSelected ? Colors.white : ColorManager.kGreyColor,
+        ),
       ),
     );
   }

@@ -153,29 +153,40 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
     iconFilePathController.clear();
   }
 
+  bool _isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < 600;
+
   @override
   Widget build(BuildContext context) {
     final categoryProvider = Provider.of<CategoryProvider>(context);
     final categoryList = categoryProvider.category;
     final size = MediaQuery.of(context).size;
+    final bool isMobile = _isMobile(context);
+    final double horizontalMargin = isMobile ? 8 : 12;
 
     return SafeArea(
       child: Container(
-          margin:
-              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: horizontalMargin,
+            vertical: isMobile ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(isMobile ? 4 : 8),
           decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+              border: Border.all(color: Colors.grey.withOpacity(0.12)),
               boxShadow: const [
                 BoxShadow(
                   color: ColorManager.boxShadowColor,
-                  blurRadius: 6,
-                  offset: Offset(1, 1),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
                 ),
               ],
               color: Colors.white),
           child: Padding(
-            padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
+            padding: EdgeInsets.symmetric(
+              vertical: isMobile ? 12.0 : 20.0,
+              horizontal: isMobile ? 12.0 : 10.0,
+            ),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,30 +196,20 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                       sideBarController.index.value = 12;
                     },
                     text: 'All Categories',
-                    // Optionally, you can customize the color and size
-                    // color: ColorManager.customColor,
-                    // size: 20.0,
                   ),
                   Text(
                     'Edit Category',
                     style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s20, 0.30, ColorManager.textColor),
+                        FontSize.s20, 0.30, ColorManager.kTitleTextColor),
                   ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  SizedBox(
-                    height: size.height * 0.8,
-                    width: double.infinity,
-                    child: BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      // margin: const EdgeInsets.only(bottom: 10),
-                      blurRadius: 6,
-                      padding: const EdgeInsets.only(
-                          left: 10.0, right: 20, top: 30, bottom: 10),
-                      offsetValue: const Offset(1, 1),
-                      child: SingleChildScrollView(
-                        child: Form(
+                  const SizedBox(height: 20),
+                  BuildBoxShadowContainer(
+                    circleRadius: 14,
+                    blurRadius: 10,
+                    offsetValue: const Offset(0, 3),
+                    border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                    padding: EdgeInsets.all(isMobile ? 14 : 20),
+                    child: Form(
                           key: formKey,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -769,12 +770,11 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                           ),
                         ),
                       ),
-                    ),
-                  )
                 ],
               ),
             ),
-          )),
+          ),
+        ),
     );
   }
 

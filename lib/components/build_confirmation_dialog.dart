@@ -56,6 +56,8 @@ class ConfirmationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final isCompact = size.width < 600;
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -63,7 +65,7 @@ class ConfirmationDialog extends StatelessWidget {
       backgroundColor: Colors.transparent,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: size.width * 0.5,
+          maxWidth: isCompact ? size.width * 0.88 : size.width * 0.5,
           maxHeight: size.height * 0.6,
         ),
         padding: const EdgeInsets.all(20),
@@ -88,6 +90,8 @@ class ConfirmationDialog extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s20,
@@ -128,45 +132,52 @@ class ConfirmationDialog extends StatelessWidget {
             ),
             const SizedBox(height: 22),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                SizedBox(
-                  width: 110,
-                  height: 40,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: cancelColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                Expanded(
+                  child: SizedBox(
+                    height: 40,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: cancelColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
-                    ),
-                    child: Text(
-                      cancelText,
-                      style: TextStyle(
-                        color: cancelColor,
-                        fontSize: FontSize.s12,
+                      child: Text(
+                        cancelText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: cancelColor,
+                          fontSize: FontSize.s12,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                SizedBox(
-                  width: 130,
-                  height: 40,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: confirmColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                Expanded(
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: confirmColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
-                    ),
-                    child: Text(
-                      confirmText,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: FontSize.s12,
+                      child: Text(
+                        confirmText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: FontSize.s12,
+                        ),
                       ),
                     ),
                   ),

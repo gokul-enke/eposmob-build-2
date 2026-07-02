@@ -32,6 +32,7 @@ import '../../resources/color_manager.dart';
 
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/sales_return_responsive.dart';
 
 class SalesReturnScreen extends StatefulWidget {
   const SalesReturnScreen({super.key});
@@ -311,31 +312,17 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     final hasDraft = _draftReturnOrderId != null;
     final step2Ready = _canCompleteReturn;
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: ColorManager.kPrimaryColor.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: ColorManager.kPrimaryColor.withOpacity(0.2),
+    return SalesReturnStepBar(
+      steps: [
+        _buildStepChip('1', 'Return items', active: true, done: hasDraft),
+        Icon(Icons.arrow_forward, size: 14, color: Colors.grey.shade400),
+        _buildStepChip(
+          '2',
+          'Complete return',
+          active: step2Ready,
+          done: false,
         ),
-      ),
-      child: Row(
-        children: [
-          _buildStepChip('1', 'Return items', active: true, done: hasDraft),
-          const SizedBox(width: 8),
-          Icon(Icons.arrow_forward, size: 14, color: Colors.grey.shade400),
-          const SizedBox(width: 8),
-          _buildStepChip(
-            '2',
-            'Complete return',
-            active: step2Ready,
-            done: false,
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -493,54 +480,39 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     final productProvider =
         Provider.of<GridSelectionProvider>(context, listen: false);
     final SideBarController sideBarController = Get.put(SideBarController());
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: refreshData,
-        child: Container(
-            margin:
-                const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: const [
-                  BoxShadow(
-                    color: ColorManager.boxShadowColor,
-                    blurRadius: 6,
-                    offset: Offset(1, 1),
+    final isPhone = salesReturnIsPhone(context);
+
+    return SalesReturnScrollShell(
+      onRefresh: refreshData,
+      child: Stack(
+        children: [
+          ListView(
+            padding: EdgeInsetsDirectional.symmetric(
+              horizontal: isPhone ? 4 : 8,
+              vertical: isPhone ? 8 : 12,
+            ),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomBackButton(
+                    onPressed: initLoading || isCompletingReturn
+                        ? () {}
+                        : () {
+                            sideBarController.index.value = 50;
+                          },
+                    text: 'Sales Return List',
+                  ),
+                  const SizedBox(height: 8),
+                  SalesReturnPageHeader(
+                    title: 'Sales Return',
+                    subtitle: isOrderSelected
+                        ? 'Select items to return, then complete the return'
+                        : 'Open an order from Sales to begin',
                   ),
                 ],
-                color: Colors.white),
-            child: Stack(
-              children: [
-                Padding(
-              padding: const EdgeInsets.only(top: 20.0, left: 10, right: 10),
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CustomBackButton(
-                        onPressed: initLoading || isCompletingReturn
-                            ? () {}
-                            : () {
-                                sideBarController.index.value = 50;
-                              },
-                        text: 'Sales Return List',
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Sales Return",
-                            style: buildCustomStyle(FontWeightManager.semiBold,
-                                FontSize.s20, 0.30, ColorManager.textColor),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+              ),
                   const SizedBox(
                     height: 5,
                   ),
@@ -706,41 +678,26 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                             ),
                           );
 
-                          return BuildBoxShadowContainer(
-                            circleRadius: 12,
+                          return SalesReturnContentCard(
                             margin: const EdgeInsets.symmetric(vertical: 8),
-                            padding: const EdgeInsets.all(20),
-                            color: Colors.white,
+                            padding: EdgeInsetsDirectional.all(
+                                isPhone ? 14 : 20),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: ColorManager.kPrimaryColor
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        'ORDER DETAILS',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          FontSize.s12,
-                                          0.25,
-                                          ColorManager.kPrimaryColor,
-                                        ),
-                                      ),
-                                    ),
+                                    const SalesReturnLabelPill(
+                                        label: 'ORDER DETAILS'),
                                     const Spacer(),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
+                                      padding: const EdgeInsetsDirectional
+                                          .symmetric(
                                           horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
                                         color: Colors.green.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
@@ -766,31 +723,23 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-                                Row(
+                                SalesReturnDetailGrid(
                                   children: [
-                                    Expanded(
-                                      child: _buildOrderDetailItem(
-                                        'Order Number',
-                                        '${order.orderNumber}',
-                                        Icons.receipt_long,
-                                      ),
+                                    _buildOrderDetailItem(
+                                      'Order Number',
+                                      '${order.orderNumber}',
+                                      Icons.receipt_long,
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildOrderDetailItem(
-                                        'Date',
-                                        DateHelper.formatDate(
-                                            order.orderDate ?? DateTime.now()),
-                                        Icons.calendar_today,
-                                      ),
+                                    _buildOrderDetailItem(
+                                      'Date',
+                                      DateHelper.formatDate(
+                                          order.orderDate ?? DateTime.now()),
+                                      Icons.calendar_today,
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildOrderDetailItem(
-                                        'Customer',
-                                        order.customerName ?? "N/A",
-                                        Icons.person,
-                                      ),
+                                    _buildOrderDetailItem(
+                                      'Customer',
+                                      order.customerName ?? "N/A",
+                                      Icons.person,
                                     ),
                                   ],
                                 ),
@@ -799,61 +748,32 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           );
                         } catch (e) {
                           debugPrint('Error displaying selected order: $e');
-                          return BuildBoxShadowContainer(
-                            circleRadius: 12,
+                          return SalesReturnContentCard(
                             margin: const EdgeInsets.symmetric(vertical: 8),
-                            padding: const EdgeInsets.all(20),
-                            color: Colors.white,
+                            padding: EdgeInsetsDirectional.all(
+                                isPhone ? 14 : 20),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: ColorManager.kPrimaryColor
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        'ORDER DETAILS',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          FontSize.s12,
-                                          0.25,
-                                          ColorManager.kPrimaryColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                const SalesReturnLabelPill(
+                                    label: 'ORDER DETAILS'),
                                 const SizedBox(height: 16),
-                                Row(
+                                SalesReturnDetailGrid(
                                   children: [
-                                    Expanded(
-                                      child: _buildOrderDetailItem(
-                                        'Order Number',
-                                        '$selectedOrderNumber',
-                                        Icons.receipt_long,
-                                      ),
+                                    _buildOrderDetailItem(
+                                      'Order Number',
+                                      '$selectedOrderNumber',
+                                      Icons.receipt_long,
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildOrderDetailItem(
-                                        'Date',
-                                        DateHelper.formatDate(DateTime.now()),
-                                        Icons.calendar_today,
-                                      ),
+                                    _buildOrderDetailItem(
+                                      'Date',
+                                      DateHelper.formatDate(DateTime.now()),
+                                      Icons.calendar_today,
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _buildOrderDetailItem(
-                                        'Customer',
-                                        'Order #$selectedOrderNumber',
-                                        Icons.person,
-                                      ),
+                                    _buildOrderDetailItem(
+                                      'Customer',
+                                      'Order #$selectedOrderNumber',
+                                      Icons.person,
                                     ),
                                   ],
                                 ),
@@ -862,10 +782,10 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           );
                         }
                       } else {
-                        return BuildBoxShadowContainer(
-                          circleRadius: 12,
+                        return SalesReturnContentCard(
                           margin: const EdgeInsets.symmetric(vertical: 8),
-                          padding: const EdgeInsets.all(20),
+                          padding: EdgeInsetsDirectional.all(
+                              isPhone ? 20 : 24),
                           color: Colors.grey.shade50,
                           child: Column(
                             children: [
@@ -912,25 +832,16 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   //     searchOrders(page);
                   //   },
                   // ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Order Items",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s20, 0.30, ColorManager.textColor),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
+                  const SizedBox(height: 16),
+                  const SalesReturnSectionTitle(title: 'Order Items'),
+                  const SizedBox(height: 12),
                   Consumer<SalesProvider>(
                     builder: (context, salesProvider, _) {
                       final itemCount = salesProvider.salesReturnItems.length;
+                      final isPhone = salesReturnIsPhone(context);
+                      if (isPhone) {
+                        return _buildOrderDetails();
+                      }
                       return SizedBox(
                         height: _itemsTableHeight(itemCount),
                         child: _buildOrderDetails(),
@@ -951,15 +862,11 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     height: 20,
                   ),
                   _buildCompleteReturnButton(size),
-                  const SizedBox(
-                    height: 20,
-                  ),
+                  SizedBox(height: isPhone ? 12 : 20),
                 ],
               ),
-            ),
-                _buildLoadingOverlay(),
-              ],
-            )),
+          _buildLoadingOverlay(),
+        ],
       ),
     );
   }
@@ -1297,142 +1204,190 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: salesReturnIsPhone(context) ? 12 : 40,
+            vertical: 16,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: SingleChildScrollView(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 color: Colors.white,
               ),
-              width: MediaQuery.of(context).size.width * 0.9,
-              padding: const EdgeInsets.all(20),
+              width: salesReturnIsPhone(context)
+                  ? MediaQuery.of(context).size.width - 24
+                  : MediaQuery.of(context).size.width * 0.9,
+              constraints: const BoxConstraints(maxWidth: 520),
+              padding: EdgeInsetsDirectional.all(
+                  salesReturnIsPhone(context) ? 16 : 20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Return $orderId',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Return $orderId',
+                          style: buildCustomStyle(
+                            FontWeightManager.semiBold,
+                            FontSize.s18,
+                            0.28,
+                            ColorManager.textColor,
+                          ),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              flex: 3, // Larger flex for product name
-                              child: Text(
-                                'Product name',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
+                  const SizedBox(height: 16),
+                  SalesReturnContentCard(
+                    padding: const EdgeInsetsDirectional.all(14),
+                    child: salesReturnIsPhone(context)
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildDialogProductRow(
+                                  'Product', productName, bold: true),
+                              const SizedBox(height: 8),
+                              _buildDialogProductRow(
+                                  'Price', '$currency $unitPrice'),
+                              const SizedBox(height: 8),
+                              _buildDialogProductRow(
+                                  'Total', '$currency $totalPrice'),
+                              const SizedBox(height: 8),
+                              _buildDialogProductRow(
+                                  'Order Qty', quantity),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Text(
+                                      'Product name',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.20,
+                                        Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Price',
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.20,
+                                        Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Total Price',
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.20,
+                                        Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Order Quantity',
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.20,
+                                        Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                'Price',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
-                                textAlign: TextAlign.center,
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Text(
+                                      productName,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s13,
+                                        0.20,
+                                        ColorManager.textColor,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      '$currency $unitPrice',
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.18,
+                                        ColorManager.textColor,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      '$currency $totalPrice',
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.18,
+                                        ColorManager.textColor,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      quantity,
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.18,
+                                        ColorManager.textColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                'Total Price',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                'Order Quantity',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              flex: 3, // Match the flex with header
-                              child: Text(
-                                productName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                '$currency $unitPrice',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                '$currency $totalPrice',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                            Expanded(
-                              flex: 2,
-                              child: Text(
-                                quantity,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                            ],
+                          ),
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -1511,22 +1466,21 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     maxLines: 1,
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  SalesReturnActionRow(
                     children: [
                       TextButton(
                         onPressed: isSubmitting
                             ? null
                             : () => Navigator.pop(dialogContext),
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
+                          minimumSize: const Size(0, 44),
+                          padding: const EdgeInsetsDirectional.symmetric(
                             horizontal: 24,
                             vertical: 12,
                           ),
                         ),
                         child: const Text('Cancel'),
                       ),
-                      const SizedBox(width: 12),
                       ElevatedButton(
                         onPressed: isSubmitting
                             ? null
@@ -1610,14 +1564,16 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          disabledBackgroundColor: Colors.blue.shade200,
-                          padding: const EdgeInsets.symmetric(
+                          backgroundColor: ColorManager.kPrimaryColor,
+                          disabledBackgroundColor:
+                              ColorManager.kPrimaryColor.withOpacity(0.4),
+                          minimumSize: const Size(0, 44),
+                          padding: const EdgeInsetsDirectional.symmetric(
                             horizontal: 24,
                             vertical: 12,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         child: isSubmitting
@@ -1647,230 +1603,385 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     );
   }
 
+  Widget _buildDialogProductRow(String label, String value, {bool bold = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s12,
+              0.18,
+              Colors.grey.shade600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              bold ? FontWeightManager.semiBold : FontWeightManager.medium,
+              FontSize.s12,
+              0.18,
+              ColorManager.textColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildOrderDetails() {
     return Consumer<SalesProvider>(builder: (context, salesProvider, child) {
       final salesReturnItems = salesProvider.salesReturnItems;
+      final isPhone = salesReturnIsPhone(context);
 
       if (salesReturnItems.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.inventory_2_outlined,
-                  size: 40, color: Colors.grey.shade400),
-              const SizedBox(height: 10),
-              Text(
-                initLoading ? 'Loading items…' : 'No items to return',
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s13,
-                  0.25,
-                  Colors.grey.shade600,
+        return SalesReturnContentCard(
+          padding: const EdgeInsetsDirectional.all(24),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.inventory_2_outlined,
+                    size: 40, color: Colors.grey.shade400),
+                const SizedBox(height: 10),
+                Text(
+                  initLoading ? 'Loading items…' : 'No items to return',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s13,
+                    0.25,
+                    Colors.grey.shade600,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       }
 
-      return BuildBoxShadowContainer(
-        margin: const EdgeInsets.only(top: 5),
-        circleRadius: 7,
-        offsetValue: const Offset(2, 2),
-        blurRadius: 8.0,
-        color: Colors.white,
-        child: Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: ColorManager.tableBGColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    offset: Offset(0, 2),
-                    blurRadius: 2.0,
+      if (isPhone) {
+        return Column(
+          children: salesReturnItems.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            return _buildMobileReturnItemCard(item, index);
+          }).toList(),
+        );
+      }
+
+      return SalesReturnResponsiveTable(
+        minWidth: 960,
+        table: SizedBox(
+          height: _itemsTableHeight(salesReturnItems.length),
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: ColorManager.tableBGColor.withOpacity(0.5),
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.withOpacity(0.15)),
                   ),
-                ],
-              ),
-              child: Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(3), // Product Name
-                  1: FlexColumnWidth(1), // Quantity
-                  2: FlexColumnWidth(1.5), // Unit Price
-                  3: FlexColumnWidth(1.5), // Total Price
-                  4: FlexColumnWidth(1.5), // Returned Quantity
-                  5: FlexColumnWidth(1.5), // Returned Total
-                  6: FlexColumnWidth(1), // Returned
-                  7: FlexColumnWidth(1.5), // Action
-                },
-                border: null,
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: [
-                  TableRow(
-                    children: [
-                      _buildTableHeader('Product Name'),
-                      _buildTableHeader('Quantity'),
-                      _buildTableHeader('Unit Price'),
-                      _buildTableHeader('Total Price'),
-                      _buildTableHeader('Returned Qty'),
-                      _buildTableHeader('Returned Total'),
-                      _buildTableHeader('Status'),
-                      _buildTableHeader('Action'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Replace Expanded with Container having a fixed height
-            Container(
-              height: 200, // Fixed height for the table body
-              child: MouseRegion(
-                cursor: SystemMouseCursors.grab,
-                child: ScrollConfiguration(
-                  behavior: ScrollConfiguration.of(context).copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.stylus,
-                      PointerDeviceKind.trackpad,
-                    },
-                  ),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    scrollDirection: Axis.vertical,
-                    child: Table(
-                      columnWidths: const {
-                        0: FlexColumnWidth(3), // Product Name
-                        1: FlexColumnWidth(1), // Quantity
-                        2: FlexColumnWidth(1.5), // Unit Price
-                        3: FlexColumnWidth(1.5), // Total Price
-                        4: FlexColumnWidth(1.5), // Returned Quantity
-                        5: FlexColumnWidth(1.5), // Returned Total
-                        6: FlexColumnWidth(1), // Returned
-                        7: FlexColumnWidth(1.5), // Action
-                      },
-                      border: null,
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
+                ),
+                child: Table(
+                  columnWidths: const {
+                    0: FlexColumnWidth(3),
+                    1: FlexColumnWidth(1),
+                    2: FlexColumnWidth(1.5),
+                    3: FlexColumnWidth(1.5),
+                    4: FlexColumnWidth(1.5),
+                    5: FlexColumnWidth(1.5),
+                    6: FlexColumnWidth(1),
+                    7: FlexColumnWidth(1.5),
+                  },
+                  border: null,
+                  defaultVerticalAlignment:
+                      TableCellVerticalAlignment.middle,
+                  children: [
+                    TableRow(
                       children: [
-                        ...salesReturnItems.asMap().entries.map((entry) {
-                          int index = entry.key;
-                          SalesReturnCart item = entry.value;
-                          return TableRow(
-                            decoration: BoxDecoration(
-                              color: index % 2 == 0
-                                  ? Colors.white
-                                  : Colors.grey.withOpacity(0.1),
-                            ),
-                            children: [
-                              SizedBox(
-                                height: 55,
-                                child: _buildTableCell(item.productName),
-                              ),
-                              SizedBox(
-                                height: 55,
-                                child: _buildTableCell(item.quantity),
-                              ),
-                              SizedBox(
-                                height: 55,
-                                child: _buildTableCell(item.unitPrice),
-                              ),
-                              SizedBox(
-                                height: 55,
-                                child: _buildTableCell(item.totalPrice),
-                              ),
-                              SizedBox(
-                                height: 55,
-                                child: _buildTableCell(
-                                  item.returnedQuantity ==
-                                          item.returnedQuantity.roundToDouble()
-                                      ? item.returnedQuantity.toInt().toString()
-                                      : item.returnedQuantity
-                                          .toStringAsFixed(3),
-                                ),
-                              ),
-                              SizedBox(
-                                height: 55,
-                                child: _buildTableCell(
-                                    item.returnedTotal.toString()),
-                              ),
-                              SizedBox(
-                                height: 55,
-                                child: Center(
-                                  child: Icon(
-                                    item.isReturned
-                                        ? Icons.check_circle
-                                        : Icons.cancel,
-                                    color: item.isReturned
-                                        ? Colors.green
-                                        : Colors.red,
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                height: 55,
-                                child: Center(
-                                  child: item.isReturned ||
-                                          SalesReturnCalculationHelper
-                                                  .remainingReturnableQuantity(
-                                                      item) <=
-                                              0
-                                      ? const Text(
-                                          "Returned",
-                                          style: TextStyle(
-                                            color: Colors.green,
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 12,
-                                          ),
-                                        )
-                                      : TextButton(
-                                          onPressed: () {
-                                            _showReturnDialog(
-                                              context,
-                                              productName:
-                                                  item.productName.toString(),
-                                              unitPrice:
-                                                  item.unitPrice.toString(),
-                                              orderId:
-                                                  selectedOrderId.toString(),
-                                              cartItemId: item.cartItemId,
-                                              currency: '',
-                                              totalPrice:
-                                                  item.totalPrice.toString(),
-                                              quantity:
-                                                  item.quantity.toString(),
-                                              returnedQuantity:
-                                                  item.returnedQuantity,
-                                            );
-                                          },
-                                          child: const Text("Return"),
-                                        ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
+                        _buildTableHeader('Product Name'),
+                        _buildTableHeader('Quantity'),
+                        _buildTableHeader('Unit Price'),
+                        _buildTableHeader('Total Price'),
+                        _buildTableHeader('Returned Qty'),
+                        _buildTableHeader('Returned Total'),
+                        _buildTableHeader('Status'),
+                        _buildTableHeader('Action'),
                       ],
                     ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Table(
+                    columnWidths: const {
+                      0: FlexColumnWidth(3),
+                      1: FlexColumnWidth(1),
+                      2: FlexColumnWidth(1.5),
+                      3: FlexColumnWidth(1.5),
+                      4: FlexColumnWidth(1.5),
+                      5: FlexColumnWidth(1.5),
+                      6: FlexColumnWidth(1),
+                      7: FlexColumnWidth(1.5),
+                    },
+                    border: null,
+                    defaultVerticalAlignment:
+                        TableCellVerticalAlignment.middle,
+                    children: [
+                      ...salesReturnItems.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        SalesReturnCart item = entry.value;
+                        return TableRow(
+                          decoration: BoxDecoration(
+                            color: index % 2 == 0
+                                ? Colors.white
+                                : Colors.grey.withOpacity(0.06),
+                          ),
+                          children: _buildOrderItemTableCells(item),
+                        );
+                      }),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     });
   }
 
+  Widget _buildMobileReturnItemCard(SalesReturnCart item, int index) {
+    final canReturn = !item.isReturned &&
+        SalesReturnCalculationHelper.remainingReturnableQuantity(item) > 0;
+
+    return Container(
+      margin: EdgeInsetsDirectional.only(bottom: index > 0 ? 10 : 0),
+      padding: const EdgeInsetsDirectional.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  item.productName.toString(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s13,
+                    0.20,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ),
+              Icon(
+                item.isReturned ? Icons.check_circle : Icons.cancel,
+                color: item.isReturned ? Colors.green : Colors.red,
+                size: 20,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _buildMobileItemMetric('Qty', item.quantity),
+              _buildMobileItemMetric('Unit', item.unitPrice),
+              _buildMobileItemMetric('Total', item.totalPrice),
+              _buildMobileItemMetric(
+                'Returned',
+                item.returnedQuantity == item.returnedQuantity.roundToDouble()
+                    ? item.returnedQuantity.toInt().toString()
+                    : item.returnedQuantity.toStringAsFixed(3),
+              ),
+              _buildMobileItemMetric(
+                  'Ret. Total', item.returnedTotal.toString()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (!canReturn)
+            Text(
+              'Returned',
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.20,
+                Colors.green,
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor:
+                      ColorManager.kPrimaryColor.withOpacity(0.1),
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  _showReturnDialog(
+                    context,
+                    productName: item.productName.toString(),
+                    unitPrice: item.unitPrice.toString(),
+                    orderId: selectedOrderId.toString(),
+                    cartItemId: item.cartItemId,
+                    currency: '',
+                    totalPrice: item.totalPrice.toString(),
+                    quantity: item.quantity.toString(),
+                    returnedQuantity: item.returnedQuantity,
+                  );
+                },
+                child: Text(
+                  'Return Item',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s12,
+                    0.20,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileItemMetric(String label, String value) {
+    return SizedBox(
+      width: 90,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.15,
+              Colors.grey.shade600,
+            ),
+          ),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s11,
+              0.15,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildOrderItemTableCells(SalesReturnCart item) {
+    return [
+      SizedBox(height: 55, child: _buildTableCell(item.productName)),
+      SizedBox(height: 55, child: _buildTableCell(item.quantity)),
+      SizedBox(height: 55, child: _buildTableCell(item.unitPrice)),
+      SizedBox(height: 55, child: _buildTableCell(item.totalPrice)),
+      SizedBox(
+        height: 55,
+        child: _buildTableCell(
+          item.returnedQuantity == item.returnedQuantity.roundToDouble()
+              ? item.returnedQuantity.toInt().toString()
+              : item.returnedQuantity.toStringAsFixed(3),
+        ),
+      ),
+      SizedBox(
+          height: 55,
+          child: _buildTableCell(item.returnedTotal.toString())),
+      SizedBox(
+        height: 55,
+        child: Center(
+          child: Icon(
+            item.isReturned ? Icons.check_circle : Icons.cancel,
+            color: item.isReturned ? Colors.green : Colors.red,
+            size: 20,
+          ),
+        ),
+      ),
+      SizedBox(
+        height: 55,
+        child: Center(
+          child: item.isReturned ||
+                  SalesReturnCalculationHelper.remainingReturnableQuantity(
+                          item) <=
+                      0
+              ? Text(
+                  'Returned',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.20,
+                    Colors.green,
+                  ),
+                )
+              : TextButton(
+                  onPressed: () {
+                    _showReturnDialog(
+                      context,
+                      productName: item.productName.toString(),
+                      unitPrice: item.unitPrice.toString(),
+                      orderId: selectedOrderId.toString(),
+                      cartItemId: item.cartItemId,
+                      currency: '',
+                      totalPrice: item.totalPrice.toString(),
+                      quantity: item.quantity.toString(),
+                      returnedQuantity: item.returnedQuantity,
+                    );
+                  },
+                  child: const Text('Return'),
+                ),
+        ),
+      ),
+    ];
+  }
+
   Widget _buildTableHeader(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+      padding: const EdgeInsetsDirectional.symmetric(
+          vertical: 14.0, horizontal: 8.0),
       child: Text(
         text,
         textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
-          FontWeightManager.medium,
+          FontWeightManager.semiBold,
           FontSize.s12,
           0.18,
           ColorManager.kPrimaryColor,
@@ -1881,13 +1992,16 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
   Widget _buildTableCell(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+      padding: const EdgeInsetsDirectional.symmetric(
+          vertical: 14.0, horizontal: 12.0),
       child: Text(
         text,
         textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
           FontWeightManager.medium,
-          FontSize.s9,
+          FontSize.s11,
           0.18,
           Colors.black,
         ),
@@ -2074,7 +2188,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         }
               }
                 : () {},
-            height: 40,
+            height: 48,
             width: size.width,
             fontSize: FontSize.s13,
             isLoading: isCompletingReturn,
@@ -2117,6 +2231,8 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           const SizedBox(height: 6),
           Text(
             value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s14,
@@ -2192,114 +2308,101 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           ? '${returnedQuantity.toInt()}'
           : returnedQuantity.toStringAsFixed(3);
 
-      return Row(
-        children: [
-          // Order Summary
-          Expanded(
-            child: BuildBoxShadowContainer(
-              circleRadius: 12,
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.all(16),
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      return SalesReturnTwoColumnLayout(
+        start: SalesReturnContentCard(
+          padding: const EdgeInsetsDirectional.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.shopping_cart,
-                          color: Colors.blue.shade700,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Order Summary',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.25,
-                          Colors.blue.shade700,
-                        ),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.shopping_cart,
+                      color: Colors.blue.shade700,
+                      size: 20,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  _buildSummaryRow('Total Items', '$totalItems'),
-                  const SizedBox(height: 6),
-                  _buildSummaryRow('Total Quantity', '$totalQuantity'),
-                  const SizedBox(height: 6),
-                  _buildSummaryRow('Discount',
-                      '${(orderDetailsModelData?.priceSummary?.discount ?? 0).toStringAsFixed(2)}'),
-                  const SizedBox(height: 6),
-                  _buildSummaryRow('Delivery Charge',
-                      '${(orderDetailsModelData?.deliveryCharge ?? 0).toStringAsFixed(2)}'),
-                  const SizedBox(height: 6),
-                  _buildSummaryRow(
-                      'Order Total', '${orderTotal.toStringAsFixed(2)}'),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Order Summary',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s14,
+                      0.25,
+                      Colors.blue.shade700,
+                    ),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
+              _buildSummaryRow('Total Items', '$totalItems'),
+              const SizedBox(height: 6),
+              _buildSummaryRow('Total Quantity', '$totalQuantity'),
+              const SizedBox(height: 6),
+              _buildSummaryRow('Discount',
+                  '${(orderDetailsModelData?.priceSummary?.discount ?? 0).toStringAsFixed(2)}'),
+              const SizedBox(height: 6),
+              _buildSummaryRow('Delivery Charge',
+                  '${(orderDetailsModelData?.deliveryCharge ?? 0).toStringAsFixed(2)}'),
+              const SizedBox(height: 6),
+              _buildSummaryRow(
+                  'Order Total', '${orderTotal.toStringAsFixed(2)}'),
+            ],
           ),
-          // Return Summary
-          Expanded(
-            child: BuildBoxShadowContainer(
-              circleRadius: 12,
-              margin: const EdgeInsets.only(left: 8),
-              padding: const EdgeInsets.all(16),
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        end: SalesReturnContentCard(
+          padding: const EdgeInsetsDirectional.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.assignment_return,
-                          color: Colors.orange.shade700,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Return Summary',
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.25,
-                          Colors.orange.shade700,
-                        ),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.assignment_return,
+                      color: Colors.orange.shade700,
+                      size: 20,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  _buildSummaryRow('Returned Items', '$returnedItems'),
-                  const SizedBox(height: 6),
-                  _buildSummaryRow('Returned Quantity', returnedQtyLabel),
-                  const SizedBox(height: 6),
-                  _buildSummaryRow('Discount', returnDiscount.toStringAsFixed(2)),
-                  const SizedBox(height: 6),
-                  _buildSummaryRow('Delivery Charge',
-                      '${(_deliveryChargeRefundable ? shippingCost : 0.0).toStringAsFixed(2)}'),
-                  const SizedBox(height: 6),
-                  _buildSummaryRow(
-                      'Return Total', '${returnedTotal.toStringAsFixed(2)}'),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Return Summary',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s14,
+                      0.25,
+                      Colors.orange.shade700,
+                    ),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
+              _buildSummaryRow('Returned Items', '$returnedItems'),
+              const SizedBox(height: 6),
+              _buildSummaryRow('Returned Quantity', returnedQtyLabel),
+              const SizedBox(height: 6),
+              _buildSummaryRow(
+                  'Discount', returnDiscount.toStringAsFixed(2)),
+              const SizedBox(height: 6),
+              _buildSummaryRow('Delivery Charge',
+                  '${(_deliveryChargeRefundable ? shippingCost : 0.0).toStringAsFixed(2)}'),
+              const SizedBox(height: 6),
+              _buildSummaryRow(
+                  'Return Total', '${returnedTotal.toStringAsFixed(2)}'),
+            ],
           ),
-        ],
+        ),
       );
     });
   }
@@ -2357,11 +2460,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       final bool isExceedingMax =
           hasPayment && enteredAmount > maxCashRefund;
 
-      return BuildBoxShadowContainer(
-        circleRadius: 12,
+      return SalesReturnContentCard(
         margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.all(20),
-        color: Colors.white,
+        padding: EdgeInsetsDirectional.all(salesReturnIsPhone(context) ? 14 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2374,7 +2475,6 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                   onChanged: (value) {
                     setState(() {
                       _deliveryChargeRefundable = value;
-                      // Clear so the autofill recalculates with the new toggle state
                       if (hasPayment) {
                         paidAmountController.clear();
                       }
@@ -2387,7 +2487,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Delivery Charge Refundable",
+                        'Delivery Charge Refundable',
                         style: buildCustomStyle(
                           FontWeightManager.semiBold,
                           FontSize.s14,
@@ -2397,7 +2497,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Turn off to exclude the delivery charge from the refund.",
+                        'Turn off to exclude the delivery charge from the refund.',
                         style: buildCustomStyle(
                           FontWeightManager.regular,
                           FontSize.s12,
@@ -2413,32 +2513,39 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.payment,
-                    color: Colors.green.shade700,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Payment Details',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.25,
-                    Colors.green.shade700,
-                  ),
-                ),
-                const Spacer(),
-                Row(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isPhone = constraints.maxWidth < kSalesReturnPhoneBreakpoint;
+                final headerRow = Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.payment,
+                        color: Colors.green.shade700,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Payment Details',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s16,
+                          0.25,
+                          Colors.green.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+                final paymentToggle = Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Has Payment:',
@@ -2463,8 +2570,30 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                       activeColor: ColorManager.kPrimaryColor,
                     ),
                   ],
-                ),
-              ],
+                );
+
+                if (isPhone) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      headerRow,
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: paymentToggle,
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(child: headerRow),
+                    paymentToggle,
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
             if (!hasPayment)
@@ -2498,177 +2627,190 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
                 ),
               ),
             if (hasPayment) ...[
-              Row(
-                children: [
-                  // Payment Method Selection
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Payment Method',
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isPhone =
+                      constraints.maxWidth < kSalesReturnPhoneBreakpoint;
+                  final paymentMethodField = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payment Method',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.25,
+                          Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 48,
+                        child: DropdownButtonFormField<String>(
+                          value: selectedPaymentMethod,
+                          isExpanded: true,
+                          dropdownColor: Colors.white,
                           style: buildCustomStyle(
                             FontWeightManager.medium,
-                            FontSize.s12,
+                            FontSize.s14,
                             0.25,
-                            Colors.grey.shade600,
+                            ColorManager.textColor,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 48,
-                          child: DropdownButtonFormField<String>(
-                            value: selectedPaymentMethod,
-                            isExpanded: true,
-                            dropdownColor: Colors.white,
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s14,
-                              0.25,
-                              ColorManager.textColor,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            contentPadding: const EdgeInsetsDirectional
+                                .symmetric(horizontal: 12, vertical: 12),
+                            constraints:
+                                const BoxConstraints.tightFor(height: 48),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
                             ),
-                            decoration: InputDecoration(
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 12),
-                              constraints:
-                                  const BoxConstraints.tightFor(height: 48),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide:
-                                    BorderSide(color: Colors.grey.shade300),
-                              ),
-                              focusedBorder: const OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(8)),
-                                borderSide: BorderSide(
-                                    color: ColorManager.kPrimaryColor),
-                              ),
-                              filled: true,
-                              fillColor: Colors.white,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide:
+                                  BorderSide(color: Colors.grey.shade300),
                             ),
-                            icon: const Icon(Icons.arrow_drop_down),
-                            iconSize: 20,
-                            items: paymentMethods.map((String method) {
-                              return DropdownMenuItem<String>(
-                                value: method,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      _getPaymentMethodIcon(method),
-                                      size: 16,
-                                      color: ColorManager.kPrimaryColor,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      method,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s14,
-                                        0.25,
-                                        ColorManager.textColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              if (newValue != null) {
-                                setState(() {
-                                  selectedPaymentMethod = newValue;
-                                });
-                              }
-                            },
+                            focusedBorder: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(10)),
+                              borderSide: BorderSide(
+                                  color: ColorManager.kPrimaryColor),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Return Amount
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Return Amount',
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s12,
-                            0.25,
-                            Colors.grey.shade600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Consumer<AppSettingsProvider>(
-                          builder: (context, settings, _) {
-                            final currency =
-                                settings.appSettings?.currency ?? 'INR';
-                            return SizedBox(
-                              height: 48,
-                              child: TextFormField(
-                                controller: paidAmountController,
-                                focusNode: paidAmountFocusNode,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                        decimal: true),
-                                textAlignVertical: TextAlignVertical.center,
-                                onTap: () {
-                                  paidAmountController.selection =
-                                      TextSelection(
-                                    baseOffset: 0,
-                                    extentOffset:
-                                        paidAmountController.text.length,
-                                  );
-                                },
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  errorText: isExceedingMax
-                                      ? 'Return amount cannot exceed ${maxCashRefund.toStringAsFixed(2)}'
-                                      : null,
-                                  prefixText: '$currency ',
-                                  constraints: const BoxConstraints.tightFor(
-                                      height: 48),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                        color: Colors.grey.shade300),
+                          icon: const Icon(Icons.arrow_drop_down),
+                          iconSize: 20,
+                          items: paymentMethods.map((String method) {
+                            return DropdownMenuItem<String>(
+                              value: method,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _getPaymentMethodIcon(method),
+                                    size: 16,
+                                    color: ColorManager.kPrimaryColor,
                                   ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                        color: Colors.grey.shade300),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    method,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s14,
+                                      0.25,
+                                      ColorManager.textColor,
+                                    ),
                                   ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: const BorderSide(
-                                        color: ColorManager.kPrimaryColor),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 12),
-                                ),
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s14,
-                                  0.25,
-                                  ColorManager.textColor,
-                                ),
+                                ],
                               ),
                             );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                selectedPaymentMethod = newValue;
+                              });
+                            }
                           },
                         ),
+                      ),
+                    ],
+                  );
+                  final amountField = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Return Amount',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s12,
+                          0.25,
+                          Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Consumer<AppSettingsProvider>(
+                        builder: (context, settings, _) {
+                          final currency =
+                              settings.appSettings?.currency ?? 'INR';
+                          return SizedBox(
+                            height: 48,
+                            child: TextFormField(
+                              controller: paidAmountController,
+                              focusNode: paidAmountFocusNode,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              textAlignVertical: TextAlignVertical.center,
+                              onTap: () {
+                                paidAmountController.selection =
+                                    TextSelection(
+                                  baseOffset: 0,
+                                  extentOffset:
+                                      paidAmountController.text.length,
+                                );
+                              },
+                              decoration: InputDecoration(
+                                isDense: true,
+                                errorText: isExceedingMax
+                                    ? 'Return amount cannot exceed ${maxCashRefund.toStringAsFixed(2)}'
+                                    : null,
+                                prefixText: '$currency ',
+                                constraints: const BoxConstraints.tightFor(
+                                    height: 48),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                      color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(
+                                      color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                      color: ColorManager.kPrimaryColor),
+                                ),
+                                contentPadding:
+                                    const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 12, vertical: 12),
+                              ),
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s14,
+                                0.25,
+                                ColorManager.textColor,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  );
+
+                  if (isPhone) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        paymentMethodField,
+                        const SizedBox(height: 12),
+                        amountField,
                       ],
-                    ),
-                  ),
-                ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(flex: 2, child: paymentMethodField),
+                      const SizedBox(width: 16),
+                      Expanded(flex: 2, child: amountField),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 12),
               Text(

@@ -26,6 +26,7 @@ import '../../resources/style_manager.dart';
 import 'widgets/customer_voucher_print.dart';
 import 'widgets/common_details_dialog.dart';
 import 'widgets/share_helper.dart';
+import 'customer_voucher_list_mobile.dart'; 
 
 class CustomerVoucherListScreen extends StatefulWidget {
   const CustomerVoucherListScreen({super.key});
@@ -375,7 +376,51 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final bool isMobile = size.width < 700;
 
+    if (isMobile) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Consumer<CustomerVoucherProvider>(
+            builder: (context, voucherProvider, child) {
+              return CustomerVoucherMobileView(
+                vouchers: voucherProvider.voucherListDetails ?? const <CustomerVoucher>[],
+                isLoading: voucherProvider.isLoading,
+                searchTextController: searchTextController,
+                voucherNumberController: voucherNumberController,
+                nameFocusNode: nameFocusNode,
+                voucherNoFocusNode: voucherNoFocusNode,
+                selectedType: selectedType,
+                selectedStatus: selectedStatus,
+                typeOptions: voucherProvider.getTypeOptions()
+                    .where((t) => t != 'All Types').toList(),
+                statusOptions: voucherProvider.getStatusOptions()
+                    .where((s) => s != 'All Status').toList(),
+                onSearchChanged: searchVouchers,
+                onReset: resetSearch,
+                onTypeChanged: (v) {
+                  setState(() => selectedType = v);
+                  searchVouchers();
+                },
+                onStatusChanged: (v) {
+                  setState(() => selectedStatus = v);
+                  searchVouchers();
+                },
+                onViewDetails: _showVoucherDetails,
+                onShowActions: _showVoucherActionsSheet,
+                currentPage: voucherProvider.currentPage,
+                totalPages: voucherProvider.totalPages,
+                onPageChanged: (page) => voucherProvider.goToPage(page),
+                onCreateVoucher: () =>
+                    Get.find<SideBarController>().index.value = 71,
+                onRefresh: refreshData,
+              );
+            },
+          ),
+        ),
+      );
+    }
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: refreshData,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/features/billing/domain/product_stock_summary.dart';
+import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/market_product_display.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/product_card_actions.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/stock_badge.dart';
@@ -15,6 +15,7 @@ class ProductCard extends StatelessWidget {
     this.onDirectAdd,
     this.isDense = false,
     this.currency = '',
+    this.stockEnabled = false,
   });
 
   final GetProduct product;
@@ -29,14 +30,17 @@ class ProductCard extends StatelessWidget {
   /// parent grid. Defaults to empty so this stays a provider-free widget.
   final String currency;
 
-  bool get _inStock =>
-      hasAvailableStock(product.stock?.map((s) => s.quantity));
+  /// When false, cards show only available/out-of-stock (no low-stock state).
+  final bool stockEnabled;
 
   String get _displayName => product.productName ?? 'Unnamed Product';
 
   @override
   Widget build(BuildContext context) {
-    final inStock = _inStock;
+    final stockStatus = resolveProductStockDisplayStatus(
+      product,
+      stockEnabled: stockEnabled,
+    );
     final imageUrl = resolveMarketProductImageUrl(product);
     final price = formatMarketProductPrice(product, currency);
     final category = resolveMarketProductCategory(product);
@@ -77,7 +81,7 @@ class ProductCard extends StatelessWidget {
                           top: isDense ? 4 : 6,
                           right: isDense ? 4 : 6,
                           child: StockBadge(
-                            inStock: inStock,
+                            status: stockStatus,
                             compact: isDense,
                           ),
                         ),

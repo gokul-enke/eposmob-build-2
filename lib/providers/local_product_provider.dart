@@ -586,10 +586,19 @@ class LocalProductProvider extends ChangeNotifier {
       return wholesalePrice;
     }
 
-    return _parseAmount(selectedStock?.price) ??
-        _parseAmount(product.price?.price?.toString()) ??
-        fallbackPrice ??
-        0.0;
+    final retailPrice = _parseAmount(selectedStock?.price) ??
+        _parseAmount(product.price?.price?.toString());
+    if (retailPrice != null) {
+      return retailPrice;
+    }
+
+    if (fallbackPrice != null &&
+        wholesalePrice != null &&
+        (fallbackPrice - wholesalePrice).abs() < 0.001) {
+      return 0.0;
+    }
+
+    return fallbackPrice ?? 0.0;
   }
 
   void _refreshCartItemPricing(
@@ -1758,6 +1767,7 @@ class LocalProductProvider extends ChangeNotifier {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
       String? accessToken = prefs.getString('access_token');
+      final int? activeStoreId = prefs.getInt('active_store_id');
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
       }
@@ -1782,9 +1792,9 @@ class LocalProductProvider extends ChangeNotifier {
         final futures = <Future<http.Response>>[];
         for (int page = batchStartPage; page <= batchEndPage; page++) {
           final queryParams = <String, String>{'page': page.toString()};
-          // if (activeStoreId != null) {
-          //   queryParams['store_id'] = activeStoreId.toString();
-          // }
+          if (activeStoreId != null) {
+            queryParams['store_id'] = activeStoreId.toString();
+          }
           if (useDelta) {
             queryParams['updated_at_range'] = "$lastSyncIso,$syncEndIso";
           }
@@ -4258,7 +4268,25 @@ class LocalProductProvider extends ChangeNotifier {
     } else {
       // Update quantity
       _cartItems[index].quantity = newQuantity;
-      _refreshCartItemPricing(_cartItems[index]);
+      final item = _cartItems[index];
+      final effectiveStock = selectedStock ?? item.selectedStock;
+      final wasWholesale = _qualifiesForWholesalePrice(
+        quantity: currentQuantity,
+        selectedStock: effectiveStock,
+      );
+      final isWholesale = _qualifiesForWholesalePrice(
+        quantity: newQuantity,
+        selectedStock: effectiveStock,
+      );
+      if (wasWholesale && !isWholesale && item.isManualPriceOverride) {
+        final wholesalePrice = _resolveWholesalePrice(effectiveStock);
+        if (wholesalePrice != null &&
+            item.price != null &&
+            (item.price! - wholesalePrice).abs() < 0.001) {
+          item.isManualPriceOverride = false;
+        }
+      }
+      _refreshCartItemPricing(item);
       debugPrint("✅ Quantity updated: $currentQuantity → $newQuantity");
     }
 

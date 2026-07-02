@@ -1462,153 +1462,107 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.withOpacity(0.3)),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: ColorManager.tableBGColor,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        topRight: Radius.circular(8),
-                      ),
-                    ),
-                    child: Table(
-                      columnWidths: const {
-                        0: FlexColumnWidth(0.6),
-                        1: FlexColumnWidth(1.2),
-                        2: FlexColumnWidth(1.2),
-                        3: FlexColumnWidth(1.2),
-                        4: FlexColumnWidth(1.2),
-                        5: FlexColumnWidth(1.4),
-                        6: FlexColumnWidth(1.4),
-                        7: FlexColumnWidth(1.2),
-                        8: FlexColumnWidth(1.2),
-                        9: FlexColumnWidth(1.0),
-                        10: FlexColumnWidth(1.2),
-                        11: FlexColumnWidth(1.2),
-                        12: FlexColumnWidth(1.0),
-                        13: FlexColumnWidth(0.8),
-                      },
-                      border: null,
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
-                      children: [
-                        TableRow(
-                          children: [
-                            _buildStockTableHeader('Sl No'),
-                            _buildStockTableHeader('Quantity'),
-                            _buildStockTableHeader('Price'),
-                            _buildStockTableHeader('MRP'),
-                            _buildStockTableHeader('Purchase Price'),
-                            _buildStockTableHeader('Supplier'),
-                            _buildStockTableHeader('Store Name'),
-                            _buildStockTableHeader('Wholesale Price'),
-                            _buildStockTableHeader('Min Count'),
-                            _buildStockTableHeader('SKU'),
-                            _buildStockTableHeader('Date'),
-                            _buildStockTableHeader('Expiry Date'),
-                            _buildStockTableHeader('Rack'),
-                            _buildStockTableHeader('Action'),
-                          ],
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Table(
+                    columnWidths: _stockTableColumnWidths,
+                    border: null,
+                    defaultVerticalAlignment:
+                        TableCellVerticalAlignment.middle,
+                    children: [
+                      TableRow(
+                        decoration: const BoxDecoration(
+                          color: ColorManager.tableBGColor,
                         ),
-                      ],
-                    ),
-                  ),
-                  ...product.stock!.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final originalStock = entry.value;
-                    final stock = originalStock.id != null
-                        ? (_editedStockRows[originalStock.id!] ?? originalStock)
-                        : originalStock;
-                    final isLowStock = stockEnabled &&
-                        _isLowStockQuantity(
-                          stock.quantity,
-                          product.reorderLevel,
-                        );
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: isLowStock
-                            ? ColorManager.kOrange.withValues(alpha: 0.06)
-                            : index % 2 == 0
-                                ? Colors.white
-                                : Colors.grey.withValues(alpha: 0.05),
-                      ),
-                      child: Table(
-                        columnWidths: const {
-                          0: FlexColumnWidth(0.6),
-                          1: FlexColumnWidth(1.2),
-                          2: FlexColumnWidth(1.2),
-                          3: FlexColumnWidth(1.2),
-                          4: FlexColumnWidth(1.2),
-                          5: FlexColumnWidth(1.4),
-                          6: FlexColumnWidth(1.4),
-                          7: FlexColumnWidth(1.2),
-                          8: FlexColumnWidth(1.2),
-                          9: FlexColumnWidth(1.0),
-                          10: FlexColumnWidth(1.2),
-                          11: FlexColumnWidth(1.2),
-                          12: FlexColumnWidth(1.0),
-                          13: FlexColumnWidth(0.8),
-                        },
-                        border: null,
-                        defaultVerticalAlignment:
-                            TableCellVerticalAlignment.middle,
                         children: [
-                          TableRow(
-                            children: [
-                              _buildStockTableCell('${index + 1}'),
-                              _buildStockTableCell(
-                                stock.quantity?.toString() ?? 'N/A',
-                                textColor:
-                                    isLowStock ? Colors.white : Colors.black,
-                                bgColor: isLowStock
-                                    ? ColorManager.kOrange
-                                    : Colors.transparent,
-                              ),
-                              _buildStockTableCell(
-                                  stock.price != null && stock.price!.isNotEmpty
-                                      ? '$currency ${stock.price}'
-                                      : 'N/A'),
-                              _buildStockTableCell(
-                                  stock.mrp != null && stock.mrp!.isNotEmpty
-                                      ? '$currency ${stock.mrp}'
-                                      : 'N/A'),
-                              _buildStockTableCell(
-                                  stock.purchasePrice != null &&
-                                          stock.purchasePrice!.isNotEmpty
-                                      ? '$currency ${stock.purchasePrice}'
-                                      : 'N/A'),
-                              _buildStockTableCell(stock.supplier ?? 'N/A'),
-                              _buildStockTableCell(stock.storeName ?? 'N/A'),
-                              _buildStockTableCell(
-                                  stock.wholesalePrice != null &&
-                                          stock.wholesalePrice!.isNotEmpty
-                                      ? '$currency ${stock.wholesalePrice}'
-                                      : 'N/A'),
-                              _buildStockTableCell(
-                                  stock.wholesaleMinUnit?.toString() ?? 'N/A'),
-                              _buildStockTableCell(stock.sku ?? 'N/A'),
-                              _buildStockTableCell(stock.date ?? 'N/A'),
-                              _buildStockTableCell(stock.expiryDate ?? 'N/A'),
-                              _buildStockTableCell(stock.rack ?? 'N/A'),
-                              _buildRackTableCell(
-                                stock,
-                                canEditProduct: canEditProduct,
-                              ),
-                            ],
-                          ),
+                          _buildStockTableHeader('Sl No'),
+                          _buildStockTableHeader('Quantity'),
+                          _buildStockTableHeader('Price'),
+                          _buildStockTableHeader('MRP'),
+                          _buildStockTableHeader('Purchase Price'),
+                          _buildStockTableHeader('Supplier'),
+                          _buildStockTableHeader('Store Name'),
+                          _buildStockTableHeader('Wholesale Price'),
+                          _buildStockTableHeader('Min Count'),
+                          _buildStockTableHeader('SKU'),
+                          _buildStockTableHeader('Date'),
+                          _buildStockTableHeader('Expiry Date'),
+                          _buildStockTableHeader('Rack'),
+                          _buildStockTableHeader('Action'),
                         ],
                       ),
-                    );
-                  }).toList(),
-                ],
+                      ...product.stock!.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final originalStock = entry.value;
+                        final stock = originalStock.id != null
+                            ? (_editedStockRows[originalStock.id!] ??
+                                originalStock)
+                            : originalStock;
+                        final isLowStock = stockEnabled &&
+                            _isLowStockQuantity(
+                              stock.quantity,
+                              product.reorderLevel,
+                            );
+                        return TableRow(
+                          decoration: BoxDecoration(
+                            color: isLowStock
+                                ? ColorManager.kOrange.withValues(alpha: 0.06)
+                                : index % 2 == 0
+                                    ? Colors.white
+                                    : Colors.grey.withValues(alpha: 0.05),
+                          ),
+                          children: [
+                            _buildStockTableCell('${index + 1}'),
+                            _buildStockTableCell(
+                              stock.quantity?.toString() ?? 'N/A',
+                              textColor:
+                                  isLowStock ? Colors.white : Colors.black,
+                              bgColor: isLowStock
+                                  ? ColorManager.kOrange
+                                  : Colors.transparent,
+                            ),
+                            _buildStockTableCell(
+                                stock.price != null && stock.price!.isNotEmpty
+                                    ? '$currency ${stock.price}'
+                                    : 'N/A'),
+                            _buildStockTableCell(
+                                stock.mrp != null && stock.mrp!.isNotEmpty
+                                    ? '$currency ${stock.mrp}'
+                                    : 'N/A'),
+                            _buildStockTableCell(
+                                stock.purchasePrice != null &&
+                                        stock.purchasePrice!.isNotEmpty
+                                    ? '$currency ${stock.purchasePrice}'
+                                    : 'N/A'),
+                            _buildStockTableCell(stock.supplier ?? 'N/A'),
+                            _buildStockTableCell(stock.storeName ?? 'N/A'),
+                            _buildStockTableCell(
+                                stock.wholesalePrice != null &&
+                                        stock.wholesalePrice!.isNotEmpty
+                                    ? '$currency ${stock.wholesalePrice}'
+                                    : 'N/A'),
+                            _buildStockTableCell(
+                                stock.wholesaleMinUnit?.toString() ?? 'N/A'),
+                            _buildStockTableCell(stock.sku ?? 'N/A'),
+                            _buildStockTableCell(stock.date ?? 'N/A'),
+                            _buildStockTableCell(stock.expiryDate ?? 'N/A'),
+                            _buildStockTableCell(stock.rack ?? 'N/A'),
+                            _buildRackTableCell(
+                              stock,
+                              canEditProduct: canEditProduct,
+                            ),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
+                ),
               ),
-            ),
             )
           else
             Container(
@@ -1983,6 +1937,23 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
+  static const Map<int, TableColumnWidth> _stockTableColumnWidths = {
+    0: FixedColumnWidth(56),
+    1: FixedColumnWidth(88),
+    2: FixedColumnWidth(100),
+    3: FixedColumnWidth(100),
+    4: FixedColumnWidth(120),
+    5: FixedColumnWidth(120),
+    6: FixedColumnWidth(120),
+    7: FixedColumnWidth(120),
+    8: FixedColumnWidth(96),
+    9: FixedColumnWidth(88),
+    10: FixedColumnWidth(110),
+    11: FixedColumnWidth(110),
+    12: FixedColumnWidth(72),
+    13: FixedColumnWidth(72),
+  };
+
   Widget _buildStockTableHeader(String text) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
@@ -1991,6 +1962,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         child: Center(
           child: Text(
             text,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s14,

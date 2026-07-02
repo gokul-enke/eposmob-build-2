@@ -71,6 +71,7 @@ AppSettings _appSettings({required bool askDeliveryDate}) {
     enableKotBillButton: false,
     kotBillAutoMarkServed: false,
     kotBillAllowedForDineIn: false,
+    pineLabPayment: false,
   );
 }
 

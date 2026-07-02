@@ -6,8 +6,11 @@ import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/quotations_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
+import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'build_quotation_details_widget.dart';
+import 'quotations_responsive.dart';
 
 class QuotationDetailsScreen extends StatefulWidget {
   final dynamic quotationId;
@@ -58,16 +61,47 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
             _buildHeader(),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: ColorManager.kPrimaryColor,
+                      ),
+                    )
                   : Consumer<QuotationsProvider>(
                       builder: (context, provider, child) {
                         final data = provider.currentQuotationDetails;
                         if (data == null) {
-                          return const Center(child: Text("No details found"));
+                          return Center(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsetsDirectional.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.description_outlined,
+                                    size: 48,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    "No details found",
+                                    textAlign: TextAlign.center,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s14,
+                                      0.25,
+                                      Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
                         }
                         return SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
-                          child: QuotationDetailWidget(data: data),
+                          child: QuotationsDetailsShell(
+                            child: QuotationDetailWidget(data: data),
+                          ),
                         );
                       },
                     ),
@@ -79,25 +113,41 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
   }
 
   Widget _buildHeader() {
+    final isPhone = quotationsIsPhone(context);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsetsDirectional.symmetric(
+        horizontal: isPhone ? 12 : 16,
+        vertical: 8,
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          CustomBackButton(
-            onPressed: () => Get.find<SideBarController>().index.value = 87,
-            text: 'Quotation List',
+          Expanded(
+            child: CustomBackButton(
+              onPressed: () =>
+                  Get.find<SideBarController>().index.value = 87,
+              text: 'Quotation List',
+            ),
           ),
-          BuildBoxShadowContainer(
-            width: 32,
-            height: 32,
-            circleRadius: 16,
-            color: ColorManager.kPrimaryColor,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              onPressed: () => Get.find<SideBarController>().index.value = 87,
-              icon: const Icon(Icons.close_rounded,
-                  size: 20, color: Colors.white),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: BuildBoxShadowContainer(
+              circleRadius: 12,
+              color: ColorManager.kPrimaryColor,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                constraints:
+                    const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () =>
+                    Get.find<SideBarController>().index.value = 87,
+                icon: const Icon(
+                  Icons.close_rounded,
+                  size: 20,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ],

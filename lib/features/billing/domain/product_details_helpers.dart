@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:pos_machine/features/billing/domain/product_stock_summary.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
+
+/// Display-only stock state for product cards and badges.
+enum ProductStockDisplayStatus {
+  available,
+  lowStock,
+  atReorderLevel,
+  outOfStock,
+}
 
 /// Whether the current user may edit product details in billing context.
 bool canEditProductDetails(
@@ -54,6 +63,27 @@ num? productAvailableQuantity(GetProduct product) {
 bool isProductLowStock(num? quantity, int? reorderLevel) {
   if (quantity == null || reorderLevel == null) return false;
   return quantity <= reorderLevel;
+}
+
+/// Resolves the stock badge state for market product cards.
+ProductStockDisplayStatus resolveProductStockDisplayStatus(
+  GetProduct product, {
+  required bool stockEnabled,
+}) {
+  final inStock =
+      hasAvailableStock(product.stock?.map((stock) => stock.quantity));
+  if (!inStock) return ProductStockDisplayStatus.outOfStock;
+  if (!stockEnabled) return ProductStockDisplayStatus.available;
+
+  final quantity = productAvailableQuantity(product);
+  final reorderLevel = product.reorderLevel;
+  if (!isProductLowStock(quantity, reorderLevel)) {
+    return ProductStockDisplayStatus.available;
+  }
+  if (quantity == reorderLevel) {
+    return ProductStockDisplayStatus.atReorderLevel;
+  }
+  return ProductStockDisplayStatus.lowStock;
 }
 
 String formatProductStockNumber(num value) {

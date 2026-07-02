@@ -13,6 +13,7 @@ import 'package:pos_machine/models/purchase_order_model.dart';
 import 'package:pos_machine/models/list_purchase.dart';
 
 import 'package:pos_machine/components/build_calendar_selection.dart';
+import 'package:pos_machine/screens/purchase/widgets/purchase_orders_responsive.dart';
 
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
@@ -35,6 +36,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
   final TextEditingController toDateController = TextEditingController();
 
   bool initLoading = false;
+  bool _showFilters = false;
   static const int _itemsPerPage = 15;
   List<String> suppliers = ["All"];
   List<String> stores = ["All"];
@@ -44,6 +46,13 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     super.initState();
     supplierController.text = "All";
     storeController.text = "All";
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _showFilters = !purchaseOrdersIsPhone(context);
+        });
+      }
+    });
     loadInitData();
   }
 
@@ -231,13 +240,80 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     resetSearch();
   }
 
+  bool _hasActiveFilters() {
+    return supplierController.text != "All" ||
+        storeController.text != "All" ||
+        fromDateController.text.isNotEmpty ||
+        toDateController.text.isNotEmpty;
+  }
+
+  bool _canReceiveOrder(PurchaseOrderData item) {
+    if (item.itemsReceived == null) return false;
+    final parts = item.itemsReceived!.split('/');
+    if (parts.length != 2) return false;
+    final received = int.tryParse(parts[0].trim()) ?? 0;
+    final total = int.tryParse(parts[1].trim()) ?? 0;
+    return received < total && total > 0;
+  }
+
+  String _itemsReceivedLabel(PurchaseOrderData item) {
+    if (item.itemsReceived == null || item.itemsReceived!.isEmpty) {
+      return "0 / 0";
+    }
+    return item.itemsReceived!;
+  }
+
+  Widget _buildFilterToggleButton() {
+    final hasFilters = _hasActiveFilters();
+
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          IconButton(
+            icon: Icon(
+              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+              color: ColorManager.kPrimaryColor,
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(
+              minWidth: 44,
+              minHeight: 44,
+            ),
+            onPressed: () {
+              setState(() {
+                _showFilters = !_showFilters;
+              });
+            },
+            tooltip: _showFilters ? 'Hide Filters' : 'Show Filters',
+          ),
+          if (hasFilters)
+            PositionedDirectional(
+              end: 6,
+              top: 6,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<PurchaseProvider>(context);
     final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
     final currency = (appSettings?.currency.trim().isNotEmpty ?? false)
-      ? appSettings!.currency.trim()
-      : 'SAR';
+        ? appSettings!.currency.trim()
+        : 'SAR';
     final purchases = provider.purchaseOrdersList;
     final currentPage = provider.listPurchaseOrderCurrentPage <= 0
         ? 1
@@ -245,442 +321,451 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     final startSerial = (currentPage - 1) * _itemsPerPage;
     final totalAmount = purchases.fold<double>(0,
         (sum, item) => sum + (double.tryParse(item.amountTotal ?? '0') ?? 0.0));
+    final isPhone = purchaseOrdersIsPhone(context);
 
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: refreshData,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: const [
-              BoxShadow(
-                color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
-              ),
-            ],
-            color: Colors.white,
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Purchase Order",
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s20,
-                            0.30,
-                            ColorManager.textColor,
-                          ),
-                        ),
-                        CustomRoundButton(
-                          title: "Create Purchase Order",
-                          fct: () {
-                            provider.activePurchaseOrderDetails = null;
-                            provider.voucherDetails = null;
-                            provider.listPurchaseItemView = [];
-                            final SideBarController sideBarController =
-                                Get.find();
-                            sideBarController.index.value = 82;
-                          },
-                          fontSize: 12,
-                          height: 45,
-                          width: 180,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _buildFilterDropdown(
-                          "Supplier",
-                          supplierController,
-                          suppliers,
-                          supplierSearchController,
-                        ),
-                        const SizedBox(width: 15),
-                        _buildFilterDropdown(
-                          "Store",
-                          storeController,
-                          stores,
-                          storeSearchController,
-                        ),
-                        const SizedBox(width: 15),
-                        _buildFilterDate("From Date", fromDateController),
-                        const SizedBox(width: 15),
-                        _buildFilterDate("To Date", toDateController),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        const Expanded(child: SizedBox()),
-                        const SizedBox(width: 15),
-                        const Expanded(child: SizedBox()),
-                        const SizedBox(width: 15),
-                        const Expanded(child: SizedBox()),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: CustomRoundButton(
-                            title: "Reset",
-                            boxColor: Colors.white,
-                            textColor: ColorManager.kPrimaryColor,
-                            borderColor: ColorManager.kPrimaryColor,
-                            fct: resetSearch,
-                            height: 45,
-                            width: double.infinity,
-                            fontSize: FontSize.s12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: initLoading
-                            ? const Center(
-                                child: CircularProgressIndicator.adaptive())
-                            : purchases.isEmpty
-                                ? BuildBoxShadowContainer(
-                                    width: double.infinity,
-                                    margin: const EdgeInsets.only(top: 20),
-                                    circleRadius: 7,
-                                    offsetValue: const Offset(1, 1),
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 50.0),
-                                      child: Center(
-                                        child: Text(
-                                          "No purchase orders found",
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s16,
-                                            0.18,
-                                            Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : BuildBoxShadowContainer(
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 0),
-                                    width: double.infinity,
-                                    circleRadius: 7,
-                                    offsetValue: const Offset(2, 2),
-                                    blurRadius: 8.0,
-                                    color: Colors.white,
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                          decoration: const BoxDecoration(
-                                            color: ColorManager.tableBGColor,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black12,
-                                                offset: Offset(0, 2),
-                                                blurRadius: 2.0,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Table(
-                                            columnWidths: const {
-                                              0: FractionColumnWidth(0.08),
-                                              1: FractionColumnWidth(0.14),
-                                              2: FractionColumnWidth(0.16),
-                                              3: FractionColumnWidth(0.20),
-                                              4: FractionColumnWidth(0.12),
-                                              5: FractionColumnWidth(0.14),
-                                              6: FractionColumnWidth(0.16),
-                                            },
-                                            border: null,
-                                            defaultVerticalAlignment:
-                                                TableCellVerticalAlignment
-                                                    .middle,
-                                            children: [
-                                              TableRow(
-                                                children: [
-                                                  _buildTableHeader("SL"),
-                                                  _buildTableHeader(
-                                                      "Purchase Date"),
-                                                  _buildTableHeader("Store"),
-                                                  _buildTableHeader("Supplier"),
-                                                  _buildTableHeader(
-                                                      "Total Price"),
-                                                  _buildTableHeader(
-                                                      "Received Items"),
-                                                  _buildTableHeader("Action"),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: SingleChildScrollView(
-                                            physics:
-                                                const BouncingScrollPhysics(),
-                                            child: Table(
-                                              columnWidths: const {
-                                                0: FractionColumnWidth(0.08),
-                                                1: FractionColumnWidth(0.14),
-                                                2: FractionColumnWidth(0.16),
-                                                3: FractionColumnWidth(0.20),
-                                                4: FractionColumnWidth(0.12),
-                                                5: FractionColumnWidth(0.14),
-                                                6: FractionColumnWidth(0.16),
-                                              },
-                                              border: null,
-                                              defaultVerticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              children: [
-                                                ...purchases
-                                                    .asMap()
-                                                    .entries
-                                                    .map((entry) {
-                                                  final int index = entry.key;
-                                                  final PurchaseOrderData item =
-                                                      entry.value;
-                                                  final int serialNumber =
-                                                      startSerial + index + 1;
-
-                                                  bool canReceive = false;
-                                                  if (item.itemsReceived !=
-                                                      null) {
-                                                    final parts = item
-                                                        .itemsReceived!
-                                                        .split('/');
-                                                    if (parts.length == 2) {
-                                                      final received =
-                                                          int.tryParse(parts[0]
-                                                                  .trim()) ??
-                                                              0;
-                                                      final total =
-                                                          int.tryParse(parts[1]
-                                                                  .trim()) ??
-                                                              0;
-                                                      canReceive =
-                                                          received < total &&
-                                                              total > 0;
-                                                    }
-                                                  }
-
-                                                  return TableRow(
-                                                    decoration: BoxDecoration(
-                                                      color: index % 2 == 0
-                                                          ? Colors.white
-                                                          : Colors.grey
-                                                              .withOpacity(0.1),
-                                                    ),
-                                                    children: [
-                                                      _buildTableCell(
-                                                        serialNumber.toString(),
-                                                      ),
-                                                      _buildTableCell(
-                                                        item.purchaseDate ?? "",
-                                                      ),
-                                                      _buildTableCell(
-                                                        item.store?.name ?? "",
-                                                      ),
-                                                      _buildTableCell(
-                                                        item.supplier?.name ??
-                                                            "",
-                                                      ),
-                                                      _buildTableCell(
-                                                        "$currency ${item.amountTotal}",
-                                                      ),
-                                                      _buildReceivedBadge(
-                                                        (item.itemsReceived ==
-                                                                    null ||
-                                                                item.itemsReceived!
-                                                                    .isEmpty)
-                                                            ? "0 / 0"
-                                                            : item
-                                                                .itemsReceived!,
-                                                      ),
-                                                      _buildActionCell(
-                                                        item: item,
-                                                        canReceive: canReceive,
-                                                      ),
-                                                    ],
-                                                  );
-                                                }).toList(),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 20, horizontal: 20),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: Colors.grey.shade200),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              "Summary",
-                              style: buildCustomStyle(
-                                FontWeightManager.bold,
-                                FontSize.s14,
-                                0.2,
-                                ColorManager.textColor,
-                              ),
-                            ),
-                            const Spacer(),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Total Price",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s12,
-                                    0.2,
-                                    Colors.grey,
-                                  ),
-                                ),
-                                Text(
-                                  "$currency ${totalAmount.toStringAsFixed(2)}",
-                                  style: buildCustomStyle(
-                                    FontWeightManager.semiBold,
-                                    FontSize.s14,
-                                    0.2,
-                                    ColorManager.textColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20.0, vertical: 10),
-                      child: PaginationControl(
-                        currentPage: provider.listPurchaseOrderCurrentPage,
-                        totalPages: provider.listPurchaseOrderTotalPages,
-                        onPageChanged: (page) {
-                          _fetchPurchases(page: page);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterDropdown(String label, TextEditingController controller,
-      List<String> items, TextEditingController searchController) {
-    return Expanded(
+    return PurchaseOrdersListShell(
+      onRefresh: refreshData,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(label,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                  0.2, ColorManager.textColor)),
-          const SizedBox(height: 5),
-          BuildDropDownWithSearch<String>(
-            title: null,
-            showName: false,
-            hintText: "All",
-            value: controller.text == "All" ? null : controller.text,
-            items: items.where((e) => e != "All").toList(),
-            onChanged: (val) {
-              setState(() => controller.text = val ?? "All");
-              _fetchPurchases();
-            },
-            displayText: (val) => val,
-            searchController: searchController,
-            height: 45,
-            margin: EdgeInsets.zero,
+          _buildHeader(provider),
+          const SizedBox(height: 12),
+          if (!isPhone || _showFilters) ...[
+            _buildFiltersCard(),
+            const SizedBox(height: 12),
+          ],
+          Expanded(
+            child: PurchaseOrdersContentCard(
+              padding: EdgeInsets.zero,
+              child: initLoading
+                  ? _buildLoadingState()
+                  : purchases.isEmpty
+                      ? _buildEmptyState()
+                      : isPhone
+                          ? _buildMobileList(
+                              purchases: purchases,
+                              startSerial: startSerial,
+                              currency: currency,
+                            )
+                          : _buildDesktopTable(
+                              purchases: purchases,
+                              startSerial: startSerial,
+                              currency: currency,
+                            ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSummaryFooter(currency: currency, totalAmount: totalAmount),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(top: 8, bottom: 4),
+            child: PaginationControl(
+              currentPage: provider.listPurchaseOrderCurrentPage,
+              totalPages: provider.listPurchaseOrderTotalPages,
+              onPageChanged: (page) {
+                _fetchPurchases(page: page);
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterDate(String label, TextEditingController controller) {
-    return Expanded(
+  Widget _buildHeader(PurchaseProvider provider) {
+    final isPhone = purchaseOrdersIsPhone(context);
+
+    return PurchaseOrdersPageHeader(
+      title: "Purchase Order",
+      subtitle: "View and manage purchase orders",
+      leading: isPhone ? _buildFilterToggleButton() : null,
+      trailing: SizedBox(
+        width: isPhone ? double.infinity : 180,
+        child: CustomRoundButton(
+          title: "Create Purchase Order",
+          fct: () {
+            provider.activePurchaseOrderDetails = null;
+            provider.voucherDetails = null;
+            provider.listPurchaseItemView = [];
+            final SideBarController sideBarController = Get.find();
+            sideBarController.index.value = 82;
+          },
+          fontSize: 12,
+          height: 44,
+          width: isPhone ? double.infinity : 180,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFiltersCard() {
+    final isPhone = purchaseOrdersIsPhone(context);
+
+    return PurchaseOrdersContentCard(
+      padding: EdgeInsets.all(isPhone ? 14 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                  0.2, ColorManager.textColor)),
-          const SizedBox(height: 5),
-          GestureDetector(
-            onTap: () async {
-              DateTime? picked = await showAutoDismissDatePicker(
-                context: context,
-                initialDate: DateTime.now(),
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2101),
-              );
-              if (picked != null) {
-                setState(() {
-                  controller.text =
-                      "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-                });
-                _fetchPurchases();
-              }
-            },
-            child: AbsorbPointer(
-              child: BuildBoxShadowContainer(
-                circleRadius: 7,
-                height: 45,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
+          const PurchaseOrdersSectionTitle(title: 'Filters'),
+          const SizedBox(height: 12),
+          if (isPhone) ...[
+            _buildFilterDropdown(
+              "Supplier",
+              supplierController,
+              suppliers,
+              supplierSearchController,
+              expanded: false,
+            ),
+            const SizedBox(height: 10),
+            _buildFilterDropdown(
+              "Store",
+              storeController,
+              stores,
+              storeSearchController,
+              expanded: false,
+            ),
+            const SizedBox(height: 10),
+            _buildFilterDate("From Date", fromDateController, expanded: false),
+            const SizedBox(height: 10),
+            _buildFilterDate("To Date", toDateController, expanded: false),
+            const SizedBox(height: 12),
+            CustomRoundButton(
+              title: "Reset",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              borderColor: ColorManager.kPrimaryColor,
+              fct: resetSearch,
+              height: 44,
+              width: double.infinity,
+              fontSize: FontSize.s12,
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildFilterDropdown(
+                  "Supplier",
+                  supplierController,
+                  suppliers,
+                  supplierSearchController,
+                ),
+                const SizedBox(width: 15),
+                _buildFilterDropdown(
+                  "Store",
+                  storeController,
+                  stores,
+                  storeSearchController,
+                ),
+                const SizedBox(width: 15),
+                _buildFilterDate("From Date", fromDateController),
+                const SizedBox(width: 15),
+                _buildFilterDate("To Date", toDateController),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Expanded(child: SizedBox()),
+                const SizedBox(width: 15),
+                const Expanded(child: SizedBox()),
+                const SizedBox(width: 15),
+                const Expanded(child: SizedBox()),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: CustomRoundButton(
+                    title: "Reset",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    borderColor: ColorManager.kPrimaryColor,
+                    fct: resetSearch,
+                    height: 44,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsetsDirectional.all(40),
+        child: SizedBox(
+          height: 28,
+          width: 28,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor:
+                AlwaysStoppedAnimation<Color>(ColorManager.kPrimaryColor),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    final hasFilters = _hasActiveFilters();
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              hasFilters
+                  ? "No purchase orders match your filters"
+                  : "No purchase orders found",
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.25,
+                Colors.grey.shade600,
+              ),
+            ),
+            if (hasFilters) ...[
+              const SizedBox(height: 16),
+              CustomRoundButton(
+                title: 'Clear filters',
+                fct: resetSearch,
+                fontSize: 12,
+                height: 44,
+                width: 140,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileList({
+    required List<PurchaseOrderData> purchases,
+    required int startSerial,
+    required String currency,
+  }) {
+    return ListView.separated(
+      padding: const EdgeInsetsDirectional.all(12),
+      itemCount: purchases.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final item = purchases[index];
+        final serialNumber = startSerial + index + 1;
+        return _buildMobilePurchaseCard(
+          item: item,
+          serialNumber: serialNumber,
+          currency: currency,
+        );
+      },
+    );
+  }
+
+  Widget _buildMobilePurchaseCard({
+    required PurchaseOrderData item,
+    required int serialNumber,
+    required String currency,
+  }) {
+    final canReceive = _canReceiveOrder(item);
+    final itemsReceived = _itemsReceivedLabel(item);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: controller,
-                        decoration: const InputDecoration(
-                            hintText: "yyyy-mm-dd",
-                            border: InputBorder.none,
-                            isDense: true),
-                        style: buildCustomStyle(FontWeightManager.medium,
-                            FontSize.s12, 0.2, ColorManager.textColor),
-                        readOnly: true,
+                    Text(
+                      item.purchaseDate ?? '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.20,
+                        ColorManager.textColor,
                       ),
                     ),
-                    const Icon(Icons.calendar_today_outlined,
-                        size: 16, color: Colors.grey),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.supplier?.name ?? '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s12,
+                        0.15,
+                        Colors.grey.shade600,
+                      ),
+                    ),
                   ],
                 ),
+              ),
+              Text(
+                '#$serialNumber',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s11,
+                  0.15,
+                  Colors.grey.shade500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          PurchaseOrdersTwoColumnLayout(
+            start: PurchaseOrdersInfoChip(
+              label: 'Store',
+              value: item.store?.name ?? '—',
+            ),
+            end: PurchaseOrdersInfoChip(
+              label: 'Total Price',
+              value: '$currency ${item.amountTotal ?? '0'}',
+            ),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: _buildReceivedBadgeWidget(itemsReceived),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              PurchaseOrdersIconAction(
+                icon: Icons.visibility,
+                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.9),
+                iconColor: Colors.white,
+                tooltip: 'View order',
+                onPressed: () => _handleOrderAction(item, 36),
+              ),
+              if (canReceive) ...[
+                const SizedBox(width: 8),
+                PurchaseOrdersIconAction(
+                  icon: Icons.add,
+                  backgroundColor: const Color(0xFFE7F8EC),
+                  iconColor: Colors.green,
+                  tooltip: 'Receive items',
+                  onPressed: () => _handleOrderAction(item, 82),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTable({
+    required List<PurchaseOrderData> purchases,
+    required int startSerial,
+    required String currency,
+  }) {
+    return PurchaseOrdersResponsiveTable(
+      table: Column(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              color: ColorManager.tableBGColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  offset: Offset(0, 2),
+                  blurRadius: 2.0,
+                ),
+              ],
+            ),
+            child: Table(
+              columnWidths: const {
+                0: FractionColumnWidth(0.08),
+                1: FractionColumnWidth(0.14),
+                2: FractionColumnWidth(0.16),
+                3: FractionColumnWidth(0.20),
+                4: FractionColumnWidth(0.12),
+                5: FractionColumnWidth(0.14),
+                6: FractionColumnWidth(0.16),
+              },
+              border: null,
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                TableRow(
+                  children: [
+                    _buildTableHeader("SL"),
+                    _buildTableHeader("Purchase Date"),
+                    _buildTableHeader("Store"),
+                    _buildTableHeader("Supplier"),
+                    _buildTableHeader("Total Price"),
+                    _buildTableHeader("Received Items"),
+                    _buildTableHeader("Action"),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Table(
+                columnWidths: const {
+                  0: FractionColumnWidth(0.08),
+                  1: FractionColumnWidth(0.14),
+                  2: FractionColumnWidth(0.16),
+                  3: FractionColumnWidth(0.20),
+                  4: FractionColumnWidth(0.12),
+                  5: FractionColumnWidth(0.14),
+                  6: FractionColumnWidth(0.16),
+                },
+                border: null,
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  ...purchases.asMap().entries.map((entry) {
+                    final int index = entry.key;
+                    final PurchaseOrderData item = entry.value;
+                    final int serialNumber = startSerial + index + 1;
+                    final canReceive = _canReceiveOrder(item);
+
+                    return TableRow(
+                      decoration: BoxDecoration(
+                        color: index % 2 == 0
+                            ? Colors.white
+                            : Colors.grey.withOpacity(0.1),
+                      ),
+                      children: [
+                        _buildTableCell(serialNumber.toString()),
+                        _buildTableCell(item.purchaseDate ?? ""),
+                        _buildTableCell(item.store?.name ?? ""),
+                        _buildTableCell(item.supplier?.name ?? ""),
+                        _buildTableCell("$currency ${item.amountTotal}"),
+                        _buildReceivedBadge(_itemsReceivedLabel(item)),
+                        _buildActionCell(
+                          item: item,
+                          canReceive: canReceive,
+                        ),
+                      ],
+                    );
+                  }),
+                ],
               ),
             ),
           ),
@@ -689,14 +774,228 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     );
   }
 
+  Widget _buildSummaryFooter({
+    required String currency,
+    required double totalAmount,
+  }) {
+    final isPhone = purchaseOrdersIsPhone(context);
+
+    return PurchaseOrdersContentCard(
+      padding: EdgeInsetsDirectional.symmetric(
+        horizontal: isPhone ? 14 : 20,
+        vertical: isPhone ? 14 : 16,
+      ),
+      child: isPhone
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Summary",
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s14,
+                    0.2,
+                    ColorManager.textColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Total Price",
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.2,
+                        Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      "$currency ${totalAmount.toStringAsFixed(2)}",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.2,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Text(
+                  "Summary",
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s14,
+                    0.2,
+                    ColorManager.textColor,
+                  ),
+                ),
+                const Spacer(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Total Price",
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.2,
+                        Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      "$currency ${totalAmount.toStringAsFixed(2)}",
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.2,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildFilterDropdown(
+    String label,
+    TextEditingController controller,
+    List<String> items,
+    TextEditingController searchController, {
+    bool expanded = true,
+  }) {
+    final field = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.2,
+            ColorManager.textColor,
+          ),
+        ),
+        const SizedBox(height: 5),
+        BuildDropDownWithSearch<String>(
+          title: null,
+          showName: false,
+          hintText: "All",
+          value: controller.text == "All" ? null : controller.text,
+          items: items.where((e) => e != "All").toList(),
+          onChanged: (val) {
+            setState(() => controller.text = val ?? "All");
+            _fetchPurchases();
+          },
+          displayText: (val) => val,
+          searchController: searchController,
+          height: 45,
+          margin: EdgeInsets.zero,
+        ),
+      ],
+    );
+
+    return expanded ? Expanded(child: field) : field;
+  }
+
+  Widget _buildFilterDate(
+    String label,
+    TextEditingController controller, {
+    bool expanded = true,
+  }) {
+    final field = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.2,
+            ColorManager.textColor,
+          ),
+        ),
+        const SizedBox(height: 5),
+        GestureDetector(
+          onTap: () async {
+            DateTime? picked = await showAutoDismissDatePicker(
+              context: context,
+              initialDate: DateTime.now(),
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2101),
+            );
+            if (picked != null) {
+              setState(() {
+                controller.text =
+                    "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+              });
+              _fetchPurchases();
+            }
+          },
+          child: AbsorbPointer(
+            child: BuildBoxShadowContainer(
+              circleRadius: 7,
+              height: 45,
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(
+                        hintText: "yyyy-mm-dd",
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s12,
+                        0.2,
+                        ColorManager.textColor,
+                      ),
+                      readOnly: true,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 16,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    return expanded ? Expanded(child: field) : field;
+  }
+
   Widget _buildTableHeader(String text) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+        padding: const EdgeInsetsDirectional.symmetric(
+          vertical: 16.0,
+          horizontal: 8.0,
+        ),
         child: Center(
           child: Text(
             text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -713,10 +1012,13 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
-        padding: const EdgeInsets.all(15.0),
+        padding: const EdgeInsetsDirectional.all(15.0),
         child: Center(
           child: Text(
             text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s12,
@@ -737,45 +1039,27 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsetsDirectional.all(8.0),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              BuildBoxShadowContainer(
-                margin: const EdgeInsets.only(left: 5, right: 5),
-                circleRadius: 5,
-                child: IconButton(
-                  icon: Icon(
-                    Icons.visibility,
-                    size: 18,
-                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                  ),
-                  onPressed: () => _handleOrderAction(item, 36),
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                  padding: EdgeInsets.zero,
-                ),
+              PurchaseOrdersIconAction(
+                icon: Icons.visibility,
+                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.9),
+                iconColor: Colors.white,
+                tooltip: 'View order',
+                onPressed: () => _handleOrderAction(item, 36),
               ),
-              if (canReceive)
-                BuildBoxShadowContainer(
-                  margin: const EdgeInsets.only(left: 5, right: 5),
-                  circleRadius: 5,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.add,
-                      size: 18,
-                      color: Colors.green,
-                    ),
-                    onPressed: () => _handleOrderAction(item, 82),
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    padding: EdgeInsets.zero,
-                  ),
+              if (canReceive) ...[
+                const SizedBox(width: 4),
+                PurchaseOrdersIconAction(
+                  icon: Icons.add,
+                  backgroundColor: const Color(0xFFE7F8EC),
+                  iconColor: Colors.green,
+                  tooltip: 'Receive items',
+                  onPressed: () => _handleOrderAction(item, 82),
                 ),
+              ],
             ],
           ),
         ),
@@ -783,7 +1067,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     );
   }
 
-  Widget _buildReceivedBadge(String itemsReceived) {
+  Widget _buildReceivedBadgeWidget(String itemsReceived) {
     int received = 0;
     int total = 0;
     final parts = itemsReceived.split('/');
@@ -815,54 +1099,61 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             ? Icons.timelapse_rounded
             : Icons.inventory_2_outlined;
 
+    return Container(
+      constraints: const BoxConstraints(minWidth: 84),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: borderColor,
+          width: 1.4,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: borderColor.withOpacity(0.14),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 15,
+            color: iconColor,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            itemsReceived,
+            style: TextStyle(
+              fontWeight: FontWeightManager.semiBold,
+              fontSize: FontSize.s12,
+              color: isFull
+                  ? const Color(0xFF166534)
+                  : hasProgress
+                      ? const Color(0xFF8A5A00)
+                      : const Color(0xFF4B5563),
+              letterSpacing: 0.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReceivedBadge(String itemsReceived) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsetsDirectional.symmetric(vertical: 10),
         child: Center(
-          child: Container(
-            constraints: const BoxConstraints(minWidth: 84),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: borderColor,
-                width: 1.4,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: borderColor.withOpacity(0.14),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 15,
-                  color: iconColor,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  itemsReceived,
-                  style: TextStyle(
-                    fontWeight: FontWeightManager.semiBold,
-                    fontSize: FontSize.s12,
-                    color: isFull
-                        ? const Color(0xFF166534)
-                        : hasProgress
-                            ? const Color(0xFF8A5A00)
-                            : const Color(0xFF4B5563),
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: _buildReceivedBadgeWidget(itemsReceived),
         ),
       ),
     );

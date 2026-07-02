@@ -199,6 +199,16 @@ class BillingMobileSettingsController {
     return appSettings?.discountAndCoupon ?? false;
   }
 
+  bool shouldShowPineLabPayment(AppSettings? appSettings) {
+    if (appSettings == null) return false;
+    try {
+      return appSettings.pineLabPayment == true;
+    } catch (_) {
+      // Stale AppSettings instances after hot reload may not have new fields.
+      return false;
+    }
+  }
+
   bool shouldShowPurchaseHistoryAction({
     required AppSettings? appSettings,
     required bool hasSelectedCustomer,
