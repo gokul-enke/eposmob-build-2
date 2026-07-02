@@ -343,469 +343,349 @@ class _AddProductScreenState extends State<AddProductScreen> {
     resetSearch();
   }
 
+  bool _isMobile(BuildContext context) =>
+      MediaQuery.of(context).size.width < 600;
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final bool isMobile = _isMobile(context);
+    final double horizontalMargin = isMobile ? 8 : 12;
 
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: refreshData,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          padding: const EdgeInsets.all(8),
+          margin: EdgeInsets.symmetric(
+            horizontal: horizontalMargin,
+            vertical: isMobile ? 10 : 20,
+          ),
+          padding: EdgeInsets.all(isMobile ? 4 : 8),
           decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: const [
-                BoxShadow(
-                  color: ColorManager.boxShadowColor,
-                  blurRadius: 6,
-                  offset: Offset(1, 1),
-                ),
-              ],
-              color: Colors.white),
+            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+            border: Border.all(color: Colors.grey.withOpacity(0.12)),
+            boxShadow: const [
+              BoxShadow(
+                color: ColorManager.boxShadowColor,
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
+            color: Colors.white,
+          ),
           child: Column(
             children: [
-              // Fixed Header Section
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 5.0, horizontal: 20.0),
+                padding: EdgeInsets.symmetric(
+                  vertical: isMobile ? 12.0 : 5.0,
+                  horizontal: isMobile ? 12.0 : 20.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Product List",
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s20,
-                            0.30,
-                            ColorManager.textColor,
-                          ),
-                        ),
-                        CustomRoundButton(
-                          title: "Add Product",
-                          fct: () async {
-                            await showDialog(
-                              context: context,
-                              builder: (context) =>
-                                  const AddProductWithBarcodeModal(),
-                            );
-                          },
-                          fontSize: 12,
-                          height: 45,
-                          width: 150,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    // First row of filters - Name, Category, Price, Barcode
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Name filter
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    isMobile
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // Text(
-                              //   "Name",
-                              //   style: buildCustomStyle(
-                              //     FontWeightManager.regular,
-                              //     FontSize.s14,
-                              //     0.27,
-                              //     Colors.black.withOpacity(0.6),
-                              //   ),
-                              // ),
-                              const SizedBox(height: 8),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                onchanged: (value) {
-                                  searchProducts(1);
-                                },
-                                controller: productNameController,
-                                size: size,
-                                hintText: 'Product Name',
+                              Text(
+                                "Product List",
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s20,
+                                  0.30,
+                                  ColorManager.kTitleTextColor,
+                                ),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-
-                        // Category filter
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Text(
-                              //   "Category",
-                              //   style: buildCustomStyle(
-                              //     FontWeightManager.regular,
-                              //     FontSize.s14,
-                              //     0.27,
-                              //     Colors.black.withOpacity(0.6),
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 8),
-                              Consumer<CategoryProvider>(
-                                builder: (context, categoryProvider, child) {
-                                  List<Category>? categoryList =
-                                      categoryProvider.category;
-                                  Category? selectedCategory;
-                                  if (selectedCategoryId != null &&
-                                      categoryList != null) {
-                                    try {
-                                      selectedCategory =
-                                          categoryList.firstWhere(
-                                        (cat) =>
-                                            cat.categoryId.toString() ==
-                                            selectedCategoryId,
-                                        orElse: () => categoryList.first,
-                                      );
-                                    } catch (e) {
-                                      selectedCategory = null;
-                                    }
-                                  }
-
-                                  return BuildDropDownWithSearch<Category>(
-                                    title: null,
-                                    showName: false,
-                                    hintText: 'Please Select',
-                                    value: selectedCategory,
-                                    items: categoryList != null &&
-                                            categoryList.isNotEmpty
-                                        ? categoryList
-                                            .where((category) =>
-                                                category.categoryName != "ALL")
-                                            .toList()
-                                        : [],
-                                    onChanged: (Category? selected) async {
-                                      if (selected != null) {
-                                        setState(() {
-                                          selectedCategoryId =
-                                              selected.categoryId.toString();
-                                        });
-                                        searchProducts(1);
-                                      }
-                                    },
-                                    displayText: (category) =>
-                                        category.categoryName ?? 'Unknown',
-                                    searchController: categorySearchController,
-                                    height: 45,
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 0, vertical: 0),
+                              const SizedBox(height: 12),
+                              CustomRoundButton(
+                                title: "Add Product",
+                                fct: () async {
+                                  await showDialog(
+                                    context: context,
+                                    builder: (context) =>
+                                        const AddProductWithBarcodeModal(),
                                   );
                                 },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-
-                        // Price filter
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Text(
-                              //   "Price",
-                              //   style: buildCustomStyle(
-                              //     FontWeightManager.regular,
-                              //     FontSize.s14,
-                              //     0.27,
-                              //     Colors.black.withOpacity(0.6),
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 8),
-                              buildColumnWidgetForTextFields(
+                                fontSize: 12,
                                 height: 45,
-                                onchanged: (value) {
-                                  searchProducts(1);
-                                },
-                                controller: amountController,
-                                size: size,
-                                hintText: 'Price',
+                                width: double.infinity,
                               ),
                             ],
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-
-                        // Barcode filter
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Text(
-                              //   "Barcode",
-                              //   style: buildCustomStyle(
-                              //     FontWeightManager.regular,
-                              //     FontSize.s14,
-                              //     0.27,
-                              //     Colors.black.withOpacity(0.6),
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 8),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                onchanged: (value) {
-                                  searchProducts(1);
-                                },
-                                margin: const EdgeInsets.only(left: 5),
-                                controller: barcodeController,
-                                size: size,
-                                hintText: 'Barcode',
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // Second row of filters - HSN Code, Properties, Store, Supplier, Reset Button
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // HSN Code filter
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Text(
-                              //   "HSN Code",
-                              //   style: buildCustomStyle(
-                              //     FontWeightManager.regular,
-                              //     FontSize.s14,
-                              //     0.27,
-                              //     Colors.black.withOpacity(0.6),
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 8),
-                              buildColumnWidgetForTextFields(
-                                height: 45,
-                                onchanged: (value) {
-                                  searchProducts(1);
-                                },
-                                controller: hsnCodeController,
-                                size: size,
-                                hintText: 'HSN Code',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-
-                        // Product Properties
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Text(
-                              //   "Product Properties",
-                              //   style: buildCustomStyle(
-                              //     FontWeightManager.regular,
-                              //     FontSize.s14,
-                              //     0.27,
-                              //     Colors.black.withOpacity(0.6),
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 8),
-                              BuildDropDownWithSearch<String>(
-                                title: null,
-                                showName: false,
-                                hintText: 'Select Property',
-                                value: selectedProperty,
-                                items: propertyList,
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    selectedProperty = newValue;
-                                  });
-                                  searchProducts(1);
-                                },
-                                displayText: (property) => property,
-                                searchController: propertySearchController,
-                                height: 45,
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 0, vertical: 0),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 15),
-
-                        // Store
-                        /*
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Text(
-                              //   "Store",
-                              //   style: buildCustomStyle(
-                              //     FontWeightManager.regular,
-                              //     FontSize.s14,
-                              //     0.27,
-                              //     Colors.black.withOpacity(0.6),
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 8),
-                              Consumer<PurchaseProvider>(
-                                builder: (context, purchaseProvider, child) {
-                                  List<GetStoreModelData> stores =
-                                      purchaseProvider.getStoreList ?? [];
-                                  return BuildDropDownWithSearch<
-                                      GetStoreModelData>(
-                                    title: null,
-                                    showName: false,
-                                    hintText: 'Select Store',
-                                    value: storeSelected,
-                                    items: stores,
-                                    onChanged:
-                                        (GetStoreModelData? storeModelData) {
-                                      if (storeModelData != null) {
-                                        setState(() {
-                                          storeSelected = storeModelData;
-                                          storeController.text =
-                                              "${storeModelData.id ?? 1}";
-                                        });
-                                        searchProducts(1);
-                                      }
-                                    },
-                                    displayText: (store) =>
-                                        store.name ?? 'Unknown Store',
-                                    searchController: storeSearchController,
-                                    height: 45,
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 0, vertical: 0),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        */
-                        // Item Code filter
-                        Consumer<AppSettingsProvider>(
-                          builder: (context, appSettingsProvider, child) {
-                            final itemCodeEnabled = appSettingsProvider
-                                    .appSettings?.itemCodeEnabled ??
-                                false;
-                            if (!itemCodeEnabled) {
-                              return const Expanded(flex: 1, child: SizedBox());
-                            }
-                            return Expanded(
-                              flex: 1,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  buildColumnWidgetForTextFields(
-                                    height: 45,
-                                    onchanged: (value) {
-                                      searchProducts(1);
-                                    },
-                                    controller: itemCodeController,
-                                    size: size,
-                                    hintText: 'Item Code',
+                              Expanded(
+                                child: Text(
+                                  "Product List",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    FontSize.s20,
+                                    0.30,
+                                    ColorManager.kTitleTextColor,
                                   ),
-                                ],
+                                ),
                               ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 15),
-
-                        // Supplier
-                        /*
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Text(
-                              //   "Supplier",
-                              //   style: buildCustomStyle(
-                              //     FontWeightManager.regular,
-                              //     FontSize.s14,
-                              //     0.27,
-                              //     Colors.black.withOpacity(0.6),
-                              //   ),
-                              // ),
-                              // const SizedBox(height: 8),
-                              Consumer<PurchaseProvider>(
-                                builder: (context, purchaseProvider, child) {
-                                  List<GetSuppliersModelData> suppliers =
-                                      purchaseProvider.getSupplierList ?? [];
-                                  return BuildDropDownWithSearch<
-                                      GetSuppliersModelData>(
-                                    title: null,
-                                    showName: false,
-                                    hintText: 'Select Supplier',
-                                    value: supplier,
-                                    items: suppliers,
-                                    onChanged: (GetSuppliersModelData?
-                                        suppliersModelData) {
-                                      if (suppliersModelData != null) {
-                                        setState(() {
-                                          supplier = suppliersModelData;
-                                          supplierIdController.text =
-                                              "${suppliersModelData.id ?? 1}";
-                                        });
-                                        searchProducts(1);
-                                      }
-                                    },
-                                    displayText: (supplier) =>
-                                        supplier.displayName,
-                                    searchController: supplierSearchController,
-                                    height: 45,
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 0, vertical: 0),
+                              CustomRoundButton(
+                                title: "Add Product",
+                                fct: () async {
+                                  await showDialog(
+                                    context: context,
+                                    builder: (context) =>
+                                        const AddProductWithBarcodeModal(),
                                   );
                                 },
+                                fontSize: 12,
+                                height: 45,
+                                width: 150,
                               ),
                             ],
                           ),
-                        ),
-                        */
-                        const Expanded(flex: 1, child: SizedBox()),
-                      ],
-                    ),
+                    const SizedBox(height: 15),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final bool stackFilters = constraints.maxWidth < 700;
+                        Widget wrapField(Widget child) => stackFilters
+                            ? Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: child,
+                              )
+                            : Expanded(flex: 1, child: child);
 
-                    const SizedBox(height: 20),
-
-                    // Third row - Reset button
-                    Row(
-                      children: [
-                        const Expanded(flex: 1, child: SizedBox()),
-                        const SizedBox(width: 15),
-                        const Expanded(flex: 1, child: SizedBox()),
-                        const SizedBox(width: 15),
-                        const Expanded(flex: 1, child: SizedBox()),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          flex: 1,
-                          child: CustomRoundButton(
-                            title: "Reset",
-                            boxColor: Colors.white,
-                            textColor: ColorManager.kPrimaryColor,
-                            fct: resetSearch,
-                            height: 45,
-                            width: 100,
-                            fontSize: FontSize.s12,
-                          ),
-                        ),
-                      ],
+                        return Column(
+                          children: [
+                            stackFilters
+                                ? Column(
+                                    children: [
+                                      wrapField(buildColumnWidgetForTextFields(
+                                        height: 45,
+                                        onchanged: (value) {
+                                          searchProducts(1);
+                                        },
+                                        controller: productNameController,
+                                        size: size,
+                                        hintText: 'Product Name',
+                                      )),
+                                      wrapField(Consumer<CategoryProvider>(
+                                        builder:
+                                            (context, categoryProvider, child) {
+                                          return _buildCategoryDropdown(
+                                              categoryProvider);
+                                        },
+                                      )),
+                                      wrapField(buildColumnWidgetForTextFields(
+                                        height: 45,
+                                        onchanged: (value) {
+                                          searchProducts(1);
+                                        },
+                                        controller: amountController,
+                                        size: size,
+                                        hintText: 'Price',
+                                      )),
+                                      wrapField(buildColumnWidgetForTextFields(
+                                        height: 45,
+                                        onchanged: (value) {
+                                          searchProducts(1);
+                                        },
+                                        controller: barcodeController,
+                                        size: size,
+                                        hintText: 'Barcode',
+                                      )),
+                                      wrapField(buildColumnWidgetForTextFields(
+                                        height: 45,
+                                        onchanged: (value) {
+                                          searchProducts(1);
+                                        },
+                                        controller: hsnCodeController,
+                                        size: size,
+                                        hintText: 'HSN Code',
+                                      )),
+                                      wrapField(BuildDropDownWithSearch<String>(
+                                        title: null,
+                                        showName: false,
+                                        hintText: 'Select Property',
+                                        value: selectedProperty,
+                                        items: propertyList,
+                                        onChanged: (String? newValue) {
+                                          setState(() {
+                                            selectedProperty = newValue;
+                                          });
+                                          searchProducts(1);
+                                        },
+                                        displayText: (property) => property,
+                                        searchController:
+                                            propertySearchController,
+                                        height: 45,
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 0, vertical: 0),
+                                      )),
+                                      Consumer<AppSettingsProvider>(
+                                        builder: (context,
+                                            appSettingsProvider, child) {
+                                          final itemCodeEnabled =
+                                              appSettingsProvider.appSettings
+                                                      ?.itemCodeEnabled ??
+                                                  false;
+                                          if (!itemCodeEnabled) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return wrapField(
+                                              buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            controller: itemCodeController,
+                                            size: size,
+                                            hintText: 'Item Code',
+                                          ));
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                : Column(
+                                    children: [
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          wrapField(
+                                              buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            controller: productNameController,
+                                            size: size,
+                                            hintText: 'Product Name',
+                                          )),
+                                          const SizedBox(width: 15),
+                                          wrapField(Consumer<CategoryProvider>(
+                                            builder: (context,
+                                                categoryProvider, child) {
+                                              return _buildCategoryDropdown(
+                                                  categoryProvider);
+                                            },
+                                          )),
+                                          const SizedBox(width: 15),
+                                          wrapField(
+                                              buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            controller: amountController,
+                                            size: size,
+                                            hintText: 'Price',
+                                          )),
+                                          const SizedBox(width: 15),
+                                          wrapField(
+                                              buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            margin: const EdgeInsetsDirectional
+                                                .only(start: 5),
+                                            controller: barcodeController,
+                                            size: size,
+                                            hintText: 'Barcode',
+                                          )),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          wrapField(
+                                              buildColumnWidgetForTextFields(
+                                            height: 45,
+                                            onchanged: (value) {
+                                              searchProducts(1);
+                                            },
+                                            controller: hsnCodeController,
+                                            size: size,
+                                            hintText: 'HSN Code',
+                                          )),
+                                          const SizedBox(width: 15),
+                                          wrapField(
+                                              BuildDropDownWithSearch<String>(
+                                            title: null,
+                                            showName: false,
+                                            hintText: 'Select Property',
+                                            value: selectedProperty,
+                                            items: propertyList,
+                                            onChanged: (String? newValue) {
+                                              setState(() {
+                                                selectedProperty = newValue;
+                                              });
+                                              searchProducts(1);
+                                            },
+                                            displayText: (property) =>
+                                                property,
+                                            searchController:
+                                                propertySearchController,
+                                            height: 45,
+                                            margin: const EdgeInsets.symmetric(
+                                                horizontal: 0, vertical: 0),
+                                          )),
+                                          const SizedBox(width: 15),
+                                          Consumer<AppSettingsProvider>(
+                                            builder: (context,
+                                                appSettingsProvider, child) {
+                                              final itemCodeEnabled =
+                                                  appSettingsProvider
+                                                          .appSettings
+                                                          ?.itemCodeEnabled ??
+                                                      false;
+                                              if (!itemCodeEnabled) {
+                                                return const Expanded(
+                                                    flex: 1,
+                                                    child: SizedBox());
+                                              }
+                                              return wrapField(
+                                                  buildColumnWidgetForTextFields(
+                                                height: 45,
+                                                onchanged: (value) {
+                                                  searchProducts(1);
+                                                },
+                                                controller:
+                                                    itemCodeController,
+                                                size: size,
+                                                hintText: 'Item Code',
+                                              ));
+                                            },
+                                          ),
+                                          const SizedBox(width: 15),
+                                          const Expanded(
+                                              flex: 1, child: SizedBox()),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: stackFilters
+                                  ? Alignment.center
+                                  : Alignment.centerRight,
+                              child: CustomRoundButton(
+                                title: "Reset",
+                                boxColor: Colors.white,
+                                textColor: ColorManager.kPrimaryColor,
+                                fct: resetSearch,
+                                height: 45,
+                                width: stackFilters ? double.infinity : 120,
+                                fontSize: FontSize.s12,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -817,7 +697,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     // Table Area - Takes remaining space with scrolling table body
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 12.0 : 20.0),
                         child: Consumer<LocalProductProvider>(
                           builder: (context, productProvider, child) {
                             List<GetProduct> productList =
@@ -830,54 +711,102 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                             if (initLoading) {
                               return const Center(
-                                  child: CircularProgressIndicator.adaptive());
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      color: ColorManager.kPrimaryColor,
+                                    ),
+                                    SizedBox(height: 14),
+                                    Text(
+                                      "Loading products...",
+                                      style: TextStyle(
+                                        color: ColorManager.kGreyColor,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
                             }
 
                             if (productList.isEmpty) {
-                              return BuildBoxShadowContainer(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(top: 20),
-                                circleRadius: 7,
-                                offsetValue: const Offset(1, 1),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 50.0),
-                                  child: Center(
-                                    child: Text(
-                                      "No products found",
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s16,
-                                        0.18,
-                                        Colors.black,
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      height: 88,
+                                      width: 88,
+                                      decoration: BoxDecoration(
+                                        color: ColorManager.kPrimaryColor
+                                            .withOpacity(0.08),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.inventory_2_outlined,
+                                        size: 40,
+                                        color: ColorManager.kPrimaryColor,
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      "No products found",
+                                      style: buildCustomStyle(
+                                        FontWeightManager.semiBold,
+                                        FontSize.s16,
+                                        0.18,
+                                        ColorManager.kTitleTextColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                              );
+                            }
+
+                            if (isMobile) {
+                              return ListView.builder(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                itemCount: productList.length,
+                                itemBuilder: (context, index) {
+                                  final product = productList[index];
+                                  final categoryName = product.category != null
+                                      ? product.category!.name ?? 'Unknown'
+                                      : 'No Category';
+                                  final serialNumber =
+                                      productProvider.paginationFrom + index;
+                                  return _buildMobileProductCard(
+                                    product: product,
+                                    serialNumber: serialNumber,
+                                    categoryName: categoryName,
+                                    itemCodeEnabled: itemCodeEnabled,
+                                  );
+                                },
                               );
                             }
 
                             return BuildBoxShadowContainer(
                               margin: const EdgeInsets.symmetric(horizontal: 0),
                               width: double.infinity,
-                              circleRadius: 7,
-                              offsetValue: const Offset(2, 2),
-                              blurRadius: 8.0,
+                              circleRadius: 14,
+                              offsetValue: const Offset(0, 3),
+                              blurRadius: 10.0,
                               color: Colors.white,
-                              child: Column(
+                              border: Border.all(
+                                  color: Colors.grey.withOpacity(0.12)),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Column(
                                 children: [
-                                  // Fixed table header
                                   Container(
                                     decoration: const BoxDecoration(
                                       color: ColorManager.tableBGColor,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black12,
-                                          offset: Offset(0, 2),
-                                          blurRadius: 2.0,
-                                        ),
-                                      ],
+                                      border: Border(
+                                        bottom: BorderSide(
+                                            color: Color(0x1F000000),
+                                            width: 1),
+                                      ),
                                     ),
                                     child: Table(
                                       columnWidths: const {
@@ -1116,7 +1045,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                     ),
                                                   ],
                                                 );
-                                              }).toList(),
+                                              }),
                                             ],
                                           ),
                                         ),
@@ -1125,6 +1054,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                   ),
                                 ],
                               ),
+                            ),
                             );
                           },
                         ),
@@ -1132,8 +1062,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                     // Pagination Always at Bottom
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20.0, vertical: 10),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isMobile ? 12.0 : 20.0, vertical: 10),
                       child: Consumer<LocalProductProvider>(
                         builder: (context, productProvider, child) {
                           if (productProvider.paginatedProducts.isEmpty) {
@@ -1160,6 +1090,169 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
+  Widget _buildCategoryDropdown(CategoryProvider categoryProvider) {
+    List<Category>? categoryList = categoryProvider.category;
+    Category? selectedCategory;
+    if (selectedCategoryId != null && categoryList != null) {
+      try {
+        selectedCategory = categoryList.firstWhere(
+          (cat) => cat.categoryId.toString() == selectedCategoryId,
+          orElse: () => categoryList.first,
+        );
+      } catch (e) {
+        selectedCategory = null;
+      }
+    }
+
+    return BuildDropDownWithSearch<Category>(
+      title: null,
+      showName: false,
+      hintText: 'Please Select',
+      value: selectedCategory,
+      items: categoryList != null && categoryList.isNotEmpty
+          ? categoryList
+              .where((category) => category.categoryName != "ALL")
+              .toList()
+          : [],
+      onChanged: (Category? selected) async {
+        if (selected != null) {
+          setState(() {
+            selectedCategoryId = selected.categoryId.toString();
+          });
+          searchProducts(1);
+        }
+      },
+      displayText: (category) => category.categoryName ?? 'Unknown',
+      searchController: categorySearchController,
+      height: 45,
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+    );
+  }
+
+  Widget _buildMobileProductCard({
+    required GetProduct product,
+    required int serialNumber,
+    required String categoryName,
+    required bool itemCodeEnabled,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: BuildBoxShadowContainer(
+        circleRadius: 14,
+        padding: const EdgeInsets.all(16),
+        showShadow: true,
+        blurRadius: 10,
+        offsetValue: const Offset(0, 3),
+        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+        color: Colors.white,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    product.productName ?? 'Unnamed',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s14,
+                      0.18,
+                      ColorManager.kPrimaryColor,
+                    ),
+                  ),
+                ),
+                Text(
+                  '#$serialNumber',
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.13,
+                    ColorManager.kGreyColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              categoryName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s11,
+                0.13,
+                Colors.black54,
+              ),
+            ),
+            if (itemCodeEnabled &&
+                product.itemCode != null &&
+                product.itemCode!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Item: ${product.itemCode}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s11,
+                    0.13,
+                    Colors.black54,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Price: ${product.price?.price ?? 'N/A'}',
+                      maxLines: 1,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.18,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        icon: Icon(Icons.visibility,
+                            size: 20, color: ColorManager.kPrimaryColor),
+                        onPressed: () => _showProductDetails(product),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        icon: Icon(Icons.delete_outline,
+                            size: 20, color: Colors.red.shade400),
+                        onPressed: () => _confirmDelete(product),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTableHeader(String text) {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
@@ -1168,11 +1261,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
         child: Center(
           child: Text(
             text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
-              FontWeightManager.medium,
+              FontWeightManager.semiBold,
               FontSize.s12,
               0.18,
-              ColorManager.kPrimaryColor,
+              ColorManager.kTitleTextColor,
             ),
           ),
         ),
@@ -1184,15 +1279,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return TableCell(
       verticalAlignment: TableCellVerticalAlignment.middle,
       child: Padding(
-        padding: const EdgeInsets.all(15.0),
+        padding: const EdgeInsets.all(12.0),
         child: Center(
           child: Text(
             text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: buildCustomStyle(
               FontWeightManager.medium,
-              FontSize.s12,
+              FontSize.s11,
               0.13,
-              Colors.black,
+              ColorManager.kTextColor,
             ),
           ),
         ),
