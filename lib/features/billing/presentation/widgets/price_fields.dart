@@ -30,6 +30,7 @@ class PriceTextField extends StatefulWidget {
 class _PriceTextFieldState extends State<PriceTextField> {
   late TextEditingController controller;
   late FocusNode focusNode;
+  bool _suppressPriceListener = false;
 
   double _displayPrice() {
     return (widget.item.displayPrice ?? widget.item.price ?? 0.0) as double;
@@ -47,14 +48,32 @@ class _PriceTextFieldState extends State<PriceTextField> {
     return value.toString();
   }
 
+  void _setControllerText(String text) {
+    _suppressPriceListener = true;
+    controller.text = text;
+    _suppressPriceListener = false;
+  }
+
+  void _setControllerValue(TextEditingValue value) {
+    _suppressPriceListener = true;
+    controller.value = value;
+    _suppressPriceListener = false;
+  }
+
   // Listener to sync controller changes (including on-screen keyboard input) with provider
   void _handleTextChanged() {
+    if (_suppressPriceListener) return;
+
     final parsedPrice = double.tryParse(controller.text);
     if (parsedPrice != null && parsedPrice >= 0) {
+      final basePrice = _toBasePrice(parsedPrice);
+      final currentBase = (widget.item.price ?? 0.0) as double;
+      if ((basePrice - currentBase).abs() < 0.001) return;
+
       widget.localProductProvider.updateItemPrice(
         widget.item.product.productId!,
         widget.item.selectedStock,
-        _toBasePrice(parsedPrice),
+        basePrice,
         stockGroupIds: widget.item.stockGroupIds,
         saleUnitId: widget.item.saleUnitId,
       );
@@ -105,10 +124,10 @@ class _PriceTextFieldState extends State<PriceTextField> {
 
     final minDisplay = (widget.item.toDisplayAmount(minBase) ?? minBase) as double;
     final text = _formatPrice(minDisplay);
-    controller.value = TextEditingValue(
+    _setControllerValue(TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
-    );
+    ));
 
     if (mounted) {
       showScaffoldError(
@@ -164,7 +183,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
         );
       }
     } else {
-      controller.text = _displayPrice().toString();
+      _setControllerText(_displayPrice().toString());
     }
 
     Provider.of<KeyboardProvider>(context, listen: false).hide();
@@ -211,7 +230,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
     super.didUpdateWidget(oldWidget);
     // Only refresh controller text if the field is NOT focused
     if (!focusNode.hasFocus && oldWidget.item.price != widget.item.price) {
-      controller.text = _displayPrice().toString();
+      _setControllerText(_displayPrice().toString());
     }
     if (_shouldHandleEditRequest(oldWidget)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -250,7 +269,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
           // Only update if user is not currently editing the field
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              controller.text = currentPrice;
+              _setControllerText(currentPrice);
             }
           });
         }

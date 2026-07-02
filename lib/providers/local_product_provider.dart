@@ -586,10 +586,19 @@ class LocalProductProvider extends ChangeNotifier {
       return wholesalePrice;
     }
 
-    return _parseAmount(selectedStock?.price) ??
-        _parseAmount(product.price?.price?.toString()) ??
-        fallbackPrice ??
-        0.0;
+    final retailPrice = _parseAmount(selectedStock?.price) ??
+        _parseAmount(product.price?.price?.toString());
+    if (retailPrice != null) {
+      return retailPrice;
+    }
+
+    if (fallbackPrice != null &&
+        wholesalePrice != null &&
+        (fallbackPrice - wholesalePrice).abs() < 0.001) {
+      return 0.0;
+    }
+
+    return fallbackPrice ?? 0.0;
   }
 
   void _refreshCartItemPricing(
@@ -4259,7 +4268,25 @@ class LocalProductProvider extends ChangeNotifier {
     } else {
       // Update quantity
       _cartItems[index].quantity = newQuantity;
-      _refreshCartItemPricing(_cartItems[index]);
+      final item = _cartItems[index];
+      final effectiveStock = selectedStock ?? item.selectedStock;
+      final wasWholesale = _qualifiesForWholesalePrice(
+        quantity: currentQuantity,
+        selectedStock: effectiveStock,
+      );
+      final isWholesale = _qualifiesForWholesalePrice(
+        quantity: newQuantity,
+        selectedStock: effectiveStock,
+      );
+      if (wasWholesale && !isWholesale && item.isManualPriceOverride) {
+        final wholesalePrice = _resolveWholesalePrice(effectiveStock);
+        if (wholesalePrice != null &&
+            item.price != null &&
+            (item.price! - wholesalePrice).abs() < 0.001) {
+          item.isManualPriceOverride = false;
+        }
+      }
+      _refreshCartItemPricing(item);
       debugPrint("✅ Quantity updated: $currentQuantity → $newQuantity");
     }
 
