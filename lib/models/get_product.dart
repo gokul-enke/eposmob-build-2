@@ -652,6 +652,10 @@ class SaleUnit {
   final String? barcode;
   final double? price;
 
+  /// Backend-resolved selling price for this unit on the default in-stock batch
+  /// (already encodes the batch-override -> master -> base*conversion fallback).
+  final double? resolvedPrice;
+
   SaleUnit({
     this.id,
     this.unitId,
@@ -659,7 +663,15 @@ class SaleUnit {
     this.conversionRate,
     this.barcode,
     this.price,
+    this.resolvedPrice,
   });
+
+  /// Conversion rate as a positive number, or null when it cannot be parsed.
+  double? get conversionRateValue {
+    final parsed = double.tryParse(conversionRate?.trim() ?? '');
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
+  }
 
   factory SaleUnit.fromJson(Map<String, dynamic> json) => SaleUnit(
         id: json["id"] is String ? int.tryParse(json["id"]) : json["id"],
@@ -669,12 +681,8 @@ class SaleUnit {
         unitName: json["unit_name"]?.toString(),
         conversionRate: json["conversion_rate"]?.toString(),
         barcode: json["barcode"]?.toString(),
-        price: (() {
-          final value = json["price"];
-          if (value == null) return null;
-          if (value is num) return value.toDouble();
-          return double.tryParse(value.toString());
-        })(),
+        price: _parseNullableDouble(json["price"]),
+        resolvedPrice: _parseNullableDouble(json["resolved_price"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -684,7 +692,46 @@ class SaleUnit {
         "conversion_rate": conversionRate,
         "barcode": barcode,
         "price": price,
+        "resolved_price": resolvedPrice,
       };
+}
+
+double? _parseNullableDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+/// Parses batch `unit_prices` into a `{ sale_unit_id: price }` map.
+///
+/// Backends may send this as an object (`{"100": 1000.0}`) or as a list of
+/// `{ "sale_unit_id": 100, "price": 1000.0 }` entries; both are supported.
+Map<int, double>? _parseUnitPriceOverrides(dynamic value) {
+  if (value == null) return null;
+  final result = <int, double>{};
+
+  void put(dynamic key, dynamic price) {
+    final parsedKey = key is int ? key : int.tryParse(key?.toString() ?? '');
+    final parsedPrice = _parseNullableDouble(price);
+    if (parsedKey != null && parsedPrice != null) {
+      result[parsedKey] = parsedPrice;
+    }
+  }
+
+  if (value is Map) {
+    value.forEach(put);
+  } else if (value is List) {
+    for (final entry in value) {
+      if (entry is Map) {
+        put(
+          entry["sale_unit_id"] ?? entry["id"] ?? entry["unit_id"],
+          entry["price"] ?? entry["unit_price"] ?? entry["value"],
+        );
+      }
+    }
+  }
+
+  return result.isEmpty ? null : result;
 }
 
 class Links {
@@ -760,6 +807,16 @@ class Stock {
   final bool? taxIncludePurchase;
   final List<dynamic>? unitPrices;
 
+  /// Per-batch sale-unit price overrides keyed by `sale_unit_id`.
+  /// Values are the price for ONE of that sale unit (e.g. price per Dozen).
+  final Map<int, double>? unitPriceOverrides;
+
+  /// Batch-specific override for the given [saleUnitId], or null when absent.
+  double? unitPriceOverrideFor(int? saleUnitId) {
+    if (saleUnitId == null) return null;
+    return unitPriceOverrides?[saleUnitId];
+  }
+
   Stock({
     this.id,
     this.productId,
@@ -785,6 +842,7 @@ class Stock {
     this.taxInclude,
     this.taxIncludePurchase,
     this.unitPrices,
+    this.unitPriceOverrides,
   });
 
   Stock copyWith({
@@ -812,6 +870,7 @@ class Stock {
     bool? taxInclude,
     bool? taxIncludePurchase,
     List<dynamic>? unitPrices,
+    Map<int, double>? unitPriceOverrides,
   }) {
     return Stock(
       id: id ?? this.id,
@@ -838,6 +897,7 @@ class Stock {
       taxInclude: taxInclude ?? this.taxInclude,
       taxIncludePurchase: taxIncludePurchase ?? this.taxIncludePurchase,
       unitPrices: unitPrices ?? this.unitPrices,
+      unitPriceOverrides: unitPriceOverrides ?? this.unitPriceOverrides,
     );
   }
 
@@ -896,6 +956,7 @@ class Stock {
         unitPrices: json["unit_prices"] is List
             ? List<dynamic>.from(json["unit_prices"])
             : null,
+        unitPriceOverrides: _parseUnitPriceOverrides(json["unit_prices"]),
       );
 
   Map<String, dynamic> toJson() => {
