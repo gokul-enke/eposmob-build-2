@@ -1384,6 +1384,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
     required String title,
     required List<TextEditingController> denominationControllers,
     required List<TextEditingController> countControllers,
+    required bool isNarrow,
     required VoidCallback onAddRow,
   }) {
     return Column(
@@ -1411,39 +1412,76 @@ class _DayCloseModalState extends State<DayCloseModal> {
         ...List.generate(denominationControllers.length, (index) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _buildDenominationRow(
-                    denominationController: denominationControllers[index],
-                    countController: countControllers[index],
+            child: isNarrow
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDenominationRow(
+                        denominationController: denominationControllers[index],
+                        countController: countControllers[index],
+                        isNarrow: true,
+                      ),
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Remove row',
+                            onPressed: denominationControllers.length == 1
+                                ? null
+                                : () {
+                                    setState(() {
+                                      denominationControllers[index].dispose();
+                                      countControllers[index].dispose();
+                                      denominationControllers.removeAt(index);
+                                      countControllers.removeAt(index);
+                                    });
+                                  },
+                            icon: const Icon(Icons.remove_circle_outline,
+                                size: 18, color: Colors.red),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildDenominationRow(
+                          denominationController: denominationControllers[index],
+                          countController: countControllers[index],
+                          isNarrow: false,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Remove row',
+                          onPressed: denominationControllers.length == 1
+                              ? null
+                              : () {
+                                  setState(() {
+                                    denominationControllers[index].dispose();
+                                    countControllers[index].dispose();
+                                    denominationControllers.removeAt(index);
+                                    countControllers.removeAt(index);
+                                  });
+                                },
+                          icon: const Icon(Icons.remove_circle_outline,
+                              size: 18, color: Colors.red),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 4),
-                SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Remove row',
-                    onPressed: denominationControllers.length == 1
-                        ? null
-                        : () {
-                            setState(() {
-                              denominationControllers[index].dispose();
-                              countControllers[index].dispose();
-                              denominationControllers.removeAt(index);
-                              countControllers.removeAt(index);
-                            });
-                          },
-                    icon: const Icon(Icons.remove_circle_outline,
-                        size: 18, color: Colors.red),
-                  ),
-                ),
-              ],
-            ),
           );
         }),
       ],
@@ -1453,29 +1491,46 @@ class _DayCloseModalState extends State<DayCloseModal> {
   Widget _buildDenominationRow({
     required TextEditingController denominationController,
     required TextEditingController countController,
+    required bool isNarrow,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildCompactField(
-                label: 'Denomination',
-                controller: denominationController,
-                keyboardType: TextInputType.text,
+        isNarrow
+            ? Column(
+                children: [
+                  _buildCompactField(
+                    label: 'Denomination',
+                    controller: denominationController,
+                    keyboardType: TextInputType.text,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildCompactField(
+                    label: 'Count',
+                    controller: countController,
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(
+                    child: _buildCompactField(
+                      label: 'Denomination',
+                      controller: denominationController,
+                      keyboardType: TextInputType.text,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _buildCompactField(
+                      label: 'Count',
+                      controller: countController,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _buildCompactField(
-                label: 'Count',
-                controller: countController,
-                keyboardType: TextInputType.number,
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -1492,8 +1547,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
           label,
           style: buildCustomStyle(
             FontWeightManager.regular,
-            FontSize.s10,
-            0.20,
+            FontSize.s12,
+            0.27,
             Colors.black.withOpacity(0.6),
           ),
         ),
@@ -1509,9 +1564,27 @@ class _DayCloseModalState extends State<DayCloseModal> {
             keyboardType: keyboardType,
             cursorColor: ColorManager.kPrimaryColor,
             decoration: InputDecoration(
-              border: InputBorder.none,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: const BorderSide(
+                  color: ColorManager.kPrimaryColor,
+                  width: 2,
+                ),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+              ),
               isDense: true,
-              contentPadding: EdgeInsets.zero,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               hintText: '',
               hintStyle: buildCustomStyle(
                 FontWeightManager.medium,
@@ -1520,7 +1593,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                 ColorManager.textColor.withOpacity(.5),
               ),
             ),
-              style: buildCustomStyle(
+            style: buildCustomStyle(
               FontWeightManager.medium,
               FontSize.s10,
               0.20,
@@ -1869,6 +1942,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                           _openingDenominationControllers,
                                       countControllers:
                                           _openingCountControllers,
+                                      isNarrow: isNarrow,
                                       onAddRow: () {
                                         setState(() {
                                           _addOpeningBreakdownRow();
@@ -1882,6 +1956,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                           _closingDenominationControllers,
                                       countControllers:
                                           _closingCountControllers,
+                                      isNarrow: isNarrow,
                                       onAddRow: () {
                                         setState(() {
                                           _addClosingBreakdownRow();

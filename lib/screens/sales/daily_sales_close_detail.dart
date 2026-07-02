@@ -209,6 +209,10 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                   const SizedBox(height: 10),
                   _buildCashSummary(context, data.cashSummary!),
                   const SizedBox(height: 20),
+                  _buildSectionHeader('Cash Denomination Breakdown', Icons.payments_outlined),
+                  const SizedBox(height: 10),
+                  _buildCashBreakdownSection(context, data.cashSummary!),
+                  const SizedBox(height: 20),
                 ],
                 _buildSectionHeader('Key Fields', Icons.info_outline),
                 const SizedBox(height: 10),
@@ -426,6 +430,106 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCashBreakdownSection(BuildContext context, CashSummary cashSummary) {
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+        return Column(
+          children: [
+            _buildBreakdownCard(
+              title: 'Opening Cash Breakdown',
+              subtitle: 'Saved denomination details for this cash stage.',
+              rows: cashSummary.openingCashBreakdown,
+              currency: currency,
+            ),
+            const SizedBox(height: 14),
+            _buildBreakdownCard(
+              title: 'Closing Cash Breakdown',
+              subtitle: 'Saved denomination details for this cash stage.',
+              rows: cashSummary.closingCashBreakdown,
+              currency: currency,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBreakdownCard({
+    required String title,
+    required String subtitle,
+    required List<dynamic>? rows,
+    required String currency,
+  }) {
+    final normalizedRows = rows
+        ?.whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList() ??
+        [];
+
+    return _buildCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s12,
+              0.21,
+              Colors.grey.shade800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (normalizedRows.isEmpty)
+            Text(
+              'No denomination details available',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
+                columns: const [
+                  DataColumn(label: Text('Denomination')),
+                  DataColumn(label: Text('Count')),
+                  DataColumn(label: Text('Total')),
+                ],
+                rows: normalizedRows.map((row) {
+                  final denomination = row['denomination']?.toString() ?? '-';
+                  final countText = row['count']?.toString() ?? '0';
+                  final count = int.tryParse(countText) ?? 0;
+                  final denominationValue = num.tryParse(denomination) ?? 0;
+                  final total = denominationValue * count;
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(denomination)),
+                      DataCell(Text(count.toString())),
+                      DataCell(Text('$currency ${total.toStringAsFixed(2)}')),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
