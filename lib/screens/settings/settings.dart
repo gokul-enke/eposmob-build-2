@@ -3,12 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
-import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -93,6 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final shouldClear = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Clear Product Cache'),
         content: const Text(
           'This will clear locally cached products and last product sync timestamp. Continue?',
@@ -138,6 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final shouldClear = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('Clear Local Storage'),
           content: const Text(
             'This will clear all local data except login credentials and log you out. Are you sure?',
@@ -214,6 +214,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
         title: const Text('Notification Position'),
         content: StatefulBuilder(
           builder: (context, setState) => Column(
@@ -265,14 +266,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   List<Widget> _buildSettingsCards(BuildContext context) {
     return [
-      _SettingsCard(
-        title: 'settings.whatsapp'.tr,
-        iconPath: ImageAssets.whatsappIcon,
-        onTap: () {
-          Get.find<SideBarController>().index.value =
-              63; // Navigate to WhatsApp Settings
-        },
-      ),
+      // _SettingsCard(
+      //   title: 'settings.whatsapp'.tr,
+      //   iconPath: ImageAssets.whatsappIcon,
+      //   onTap: () {
+      //     Get.find<SideBarController>().index.value =
+      //         63; // Navigate to WhatsApp Settings
+      //   },
+      // ),
       _SettingsCardWithIcon(
         title: 'settings.company_info'.tr,
         icon: FontAwesomeIcons.building,
@@ -421,6 +422,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) {
         String selected = currentCode;
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: Text('settings.language_select'.tr),
           content: StatefulBuilder(
             builder: (context, setState) {
@@ -484,6 +486,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('Last Product Sync'),
           content: Text(displayTime),
           actions: [
@@ -511,84 +514,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-class _SettingsCard extends StatelessWidget {
-  final String title;
-  final String iconPath;
-  final VoidCallback onTap;
-  final Color? iconColor;
-
-  const _SettingsCard({
-    super.key,
-    required this.title,
-    required this.iconPath,
-    required this.onTap,
-    this.iconColor = const Color(0xFF25D366),
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = iconColor ?? const Color(0xFF25D366);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: BuildBoxShadowContainer(
-          circleRadius: 14,
-          showShadow: true,
-          blurRadius: 10,
-          offsetValue: const Offset(0, 3),
-          border: Border.all(color: accent.withOpacity(0.18)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  height: 48,
-                  width: 48,
-                  decoration: BoxDecoration(
-                    color: accent.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: SizedBox(
-                      height: 28,
-                      width: 28,
-                      child: WebsafeSvg.asset(
-                        iconPath,
-                        fit: BoxFit.contain,
-                        colorFilter: ColorFilter.mode(
-                          accent,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s14,
-                    0.21,
-                    ColorManager.textColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+// class _SettingsCard extends StatelessWidget {
+//   final String title;
+//   final String iconPath;
+//   final VoidCallback onTap;
+//   final Color? iconColor;
+//
+//   const _SettingsCard({
+//     super.key,
+//     required this.title,
+//     required this.iconPath,
+//     required this.onTap,
+//     this.iconColor = const Color(0xFF25D366),
+//   });
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final accent = iconColor ?? const Color(0xFF25D366);
+//
+//     return Material(
+//       color: Colors.transparent,
+//       child: InkWell(
+//         onTap: onTap,
+//         borderRadius: BorderRadius.circular(14),
+//         child: BuildBoxShadowContainer(
+//           circleRadius: 14,
+//           showShadow: true,
+//           blurRadius: 10,
+//           offsetValue: const Offset(0, 3),
+//           border: Border.all(color: accent.withOpacity(0.18)),
+//           child: Padding(
+//             padding: const EdgeInsets.all(16),
+//             child: Column(
+//               mainAxisAlignment: MainAxisAlignment.center,
+//               crossAxisAlignment: CrossAxisAlignment.center,
+//               children: [
+//                 Container(
+//                   height: 48,
+//                   width: 48,
+//                   decoration: BoxDecoration(
+//                     color: accent.withOpacity(0.12),
+//                     borderRadius: BorderRadius.circular(12),
+//                   ),
+//                   child: Center(
+//                     child: SizedBox(
+//                       height: 28,
+//                       width: 28,
+//                       child: WebsafeSvg.asset(
+//                         iconPath,
+//                         fit: BoxFit.contain,
+//                         colorFilter: ColorFilter.mode(
+//                           accent,
+//                           BlendMode.srcIn,
+//                         ),
+//                       ),
+//                     ),
+//                   ),
+//                 ),
+//                 const SizedBox(height: 14),
+//                 Text(
+//                   title,
+//                   textAlign: TextAlign.center,
+//                   maxLines: 2,
+//                   overflow: TextOverflow.ellipsis,
+//                   style: buildCustomStyle(
+//                     FontWeightManager.semiBold,
+//                     FontSize.s14,
+//                     0.21,
+//                     ColorManager.textColor,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 class _SettingsCardWithIcon extends StatefulWidget {
   final String title;

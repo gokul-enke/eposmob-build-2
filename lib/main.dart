@@ -499,6 +499,9 @@ ThemeData _buildAppTheme(bool focusHighlightEnabled) {
       style: ButtonStyle(overlayColor: overlayForButtons()),
     ),
 
+    // ---- Dialogs ----
+    dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
+
     // ---- Text fields ----
     // Bold the focused border so the active TextField is unmistakable.
     inputDecorationTheme: focusHighlightEnabled
