@@ -1734,6 +1734,7 @@ class LocalProductProvider extends ChangeNotifier {
     bool sellableOnly = false,
   }) async {
     List<GetProduct> allProducts = [];
+    final Set<int> deletedProductIds = {};
     int currentPage = 1;
     const int batchSize = 3; // Fetch 3 pages concurrently
     final prefsProvider = prefs_provider.SharedPreferenceProvider();
@@ -1844,6 +1845,10 @@ class LocalProductProvider extends ChangeNotifier {
             GetProductModel getProductModel =
                 GetProductModel.fromJson(jsonData);
 
+            if (getProductModel.deletedProductIds != null) {
+              deletedProductIds.addAll(getProductModel.deletedProductIds!);
+            }
+
             final productsFetched = getProductModel.product?.length ?? 0;
 
             if (getProductModel.product == null ||
@@ -1908,6 +1913,20 @@ class LocalProductProvider extends ChangeNotifier {
       } else {
         _products = allProducts;
       }
+
+      // Remove any products the server reported as deleted so local Hive
+      // storage stays in sync (important for delta syncs).
+      if (deletedProductIds.isNotEmpty) {
+        final beforeCount = _products.length;
+        _products = _products
+            .where((p) =>
+                p.productId == null ||
+                !deletedProductIds.contains(p.productId))
+            .toList();
+        debugPrint(
+            "🗑️ [Sync] Removed ${beforeCount - _products.length} product(s) via deleted_product_ids (${deletedProductIds.length} id(s) reported)");
+      }
+
       _filteredProducts = List.from(_products);
       _rebuildBarcodeIndex();
       _updatePagination();

@@ -59,6 +59,7 @@ class GetProductModel {
   final Links? links; // links field is currently unused
   final Meta? meta; // Rename pagination to meta
   final Pagination? pagination;
+  final List<int>? deletedProductIds;
 
   GetProductModel({
     this.product,
@@ -66,6 +67,7 @@ class GetProductModel {
     this.links,
     this.meta, // Update constructor accordingly
     this.pagination,
+    this.deletedProductIds,
   });
 
   factory GetProductModel.fromJson(Map<String, dynamic> json) {
@@ -87,6 +89,15 @@ class GetProductModel {
         pagination: json["pagination"] == null
             ? null
             : Pagination.fromJson(json["pagination"]),
+        deletedProductIds: json["deleted_product_ids"] is List
+            ? (json["deleted_product_ids"] as List)
+                .map((e) {
+                  if (e is int) return e;
+                  return int.tryParse(e.toString());
+                })
+                .whereType<int>()
+                .toList()
+            : null,
       );
     } catch (e, stack) {
       debugPrint("❌ GetProductModel.fromJson error: $e");
@@ -103,6 +114,7 @@ class GetProductModel {
         "links": links?.toJson(), // Serialize links if necessary
         "meta": meta?.toJson(), // Update for meta
         "pagination": pagination?.toJson(),
+        "deleted_product_ids": deletedProductIds,
       };
 }
 
@@ -140,6 +152,8 @@ class GetProduct {
   final int? reorderLevel; // Reorder threshold level
   final bool? sellable; // Whether product can be sold
   final bool? purchasable; // Whether product can be purchased
+  final int? sortOrder;
+  final bool? isOnlineProduct;
 
   GetProduct({
     this.productId,
@@ -174,6 +188,8 @@ class GetProduct {
     this.reorderLevel,
     this.sellable,
     this.purchasable,
+    this.sortOrder,
+    this.isOnlineProduct,
   });
 
   GetProduct copyWith({
@@ -209,6 +225,8 @@ class GetProduct {
     int? reorderLevel,
     bool? sellable,
     bool? purchasable,
+    int? sortOrder,
+    bool? isOnlineProduct,
   }) {
     return GetProduct(
       productId: productId ?? this.productId,
@@ -244,6 +262,8 @@ class GetProduct {
       reorderLevel: reorderLevel ?? this.reorderLevel,
       sellable: sellable ?? this.sellable,
       purchasable: purchasable ?? this.purchasable,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isOnlineProduct: isOnlineProduct ?? this.isOnlineProduct,
     )..isSelected = isSelected;
   }
 
@@ -339,6 +359,13 @@ class GetProduct {
         })(),
         sellable: _parseBool(json["sellable"]),
         purchasable: _parseBool(json["purchasable"]),
+        sortOrder: (() {
+          final so = json["sort_order"];
+          if (so == null) return null;
+          if (so is int) return so;
+          return int.tryParse(so.toString());
+        })(),
+        isOnlineProduct: _parseBool(json["is_online_product"]),
       );
     } catch (e, stack) {
       debugPrint("❌ GetProduct.fromJson error: $e");
@@ -404,6 +431,8 @@ class GetProduct {
         "reorder_level": reorderLevel,
         "sellable": sellable,
         "purchasable": purchasable,
+        "sort_order": sortOrder,
+        "is_online_product": isOnlineProduct,
       };
 }
 
@@ -621,6 +650,7 @@ class SaleUnit {
   final String? unitName;
   final String? conversionRate;
   final String? barcode;
+  final double? price;
 
   SaleUnit({
     this.id,
@@ -628,6 +658,7 @@ class SaleUnit {
     this.unitName,
     this.conversionRate,
     this.barcode,
+    this.price,
   });
 
   factory SaleUnit.fromJson(Map<String, dynamic> json) => SaleUnit(
@@ -638,6 +669,12 @@ class SaleUnit {
         unitName: json["unit_name"]?.toString(),
         conversionRate: json["conversion_rate"]?.toString(),
         barcode: json["barcode"]?.toString(),
+        price: (() {
+          final value = json["price"];
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          return double.tryParse(value.toString());
+        })(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -646,6 +683,7 @@ class SaleUnit {
         "unit_name": unitName,
         "conversion_rate": conversionRate,
         "barcode": barcode,
+        "price": price,
       };
 }
 
@@ -718,6 +756,9 @@ class Stock {
   final num? purchaseQty;
   final String? wholesalePrice;
   final int? wholesaleMinUnit;
+  final bool? taxInclude;
+  final bool? taxIncludePurchase;
+  final List<dynamic>? unitPrices;
 
   Stock({
     this.id,
@@ -741,6 +782,9 @@ class Stock {
     this.purchaseQty,
     this.wholesalePrice,
     this.wholesaleMinUnit,
+    this.taxInclude,
+    this.taxIncludePurchase,
+    this.unitPrices,
   });
 
   Stock copyWith({
@@ -765,6 +809,9 @@ class Stock {
     num? purchaseQty,
     String? wholesalePrice,
     int? wholesaleMinUnit,
+    bool? taxInclude,
+    bool? taxIncludePurchase,
+    List<dynamic>? unitPrices,
   }) {
     return Stock(
       id: id ?? this.id,
@@ -788,6 +835,9 @@ class Stock {
       purchaseQty: purchaseQty ?? this.purchaseQty,
       wholesalePrice: wholesalePrice ?? this.wholesalePrice,
       wholesaleMinUnit: wholesaleMinUnit ?? this.wholesaleMinUnit,
+      taxInclude: taxInclude ?? this.taxInclude,
+      taxIncludePurchase: taxIncludePurchase ?? this.taxIncludePurchase,
+      unitPrices: unitPrices ?? this.unitPrices,
     );
   }
 
@@ -841,6 +891,11 @@ class Stock {
           if (value is int) return value;
           return int.tryParse(value.toString());
         })(),
+        taxInclude: _parseBool(json["tax_include"]),
+        taxIncludePurchase: _parseBool(json["tax_include_purchase"]),
+        unitPrices: json["unit_prices"] is List
+            ? List<dynamic>.from(json["unit_prices"])
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -865,6 +920,9 @@ class Stock {
         "purchase_qty": purchaseQty,
         "wholesale_price": wholesalePrice,
         "wholesale_min_unit": wholesaleMinUnit,
+        "tax_include": taxInclude,
+        "tax_include_purchase": taxIncludePurchase,
+        "unit_prices": unitPrices,
       };
 }
 
