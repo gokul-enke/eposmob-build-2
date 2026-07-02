@@ -18,6 +18,8 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'widgets/supplier_voucher_print.dart';
+import 'widgets/common_details_dialog.dart';
+import 'widgets/share_helper.dart';
 
 class SupplierVoucherListScreen extends StatefulWidget {
   const SupplierVoucherListScreen({super.key});
@@ -426,8 +428,8 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                 7: const FlexColumnWidth(0.9),
                                 8: FlexColumnWidth(
                                     MediaQuery.of(context).size.width < 900
-                                        ? 2.2
-                                        : 1.5),
+                                        ? 2.6
+                                        : 1.8),
                               },
                               border: null,
                               defaultVerticalAlignment:
@@ -465,8 +467,8 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                   7: const FlexColumnWidth(0.9),
                                   8: FlexColumnWidth(
                                       MediaQuery.of(context).size.width < 900
-                                          ? 2.2
-                                          : 1.5),
+                                          ? 2.6
+                                          : 1.8),
                                 },
                                 border: null,
                                 defaultVerticalAlignment:
@@ -546,6 +548,32 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
                                                               true,
                                                         ),
                                                       ),
+                                                    );
+                                                  },
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                    minWidth: 36,
+                                                    minHeight: 36,
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                ),
+                                              ),
+                                              BuildBoxShadowContainer(
+                                                margin: const EdgeInsets.only(
+                                                    left: 5, right: 5),
+                                                circleRadius: 5,
+                                                child: IconButton(
+                                                  icon: Icon(
+                                                    Icons.share,
+                                                    size: 18,
+                                                    color: ColorManager
+                                                        .kPrimaryColor
+                                                        .withOpacity(0.9),
+                                                  ),
+                                                  onPressed: () {
+                                                    ShareHelper.showShareSupplierVoucherSheet(
+                                                      context: context,
+                                                      voucher: voucher,
                                                     );
                                                   },
                                                   constraints:
@@ -703,196 +731,116 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
   void _showVoucherDetails(SupplierVoucher voucher) {
     showDialog(
       context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          elevation: 8,
-          backgroundColor: Colors.white,
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width / 1.5,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Supplier Voucher Items Details',
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s24,
-                        0.36,
-                        Colors.black,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Voucher Header Info
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildDetailRow(
-                                  'Voucher Number', voucher.voucherNumber),
-                              _buildDetailRow(
-                                  'Supplier Name', voucher.supplier.name),
-                              _buildDetailRow(
-                                  'Supplier Phone', voucher.supplier.phone),
-                              _buildDetailRow('Type', voucher.type),
-                              _buildDetailRow(
-                                  'Voucher Date', voucher.voucherDate),
-                              _buildDetailRow('Due Date', voucher.dueDate),
-                              _buildDetailRow('Status', voucher.status),
-                              _buildDetailRow(
-                                  'Payment Method', voucher.paymentMethod),
-                            ],
-                          ),
-                        ),
-                        const Divider(height: 2),
-                        const SizedBox(height: 20),
-                        // Items Table
-                        Text(
-                          'Voucher Items',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s16,
-                            0.27,
-                            Colors.black,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // Table Header
-                        Container(
-                          decoration: BoxDecoration(
-                            color: ColorManager.tableBGColor,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Table(
-                            columnWidths: const {
-                              0: FlexColumnWidth(1.2),
-                              1: FlexColumnWidth(2),
-                              2: FlexColumnWidth(1),
-                              3: FlexColumnWidth(1.5),
-                              4: FlexColumnWidth(1),
-                              5: FlexColumnWidth(1.5),
-                            },
-                            children: [
-                              TableRow(
-                                children: [
-                                  _buildTableHeaderCell('VOUCHER'),
-                                  _buildTableHeaderCell('ITEM NAME'),
-                                  _buildTableHeaderCell('QUANTITY'),
-                                  _buildTableHeaderCell('UNIT AMOUNT'),
-                                  _buildTableHeaderCell('TAX'),
-                                  _buildTableHeaderCell('TOTAL AMOUNT'),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Table Body
-                        Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(1.2),
-                            1: FlexColumnWidth(2),
-                            2: FlexColumnWidth(1),
-                            3: FlexColumnWidth(1.5),
-                            4: FlexColumnWidth(1),
-                            5: FlexColumnWidth(1.5),
-                          },
-                          children: voucher.items.asMap().entries.map((entry) {
-                            final item = entry.value;
-                            final index = entry.key;
-                            return TableRow(
-                              decoration: BoxDecoration(
-                                color: index % 2 == 0
-                                    ? Colors.white
-                                    : Colors.grey.withOpacity(0.05),
-                              ),
-                              children: [
-                                _buildTableBodyCell(voucher.voucherNumber),
-                                _buildTableBodyCell(item.itemName),
-                                _buildTableBodyCell(item.quantity),
-                                _buildTableBodyCell(item.unitAmount),
-                                _buildTableBodyCell(item.tax),
-                                _buildTableBodyCell(item.totalAmount),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 24),
-                        // Grand Total
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Grand Total:',
-                                style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s14,
-                                  0.27,
-                                  Colors.black54,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}',
-                                style: buildCustomStyle(
-                                  FontWeightManager.bold,
-                                  FontSize.s18,
-                                  0.27,
-                                  ColorManager.kPrimaryColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+      builder: (context) => CommonDetailsDialog(
+        title: 'Voucher details',
+        gridColumns: [
+          [
+            CommonDetailsDialog.buildKeyValueRow('Voucher Number', voucher.voucherNumber),
+            CommonDetailsDialog.buildKeyValueRow('Supplier Name', voucher.supplier.name),
+            CommonDetailsDialog.buildKeyValueRow('Supplier Phone', voucher.supplier.phone),
+            CommonDetailsDialog.buildKeyValueRow('Type', voucher.type),
+          ],
+          [
+            CommonDetailsDialog.buildKeyValueRow('Voucher Date', voucher.voucherDate),
+            CommonDetailsDialog.buildKeyValueRow('Due Date', voucher.dueDate),
+            CommonDetailsDialog.buildKeyValueRow('Status', voucher.status),
+            CommonDetailsDialog.buildKeyValueRow('Payment Method', voucher.paymentMethod),
+          ],
+        ],
+        sectionTitle: 'Voucher Items',
+        tableContent: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Table Header
+            Container(
+              decoration: BoxDecoration(
+                color: ColorManager.tableBGColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(1.2),
+                  1: FlexColumnWidth(2),
+                  2: FlexColumnWidth(1),
+                  3: FlexColumnWidth(1.5),
+                  4: FlexColumnWidth(1),
+                  5: FlexColumnWidth(1.5),
+                },
+                children: [
+                  TableRow(
+                    children: [
+                      _buildTableHeaderCell('VOUCHER'),
+                      _buildTableHeaderCell('ITEM NAME'),
+                      _buildTableHeaderCell('QUANTITY'),
+                      _buildTableHeaderCell('UNIT AMOUNT'),
+                      _buildTableHeaderCell('TAX'),
+                      _buildTableHeaderCell('TOTAL AMOUNT'),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    CustomRoundButton(
-                      title: "Close",
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      borderColor: ColorManager.kPrimaryColor,
-                      fct: () => Navigator.pop(context),
-                      height: 45,
-                      width: 120,
-                      fontSize: FontSize.s12,
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
+            const SizedBox(height: 8),
+            // Table Body
+            Table(
+              columnWidths: const {
+                0: FlexColumnWidth(1.2),
+                1: FlexColumnWidth(2),
+                2: FlexColumnWidth(1),
+                3: FlexColumnWidth(1.5),
+                4: FlexColumnWidth(1),
+                5: FlexColumnWidth(1.5),
+              },
+              children: voucher.items.asMap().entries.map((entry) {
+                final item = entry.value;
+                final index = entry.key;
+                return TableRow(
+                  decoration: BoxDecoration(
+                    color: index % 2 == 0
+                        ? Colors.white
+                        : Colors.grey.withOpacity(0.05),
+                  ),
+                  children: [
+                    _buildTableBodyCell(voucher.voucherNumber),
+                    _buildTableBodyCell(item.itemName),
+                    _buildTableBodyCell(item.quantity),
+                    _buildTableBodyCell(item.unitAmount),
+                    _buildTableBodyCell(item.tax),
+                    _buildTableBodyCell(item.totalAmount),
+                  ],
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        totalsContent: Align(
+          alignment: Alignment.centerRight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Grand Total:',
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  FontSize.s12,
+                  0.27,
+                  Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${voucher.amount}',
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s18,
+                  0.27,
+                  ColorManager.kPrimaryColor,
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -906,7 +854,7 @@ class _SupplierVoucherListScreenState extends State<SupplierVoucherListScreen> {
           FontWeightManager.semiBold,
           FontSize.s11,
           0.18,
-          ColorManager.kPrimaryColor,
+          ColorManager.kTitleTextColor,
         ),
       ),
     );

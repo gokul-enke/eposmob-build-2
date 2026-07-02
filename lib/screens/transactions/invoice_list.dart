@@ -24,6 +24,8 @@ import '../../providers/app_settings_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/common_details_dialog.dart';
+import 'widgets/share_helper.dart';
 
 class InvoiceListScreen extends StatefulWidget {
   const InvoiceListScreen({super.key});
@@ -337,6 +339,31 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           (zatcaRequestStatus == null || zatcaRequestStatus == 'not_sent');
 
         final List<Widget> dynamicItems = [];
+
+        // Always show Share option
+        dynamicItems.add(
+          ListTile(
+            leading: CircleAvatar(
+              radius: 18,
+              backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.12),
+              child: const Icon(Icons.share, color: ColorManager.kPrimaryColor),
+            ),
+            title: const Text('Share'),
+            onTap: () async {
+              Navigator.pop(ctx);
+              await ShareHelper.showShareInvoiceSheet(
+                context: context,
+                invoiceId: invoice.id,
+                invoiceNumber: invoice.invoiceNumber,
+                customerName: invoice.customer.user.name,
+                customerPhone: invoice.customer.user.phone,
+                customerEmail: invoice.customer.user.email,
+                amount: invoice.amount,
+                invoiceHash: null,
+              );
+            },
+          ),
+        );
 
         // Always show Phase 1 print when enabled, regardless of status
         if (phase1) {
@@ -1507,88 +1534,175 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   //   );
   // }
 
-  void _showInvoiceDetails(Invoice invoice) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          elevation: 8,
-          backgroundColor: Colors.white,
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width / 2,
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Invoice Details',
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s24,
-                        0.36,
-                        Colors.black,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _buildDetailRow(
-                            'Invoice Number', invoice.invoiceNumber),
-                        _buildDetailRow(
-                            'Customer Name', invoice.customer.user.name),
-                        _buildDetailRow(
-                            'Customer Phone', invoice.customer.user.phone),
-                        _buildDetailRow('Order Number', ""), //no order number
+  Future<void> _showInvoiceDetails(Invoice invoice) async {
+    final String? token = Provider.of<AuthModel>(context, listen: false).token;
+    if (token == null || token.isEmpty) {
+      showScaffoldError(context: context, message: 'Missing authentication token');
+      return;
+    }
 
-                        _buildDetailRow('Type', invoice.type),
-                        _buildDetailRow('Invoice Date', invoice.invoiceDate),
-                        _buildDetailRow('Due Date', invoice.dueDate),
-                        _buildDetailRow('Amount', invoice.amount.toString()),
-                        _buildDetailRow('Status', invoice.status),
-                      ],
-                    ),
+    showLoadingOverlay(context, message: 'Loading details...');
+    try {
+      final provider = Provider.of<InvoiceProvider>(context, listen: false);
+      await provider.callDetailsOfInvoice(id: invoice.id, accessToken: token);
+      final details = provider.getInvoiceDetails;
+      hideLoadingOverlay();
+
+      if (details == null) {
+        showScaffoldError(context: context, message: 'Failed to load details');
+        return;
+      }
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => CommonDetailsDialog(
+          title: 'Invoice details',
+          gridColumns: [
+            [
+              CommonDetailsDialog.buildKeyValueRow('Invoice Number', details.invoiceNumber),
+              CommonDetailsDialog.buildKeyValueRow('Customer Name', details.customer.name),
+              CommonDetailsDialog.buildKeyValueRow('Customer Phone', details.customer.phone),
+              CommonDetailsDialog.buildKeyValueRow('Amount', details.amount),
+              CommonDetailsDialog.buildKeyValueRow('Type', details.type),
+            ],
+            [
+              CommonDetailsDialog.buildKeyValueRow('Invoice Date', details.invoiceDate),
+              CommonDetailsDialog.buildKeyValueRow('Due Date', details.dueDate),
+              CommonDetailsDialog.buildKeyValueRow('Status', details.status),
+              CommonDetailsDialog.buildKeyValueRow('Order Number', 'N/A'),
+            ],
+          ],
+          sectionTitle: 'Items',
+          tableContent: Column(
+            children: [
+              // Table Header
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade200, width: 1),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                child: Row(
                   children: [
-                    CustomRoundButton(
-                      title: "Close",
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      borderColor: ColorManager.kPrimaryColor,
-                      fct: () => Navigator.pop(context),
-                      height: 45,
-                      width: 120,
-                      fontSize: FontSize.s12,
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        'Item',
+                        style: TextStyle(
+                          fontWeight: FontWeightManager.bold,
+                          fontSize: FontSize.s12,
+                          color: ColorManager.kTitleTextColor,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Quantity',
+                        style: TextStyle(
+                          fontWeight: FontWeightManager.bold,
+                          fontSize: FontSize.s12,
+                          color: ColorManager.kTitleTextColor,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Price',
+                        style: TextStyle(
+                          fontWeight: FontWeightManager.bold,
+                          fontSize: FontSize.s12,
+                          color: ColorManager.kTitleTextColor,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'Total',
+                        style: TextStyle(
+                          fontWeight: FontWeightManager.bold,
+                          fontSize: FontSize.s12,
+                          color: ColorManager.kTitleTextColor,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              // Table Rows
+              ...details.invoiceItems.map((item) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade100, width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          item.itemName,
+                          style: TextStyle(
+                            fontSize: FontSize.s12,
+                            color: ColorManager.textColor,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.quantity.toString(),
+                          style: TextStyle(
+                            fontSize: FontSize.s12,
+                            color: ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.unitAmount,
+                          style: TextStyle(
+                            fontSize: FontSize.s12,
+                            color: ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          item.totalAmount,
+                          style: TextStyle(
+                            fontSize: FontSize.s12,
+                            color: ColorManager.textColor,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    } catch (e) {
+      hideLoadingOverlay();
+      showScaffoldError(context: context, message: 'Error loading invoice details: $e');
+    }
   }
 
 //------------------------------------------------------debug-------------------------------------------

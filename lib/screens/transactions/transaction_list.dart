@@ -20,6 +20,7 @@ import '../../providers/invoice_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/common_details_dialog.dart';
 
 class CustomerTransactionListScreen extends StatefulWidget {
   const CustomerTransactionListScreen({super.key});
@@ -254,92 +255,30 @@ class _CustomerTransactionListScreenState
   void _showTransactionDetails(ListTransaction transaction) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 8,
-        backgroundColor: Colors.white,
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width / 2,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Transaction Details',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    _buildDetailRow(
-                        'Customer Name', transaction.customerName ?? 'No Name'),
-                    // _buildDetailRow(
-                    //     'Customer Phone', transaction.customerPhone ?? 'N/A'), // Commented out - no backend API field
-                    _buildDetailRow('Date', transaction.date ?? 'N/A'),
-                    _buildDetailRow('Type', transaction.type ?? 'N/A'),
-                    _buildDetailRow('Transaction Type',
-                        transaction.transactionType ?? 'N/A'),
-                    _buildDetailRow(
-                        'Payment Method', transaction.paymentMethod ?? 'N/A'),
-                    _buildDetailRow('Amount',
-                        '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),
-                    _buildDetailRow(
-                        'Reference ID', transaction.referenceId ?? 'N/A'),
-                    _buildDetailRow(
-                        'Reference', transaction.reference ?? 'N/A'),
-                    _buildDetailRow('Status', transaction.status ?? 'N/A'),
-                    _buildDetailRow(
-                        'Comment', transaction.transactionComment ?? 'N/A'),
-                    _buildDetailRow(
-                        'Created At',
-                        transaction.createdAt != null
-                            ? DateHelper.formatDate(transaction.createdAt!)
-                            : 'N/A'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: "Close",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => Navigator.pop(context),
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => CommonDetailsDialog(
+        title: 'Transaction Details',
+        gridColumns: [
+          [
+            CommonDetailsDialog.buildKeyValueRow('Customer Name', transaction.customerName ?? 'No Name'),
+            CommonDetailsDialog.buildKeyValueRow('Date', transaction.date ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('Type', transaction.type ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('Transaction Type', transaction.transactionType ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('Payment Method', transaction.paymentMethod ?? 'N/A'),
+          ],
+          [
+            CommonDetailsDialog.buildKeyValueRow('Amount', '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),
+            CommonDetailsDialog.buildKeyValueRow('Reference ID', transaction.referenceId ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('Reference', transaction.reference ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('Status', transaction.status ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('Comment', transaction.transactionComment ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow(
+              'Created At',
+              transaction.createdAt != null
+                  ? DateHelper.formatDate(transaction.createdAt!)
+                  : 'N/A',
+            ),
+          ],
+        ],
       ),
     );
   }
