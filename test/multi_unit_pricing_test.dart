@@ -1,15 +1,38 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/models/get_general_settings.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
+import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'test_support/hive_test_teardown.dart';
 
+class _FakeGeneralSettingsProvider extends GeneralSettingsProvider {
+  _FakeGeneralSettingsProvider({required this.stockEnabled});
+
+  final bool stockEnabled;
+
+  @override
+  Future<void> fetchGeneralSettings() async {}
+
+  @override
+  GeneralSettings? get generalSettings =>
+      GeneralSettings(stockEnabled: stockEnabled);
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('SaleUnit.fromJson', () {
     test('parses resolved_price and conversionRateValue', () {
       final unit = SaleUnit.fromJson({
@@ -303,6 +326,204 @@ void main() {
 
       final item = provider.cartItems.single;
       expect(item.price, 50);
+    });
+
+    test('batch override beats wholesale when quantity qualifies', () {
+      final product = buildProduct(masterDozenPrice: 900);
+      final stock = Stock(
+        id: 3279,
+        price: '100',
+        wholesalePrice: '60',
+        wholesaleMinUnit: 1,
+        unitPriceOverrides: {100: 1000.0},
+      );
+      final provider = newProvider(product);
+
+      provider.addToCart(
+        product: product,
+        quantity: 24,
+        selectedStock: stock,
+        saleUnitId: 100,
+        saleUnitName: 'DZ',
+        saleUnitConversionRate: 12,
+      );
+
+      final item = provider.cartItems.single;
+      expect(item.price, closeTo(1000 / 12, 0.0001));
+      expect(item.displayPrice, closeTo(1000, 0.0001));
+    });
+
+    test('master price beats wholesale when quantity qualifies', () {
+      final product = buildProduct(masterDozenPrice: 900);
+      final stock = Stock(
+        id: 1,
+        wholesalePrice: '60',
+        wholesaleMinUnit: 12,
+      );
+      final provider = newProvider(product);
+
+      provider.addToCart(
+        product: product,
+        quantity: 24,
+        selectedStock: stock,
+        saleUnitId: 100,
+        saleUnitName: 'DZ',
+        saleUnitConversionRate: 12,
+      );
+
+      final item = provider.cartItems.single;
+      // Master 900/12 = 75 per base, not wholesale 60.
+      expect(item.price, closeTo(75, 0.0001));
+      expect(item.displayPrice, closeTo(900, 0.0001));
+    });
+
+    test('payload multiplies resolved base price back to sale-unit price', () {
+      final product = buildProduct(masterDozenPrice: 900);
+      final stock = Stock(
+        id: 3279,
+        unitPriceOverrides: {100: 1000.0},
+      );
+      final provider = newProvider(product);
+
+      provider.addToCart(
+        product: product,
+        quantity: 12,
+        selectedStock: stock,
+        saleUnitId: 100,
+        saleUnitName: 'DZ',
+        saleUnitConversionRate: 12,
+      );
+
+      final payload = provider.buildOrderItemsPayload();
+      expect(payload.length, 1);
+      expect(payload.first['quantity'], 1);
+      expect(payload.first['price'], closeTo(1000, 0.0001));
+      expect(payload.first['sale_unit_id'], 100);
+      expect(payload.first['stock_id'], 3279);
+    });
+  });
+
+  group('ProductCartHelper sale-unit first add', () {
+    late Directory hiveDir;
+
+    setUpAll(() async {
+      hiveDir =
+          await Directory.systemTemp.createTemp('epos_cart_helper_sale_unit_');
+      Hive.init(hiveDir.path);
+
+      if (!Hive.isAdapterRegistered(0)) {
+        Hive.registerAdapter(HiveStringValueAdapter());
+      }
+      if (!Hive.isAdapterRegistered(1)) {
+        Hive.registerAdapter(HiveLocalCartItemAdapter());
+      }
+      if (!Hive.isAdapterRegistered(2)) {
+        Hive.registerAdapter(HiveSavedOrderAdapter());
+      }
+      if (!Hive.isAdapterRegistered(3)) {
+        Hive.registerAdapter(HiveProductAdapter());
+      }
+
+      await Hive.openBox<HiveProduct>('products');
+      await Hive.openBox<HiveLocalCartItem>('cart_items');
+      await Hive.openBox<HiveSavedOrder>('saved_orders');
+      await Hive.openBox<HiveSavedOrder>('confirmed_orders');
+    });
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({'general_stock_enabled': false});
+      await Hive.box<HiveProduct>('products').clear();
+      await Hive.box<HiveLocalCartItem>('cart_items').clear();
+      await Hive.box<HiveSavedOrder>('saved_orders').clear();
+      await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
+    });
+
+    tearDown(awaitPendingHiveBoxWrites);
+    tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
+
+    GetProduct buildProduct({double? masterDozenPrice}) {
+      return GetProduct(
+        productId: 1,
+        productName: 'Nivea Men',
+        unit: 'PC',
+        price: ProductPrice(price: '100'),
+        mrp: '120',
+        saleUnits: [
+          SaleUnit(
+            id: 100,
+            unitId: 1991,
+            unitName: 'DZ',
+            conversionRate: '12',
+            price: masterDozenPrice,
+          ),
+        ],
+      );
+    }
+
+    Future<BuildContext> pumpHelperContext(
+      WidgetTester tester,
+      LocalProductProvider provider,
+    ) async {
+      late BuildContext capturedContext;
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<LocalProductProvider>.value(
+              value: provider,
+            ),
+            ChangeNotifierProvider<GeneralSettingsProvider>(
+              create: (_) => _FakeGeneralSettingsProvider(stockEnabled: false),
+            ),
+            ChangeNotifierProvider<MasterDataProvider>(
+              create: (_) => MasterDataProvider(),
+            ),
+            ChangeNotifierProvider<StoreSessionProvider>(
+              create: (_) => StoreSessionProvider(),
+            ),
+            ChangeNotifierProvider<CustomerSelectionProvider>(
+              create: (_) => CustomerSelectionProvider(),
+            ),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) {
+                capturedContext = context;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return capturedContext;
+    }
+
+    testWidgets(
+        'handleProductSelection applies sale-unit master price on first add without customPrice',
+        (tester) async {
+      final product = buildProduct(masterDozenPrice: 900);
+      final saleUnit = product.saleUnits!.single;
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(false);
+      provider.initializeProducts([product]);
+
+      final context = await pumpHelperContext(tester, provider);
+
+      await ProductCartHelper.handleProductSelection(
+        context: context,
+        product: product,
+        quantity: 12,
+        selectedSaleUnit: saleUnit,
+      );
+      // Flush showScaffold overlay auto-dismiss timer (2s).
+      await tester.pump(const Duration(seconds: 2));
+
+      final item = provider.cartItems.single;
+      // Without passing precomputed base retail (100), provider resolves master 900/12.
+      expect(item.price, closeTo(75, 0.0001));
+      expect(item.displayPrice, closeTo(900, 0.0001));
+      expect(item.saleUnitId, 100);
     });
   });
 }

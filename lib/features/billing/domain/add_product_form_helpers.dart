@@ -10,19 +10,23 @@ class AddProductSaleUnitRow {
     this.selectedUnitId,
     String conversionRate = '',
     String barcode = '',
+    String price = '',
   })  : conversionRateController = TextEditingController(text: conversionRate),
         barcodeController = TextEditingController(text: barcode),
+        priceController = TextEditingController(text: price),
         searchController = TextEditingController();
 
   String? selectedUnitId;
   final TextEditingController conversionRateController;
   final TextEditingController barcodeController;
+  final TextEditingController priceController;
   final TextEditingController searchController;
   bool isGeneratingBarcode = false;
 
   void dispose() {
     conversionRateController.dispose();
     barcodeController.dispose();
+    priceController.dispose();
     searchController.dispose();
   }
 }
@@ -318,6 +322,7 @@ class AddProductFormHelpers {
               'conversion_rate':
                   num.parse(row.conversionRateController.text.trim()),
               'barcode': row.barcodeController.text.trim(),
+              'price': num.parse(row.priceController.text.trim()),
             })
         .toList(growable: false);
   }
@@ -373,6 +378,18 @@ class AddProductFormHelpers {
         return false;
       }
       usedBarcodes.add(barcode);
+
+      final price = row.priceController.text.trim();
+      if (price.isEmpty) {
+        onError('Enter a price for every sale unit.');
+        return false;
+      }
+
+      final parsedPrice = num.tryParse(price);
+      if (parsedPrice == null || parsedPrice <= 0) {
+        onError('Price must be greater than 0.');
+        return false;
+      }
     }
 
     return true;
