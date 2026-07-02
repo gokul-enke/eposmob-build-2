@@ -603,6 +603,7 @@ void main() {
         autoAssignDefaultCustomer: autoAssignDefaultCustomer,
         autoAssignDefaultCustomerPhone: autoAssignDefaultCustomerPhone,
         currency: 'SAR',
+        workingTime: '',
         zatcaPhase1Enabled: false,
         zatcaPhase2Enabled: false,
         showTaxPos: false,
