@@ -20,6 +20,7 @@ import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/sales/widgets/quotations_responsive.dart';
 import 'package:pos_machine/services/quotation_print_service.dart';
 import 'package:provider/provider.dart';
 
@@ -466,49 +467,36 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Widget build(BuildContext context) {
     return Consumer<QuotationsProvider>(
       builder: (context, provider, child) {
-        return SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _fetchQuotations,
-            child: BuildBoxShadowContainer(
-              circleRadius: 7,
-              margin: const EdgeInsets.only(
-                  left: 10, top: 20, bottom: 0, right: 10),
-              padding: const EdgeInsets.all(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 20.0, horizontal: 20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 16),
-                    _buildFiltersCard(),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: BuildBoxShadowContainer(
-                        circleRadius: 7,
-                        offsetValue: const Offset(1, 1),
-                        child: _isLoading
-                            ? const Center(
-                                child: SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        ColorManager.kPrimaryColor),
-                                  ),
-                                ),
-                              )
-                            : provider.quotations.isEmpty
-                                ? _buildEmptyState(provider)
-                                : _buildQuotationsTable(provider),
-                      ),
-                    ),
-                  ],
+        return QuotationsListShell(
+          onRefresh: _fetchQuotations,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 16),
+              _buildFiltersCard(),
+              const SizedBox(height: 16),
+              Expanded(
+                child: QuotationsContentCard(
+                  padding: EdgeInsets.zero,
+                  child: _isLoading
+                      ? const Center(
+                          child: SizedBox(
+                            height: 28,
+                            width: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  ColorManager.kPrimaryColor),
+                            ),
+                          ),
+                        )
+                      : provider.quotations.isEmpty
+                          ? _buildEmptyState(provider)
+                          : _buildQuotationsContent(provider),
                 ),
               ),
-            ),
+            ],
           ),
         );
       },
@@ -516,188 +504,272 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Quotation List',
-          style: buildCustomStyle(
-            FontWeightManager.semiBold,
-            FontSize.s20,
-            0.30,
-            ColorManager.textColor,
-          ),
-        ),
-        CustomRoundButton(
+    final isPhone = quotationsIsPhone(context);
+
+    return QuotationsPageHeader(
+      title: 'Quotation List',
+      subtitle: 'Search, view and convert quotations to orders',
+      trailing: SizedBox(
+        width: isPhone ? double.infinity : 160,
+        child: CustomRoundButton(
           title: 'New Quotation',
           fct: () {
             Get.find<SideBarController>().index.value = 86;
           },
           fontSize: 12,
-          height: 42,
-          width: 160,
+          height: 44,
+          width: isPhone ? double.infinity : 160,
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildFiltersCard() {
     final size = MediaQuery.of(context).size;
-    final isMobile = size.width < 900;
+    final isPhone = quotationsIsPhone(context);
 
-    if (isMobile) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 1,
-              child: buildColumnWidgetForTextFields(
-                title: "Quotation #",
-                height: 45,
-                width: double.infinity,
-                onchanged: (value) {
-                  if (value != null && value.length > 2) _fetchQuotations();
-                },
-                controller: _quotationNumberController,
-                size: size,
-                hintText: 'Search quotation number',
-                margin: const EdgeInsets.symmetric(horizontal: 0),
-              ),
+    return QuotationsContentCard(
+      padding: EdgeInsets.all(isPhone ? 14 : 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const QuotationsSectionTitle(title: 'Filters'),
+          const SizedBox(height: 12),
+          if (isPhone) ...[
+            buildColumnWidgetForTextFields(
+              title: "Quotation #",
+              height: 45,
+              width: double.infinity,
+              onchanged: (value) {
+                if (value != null && value.length > 2) _fetchQuotations();
+              },
+              controller: _quotationNumberController,
+              size: size,
+              hintText: 'Search quotation number',
+              margin: const EdgeInsets.symmetric(horizontal: 0),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 1,
-              child: _buildCustomerDropdown(),
+            const SizedBox(height: 10),
+            _buildCustomerDropdown(),
+            const SizedBox(height: 10),
+            _buildStoreDropdown(),
+            const SizedBox(height: 10),
+            BuildDropDownStatic(
+              title: "Quotation Status",
+              size: size,
+              items: _statusOptions,
+              selectedItem: _selectedStatus,
+              hintText: "All",
+              onChanged: (v) {
+                setState(() => _selectedStatus = v ?? 'All');
+                _fetchQuotations();
+              },
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 1,
-              child: _buildStoreDropdown(),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 1,
-              child: BuildDropDownStatic(
-                title: "Quotation Status",
-                size: size,
-                items: _statusOptions,
-                selectedItem: _selectedStatus,
-                hintText: "All",
-                onChanged: (v) {
-                  setState(() => _selectedStatus = v ?? 'All');
-                  _fetchQuotations();
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  BuildTextTile(
-                    title: "Quotation Date",
-                    textStyle: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s14,
-                      0.27,
-                      Colors.black.withOpacity(0.6),
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BuildTextTile(
+                  title: "Quotation Date",
+                  textStyle: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s14,
+                    0.27,
+                    Colors.black.withOpacity(0.6),
+                  ),
+                ),
+                BuildBoxShadowContainer(
+                  circleRadius: 10,
+                  height: 45,
+                  margin: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Center(
+                    child: CalendarPickerTableCell(
+                      key: _quotationDateKey,
+                      onDateSelected: (DateTime date) {
+                        setState(() => _selectedQuotationDate = date);
+                        _fetchQuotations();
+                      },
                     ),
                   ),
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    height: 45,
-                    margin: const EdgeInsets.symmetric(horizontal: 0),
-                    child: Center(
-                      child: CalendarPickerTableCell(
-                        key: _quotationDateKey,
-                        onDateSelected: (DateTime date) {
-                          setState(() => _selectedQuotationDate = date);
-                          _fetchQuotations();
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  BuildTextTile(
-                    title: "Expiry Date",
-                    textStyle: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s14,
-                      0.27,
-                      Colors.black.withOpacity(0.6),
+            const SizedBox(height: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BuildTextTile(
+                  title: "Expiry Date",
+                  textStyle: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s14,
+                    0.27,
+                    Colors.black.withOpacity(0.6),
+                  ),
+                ),
+                BuildBoxShadowContainer(
+                  circleRadius: 10,
+                  height: 45,
+                  margin: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Center(
+                    child: CalendarPickerTableCell(
+                      key: _expiryDateKey,
+                      onDateSelected: (DateTime date) {
+                        setState(() => _selectedExpiryDate = date);
+                        _fetchQuotations();
+                      },
                     ),
                   ),
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    height: 45,
-                    margin: const EdgeInsets.symmetric(horizontal: 0),
-                    child: Center(
-                      child: CalendarPickerTableCell(
-                        key: _expiryDateKey,
-                        onDateSelected: (DateTime date) {
-                          setState(() => _selectedExpiryDate = date);
-                          _fetchQuotations();
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 1,
-              child: Column(
-                children: [
-                  Opacity(
-                    opacity: 0.0,
-                    child: BuildTextTile(
-                      title: "Reset",
-                      textStyle: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s14,
-                        0.27,
-                        Colors.black.withOpacity(0.6),
-                      ),
-                    ),
-                  ),
-                  CustomRoundButton(
-                    title: "Reset",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    fct: _resetFilters,
+            const SizedBox(height: 12),
+            CustomRoundButton(
+              title: "Reset",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              fct: _resetFilters,
+              height: 44,
+              width: double.infinity,
+              fontSize: FontSize.s12,
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: buildColumnWidgetForTextFields(
+                    title: "Quotation #",
                     height: 45,
                     width: double.infinity,
-                    fontSize: FontSize.s12,
+                    onchanged: (value) {
+                      if (value != null && value.length > 2) _fetchQuotations();
+                    },
+                    controller: _quotationNumberController,
+                    size: size,
+                    hintText: 'Search quotation number',
+                    margin: const EdgeInsets.symmetric(horizontal: 0),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: _buildCustomerDropdown()),
+                const SizedBox(width: 10),
+                Expanded(child: _buildStoreDropdown()),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: BuildDropDownStatic(
+                    title: "Quotation Status",
+                    size: size,
+                    items: _statusOptions,
+                    selectedItem: _selectedStatus,
+                    hintText: "All",
+                    onChanged: (v) {
+                      setState(() => _selectedStatus = v ?? 'All');
+                      _fetchQuotations();
+                    },
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(flex: 1, child: SizedBox.shrink()),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BuildTextTile(
+                        title: "Quotation Date",
+                        textStyle: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                      BuildBoxShadowContainer(
+                        circleRadius: 10,
+                        height: 45,
+                        margin: const EdgeInsets.symmetric(horizontal: 0),
+                        child: Center(
+                          child: CalendarPickerTableCell(
+                            key: _quotationDateKey,
+                            onDateSelected: (DateTime date) {
+                              setState(() => _selectedQuotationDate = date);
+                              _fetchQuotations();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      BuildTextTile(
+                        title: "Expiry Date",
+                        textStyle: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                      ),
+                      BuildBoxShadowContainer(
+                        circleRadius: 10,
+                        height: 45,
+                        margin: const EdgeInsets.symmetric(horizontal: 0),
+                        child: Center(
+                          child: CalendarPickerTableCell(
+                            key: _expiryDateKey,
+                            onDateSelected: (DateTime date) {
+                              setState(() => _selectedExpiryDate = date);
+                              _fetchQuotations();
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Opacity(
+                        opacity: 0.0,
+                        child: BuildTextTile(
+                          title: "Reset",
+                          textStyle: buildCustomStyle(
+                            FontWeightManager.regular,
+                            FontSize.s14,
+                            0.27,
+                            Colors.black.withOpacity(0.6),
+                          ),
+                        ),
+                      ),
+                      CustomRoundButton(
+                        title: "Reset",
+                        boxColor: Colors.white,
+                        textColor: ColorManager.kPrimaryColor,
+                        fct: _resetFilters,
+                        height: 45,
+                        width: double.infinity,
+                        fontSize: FontSize.s12,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(child: SizedBox.shrink()),
+              ],
+            ),
           ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -710,93 +782,232 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         _selectedExpiryDate != null;
 
     return Center(
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.request_quote_outlined,
+              size: 48,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              provider.quotations.isEmpty && !hasFilters
+                  ? "No quotations available"
+                  : "No quotations match your filters",
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.25,
+                Colors.grey.shade600,
+              ),
+            ),
+            if (hasFilters) ...[
+              const SizedBox(height: 16),
+              CustomRoundButton(
+                title: 'Clear filters',
+                fct: _resetFilters,
+                fontSize: 12,
+                height: 44,
+                width: 140,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuotationsContent(QuotationsProvider provider) {
+    if (quotationsIsPhone(context)) {
+      return _buildMobileList(provider);
+    }
+    return _buildDesktopTable(provider);
+  }
+
+  Widget _buildMobileList(QuotationsProvider provider) {
+    return ListView.separated(
+      padding: const EdgeInsetsDirectional.all(12),
+      itemCount: provider.quotations.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        return _buildMobileQuotationCard(provider.quotations[index]);
+      },
+    );
+  }
+
+  Widget _buildMobileQuotationCard(Quotation q) {
+    final status = q.status ?? '';
+    final quotationDate = q.quotationDate != null
+        ? q.quotationDate!.split(' ').first
+        : '—';
+    final expiryDate =
+        q.expiryDate != null ? q.expiryDate!.split(' ').first : '—';
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.shopping_cart_outlined,
-              size: 48, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            provider.quotations.isEmpty && !hasFilters
-                ? "No quotations available"
-                : "No quotations match your filters",
-            style: const TextStyle(color: Colors.grey),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      q.quotationNumber ?? '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.20,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      q.customer ?? '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s12,
+                        0.15,
+                        Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              QuotationsStatusBadge(
+                label: status,
+                color: _statusColor(status),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          QuotationsTwoColumnLayout(
+            start: QuotationsInfoChip(
+              label: 'Store',
+              value: q.store ?? '—',
+            ),
+            end: QuotationsInfoChip(
+              label: 'Quotation Date',
+              value: quotationDate,
+            ),
+          ),
+          const SizedBox(height: 10),
+          QuotationsInfoChip(
+            label: 'Expiry Date',
+            value: expiryDate,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              QuotationsIconAction(
+                icon: Icons.visibility,
+                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.9),
+                iconColor: Colors.white,
+                tooltip: 'View details',
+                onPressed: () {
+                  Get.find<SideBarController>().index.value = 88;
+                  context
+                      .read<QuotationsProvider>()
+                      .setSelectedQuotationId(q.id);
+                },
+              ),
+              const SizedBox(width: 8),
+              QuotationsIconAction(
+                icon: Icons.shopping_cart_checkout,
+                backgroundColor: Colors.orange.withOpacity(0.9),
+                iconColor: Colors.white,
+                tooltip: 'Convert to order',
+                onPressed: _isConvertingQuotation
+                    ? null
+                    : () => _convertQuotationToOrder(q),
+              ),
+              const SizedBox(width: 8),
+              QuotationsIconAction(
+                icon: Icons.print,
+                backgroundColor: Colors.green.withOpacity(0.9),
+                iconColor: Colors.white,
+                tooltip: 'Print quotation',
+                onPressed: _isPrintingQuotation
+                    ? null
+                    : () => _printQuotation(q),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuotationsTable(QuotationsProvider provider) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const double minWidth = 900.0;
-        final double tableWidth =
-            constraints.maxWidth < minWidth ? minWidth : constraints.maxWidth;
-
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: tableWidth,
-            child: Column(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    color: ColorManager.tableBGColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        offset: Offset(0, 2),
-                        blurRadius: 2.0,
-                      ),
-                    ],
-                  ),
-                  child: Table(
-                    border: null,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    columnWidths: const {
-                      0: FlexColumnWidth(1.8),
-                      1: FlexColumnWidth(2.0),
-                      2: FlexColumnWidth(1.5),
-                      3: FlexColumnWidth(1.2),
-                      4: FlexColumnWidth(1.2),
-                      5: FlexColumnWidth(1.4),
-                      6: FlexColumnWidth(1.2),
-                    },
-                    children: [_buildTableHeader()],
-                  ),
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    physics: const BouncingScrollPhysics(),
-                    child: Table(
-                      border: null,
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
-                      columnWidths: const {
-                        0: FlexColumnWidth(1.8),
-                        1: FlexColumnWidth(2.0),
-                        2: FlexColumnWidth(1.5),
-                        3: FlexColumnWidth(1.2),
-                        4: FlexColumnWidth(1.2),
-                        5: FlexColumnWidth(1.4),
-                        6: FlexColumnWidth(1.2),
-                      },
-                      children:
-                          provider.quotations.asMap().entries.map((entry) {
-                        int idx = entry.key;
-                        Quotation q = entry.value;
-                        return _buildTableRow(q, idx);
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ],
+  Widget _buildDesktopTable(QuotationsProvider provider) {
+    return QuotationsResponsiveTable(
+      minWidth: 900,
+      table: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: ColorManager.tableBGColor.withOpacity(0.5),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.withOpacity(0.15)),
+              ),
+            ),
+            child: Table(
+              border: null,
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              columnWidths: const {
+                0: FlexColumnWidth(1.8),
+                1: FlexColumnWidth(2.0),
+                2: FlexColumnWidth(1.5),
+                3: FlexColumnWidth(1.2),
+                4: FlexColumnWidth(1.2),
+                5: FlexColumnWidth(1.4),
+                6: FlexColumnWidth(1.2),
+              },
+              children: [_buildTableHeader()],
             ),
           ),
-        );
-      },
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              physics: const BouncingScrollPhysics(),
+              child: Table(
+                border: null,
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                columnWidths: const {
+                  0: FlexColumnWidth(1.8),
+                  1: FlexColumnWidth(2.0),
+                  2: FlexColumnWidth(1.5),
+                  3: FlexColumnWidth(1.2),
+                  4: FlexColumnWidth(1.2),
+                  5: FlexColumnWidth(1.4),
+                  6: FlexColumnWidth(1.2),
+                },
+                children: provider.quotations.asMap().entries.map((entry) {
+                  int idx = entry.key;
+                  Quotation q = entry.value;
+                  return _buildTableRow(q, idx);
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -850,21 +1061,9 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
           child: Padding(
             padding: const EdgeInsets.all(12.0),
             child: Center(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _statusColor(status).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  status.isEmpty ? '—' : status.toUpperCase(),
-                  style: TextStyle(
-                    color: _statusColor(status),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              child: QuotationsStatusBadge(
+                label: status,
+                color: _statusColor(status),
               ),
             ),
           ),
@@ -872,58 +1071,44 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(8.0),
             child: Center(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  BuildBoxShadowContainer(
-                    margin: const EdgeInsets.only(left: 4, right: 4),
-                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                    circleRadius: 5,
-                    child: IconButton(
-                      icon: const Icon(Icons.visibility,
-                          size: 16, color: Colors.white),
-                      padding: EdgeInsets.zero,
-                      constraints:
-                          const BoxConstraints(minWidth: 32, minHeight: 32),
-                      onPressed: () {
-                        Get.find<SideBarController>().index.value = 88;
-                        context
-                            .read<QuotationsProvider>()
-                            .setSelectedQuotationId(q.id);
-                      },
-                    ),
+                  QuotationsIconAction(
+                    icon: Icons.visibility,
+                    backgroundColor:
+                        ColorManager.kPrimaryColor.withOpacity(0.9),
+                    iconColor: Colors.white,
+                    tooltip: 'View details',
+                    onPressed: () {
+                      Get.find<SideBarController>().index.value = 88;
+                      context
+                          .read<QuotationsProvider>()
+                          .setSelectedQuotationId(q.id);
+                    },
                   ),
-                  BuildBoxShadowContainer(
-                    margin: const EdgeInsets.only(left: 4, right: 4),
-                    color: Colors.orange.withOpacity(0.9),
-                    circleRadius: 5,
-                    child: IconButton(
-                      icon: const Icon(Icons.shopping_cart_checkout,
-                          size: 16, color: Colors.white),
-                      padding: EdgeInsets.zero,
-                      constraints:
-                          const BoxConstraints(minWidth: 32, minHeight: 32),
-                      onPressed: _isConvertingQuotation
-                          ? null
-                          : () => _convertQuotationToOrder(q),
-                    ),
+                  const SizedBox(width: 6),
+                  QuotationsIconAction(
+                    icon: Icons.shopping_cart_checkout,
+                    backgroundColor: Colors.orange.withOpacity(0.9),
+                    iconColor: Colors.white,
+                    tooltip: 'Convert to order',
+                    onPressed: _isConvertingQuotation
+                        ? null
+                        : () => _convertQuotationToOrder(q),
                   ),
-                  BuildBoxShadowContainer(
-                    margin: const EdgeInsets.only(left: 4, right: 4),
-                    color: Colors.green.withOpacity(0.9),
-                    circleRadius: 5,
-                    child: IconButton(
-                      icon: const Icon(Icons.print,
-                          size: 16, color: Colors.white),
-                      padding: EdgeInsets.zero,
-                      constraints:
-                          const BoxConstraints(minWidth: 32, minHeight: 32),
-                      onPressed: _isPrintingQuotation
-                          ? null
-                          : () => _printQuotation(q),
-                    ),
+                  const SizedBox(width: 6),
+                  QuotationsIconAction(
+                    icon: Icons.print,
+                    backgroundColor: Colors.green.withOpacity(0.9),
+                    iconColor: Colors.white,
+                    tooltip: 'Print quotation',
+                    onPressed: _isPrintingQuotation
+                        ? null
+                        : () => _printQuotation(q),
                   ),
                 ],
               ),
@@ -936,13 +1121,15 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   Widget _textCell(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+      padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
       child: Text(
         text,
         textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
           FontWeightManager.medium,
-          FontSize.s9,
+          FontSize.s10,
           0.18,
           Colors.black,
         ),
