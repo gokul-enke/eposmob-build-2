@@ -549,7 +549,7 @@ class SupplierVoucherTemplatePdfBuilder {
         children: [
           pw.Text(
             'Signature',
-            style: const pw.TextStyle(
+            style: pw.TextStyle(
               fontSize: 9,
               color: PdfColors.grey400,
               fontStyle: pw.FontStyle.italic,
