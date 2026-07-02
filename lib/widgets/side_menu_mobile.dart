@@ -16,6 +16,7 @@ import '../controllers/sidebar_controller.dart';
 import '../resources/color_manager.dart';
 import '../resources/font_manager.dart';
 import '../resources/style_manager.dart';
+import '../widgets/store_switcher.dart';
 import '../widgets/user_switcher.dart';
 import 'side_menu.dart';
 
@@ -594,6 +595,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     75,
                     76,
                     91,
+                    93,
+                    94,
+                    95,
                   ].contains(sideBarController.index.value),
                   subItems: [
                     if (hasInvoicePermission)
@@ -621,6 +625,10 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                         title: 'Proforma Invoice',
                         onTap: () => navigate(91),
                       ),
+                    _MobileDrawerSubItem(
+                      title: 'Expense',
+                      onTap: () => navigate(93),
+                    ),
                   ],
                 ),
               ),
@@ -1104,6 +1112,19 @@ class _MobileDrawerFooter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              if (!roleProvider.currentUserHasPermissionSync(
+                  'menu.utility.store_switcher.access')) {
+                return const SizedBox.shrink();
+              }
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: StoreSwitcher(),
+              );
+            },
+          ),
+          const SizedBox(height: 4),
           _MobileDrawerTile(
             icon: Icons.logout_rounded,
             title: 'Logout',

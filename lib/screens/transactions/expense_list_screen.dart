@@ -15,7 +15,10 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import '../../models/master_data.dart';
+import '../../models/expense.dart';
 import '../../providers/master_data_provider.dart';
+import '../dashboard/widgets/dashboard_responsive.dart';
+import 'widgets/expense_list_responsive.dart';
 
 class ExpenseListScreen extends StatefulWidget {
   const ExpenseListScreen({super.key});
@@ -37,6 +40,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
   String? selectedCategory;
   String? selectedDebitAccount;
   String? selectedStatus;
+  bool _showFilters = true;
 
   @override
   void initState() {
@@ -53,6 +57,11 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         provider.fetchGeneralPayments(accessToken: token, type: 'EXPENSE');
         provider.fetchAccountOptions(accessToken: token);
         _loadCategoriesFromMasterData();
+      }
+      if (mounted) {
+        setState(() {
+          _showFilters = !expenseListIsPhone(context);
+        });
       }
       _categoryFilterFocus.requestFocus();
     });
@@ -103,267 +112,292 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     super.dispose();
   }
 
+  bool _hasActiveFilters() {
+    return selectedCategory != null ||
+        selectedDebitAccount != null ||
+        selectedStatus != null ||
+        searchTextController.text.trim().isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [
-            BoxShadow(
-              color: ColorManager.boxShadowColor,
-              blurRadius: 6,
-              offset: Offset(1, 1),
-            ),
+    final isPhone = expenseListIsPhone(context);
+
+    return ExpenseListShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(isPhone),
+          const SizedBox(height: 12),
+          if (!isPhone || _showFilters) ...[
+            _buildFilterSection(isPhone),
+            const SizedBox(height: 12),
           ],
-          color: Colors.white,
+          Expanded(child: _buildExpenseTable(isPhone)),
+          const SizedBox(height: 12),
+          _buildPaginationControls(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreadcrumb() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Expenses',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.20,
+            Colors.grey,
+          ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 15),
-              _buildFilterSection(),
-              const SizedBox(height: 15),
-              Expanded(child: _buildExpenseTable()),
-              const SizedBox(height: 15),
-              _buildPaginationControls(),
+        const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
+        Text(
+          'List',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.20,
+            ColorManager.kPrimaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeader(bool isPhone) {
+    return ExpenseListPageHeader(
+      title: 'Expenses',
+      breadcrumb: _buildBreadcrumb(),
+      leading: isPhone
+          ? ExpenseListFilterToggle(
+              showFilters: _showFilters,
+              hasActiveFilters: _hasActiveFilters(),
+              onPressed: () {
+                setState(() {
+                  _showFilters = !_showFilters;
+                });
+              },
+            )
+          : null,
+      trailing: SizedBox(
+        width: isPhone ? double.infinity : 140,
+        child: CustomRoundButtonAdvanced(
+          title: 'New Entry',
+          fct: () {
+            sideBarController.index.value = 94;
+          },
+          width: isPhone ? double.infinity : 140,
+          height: 44,
+          fontSize: 12,
+          radius: 8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterSection(bool isPhone) {
+    final provider = Provider.of<ExpenseProvider>(context);
+
+    final List<String> categoriesList = [
+      'All',
+      ...provider.categoryOptions
+          .map((e) => e['name']?.toString() ?? '')
+          .where((e) => e.isNotEmpty),
+    ];
+
+    final List<String> debitAccountsList = [
+      'All',
+      ...provider.debitAccountOptions
+          .map((e) => e['name']?.toString() ?? '')
+          .where((e) => e.isNotEmpty),
+    ];
+
+    final List<String> statusOptions = provider.availableStatuses;
+
+    return ExpenseListContentCard(
+      padding: EdgeInsets.all(isPhone ? 14 : 16),
+      child: FocusTraversalGroup(
+        policy: OrderedTraversalPolicy(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const ExpenseListSectionTitle(title: 'Filters'),
+            const SizedBox(height: 12),
+            if (isPhone) ...[
+              _buildCategoryFilter(categoriesList, provider),
+              const SizedBox(height: 10),
+              _buildReferenceFilter(),
+              const SizedBox(height: 10),
+              _buildDebitFilter(debitAccountsList, provider),
+              const SizedBox(height: 10),
+              _buildStatusFilter(statusOptions, provider),
+              const SizedBox(height: 12),
+              _buildResetButton(provider, fullWidth: true),
+            ] else ...[
+              SizedBox(
+                height: 48,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildCategoryFilter(categoriesList, provider)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildReferenceFilter()),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildDebitFilter(debitAccountsList, provider)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildStatusFilter(statusOptions, provider)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: _buildResetButton(provider, fullWidth: false),
+              ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilter(List<String> categoriesList, ExpenseProvider provider) {
+    return FocusTraversalOrder(
+      order: const NumericFocusOrder(1),
+      child: CustomDropDownWithSearch<String>(
+        key: const ValueKey('list_category_filter_dropdown'),
+        hintText: 'All Categories',
+        value: selectedCategory,
+        items: categoriesList,
+        onChanged: (val) {
+          setState(() {
+            selectedCategory = val;
+          });
+          provider.setCategory(val ?? 'All');
+        },
+        displayText: (item) => item,
+        showName: false,
+        height: 44,
+        autofocus: false,
+        focusNode: _categoryFilterFocus,
+      ),
+    );
+  }
+
+  Widget _buildReferenceFilter() {
+    return FocusTraversalOrder(
+      order: const NumericFocusOrder(2),
+      child: CustomBoxShadowContainer(
+        height: 44,
+        circleRadius: 10,
+        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+        child: TextFormField(
+          controller: searchTextController,
+          focusNode: _referenceFilterFocus,
+          textInputAction: TextInputAction.next,
+          onFieldSubmitted: (_) => _debitFilterFocus.requestFocus(),
+          cursorColor: ColorManager.kPrimaryColor,
+          cursorHeight: 13,
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            hintText: 'Reference No',
+            hintStyle: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s12,
+              0.27,
+              ColorManager.textColor.withOpacity(0.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+          ),
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.27,
+            ColorManager.textColor,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Expenses',
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s20,
-                0.30,
-                ColorManager.textColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text(
-                  'Expenses',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.20,
-                    Colors.grey,
-                  ),
-                ),
-                const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
-                Text(
-                  'List',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s12,
-                    0.20,
-                    ColorManager.kPrimaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        CustomRoundButtonAdvanced(
-          title: 'New Entry',
-          fct: () {
-            sideBarController.index.value = 94;
-          },
-          width: 140,
-          height: 40,
-          fontSize: 12,
-          radius: 6,
-        ),
-      ],
+  Widget _buildDebitFilter(List<String> debitAccountsList, ExpenseProvider provider) {
+    return FocusTraversalOrder(
+      order: const NumericFocusOrder(3),
+      child: CustomDropDownWithSearch<String>(
+        key: const ValueKey('list_debit_account_filter_dropdown'),
+        hintText: 'All Debit Accounts',
+        value: selectedDebitAccount,
+        items: debitAccountsList,
+        onChanged: (val) {
+          setState(() {
+            selectedDebitAccount = val;
+          });
+          provider.setDebitAccount(val ?? 'All');
+        },
+        displayText: (item) => item,
+        showName: false,
+        height: 44,
+        autofocus: false,
+        focusNode: _debitFilterFocus,
+      ),
     );
   }
 
-  Widget _buildFilterSection() {
-    final provider = Provider.of<ExpenseProvider>(context);
+  Widget _buildStatusFilter(List<String> statusOptions, ExpenseProvider provider) {
+    return FocusTraversalOrder(
+      order: const NumericFocusOrder(4),
+      child: CustomDropDownWithSearch<String>(
+        key: const ValueKey('list_status_filter_dropdown'),
+        hintText: 'All Status',
+        value: selectedStatus,
+        items: statusOptions,
+        onChanged: (val) {
+          setState(() {
+            selectedStatus = val;
+          });
+          provider.setStatus(val ?? 'All');
+        },
+        displayText: (item) => item,
+        showName: false,
+        height: 44,
+        autofocus: false,
+        focusNode: _statusFilterFocus,
+      ),
+    );
+  }
 
-    final List<String> categoriesList = [
-      'All',
-      ...provider.categoryOptions.map((e) => e['name']?.toString() ?? '').where((e) => e.isNotEmpty),
-    ];
-
-    final List<String> debitAccountsList = [
-      'All',
-      ...provider.debitAccountOptions.map((e) => e['name']?.toString() ?? '').where((e) => e.isNotEmpty),
-    ];
-
-    final List<String> statusOptions = provider.availableStatuses;
-
-    return FocusTraversalGroup(
-      policy: OrderedTraversalPolicy(),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 55,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: FocusTraversalOrder(
-                    order: const NumericFocusOrder(1),
-                    child: CustomDropDownWithSearch<String>(
-                      key: const ValueKey('list_category_filter_dropdown'),
-                      hintText: 'All Categories',
-                      value: selectedCategory,
-                      items: categoriesList,
-                      onChanged: (val) {
-                        setState(() {
-                          selectedCategory = val;
-                        });
-                        provider.setCategory(val ?? 'All');
-                      },
-                      displayText: (item) => item,
-                      showName: false,
-                      height: 45,
-                      autofocus: false,
-                      focusNode: _categoryFilterFocus,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FocusTraversalOrder(
-                    order: const NumericFocusOrder(2),
-                    child: CustomBoxShadowContainer(
-                      height: 45,
-                      circleRadius: 7,
-                      child: TextFormField(
-                        controller: searchTextController,
-                        focusNode: _referenceFilterFocus,
-                        textInputAction: TextInputAction.next,
-                        onFieldSubmitted: (_) => _debitFilterFocus.requestFocus(),
-                        cursorColor: ColorManager.kPrimaryColor,
-                        cursorHeight: 13,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Reference No',
-                          hintStyle: buildCustomStyle(
-                            FontWeightManager.regular,
-                            FontSize.s12,
-                            0.27,
-                            ColorManager.textColor.withOpacity(0.5),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 12,
-                          ),
-                        ),
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s12,
-                          0.27,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FocusTraversalOrder(
-                    order: const NumericFocusOrder(3),
-                    child: CustomDropDownWithSearch<String>(
-                      key: const ValueKey('list_debit_account_filter_dropdown'),
-                      hintText: 'All Debit Accounts',
-                      value: selectedDebitAccount,
-                      items: debitAccountsList,
-                      onChanged: (val) {
-                        setState(() {
-                          selectedDebitAccount = val;
-                        });
-                        provider.setDebitAccount(val ?? 'All');
-                      },
-                      displayText: (item) => item,
-                      showName: false,
-                      height: 45,
-                      autofocus: false,
-                      focusNode: _debitFilterFocus,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FocusTraversalOrder(
-                    order: const NumericFocusOrder(4),
-                    child: CustomDropDownWithSearch<String>(
-                      key: const ValueKey('list_status_filter_dropdown'),
-                      hintText: 'All Status',
-                      value: selectedStatus,
-                      items: statusOptions,
-                      onChanged: (val) {
-                        setState(() {
-                          selectedStatus = val;
-                        });
-                        provider.setStatus(val ?? 'All');
-                      },
-                      displayText: (item) => item,
-                      showName: false,
-                      height: 45,
-                      autofocus: false,
-                      focusNode: _statusFilterFocus,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 46,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FocusTraversalOrder(
-                  order: const NumericFocusOrder(5),
-                  child: Focus(
-                    focusNode: _resetButtonFocus,
-                    onKey: (node, event) {
-                      if (event is RawKeyDownEvent &&
-                          (event.logicalKey == LogicalKeyboardKey.enter ||
-                              event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
-                        _resetFilters(provider);
-                        return KeyEventResult.handled;
-                      }
-                      return KeyEventResult.ignored;
-                    },
-                    child: CustomRoundButtonAdvanced(
-                      title: 'Reset',
-                      boxColor: Colors.white,
-                      textColor: ColorManager.kPrimaryColor,
-                      borderColor: ColorManager.kPrimaryColor,
-                      fct: () => _resetFilters(provider),
-                      height: 45,
-                      width: 150,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
+  Widget _buildResetButton(ExpenseProvider provider, {required bool fullWidth}) {
+    return FocusTraversalOrder(
+      order: const NumericFocusOrder(5),
+      child: Focus(
+        focusNode: _resetButtonFocus,
+        onKey: (node, event) {
+          if (event is RawKeyDownEvent &&
+              (event.logicalKey == LogicalKeyboardKey.enter ||
+                  event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+            _resetFilters(provider);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: CustomRoundButtonAdvanced(
+          title: 'Reset',
+          boxColor: Colors.white,
+          textColor: ColorManager.kPrimaryColor,
+          borderColor: ColorManager.kPrimaryColor,
+          fct: () => _resetFilters(provider),
+          height: 44,
+          width: fullWidth ? double.infinity : 150,
+          fontSize: 12,
+          radius: 8,
+        ),
       ),
     );
   }
@@ -379,16 +413,25 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     _categoryFilterFocus.requestFocus();
   }
 
-  Widget _buildExpenseTable() {
+  void _openExpenseView(String referenceNumber) {
+    sideBarController.index.value = 95;
+    Get.put(ExpenseViewController()).selectedRef.value = referenceNumber;
+  }
+
+  Widget _buildExpenseTable(bool isPhone) {
     return Consumer<ExpenseProvider>(
       builder: (context, provider, child) {
-        final currency = Provider.of<AppSettingsProvider>(context).appSettings?.currency ?? "";
+        final currency =
+            Provider.of<AppSettingsProvider>(context).appSettings?.currency ?? "";
+
         if (provider.isLoading) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 40.0),
-              child: CircularProgressIndicator(
-                color: ColorManager.kPrimaryColor,
+          return const ExpenseListContentCard(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 40.0),
+                child: CircularProgressIndicator(
+                  color: ColorManager.kPrimaryColor,
+                ),
               ),
             ),
           );
@@ -397,125 +440,126 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         final expenseList = provider.expenses;
 
         if (expenseList.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  size: 60,
-                  color: ColorManager.kPrimaryColor.withOpacity(0.5),
-                ),
-                const SizedBox(height: 15),
-                Text(
-                  'No Expenses Found',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s16,
-                    0.27,
-                    ColorManager.textColor,
+          return ExpenseListContentCard(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 56,
+                    color: ColorManager.kPrimaryColor.withOpacity(0.45),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  Text(
+                    'No Expenses Found',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s16,
+                      0.27,
+                      ColorManager.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Try adjusting your filters or create a new entry',
+                    textAlign: TextAlign.center,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.10,
+                      Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
 
-        return CustomBoxShadowContainer(
-          margin: const EdgeInsets.only(top: 5),
-          circleRadius: 7,
-          offsetValue: const Offset(1, 1),
-          blurRadius: 4.0,
-          color: Colors.white,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const DashboardSectionHeader(title: 'Expense records'),
+            Expanded(
+              child: isPhone
+                  ? _buildMobileList(expenseList, currency)
+                  : _buildDesktopTable(expenseList, currency),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMobileList(List<Expense> expenseList, String currency) {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      itemCount: expenseList.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final exp = expenseList[index];
+        final dateStr = _formatPaymentDate(exp.paymentDate);
+
+        return ExpenseListContentCard(
+          padding: const EdgeInsets.all(14),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                decoration: const BoxDecoration(
-                  color: ColorManager.tableBGColor,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(7)),
-                ),
-                child: Table(
-                  columnWidths: const {
-                    0: FlexColumnWidth(1.2),
-                    1: FlexColumnWidth(1.2),
-                    2: FlexColumnWidth(1.2),
-                    3: FlexColumnWidth(1.5),
-                    4: FlexColumnWidth(1.5),
-                    5: FlexColumnWidth(1.2),
-                    6: FlexColumnWidth(1.0),
-                    7: FlexColumnWidth(0.8),
-                  },
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: [
-                    TableRow(
-                      children: [
-                        _buildTableHeader('Reference number'),
-                        _buildTableHeader('Payment date'),
-                        _buildTableHeader('Category'),
-                        _buildTableHeader('Debit A/c'),
-                        _buildTableHeader('Credit A/c'),
-                        _buildTableHeader('Amount'),
-                        _buildTableHeader('Status', alignment: Alignment.center),
-                        _buildTableHeader('View', alignment: Alignment.center),
-                      ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      exp.referenceNumber,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.20,
+                        ColorManager.textColor,
+                      ),
                     ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Table(
-                    columnWidths: const {
-                      0: FlexColumnWidth(1.2),
-                      1: FlexColumnWidth(1.2),
-                      2: FlexColumnWidth(1.2),
-                      3: FlexColumnWidth(1.5),
-                      4: FlexColumnWidth(1.5),
-                      5: FlexColumnWidth(1.2),
-                      6: FlexColumnWidth(1.0),
-                      7: FlexColumnWidth(0.8),
-                    },
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: expenseList.asMap().entries.map((entry) {
-                      final idx = entry.key;
-                      final exp = entry.value;
-
-                      final dateStr =
-                          '${exp.paymentDate.day.toString().padLeft(2, '0')} '
-                          '${_getMonthName(exp.paymentDate.month)} '
-                          '${exp.paymentDate.year}';
-
-                      return TableRow(
-                        decoration: BoxDecoration(
-                          color: idx.isEven ? Colors.white : Colors.grey.withOpacity(0.05),
-                          border: Border(
-                            bottom: BorderSide(color: Colors.grey.shade200, width: 0.5),
-                          ),
-                        ),
-                        children: [
-                          _buildTableCell(exp.referenceNumber),
-                          _buildTableCell(dateStr),
-                          _buildTableCell(exp.category),
-                          _buildTableCell(exp.debitAccount),
-                          _buildTableCell(exp.creditAccount),
-                          _buildTableCell('$currency ${exp.amount.toStringAsFixed(2)}'),
-                          Center(child: _buildStatusChip(exp.status)),
-                          Center(
-                            child: IconButton(
-                              constraints: const BoxConstraints(),
-                              padding: const EdgeInsets.all(4),
-                              icon: const Icon(Icons.visibility, color: Colors.grey, size: 18),
-                              onPressed: () {
-                                sideBarController.index.value = 95;
-                                Get.put(ExpenseViewController()).selectedRef.value =
-                                    exp.referenceNumber;
-                              },
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
                   ),
+                  const SizedBox(width: 8),
+                  ExpenseListStatusPill(status: exp.status),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ExpenseListInfoChip(label: 'Payment date', value: dateStr),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ExpenseListInfoChip(
+                      label: 'Amount',
+                      value: '$currency ${exp.amount.toStringAsFixed(2)}',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ExpenseListInfoChip(label: 'Category', value: exp.category),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ExpenseListInfoChip(label: 'Debit A/c', value: exp.debitAccount),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ExpenseListInfoChip(label: 'Credit A/c', value: exp.creditAccount),
+              const SizedBox(height: 12),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: ExpenseListViewAction(
+                  onPressed: () => _openExpenseView(exp.referenceNumber),
                 ),
               ),
             ],
@@ -525,9 +569,103 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     );
   }
 
+  Widget _buildDesktopTable(List<Expense> expenseList, String currency) {
+    return ExpenseListResponsiveTable(
+      table: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: ColorManager.tableBGColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Table(
+              columnWidths: const {
+                0: FlexColumnWidth(1.2),
+                1: FlexColumnWidth(1.2),
+                2: FlexColumnWidth(1.2),
+                3: FlexColumnWidth(1.5),
+                4: FlexColumnWidth(1.5),
+                5: FlexColumnWidth(1.2),
+                6: FlexColumnWidth(1.0),
+                7: FlexColumnWidth(0.8),
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: [
+                TableRow(
+                  children: [
+                    _buildTableHeader('Reference number'),
+                    _buildTableHeader('Payment date'),
+                    _buildTableHeader('Category'),
+                    _buildTableHeader('Debit A/c'),
+                    _buildTableHeader('Credit A/c'),
+                    _buildTableHeader('Amount'),
+                    _buildTableHeader('Status', alignment: Alignment.center),
+                    _buildTableHeader('View', alignment: Alignment.center),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(1.2),
+                  1: FlexColumnWidth(1.2),
+                  2: FlexColumnWidth(1.2),
+                  3: FlexColumnWidth(1.5),
+                  4: FlexColumnWidth(1.5),
+                  5: FlexColumnWidth(1.2),
+                  6: FlexColumnWidth(1.0),
+                  7: FlexColumnWidth(0.8),
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: expenseList.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final exp = entry.value;
+                  final dateStr = _formatPaymentDate(exp.paymentDate);
+
+                  return TableRow(
+                    decoration: BoxDecoration(
+                      color: idx.isEven
+                          ? Colors.white
+                          : Colors.grey.withOpacity(0.04),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.grey.shade200,
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    children: [
+                      _buildTableCell(exp.referenceNumber),
+                      _buildTableCell(dateStr),
+                      _buildTableCell(exp.category),
+                      _buildTableCell(exp.debitAccount),
+                      _buildTableCell(exp.creditAccount),
+                      _buildTableCell(
+                        '$currency ${exp.amount.toStringAsFixed(2)}',
+                      ),
+                      Center(child: ExpenseListStatusPill(status: exp.status)),
+                      Center(
+                        child: ExpenseListViewAction(
+                          onPressed: () => _openExpenseView(exp.referenceNumber),
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTableHeader(String text, {Alignment alignment = Alignment.centerLeft}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 10.0),
       child: Align(
         alignment: alignment,
         child: Text(
@@ -545,9 +683,11 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 
   Widget _buildTableCell(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 10.0),
       child: Text(
         text,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
           FontWeightManager.medium,
           FontSize.s12,
@@ -558,28 +698,10 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.green,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
   Widget _buildPaginationControls() {
     final provider = Provider.of<ExpenseProvider>(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Center(
         child: PaginationControl(
           currentPage: provider.currentPage,
@@ -590,6 +712,12 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         ),
       ),
     );
+  }
+
+  String _formatPaymentDate(DateTime paymentDate) {
+    return '${paymentDate.day.toString().padLeft(2, '0')} '
+        '${_getMonthName(paymentDate.month)} '
+        '${paymentDate.year}';
   }
 
   String _getMonthName(int monthNum) {
@@ -617,5 +745,3 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
 class ExpenseViewController extends GetxController {
   var selectedRef = ''.obs;
 }
-
-
