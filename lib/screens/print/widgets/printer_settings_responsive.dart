@@ -15,6 +15,15 @@ double printerHorizontalPadding(double width) => settingsHorizontalPadding(width
 
 double printerVerticalPadding(double width) => settingsVerticalPadding(width);
 
+bool printerIsCompact(BuildContext context) =>
+    MediaQuery.sizeOf(context).width < kPrinterPhoneBreakpoint;
+
+EdgeInsets printerCardPadding(BuildContext context) =>
+    EdgeInsets.all(printerIsCompact(context) ? 14 : 20);
+
+double printerSectionGap(BuildContext context) =>
+    printerIsCompact(context) ? 12 : 16;
+
 /// White page shell with SafeArea and responsive padding.
 class PrinterSettingsPageShell extends StatelessWidget {
   final Widget child;
@@ -75,17 +84,18 @@ class PrinterSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = iconColor ?? ColorManager.kPrimaryColor;
-    final isCompact =
-        MediaQuery.of(context).size.width < kPrinterPhoneBreakpoint;
+    final isCompact = printerIsCompact(context);
+    final iconSize = isCompact ? 36.0 : 42.0;
+    final iconGlyphSize = isCompact ? 20.0 : 22.0;
 
     final iconChip = Container(
-      height: 42,
-      width: 42,
+      height: iconSize,
+      width: iconSize,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
       ),
-      child: Icon(icon, color: color, size: 22),
+      child: Icon(icon, color: color, size: iconGlyphSize),
     );
 
     final titleBlock = Expanded(
@@ -94,20 +104,24 @@ class PrinterSectionHeader extends StatelessWidget {
         children: [
           Text(
             title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
-              FontSize.s16,
+              isCompact ? FontSize.s15 : FontSize.s16,
               0.20,
               ColorManager.textColor,
             ),
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: 4),
+            SizedBox(height: isCompact ? 2 : 4),
             Text(
               subtitle!,
+              maxLines: isCompact ? 2 : 3,
+              overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(
                 FontWeightManager.regular,
-                FontSize.s12,
+                isCompact ? FontSize.s11 : FontSize.s12,
                 0.10,
                 Colors.grey.shade600,
               ),
@@ -119,13 +133,13 @@ class PrinterSectionHeader extends StatelessWidget {
 
     if (isCompact && trailing != null) {
       return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [iconChip, const SizedBox(width: 12), titleBlock],
+            children: [iconChip, const SizedBox(width: 10), titleBlock],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           trailing!,
         ],
       );
@@ -135,7 +149,7 @@ class PrinterSectionHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         iconChip,
-        const SizedBox(width: 12),
+        SizedBox(width: isCompact ? 10 : 12),
         titleBlock,
         if (trailing != null) ...[
           const SizedBox(width: 12),
@@ -183,6 +197,8 @@ class PrinterTabSelector extends StatelessWidget {
     if (isCompact) {
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        padding: const EdgeInsetsDirectional.only(end: 4),
         child: Row(children: tabs),
       );
     }
@@ -276,8 +292,9 @@ class PrinterSegmentSelector extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           child: Container(
             height: 44,
+            width: isCompact ? double.infinity : null,
             padding: EdgeInsets.symmetric(
-              horizontal: isCompact ? 14 : 20,
+              horizontal: isCompact ? 10 : 20,
               vertical: 10,
             ),
             decoration: BoxDecoration(
@@ -295,6 +312,8 @@ class PrinterSegmentSelector extends StatelessWidget {
             child: Center(
               child: Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: buildCustomStyle(
                   FontWeightManager.semiBold,
                   FontSize.s12,
@@ -310,17 +329,28 @@ class PrinterSegmentSelector extends StatelessWidget {
       );
     }
 
+    final pills = [
+      segmentPill('B2C', isCompact ? 'B2C' : 'B2C (Retail)'),
+      segmentPill('B2B', isCompact ? 'B2B' : 'B2B (Business)'),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            segmentPill('B2C', 'B2C (Retail)'),
-            segmentPill('B2B', 'B2B (Business)'),
-          ],
-        ),
+        if (isCompact)
+          Row(
+            children: [
+              Expanded(child: pills[0]),
+              const SizedBox(width: 8),
+              Expanded(child: pills[1]),
+            ],
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: pills,
+          ),
         const SizedBox(height: 8),
         Text(
           helperText,
@@ -355,7 +385,9 @@ class PrinterDropdownField extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isStacked = constraints.maxWidth < 420;
+        final isStacked =
+            constraints.maxWidth < kPrinterPhoneBreakpoint ||
+            printerIsCompact(context);
 
         final labelWidget = Text(
           label,
@@ -372,7 +404,7 @@ class PrinterDropdownField extends StatelessWidget {
           showShadow: false,
           border: Border.all(color: Colors.grey.shade300),
           color: Colors.grey.shade50,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
           child: DropdownButton<String>(
             value: value,
             isExpanded: true,
@@ -442,6 +474,41 @@ class PrinterInfoStrip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Centered loading placeholder for the settings page.
+class PrinterSettingsLoadingState extends StatelessWidget {
+  const PrinterSettingsLoadingState({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: PrinterSettingsCard(
+        padding: printerCardPadding(context),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading printer settings…',
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s14,
+                0.18,
+                ColorManager.kGreyColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -524,7 +591,7 @@ class PrinterSettingsSplitLayout extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               settingsColumn,
-              const SizedBox(height: 16),
+              SizedBox(height: printerSectionGap(context)),
               printerColumn,
             ],
           );

@@ -1155,7 +1155,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     return PrinterSettingsPageShell(
       scrollable: selectedSettingsType != 'Barcode',
       child: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const PrinterSettingsLoadingState()
           : selectedSettingsType == 'Barcode'
               ? _buildBarcodeBody()
               : _buildDefaultBody(),
@@ -1164,11 +1164,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   /// Body for Barcode tab — header & tabs fixed, barcode panel fills remaining space
   Widget _buildBarcodeBody() {
+    final gap = printerSectionGap(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(),
-        const SizedBox(height: 16),
+        SizedBox(height: gap),
         _buildTabToggle(),
         Expanded(
           child: BarcodeLayoutSettingsPanel(
@@ -1181,17 +1182,19 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   /// Body for Billing / Kitchen tabs — everything scrolls
   Widget _buildDefaultBody() {
+    final gap = printerSectionGap(context);
+    final isCompact = printerIsCompact(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(),
-        const SizedBox(height: 16),
+        SizedBox(height: gap),
         _buildTabToggle(),
         if (selectedSettingsType == 'Billing') ...[
-          const SizedBox(height: 4),
+          SizedBox(height: isCompact ? 8 : 4),
           _buildSegmentToggle(),
         ],
-        const SizedBox(height: 16),
+        SizedBox(height: gap),
         PrinterSettingsSplitLayout(
           settingsColumn: _buildSettingsSection(),
           printerColumn: _buildPrinterList(),
@@ -1201,9 +1204,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   }
 
   Widget _buildSettingsSection() {
+    final cardPadding = printerCardPadding(context);
+    final fieldGap = printerIsCompact(context) ? 12.0 : 20.0;
+    final cardGap = printerSectionGap(context);
+
     return Column(
       children: [
         PrinterSettingsCard(
+          padding: cardPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1212,7 +1220,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                 title: 'Paper Size Settings',
                 subtitle: 'Choose the default paper width for receipts',
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: fieldGap),
               PrinterDropdownField(
                 label: 'Paper Size',
                 value: paperSizes.contains(selectedPaperSize)
@@ -1255,9 +1263,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: cardGap),
         if (_usesReceiptSettings)
           PrinterSettingsCard(
+            padding: cardPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1266,7 +1275,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                   title: 'Receipt Theme',
                   subtitle: 'Select the visual layout for printed receipts',
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: fieldGap),
                 PrinterDropdownField(
                   label: 'Theme',
                   value: selectedReceiptTheme,
@@ -1422,11 +1431,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   }
 
   Widget _buildHeader() {
-    final isCompact =
-        MediaQuery.of(context).size.width < kPrinterPhoneBreakpoint;
+    final isCompact = printerIsCompact(context);
+    final cardPadding = printerCardPadding(context);
 
     return PrinterSettingsCard(
-      padding: EdgeInsets.all(isCompact ? 16 : 20),
+      padding: cardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1434,19 +1443,19 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                height: 48,
-                width: 48,
+                height: isCompact ? 40 : 48,
+                width: isCompact ? 40 : 48,
                 decoration: BoxDecoration(
                   color: ColorManager.kPrimaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.print_rounded,
                   color: ColorManager.kPrimaryColor,
-                  size: 26,
+                  size: isCompact ? 22 : 26,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1463,6 +1472,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                     const SizedBox(height: 4),
                     Text(
                       'Configure printers, paper sizes and receipt themes',
+                      maxLines: isCompact ? 2 : 3,
+                      overflow: TextOverflow.ellipsis,
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -1475,7 +1486,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isCompact ? 12 : 16),
           SettingsActionRow(
             children: [
               CustomRoundButton(
@@ -1541,11 +1552,12 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   }
 
   Widget _buildPrinterList() {
-    final isCompact =
-        MediaQuery.of(context).size.width < kPrinterPhoneBreakpoint;
+    final isCompact = printerIsCompact(context);
+    final cardPadding = printerCardPadding(context);
+    final listGap = printerSectionGap(context);
 
     return PrinterSettingsCard(
-      padding: EdgeInsets.all(isCompact ? 16 : 20),
+      padding: cardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1569,7 +1581,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               isLoading: _isScanning,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: listGap),
           PrinterInfoStrip(
             text: _isScanning
                 ? 'Scanning for printers...'
@@ -1586,7 +1598,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               icon: Icons.check_circle_outline_rounded,
             ),
           ],
-          const SizedBox(height: 16),
+          SizedBox(height: listGap),
           devices.isEmpty
               ? const PrinterEmptyState(
                   title: 'No printers found',
