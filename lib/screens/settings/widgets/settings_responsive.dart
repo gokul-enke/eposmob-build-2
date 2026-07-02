@@ -372,6 +372,7 @@ class SettingsInfoRow extends StatelessWidget {
 
         final labelWidget = Text(
           label,
+          textAlign: TextAlign.start,
           style: buildCustomStyle(
             FontWeightManager.medium,
             FontSize.s13,
@@ -382,6 +383,7 @@ class SettingsInfoRow extends StatelessWidget {
 
         final valueWidget = SelectableText(
           value,
+          textAlign: TextAlign.start,
           style: buildCustomStyle(
             FontWeightManager.regular,
             FontSize.s14,
@@ -391,6 +393,7 @@ class SettingsInfoRow extends StatelessWidget {
         );
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
@@ -438,6 +441,7 @@ class SettingsInfoList extends StatelessWidget {
     return SettingsContentCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (int i = 0; i < entries.length; i++)
             SettingsInfoRow(
