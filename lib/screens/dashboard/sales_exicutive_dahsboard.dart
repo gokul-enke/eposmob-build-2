@@ -16,6 +16,7 @@ import '../../resources/color_manager.dart';
 import '../../providers/app_settings_provider.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/dashboard_responsive.dart';
 
 class SalesExecutiveDashboard extends StatefulWidget {
   const SalesExecutiveDashboard({super.key});
@@ -259,6 +260,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final double horizontalPadding = size.width < 600 ? 4.0 : 12.0;
     return Scaffold(
       backgroundColor: Colors.white,
       body: isInitialLoading
@@ -266,12 +268,13 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
               width: size.width,
               height: size.height,
               child: const Center(child: CircularProgressIndicator.adaptive()))
-          : Container(
+          : SafeArea(
+              child: SizedBox(
               width: size.width,
               height: size.height,
-              padding:
-                  const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
               child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                    vertical: 16.0, horizontal: horizontalPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -302,7 +305,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                   ],
                 ),
               ),
-            ),
+            )),
     );
   }
 
@@ -445,127 +448,85 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   }
 
   Widget _buildTodaysSales() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Sales Overview",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
+    return DashboardSectionHeader(
+      title: "Sales Overview",
+      trailing: BuildBoxShadowContainer(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        height: 38,
+        width: 110,
+        circleRadius: 10,
+        child: DropdownButton<String>(
+          value: value,
+          onChanged: (String? newValue) {
+            if (newValue != null) {
+              fetchDataForPeriod(newValue.toLowerCase());
+            }
+          },
+          dropdownColor: Colors.white,
+          menuMaxHeight: 200,
+          elevation: 2,
+          padding: EdgeInsets.zero,
+          items: <String>['Today', 'Week', 'Month', 'Year'].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value.toLowerCase(),
+              child: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s12,
+                    0.10,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
               ),
-            ),
+            );
+          }).toList(),
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.10,
+            ColorManager.textColor,
           ),
-        ),
-        BuildBoxShadowContainer(
-          margin: const EdgeInsets.only(right: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          height: 36,
-          width: 100,
-          circleRadius: 8,
-          child: DropdownButton<String>(
-            value: value,
-            onChanged: (String? newValue) {
-              if (newValue != null) {
-                fetchDataForPeriod(newValue.toLowerCase());
-              }
-            },
-            dropdownColor: Colors.white,
-            menuMaxHeight: 200,
-            elevation: 2,
-            padding: EdgeInsets.zero,
-            items:
-                <String>['Today', 'Week', 'Month', 'Year'].map((String value) {
-              return DropdownMenuItem<String>(
-                value: value.toLowerCase(),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Text(
-                    value,
-                    textAlign: TextAlign.center,
-                    style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s12,
-                      0.10,
-                      ColorManager.kPrimaryColor,
-                    ),
+          underline: Container(),
+          isExpanded: true,
+          icon: const Icon(
+            Icons.arrow_drop_down,
+            color: ColorManager.kPrimaryColor,
+          ),
+          selectedItemBuilder: (BuildContext context) {
+            return <String>['Today', 'Week', 'Month', 'Year']
+                .map<Widget>((String value) {
+              return Container(
+                alignment: Alignment.center,
+                child: Text(
+                  value,
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s12,
+                    0.10,
+                    ColorManager.kPrimaryColor,
                   ),
                 ),
               );
-            }).toList(),
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s12,
-              0.10,
-              ColorManager.textColor,
-            ),
-            underline: Container(),
-            isExpanded: true,
-            icon: const Icon(
-              Icons.arrow_drop_down,
-              color: ColorManager.kPrimaryColor,
-            ),
-            selectedItemBuilder: (BuildContext context) {
-              return <String>['Today', 'Week', 'Month', 'Year']
-                  .map<Widget>((String value) {
-                return Container(
-                  alignment: Alignment.center,
-                  child: Text(
-                    value,
-                    style: buildCustomStyle(
-                      FontWeightManager.bold,
-                      FontSize.s12,
-                      0.10,
-                      ColorManager.kPrimaryColor,
-                    ),
-                  ),
-                );
-              }).toList();
-            },
-          ),
+            }).toList();
+          },
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildSalesCards() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 180,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  shrinkWrap: true,
-                  children: [
-                    _buildSalesCard("Count", ColorManager.kPrimaryColor,
-                        Icons.receipt_long),
-                    _buildSalesCard(
-                        "Amount", ColorManager.kMagentha, Icons.attach_money),
-                    _buildSalesCard(
-                        "Customers", ColorManager.kOrange, Icons.people),
-                    _buildSalesCard(
-                        "Products", ColorManager.kBlue, Icons.inventory),
-                    _buildSalesCard(
-                        "Revenue", const Color(0xFF4CAF50), Icons.trending_up),
-                    _buildSalesCard(
-                        "Orders", const Color(0xFF9C27B0), Icons.shopping_cart),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+    return ResponsiveStatGrid(
+      cards: [
+        _buildSalesCard("Count", ColorManager.kPrimaryColor, Icons.receipt_long),
+        _buildSalesCard("Amount", ColorManager.kMagentha, Icons.attach_money),
+        _buildSalesCard("Customers", ColorManager.kOrange, Icons.people),
+        _buildSalesCard("Products", ColorManager.kBlue, Icons.inventory),
+        _buildSalesCard("Revenue", const Color(0xFF4CAF50), Icons.trending_up),
+        _buildSalesCard("Orders", const Color(0xFF9C27B0), Icons.shopping_cart),
       ],
     );
   }
@@ -604,67 +565,21 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Company Account Overview",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 180,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    shrinkWrap: true,
-                    children: [
-                      _buildCompanyAccountCard(
-                          "Bank Account",
-                          "Total Balance",
-                          bankAccountValue,
-                          ColorManager.kPrimaryColor,
-                          Icons.account_balance),
-                      _buildCompanyAccountCard(
-                          "Cash Account",
-                          "Total Balance",
-                          cashAccountValue,
-                          ColorManager.kMagentha,
-                          Icons.account_balance_wallet),
-                      _buildCompanyAccountCard(
-                          "Total Revenue",
-                          "Company Revenue",
-                          revenueValue,
-                          ColorManager.kOrange,
-                          Icons.trending_up),
-                      _buildCompanyAccountCard(
-                          "Total Customers",
-                          "All Customers",
-                          customersValue,
-                          ColorManager.kBlue,
-                          Icons.people),
-                      _buildCompanyAccountCard(
-                          "Total Orders",
-                          "All Orders",
-                          ordersValue,
-                          const Color(0xFF4CAF50),
-                          Icons.shopping_cart),
-                    ],
-                  ),
-              ),
-            ],
-          ),
+        const DashboardSectionHeader(title: "Company Account Overview"),
+        ResponsiveStatGrid(
+          cards: [
+            _buildCompanyAccountCard("Bank Account", "Total Balance",
+                bankAccountValue, ColorManager.kPrimaryColor, Icons.account_balance),
+            _buildCompanyAccountCard("Cash Account", "Total Balance",
+                cashAccountValue, ColorManager.kMagentha,
+                Icons.account_balance_wallet),
+            _buildCompanyAccountCard("Total Revenue", "Company Revenue",
+                revenueValue, ColorManager.kOrange, Icons.trending_up),
+            _buildCompanyAccountCard("Total Customers", "All Customers",
+                customersValue, ColorManager.kBlue, Icons.people),
+            _buildCompanyAccountCard("Total Orders", "All Orders", ordersValue,
+                const Color(0xFF4CAF50), Icons.shopping_cart),
+          ],
         ),
       ],
     );
@@ -693,57 +608,19 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Your Account Overview",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 180,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    shrinkWrap: true,
-                    children: [
-                      _buildCompanyAccountCard(
-                          "Cash Received",
-                          "Your Cash Inflow",
-                          cashReceivedValue,
-                          ColorManager.kPrimaryColor,
-                          Icons.call_received),
-                      _buildCompanyAccountCard(
-                          "Cash Sent",
-                          "Your Cash Outflow",
-                          cashSentValue,
-                          ColorManager.kMagentha,
-                          Icons.call_made),
-                      _buildCompanyAccountCard(
-                          "Bank Received",
-                          "Your Bank Inflow",
-                          bankReceivedValue,
-                          ColorManager.kOrange,
-                          Icons.account_balance),
-                      _buildCompanyAccountCard("Bank Sent", "Your Bank Outflow",
-                          bankSentValue, ColorManager.kBlue, Icons.call_made),
-                    ],
-                  ),
-              ),
-            ],
-          ),
+        const DashboardSectionHeader(title: "Your Account Overview"),
+        ResponsiveStatGrid(
+          cards: [
+            _buildCompanyAccountCard("Cash Received", "Your Cash Inflow",
+                cashReceivedValue, ColorManager.kPrimaryColor,
+                Icons.call_received),
+            _buildCompanyAccountCard("Cash Sent", "Your Cash Outflow",
+                cashSentValue, ColorManager.kMagentha, Icons.call_made),
+            _buildCompanyAccountCard("Bank Received", "Your Bank Inflow",
+                bankReceivedValue, ColorManager.kOrange, Icons.account_balance),
+            _buildCompanyAccountCard("Bank Sent", "Your Bank Outflow",
+                bankSentValue, ColorManager.kBlue, Icons.call_made),
+          ],
         ),
       ],
     );
@@ -818,61 +695,18 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Your Sales Performance",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 180,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    shrinkWrap: true,
-                    children: [
-                      _buildCompanyAccountCard(
-                          "Today's Sales",
-                          "Today's Revenue",
-                          todaysSalesValue,
-                          ColorManager.kPrimaryColor,
-                          Icons.today),
-                      _buildCompanyAccountCard(
-                          "This Week",
-                          "Weekly Revenue",
-                          thisWeekValue,
-                          ColorManager.kMagentha,
-                          Icons.date_range),
-                      _buildCompanyAccountCard(
-                          "This Month",
-                          "Monthly Revenue",
-                          thisMonthValue,
-                          ColorManager.kOrange,
-                          Icons.calendar_month),
-                      _buildCompanyAccountCard(
-                          "Total Sales",
-                          "Overall Performance",
-                          totalSalesValue,
-                          ColorManager.kBlue,
-                          Icons.trending_up),
-                    ],
-                  ),
-              ),
-            ],
-          ),
+        const DashboardSectionHeader(title: "Your Sales Performance"),
+        ResponsiveStatGrid(
+          cards: [
+            _buildCompanyAccountCard("Today's Sales", "Today's Revenue",
+                todaysSalesValue, ColorManager.kPrimaryColor, Icons.today),
+            _buildCompanyAccountCard("This Week", "Weekly Revenue",
+                thisWeekValue, ColorManager.kMagentha, Icons.date_range),
+            _buildCompanyAccountCard("This Month", "Monthly Revenue",
+                thisMonthValue, ColorManager.kOrange, Icons.calendar_month),
+            _buildCompanyAccountCard("Total Sales", "Overall Performance",
+                totalSalesValue, ColorManager.kBlue, Icons.trending_up),
+          ],
         ),
       ],
     );
@@ -890,29 +724,13 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Sales Graph",
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s15,
-                    0.23,
-                    ColorManager.textColor,
-                  ),
-                ),
-              ),
-              BuildBoxShadowContainer(
-                margin: const EdgeInsets.only(right: 16),
+        DashboardSectionHeader(
+          title: "Sales Graph",
+          trailing: BuildBoxShadowContainer(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
-                height: 36,
-                width: 120,
-                circleRadius: 8,
+                height: 38,
+                width: 130,
+                circleRadius: 10,
                 child: DropdownButton<String>(
                   value: salesGraphPeriod,
                   onChanged: (String? newValue) async {
@@ -1004,17 +822,16 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
                   },
                 ),
               ),
-            ],
-          ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 300,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: BuildBoxShadowContainer(
-            margin: const EdgeInsets.all(15),
-            padding: const EdgeInsets.all(15),
-            height: 250,
-            circleRadius: 7,
+            padding: const EdgeInsets.all(16),
+            height: 280,
+            circleRadius: 14,
+            blurRadius: 10,
+            offsetValue: const Offset(0, 3),
+            border: Border.all(color: Colors.grey.withOpacity(0.12)),
             child: _buildSalesExecutiveGraph(),
           ),
         ),
@@ -1025,69 +842,42 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   Widget _buildCustomersBySalesExecutive() {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Your Customers",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 180,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    shrinkWrap: true,
-                    children: [
-                      _buildCompanyAccountCard(
-                          "Total Customers",
-                          "All Time",
-                          customerStats != null
-                              ? customerStats!.totalCustomers.toString()
-                              : "0",
-                          ColorManager.kPrimaryColor,
-                          Icons.people),
-                      _buildCompanyAccountCard(
-                          "Debit Customers",
-                          "Pending Payments",
-                          customerStats != null
-                              ? customerStats!.debitCustomers.toString()
-                              : "0",
-                          ColorManager.kMagentha,
-                          Icons.money_off),
-                      _buildCompanyAccountCard(
-                          "Credit Customers",
-                          "Balance Available",
-                          customerStats != null
-                              ? customerStats!.creditCustomers.toString()
-                              : "0",
-                          ColorManager.kOrange,
-                          Icons.account_balance_wallet),
-                      _buildCompanyAccountCard(
-                          "Crucial Customers",
-                          "VVIP Clients",
-                          customerStats != null
-                              ? customerStats!.crucialCustomers.toString()
-                              : "0",
-                          ColorManager.kBlue,
-                          Icons.star),
-                    ],
-                  ),
-              ),
-            ],
-          ),
+        const DashboardSectionHeader(title: "Your Customers"),
+        ResponsiveStatGrid(
+          cards: [
+            _buildCompanyAccountCard(
+                "Total Customers",
+                "All Time",
+                customerStats != null
+                    ? customerStats!.totalCustomers.toString()
+                    : "0",
+                ColorManager.kPrimaryColor,
+                Icons.people),
+            _buildCompanyAccountCard(
+                "Debit Customers",
+                "Pending Payments",
+                customerStats != null
+                    ? customerStats!.debitCustomers.toString()
+                    : "0",
+                ColorManager.kMagentha,
+                Icons.money_off),
+            _buildCompanyAccountCard(
+                "Credit Customers",
+                "Balance Available",
+                customerStats != null
+                    ? customerStats!.creditCustomers.toString()
+                    : "0",
+                ColorManager.kOrange,
+                Icons.account_balance_wallet),
+            _buildCompanyAccountCard(
+                "Crucial Customers",
+                "VVIP Clients",
+                customerStats != null
+                    ? customerStats!.crucialCustomers.toString()
+                    : "0",
+                ColorManager.kBlue,
+                Icons.star),
+          ],
         ),
       ],
     );
@@ -1096,69 +886,40 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
   Widget _buildProductOverview() {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Product Overview",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 180,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    shrinkWrap: true,
-                    children: [
-                      _buildCompanyAccountCard(
-                          "Total Products",
-                          "All Products",
-                          productStats != null
-                              ? productStats!.totalProducts.toString()
-                              : "0",
-                          ColorManager.kPrimaryColor,
-                          Icons.inventory),
-                      _buildCompanyAccountCard(
-                          "Active Products",
-                          "Currently Selling",
-                          productStats != null
-                              ? productStats!.activeProducts.toString()
-                              : "0",
-                          ColorManager.kMagentha,
-                          Icons.check_circle),
-                      _buildCompanyAccountCard(
-                          "Low Stock",
-                          "Needs Attention",
-                          productStats != null
-                              ? productStats!.lowStock.toString()
-                              : "0",
-                          ColorManager.kOrange,
-                          Icons.warning),
-                      _buildCompanyAccountCard(
-                          "Total Stock Qty",
-                          "Overall Inventory",
-                          productStats != null
-                              ? productStats!.totalProductsStockQty.toString()
-                              : "0",
-                          ColorManager.kBlue,
-                          Icons.inventory_2),
-                    ],
-                  ),
-              ),
-            ],
-          ),
+        const DashboardSectionHeader(title: "Product Overview"),
+        ResponsiveStatGrid(
+          cards: [
+            _buildCompanyAccountCard(
+                "Total Products",
+                "All Products",
+                productStats != null
+                    ? productStats!.totalProducts.toString()
+                    : "0",
+                ColorManager.kPrimaryColor,
+                Icons.inventory),
+            _buildCompanyAccountCard(
+                "Active Products",
+                "Currently Selling",
+                productStats != null
+                    ? productStats!.activeProducts.toString()
+                    : "0",
+                ColorManager.kMagentha,
+                Icons.check_circle),
+            _buildCompanyAccountCard(
+                "Low Stock",
+                "Needs Attention",
+                productStats != null ? productStats!.lowStock.toString() : "0",
+                ColorManager.kOrange,
+                Icons.warning),
+            _buildCompanyAccountCard(
+                "Total Stock Qty",
+                "Overall Inventory",
+                productStats != null
+                    ? productStats!.totalProductsStockQty.toString()
+                    : "0",
+                ColorManager.kBlue,
+                Icons.inventory_2),
+          ],
         ),
       ],
     );
@@ -1862,200 +1623,46 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
     String valueText = _getSalesValue(title);
     String subtitle = _getCardSubtitle(title);
 
-    return BuildBoxShadowContainer(
-      margin: const EdgeInsets.all(15),
-      padding: const EdgeInsets.all(12),
-      height: 150,
-      width: 240,
-      circleRadius: 7,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              CircleAvatar(
-                backgroundColor: color.withOpacity(0.1),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 20,
-                ),
+    return DashboardStatCard(
+      title: title,
+      subtitle: subtitle,
+      value: valueText,
+      color: color,
+      icon: icon,
+      valueWidget: Consumer<AppSettingsProvider>(
+        builder: (context, settings, child) {
+          String displayValue = valueText;
+          if (title == "Amount" || title == "Revenue") {
+            final currency = settings.appSettings?.currency ?? 'INR';
+            displayValue = "$currency $valueText";
+          }
+          return FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              displayValue,
+              maxLines: 1,
+              style: buildCustomStyle(
+                FontWeightManager.bold,
+                FontSize.s20,
+                0.20,
+                ColorManager.textColor,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.trending_up,
-                      size: 12,
-                      color: Colors.green[600],
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      "+12%",
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s10,
-                        0.10,
-                        Colors.green[600]!,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Consumer<AppSettingsProvider>(
-            builder: (context, settings, child) {
-              String displayValue = valueText;
-              if (title == "Amount" || title == "Revenue") {
-                final currency = settings.appSettings?.currency ?? 'INR';
-                displayValue = "$currency $valueText";
-              }
-              return Text(
-                displayValue,
-                style: buildCustomStyle(
-                  FontWeightManager.semiBold,
-                  FontSize.s20,
-                  0.38,
-                  ColorManager.textColor,
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s15,
-                      0.23,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s11,
-                      0.10,
-                      Colors.grey[600]!,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildCompanyAccountCard(
       String title, String subtitle, String value, Color color, IconData icon) {
-    return BuildBoxShadowContainer(
-      margin: const EdgeInsets.all(15),
-      padding: const EdgeInsets.all(12),
-      height: 150,
-      width: 240,
-      circleRadius: 7,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              CircleAvatar(
-                backgroundColor: color.withOpacity(0.1),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 20,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.trending_up,
-                      size: 12,
-                      color: Colors.green[600],
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      "+12%",
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s10,
-                        0.10,
-                        Colors.green[600]!,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s20,
-              0.38,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s15,
-                      0.23,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: buildCustomStyle(
-                      FontWeightManager.regular,
-                      FontSize.s11,
-                      0.10,
-                      Colors.grey[600]!,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
+    return DashboardStatCard(
+      title: title,
+      subtitle: subtitle,
+      value: value,
+      color: color,
+      icon: icon,
     );
   }
 
@@ -2131,21 +1738,7 @@ class _SalesExecutiveDashboardState extends State<SalesExecutiveDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Works Team",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
-            ),
-          ),
-        ),
+        const DashboardSectionHeader(title: "Works Team"),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           height: 120,

@@ -16,6 +16,7 @@ import '../../resources/asset_manager.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
+import 'widgets/dashboard_responsive.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -176,6 +177,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final double horizontalPadding = size.width < 600 ? 4.0 : 12.0;
     return Scaffold(
       backgroundColor: Colors.white,
       body: isInitialLoading
@@ -183,12 +185,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
               width: size.width,
               height: size.height,
               child: const Center(child: CircularProgressIndicator.adaptive()))
-          : Container(
+          : SafeArea(
+              child: SizedBox(
               width: size.width,
               height: size.height,
-              padding:
-                  const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
               child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                    vertical: 16.0, horizontal: horizontalPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -205,7 +208,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ],
                 ),
               ),
-            ),
+            )),
     );
   }
 
@@ -265,31 +268,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildSupplierOverview() {
     return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Supplier Overview",
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s15,
-                    0.23,
-                    ColorManager.textColor,
-                  ),
-                ),
-              ),
-            ),
-            BuildBoxShadowContainer(
-              margin: const EdgeInsets.only(right: 16),
+        DashboardSectionHeader(
+          title: "Supplier Overview",
+          trailing: BuildBoxShadowContainer(
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              height: 36,
-              width: 100,
-              circleRadius: 8,
+              height: 38,
+              width: 110,
+              circleRadius: 10,
               child: DropdownButton<String>(
                 value: value,
                 onChanged: (String? newValue) {
@@ -353,31 +338,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   }).toList();
                 },
               ),
-            ),
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          height: 180,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Center(
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const NeverScrollableScrollPhysics(),
-                    shrinkWrap: true,
-                    children: [
-                      _buildSupplierCountCard(),
-                      const SizedBox(width: 16),
-                      _buildNewSuppliersCard(),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ),
+        ),
+        ResponsiveStatGrid(
+          cardHeight: 150,
+          maxColumns: 2,
+          cards: [
+            _buildSupplierCountCard(),
+            _buildNewSuppliersCard(),
+          ],
         ),
       ],
     );
@@ -386,9 +355,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildSupplierCountCard() {
     final totalSuppliers = suppliersOverview?.suppliers.totalSuppliers ?? 0;
     return BuildBoxShadowContainer(
-      height: 150,
-      width: 280,
-      circleRadius: 12,
+      circleRadius: 14,
+      blurRadius: 10,
+      offsetValue: const Offset(0, 3),
+      border: Border.all(color: Colors.grey.withOpacity(0.12)),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,9 +416,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget _buildNewSuppliersCard() {
     final newSuppliers = suppliersOverview?.suppliers.newSuppliers ?? 0;
     return BuildBoxShadowContainer(
-      height: 150,
-      width: 280,
-      circleRadius: 12,
+      circleRadius: 14,
+      blurRadius: 10,
+      offsetValue: const Offset(0, 3),
+      border: Border.all(color: Colors.grey.withOpacity(0.12)),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,38 +478,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const DashboardSectionHeader(title: "Supplier Purchase Graph"),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Supplier Purchase Graph",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Container(
+            height: 380,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.withOpacity(0.12)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-          ),
-        ),
-        Container(
-          height: 380,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _buildPurchaseGraphContent(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildPurchaseGraphContent(),
+            ),
           ),
         ),
       ],
@@ -715,38 +676,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const DashboardSectionHeader(title: "Supplier Transactions Graph"),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Supplier Transactions Graph",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Container(
+            height: 380,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.withOpacity(0.12)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-          ),
-        ),
-        Container(
-          height: 380,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _buildTransactionsGraphContent(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildTransactionsGraphContent(),
+            ),
           ),
         ),
       ],
@@ -968,38 +919,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const DashboardSectionHeader(title: "Supplier Credit/Balance Graph"),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              "Supplier Credit/Balance Graph",
-              style: buildCustomStyle(
-                FontWeightManager.semiBold,
-                FontSize.s15,
-                0.23,
-                ColorManager.textColor,
-              ),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Container(
+            height: 380,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.withOpacity(0.12)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-          ),
-        ),
-        Container(
-          height: 380,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _buildCreditBalanceGraphContent(),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildCreditBalanceGraphContent(),
+            ),
           ),
         ),
       ],

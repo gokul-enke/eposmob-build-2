@@ -1216,9 +1216,9 @@ class _SideMenuState extends State<SideMenu> {
                 '2025 CloudPOS App',
                 style: buildCustomStyle(
                   FontWeightManager.medium,
-                  FontSize.s12,
+                  FontSize.s11,
                   0.16,
-                  ColorManager.textColor,
+                  ColorManager.kGreyColor,
                 ),
               ),
             ),
