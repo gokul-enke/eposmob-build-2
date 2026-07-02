@@ -137,7 +137,7 @@ class _SalesScreenState extends State<SalesScreen> {
     loadInitData();
     // Ensure filters are shown by default on desktop
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isMobile = MediaQuery.of(context).size.width < 768;
+      final isMobile = MediaQuery.of(context).size.width < 600;
       Provider.of<SalesProvider>(context, listen: false)
           .setFiltersVisibility(!isMobile);
     });
@@ -1210,7 +1210,7 @@ Powered by CloudPOS''',
 
   // Helper method to check if device is mobile
   bool _isMobile(BuildContext context) {
-    return MediaQuery.of(context).size.width < 768;
+    return MediaQuery.of(context).size.width < 600;
   }
 
   Widget _buildTableHeader(String text) {
@@ -1219,11 +1219,13 @@ Powered by CloudPOS''',
       child: Text(
         text,
         textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
-          FontWeightManager.medium,
+          FontWeightManager.semiBold,
           FontSize.s12,
           0.18,
-          ColorManager.kPrimaryColor,
+          ColorManager.kTitleTextColor,
         ),
       ),
     );
@@ -1235,11 +1237,13 @@ Powered by CloudPOS''',
       child: Text(
         text,
         textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
         style: buildCustomStyle(
           FontWeightManager.medium,
-          FontSize.s9, // Increased from s9
+          FontSize.s11,
           0.18,
-          Colors.black,
+          ColorManager.kTextColor,
         ),
       ),
     );
@@ -1252,38 +1256,72 @@ Powered by CloudPOS''',
     switch (status.toLowerCase()) {
       case 'confirmed':
         backgroundColor = Colors.green.withOpacity(0.1);
-        textColor = Colors.green;
+        textColor = Colors.green.shade700;
         break;
       case 'pending':
         backgroundColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
+        textColor = Colors.orange.shade800;
         break;
       case 'cancelled':
         backgroundColor = Colors.red.withOpacity(0.1);
-        textColor = Colors.red;
+        textColor = Colors.red.shade700;
         break;
       case 'new':
         backgroundColor = Colors.blue.withOpacity(0.1);
-        textColor = Colors.blue;
+        textColor = Colors.blue.shade700;
         break;
       default:
-        backgroundColor = Colors.grey.withOpacity(0.1);
-        textColor = Colors.grey;
+        backgroundColor = Colors.grey.withOpacity(0.12);
+        textColor = Colors.grey.shade700;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsetsDirectional.only(
+          start: 10, end: 12, top: 5, bottom: 5),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withOpacity(0.18)),
       ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(
-          color: textColor,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: textColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status.toUpperCase(),
+            style: TextStyle(
+              color: textColor,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionIcon({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: IconButton(
+        icon: Icon(icon, size: 18, color: color),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        onPressed: onPressed,
       ),
     );
   }
@@ -1291,10 +1329,11 @@ Powered by CloudPOS''',
   Widget _buildActionButtons(ListOrderModelData order, BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          icon: const Icon(Icons.visibility,
-              size: 18, color: ColorManager.kPrimaryColor),
+        _buildActionIcon(
+          icon: Icons.visibility,
+          color: ColorManager.kPrimaryColor,
           onPressed: () {
             final provider = Provider.of<SalesProvider>(context, listen: false);
             provider.setOrderNumber(order.orderNumber ?? "0");
@@ -1315,8 +1354,9 @@ Powered by CloudPOS''',
         //       Get.find<SideBarController>().index.value = 51;
         //     },
         //   ),
-        IconButton(
-          icon: const Icon(Icons.print, size: 18, color: Colors.blue),
+        _buildActionIcon(
+          icon: Icons.print,
+          color: Colors.blue,
           onPressed: () async {
             try {
               String ordersId = order.orderNumber.toString();
@@ -1548,8 +1588,9 @@ Powered by CloudPOS''',
             }
           },
         ),
-        IconButton(
-          icon: const Icon(Icons.more_vert, size: 18, color: Colors.blue),
+        _buildActionIcon(
+          icon: Icons.more_vert,
+          color: Colors.blue,
           onPressed: () async {
             // Show bottom sheet with options instead of popup menu
             if (!context.mounted) return;
@@ -2128,26 +2169,65 @@ Powered by CloudPOS''',
         selectedDate != null;
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.shopping_cart_outlined,
-              size: 48, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            displayedOrders.isEmpty && provider.orders.isNotEmpty
-                ? (widget.isOnlineSales
-                    ? "No online orders available"
-                    : "No orders match your filters")
-                : "No orders available",
-            style: const TextStyle(color: Colors.grey),
-          ),
-          if (hasFilters)
-            TextButton(
-              onPressed: resetSearch,
-              child: const Text("Reset filters"),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 88,
+              width: 88,
+              decoration: BoxDecoration(
+                color: ColorManager.kPrimaryColor.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.shopping_cart_outlined,
+                  size: 40, color: ColorManager.kPrimaryColor),
             ),
-        ],
+            const SizedBox(height: 18),
+            Text(
+              displayedOrders.isEmpty && provider.orders.isNotEmpty
+                  ? (widget.isOnlineSales
+                      ? "No online orders available"
+                      : "No orders match your filters")
+                  : "No orders available",
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s16,
+                0.20,
+                ColorManager.kTitleTextColor,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              hasFilters
+                  ? "Try adjusting or clearing your filters."
+                  : "Orders will appear here once they are placed.",
+              textAlign: TextAlign.center,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s12,
+                0.10,
+                ColorManager.kGreyColor,
+              ),
+            ),
+            if (hasFilters)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: CustomRoundButton(
+                  title: "Reset filters",
+                  boxColor: ColorManager.kPrimaryColor,
+                  textColor: Colors.white,
+                  fct: resetSearch,
+                  height: 44,
+                  width: 180,
+                  fontSize: FontSize.s12,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -2156,162 +2236,188 @@ Powered by CloudPOS''',
       SalesProvider provider, List<ListOrderModelData> displayedOrders) {
     return BuildBoxShadowContainer(
       margin: const EdgeInsets.only(top: 5),
-      circleRadius: 7,
-      offsetValue: const Offset(2, 2),
-      blurRadius: 8.0,
+      circleRadius: 14,
+      offsetValue: const Offset(0, 3),
+      blurRadius: 10.0,
       color: Colors.white,
-      child: Column(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              color: ColorManager.tableBGColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  offset: Offset(0, 2),
-                  blurRadius: 2.0,
-                ),
-              ],
-            ),
-            child: Table(
-              columnWidths: const {
-                0: FixedColumnWidth(60), // SI No
-                1: FlexColumnWidth(2), // Order #
-                2: FlexColumnWidth(3), // Customer
-                3: FlexColumnWidth(2), // Date
-                4: FlexColumnWidth(1.5), // Items
-                5: FlexColumnWidth(2), // Amount
-                6: FlexColumnWidth(1.8), // Status
-                7: FixedColumnWidth(150), // Actions
-              },
-              border: null,
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              children: [
-                TableRow(
-                  children: [
-                    _buildTableHeader('SI No'),
-                    _buildTableHeader('Order #'),
-                    _buildTableHeader('Customer'),
-                    _buildTableHeader('Date'),
-                    _buildTableHeader('Items'),
-                    _buildTableHeader('Amount'),
-                    _buildTableHeader('Status'),
-                    _buildTableHeader('Actions'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: MouseRegion(
-              cursor: SystemMouseCursors.grab,
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.stylus,
-                    PointerDeviceKind.trackpad,
-                  },
-                ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  scrollDirection: Axis.vertical,
-                  child: Table(
-                    columnWidths: const {
-                      0: FixedColumnWidth(60), // SI No
-                      1: FlexColumnWidth(2), // Order #
-                      2: FlexColumnWidth(3), // Customer
-                      3: FlexColumnWidth(2), // Date
-                      4: FlexColumnWidth(1.5), // Items
-                      5: FlexColumnWidth(2), // Amount
-                      6: FlexColumnWidth(1.8), // Status
-                      7: FixedColumnWidth(150), // Actions
-                    },
-                    border: null,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      ...displayedOrders.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        ListOrderModelData order = entry.value;
-                        PriceSummary priceSummary =
-                            order.priceSummary ?? PriceSummary();
+      border: Border.all(color: Colors.grey.withOpacity(0.12)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double tableWidth =
+              constraints.maxWidth < 860 ? 860 : constraints.maxWidth;
+          final bool needsHorizontalScroll = constraints.maxWidth < 860;
 
-                        // Calculate serial number based on pagination
-                        int serialNumber = provider.paginationFrom + index;
-
-                        return TableRow(
-                          decoration: BoxDecoration(
-                            color: index % 2 == 0
-                                ? Colors.white
-                                : Colors.grey.withOpacity(0.1),
-                          ),
+          Widget buildTableContent() {
+            return SizedBox(
+              width: tableWidth,
+              child: Column(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: ColorManager.tableBGColor,
+                      border: Border(
+                        bottom: BorderSide(color: Color(0x1F000000), width: 1),
+                      ),
+                    ),
+                    child: Table(
+                      columnWidths: const {
+                        0: FixedColumnWidth(60),
+                        1: FlexColumnWidth(2),
+                        2: FlexColumnWidth(3),
+                        3: FlexColumnWidth(2),
+                        4: FlexColumnWidth(1.5),
+                        5: FlexColumnWidth(2),
+                        6: FlexColumnWidth(1.8),
+                        7: FixedColumnWidth(150),
+                      },
+                      border: null,
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.middle,
+                      children: [
+                        TableRow(
                           children: [
-                            SizedBox(
-                              height: 55, // Set your desired row height here
-                              child: _buildTableCell("$serialNumber"),
-                            ),
-                            SizedBox(
-                              height: 55,
-                              child: _buildTableCell("#${order.orderNumber}"),
-                            ),
-                            SizedBox(
-                              height: 55,
-                              child: _buildTableCell(
-                                (order.customerName?.isNotEmpty == true)
-                                    ? order.customerName!
-                                    : (order.customerDetails?.phone
-                                                ?.isNotEmpty ==
-                                            true
-                                        ? order.customerDetails!.phone!
-                                        : "NA"),
-                              ),
-                            ),
-                            SizedBox(
-                              height: 55,
-                              child: _buildTableCell(
-                                  DateHelper.formatYearMonthDay(
-                                      order.orderDate!)),
-                            ),
-                            SizedBox(
-                              height: 55,
-                              child: _buildTableCell(
-                                  "${order.cartItems?.length ?? 0}"),
-                            ),
-                            SizedBox(
-                              height: 55,
-                              child: Consumer<AppSettingsProvider>(
-                                builder: (context, appSettingsProvider, child) {
-                                  final currency = appSettingsProvider
-                                          .appSettings?.currency ??
-                                      'INR';
-                                  return _buildTableCell(
-                                      "$currency ${AmountHelper.formatAmount(order.grantTotal ?? 0.0)}");
-                                },
-                              ),
-                            ),
-                            SizedBox(
-                              height: 55,
-                              child: Center(
-                                  child: _buildStatusChip(
-                                      order.status ?? "pending")),
-                            ),
-                            SizedBox(
-                              height: 55,
-                              child: Center(
-                                  child: _buildActionButtons(order, context)),
-                            ),
+                            _buildTableHeader('SI No'),
+                            _buildTableHeader('Order #'),
+                            _buildTableHeader('Customer'),
+                            _buildTableHeader('Date'),
+                            _buildTableHeader('Items'),
+                            _buildTableHeader('Amount'),
+                            _buildTableHeader('Status'),
+                            _buildTableHeader('Actions'),
                           ],
-                        );
-                        ;
-                      }).toList(),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  Expanded(
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.grab,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.stylus,
+                            PointerDeviceKind.trackpad,
+                          },
+                        ),
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          scrollDirection: Axis.vertical,
+                          child: Table(
+                            columnWidths: const {
+                              0: FixedColumnWidth(60),
+                              1: FlexColumnWidth(2),
+                              2: FlexColumnWidth(3),
+                              3: FlexColumnWidth(2),
+                              4: FlexColumnWidth(1.5),
+                              5: FlexColumnWidth(2),
+                              6: FlexColumnWidth(1.8),
+                              7: FixedColumnWidth(150),
+                            },
+                            border: null,
+                            defaultVerticalAlignment:
+                                TableCellVerticalAlignment.middle,
+                            children: [
+                              ...displayedOrders.asMap().entries.map((entry) {
+                                int index = entry.key;
+                                ListOrderModelData order = entry.value;
+
+                                int serialNumber =
+                                    provider.paginationFrom + index;
+
+                                return TableRow(
+                                  decoration: BoxDecoration(
+                                    color: index % 2 == 0
+                                        ? Colors.white
+                                        : Colors.grey.withOpacity(0.1),
+                                  ),
+                                  children: [
+                                    SizedBox(
+                                      height: 55,
+                                      child: _buildTableCell("$serialNumber"),
+                                    ),
+                                    SizedBox(
+                                      height: 55,
+                                      child: _buildTableCell(
+                                          "#${order.orderNumber}"),
+                                    ),
+                                    SizedBox(
+                                      height: 55,
+                                      child: _buildTableCell(
+                                        (order.customerName?.isNotEmpty == true)
+                                            ? order.customerName!
+                                            : (order.customerDetails?.phone
+                                                        ?.isNotEmpty ==
+                                                    true
+                                                ? order.customerDetails!.phone!
+                                                : "NA"),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 55,
+                                      child: _buildTableCell(
+                                          DateHelper.formatYearMonthDay(
+                                              order.orderDate!)),
+                                    ),
+                                    SizedBox(
+                                      height: 55,
+                                      child: _buildTableCell(
+                                          "${order.cartItems?.length ?? 0}"),
+                                    ),
+                                    SizedBox(
+                                      height: 55,
+                                      child: Consumer<AppSettingsProvider>(
+                                        builder: (context, appSettingsProvider,
+                                            child) {
+                                          final currency = appSettingsProvider
+                                                  .appSettings?.currency ??
+                                              'INR';
+                                          return _buildTableCell(
+                                              "$currency ${AmountHelper.formatAmount(order.grantTotal ?? 0.0)}");
+                                        },
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 55,
+                                      child: Center(
+                                          child: _buildStatusChip(
+                                              order.status ?? "pending")),
+                                    ),
+                                    SizedBox(
+                                      height: 55,
+                                      child: Center(
+                                          child: _buildActionButtons(
+                                              order, context)),
+                                    ),
+                                  ],
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-        ],
+            );
+          }
+
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: needsHorizontalScroll
+                ? SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: tableWidth,
+                      height: constraints.maxHeight,
+                      child: buildTableContent(),
+                    ),
+                  )
+                : buildTableContent(),
+          );
+        },
       ),
     );
   }
@@ -2329,17 +2435,18 @@ Powered by CloudPOS''',
         onRefresh: refreshData,
         child: Container(
           margin: EdgeInsets.symmetric(
-            horizontal: _isMobile(context) ? 5 : 10,
+            horizontal: _isMobile(context) ? 8 : 12,
             vertical: _isMobile(context) ? 10 : 20,
           ),
           padding: EdgeInsets.all(_isMobile(context) ? 4 : 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(_isMobile(context) ? 12 : 22),
+            borderRadius: BorderRadius.circular(_isMobile(context) ? 16 : 20),
+            border: Border.all(color: Colors.grey.withOpacity(0.12)),
             boxShadow: const [
               BoxShadow(
                 color: ColorManager.boxShadowColor,
-                blurRadius: 6,
-                offset: Offset(1, 1),
+                blurRadius: 10,
+                offset: Offset(0, 3),
               ),
             ],
             color: Colors.white,
@@ -2355,15 +2462,19 @@ Powered by CloudPOS''',
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      widget.isOnlineSales
-                          ? "Online Orders List"
-                          : "Orders List",
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s20,
-                        0.30,
-                        ColorManager.textColor,
+                    Expanded(
+                      child: Text(
+                        widget.isOnlineSales
+                            ? "Online Orders List"
+                            : "Orders List",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s20,
+                          0.30,
+                          ColorManager.kTitleTextColor,
+                        ),
                       ),
                     ),
                     Consumer<SalesProvider>(
@@ -2378,36 +2489,46 @@ Powered by CloudPOS''',
                                 statusController.text.isNotEmpty ||
                                 selectedDate != null;
 
-                        return Stack(
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                salesProvider.showFilters
-                                    ? Icons.filter_alt
-                                    : Icons.filter_alt_outlined,
-                                color: ColorManager.kPrimaryColor,
+                        return SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  salesProvider.showFilters
+                                      ? Icons.filter_alt
+                                      : Icons.filter_alt_outlined,
+                                  color: ColorManager.kPrimaryColor,
+                                ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 44,
+                                  minHeight: 44,
+                                ),
+                                onPressed: () {
+                                  salesProvider.toggleFilters();
+                                },
+                                tooltip: salesProvider.showFilters
+                                    ? 'Hide Filters'
+                                    : 'Show Filters',
                               ),
-                              onPressed: () {
-                                salesProvider.toggleFilters();
-                              },
-                              tooltip: salesProvider.showFilters
-                                  ? 'Hide Filters'
-                                  : 'Show Filters',
-                            ),
-                            if (hasFilters)
-                              Positioned(
-                                right: 8,
-                                top: 8,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
+                              if (hasFilters)
+                                PositionedDirectional(
+                                  end: 6,
+                                  top: 6,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         );
                       },
                     ),
@@ -2813,7 +2934,24 @@ Powered by CloudPOS''',
                   child: Consumer<SalesProvider>(
                     builder: (context, orderProvider, child) {
                       if (initLoading) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(
+                                color: ColorManager.kPrimaryColor,
+                              ),
+                              SizedBox(height: 14),
+                              Text(
+                                "Loading orders...",
+                                style: TextStyle(
+                                  color: ColorManager.kGreyColor,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
                       }
 
                       final displayedOrders = orderProvider.orders;
