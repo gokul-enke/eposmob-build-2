@@ -623,6 +623,7 @@ void main() {
         enableKotBillButton: false,
         kotBillAutoMarkServed: false,
         kotBillAllowedForDineIn: false,
+        pineLabPayment: false,
       );
     }
 

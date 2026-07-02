@@ -25,6 +25,7 @@ class PaymentMethodsSection extends StatefulWidget {
 class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   static const _controller = BillingMobilePaymentController();
   static const _customerController = BillingMobileCustomerController();
+  static const _settingsController = BillingMobileSettingsController();
   bool _isLoadingPaymentMethods = false;
   List<MasterDataValue> _paymentMethods = [];
 
@@ -93,6 +94,10 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
     if (_isLoadingPaymentMethods && _paymentMethods.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    final showPineLabPayment = _settingsController.shouldShowPineLabPayment(
+      context.watch<AppSettingsProvider>().appSettings,
+    );
 
     return Selector<BillingProvider, _PaymentMethodsSnapshot>(
       selector: (_, bp) => _PaymentMethodsSnapshot.from(bp),
@@ -328,10 +333,10 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                 );
               },
             ),
-            const SizedBox(height: 16),
-
-            // Integration with PineLabs terminal (keep visual separation)
-            const PineLabsSection(),
+            if (showPineLabPayment) ...[
+              const SizedBox(height: 16),
+              const PineLabsSection(),
+            ],
           ],
         );
       },
@@ -356,12 +361,12 @@ class _PaymentMethodsSnapshot {
   factory _PaymentMethodsSnapshot.from(BillingProvider bp) {
     return _PaymentMethodsSnapshot(
       totalOrderAmount: bp.totalOrderAmount,
-      isCashSelected: bp.isCashSelected,
-      isCardSelected: bp.isCardSelected,
-      isUpiSelected: bp.isUpiSelected,
-      isCodSelected: bp.isCodSelected,
-      isDebitSelected: bp.isDebitSelected,
-      toCustomerCreditEnabled: bp.toCustomerCreditEnabled,
+      isCashSelected: bp.isCashSelected == true,
+      isCardSelected: bp.isCardSelected == true,
+      isUpiSelected: bp.isUpiSelected == true,
+      isCodSelected: bp.isCodSelected == true,
+      isDebitSelected: bp.isDebitSelected == true,
+      toCustomerCreditEnabled: bp.toCustomerCreditEnabled == true,
       selectedCustomerId: bp.selectedCustomer?.id,
       selectedExtraMethodIds: Set<String>.from(bp.selectedExtraMethodIds),
     );

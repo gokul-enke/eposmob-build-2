@@ -10,7 +10,6 @@ import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
-import 'package:pos_machine/widgets/drawer_list_tile_expandable.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/sidebar_controller.dart';
@@ -286,31 +285,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             const _MobileSectionHeader(title: 'Sales'),
             if (hasSalesGroup)
               Obx(
-                () => DrawerListTileExpandableColumn(
-                  onTapTitle1: () => navigate(2),
-                  onTapTitle2: () => navigate(54),
-                  onTapTitle3: () => navigate(50),
-                  onTapTitle4: () => navigate(78),
-                  onTapTitle5: () => navigate(84),
-                  onTapTitle6: () => navigate(92),
-                  listTitle1: 'Sales',
-                  listTitle2: 'Confirmed Orders',
-                  listTitle3: 'Sales Return',
-                  listTitle4: 'Day Sale Closing',
-                  listTitle5: 'Admin Day Sale records',
-                  listTitle6: 'Online Orders',
-                  showTitle1: hasSalesPermission,
-                  showTitle2: hasConfirmedOrdersPermission,
-                  showTitle3: hasSalesReturnPermission,
-                  showTitle4: hasDayClosingPermission,
-                  showTitle5: isCompanyAdmin && hasDayClosingPermission,
-                  showTitle6: hasOnlineSalesPermission || isCompanyAdmin,
+                () => _MobileDrawerExpandableTile(
                   icon: Icons.shopping_cart_rounded,
                   title: 'Sales',
-                  onTap: () {
-                    fetchSalesOrders();
-                    navigate(2);
-                  },
                   selected: [
                     2,
                     11,
@@ -323,22 +300,60 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     84,
                     92,
                   ].contains(sideBarController.index.value),
-                  iconSize: 22,
+                  subItems: [
+                    if (hasSalesPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Sales',
+                        onTap: () {
+                          fetchSalesOrders();
+                          navigate(2);
+                        },
+                      ),
+                    if (hasConfirmedOrdersPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Confirmed Orders',
+                        onTap: () => navigate(54),
+                      ),
+                    if (hasSalesReturnPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Sales Return',
+                        onTap: () => navigate(50),
+                      ),
+                    if (hasDayClosingPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Day Sale Closing',
+                        onTap: () => navigate(78),
+                      ),
+                    if (isCompanyAdmin && hasDayClosingPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Admin Day Sale records',
+                        onTap: () => navigate(84),
+                      ),
+                    if (hasOnlineSalesPermission || isCompanyAdmin)
+                      _MobileDrawerSubItem(
+                        title: 'Online Orders',
+                        onTap: () => navigate(92),
+                      ),
+                  ],
                 ),
               ),
             if (hasQuotationPermission)
               Obx(
-                () => DrawerListTileExpandableColumn(
-                  onTapTitle1: () => navigate(86),
-                  onTapTitle2: () => navigate(87),
-                  listTitle1: 'Quotations',
-                  listTitle2: 'Quotation List',
+                () => _MobileDrawerExpandableTile(
                   icon: Icons.request_quote_rounded,
                   title: 'Quotations',
-                  onTap: () => navigate(86),
                   selected: [86, 87, 88]
                       .contains(sideBarController.index.value),
-                  iconSize: 22,
+                  subItems: [
+                    _MobileDrawerSubItem(
+                      title: 'Quotations',
+                      onTap: () => navigate(86),
+                    ),
+                    _MobileDrawerSubItem(
+                      title: 'Quotation List',
+                      onTap: () => navigate(87),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -388,36 +403,38 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               ),
             if (hasProductGroup)
               Obx(
-                () => DrawerListTileExpandableColumn(
-                  onTapTitle1: () => navigate(14),
-                  onTapTitle2: () => navigate(15),
-                  onTapTitle3: () => navigate(83),
-                  listTitle1: 'Product',
-                  listTitle2: 'Stock',
-                  listTitle3: 'Product Barcode',
-                  showTitle1: hasProductPermission,
-                  showTitle2: hasStockPermission,
-                  showTitle3: hasBarcodePermission,
+                () => _MobileDrawerExpandableTile(
                   icon: Icons.inventory_2_rounded,
                   title: 'Product',
-                  onTap: () => navigate(14),
                   selected: [14, 15, 17, 18, 28, 33, 35, 83]
                       .contains(sideBarController.index.value),
-                  iconSize: 22,
+                  subItems: [
+                    if (hasProductPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Product',
+                        onTap: () => navigate(14),
+                      ),
+                    if (hasStockPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Stock',
+                        onTap: () => navigate(15),
+                      ),
+                    if (hasBarcodePermission)
+                      _MobileDrawerSubItem(
+                        title: 'Product Barcode',
+                        onTap: () => navigate(83),
+                      ),
+                  ],
                 ),
               ),
             if (hasPurchase)
               Obx(
-                () => DrawerListTileExpandableColumn(
-                  onTapTitle1: () => navigate(81),
-                  listTitle1: 'Purchase Orders',
-                  showTitle1: true,
+                () => _MobileDrawerTile(
                   icon: Icons.shopping_bag_rounded,
                   title: 'Purchase',
                   onTap: () => navigate(81),
                   selected: [81, 82, 36]
                       .contains(sideBarController.index.value),
-                  iconSize: 22,
                 ),
               ),
           ],
@@ -464,28 +481,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             const _MobileSectionDivider(),
             const _MobileSectionHeader(title: 'Reports'),
             Obx(
-              () => DrawerListTileExpandableColumn(
-                onTapTitle1: () => navigate(58),
-                onTapTitle2: () => navigate(85),
-                onTapTitle3: () => navigate(65),
-                onTapTitle4: () => navigate(67),
-                onTapTitle5: () => navigate(77),
-                onTapTitle6: () => navigate(80),
-                listTitle1: 'Sales Executive Reports',
-                listTitle2: 'Executive Reports',
-                listTitle3: 'Customer Transactions Reports',
-                listTitle4: 'Supplier Transactions Reports',
-                listTitle5: 'Non-Stock Report',
-                listTitle6: 'Consumed Stocks Report',
-                showTitle1: hasSalesExecutiveReportsPermission,
-                showTitle2: isCompanyAdmin || hasExecutiveSummaryPermission,
-                showTitle3: hasCustomerTransactionsPermission,
-                showTitle4: hasSupplierTransactionsPermission,
-                showTitle5: hasNonStockPermission,
-                showTitle6: hasConsumedStockPermission,
+              () => _MobileDrawerExpandableTile(
                 icon: Icons.analytics_rounded,
                 title: 'Reports',
-                onTap: () => navigate(isCompanyAdmin ? 85 : 58),
                 selected: [
                   39,
                   40,
@@ -500,7 +498,38 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   80,
                   85,
                 ].contains(sideBarController.index.value),
-                iconSize: 22,
+                subItems: [
+                  if (hasSalesExecutiveReportsPermission)
+                    _MobileDrawerSubItem(
+                      title: 'Sales Executive Reports',
+                      onTap: () => navigate(58),
+                    ),
+                  if (isCompanyAdmin || hasExecutiveSummaryPermission)
+                    _MobileDrawerSubItem(
+                      title: 'Executive Reports',
+                      onTap: () => navigate(85),
+                    ),
+                  if (hasCustomerTransactionsPermission)
+                    _MobileDrawerSubItem(
+                      title: 'Customer Transactions Reports',
+                      onTap: () => navigate(65),
+                    ),
+                  if (hasSupplierTransactionsPermission)
+                    _MobileDrawerSubItem(
+                      title: 'Supplier Transactions Reports',
+                      onTap: () => navigate(67),
+                    ),
+                  if (hasNonStockPermission)
+                    _MobileDrawerSubItem(
+                      title: 'Non-Stock Report',
+                      onTap: () => navigate(77),
+                    ),
+                  if (hasConsumedStockPermission)
+                    _MobileDrawerSubItem(
+                      title: 'Consumed Stocks Report',
+                      onTap: () => navigate(80),
+                    ),
+                ],
               ),
             ),
           ],
@@ -550,25 +579,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             const _MobileSectionHeader(title: 'Accounts'),
             if (hasTransactions)
               Obx(
-                () => DrawerListTileExpandableColumn(
-                  onTapTitle1: () => navigate(21),
-                  onTapTitle2: () => navigate(47),
-                  onTapTitle3: () => navigate(70),
-                  onTapTitle4: () => navigate(75),
-                  onTapTitle5: () => navigate(91),
-                  listTitle1: 'Invoice',
-                  listTitle2: 'Receipts',
-                  listTitle3: 'Customer Voucher',
-                  listTitle4: 'Supplier Voucher (Purchase Entry)',
-                  listTitle5: 'Proforma Invoice',
-                  showTitle1: hasInvoicePermission,
-                  showTitle2: hasReceiptsPermission,
-                  showTitle3: hasCustomerVouchersPermission,
-                  showTitle4: hasSupplierVouchersPermission,
-                  showTitle5: hasProformaPermission,
+                () => _MobileDrawerExpandableTile(
                   icon: Icons.receipt_long_rounded,
                   title: 'Transactions',
-                  onTap: () => navigate(21),
                   selected: [
                     21,
                     24,
@@ -582,23 +595,53 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     76,
                     91,
                   ].contains(sideBarController.index.value),
-                  iconSize: 22,
+                  subItems: [
+                    if (hasInvoicePermission)
+                      _MobileDrawerSubItem(
+                        title: 'Invoice',
+                        onTap: () => navigate(21),
+                      ),
+                    if (hasReceiptsPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Receipts',
+                        onTap: () => navigate(47),
+                      ),
+                    if (hasCustomerVouchersPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Customer Voucher',
+                        onTap: () => navigate(70),
+                      ),
+                    if (hasSupplierVouchersPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Supplier Voucher (Purchase Entry)',
+                        onTap: () => navigate(75),
+                      ),
+                    if (hasProformaPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Proforma Invoice',
+                        onTap: () => navigate(91),
+                      ),
+                  ],
                 ),
               ),
             if (hasPartyAccounts)
               Obx(
-                () => DrawerListTileExpandableColumn(
-                  onTapTitle1: () => navigate(23),
-                  onTapTitle2: () => navigate(74),
-                  listTitle1: 'Customer Transactions',
-                  listTitle2: 'Supplier Transactions',
-                  showTitle1: hasPartyCustomer,
-                  showTitle2: hasPartySupplier,
+                () => _MobileDrawerExpandableTile(
                   icon: Icons.account_balance_wallet_rounded,
                   title: 'Party Accounts',
-                  onTap: () => navigate(23),
                   selected: [23, 74].contains(sideBarController.index.value),
-                  iconSize: 22,
+                  subItems: [
+                    if (hasPartyCustomer)
+                      _MobileDrawerSubItem(
+                        title: 'Customer Transactions',
+                        onTap: () => navigate(23),
+                      ),
+                    if (hasPartySupplier)
+                      _MobileDrawerSubItem(
+                        title: 'Supplier Transactions',
+                        onTap: () => navigate(74),
+                      ),
+                  ],
                 ),
               ),
           ],
@@ -648,28 +691,31 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
               ),
             if (hasSuppliersGroup)
               Obx(
-                () => DrawerListTileExpandableColumn(
-                  onTapTitle1: () {
-                    fetchSuppliers();
-                    navigate(52);
-                  },
-                  onTapTitle2: () => navigate(4),
-                  onTapTitle3: () => navigate(72),
-                  listTitle1: 'Suppliers',
-                  listTitle2: 'Supplier Transactions',
-                  listTitle3: 'Supplier Voucher',
-                  showTitle1: hasSuppliersPermission,
-                  showTitle2: hasSupplierTransactionsPermission,
-                  showTitle3: hasSupplierVouchersPermission,
+                () => _MobileDrawerExpandableTile(
                   icon: Icons.local_shipping_rounded,
                   title: 'Suppliers',
-                  onTap: () {
-                    fetchSuppliers();
-                    navigate(52);
-                  },
                   selected: [52, 57, 69, 4, 72, 73]
                       .contains(sideBarController.index.value),
-                  iconSize: 22,
+                  subItems: [
+                    if (hasSuppliersPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Suppliers',
+                        onTap: () {
+                          fetchSuppliers();
+                          navigate(52);
+                        },
+                      ),
+                    if (hasSupplierTransactionsPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Supplier Transactions',
+                        onTap: () => navigate(4),
+                      ),
+                    if (hasSupplierVouchersPermission)
+                      _MobileDrawerSubItem(
+                        title: 'Supplier Voucher',
+                        onTap: () => navigate(72),
+                      ),
+                  ],
                 ),
               ),
           ],
@@ -784,6 +830,195 @@ class _MobileSectionDivider extends StatelessWidget {
         height: 1,
         thickness: 1,
         color: ColorManager.kPrimaryColor.withOpacity(0.12),
+      ),
+    );
+  }
+}
+
+class _MobileDrawerSubItem {
+  final String title;
+  final VoidCallback onTap;
+
+  const _MobileDrawerSubItem({
+    required this.title,
+    required this.onTap,
+  });
+}
+
+class _MobileDrawerExpandableTile extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final bool selected;
+  final List<_MobileDrawerSubItem> subItems;
+
+  const _MobileDrawerExpandableTile({
+    required this.icon,
+    required this.title,
+    required this.selected,
+    required this.subItems,
+  });
+
+  @override
+  State<_MobileDrawerExpandableTile> createState() =>
+      _MobileDrawerExpandableTileState();
+}
+
+class _MobileDrawerExpandableTileState extends State<_MobileDrawerExpandableTile> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.selected;
+  }
+
+  @override
+  void didUpdateWidget(covariant _MobileDrawerExpandableTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selected && !oldWidget.selected) {
+      _isExpanded = true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.subItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (widget.subItems.length == 1) {
+      return _MobileDrawerTile(
+        icon: widget.icon,
+        title: widget.title,
+        selected: widget.selected,
+        onTap: widget.subItems.first.onTap,
+      );
+    }
+
+    final foregroundColor =
+        widget.selected ? Colors.white : ColorManager.kTitleTextColor;
+    final iconColor =
+        widget.selected ? Colors.white : ColorManager.kPrimaryColor;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Material(
+            color: widget.selected
+                ? ColorManager.kPrimaryColor
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            elevation: widget.selected ? 1 : 0,
+            shadowColor: ColorManager.kPrimaryColor.withOpacity(0.25),
+            child: InkWell(
+              onTap: () => setState(() => _isExpanded = !_isExpanded),
+              borderRadius: BorderRadius.circular(12),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
+                    children: [
+                      Icon(widget.icon, size: 22, color: iconColor),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          widget.title,
+                          style: TextStyle(
+                            fontWeight: widget.selected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            fontSize: 15,
+                            color: foregroundColor,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        _isExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 22,
+                        color: iconColor,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (_isExpanded)
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 2, bottom: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final subItem in widget.subItems)
+                    _MobileDrawerSubTile(
+                      title: subItem.title,
+                      onTap: subItem.onTap,
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileDrawerSubTile extends StatelessWidget {
+  final String title;
+  final VoidCallback onTap;
+
+  const _MobileDrawerSubTile({
+    required this.title,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 40),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 14, 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: ColorManager.kPrimaryColor.withOpacity(0.65),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                        color: ColorManager.kTitleTextColor,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

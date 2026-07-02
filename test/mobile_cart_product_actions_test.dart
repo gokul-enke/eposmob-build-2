@@ -74,6 +74,7 @@ AppSettings _buildAppSettings({required bool showCustomerLastBuyedPriceList}) {
     enableKotBillButton: false,
     kotBillAutoMarkServed: false,
     kotBillAllowedForDineIn: false,
+    pineLabPayment: false,
   );
 }
 
@@ -326,6 +327,7 @@ void main() {
                   enableKotBillButton: false,
                   kotBillAutoMarkServed: false,
                   kotBillAllowedForDineIn: false,
+                  pineLabPayment: false,
                 ),
               ),
             ),

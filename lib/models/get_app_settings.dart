@@ -1,5 +1,21 @@
 import 'package:flutter/material.dart';
 
+bool _readSettingStatus(
+  Map<String, dynamic> settingsMap,
+  String code, {
+  bool defaultValue = false,
+}) {
+  final entry = settingsMap[code];
+  if (entry is! Map) return defaultValue;
+
+  final status = entry['status'];
+  if (status is bool) return status;
+  if (status == null) return defaultValue;
+  if (status is String) return status == 'true' || status == '1';
+  if (status is num) return status == 1;
+  return defaultValue;
+}
+
 class AppSettings {
   final bool barcodeSales;
   final String customerCarePhone;
@@ -32,6 +48,7 @@ class AppSettings {
   final bool enableKotBillButton;
   final bool kotBillAutoMarkServed;
   final bool kotBillAllowedForDineIn;
+  final bool pineLabPayment;
 
   AppSettings({
     required this.barcodeSales,
@@ -65,6 +82,7 @@ class AppSettings {
     required this.enableKotBillButton,
     required this.kotBillAutoMarkServed,
     required this.kotBillAllowedForDineIn,
+    this.pineLabPayment = false,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -155,6 +173,7 @@ class AppSettings {
           settingsMap['KOT_BILL_AUTO_MARK_SERVED']?['status'] ?? false,
       kotBillAllowedForDineIn:
           settingsMap['KOT_BILL_ALLOWED_FOR_DINE_IN']?['status'] ?? false,
+      pineLabPayment: _readSettingStatus(settingsMap, 'PINELAB_PAYMENT'),
     );
   }
 
@@ -334,6 +353,12 @@ class AppSettings {
           "code": "KOT_BILL_ALLOWED_FOR_DINE_IN",
           "value": "",
           "status": kotBillAllowedForDineIn.toString(),
+        },
+        {
+          "name": "Pine Lab Payment",
+          "code": "PINELAB_PAYMENT",
+          "value": "",
+          "status": pineLabPayment.toString(),
         },
       ],
     };

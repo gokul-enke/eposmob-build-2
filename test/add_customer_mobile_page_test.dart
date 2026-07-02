@@ -50,6 +50,7 @@ AppSettings _minimalAppSettings({bool companyB2BEnabled = false}) {
     enableKotBillButton: false,
     kotBillAutoMarkServed: false,
     kotBillAllowedForDineIn: false,
+    pineLabPayment: false,
   );
 }
 
