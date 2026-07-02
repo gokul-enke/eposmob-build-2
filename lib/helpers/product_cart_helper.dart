@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
@@ -37,6 +39,45 @@ class ProductCartHelper {
     int? customerId,
     String? customerName,
     SaleUnit? selectedSaleUnit,
+    ProductVariant? selectedVariant,
+  }) async {
+    try {
+      await _handleProductSelectionImpl(
+        context: context,
+        product: product,
+        onSelected: onSelected,
+        addToCartDirectly: addToCartDirectly,
+        quantity: quantity,
+        customPrice: customPrice,
+        customMrp: customMrp,
+        customerId: customerId,
+        customerName: customerName,
+        selectedSaleUnit: selectedSaleUnit,
+        selectedVariant: selectedVariant,
+      );
+    } catch (error) {
+      debugPrint('ProductCartHelper error: $error');
+      if (context.mounted) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.addToCartFailed,
+        );
+      }
+    }
+  }
+
+  static Future<void> _handleProductSelectionImpl({
+    required BuildContext context,
+    required GetProduct product,
+    Function(GetProduct, Stock?)? onSelected,
+    bool addToCartDirectly = true,
+    num? quantity,
+    double? customPrice,
+    double? customMrp,
+    int? customerId,
+    String? customerName,
+    SaleUnit? selectedSaleUnit,
+    ProductVariant? selectedVariant,
   }) async {
     debugPrint("=== PRODUCT CART HELPER DEBUG START ===");
     debugPrint("Product selected: ${product.productName}");
@@ -50,6 +91,20 @@ class ProductCartHelper {
     debugPrint("Quantity: $quantity");
     debugPrint("Custom Price: $customPrice");
     debugPrint("Custom MRP: $customMrp");
+
+    if (selectedVariant != null &&
+        ProductVariantSelection.isOutOfStock(selectedVariant)) {
+      final label = selectedVariant.formattedAttributes.isEmpty
+          ? (selectedVariant.sku ?? 'Selected variant')
+          : selectedVariant.formattedAttributes;
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.variantOutOfStock(label),
+      );
+      debugPrint("❌ Variant out of stock — aborting add");
+      debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+      return;
+    }
 
     // Get customer information from global provider if not provided in parameters
     final customerSelectionProvider =
@@ -102,6 +157,16 @@ class ProductCartHelper {
     num? finalQuantity = quantity;
     bool hasExplicitPriceOverride = customPrice != null;
     final requestedQuantity = finalQuantity ?? 1;
+
+    if (selectedVariant != null && !hasExplicitPriceOverride) {
+      final productPrice = ProductVariantSelection.productBasePrice(product);
+      finalPrice = selectedVariant.effectivePrice(productPrice);
+      if (customMrp == null) {
+        finalMrp = selectedVariant.mrp ??
+            double.tryParse(product.mrp?.toString() ?? '') ??
+            finalPrice;
+      }
+    }
 
     // STEP 1: Handle stock selection if stock management is enabled
     if (stockEnabled && product.stock != null && product.stock!.isNotEmpty) {
@@ -282,8 +347,9 @@ class ProductCartHelper {
         (selectedStock.quantity ?? 0) < requestedQuantity) {
       showScaffoldError(
         context: context,
-        message:
-            'Insufficient stock for ${selectedSaleUnit.unitName ?? product.unit ?? "selected unit"}',
+        message: BillingMobileErrorMessages.insufficientStock(
+          selectedSaleUnit.unitName ?? product.unit ?? 'selected unit',
+        ),
       );
       debugPrint(
           "❌ Selected stock does not cover requested sale-unit quantity");
@@ -317,6 +383,7 @@ class ProductCartHelper {
             (item) =>
                 item.product.productId == product.productId &&
                 item.saleUnitId == selectedSaleUnit?.id &&
+                item.variantId == selectedVariant?.id &&
                 ((selectedStockGroupIds.isNotEmpty &&
                         item.stockGroupIds.isNotEmpty &&
                         item.stockGroupIds.length ==
@@ -333,6 +400,7 @@ class ProductCartHelper {
             (item) =>
                 item.product.productId == product.productId &&
                 item.saleUnitId == selectedSaleUnit?.id &&
+                item.variantId == selectedVariant?.id &&
                 ((selectedStockGroupIds.isNotEmpty &&
                         item.stockGroupIds.isNotEmpty &&
                         item.stockGroupIds.length ==
@@ -379,6 +447,8 @@ class ProductCartHelper {
         saleUnitId: selectedSaleUnit?.id,
         saleUnitName: selectedSaleUnit?.unitName,
         saleUnitConversionRate: _parseSaleUnitConversionRate(selectedSaleUnit),
+        variantId: selectedVariant?.id,
+        variantAttributes: selectedVariant?.attributes,
       );
 
       showScaffold(

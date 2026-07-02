@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'test_support/hive_test_teardown.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,12 +47,7 @@ void main() {
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
   });
 
-  tearDownAll(() async {
-    await Hive.close();
-    if (await hiveDir.exists()) {
-      await hiveDir.delete(recursive: true);
-    }
-  });
+  tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   GetProduct buildProduct({
     required int productId,

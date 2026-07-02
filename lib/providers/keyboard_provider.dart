@@ -53,8 +53,12 @@ class KeyboardProvider extends ChangeNotifier {
         return;
       }
 
-      // Restore persisted values (with sensible defaults if absent)
-      _showKeyboardFeature = _settingsBox!.get('showKeyboardFeature', defaultValue: true);
+      // Restore persisted values. If the key is absent, keep the in-memory
+      // value (e.g. login/api-key screens call featureOff() before Hive opens).
+      if (_settingsBox!.containsKey('showKeyboardFeature')) {
+        _showKeyboardFeature =
+            _settingsBox!.get('showKeyboardFeature') as bool;
+      }
 
       _numericKeyboardSize = Size(
         (_settingsBox!.get('numericWidth') ?? 450).toDouble(),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
@@ -131,6 +130,7 @@ class OrderDetailWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectivePriceSummary = _effectivePriceSummary();
+    final isMobile = ResponsiveWidget.isMobile(context);
 
     if (customerDetails == null ||
         cartItem == null ||
@@ -144,69 +144,25 @@ class OrderDetailWidget extends StatelessWidget {
       builder: (context, appSettingsProvider, child) {
         final currency = appSettingsProvider.appSettings?.currency ?? '';
 
-        return MouseRegion(
-          cursor: SystemMouseCursors.grab,
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.touch,
-                PointerDeviceKind.stylus,
-                PointerDeviceKind.trackpad,
-              },
-            ),
-            child: SingleChildScrollView(
-              // Removed Expanded
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Original Order Details Section (FIRST)
+            BuildBoxShadowContainer(
+              circleRadius: 7,
+              padding: EdgeInsets.all(isMobile ? 12 : 20),
+              margin: EdgeInsets.only(
+                top: isMobile ? 8.0 : 13.0,
+                left: isMobile ? 0 : 8,
+                right: isMobile ? 0 : 8,
+              ),
+              offsetValue: const Offset(1, 1),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Original Order Details Section (FIRST)
-                  BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    padding: const EdgeInsets.all(20),
-                    margin: const EdgeInsets.only(top: 13.0, left: 8, right: 8),
-                    offsetValue: const Offset(1, 1),
-                    child: Column(
-                      children: [
-                        // Customer Details and Order Date
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            RichText(
-                              text: TextSpan(
-                                text:
-                                    '${customerDetails?.name ?? "NA"} - ${customerDetails?.phone ?? ""} \n',
-                                style: ResponsiveWidget.isMobile(context)
-                                    ? buildCustomStyle(
-                                        FontWeightManager.semiBold,
-                                        FontSize.s12,
-                                        0.30,
-                                        ColorManager.textColor)
-                                    : buildCustomStyle(
-                                        FontWeightManager.semiBold,
-                                        FontSize.s24,
-                                        0.35,
-                                        ColorManager.textColor),
-                                children: <TextSpan>[
-                                  TextSpan(
-                                    text: DateHelper.formatInputToDisplay(
-                                        orderDetailsModelData?.orderDate
-                                                ?.toString() ??
-                                            ''),
-                                    style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s13,
-                                        0.20,
-                                        ColorManager.blackWithOpacity50),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const BuildProfilePicture(),
-                          ],
-                        ),
-                        // Cart Items Table - Same design as Return Order Details
-                        _buildCartItemsTable(currency),
+                  // Customer Details and Order Date
+                  _buildCustomerHeader(context),
+                  // Cart Items - cards on mobile, table on desktop
+                  _buildCartItemsTable(currency, context),
                         Align(
                           alignment: Alignment.bottomCenter,
                           child: Padding(
@@ -318,42 +274,17 @@ class OrderDetailWidget extends StatelessWidget {
 
                   // Order Status Section (BELOW the main card)
                   if (orderDetailsModelData?.orderStatus != null)
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      padding: const EdgeInsets.all(16),
-                      margin:
-                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
-                      offsetValue: const Offset(1, 1),
+                    _buildSectionCard(
+                      context: context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Order Status',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s16,
-                              0.24,
-                              ColorManager.textColor,
-                            ),
+                            style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              _buildStatusChip(
-                                  orderDetailsModelData?.orderStatus ?? ''),
-                              const SizedBox(width: 12),
-                              if (orderDetailsModelData?.paymentStatus != null)
-                                _buildStatusChip(
-                                    orderDetailsModelData?.paymentStatus ?? ''),
-                              if (orderDetailsModelData?.deliveryStatus !=
-                                  null) ...[
-                                const SizedBox(width: 12),
-                                _buildStatusChip(
-                                    orderDetailsModelData?.deliveryStatus ??
-                                        ''),
-                              ],
-                            ],
-                          ),
+                          _buildStatusChips(context),
                         ],
                       ),
                     ),
@@ -361,43 +292,41 @@ class OrderDetailWidget extends StatelessWidget {
                   // Store & Delivery Info Section
                   if (orderDetailsModelData?.storeName != null ||
                       orderDetailsModelData?.deliveryMethodName != null)
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      padding: const EdgeInsets.all(16),
-                      margin:
-                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
-                      offsetValue: const Offset(1, 1),
+                    _buildSectionCard(
+                      context: context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Store & Delivery',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s16,
-                              0.24,
-                              ColorManager.textColor,
-                            ),
+                            style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           if (orderDetailsModelData?.storeName != null)
-                            _buildInfoRow('Store',
+                            _buildInfoRow(context, 'Store',
                                 orderDetailsModelData?.storeName ?? ''),
                           if (orderDetailsModelData?.deliveryMethodName != null)
                             _buildInfoRow(
+                                context,
                                 'Delivery Method',
                                 orderDetailsModelData?.deliveryMethodName ??
                                     ''),
                           if (orderDetailsModelData?.deliveryDate != null &&
                               orderDetailsModelData!.deliveryDate!.isNotEmpty)
-                            _buildInfoRow('Delivery Date',
+                            _buildInfoRow(
+                                context,
+                                'Delivery Date',
                                 orderDetailsModelData?.deliveryDate ?? ''),
                           if (orderDetailsModelData?.deliveryTime != null &&
                               orderDetailsModelData!.deliveryTime!.isNotEmpty)
-                            _buildInfoRow('Delivery Time',
+                            _buildInfoRow(
+                                context,
+                                'Delivery Time',
                                 orderDetailsModelData?.deliveryTime ?? ''),
                           if (orderDetailsModelData?.deliveryCharge != null)
-                            _buildInfoRow('Delivery Charge',
+                            _buildInfoRow(
+                                context,
+                                'Delivery Charge',
                                 '$currency ${_formatAmount(orderDetailsModelData?.deliveryCharge)}'),
                         ],
                       ),
@@ -405,29 +334,21 @@ class OrderDetailWidget extends StatelessWidget {
 
                   // Payment Details Section
                   if (orderDetailsModelData?.paymentDetails != null)
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      padding: const EdgeInsets.all(16),
-                      margin:
-                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
-                      offsetValue: const Offset(1, 1),
+                    _buildSectionCard(
+                      context: context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Payment Details',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s16,
-                              0.24,
-                              ColorManager.textColor,
-                            ),
+                            style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           if (orderDetailsModelData
                                   ?.paymentDetails?.paymentMethod !=
                               null)
                             _buildInfoRow(
+                                context,
                                 'Payment Method',
                                 orderDetailsModelData
                                         ?.paymentDetails?.paymentMethod ??
@@ -436,6 +357,7 @@ class OrderDetailWidget extends StatelessWidget {
                                   ?.paymentDetails?.transactionId !=
                               null)
                             _buildInfoRow(
+                                context,
                                 'Transaction ID',
                                 orderDetailsModelData
                                         ?.paymentDetails?.transactionId
@@ -445,6 +367,7 @@ class OrderDetailWidget extends StatelessWidget {
                                   ?.paymentDetails?.paymentId !=
                               null)
                             _buildInfoRow(
+                                context,
                                 'Payment ID',
                                 orderDetailsModelData
                                         ?.paymentDetails?.paymentId ??
@@ -474,13 +397,15 @@ class OrderDetailWidget extends StatelessWidget {
                                           mainAxisAlignment:
                                               MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text(
-                                              entry.key,
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s11,
-                                                0.16,
-                                                ColorManager.textColor,
+                                            Expanded(
+                                              child: Text(
+                                                entry.key,
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s11,
+                                                  0.16,
+                                                  ColorManager.textColor,
+                                                ),
                                               ),
                                             ),
                                             Text(
@@ -541,37 +466,31 @@ class OrderDetailWidget extends StatelessWidget {
                           .isNotEmpty ||
                       (customerDetails?.address != null &&
                           (customerDetails?.address?.isNotEmpty ?? false)))
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      padding: const EdgeInsets.all(16),
-                      margin:
-                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
-                      offsetValue: const Offset(1, 1),
+                    _buildSectionCard(
+                      context: context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Customer Information',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s16,
-                              0.24,
-                              ColorManager.textColor,
-                            ),
+                            style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           if (customerDetails?.email != null)
                             _buildInfoRow(
-                                'Email', customerDetails?.email ?? ''),
+                                context, 'Email', customerDetails?.email ?? ''),
                           if (customerDetails?.alternatePhone != null &&
                               customerDetails!.alternatePhone!.isNotEmpty)
-                            _buildInfoRow('Alternate Phone',
+                            _buildInfoRow(
+                                context,
+                                'Alternate Phone',
                                 customerDetails?.alternatePhone ?? ''),
                           if ((orderDetailsModelData
                                       ?.getCustomerAddressFromProps() ??
                                   '')
                               .isNotEmpty)
                             _buildInfoRow(
+                                context,
                                 'Address',
                                 orderDetailsModelData
                                         ?.getCustomerAddressFromProps() ??
@@ -583,6 +502,7 @@ class OrderDetailWidget extends StatelessWidget {
                                       '')
                                   .isEmpty)
                             _buildInfoRow(
+                                context,
                                 'Address',
                                 _formatCustomerAddressList(
                                     customerDetails?.address)),
@@ -592,30 +512,24 @@ class OrderDetailWidget extends StatelessWidget {
 
                   if (orderDetailsModelData?.kycInfo?.crNumber != null ||
                       orderDetailsModelData?.kycInfo?.vatNumber != null)
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      padding: const EdgeInsets.all(16),
-                      margin:
-                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
-                      offsetValue: const Offset(1, 1),
+                    _buildSectionCard(
+                      context: context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'KYC Information',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s16,
-                              0.24,
-                              ColorManager.textColor,
-                            ),
+                            style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           if (orderDetailsModelData?.kycInfo?.crNumber != null)
-                            _buildInfoRow('CR Number',
+                            _buildInfoRow(
+                                context,
+                                'CR Number',
                                 orderDetailsModelData?.kycInfo?.crNumber ?? ''),
                           if (orderDetailsModelData?.kycInfo?.vatNumber != null)
                             _buildInfoRow(
+                                context,
                                 'VAT Number',
                                 orderDetailsModelData?.kycInfo?.vatNumber ??
                                     ''),
@@ -625,30 +539,25 @@ class OrderDetailWidget extends StatelessWidget {
 
                   if (orderDetailsModelData?.tokenNumber != null ||
                       orderDetailsModelData?.invoiceHash != null)
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      padding: const EdgeInsets.all(16),
-                      margin:
-                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
-                      offsetValue: const Offset(1, 1),
+                    _buildSectionCard(
+                      context: context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Order Metadata',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s16,
-                              0.24,
-                              ColorManager.textColor,
-                            ),
+                            style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           if (orderDetailsModelData?.tokenNumber != null)
-                            _buildInfoRow('Token Number',
+                            _buildInfoRow(
+                                context,
+                                'Token Number',
                                 orderDetailsModelData?.tokenNumber ?? ''),
                           if (orderDetailsModelData?.invoiceHash != null)
-                            _buildInfoRow('Invoice Hash',
+                            _buildInfoRow(
+                                context,
+                                'Invoice Hash',
                                 orderDetailsModelData?.invoiceHash ?? ''),
                         ],
                       ),
@@ -657,27 +566,19 @@ class OrderDetailWidget extends StatelessWidget {
                   // Order Properties Section (Custom Fields)
                   if (orderDetailsModelData?.orderProps != null &&
                       (orderDetailsModelData?.orderProps?.isNotEmpty ?? false))
-                    BuildBoxShadowContainer(
-                      circleRadius: 7,
-                      padding: const EdgeInsets.all(16),
-                      margin:
-                          const EdgeInsets.only(top: 8.0, left: 8, right: 8),
-                      offsetValue: const Offset(1, 1),
+                    _buildSectionCard(
+                      context: context,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Order Properties',
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              FontSize.s16,
-                              0.24,
-                              ColorManager.textColor,
-                            ),
+                            style: _sectionTitleStyle(context),
                           ),
                           const SizedBox(height: 8),
                           ...(orderDetailsModelData?.orderProps
                                   ?.map((prop) => _buildInfoRow(
+                                      context,
                                       StringHelper.formatPropCode(
                                           prop.propsCode ?? ''),
                                       prop.propsValue ?? ''))
@@ -687,11 +588,142 @@ class OrderDetailWidget extends StatelessWidget {
                       ),
                     ),
                 ],
+              );
+      },
+    );
+  }
+
+  TextStyle _sectionTitleStyle(BuildContext context) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    return buildCustomStyle(
+      FontWeightManager.semiBold,
+      isMobile ? FontSize.s14 : FontSize.s16,
+      isMobile ? 0.21 : 0.24,
+      ColorManager.textColor,
+    );
+  }
+
+  Widget _buildSectionCard({
+    required BuildContext context,
+    required Widget child,
+  }) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    return BuildBoxShadowContainer(
+      circleRadius: 7,
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      margin: EdgeInsets.only(
+        top: 8.0,
+        left: isMobile ? 0 : 8,
+        right: isMobile ? 0 : 8,
+      ),
+      offsetValue: const Offset(1, 1),
+      child: child,
+    );
+  }
+
+  Widget _buildCustomerHeader(BuildContext context) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+    final nameStyle = isMobile
+        ? buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s14,
+            0.30,
+            ColorManager.textColor)
+        : buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s24,
+            0.35,
+            ColorManager.textColor);
+    final dateStyle = buildCustomStyle(
+      FontWeightManager.medium,
+      isMobile ? FontSize.s11 : FontSize.s13,
+      0.20,
+      ColorManager.blackWithOpacity50,
+    );
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            customerDetails?.name ?? 'NA',
+            style: nameStyle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if ((customerDetails?.phone ?? '').isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              customerDetails?.phone ?? '',
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.20,
+                ColorManager.blackWithOpacity50,
               ),
             ),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            DateHelper.formatInputToDisplay(
+              orderDetailsModelData?.orderDate?.toString() ?? '',
+            ),
+            style: dateStyle,
           ),
-        );
-      },
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              text:
+                  '${customerDetails?.name ?? "NA"} - ${customerDetails?.phone ?? ""} \n',
+              style: nameStyle,
+              children: <TextSpan>[
+                TextSpan(
+                  text: DateHelper.formatInputToDisplay(
+                    orderDetailsModelData?.orderDate?.toString() ?? '',
+                  ),
+                  style: dateStyle,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const BuildProfilePicture(),
+      ],
+    );
+  }
+
+  Widget _buildStatusChips(BuildContext context) {
+    final chips = <Widget>[
+      _buildStatusChip(orderDetailsModelData?.orderStatus ?? ''),
+      if (orderDetailsModelData?.paymentStatus != null)
+        _buildStatusChip(orderDetailsModelData?.paymentStatus ?? ''),
+      if (orderDetailsModelData?.deliveryStatus != null)
+        _buildStatusChip(orderDetailsModelData?.deliveryStatus ?? ''),
+    ];
+
+    if (ResponsiveWidget.isMobile(context)) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: chips,
+      );
+    }
+
+    return Row(
+      children: [
+        for (int i = 0; i < chips.length; i++) ...[
+          if (i > 0) const SizedBox(width: 12),
+          chips[i],
+        ],
+      ],
     );
   }
 
@@ -739,7 +771,45 @@ class OrderDetailWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+
+    if (isMobile) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$label:',
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.18,
+                ColorManager.blackWithOpacity50,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Consumer<AppSettingsProvider>(
+              builder: (context, appSettingsProvider, child) {
+                final currency =
+                    appSettingsProvider.appSettings?.currency ?? 'INR';
+                return Text(
+                  _formatOrderPropertyValue(label, value, currency),
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.18,
+                    Colors.black,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -840,10 +910,159 @@ class OrderDetailWidget extends StatelessWidget {
     return val.toString();
   }
 
-  Widget _buildCartItemsTable(String currency) {
+  Widget _buildCartItemsTable(String currency, BuildContext context) {
+    if (ResponsiveWidget.isMobile(context)) {
+      return _buildMobileCartItemsList(currency);
+    }
+
+    final table = _buildDesktopCartItemsTable(currency);
+    if (ResponsiveWidget.isTablet(context)) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 15.0),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: table,
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 15.0),
-      child: Table(
+      child: table,
+    );
+  }
+
+  Widget _buildMobileCartItemsList(String currency) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: Column(
+        children: [
+          for (int index = 0; index < (cartItem?.length ?? 0); index++) ...[
+            if (index > 0) const SizedBox(height: 8),
+            _buildMobileCartItemCard(index, cartItem![index], currency),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileCartItemCard(
+    int index,
+    OrderDetailsModelDataCartItem item,
+    String currency,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: index.isEven ? Colors.white : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${index + 1}',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s11,
+                    0.16,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.productName ?? 'N/A',
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s12,
+                    0.18,
+                    ColorManager.textColor,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$currency ${_fmt(item.totalPrice)}',
+                style: buildCustomStyle(
+                  FontWeightManager.bold,
+                  FontSize.s12,
+                  0.18,
+                  ColorManager.kPrimaryColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildMobileDetailChip('Qty', _fmtQty(item.quantity)),
+          const SizedBox(height: 6),
+          _buildMobileDetailChip('Unit', _unitText(item)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMobileDetailChip('MRP', '$currency ${_fmt(item.mrp)}'),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMobileDetailChip(
+                    'Rate', '$currency ${_fmt(item.unitPrice)}'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          _buildMobileDetailChip('Tax', '$currency ${_fmt(item.taxAmount)}'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileDetailChip(String label, String value) {
+    return Row(
+      children: [
+        Text(
+          '$label: ',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s11,
+            0.16,
+            ColorManager.blackWithOpacity50,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s11,
+              0.16,
+              Colors.black87,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopCartItemsTable(String currency) {
+    return Table(
         columnWidths: const {
           0: FlexColumnWidth(0.5),
           1: FlexColumnWidth(2.7),
@@ -899,7 +1118,6 @@ class OrderDetailWidget extends StatelessWidget {
             },
           ),
         ],
-      ),
     );
   }
 

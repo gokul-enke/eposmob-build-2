@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/domain/add_created_product_to_cart.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/language.dart';
@@ -2701,20 +2702,25 @@ class _AddProductWithBarcodeModalState
         }
 
         if (result is Map<String, dynamic> && result.containsKey('data')) {
+          GetProduct? createdProduct;
           try {
-            GetProduct product = GetProduct.fromJson(result['data']);
+            createdProduct = GetProduct.fromJson(result['data']);
             Provider.of<LocalProductProvider>(context, listen: false)
-                .addProduct(product);
+                .addProduct(createdProduct);
           } catch (e) {
             debugPrint("Error parsing product: $e");
           }
 
-          if (widget.isAddToCart) {
-            Provider.of<LocalProductProvider>(context, listen: false).addToCart(
-              productId: result["data"]['product_id'],
-              price: double.parse(_productSellingPriceController.text),
-              quantity: 1,
+          if (widget.isAddToCart && createdProduct != null) {
+            await addCreatedProductToCart(
+              context: context,
+              product: createdProduct,
+              quantityText: _productQuantityController.text,
+              sellingPriceText: _productSellingPriceController.text,
             );
+            if (!mounted) {
+              return;
+            }
           }
 
           Provider.of<LocalProductProvider>(context, listen: false)

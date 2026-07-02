@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:pos_machine/features/billing/presentation/pages/billing_page.dart';
+import 'package:pos_machine/features/billing/presentation/pages/billing_quotation_page_responsive.dart';
 import 'package:pos_machine/features/billing/presentation/pages/billing_page_responsive.dart';
 import 'package:pos_machine/screens/billing/kitchen_master.dart';
 import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
@@ -92,11 +92,21 @@ import 'package:pos_machine/screens/sales/admin_daily_sales_close_list.dart';
 import 'package:pos_machine/screens/sales/quotations_list.dart';
 
 class SideBarController extends GetxController {
+  static const int billingScreenIndex = 0;
+
   RxInt index =
       0.obs; // Default to HomeNew, will be set based on user role during login
   RxBool isExpanded = false.obs;
 
+  /// When set and [index] is [billingScreenIndex], mobile MainScreen shows this
+  /// title instead of the brand logo. Cleared on Market tab or when leaving billing.
+  final RxnString billingMobileAppBarTitle = RxnString(null);
+
   // Removed transactionCustomerName variable as it's now handled by TransactionProvider
+
+  void setBillingMobileAppBarTitle(String? title) {
+    billingMobileAppBarTitle.value = title;
+  }
 
   void toggleExpansion() {
     isExpanded.value = !isExpanded.value;
@@ -192,7 +202,7 @@ class SideBarController extends GetxController {
     ProductBarcodeScreen(), // 83 Product Barcode Screen
     AdminDailySalesCloseListScreen(), // 84 Admin Daily Sales Close List
     AdminSalesExecutiveReportScreen(), // 85 Admin Sales Executive Report
-    BillingPage(mode: BillingPageMode.quotation), // 86 Quotations
+    BillingQuotationPageResponsive(), // 86 Quotations
     QuotationsListScreen(), // 87 Quotation List
     QuotationDetailsScreen(
         quotationId: null), // 88 Quotation Details (ID from Provider)

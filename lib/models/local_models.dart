@@ -67,6 +67,12 @@ class HiveLocalCartItem {
   @HiveField(15)
   final double? saleUnitConversionRate;
 
+  @HiveField(16)
+  final int? variantId;
+
+  @HiveField(17)
+  final HiveStringValue? serializedVariantAttributes;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -84,6 +90,8 @@ class HiveLocalCartItem {
     this.saleUnitId,
     this.saleUnitName,
     this.saleUnitConversionRate,
+    this.variantId,
+    this.serializedVariantAttributes,
   });
 }
 

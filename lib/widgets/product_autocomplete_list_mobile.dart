@@ -4,9 +4,8 @@ import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
-import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/helpers/product_cart_helper.dart';
+import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
@@ -88,13 +87,12 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       return const <GetProduct>[];
     }
 
-    final productProvider = Provider.of<LocalProductProvider>(context, listen: false);
     final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
     final itemCodeEnabled = appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
     final lowerQuery = query.toLowerCase();
 
-    // Search through the complete products list, not the filtered one
-    return productProvider.products.where((product) {
+    // Match desktop billing autocomplete: search sellable products only.
+    final results = widget.productList.where((product) {
       final nameMatch = _productSearchNames(product)
           .any((name) => name.toLowerCase().contains(lowerQuery));
       if (nameMatch) return true;
@@ -106,6 +104,24 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       }
       return false;
     }).toList();
+
+    final indexedResults = results.indexed.toList();
+    indexedResults.sort((first, second) {
+      final rankCompare = _productSearchRank(first.$2, lowerQuery)
+          .compareTo(_productSearchRank(second.$2, lowerQuery));
+      if (rankCompare != 0) return rankCompare;
+      return first.$1.compareTo(second.$1);
+    });
+
+    return indexedResults.map((entry) => entry.$2).toList();
+  }
+
+  int _productSearchRank(GetProduct product, String lowerQuery) {
+    final productNames = _productSearchNames(product)
+        .map((name) => name.trim().toLowerCase())
+        .where((name) => name.isNotEmpty);
+    if (productNames.any((name) => name.startsWith(lowerQuery))) return 0;
+    return 1;
   }
 
   List<String> _productSearchNames(GetProduct product) {
@@ -171,7 +187,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
     debugPrint(
         "  - Customer ID from provider: ${customerSelectionProvider.selectedCustomerID}");
 
-    await ProductCartHelper.handleProductSelection(
+    await addProductWithVariantResolution(
       context: context,
       product: product,
       onSelected: widget.onSelected,

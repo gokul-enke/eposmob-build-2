@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1254,113 +1255,111 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final itemCodeEnabled =
         appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
     final stockEnabled = localProductProvider.isStockEnabled;
+
+    final identityRows = <Widget>[
+      _buildDetailRow('Product Name', product.productName ?? 'N/A'),
+      _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
+      _buildDetailRow('Category', product.category?.name ?? 'N/A'),
+      if (itemCodeEnabled)
+        _buildDetailRowWithCopy('Item Code', product.itemCode ?? 'N/A'),
+      _buildDetailRowWithCopy('Barcode', product.barcode ?? 'N/A'),
+      _buildDetailRow('Unit', product.unit ?? 'N/A'),
+      if (product.taxes != null && product.taxes!.isNotEmpty)
+        ...product.taxes!.map((tax) => _buildDetailRow(
+              tax.name ?? 'Tax',
+              '${tax.rate ?? 0}%',
+            )),
+    ];
+
+    final pricingRows = <Widget>[
+      _buildDetailRow(
+          'Price',
+          product.price?.price != null
+              ? '$currency ${product.price!.price}'
+              : 'N/A'),
+      _buildDetailRow(
+          'MRP',
+          product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
+      _buildDetailRow(
+        'Purchase Price',
+        (product.purchasePrice != null && product.purchasePrice!.isNotEmpty
+            ? '$currency ${product.purchasePrice}'
+            : (product.stock != null && product.stock!.isNotEmpty
+                ? (product.stock!.first.purchasePrice != null &&
+                        product.stock!.first.purchasePrice!.isNotEmpty
+                    ? '$currency ${product.stock!.first.purchasePrice}'
+                    : 'N/A')
+                : 'N/A')),
+      ),
+      _buildDetailRow(
+          'Offer Price',
+          product.offerPrice != null
+              ? '$currency ${product.offerPrice}'
+              : 'N/A'),
+      _buildDetailRow(
+          'Max Discount Percentage',
+          _formatNumericString(product.minMarginPercentage).isNotEmpty
+              ? '${_formatNumericString(product.minMarginPercentage)}%'
+              : 'N/A'),
+      _buildDetailRow(
+          'Max Discount Amount',
+          _formatNumericString(product.minMarginPrice).isNotEmpty
+              ? '$currency ${_formatNumericString(product.minMarginPrice)}'
+              : 'N/A'),
+      _buildDetailRow('SKU', product.sku ?? 'Not Available'),
+    ];
+
+    final metaRows = <Widget>[
+      _buildDetailRow('Rating', product.rating ?? 'N/A'),
+      _buildStockStatusRow(
+        product,
+        stockEnabled: stockEnabled,
+      ),
+      _buildDetailRow(
+          'Reorder Level', product.reorderLevel?.toString() ?? 'N/A'),
+      _buildDetailRow(
+          'Location', product.productLocation?.toString() ?? 'N/A'),
+      if (product.weightInfo != null) ...[
+        _buildDetailRow(
+            'Weight', product.weightInfo!.weight?.toString() ?? 'N/A'),
+        _buildDetailRow(
+            'Is Weighted',
+            product.weightInfo!.isWeighted == true ? 'Yes' : 'No'),
+      ] else ...[
+        _buildDetailRow('Weight', 'N/A'),
+        _buildDetailRow('Is Weighted', 'N/A'),
+      ],
+    ];
+
+    Widget detailSections;
+    if (widget.isCompact) {
+      detailSections = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...identityRows,
+          ...pricingRows,
+          ...metaRows,
+        ],
+      );
+    } else {
+      detailSections = Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: Column(children: identityRows)),
+          const SizedBox(width: 16),
+          Expanded(child: Column(children: pricingRows)),
+          const SizedBox(width: 16),
+          Expanded(child: Column(children: metaRows)),
+        ],
+      );
+    }
+
     return SelectionArea(
       child: ListView(
         shrinkWrap: true,
         physics: const BouncingScrollPhysics(),
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildDetailRow(
-                        'Product Name', product.productName ?? 'N/A'),
-                    _buildDetailRow('Slug', product.productSlug ?? 'N/A'),
-                    _buildDetailRow(
-                        'Category', product.category?.name ?? 'N/A'),
-                    if (itemCodeEnabled)
-                      _buildDetailRowWithCopy(
-                          'Item Code', product.itemCode ?? 'N/A'),
-                    _buildDetailRowWithCopy(
-                        'Barcode', product.barcode ?? 'N/A'),
-                    _buildDetailRow('Unit', product.unit ?? 'N/A'),
-                    if (product.taxes != null && product.taxes!.isNotEmpty)
-                      ...product.taxes!.map((tax) => _buildDetailRow(
-                            tax.name ?? 'Tax',
-                            '${tax.rate ?? 0}%',
-                          )),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildDetailRow(
-                        'Price',
-                        product.price?.price != null
-                            ? '$currency ${product.price!.price}'
-                            : 'N/A'),
-                    _buildDetailRow(
-                        'MRP',
-                        product.mrp != null
-                            ? '$currency ${product.mrp}'
-                            : 'N/A'),
-                    _buildDetailRow(
-                      'Purchase Price',
-                      (product.purchasePrice != null &&
-                              product.purchasePrice!.isNotEmpty
-                          ? '$currency ${product.purchasePrice}'
-                          : (product.stock != null && product.stock!.isNotEmpty
-                              ? (product.stock!.first.purchasePrice != null &&
-                                      product.stock!.first.purchasePrice!
-                                          .isNotEmpty
-                                  ? '$currency ${product.stock!.first.purchasePrice}'
-                                  : 'N/A')
-                              : 'N/A')),
-                    ),
-                    _buildDetailRow(
-                        'Offer Price',
-                        product.offerPrice != null
-                            ? '$currency ${product.offerPrice}'
-                            : 'N/A'),
-                    _buildDetailRow(
-                        'Max Discount Percentage',
-                        _formatNumericString(product.minMarginPercentage)
-                                .isNotEmpty
-                            ? '${_formatNumericString(product.minMarginPercentage)}%'
-                            : 'N/A'),
-                    _buildDetailRow(
-                        'Max Discount Amount',
-                        _formatNumericString(product.minMarginPrice).isNotEmpty
-                            ? '$currency ${_formatNumericString(product.minMarginPrice)}'
-                            : 'N/A'),
-                    _buildDetailRow('SKU', product.sku ?? 'Not Available'),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildDetailRow('Rating', product.rating ?? 'N/A'),
-                    _buildStockStatusRow(
-                      product,
-                      stockEnabled: stockEnabled,
-                    ),
-                    _buildDetailRow('Reorder Level',
-                        product.reorderLevel?.toString() ?? 'N/A'),
-                    _buildDetailRow('Location',
-                        product.productLocation?.toString() ?? 'N/A'),
-                    if (product.weightInfo != null) ...[
-                      _buildDetailRow('Weight',
-                          product.weightInfo!.weight?.toString() ?? 'N/A'),
-                      _buildDetailRow(
-                          'Is Weighted',
-                          product.weightInfo!.isWeighted == true
-                              ? 'Yes'
-                              : 'No'),
-                    ] else ...[
-                      _buildDetailRow('Weight', 'N/A'),
-                      _buildDetailRow('Is Weighted', 'N/A'),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
+          detailSections,
           if (product.description != null &&
               product.description.toString().isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -1460,7 +1459,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           ),
           const SizedBox(height: 8),
           if (product.stock != null && product.stock!.isNotEmpty)
-            Container(
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
@@ -1607,6 +1608,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   }).toList(),
                 ],
               ),
+            ),
             )
           else
             Container(
@@ -2158,20 +2160,34 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final canEditProduct = _canEditProduct(context);
     _ensureTabController(canEditProduct);
 
+    final screenSize = MediaQuery.sizeOf(context);
+    final maxDialogWidth = screenSize.width * (widget.isCompact ? 0.96 : 0.9);
+    final minDialogWidth = widget.isCompact
+        ? 0.0
+        : math.min(600.0, maxDialogWidth);
+
+    final titleStyle = TextStyle(
+      fontSize: widget.isCompact ? 20 : 24,
+      fontWeight: FontWeight.bold,
+      color: Colors.black,
+    );
+
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
       ),
       elevation: 8,
       backgroundColor: Colors.white,
+      insetPadding: widget.isCompact
+          ? const EdgeInsets.symmetric(horizontal: 12, vertical: 24)
+          : null,
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width *
-              0.9, // Increased from 0.8 to 0.9
-          maxHeight: MediaQuery.of(context).size.height * 0.8,
-          minWidth: 600, // Add minimum width to ensure adequate space
+          maxWidth: maxDialogWidth,
+          maxHeight: screenSize.height * 0.85,
+          minWidth: minDialogWidth,
         ),
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(widget.isCompact ? 16 : 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2180,13 +2196,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Product Details',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+                  style: titleStyle,
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, color: Colors.black),

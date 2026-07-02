@@ -8,6 +8,7 @@ import 'package:pos_machine/models/executive.dart';
 import 'package:pos_machine/providers/authentication_providers.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
+import 'package:pos_machine/helpers/debug_login_autofill.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
@@ -102,6 +103,12 @@ class _SignInScreenState extends State<SignInScreen> {
         _emailController.text = prefsEmail;
         _passwordTextController.text = prefsPassword;
       }
+
+      await DebugLoginAutofill.applyLoginIfNeeded(
+        emailController: _emailController,
+        passwordController: _passwordTextController,
+      );
+      if (mounted) setState(() {});
     } catch (e) {
       rethrow;
     }

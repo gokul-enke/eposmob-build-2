@@ -24,6 +24,9 @@ class CustomCustomerForm extends StatefulWidget {
   final String? initialMobileNumber;
   final String? initialCustomerName;
   final bool isModal;
+  /// When true, fields stack in a single column (or two on wide phones)
+  /// instead of the desktop 3-column rows.
+  final bool isMobileLayout;
   final VoidCallback? onSuccess;
   final VoidCallback? onCancel;
 
@@ -32,6 +35,7 @@ class CustomCustomerForm extends StatefulWidget {
     this.initialMobileNumber,
     this.initialCustomerName,
     this.isModal = false,
+    this.isMobileLayout = false,
     this.onSuccess,
     this.onCancel,
   }) : super(key: key);
@@ -244,6 +248,8 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final bool isCompanyB2BEnabled = appSettings?.companyB2BEnabled ?? false;
 
+    final fieldGap = widget.isMobileLayout ? 16.0 : 20.0;
+
     return Form(
       key: _formKey,
       autovalidateMode: _showPhoneValidationOnLoad
@@ -252,226 +258,283 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row 1: First Name, Last Name, Email Address
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  "First Name",
-                  firstNameTextController,
-                  TextInputType.text,
-                  size,
-                  focusNode: firstNameFocusNode,
-                ),
+          _buildFieldRow(
+            size,
+            [
+              _buildTextField(
+                "First Name",
+                firstNameTextController,
+                TextInputType.text,
+                size,
+                focusNode: firstNameFocusNode,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  "Last Name",
-                  lastNameTextController,
-                  TextInputType.text,
-                  size,
-                ),
+              _buildTextField(
+                "Last Name",
+                lastNameTextController,
+                TextInputType.text,
+                size,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  "Email Address",
-                  emailTextController,
-                  TextInputType.emailAddress,
-                  size,
-                  validator: validateEmail,
-                ),
+              _buildTextField(
+                "Email Address",
+                emailTextController,
+                TextInputType.emailAddress,
+                size,
+                validator: validateEmail,
               ),
             ],
           ),
-          const SizedBox(height: 20),
-
-          // Row 2: Phone Number, Building/Apartment, Country
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  "Phone Number",
-                  phoneNumberController,
-                  TextInputType.number,
-                  size,
-                  inputFormatter: PhoneNumberFormatter(),
-                  validator: validatePhoneNumber,
+          SizedBox(height: fieldGap),
+          _buildFieldRow(
+            size,
+            [
+              _buildTextField(
+                "Phone Number",
+                phoneNumberController,
+                TextInputType.number,
+                size,
+                inputFormatter: PhoneNumberFormatter(),
+                validator: validatePhoneNumber,
+                isRequired: true,
+              ),
+              _buildTextField(
+                "Building / Apartment",
+                addressTextController,
+                TextInputType.text,
+                size,
+              ),
+              _buildTextField(
+                "Country",
+                countryTextController,
+                TextInputType.text,
+                size,
+              ),
+            ],
+          ),
+          SizedBox(height: fieldGap),
+          _buildFieldRow(
+            size,
+            [
+              widget.isModal
+                  ? _buildStateDropdownWithSearch(
+                      size, locationProvider, accessToken)
+                  : _buildStateDropdown(size, locationProvider, accessToken),
+              widget.isModal
+                  ? _buildDistrictDropdownWithSearch(size, locationProvider)
+                  : _buildDistrictDropdown(size, locationProvider),
+              _buildPincodeDropdown(size, locationProvider),
+            ],
+          ),
+          SizedBox(height: fieldGap),
+          _buildFieldRow(
+            size,
+            [
+              _buildGenderDropdown(size),
+              _buildDobField(size),
+              _buildTextField(
+                "Alternate Phone",
+                altPhoneTextController,
+                TextInputType.phone,
+                size,
+              ),
+            ],
+          ),
+          if (isCompanyB2BEnabled) ...[
+            SizedBox(height: fieldGap),
+            _buildFieldRow(
+              size,
+              [
+                CustomRadioGroup<String>(
+                  title: "Customer Type",
+                  value: selectedCustomerType,
+                  options: const ['B2C', 'B2B'],
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedCustomerType = newValue ?? 'B2C';
+                    });
+                  },
+                  displayText: (String value) => value,
                   isRequired: true,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  "Building / Apartment",
-                  addressTextController,
+                _buildTextField(
+                  "CR Number",
+                  crNumberController,
                   TextInputType.text,
                   size,
+                  isRequired: selectedCustomerType == 'B2B',
+                  validator: (value) {
+                    if (selectedCustomerType == 'B2B' &&
+                        (value == null || value.trim().isEmpty)) {
+                      return 'CR Number is required for B2B';
+                    }
+                    return null;
+                  },
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  "Country",
-                  countryTextController,
+                _buildTextField(
+                  "VAT Number",
+                  vatNumberController,
                   TextInputType.text,
                   size,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Row 3: States/Provinces, District/City, Pincode (both modes)
-          Row(
-            children: [
-              Expanded(
-                child: widget.isModal
-                    ? _buildStateDropdownWithSearch(
-                        size, locationProvider, accessToken)
-                    : _buildStateDropdown(size, locationProvider, accessToken),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: widget.isModal
-                    ? _buildDistrictDropdownWithSearch(size, locationProvider)
-                    : _buildDistrictDropdown(size, locationProvider),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildPincodeDropdown(size, locationProvider),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Row 4: Gender, Date of Birth, Alternate Phone
-          Row(
-            children: [
-              Expanded(
-                child: _buildGenderDropdown(size),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildDobField(size),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  "Alternate Phone",
-                  altPhoneTextController,
-                  TextInputType.phone,
-                  size,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Row 5: Customer Type, CR Number, VAT Number (shown only when B2B is enabled)
-          if (isCompanyB2BEnabled)
-            Row(
-              children: [
-                Expanded(
-                  child: CustomRadioGroup<String>(
-                    title: "Customer Type",
-                    value: selectedCustomerType,
-                    options: const ['B2C', 'B2B'],
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        selectedCustomerType = newValue ?? 'B2C';
-                      });
-                    },
-                    displayText: (String value) => value,
-                    isRequired: true,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildTextField(
-                    "CR Number",
-                    crNumberController,
-                    TextInputType.text,
-                    size,
-                    isRequired: selectedCustomerType == 'B2B',
-                    validator: (value) {
-                      if (selectedCustomerType == 'B2B' &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'CR Number is required for B2B';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildTextField(
-                    "VAT Number",
-                    vatNumberController,
-                    TextInputType.text,
-                    size,
-                    isRequired: selectedCustomerType == 'B2B',
-                    validator: (value) {
-                      if (selectedCustomerType == 'B2B' &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'VAT Number is required for B2B';
-                      }
-                      return null;
-                    },
-                  ),
+                  isRequired: selectedCustomerType == 'B2B',
+                  validator: (value) {
+                    if (selectedCustomerType == 'B2B' &&
+                        (value == null || value.trim().isEmpty)) {
+                      return 'VAT Number is required for B2B';
+                    }
+                    return null;
+                  },
                 ),
               ],
             ),
-          const SizedBox(height: 20),
-
-          // Row 6: Balance and Payment Type
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  "Balance",
-                  balanceTextController,
-                  TextInputType.number,
-                  size,
-                  inputFormatter: FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d*\.?\d{0,2}$')),
+          ],
+          SizedBox(height: fieldGap),
+          widget.isMobileLayout
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildTextField(
+                      "Balance",
+                      balanceTextController,
+                      TextInputType.number,
+                      size,
+                      inputFormatter: FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}$')),
+                    ),
+                    const SizedBox(height: 16),
+                    CustomRadioGroup<PaymentType>(
+                      title: "Payment Type",
+                      value: selectedPaymentType,
+                      options: const [PaymentType.toPay, PaymentType.toReceive],
+                      onChanged: (PaymentType? newValue) {
+                        setState(() {
+                          selectedPaymentType = newValue ?? PaymentType.none;
+                        });
+                      },
+                      displayText: (PaymentType value) {
+                        switch (value) {
+                          case PaymentType.toPay:
+                            return "To Pay";
+                          case PaymentType.toReceive:
+                            return "To Receive";
+                          default:
+                            return "";
+                        }
+                      },
+                      isRequired: false,
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        "Balance",
+                        balanceTextController,
+                        TextInputType.number,
+                        size,
+                        inputFormatter: FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}$')),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 2,
+                      child: CustomRadioGroup<PaymentType>(
+                        title: "Payment Type",
+                        value: selectedPaymentType,
+                        options: const [
+                          PaymentType.toPay,
+                          PaymentType.toReceive
+                        ],
+                        onChanged: (PaymentType? newValue) {
+                          setState(() {
+                            selectedPaymentType =
+                                newValue ?? PaymentType.none;
+                          });
+                        },
+                        displayText: (PaymentType value) {
+                          switch (value) {
+                            case PaymentType.toPay:
+                              return "To Pay";
+                            case PaymentType.toReceive:
+                              return "To Receive";
+                            default:
+                              return "";
+                          }
+                        },
+                        isRequired: false,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: CustomRadioGroup<PaymentType>(
-                  title: "Payment Type",
-                  value: selectedPaymentType,
-                  options: const [PaymentType.toPay, PaymentType.toReceive],
-                  onChanged: (PaymentType? newValue) {
-                    setState(() {
-                      selectedPaymentType = newValue ?? PaymentType.none;
-                    });
-                  },
-                  displayText: (PaymentType value) {
-                    switch (value) {
-                      case PaymentType.toPay:
-                        return "To Pay";
-                      case PaymentType.toReceive:
-                        return "To Receive";
-                      default:
-                        return "";
-                    }
-                  },
-                  isRequired: false,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Submit buttons
+          SizedBox(height: fieldGap),
           _buildSubmitButtons(size, locationProvider, accessToken),
         ],
       ),
     );
+  }
+
+  Widget _buildFieldRow(Size size, List<Widget> fields) {
+    if (widget.isMobileLayout) {
+      return _buildMobileFieldGroup(fields, size);
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < fields.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(child: fields[i]),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMobileFieldGroup(List<Widget> fields, Size size) {
+    final useTwoCol = size.width >= 480 && fields.length > 1;
+    if (!useTwoCol) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (int i = 0; i < fields.length; i++) ...[
+            if (i > 0) const SizedBox(height: 16),
+            fields[i],
+          ],
+        ],
+      );
+    }
+
+    final rows = <Widget>[];
+    for (int i = 0; i < fields.length; i += 2) {
+      if (i > 0) {
+        rows.add(const SizedBox(height: 16));
+      }
+      if (i + 1 < fields.length) {
+        rows.add(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: fields[i]),
+              const SizedBox(width: 12),
+              Expanded(child: fields[i + 1]),
+            ],
+          ),
+        );
+      } else {
+        rows.add(fields[i]);
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
+    );
+  }
+
+  double _fieldHeight(Size size) {
+    if (widget.isMobileLayout) {
+      return 48;
+    }
+    return size.height * .048;
   }
 
   Widget _buildTextField(String title, TextEditingController controller,
@@ -507,8 +570,10 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 ),
             ],
           ),
-          softWrap: false,
-          overflow: TextOverflow.ellipsis,
+          softWrap: widget.isMobileLayout,
+          overflow: widget.isMobileLayout
+              ? TextOverflow.visible
+              : TextOverflow.ellipsis,
         ),
         const SizedBox(height: 4),
         CustomBoxShadowContainer(
@@ -516,7 +581,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           alignment: Alignment.centerLeft,
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           padding: const EdgeInsets.only(left: 12),
-          height: size.height * .048,
+          height: _fieldHeight(size),
           width: size.width,
           child: TextFormField(
             controller: controller,
@@ -556,7 +621,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           title: "",
           hintText: "Select State",
           value: selectedStateId,
-          height: size.height * .048,
+          height: _fieldHeight(size),
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           items: locationProvider.stateList.map((state) => state.key).toList(),
           onChanged: (String? newValue) async {
@@ -598,7 +663,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         CustomDropDownWithSearch<String>(
           key: districtDropdownKey,
           title: "",
-          height: size.height * .048,
+          height: _fieldHeight(size),
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           hintText: "Select District",
           value: selectedDistrictId,
@@ -644,7 +709,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           alignment: Alignment.centerLeft,
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           padding: const EdgeInsets.only(left: 12),
-          height: size.height * .048,
+          height: _fieldHeight(size),
           width: size.width,
           child: DropdownButton<String>(
             key: stateDropdownKey,
@@ -714,7 +779,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           alignment: Alignment.centerLeft,
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           padding: const EdgeInsets.only(left: 12),
-          height: size.height * .048,
+          height: _fieldHeight(size),
           width: size.width,
           child: isLoadingDistricts
               ? const Center(
@@ -824,7 +889,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           alignment: Alignment.centerLeft,
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           padding: const EdgeInsets.only(left: 12),
-          height: size.height * .048,
+          height: _fieldHeight(size),
           width: size.width,
           child: isLoadingPincodes
               ? const Center(
@@ -892,6 +957,58 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
 
   Widget _buildSubmitButtons(
       Size size, LocationProvider locationProvider, String? accessToken) {
+    if (widget.isMobileLayout) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton(
+            onPressed: () => _submitForm(locationProvider, accessToken),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF166534),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Submit',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () {
+              if (widget.onCancel != null) {
+                widget.onCancel!();
+              } else {
+                Navigator.pop(context);
+              }
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.black87,
+              side: BorderSide(color: Colors.grey.shade300),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Close',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     if (widget.isModal) {
       return Padding(
         padding: const EdgeInsets.only(left: 10.0),
@@ -1084,7 +1201,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           alignment: Alignment.centerLeft,
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           padding: const EdgeInsets.only(left: 12),
-          height: size.height * .048,
+          height: _fieldHeight(size),
           width: size.width,
           child: DropdownButton<String>(
             isExpanded: true,
@@ -1138,7 +1255,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           alignment: Alignment.centerLeft,
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           padding: const EdgeInsets.only(left: 12),
-          height: size.height * .048,
+          height: _fieldHeight(size),
           width: size.width,
           child: TextFormField(
             controller: dobTextController,

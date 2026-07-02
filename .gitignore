@@ -47,8 +47,11 @@ app.*.map.json
 .local-chromium/
 
 Todo.md
+!wikidata/billing/todo.md
 .idx
 # .opencode
 /enkepos
 /temp
 /cloudpos-docs
+/.gradle-user-home
+.gradle-user-home/

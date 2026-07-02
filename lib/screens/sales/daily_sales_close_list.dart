@@ -749,9 +749,20 @@ class _DayCloseModalState extends State<DayCloseModal> {
 
       final storeId = storeSession.activeStore?.storeId ?? 0;
 
+      debugPrint('=== DEBUG: createDailySalesClose CALLER CONTEXT ===');
+      debugPrint('store_id: $storeId');
+      debugPrint('Summary opening_time: ${summary?.openingTime}');
+      debugPrint('Summary closing_time: ${summary?.closingTime}');
+      debugPrint('Summary opening_date: ${summary?.openingDate}');
+      debugPrint('Summary closing_date: ${summary?.closingDate}');
+
       final result = await salesProvider.createDailySalesClose(
         accessToken: authModel.token ?? '',
         storeId: storeId,
+        openingDate: summary?.openingDate,
+        openingTime: summary?.openingTime,
+        closingDate: summary?.closingDate,
+        closingTime: summary?.closingTime,
       );
 
       if (result['success'] == true) {

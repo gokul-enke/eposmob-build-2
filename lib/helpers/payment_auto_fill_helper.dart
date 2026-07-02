@@ -80,6 +80,31 @@ class PaymentAutoFillHelper {
     );
   }
 
+  /// When exactly one dynamic/extra method was selected for the full old payable,
+  /// remap that method's amount to [newEffectiveTotal].
+  ///
+  /// Returns `null` when typed methods are selected, multiple extras are selected,
+  /// or the extra amount did not cover the old payable total.
+  static Map<String, String>? remapSingleExtraAfterDiscount({
+    required bool anyTypedMethodSelected,
+    required Set<String> selectedExtraMethodIds,
+    required Map<String, String> extraAmounts,
+    required double oldEffectiveTotal,
+    required double newEffectiveTotal,
+  }) {
+    if (anyTypedMethodSelected || selectedExtraMethodIds.length != 1) {
+      return null;
+    }
+
+    final methodId = selectedExtraMethodIds.first;
+    final amountVal = double.tryParse(extraAmounts[methodId] ?? '') ?? 0.0;
+    if ((amountVal - oldEffectiveTotal).abs() >= 0.01) {
+      return null;
+    }
+
+    return {methodId: newEffectiveTotal.toStringAsFixed(2)};
+  }
+
   static String autoFillSingleMethod({
     required String paymentType,
     required String currentTargetAmount,
@@ -88,6 +113,8 @@ class PaymentAutoFillHelper {
     required String upiAmount,
     required String codAmount,
     required double cartTotal,
+    Map<String, String>? extraAmounts,
+    String? excludeExtraMethodId,
   }) {
     if (currentTargetAmount.isNotEmpty) {
       return currentTargetAmount;
@@ -98,9 +125,42 @@ class PaymentAutoFillHelper {
     final upi = paymentType == 'upi' ? 0.0 : (double.tryParse(upiAmount) ?? 0.0);
     final cod = paymentType == 'cod' ? 0.0 : (double.tryParse(codAmount) ?? 0.0);
 
-    final remaining = cartTotal - (cash + card + upi + cod);
+    var extraTotal = 0.0;
+    for (final entry in extraAmounts?.entries ?? const Iterable.empty()) {
+      if (excludeExtraMethodId != null && entry.key == excludeExtraMethodId) {
+        continue;
+      }
+      extraTotal += double.tryParse(entry.value) ?? 0.0;
+    }
+
+    final remaining = cartTotal - (cash + card + upi + cod + extraTotal);
     if (remaining <= 0) {
       return currentTargetAmount;
+    }
+    return remaining.toStringAsFixed(2);
+  }
+
+  /// Fills [targetMethodKey] with whatever is left of [cartTotal] after all
+  /// other collected methods (typed or dynamic/extra) are counted.
+  static String autoFillRemaining({
+    required String targetMethodKey,
+    required String targetCurrentAmount,
+    required Map<String, String> collectedAmounts,
+    required double cartTotal,
+  }) {
+    if (targetCurrentAmount.isNotEmpty) {
+      return targetCurrentAmount;
+    }
+
+    var otherTotal = 0.0;
+    for (final entry in collectedAmounts.entries) {
+      if (entry.key == targetMethodKey) continue;
+      otherTotal += double.tryParse(entry.value) ?? 0.0;
+    }
+
+    final remaining = cartTotal - otherTotal;
+    if (remaining <= 0) {
+      return targetCurrentAmount;
     }
     return remaining.toStringAsFixed(2);
   }

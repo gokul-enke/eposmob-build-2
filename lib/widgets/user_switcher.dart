@@ -16,7 +16,9 @@ import 'package:pos_machine/screens/login/store_selection_screen.dart';
 import 'dart:convert';
 
 class UserSwitcher extends StatefulWidget {
-  const UserSwitcher({Key? key}) : super(key: key);
+  final bool compact;
+
+  const UserSwitcher({Key? key, this.compact = false}) : super(key: key);
 
   @override
   State<UserSwitcher> createState() => _UserSwitcherState();
@@ -325,7 +327,16 @@ class _UserSwitcherState extends State<UserSwitcher> {
         debugPrint(
             "✅ UserSwitcher: currentUser found: ${currentUser.name} (${currentUser.email ?? 'no email'})");
 
-        return Column(
+        final avatarRadius = widget.compact ? 14.0 : 16.0;
+        final nameFontSize = widget.compact ? FontSize.s13 : FontSize.s14;
+        final emailFontSize = widget.compact ? FontSize.s11 : FontSize.s12;
+        final cardPadding = widget.compact
+            ? const EdgeInsets.symmetric(vertical: 6, horizontal: 12)
+            : const EdgeInsets.symmetric(vertical: 8, horizontal: 15);
+
+        final switcherBody = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Current user display
             InkWell(
@@ -335,69 +346,68 @@ class _UserSwitcherState extends State<UserSwitcher> {
                   _isDropdownOpen = !_isDropdownOpen;
                 });
               },
+              borderRadius: BorderRadius.circular(10),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                padding: cardPadding,
                 decoration: BoxDecoration(
                   color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: ColorManager.kPrimaryColor.withOpacity(0.15),
+                  ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
-                      child: Row(
+                    CircleAvatar(
+                      backgroundColor: ColorManager.kPrimaryColor,
+                      radius: avatarRadius,
+                      child: Text(
+                        currentUser.name.substring(0, 1).toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: widget.compact ? 13 : 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          CircleAvatar(
-                            backgroundColor: ColorManager.kPrimaryColor,
-                            radius: 16,
-                            child: Text(
-                              currentUser.name.substring(0, 1).toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          Text(
+                            currentUser.name,
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              nameFontSize,
+                              0.21,
+                              ColorManager.kTitleTextColor,
                             ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
-                          const SizedBox(width: 10),
-                          Flexible(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  currentUser.name,
-                                  style: buildCustomStyle(
-                                    FontWeightManager.medium,
-                                    FontSize.s14,
-                                    0.21,
-                                    ColorManager.textColor,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                                Text(
-                                  currentUser.email ?? 'No email',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s12,
-                                    0.18,
-                                    Colors.grey,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ],
+                          Text(
+                            currentUser.email ?? 'No email',
+                            style: buildCustomStyle(
+                              FontWeightManager.regular,
+                              emailFontSize,
+                              0.18,
+                              ColorManager.kGreyColor,
                             ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 4),
                     Icon(
                       _isDropdownOpen
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
                       color: ColorManager.kPrimaryColor,
+                      size: widget.compact ? 20 : 24,
                     ),
                   ],
                 ),
@@ -421,6 +431,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
                   ],
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(10.0),
@@ -494,6 +505,16 @@ class _UserSwitcherState extends State<UserSwitcher> {
                 ),
               ),
           ],
+        );
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.hasBoundedHeight &&
+                constraints.maxHeight < double.infinity) {
+              return SingleChildScrollView(child: switcherBody);
+            }
+            return switcherBody;
+          },
         );
       },
     );

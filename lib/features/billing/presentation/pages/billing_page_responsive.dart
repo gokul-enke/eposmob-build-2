@@ -6,6 +6,23 @@ import 'package:pos_machine/screens/billing/restaurant/restaurant_page.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'billing_page.dart';
 
+/// Resolved billing shell for responsive routing (testable without mounting pages).
+enum BillingResponsiveRoute { loading, restaurant, mobileBilling, desktopBilling }
+
+@visibleForTesting
+BillingResponsiveRoute resolveBillingResponsiveRoute({
+  required bool isRoleLoaded,
+  required String userRole,
+  required bool isMobileWidth,
+}) {
+  if (!isRoleLoaded) return BillingResponsiveRoute.loading;
+  if (userRole == 'restaurant_sales') {
+    return BillingResponsiveRoute.restaurant;
+  }
+  if (isMobileWidth) return BillingResponsiveRoute.mobileBilling;
+  return BillingResponsiveRoute.desktopBilling;
+}
+
 class BillingPageResponsive extends StatefulWidget {
   const BillingPageResponsive({super.key});
 
@@ -36,24 +53,28 @@ class _BillingPageResponsiveState extends State<BillingPageResponsive> {
   Widget build(BuildContext context) {
     // Use full screen width to decide layout, not inner constraints reduced by
     // sidebar. Threshold delegated to the single source of truth (Breakpoints).
-    if (Breakpoints.isMobileWidth(MediaQuery.of(context).size.width)) {
-      return const BillingPageMobile();
-    }
+    final isMobileWidth =
+        Breakpoints.isMobileWidth(MediaQuery.of(context).size.width);
 
-    if (!_isRoleLoaded) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF8FAFC),
-        body: SizedBox.expand(),
-      );
+    switch (resolveBillingResponsiveRoute(
+      isRoleLoaded: _isRoleLoaded,
+      userRole: userRole,
+      isMobileWidth: isMobileWidth,
+    )) {
+      case BillingResponsiveRoute.loading:
+        return Scaffold(
+          backgroundColor: isMobileWidth ? Colors.white : const Color(0xFFF8FAFC),
+          body: const SizedBox.expand(),
+        );
+      case BillingResponsiveRoute.restaurant:
+        return const RestaurantPage(
+          allowCounterBillingFromAttender: true,
+          defaultCounterBillingMode: true,
+        );
+      case BillingResponsiveRoute.mobileBilling:
+        return const BillingPageMobile();
+      case BillingResponsiveRoute.desktopBilling:
+        return const BillingPage();
     }
-
-    // Show RestaurantPage for restaurant_sales role, otherwise show BillingPage
-    if (userRole == 'restaurant_sales') {
-      return const RestaurantPage(
-        allowCounterBillingFromAttender: true,
-        defaultCounterBillingMode: true,
-      );
-    }
-    return const BillingPage();
   }
 }

@@ -1,97 +1,116 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
+import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
+import 'package:pos_machine/helpers/delivery_charge_helper.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 
+/// Result of a [CheckoutService.saveOrder] call.
+///
+/// Having an explicit result type eliminates the ambiguity of the old `bool`
+/// return where `false` meant BOTH "saved new order" and "save failed".
+enum SaveOrderResult {
+  /// A new draft order was created successfully.
+  savedNew,
+
+  /// An existing draft order was updated successfully.
+  updatedExisting,
+
+  /// Save was blocked by a validation error (empty cart, invalid price, etc.).
+  /// The service has already shown an error snackbar; callers must NOT clear
+  /// the workspace.
+  validationFailed,
+
+  /// Save failed due to an unexpected exception.
+  /// The service has already shown an error snackbar; callers must NOT clear
+  /// the workspace.
+  failed,
+}
+
 class CheckoutService {
   final BuildContext context;
   const CheckoutService(this.context);
 
-  Future<void> confirmOrder() async {
+  /// Desktop confirm parity: a registered customer id, a typed phone, or the
+  /// sales-executive default phone all satisfy the customer requirement.
+  bool _hasCustomerForCheckout(BillingProvider billingProvider) {
+    return billingProvider.selectedCustomerID != null ||
+        (billingProvider.mobileNumberText?.trim().isNotEmpty ?? false) ||
+        (billingProvider.salesExecutivemobileNumberText?.trim().isNotEmpty ??
+            false);
+  }
+
+  /// Confirms the current order via the API. Returns `true` when the server
+  /// accepted the order (an `order_id` was returned), so callers can run the
+  /// post-confirm workspace reset (default-customer re-apply, etc.).
+  Future<bool> confirmOrder() async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
 
     if (!billingProvider.hasInternet) {
       showScaffoldError(
         context: context,
-        message: "No internet connection. Cannot confirm order online.",
+        message: BillingMobileErrorMessages.noInternetConfirm,
       );
-      return;
+      return false;
     }
 
-    debugPrint("Confirm Order pressed");
-    debugPrint("🚀 API REQUEST STARTING - Confirm Order");
+    billingDebugCheckout('confirmOrder', 'started');
 
+    bool orderConfirmed = false;
     billingProvider.setLoadingConfirmOrder(true);
     try {
-      if (billingProvider.selectedCustomerID == null &&
-          billingProvider.mobileNumberText == "") {
+      final skipCustomerSelection = Provider.of<AppSettingsProvider>(
+            context,
+            listen: false,
+          ).appSettings?.skipCustomerSelection ??
+          false;
+      if (!skipCustomerSelection && !_hasCustomerForCheckout(billingProvider)) {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: BillingMobileErrorMessages.selectCustomer,
         );
-        return;
+        return false;
       }
 
       // Check if any payment method is selected (provider-level helper)
       List<String> selectedPaymentMethods =
           billingProvider.getSelectedPaymentMethodsForApi();
 
-      debugPrint('🔍 [CheckoutService] Validating payment methods...');
-      debugPrint(
-          '🔍 [CheckoutService] Selected methods (excluding empty): $selectedPaymentMethods');
-      debugPrint(
-          '🔍 [CheckoutService] hasAnyPaymentSelected: ${billingProvider.hasAnyPaymentSelected()}');
-      debugPrint(
-          '🔍 [CheckoutService] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+      billingDebugCheckout(
+        'confirmOrder',
+        'validatingPayment',
+        hasPayment: billingProvider.hasAnyPaymentSelected(),
+      );
 
       if (!billingProvider.hasAnyPaymentSelected()) {
-        debugPrint(
-            '❌ [CheckoutService] No payment method selected - showing error');
+        billingDebugCheckout('confirmOrder', 'validationFailed', errorType: 'noPayment');
         showScaffoldError(
           context: context,
-          message: "Please select a payment method",
+          message: BillingMobileErrorMessages.selectPaymentMethod,
         );
-        return;
+        return false;
       }
-
-      debugPrint('✅ [CheckoutService] Payment method validation passed');
 
       if (!billingProvider.validateCarNumberIfNeeded()) {
         showScaffoldError(
           context: context,
-          message: "Please enter Car Number",
+          message: BillingMobileErrorMessages.enterCarNumber,
         );
-        return;
+        return false;
       }
 
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
       final provider = Provider.of<CartProvider>(context, listen: false);
       int? cartId = provider.getCartIDForOrder;
-      debugPrint("📦 Cart ID for order: $cartId");
-
-      String paymentMethod = "";
-      if (selectedPaymentMethods.contains("CASH")) {
-        paymentMethod = "CASH";
-      } else if (selectedPaymentMethods.contains("CARD")) {
-        paymentMethod = "CARD";
-      } else if (selectedPaymentMethods.contains("UPI")) {
-        paymentMethod = "UPI";
-      } else if (selectedPaymentMethods.contains("ONLINE")) {
-        paymentMethod = "ONLINE";
-      } else if (selectedPaymentMethods.contains("DEBIT")) {
-        paymentMethod = "DEBIT";
-      } else if (selectedPaymentMethods.contains("BALANCE")) {
-        paymentMethod = "BALANCE";
-      }
-      debugPrint("💰 Payment Method: $paymentMethod");
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -99,9 +118,9 @@ class CheckoutService {
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please add items to cart",
+          message: BillingMobileErrorMessages.emptyCart,
         );
-        return;
+        return false;
       }
 
       // Validate that all items have valid pricing before API call
@@ -114,32 +133,27 @@ class CheckoutService {
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
-          message:
-              "Please ensure all items have valid prices and MRP before confirming order",
+          message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
         );
-        return;
+        return false;
       }
 
       final items = localProductProvider.buildOrderItemsPayload();
-      for (final item in items) {
-        debugPrint("📦 Order Item Payload: $item");
-      }
-
-      debugPrint("📋 Order Items: ${items.length} products");
-      debugPrint(
-          "💵 Total Price: ${localProductProvider.priceSummary!.netTotal}");
-      debugPrint("👤 Customer ID: ${billingProvider.selectedCustomerID}");
-      debugPrint(
-          "📱 Customer Phone: ${billingProvider.selectedCustomerPhone ?? billingProvider.mobileNumberText}");
-      debugPrint(
-          "💳 Payment Details - Paid: ${billingProvider.paidAmountController.text}, Balance: ${Provider.of<BillingProvider>(context, listen: false).balanceAmount}");
-      debugPrint(
-          "🚚 Delivery Method: ${billingProvider.deliveryMethod} (ID: ${billingProvider.deliveryMethodId})");
-
       final paidMethods =
           Provider.of<BillingProvider>(context, listen: false).getPaidMethods();
-      debugPrint("💰 [ConfirmOrder] Payment Methods: $selectedPaymentMethods");
-      debugPrint("💰 [ConfirmOrder] Paid Methods (with amounts): $paidMethods");
+
+      billingDebugCheckout(
+        'confirmOrder',
+        'submitting',
+        itemCount: items.length,
+        hasCustomer: billingProvider.selectedCustomerID != null ||
+            (billingProvider.mobileNumberText?.isNotEmpty ?? false),
+        hasPayment: paidMethods.isNotEmpty,
+      );
+
+      final netTotal = localProductProvider.priceSummary!.netTotal;
+      final deliveryCharge = resolveDeliveryCharge(context);
+      final orderTotal = netTotal + deliveryCharge;
 
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
@@ -147,7 +161,7 @@ class CheckoutService {
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
         transactionId: billingProvider.transactionNumberController.text,
-        totalPrice: localProductProvider.priceSummary!.netTotal.toString(),
+        totalPrice: orderTotal.toString(),
         customerId: billingProvider.selectedCustomerID,
         customerPhone: billingProvider.selectedCustomerPhone ??
             billingProvider.mobileNumberText,
@@ -180,10 +194,15 @@ class CheckoutService {
         address: billingProvider.orderAddress.isNotEmpty
             ? billingProvider.orderAddress
             : null,
+        deliveryCharge: deliveryCharge,
       )
           .then((response) {
-        debugPrint("✅ API RESPONSE - Confirm Order: ${json.encode(response)}");
+        billingDebugCheckout(
+          'confirmOrder',
+          response["order_id"] != null ? 'succeeded' : 'apiFailed',
+        );
         if (response["order_id"] != null) {
+          orderConfirmed = true;
           showScaffold(
             context: context,
             message: "Order Confirmed Successfully",
@@ -212,27 +231,38 @@ class CheckoutService {
           billingProvider.setDeliveryDate(null);
           billingProvider.setDeliveryTime(null);
 
-          // Clear all payment methods including Pine Labs ONLINE
-          debugPrint(
-              '🔄 [CheckoutService] Clearing all payment methods after order confirmation');
           billingProvider.clearAllPaymentMethods();
           billingProvider.setPineLabsPaymentSuccess(false);
 
           // Notify UI hooks that depend on resets (optional)
         } else {
-          debugPrint("❌ API ERROR - Confirm Order failed");
           showScaffoldError(
             context: context,
-            message: "Failed to Confirm Order",
+            message: BillingMobileErrorMessages.orderApiFailure(
+              Map<dynamic, dynamic>.from(response as Map),
+              fallback: BillingMobileErrorMessages.confirmOrderFailed,
+            ),
           );
         }
       });
     } catch (error) {
-      debugPrint("❌ EXCEPTION in confirmOrder: $error");
+      billingDebugCheckout(
+        'confirmOrder',
+        'exception',
+        errorType: error.runtimeType.toString(),
+      );
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.checkoutException(
+          error,
+          operation: 'confirm order',
+        ),
+      );
     } finally {
       billingProvider.setLoadingConfirmOrder(false);
-      debugPrint("🏁 Confirm Order process completed");
+      billingDebugCheckout('confirmOrder', 'completed');
     }
+    return orderConfirmed;
   }
 
   Future<String?> createOrderAndPrint() async {
@@ -241,22 +271,25 @@ class CheckoutService {
     if (!billingProvider.hasInternet) {
       showScaffoldError(
         context: context,
-        message: "No internet connection. Cannot create order online.",
+        message: BillingMobileErrorMessages.noInternetCreateOrder,
       );
       return null;
     }
 
-    debugPrint("Create Order and Print pressed");
-    debugPrint("🚀 API REQUEST STARTING - Create Order and Print");
+    billingDebugCheckout('createOrderAndPrint', 'started');
 
     billingProvider.setLoadingCreateOrder(true);
     String? createdOrderNumber;
     try {
-      if (billingProvider.selectedCustomerID == null &&
-          billingProvider.mobileNumberText == "") {
+      final skipCustomerSelection = Provider.of<AppSettingsProvider>(
+            context,
+            listen: false,
+          ).appSettings?.skipCustomerSelection ??
+          false;
+      if (!skipCustomerSelection && !_hasCustomerForCheckout(billingProvider)) {
         showScaffoldError(
           context: context,
-          message: "Please select a customer",
+          message: BillingMobileErrorMessages.selectCustomer,
         );
         return null;
       }
@@ -265,20 +298,21 @@ class CheckoutService {
       final selectedPaymentMethods =
           billingProvider.getSelectedPaymentMethodsForApi();
 
-      debugPrint('🔍 [CreateOrderAndPrint] Validating payment methods...');
-      debugPrint(
-          '🔍 [CreateOrderAndPrint] Selected methods: $selectedPaymentMethods');
-      debugPrint(
-          '🔍 [CreateOrderAndPrint] hasAnyPaymentSelected: ${billingProvider.hasAnyPaymentSelected()}');
-      debugPrint(
-          '🔍 [CreateOrderAndPrint] isOnlineSelected: ${billingProvider.isOnlineSelected}');
+      billingDebugCheckout(
+        'createOrderAndPrint',
+        'validatingPayment',
+        hasPayment: billingProvider.hasAnyPaymentSelected(),
+      );
 
       if (!billingProvider.hasAnyPaymentSelected()) {
-        debugPrint(
-            '❌ [CreateOrderAndPrint] No payment method selected - showing error');
+        billingDebugCheckout(
+          'createOrderAndPrint',
+          'validationFailed',
+          errorType: 'noPayment',
+        );
         showScaffoldError(
           context: context,
-          message: "Please select a payment method",
+          message: BillingMobileErrorMessages.selectPaymentMethod,
         );
         return null;
       }
@@ -287,7 +321,7 @@ class CheckoutService {
       if (!billingProvider.validateCarNumberIfNeeded()) {
         showScaffoldError(
           context: context,
-          message: "Please enter Car Number",
+          message: BillingMobileErrorMessages.enterCarNumber,
         );
         return null;
       }
@@ -295,7 +329,6 @@ class CheckoutService {
       final accessToken = Provider.of<AuthModel>(context, listen: false).token;
       final provider = Provider.of<CartProvider>(context, listen: false);
       final cartId = provider.getCartIDForOrder;
-      debugPrint("📦 Cart ID for order: $cartId");
 
       final localProductProvider =
           Provider.of<LocalProductProvider>(context, listen: false);
@@ -303,7 +336,7 @@ class CheckoutService {
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
           context: context,
-          message: "Please add items to cart",
+          message: BillingMobileErrorMessages.emptyCart,
         );
         return null;
       }
@@ -317,16 +350,25 @@ class CheckoutService {
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
-          message:
-              "Please ensure all items have valid prices and MRP before confirming order",
+          message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
         );
         return null;
       }
 
-      // Build items
       final items = localProductProvider.buildOrderItemsPayload();
 
       final priceSummary = localProductProvider.priceSummary!;
+      billingDebugCheckout(
+        'createOrderAndPrint',
+        'submitting',
+        itemCount: items.length,
+        hasCustomer: billingProvider.selectedCustomerID != null ||
+            (billingProvider.mobileNumberText?.isNotEmpty ?? false),
+        hasPayment: billingProvider.hasAnyPaymentSelected(),
+      );
+
+      final deliveryCharge = resolveDeliveryCharge(context);
+      final orderTotal = priceSummary.netTotal + deliveryCharge;
 
       await Provider.of<CartProvider>(context, listen: false)
           .addToOrderAPI(
@@ -334,7 +376,7 @@ class CheckoutService {
         cartIds: cartId ?? 0,
         accessToken: accessToken ?? "",
         transactionId: billingProvider.transactionNumberController.text,
-        totalPrice: priceSummary.netTotal.toString(),
+        totalPrice: orderTotal.toString(),
         customerId: billingProvider.selectedCustomerID,
         customerPhone: billingProvider.selectedCustomerPhone ??
             billingProvider.mobileNumberText,
@@ -367,10 +409,13 @@ class CheckoutService {
         address: billingProvider.orderAddress.isNotEmpty
             ? billingProvider.orderAddress
             : null,
+        deliveryCharge: deliveryCharge,
       )
           .then((response) async {
-        debugPrint(
-            "✅ API RESPONSE - Create Order and Print: ${json.encode(response)}");
+        billingDebugCheckout(
+          'createOrderAndPrint',
+          response["order_id"] != null ? 'succeeded' : 'apiFailed',
+        );
         if (response["order_id"] != null) {
           showScaffold(
             context: context,
@@ -386,7 +431,11 @@ class CheckoutService {
           try {
             createdOrderNumber = response["order_number"]?.toString();
           } catch (error) {
-            debugPrint("❌ Error preparing order details for print: $error");
+            billingDebugCheckout(
+              'createOrderAndPrint',
+              'printPrepFailed',
+              errorType: error.runtimeType.toString(),
+            );
           }
 
           // Reset provider state
@@ -403,24 +452,43 @@ class CheckoutService {
           billingProvider.commentController.clear();
           billingProvider.setDeliveryDate(null);
           billingProvider.setDeliveryTime(null);
+
+          // Match confirmOrder / desktop full reset: clear all payment method
+          // selections, amounts, to-customer-credit and Pine Labs state so the
+          // next sale starts from a clean workspace.
+          billingProvider.clearAllPaymentMethods();
+          billingProvider.setPineLabsPaymentSuccess(false);
         } else {
-          debugPrint("❌ API ERROR - Create Order and Print failed");
           showScaffoldError(
             context: context,
-            message: "Failed to Save Order",
+            message: BillingMobileErrorMessages.orderApiFailure(
+              Map<dynamic, dynamic>.from(response as Map),
+              fallback: BillingMobileErrorMessages.createOrderFailed,
+            ),
           );
         }
       });
     } catch (error) {
-      debugPrint("❌ EXCEPTION in createOrderAndPrint: $error");
+      billingDebugCheckout(
+        'createOrderAndPrint',
+        'exception',
+        errorType: error.runtimeType.toString(),
+      );
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.checkoutException(
+          error,
+          operation: 'create order',
+        ),
+      );
     } finally {
       billingProvider.setLoadingCreateOrder(false);
-      debugPrint("🏁 Create Order and Print process completed");
+      billingDebugCheckout('createOrderAndPrint', 'completed');
     }
     return createdOrderNumber;
   }
 
-  Future<bool> saveOrder() async {
+  Future<SaveOrderResult> saveOrder() async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     final localProductProvider =
@@ -430,8 +498,8 @@ class CheckoutService {
     try {
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
-            context: context, message: "Please add items to cart");
-        return false;
+            context: context, message: BillingMobileErrorMessages.emptyCart);
+        return SaveOrderResult.validationFailed;
       }
 
       // Validate that all items have valid pricing
@@ -440,9 +508,9 @@ class CheckoutService {
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
-          message: "Please ensure all items have valid prices before saving",
+          message: BillingMobileErrorMessages.invalidPricingBeforeSave,
         );
-        return false;
+        return SaveOrderResult.validationFailed;
       }
 
       final orderData = billingProvider.createOrderData();
@@ -450,9 +518,16 @@ class CheckoutService {
       final paidAmount = orderData['paidAmount']?.toString() ?? "0";
 
       final currentOrder = localProductProvider.currentOrder;
-      final customerNameToSave = billingProvider.selectedCustomer?.name;
-      final customerPhoneToSave = billingProvider.selectedCustomerPhone ??
-          billingProvider.mobileNumberText;
+      final customerNameToSave =
+          OrderCustomerFields.nameForOrder(billingProvider.selectedCustomer?.name);
+      final customerPhoneToSave = OrderCustomerFields.phoneForOrder(
+        selectedPhone: billingProvider.selectedCustomerPhone,
+        customerPhone: billingProvider.selectedCustomer?.phone,
+        mobileNumberText: billingProvider.mobileNumberText,
+        controllerText: billingProvider.mobileNumberTextController.text,
+      );
+      final customerTypeToSave = billingProvider.selectedCustomer?.customerType;
+      final deliveryCharge = resolveDeliveryCharge(context);
 
       if (currentOrder != null) {
         // Update existing order
@@ -480,9 +555,11 @@ class CheckoutService {
           address: billingProvider.orderAddress.isNotEmpty
               ? billingProvider.orderAddress
               : null,
+          deliveryCharge: deliveryCharge,
+          customerType: customerTypeToSave,
         );
         showScaffold(context: context, message: "Order Updated Successfully");
-        return true; // updated
+        return SaveOrderResult.updatedExisting;
       } else {
         // Save as new order
         localProductProvider.saveCurrentCartAsOrder(
@@ -508,17 +585,23 @@ class CheckoutService {
           address: billingProvider.orderAddress.isNotEmpty
               ? billingProvider.orderAddress
               : null,
+          deliveryCharge: deliveryCharge,
+          customerType: customerTypeToSave,
         );
         showScaffold(context: context, message: "Order Saved Successfully");
-        return false; // new save
+        return SaveOrderResult.savedNew;
       }
     } catch (e) {
-      debugPrint("Error saving order: $e");
+      billingDebugCheckout(
+        'saveOrder',
+        'exception',
+        errorType: e.runtimeType.toString(),
+      );
       showScaffoldError(
         context: context,
-        message: "Failed to save order. Please try again.",
+        message: BillingMobileErrorMessages.saveOrderFailed,
       );
-      return false;
+      return SaveOrderResult.failed;
     } finally {
       billingProvider.setLoadingSaveOrder(false);
     }
@@ -534,7 +617,7 @@ class CheckoutService {
     try {
       if (localProductProvider.cartItems.isEmpty) {
         showScaffoldError(
-            context: context, message: "Please add items to cart");
+            context: context, message: BillingMobileErrorMessages.emptyCart);
         return null;
       }
 
@@ -544,7 +627,7 @@ class CheckoutService {
       if (hasInvalidPricing) {
         showScaffoldError(
           context: context,
-          message: "Please ensure all items have valid prices before saving",
+          message: BillingMobileErrorMessages.invalidPricingBeforeSave,
         );
         return null;
       }
@@ -558,6 +641,8 @@ class CheckoutService {
       final customerNameToSave = billingProvider.selectedCustomer?.name;
       final customerPhoneToSave = billingProvider.selectedCustomerPhone ??
           billingProvider.mobileNumberText;
+      final customerTypeToSave = billingProvider.selectedCustomer?.customerType;
+      final deliveryCharge = resolveDeliveryCharge(context);
 
       if (currentOrder != null) {
         final currentOrderId = currentOrder.id;
@@ -585,6 +670,8 @@ class CheckoutService {
           address: billingProvider.orderAddress.isNotEmpty
               ? billingProvider.orderAddress
               : null,
+          deliveryCharge: deliveryCharge,
+          customerType: customerTypeToSave,
         );
         result = localProductProvider.moveToConfirmedOrders(currentOrderId);
         if (result != null) {
@@ -617,6 +704,8 @@ class CheckoutService {
             address: billingProvider.orderAddress.isNotEmpty
                 ? billingProvider.orderAddress
                 : null,
+            deliveryCharge: deliveryCharge,
+            customerType: customerTypeToSave,
           );
           showScaffold(
             context: context,
@@ -647,6 +736,8 @@ class CheckoutService {
           address: billingProvider.orderAddress.isNotEmpty
               ? billingProvider.orderAddress
               : null,
+          deliveryCharge: deliveryCharge,
+          customerType: customerTypeToSave,
         );
         showScaffold(
           context: context,
@@ -660,10 +751,14 @@ class CheckoutService {
 
       return result;
     } catch (e) {
-      debugPrint(e.toString());
+      billingDebugCheckout(
+        'saveOrderAndReturnConfirmed',
+        'exception',
+        errorType: e.runtimeType.toString(),
+      );
       showScaffoldError(
         context: context,
-        message: "Failed to save order. Please try again.",
+        message: BillingMobileErrorMessages.saveOrderFailed,
       );
       return null;
     } finally {

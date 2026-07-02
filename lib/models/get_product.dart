@@ -18,6 +18,41 @@ bool? _parseBool(dynamic value) {
   return null;
 }
 
+Map<String, dynamic> _parseVariantAttributes(dynamic raw) {
+  if (raw == null) return const {};
+  if (raw is Map) return Map<String, dynamic>.from(raw);
+  if (raw is List) {
+    final result = <String, dynamic>{};
+    for (final item in raw) {
+      if (item is! Map) continue;
+      final map = Map<String, dynamic>.from(item);
+      final nameKey = map.containsKey('name')
+          ? 'name'
+          : map.containsKey('attribute')
+              ? 'attribute'
+              : map.containsKey('attribute_name')
+                  ? 'attribute_name'
+                  : map.containsKey('key')
+                      ? 'key'
+                      : null;
+      if (nameKey != null && map.containsKey('value')) {
+        final key = map[nameKey]?.toString();
+        if (key != null && key.isNotEmpty) {
+          result[key] = map['value'];
+        }
+        continue;
+      }
+      for (final entry in map.entries) {
+        final key = entry.key.toString();
+        if (key == 'id') continue;
+        result[key] = entry.value;
+      }
+    }
+    return result;
+  }
+  return const {};
+}
+
 class GetProductModel {
   final List<GetProduct>? product;
   final String? status; // this field seems to be missing in your JSON
@@ -97,7 +132,7 @@ class GetProduct {
   final WeightInfo? weightInfo;
   final List<Stock>? stock;
   final List<SaleUnit>? saleUnits;
-  final List<dynamic>? variants;
+  final List<ProductVariant>? variants;
   final String? sku;
   final dynamic offerPrice;
   final dynamic productLocation;
@@ -166,7 +201,7 @@ class GetProduct {
     WeightInfo? weightInfo,
     List<Stock>? stock,
     List<SaleUnit>? saleUnits,
-    List<dynamic>? variants,
+    List<ProductVariant>? variants,
     String? sku,
     dynamic offerPrice,
     dynamic productLocation,
@@ -288,10 +323,8 @@ class GetProduct {
               )),
         variants: json["variants"] == null
             ? []
-            : List<dynamic>.from((json["variants"] as List).map(
-                (x) => x is Map<String, dynamic>
-                    ? Map<String, dynamic>.from(x)
-                    : x,
+            : List<ProductVariant>.from((json["variants"] as List).map(
+                (x) => ProductVariant.fromJson(x as Map<String, dynamic>),
               )),
         sku: json["sku"],
         offerPrice: json["offer_price"]?.toString(),
@@ -320,6 +353,11 @@ class GetProduct {
     return taxes!.fold(
         0.0, (sum, tax) => sum + (double.tryParse(tax.rate ?? "0") ?? 0.0));
   }
+
+  bool get hasVariants => variants != null && variants!.isNotEmpty;
+
+  List<ProductVariant> get activeVariants =>
+      variants?.where((variant) => variant.active).toList() ?? const [];
 
   Map<String, dynamic> toJson() => {
         "product_id": productId,
@@ -356,7 +394,9 @@ class GetProduct {
         "sale_units": saleUnits == null
             ? []
             : List<dynamic>.from(saleUnits!.map((x) => x.toJson())),
-        "variants": variants == null ? [] : List<dynamic>.from(variants!),
+        "variants": variants == null
+            ? []
+            : List<dynamic>.from(variants!.map((x) => x.toJson())),
         "sku": sku,
         "offer_price": offerPrice,
         "product_location": productLocation,
@@ -854,6 +894,99 @@ class Pagination {
         "per_page": perPage,
         "total": total,
       };
+}
+
+class ProductVariant {
+  final int id;
+  final String? sku;
+  final String? barcode;
+  final double? price;
+  final double? mrp;
+  final double? purchasePrice;
+  final num? quantity;
+  final bool active;
+  final Map<String, dynamic> attributes;
+
+  ProductVariant({
+    required this.id,
+    this.sku,
+    this.barcode,
+    this.price,
+    this.mrp,
+    this.purchasePrice,
+    this.quantity,
+    this.active = true,
+    this.attributes = const {},
+  });
+
+  factory ProductVariant.fromJson(Map<String, dynamic> json) => ProductVariant(
+        id: (() {
+          final raw = json['id'];
+          if (raw is int) return raw;
+          if (raw is String) return int.tryParse(raw) ?? 0;
+          return 0;
+        })(),
+        sku: json['sku']?.toString(),
+        barcode: json['barcode']?.toString(),
+        price: (() {
+          final value = json['price'];
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value);
+          return null;
+        })(),
+        mrp: (() {
+          final value = json['mrp'];
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value);
+          return null;
+        })(),
+        purchasePrice: (() {
+          final value = json['purchase_price'];
+          if (value == null) return null;
+          if (value is num) return value.toDouble();
+          if (value is String) return double.tryParse(value);
+          return null;
+        })(),
+        quantity: (() {
+          final q = json['quantity'];
+          if (q == null) return null;
+          if (q is num) return q;
+          if (q is String) {
+            final i = int.tryParse(q);
+            if (i != null) return i;
+            final d = double.tryParse(q);
+            if (d != null) return d;
+          }
+          return null;
+        })(),
+        active: _parseBool(json['active']) ?? true,
+        attributes: _parseVariantAttributes(json['attributes']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'sku': sku,
+        'barcode': barcode,
+        'price': price,
+        'mrp': mrp,
+        'purchase_price': purchasePrice,
+        'quantity': quantity,
+        'active': active,
+        'attributes': attributes,
+      };
+
+  String get formattedAttributes =>
+      attributes.values.map((value) => value.toString()).join(' | ');
+
+  String displayName(String productName) {
+    final attrs = formattedAttributes;
+    return attrs.isEmpty ? productName : '$productName ($attrs)';
+  }
+
+  double effectivePrice(double productPrice) =>
+      (price != null && price! > 0) ? price! : productPrice;
 }
 
 class ProductTax {

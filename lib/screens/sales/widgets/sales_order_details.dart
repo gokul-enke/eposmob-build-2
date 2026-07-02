@@ -153,6 +153,7 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final isMobile = ResponsiveWidget.isMobile(context);
 
     return SafeArea(
       child: MouseRegion(
@@ -168,10 +169,10 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
           ),
           child: SingleChildScrollView(
             child: Container(
-              margin: const EdgeInsets.all(10.0),
-              padding: const EdgeInsets.all(8.0),
+              margin: EdgeInsets.all(isMobile ? 4.0 : 10.0),
+              padding: EdgeInsets.all(isMobile ? 4.0 : 8.0),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(isMobile ? 12 : 22),
                 boxShadow: const [
                   BoxShadow(
                     color: ColorManager.boxShadowColor,
@@ -182,11 +183,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                 color: Colors.white,
               ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 20.0, horizontal: 10.0),
+                padding: EdgeInsets.symmetric(
+                  vertical: isMobile ? 12.0 : 20.0,
+                  horizontal: isMobile ? 8.0 : 10.0,
+                ),
                 child: isInitLoading
                     ? SizedBox(
-                        height: size.height,
+                        height: isMobile ? 240 : size.height,
                         child: const Center(
                             child: CircularProgressIndicator.adaptive()))
                     : Column(
@@ -252,7 +255,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                           'Delivery Date: 	${DateHelper.formatISODate(effectiveDeliveryDate)}',
                                           style: buildCustomStyle(
                                               FontWeightManager.medium,
-                                              FontSize.s14,
+                                              isMobile
+                                                  ? FontSize.s12
+                                                  : FontSize.s14,
                                               0.21,
                                               ColorManager.textColor),
                                         ),
@@ -266,7 +271,9 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                                           'Delivery Time: 	${effectiveDeliveryTime}',
                                           style: buildCustomStyle(
                                               FontWeightManager.medium,
-                                              FontSize.s14,
+                                              isMobile
+                                                  ? FontSize.s12
+                                                  : FontSize.s14,
                                               0.21,
                                               ColorManager.textColor),
                                         ),
@@ -353,14 +360,25 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
   }
 
   Widget _buildActionButtons(Size size) {
+    final isMobile = ResponsiveWidget.isMobile(context);
+
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        children: [
-          CustomRoundButton(
-            title: "Print",
+      padding: EdgeInsets.only(top: isMobile ? 8 : 10),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final buttonWidth = isMobile
+              ? (constraints.maxWidth - 12) / 2
+              : size.width * 0.19;
+          final buttonHeight = isMobile ? 44.0 : 50.0;
+          final buttonFontSize = isMobile ? FontSize.s11 : FontSize.s12;
+
+          return Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: isMobile ? WrapAlignment.center : WrapAlignment.start,
+            children: [
+              CustomRoundButton(
+                title: "Print",
             boxColor: Colors.white,
             textColor: ColorManager.kPrimaryColor,
             fct: () async {
@@ -530,24 +548,24 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   ),
                 );
               }
-            },
-            height: 50,
-            width: size.width * 0.19,
-            fontSize: FontSize.s12,
-          ),
-          CustomRoundButton(
-            title: "Share",
+                },
+                height: buttonHeight,
+                width: buttonWidth,
+                fontSize: buttonFontSize,
+              ),
+              CustomRoundButton(
+                title: "Share",
             boxColor: Colors.white,
             textColor: Colors.blue,
             fct: () async {
               await _showShareOptions();
-            },
-            height: 50,
-            width: size.width * 0.19,
-            fontSize: FontSize.s12,
-          ),
-          CustomRoundButton(
-            title: "Return",
+                },
+                height: buttonHeight,
+                width: buttonWidth,
+                fontSize: buttonFontSize,
+              ),
+              CustomRoundButton(
+                title: "Return",
             boxColor: Colors.white,
             textColor: const Color(0xFFE53E3E),
             fct: () async {
@@ -593,13 +611,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   );
                 }
               }
-            },
-            height: 50,
-            width: size.width * 0.19,
-            fontSize: FontSize.s12,
-          ),
-          CustomRoundButton(
-            title: "Order Status",
+                },
+                height: buttonHeight,
+                width: buttonWidth,
+                fontSize: buttonFontSize,
+              ),
+              CustomRoundButton(
+                title: "Order Status",
             boxColor: Colors.white,
             textColor: const Color(0xFF6A1B9A),
             fct: () {
@@ -649,13 +667,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   },
                 ),
               );
-            },
-            height: 50,
-            width: size.width * 0.19,
-            fontSize: FontSize.s12,
-          ),
-          CustomRoundButton(
-            title: "Payment Status",
+                },
+                height: buttonHeight,
+                width: buttonWidth,
+                fontSize: buttonFontSize,
+              ),
+              CustomRoundButton(
+                title: "Payment Status",
             boxColor: Colors.white,
             textColor: const Color(0xFF1E88E5),
             fct: () {
@@ -696,12 +714,14 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                   },
                 ),
               );
-            },
-            height: 50,
-            width: size.width * 0.19,
-            fontSize: FontSize.s12,
-          ),
-        ],
+                },
+                height: buttonHeight,
+                width: buttonWidth,
+                fontSize: buttonFontSize,
+              ),
+            ],
+          );
+        },
       ),
     );
   }

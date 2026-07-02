@@ -773,11 +773,9 @@ class _SideMenuState extends State<SideMenu> {
               final hasInvoicePermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.invoice.access');
-              // final hasProformaPermission = roleProvider
-              //     .currentUserHasPermissionSync(
-              //         'menu.transactions.proforma.access');
               final hasProformaPermission = roleProvider
-                  .currentUserHasPermissionSync('menu.quotation.main.access');
+                  .currentUserHasPermissionSync(
+                      'menu.transactions.proforma.access');
 
               // final hasReceiptsPermission =
               //     roleProvider.currentUserHasPermissionSync('page_Receipts') ||
@@ -1266,6 +1264,25 @@ class SidebarBrandLogo extends StatelessWidget {
         logoUrl,
         height: height,
         fit: BoxFit.contain,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return SizedBox(
+            height: height,
+            child: Center(
+              child: SizedBox(
+                width: height * 0.6,
+                height: height * 0.6,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  value: loadingProgress.expectedTotalBytes != null
+                      ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                      : null,
+                ),
+              ),
+            ),
+          );
+        },
         errorBuilder: (context, error, stackTrace) {
           return _buildFallbackLogo();
         },

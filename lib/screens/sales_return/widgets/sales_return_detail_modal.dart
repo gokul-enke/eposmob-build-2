@@ -89,6 +89,24 @@ class SalesReturnDetailModal extends StatelessWidget {
                     const SizedBox(height: 8),
                     _buildInfoRow("Date",
                         DateHelper.formatDate(order.createdAt).toString()),
+                    const SizedBox(height: 8),
+                    Consumer<AppSettingsProvider>(
+                      builder: (context, settings, _) {
+                        final currency =
+                            settings.appSettings?.currency ?? 'INR';
+                        final parsed = double.tryParse(order.totalAmount);
+                        final amount = parsed != null
+                            ? parsed.toStringAsFixed(2)
+                            : order.totalAmount;
+                        return _buildInfoRow(
+                            "Return Total", "$currency $amount");
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInfoRow(
+                      "Status",
+                      order.status.toString() == '1' ? 'Completed' : 'Pending',
+                    ),
                   ],
                 ),
               ),

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/features/billing/domain/payment_validation.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import '../models/customer_list.dart';
 import '../models/list_cart.dart';
@@ -427,7 +428,8 @@ class BillingProvider extends ChangeNotifier {
     _isCustomerFound = customer != null;
 
     if (customer != null) {
-      // Update mobile number text based on customer data
+      // Store phone only for order payloads; controller may show "name phone".
+      _mobileNumberText = customer.phone ?? '';
       if (customer.id != null &&
           customer.name != null &&
           customer.name!.isNotEmpty) {
@@ -436,7 +438,6 @@ class BillingProvider extends ChangeNotifier {
         _isCustomerFound = true;
       } else {
         mobileNumberTextController.text = customer.phone ?? '';
-        _mobileNumberText = customer.phone ?? '';
         _isCustomerFound = false;
       }
     }
@@ -463,6 +464,26 @@ class BillingProvider extends ChangeNotifier {
     _mobileNumberText = "";
     _highlightedCustomerIndex = null;
     mobileNumberTextController.clear();
+    notifyListeners();
+  }
+
+  /// Resets billing customer fields when the sales executive or auth user
+  /// changes. Mirrors desktop `BillingPage._onSalesExecutiveChanged` /
+  /// `BillingPage._onUserSwitched` state clears.
+  void resetCustomerForExecutiveOrUserChange({
+    required bool resetManualSelectionFlag,
+  }) {
+    _selectedCustomer = null;
+    _selectedCustomerID = null;
+    _selectedCustomerPhone = null;
+    _isCustomerFound = false;
+    _mobileNumberText = '';
+    _salesExecutivemobileNumberText = '';
+    mobileNumberTextController.clear();
+    _highlightedCustomerIndex = null;
+    if (resetManualSelectionFlag) {
+      _isCustomerManuallySelected = false;
+    }
     notifyListeners();
   }
 
@@ -849,6 +870,19 @@ class BillingProvider extends ChangeNotifier {
   // Pine Labs payment success state
   bool _pineLabsPaymentSuccess = false;
 
+  // Dynamic/extra payment methods beyond CASH/CARD/UPI/COD (e.g. CHEQUE, WALLET)
+  final Map<String, String> _extraPaymentAmounts = {};
+  final Map<String, String> _extraPaymentValues = {};
+  final Set<String> _selectedExtraMethodIds = {};
+  final Map<String, TextEditingController> _extraAmountControllers = {};
+
+  Map<String, String> get extraPaymentAmounts =>
+      Map<String, String>.unmodifiable(_extraPaymentAmounts);
+  Map<String, String> get extraPaymentValues =>
+      Map<String, String>.unmodifiable(_extraPaymentValues);
+  Set<String> get selectedExtraMethodIds =>
+      Set<String>.unmodifiable(_selectedExtraMethodIds);
+
   bool get isCashSelected => _isCashSelected;
   bool get isCardSelected => _isCardSelected;
   bool get isUpiSelected => _isUpiSelected;
@@ -889,9 +923,93 @@ class BillingProvider extends ChangeNotifier {
   double _totalPaidAmount = 0.0;
   double _totalOrderAmount = 0.0;
 
+  /// Saved-order delivery charge override (mirrors desktop `_selectedDeliveryCharge`).
+  double? _deliveryChargeOverride;
+
+  /// Desktop parity: true default customer via provider + configured phone.
+  bool _paymentValidationIsDefaultCustomer = false;
+  String _configuredDefaultCustomerPhone = '';
+
+  /// Split-payment pristine tracking (mirrors payment_method_modal).
+  String? _pristinePaymentMethodKey;
+  String? _pristinePaymentAmount;
+
+  /// Whether the cashier opened the payment section (confirm gate).
+  bool _paymentStepVisited = false;
+
+  /// Order total used for payment validation, balance/change and autofill.
+  ///
+  /// Matches desktop `BillingPage._getEffectiveOrderTotal()` — i.e. the net
+  /// total is round-off adjusted (when `priceRoundOff` is enabled) before the
+  /// delivery charge is added. [_totalOrderAmount] stays the raw (unrounded)
+  /// net + delivery so that discount-driven payment remapping keeps using the
+  /// same unrounded ratio as desktop.
+  double _effectiveOrderTotal = 0.0;
+
   double get balanceAmount => _balanceAmount;
   double get totalPaidAmount => _totalPaidAmount;
   double get totalOrderAmount => _totalOrderAmount;
+
+  /// Effective (round-off adjusted) order total. Falls back to the raw total
+  /// so callers that only set [setTotalOrderAmount] keep their prior behaviour.
+  double get effectiveOrderTotal => _effectiveOrderTotal;
+
+  double? get deliveryChargeOverride => _deliveryChargeOverride;
+
+  String? get pristinePaymentMethodKey => _pristinePaymentMethodKey;
+
+  String? get pristinePaymentAmount => _pristinePaymentAmount;
+
+  bool get paymentStepVisited => _paymentStepVisited;
+
+  void setDeliveryChargeOverride(double? charge) {
+    _deliveryChargeOverride = charge;
+    notifyListeners();
+  }
+
+  void setPaymentValidationCustomerContext({
+    required bool isDefaultCustomer,
+    required String configuredDefaultCustomerPhone,
+  }) {
+    _paymentValidationIsDefaultCustomer = isDefaultCustomer;
+    _configuredDefaultCustomerPhone = configuredDefaultCustomerPhone.trim();
+  }
+
+  void setPristinePaymentState(String? methodKey, String? amount) {
+    _pristinePaymentMethodKey = methodKey;
+    _pristinePaymentAmount = amount;
+  }
+
+  void clearPristinePaymentState() {
+    _pristinePaymentMethodKey = null;
+    _pristinePaymentAmount = null;
+  }
+
+  void markPaymentStepVisited() {
+    if (_paymentStepVisited) return;
+    _paymentStepVisited = true;
+    notifyListeners();
+  }
+
+  void resetPaymentStepVisited() {
+    if (!_paymentStepVisited) return;
+    _paymentStepVisited = false;
+    notifyListeners();
+  }
+
+  void restoreBalanceAmount(double amount) {
+    _balanceAmount = amount;
+    notifyListeners();
+  }
+
+  bool _resolveIsDefaultCustomerForPayment() {
+    if (_paymentValidationIsDefaultCustomer) return true;
+    final customer = _selectedCustomer;
+    if (customer == null) return false;
+    final defaultPhone = _configuredDefaultCustomerPhone;
+    final customerPhone = customer.phone?.trim() ?? '';
+    return defaultPhone.isNotEmpty && customerPhone == defaultPhone;
+  }
 
   // 25. To Customer Credit Toggle - Handle excess payment allocation
   bool _hasExcessPayment = false;
@@ -966,11 +1084,189 @@ class BillingProvider extends ChangeNotifier {
     debitAmountController.clear();
     paidAmountController.clear();
 
+    clearExtraPayments();
+
     _balanceAmount = 0.0;
     _totalPaidAmount = 0.0;
     _hasExcessPayment = false;
+    clearPristinePaymentState();
 
     notifyListeners();
+  }
+
+  /// Clears collected payment amounts while keeping method selections.
+  /// Mirrors desktop `_clearPaymentAmountsOnly` when the cart changes.
+  void clearCollectedPaymentAmountsOnly() {
+    cashAmountController.clear();
+    cardAmountController.clear();
+    upiAmountController.clear();
+    codAmountController.clear();
+    debitAmountController.clear();
+
+    for (final controller in _extraAmountControllers.values) {
+      controller.clear();
+    }
+    _extraPaymentAmounts.clear();
+    _extraPaymentValues.clear();
+
+    calculateBalance();
+    validatePayment();
+    notifyListeners();
+  }
+
+  /// Whether any collected payment amount is present (standard + extra methods).
+  bool hasCollectedPaymentAmounts() {
+    return PaymentValidation.hasCollectedPayment(
+      isCashSelected: _isCashSelected,
+      isCardSelected: _isCardSelected,
+      isUpiSelected: _isUpiSelected,
+      isCodSelected: _isCodSelected,
+      cashAmount: cashAmountController.text,
+      cardAmount: cardAmountController.text,
+      upiAmount: upiAmountController.text,
+      codAmount: codAmountController.text,
+      extraAmounts: _extraPaymentAmounts,
+    );
+  }
+
+  TextEditingController getExtraAmountController(
+    String methodId, {
+    String? displayValue,
+  }) {
+    if (displayValue != null && displayValue.isNotEmpty) {
+      _extraPaymentValues[methodId] = displayValue;
+    }
+    return _extraAmountControllers.putIfAbsent(
+      methodId,
+      () => TextEditingController(
+        text: _extraPaymentAmounts[methodId] ?? '',
+      ),
+    );
+  }
+
+  bool isExtraMethodSelected(String methodId) {
+    return _selectedExtraMethodIds.contains(methodId);
+  }
+
+  void setExtraPaymentAmount(
+    String methodId,
+    String amount, {
+    String? displayValue,
+  }) {
+    _extraPaymentAmounts[methodId] = amount;
+    if (displayValue != null && displayValue.isNotEmpty) {
+      _extraPaymentValues[methodId] = displayValue;
+    }
+    final controller = _extraAmountControllers[methodId];
+    if (controller != null && controller.text != amount) {
+      controller.text = amount;
+    }
+    final parsed = double.tryParse(amount) ?? 0.0;
+    if (parsed > 0) {
+      _selectedExtraMethodIds.add(methodId);
+    } else {
+      _selectedExtraMethodIds.remove(methodId);
+    }
+    validatePayment();
+    calculateBalance();
+    notifyListeners();
+  }
+
+  /// Selects an extra method without autofill (mobile pristine-switch flow).
+  void selectExtraMethod(String methodId, {String? displayValue}) {
+    _selectedExtraMethodIds.add(methodId);
+    if (displayValue != null && displayValue.isNotEmpty) {
+      _extraPaymentValues[methodId] = displayValue;
+    }
+    getExtraAmountController(methodId, displayValue: displayValue);
+    notifyListeners();
+  }
+
+  void toggleExtraMethod(String methodId, {String? displayValue}) {
+    if (_selectedExtraMethodIds.contains(methodId)) {
+      _selectedExtraMethodIds.remove(methodId);
+      setExtraPaymentAmount(methodId, '', displayValue: displayValue);
+      return;
+    }
+
+    _selectedExtraMethodIds.add(methodId);
+    if (displayValue != null && displayValue.isNotEmpty) {
+      _extraPaymentValues[methodId] = displayValue;
+    }
+
+    final controller = getExtraAmountController(methodId, displayValue: displayValue);
+    if (controller.text.isEmpty || (double.tryParse(controller.text) ?? 0.0) == 0.0) {
+      final remaining = _effectiveOrderTotal - getTotalPaidAmount();
+      if (remaining > 0) {
+        setExtraPaymentAmount(
+          methodId,
+          remaining.toStringAsFixed(2),
+          displayValue: displayValue,
+        );
+        return;
+      }
+    }
+
+    validatePayment();
+    calculateBalance();
+    notifyListeners();
+  }
+
+  void clearExtraPayments() {
+    _extraPaymentAmounts.clear();
+    _extraPaymentValues.clear();
+    _selectedExtraMethodIds.clear();
+    for (final controller in _extraAmountControllers.values) {
+      controller.dispose();
+    }
+    _extraAmountControllers.clear();
+  }
+
+  double getExtraPaidTotal() {
+    double total = 0.0;
+    for (final amountStr in _extraPaymentAmounts.values) {
+      total += double.tryParse(amountStr) ?? 0.0;
+    }
+    return total;
+  }
+
+  void restoreExtraPaymentsFromAmounts(
+    Map<String, dynamic> amounts, {
+    String? Function(String methodId)? resolveDisplayValue,
+  }) {
+    final cashId = cashPaymentMethodId ?? 'CASH';
+    final cardId = cardPaymentMethodId ?? 'CARD';
+    final upiId = upiPaymentMethodId ?? 'UPI';
+    final codId = codPaymentMethodId ?? 'COD';
+    final typedKeys = {
+      'CASH',
+      cashId,
+      'CARD',
+      cardId,
+      'UPI',
+      upiId,
+      'COD',
+      codId,
+      'DEBIT',
+      'BALANCE',
+      'ONLINE',
+    };
+
+    for (final entry in amounts.entries) {
+      if (typedKeys.contains(entry.key)) continue;
+      final amount = double.tryParse(entry.value.toString()) ?? 0.0;
+      if (amount <= 0) continue;
+
+      final methodId = entry.key;
+      final resolved = resolveDisplayValue?.call(methodId);
+      final displayValue =
+          (resolved != null && resolved.isNotEmpty) ? resolved : methodId;
+      setExtraPaymentAmount(
+        methodId,
+        entry.value.toString(),
+        displayValue: displayValue,
+      );
+    }
   }
 
   List<String> getSelectedPaymentMethods() {
@@ -986,7 +1282,9 @@ class BillingProvider extends ChangeNotifier {
 
   // Lightweight helper: any payment selected (without amount validation)
   bool hasAnyPaymentSelected() {
-    return getSelectedPaymentMethods().isNotEmpty;
+    return getSelectedPaymentMethods().isNotEmpty ||
+        getExtraPaidTotal() > 0 ||
+        _isOnlineSelected;
   }
 
   // Delivery helpers
@@ -1048,9 +1346,19 @@ class BillingProvider extends ChangeNotifier {
     if (_isOnlineSelected) {
       paidMethods.add({
         "method": "ONLINE",
-        "amount": totalOrderAmount,
+        "amount": _effectiveOrderTotal,
       });
     }
+
+    _extraPaymentAmounts.forEach((methodId, amountStr) {
+      final amount = double.tryParse(amountStr) ?? 0;
+      if (amount > 0) {
+        paidMethods.add({
+          "method": methodId,
+          "amount": amount,
+        });
+      }
+    });
 
     // Note: DEBIT (to customer credit) is excluded from paid methods list
 
@@ -1063,71 +1371,93 @@ class BillingProvider extends ChangeNotifier {
   }
 
   bool validatePayment() {
-    List<String> selectedMethods = getSelectedPaymentMethods();
-
-    if (selectedMethods.isEmpty) {
-      _paymentValidationError = "Please select at least one payment method";
-      _isPaymentValid = false;
+    if (_isOnlineSelected) {
+      _paymentValidationError = null;
+      _isPaymentValid = true;
       notifyListeners();
-      return false;
+      return true;
     }
 
-    // Validate each selected payment method has an amount
-    for (String method in selectedMethods) {
-      double amount = 0.0;
-      switch (method) {
-        case 'CASH':
-          amount = double.tryParse(cashAmountController.text) ?? 0;
-          break;
-        case 'CARD':
-          amount = double.tryParse(cardAmountController.text) ?? 0;
-          break;
-        case 'UPI':
-          amount = double.tryParse(upiAmountController.text) ?? 0;
-          break;
-        case 'COD':
-          amount = double.tryParse(codAmountController.text) ?? 0;
-          break;
-        case 'DEBIT':
-          amount = double.tryParse(debitAmountController.text) ?? 0;
-          break;
-        case 'ONLINE':
-          // ONLINE (Pine Labs) uses cart total
-          amount = totalOrderAmount;
-          break;
-      }
+    final isDefaultCustomer = _resolveIsDefaultCustomerForPayment();
+    final customerPrevBalance = isDefaultCustomer
+        ? 0.0
+        : (_selectedCustomer?.balance ?? 0.0);
 
-      if (amount <= 0) {
-        _paymentValidationError = "Please enter a valid amount for $method";
-        _isPaymentValid = false;
-        notifyListeners();
-        return false;
-      }
-    }
+    final result = PaymentValidation.validateForOrder(
+      orderTotal: _effectiveOrderTotal,
+      toCustomerCreditEnabled: _toCustomerCreditEnabled,
+      isDefaultCustomer: isDefaultCustomer,
+      customerPrevBalance: customerPrevBalance,
+      isCashSelected: _isCashSelected,
+      isCardSelected: _isCardSelected,
+      isUpiSelected: _isUpiSelected,
+      isCodSelected: _isCodSelected,
+      cashAmount: cashAmountController.text,
+      cardAmount: cardAmountController.text,
+      upiAmount: upiAmountController.text,
+      codAmount: codAmountController.text,
+      extraAmounts: _extraPaymentAmounts,
+    );
 
-    _paymentValidationError = null;
-    _isPaymentValid = true;
+    _paymentValidationError = result.message;
+    _isPaymentValid = result.isValid;
     notifyListeners();
-    return true;
+    return result.isValid;
   }
 
   void calculateBalance() {
     // Use the new getTotalPaidAmount() method that excludes debit/customer credit
-    _totalPaidAmount = getTotalPaidAmount();
+    final newTotalPaid = getTotalPaidAmount();
+    final newBalance = calculateBalanceAmount(_effectiveOrderTotal);
+    final newHasExcess = newBalance > 0;
 
-    // Use the complex balance calculation logic
-    _balanceAmount = calculateBalanceAmount(_totalOrderAmount);
-    _hasExcessPayment = _balanceAmount > 0;
+    if ((newTotalPaid - _totalPaidAmount).abs() < 0.001 &&
+        (newBalance - _balanceAmount).abs() < 0.001 &&
+        newHasExcess == _hasExcessPayment) {
+      return;
+    }
 
-    paidAmountController.text = _totalPaidAmount.toString();
+    _totalPaidAmount = newTotalPaid;
+    _balanceAmount = newBalance;
+    _hasExcessPayment = newHasExcess;
+
+    final paidText = _totalPaidAmount.toString();
+    if (paidAmountController.text != paidText) {
+      paidAmountController.text = paidText;
+    }
 
     notifyListeners();
   }
 
   void setTotalOrderAmount(double amount) {
+    // Keep the effective total in lock-step for callers that only know a single
+    // total (tests, legacy screens). Rounding-aware callers use [setOrderTotals].
+    if ((_totalOrderAmount - amount).abs() < 0.001 &&
+        (_effectiveOrderTotal - amount).abs() < 0.001) {
+      return;
+    }
     _totalOrderAmount = amount;
+    _effectiveOrderTotal = amount;
     calculateBalance();
-    notifyListeners();
+  }
+
+  /// Sets the raw and effective (round-off adjusted) order totals together.
+  ///
+  /// [totalOrderAmount] is the raw net + delivery total (used for discount
+  /// remapping); [effectiveOrderTotal] is the round-off adjusted total used for
+  /// payment validation, balance/change and autofill — mirroring desktop's
+  /// `_getEffectiveOrderTotal()`.
+  void setOrderTotals({
+    required double totalOrderAmount,
+    required double effectiveOrderTotal,
+  }) {
+    if ((_totalOrderAmount - totalOrderAmount).abs() < 0.001 &&
+        (_effectiveOrderTotal - effectiveOrderTotal).abs() < 0.001) {
+      return;
+    }
+    _totalOrderAmount = totalOrderAmount;
+    _effectiveOrderTotal = effectiveOrderTotal;
+    calculateBalance();
   }
 
   void showPaymentMethodModal() {
@@ -1323,6 +1653,7 @@ class BillingProvider extends ChangeNotifier {
 
   void setDeliveryTimeString(String? time) {
     _deliveryTimeString = time;
+    _deliveryTime = time;
     notifyListeners();
   }
 
@@ -1375,6 +1706,7 @@ class BillingProvider extends ChangeNotifier {
           codId: codAmountController.text,
           "ONLINE": _isOnlineSelected ? totalOrderAmount.toString() : "0",
           "DEBIT": debitAmountController.text,
+          ..._buildExtraAmountsForStorage(),
         },
         "isMultiPayment": true,
       };
@@ -1535,6 +1867,8 @@ class BillingProvider extends ChangeNotifier {
                   '♻️ [Rehydrate] ONLINE detected in multi-payment. Setting PineLabs success');
               setPineLabsPaymentSuccess(true);
             }
+
+            restoreExtraPaymentsFromAmounts(amounts);
 
             parsedMulti = true;
           } catch (e) {
@@ -1855,6 +2189,8 @@ class BillingProvider extends ChangeNotifier {
     VoidCallback? onSaveOrder,
     VoidCallback? onCreateOrderAndPrint,
     VoidCallback? onConfirmOrder,
+    VoidCallback? onNewOrder,
+    VoidCallback? onSaveOrderAndPrint,
   }) {
     if (onClearCart != null) {
       registerKeyboardShortcut('clearCart', onClearCart);
@@ -1867,6 +2203,12 @@ class BillingProvider extends ChangeNotifier {
     }
     if (onConfirmOrder != null) {
       registerKeyboardShortcut('confirmOrder', onConfirmOrder);
+    }
+    if (onNewOrder != null) {
+      registerKeyboardShortcut('newOrder', onNewOrder);
+    }
+    if (onSaveOrderAndPrint != null) {
+      registerKeyboardShortcut('saveOrderAndPrint', onSaveOrderAndPrint);
     }
   }
 
@@ -2372,27 +2714,47 @@ class BillingProvider extends ChangeNotifier {
     }
   }
 
+  static int _debugBalanceCalcCount = 0;
+
+  void _debugBalanceLog(String message) {
+    assert(() {
+      debugPrint(message);
+      return true;
+    }());
+  }
+
   // MISSED LOGIC: Balance calculation methods - Updated to match billing_page.dart logic
   double calculateBalanceAmount(double cartTotal, {String currency = 'INR'}) {
+    assert(() {
+      _debugBalanceCalcCount++;
+      if (_debugBalanceCalcCount <= 3 || _debugBalanceCalcCount % 50 == 0) {
+        debugPrint(
+          '[BillingProvider] calculateBalanceAmount #$_debugBalanceCalcCount',
+        );
+      }
+      return true;
+    }());
     // For balance calculation, only include actual cash payments (not debit/store credit)
     double cashAmount = double.tryParse(cashAmountController.text) ?? 0.0;
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
-    double totalCollected = cashAmount + cardAmount + upiAmount;
+    double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
+    double totalCollected =
+        cashAmount + cardAmount + upiAmount + codAmount + getExtraPaidTotal();
 
     double balance = 0.0;
 
     if (_toCustomerCreditEnabled) {
-      debugPrint(
+      _debugBalanceLog(
           '🔛 BILLING PROVIDER: Toggle is ON - Calculating with customer credit consideration');
 
       double customerPrevBalance = _selectedCustomer?.balance ?? 0.0;
 
       if (customerPrevBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
-        debugPrint('💳 Customer has debt - using transaction excess logic');
+        _debugBalanceLog('💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalCollected - cartTotal;
-        debugPrint(
+        _debugBalanceLog(
             '💰 Transaction excess: $currency${transactionExcess.toStringAsFixed(2)}');
 
         if (transactionExcess > 0) {
@@ -2403,35 +2765,35 @@ class BillingProvider extends ChangeNotifier {
           // Clamp customer credit to available excess
           if (actualCustomerCredit > transactionExcess) {
             actualCustomerCredit = transactionExcess;
-            debugPrint(
+            _debugBalanceLog(
                 '  - Clamped customer credit to transaction excess: $currency${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = transaction excess - customer credit
           balance = transactionExcess - actualCustomerCredit;
-          debugPrint(
+          _debugBalanceLog(
               '  - Balance = Transaction Excess ($currency${transactionExcess.toStringAsFixed(2)}) - Customer Credit ($currency${actualCustomerCredit.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
         } else {
           balance = 0.0;
-          debugPrint('  - No transaction excess, balance = 0');
+          _debugBalanceLog('  - No transaction excess, balance = 0');
         }
       } else {
         // Customer has positive/zero balance - use Net Due logic
-        debugPrint('💵 Customer has credit/zero balance - using Net Due logic');
+        _debugBalanceLog('💵 Customer has credit/zero balance - using Net Due logic');
         // Net Due = Purchase Total - Customer Previous Balance
         double netDue = cartTotal - customerPrevBalance;
-        debugPrint('💰 Net Due calculation:');
-        debugPrint(
+        _debugBalanceLog('💰 Net Due calculation:');
+        _debugBalanceLog(
             '  - Purchase Total: $currency${cartTotal.toStringAsFixed(2)}');
-        debugPrint(
+        _debugBalanceLog(
             '  - Customer Prev Balance: $currency${customerPrevBalance.toStringAsFixed(2)}');
-        debugPrint('  - Net Due: $currency${netDue.toStringAsFixed(2)}');
+        _debugBalanceLog('  - Net Due: $currency${netDue.toStringAsFixed(2)}');
 
         // Available balance = Total Collected - Net Due
         double availableBalance = totalCollected - netDue;
-        debugPrint(
+        _debugBalanceLog(
             '  - Total Collected: $currency${totalCollected.toStringAsFixed(2)}');
-        debugPrint(
+        _debugBalanceLog(
             '  - Available Balance: $currency${availableBalance.toStringAsFixed(2)}');
 
         if (availableBalance > 0) {
@@ -2442,32 +2804,32 @@ class BillingProvider extends ChangeNotifier {
           // Clamp customer credit to available balance
           if (actualCustomerCredit > availableBalance) {
             actualCustomerCredit = availableBalance;
-            debugPrint(
+            _debugBalanceLog(
                 '  - Clamped customer credit to available balance: $currency${actualCustomerCredit.toStringAsFixed(2)}');
           }
 
           // Cash balance = available balance - customer credit
           balance = availableBalance - actualCustomerCredit;
-          debugPrint(
+          _debugBalanceLog(
               '  - Balance = Available Balance ($currency${availableBalance.toStringAsFixed(2)}) - Customer Credit ($currency${actualCustomerCredit.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
         } else {
           balance = 0.0;
-          debugPrint('  - No available balance, balance = 0');
+          _debugBalanceLog('  - No available balance, balance = 0');
         }
       }
     } else {
-      debugPrint(
+      _debugBalanceLog(
           '🔴 BILLING PROVIDER: Toggle is OFF - Using simple calculation');
       // Toggle OFF: Simple calculation without previous balance
       balance = totalCollected - cartTotal;
-      debugPrint(
+      _debugBalanceLog(
           '  - Balance = Total Collected ($currency${totalCollected.toStringAsFixed(2)}) - Cart Total ($currency${cartTotal.toStringAsFixed(2)}) = $currency${balance.toStringAsFixed(2)}');
     }
 
     // Clamp balance to never show negative values in UI
     // Negative balance means insufficient payment, but cash drawer can't give negative money
     if (balance < 0) {
-      debugPrint(
+      _debugBalanceLog(
           '🚫 BILLING PROVIDER: Clamping negative balance ($currency${balance.toStringAsFixed(2)}) to 0 for UI display');
       balance = 0.0;
     }
@@ -2481,10 +2843,26 @@ class BillingProvider extends ChangeNotifier {
     double cardAmount = double.tryParse(cardAmountController.text) ?? 0.0;
     double upiAmount = double.tryParse(upiAmountController.text) ?? 0.0;
     double codAmount = double.tryParse(codAmountController.text) ?? 0.0;
-    double onlineAmount = _isOnlineSelected ? totalOrderAmount : 0.0;
+    double onlineAmount = _isOnlineSelected ? _effectiveOrderTotal : 0.0;
     // Note: We don't include debit/toCustomerCredit in total paid amount
     // as it represents money going to customer credit, not money collected
-    return cashAmount + cardAmount + upiAmount + codAmount + onlineAmount;
+    return cashAmount +
+        cardAmount +
+        upiAmount +
+        codAmount +
+        onlineAmount +
+        getExtraPaidTotal();
+  }
+
+  Map<String, String> _buildExtraAmountsForStorage() {
+    final extras = <String, String>{};
+    _extraPaymentAmounts.forEach((methodId, amountStr) {
+      final amount = double.tryParse(amountStr) ?? 0;
+      if (amount > 0) {
+        extras[methodId] = amountStr;
+      }
+    });
+    return extras;
   }
 
   // MISSED LOGIC: Get selected payment methods excluding debit when no amount
@@ -2509,6 +2887,11 @@ class BillingProvider extends ChangeNotifier {
     if (_isOnlineSelected) {
       methods.add("ONLINE");
     }
+    _extraPaymentAmounts.forEach((methodId, amountStr) {
+      if ((double.tryParse(amountStr) ?? 0) > 0) {
+        methods.add(methodId);
+      }
+    });
     // Note: Debit is handled separately as customer credit, not a payment method
     return methods;
   }
@@ -2535,6 +2918,11 @@ class BillingProvider extends ChangeNotifier {
     if (_isOnlineSelected) {
       methods.add("ONLINE");
     }
+    _extraPaymentAmounts.forEach((methodId, amountStr) {
+      if ((double.tryParse(amountStr) ?? 0) > 0) {
+        methods.add(methodId);
+      }
+    });
 
     return methods;
   }
@@ -2716,7 +3104,12 @@ class BillingProvider extends ChangeNotifier {
     cashAmountController.dispose();
     cardAmountController.dispose();
     upiAmountController.dispose();
+    codAmountController.dispose();
     debitAmountController.dispose();
+    for (final controller in _extraAmountControllers.values) {
+      controller.dispose();
+    }
+    _extraAmountControllers.clear();
     barcodeController.dispose();
     quantityController.dispose();
     unitPriceController.dispose();

@@ -12,6 +12,7 @@ import '../../resources/style_manager.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
+import 'package:pos_machine/helpers/debug_login_autofill.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ApiKeyScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class ApiKeyScreen extends StatefulWidget {
 
 class _ApiKeyScreenState extends State<ApiKeyScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
+  final FocusNode _apiKeyFocusNode = FocusNode();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   String? _errorMessage;
@@ -35,17 +37,35 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     );
   }
 
+  void _ensureVirtualKeyboardOffByDefault() {
+    try {
+      final keyboardProvider =
+          Provider.of<KeyboardProvider>(context, listen: false);
+      keyboardProvider.featureOff();
+      keyboardProvider.clear();
+      _apiKeyFocusNode.unfocus();
+      FocusManager.instance.primaryFocus?.unfocus();
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
-    // Ensure on-screen keyboard feature is OFF by default when opening API key screen
+    // Keep virtual keyboard off on first open; re-apply after Hive may finish loading.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
-        keyboardProvider.featureOff();
-        keyboardProvider.clear();
-      } catch (_) {}
+      _ensureVirtualKeyboardOffByDefault();
+      DebugLoginAutofill.applyApiKeyIfNeeded(_apiKeyController);
+      Future<void>.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) _ensureVirtualKeyboardOffByDefault();
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _apiKeyFocusNode.dispose();
+    _apiKeyController.dispose();
+    super.dispose();
   }
 
   Future<void> _saveApiConfig({
@@ -211,6 +231,8 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                             child: Padding(
                               padding: fieldPadding,
                               child: TextFormField(
+                                focusNode: _apiKeyFocusNode,
+                                autofocus: false,
                                 autovalidateMode:
                                     AutovalidateMode.onUserInteraction,
                                 validator: _validateApiKey,
@@ -220,8 +242,13 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                                 readOnly: _shouldSuppressSystemKeyboard(),
                                 showCursor: true,
                                 onTap: () {
-                                  Provider.of<KeyboardProvider>(context, listen: false)
-                                      .show('api_key', _apiKeyController);
+                                  final keyboardProvider =
+                                      Provider.of<KeyboardProvider>(context,
+                                          listen: false);
+                                  if (keyboardProvider.showKeyboardFeature) {
+                                    keyboardProvider.show(
+                                        'api_key', _apiKeyController);
+                                  }
                                 },
                                 keyboardType: TextInputType.text,
                                 decoration: decoration.copyWith(

@@ -3,9 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/helpers/api_response_helper.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
+import 'package:pos_machine/models/sales_return_refund_breakdown.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/list_sales_order.dart';
@@ -17,6 +19,7 @@ class SalesProvider with ChangeNotifier {
   List<SalesReturnOrder> _salesReturnOrders = [];
   List<SalesReturnCart> _salesReturnItems = [];
   SalesReturnOrderInfo? _currentReturnOrder;
+  SalesReturnRefundBreakdown? _serverRefundBreakdown;
   List<DailySalesCloseData> dailySalesCloseList = [];
   Pagination? dailySalesClosePagination;
   int currentPage = 1;
@@ -28,6 +31,19 @@ class SalesProvider with ChangeNotifier {
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
   List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
   SalesReturnOrderInfo? get currentReturnOrder => _currentReturnOrder;
+  SalesReturnRefundBreakdown? get serverRefundBreakdown => _serverRefundBreakdown;
+
+  void clearServerRefundBreakdown() {
+    _serverRefundBreakdown = null;
+    notifyListeners();
+  }
+
+  void _storeRefundBreakdownFromBody(String body) {
+    final breakdown = SalesReturnRefundBreakdown.fromResponseBody(body);
+    if (breakdown != null) {
+      _serverRefundBreakdown = breakdown;
+    }
+  }
 
   String _orderNumber = "";
   String _orderId = "";
@@ -488,39 +504,21 @@ class SalesProvider with ChangeNotifier {
           'fetch Sales Return list response status code: ${response.statusCode}');
       debugPrint('response.body ${response.body}');
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        try {
-          debugPrint('=== SALES RETURN JSON PARSING DEBUG ===');
-          debugPrint('About to parse SalesReturnResponse.fromJson...');
-          debugPrint('JSON Data Keys: ${jsonData.keys}');
-          debugPrint('Data section: ${jsonData['data']}');
-          final salesReturnResponse = SalesReturnResponse.fromJson(jsonData);
-          debugPrint(
-              'fetch Sales Return list response data: ${salesReturnResponse.data.data}');
-          _salesReturnOrders = salesReturnResponse
-              .data.data; // Store fetched data from nested structure
+      ApiResponseHelper.ensureSuccess(
+        response.statusCode,
+        response.body,
+        fallback: 'Failed to load sales returns',
+      );
 
-          // Update pagination for sales return
-          salesReturnCurrentPage = salesReturnResponse.data.currentPage;
-          salesReturnTotalPages = salesReturnResponse.data.lastPage;
-          debugPrint(
-              'Sales Return Pagination - Current: $salesReturnCurrentPage, Total: $salesReturnTotalPages');
+      final jsonData = json.decode(response.body);
+      final salesReturnResponse = SalesReturnResponse.fromJson(jsonData);
+      _salesReturnOrders = salesReturnResponse.data.data;
 
-          notifyListeners(); // Notify listeners to update UI
-        } catch (e, stackTrace) {
-          debugPrint('=== JSON PARSING ERROR ===');
-          debugPrint('Error parsing JSON data: $e');
-          debugPrint('Stack Trace: $stackTrace');
-          debugPrint('JSON that failed to parse: ${jsonData.toString()}');
-        }
-      } else {
-        debugPrint(
-            'Failed to load orders: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to load orders');
-      }
+      salesReturnCurrentPage = salesReturnResponse.data.currentPage;
+      salesReturnTotalPages = salesReturnResponse.data.lastPage;
+
+      notifyListeners();
     } catch (error) {
-      // debugPrint('Error in fetchOrders: $error');
       _salesReturnOrders = [];
       rethrow;
     }
@@ -569,24 +567,19 @@ class SalesProvider with ChangeNotifier {
           'fetch Sales Return list response status code: ${response.statusCode}');
       debugPrint('response.body ${response.body}');
 
+      ApiResponseHelper.ensureSuccess(
+        response.statusCode,
+        response.body,
+        fallback: 'Failed to load return items',
+      );
+
       final jsonData = json.decode(response.body);
-      try {
-        debugPrint('=== SALES RETURN ITEMS JSON PARSING DEBUG ===');
-        debugPrint('About to parse SalesReturnItemsResponse.fromJson...');
-        debugPrint('JSON Data Keys: ${jsonData.keys}');
-        debugPrint('Data section: ${jsonData['data']}');
-        final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
-        _salesReturnItems = salesReturnResponse.data;
-        _currentReturnOrder = salesReturnResponse.order;
-        notifyListeners();
-      } catch (e, stackTrace) {
-        debugPrint('=== SALES RETURN ITEMS JSON PARSING ERROR ===');
-        debugPrint('Error parsing JSON data: $e');
-        debugPrint('Stack Trace: $stackTrace');
-        debugPrint('JSON that failed to parse: ${jsonData.toString()}');
-      }
+      final salesReturnResponse = SalesReturnItemsResponse.fromJson(jsonData);
+      _salesReturnItems = salesReturnResponse.data;
+      _currentReturnOrder = salesReturnResponse.order;
+      notifyListeners();
     } catch (error) {
-      debugPrint('Error in fetchOrders: $error');
+      debugPrint('Error in fetchSalesReturnItems: $error');
       rethrow;
     }
   }
@@ -595,9 +588,10 @@ class SalesProvider with ChangeNotifier {
     required String accessToken,
     required int orderId,
     required double price,
-    required int quantity,
+    required num quantity,
     required int cartItemId,
     required String reason,
+    bool isDeliveryRefundable = false,
   }) async {
     final url =
         Uri.parse(APPUrl.salesReturn); // Update with your server base URL
@@ -622,6 +616,7 @@ class SalesProvider with ChangeNotifier {
         'quantity': quantity,
         'cart_item_id': cartItemId,
         'reason': reason,
+        'is_delivery_refundable': isDeliveryRefundable,
       }),
     );
 
@@ -634,14 +629,13 @@ class SalesProvider with ChangeNotifier {
     debugPrint("response.statusCode ${response.statusCode}");
     debugPrint("response.body ${response.body}");
 
-    if (response.statusCode == 200) {
-      // debugPrint('Sales return submitted successfully: ${response.body}');
-      notifyListeners();
-    } else {
-      debugPrint(
-          'Failed to submit sales return: ${response.statusCode} - ${response.body}');
-      throw Exception('Failed to submit sales return');
-    }
+    ApiResponseHelper.ensureSuccess(
+      response.statusCode,
+      response.body,
+      fallback: 'Failed to submit sales return',
+    );
+    _storeRefundBreakdownFromBody(response.body);
+    notifyListeners();
   }
 
   Future<void> completeSalesReturn({
@@ -650,7 +644,7 @@ class SalesProvider with ChangeNotifier {
     String? paymentMethod,
     double? paidAmount,
     bool? hasPayment,
-    bool isDeliveryRefundable = true,
+    bool isDeliveryRefundable = false,
   }) async {
     final url = Uri.parse(
         APPUrl.completeSalesReturn); // Update with your server base URL
@@ -696,14 +690,14 @@ class SalesProvider with ChangeNotifier {
       body: requestBody,
     );
 
-    if (response.statusCode == 200) {
-      debugPrint('Sales return submitted successfully: ${response.body}');
-      notifyListeners();
-    } else {
-      debugPrint(
-          'Failed to submit sales return: ${response.statusCode} - ${response.body}');
-      throw Exception('Failed to submit sales return');
-    }
+    ApiResponseHelper.ensureSuccess(
+      response.statusCode,
+      response.body,
+      fallback: 'Failed to complete sales return',
+    );
+    _storeRefundBreakdownFromBody(response.body);
+    debugPrint('Sales return completed successfully: ${response.body}');
+    notifyListeners();
   }
 
   Future<void> cancelOrder({
@@ -1027,6 +1021,10 @@ class SalesProvider with ChangeNotifier {
   Future<Map<String, dynamic>> createDailySalesClose({
     required String accessToken,
     required int storeId,
+    String? openingDate,
+    String? openingTime,
+    String? closingDate,
+    String? closingTime,
   }) async {
     final queryParameters = <String, String>{
       'store_id': storeId.toString(),
@@ -1037,6 +1035,22 @@ class SalesProvider with ChangeNotifier {
 
     debugPrint('=== DEBUG: createDailySalesClose START ===');
     debugPrint('Full URL: $uri');
+    debugPrint('Query Parameters: $queryParameters');
+
+    final Map<String, dynamic> requestBody = {
+      'opening_date': openingDate,
+      'opening_time': openingTime,
+      'closing_date': closingDate,
+      'closing_time': closingTime,
+    };
+    final requestBodyJson = jsonEncode(requestBody);
+    debugPrint('=== DEBUG: createDailySalesClose REQUEST BODY ===');
+    debugPrint(requestBodyJson);
+    debugPrint('opening_date: ${requestBody['opening_date']}');
+    debugPrint('opening_time: ${requestBody['opening_time']}');
+    debugPrint('closing_date: ${requestBody['closing_date']}');
+    debugPrint('closing_time: ${requestBody['closing_time']}');
+    debugPrint('=== END REQUEST BODY ===');
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1053,6 +1067,7 @@ class SalesProvider with ChangeNotifier {
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         },
+        body: requestBodyJson,
       ).timeout(const Duration(seconds: 15));
 
       debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');

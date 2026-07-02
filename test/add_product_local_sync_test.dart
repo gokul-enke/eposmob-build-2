@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'test_support/hive_test_teardown.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,12 +45,7 @@ void main() {
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
   });
 
-  tearDownAll(() async {
-    await Hive.close();
-    if (await hiveDir.exists()) {
-      await hiveDir.delete(recursive: true);
-    }
-  });
+  tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   GetProduct makeProduct({
     required int id,
@@ -172,5 +169,31 @@ void main() {
         provider.sellableFilteredProducts.where((p) => p.productId == 7).toList();
     expect(matches, hasLength(1));
     expect(matches.first.productName, 'Updated Name');
+  });
+
+  // ── Mobile create-and-add: form quantity parsing for cart (not opening stock) ─
+
+  test('parseAddToCartQuantity treats form default "0" as cart qty 1', () {
+    expect(
+      AddProductFormHelpers.parseAddToCartQuantity('0'),
+      1,
+      reason: 'Opening stock field defaults to 0; cart add must still use 1',
+    );
+  });
+
+  test('P-02 sign-off: parsed qty 3 adds single cart line with quantity 3', () {
+    final provider = LocalProductProvider()..setStockEnabled(false);
+    final product = makeProduct(id: 101, barcode: 'BC-101', name: 'Created Qty3');
+    provider.addProduct(product);
+
+    final quantity = AddProductFormHelpers.parseAddToCartQuantity('3');
+    final price = AddProductFormHelpers.parseAddToCartSellingPrice('120');
+
+    provider.addToCart(product: product, quantity: quantity, price: price);
+
+    expect(quantity, 3);
+    expect(provider.cartItems, hasLength(1));
+    expect(provider.cartItems.single.quantity, 3);
+    expect(provider.cartItems.single.price, 120);
   });
 }
