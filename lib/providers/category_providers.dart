@@ -381,11 +381,11 @@ class CategoryProvider extends ChangeNotifier {
     }
 
     // Add store_id to query parameters
-    final Map<String, String> queryParams = {};
+    final queryParams = Map<String, String>.from(url.queryParameters);
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();
     }
-    final updatedUrl = url.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    final updatedUrl = url.replace(queryParameters: queryParams);
 
     try {
       final response = await http.get(updatedUrl, headers: {

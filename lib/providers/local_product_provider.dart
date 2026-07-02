@@ -1758,6 +1758,7 @@ class LocalProductProvider extends ChangeNotifier {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? apiKey = prefs.getString('api_key');
       String? accessToken = prefs.getString('access_token');
+      final int? activeStoreId = prefs.getInt('active_store_id');
       if (apiKey == null || apiKey.isEmpty) {
         throw const HttpException("API key not found. Please restart the app.");
       }
@@ -1782,9 +1783,9 @@ class LocalProductProvider extends ChangeNotifier {
         final futures = <Future<http.Response>>[];
         for (int page = batchStartPage; page <= batchEndPage; page++) {
           final queryParams = <String, String>{'page': page.toString()};
-          // if (activeStoreId != null) {
-          //   queryParams['store_id'] = activeStoreId.toString();
-          // }
+          if (activeStoreId != null) {
+            queryParams['store_id'] = activeStoreId.toString();
+          }
           if (useDelta) {
             queryParams['updated_at_range'] = "$lastSyncIso,$syncEndIso";
           }
