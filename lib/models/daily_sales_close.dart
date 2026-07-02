@@ -31,6 +31,8 @@ class DailySalesCloseData {
   String? openingTime;
   String? closingDate;
   String? closingTime;
+  String? shiftName;
+  String? businessDate;
   int? openingTransactionId;
   int? closingTransactionId;
   int? totalOrders;
@@ -43,6 +45,7 @@ class DailySalesCloseData {
   String? totalCreditCollected;
   String? totalReturns;
   String? totalRefunds;
+  CashSummary? cashSummary;
   List<DailySalesTransaction>? transactions;
   ProductSummary? productSummary;
   String? createdAt;
@@ -57,6 +60,8 @@ class DailySalesCloseData {
       this.openingTime,
       this.closingDate,
       this.closingTime,
+      this.shiftName,
+      this.businessDate,
       this.openingTransactionId,
       this.closingTransactionId,
       this.totalOrders,
@@ -69,6 +74,7 @@ class DailySalesCloseData {
       this.totalCreditCollected,
       this.totalReturns,
       this.totalRefunds,
+      this.cashSummary,
       this.transactions,
       this.productSummary,
       this.createdAt,
@@ -85,6 +91,8 @@ class DailySalesCloseData {
     openingTime = json['opening_time'];
     closingDate = json['closing_date'];
     closingTime = json['closing_time'];
+    shiftName = json['shift_name'];
+    businessDate = json['business_date'];
     openingTransactionId = json['opening_transaction_id'];
     closingTransactionId = json['closing_transaction_id'];
     totalOrders = json['total_orders'];
@@ -97,6 +105,11 @@ class DailySalesCloseData {
     totalCreditCollected = json['total_credit_collected'];
     totalReturns = json['total_returns'];
     totalRefunds = json['total_refunds'];
+    if (json['cash_summary'] != null) {
+      cashSummary = CashSummary.fromJson(
+        Map<String, dynamic>.from(json['cash_summary']),
+      );
+    }
     if (json['transactions'] != null) {
       transactions = <DailySalesTransaction>[];
       json['transactions'].forEach((v) {
@@ -218,10 +231,20 @@ class DailySalesCloseSummaryResponse {
 class DailySalesCloseSummary {
   String? userName;
   int? storeId;
+  String? shiftName;
+  String? businessDate;
   String? openingDate;
   String? openingTime;
   String? closingDate;
   String? closingTime;
+  num? cashRefunds;
+  num? cashExpenses;
+  num? cashDropAmount;
+  num? openingCashInHand;
+  List<dynamic>? openingCashBreakdown;
+  num? closingCashInHand;
+  List<dynamic>? closingCashBreakdown;
+  String? notes;
   int? totalOrders;
   String? totalSales;
   String? paymentReceived;
@@ -236,10 +259,20 @@ class DailySalesCloseSummary {
   DailySalesCloseSummary({
     this.userName,
     this.storeId,
+    this.shiftName,
+    this.businessDate,
     this.openingDate,
     this.openingTime,
     this.closingDate,
     this.closingTime,
+    this.cashRefunds,
+    this.cashExpenses,
+    this.cashDropAmount,
+    this.openingCashInHand,
+    this.openingCashBreakdown,
+    this.closingCashInHand,
+    this.closingCashBreakdown,
+    this.notes,
     this.totalOrders,
     this.totalSales,
     this.paymentReceived,
@@ -255,10 +288,24 @@ class DailySalesCloseSummary {
   DailySalesCloseSummary.fromJson(Map<String, dynamic> json) {
     userName = _stringValue(json['user_name']);
     storeId = _intValue(json['store_id']);
+    shiftName = _stringValue(json['shift_name']);
+    businessDate = _stringValue(json['business_date']);
     openingDate = _stringValue(json['opening_date']);
     openingTime = _stringValue(json['opening_time']);
     closingDate = _stringValue(json['closing_date']);
     closingTime = _stringValue(json['closing_time']);
+    cashRefunds = _numValue(json['cash_refunds']);
+    cashExpenses = _numValue(json['cash_expenses']);
+    cashDropAmount = _numValue(json['cash_drop_amount']);
+    openingCashInHand = _numValue(json['opening_cash_in_hand']);
+    openingCashBreakdown = json['opening_cash_breakdown'] is List
+        ? List<dynamic>.from(json['opening_cash_breakdown'] as List)
+        : null;
+    closingCashInHand = _numValue(json['closing_cash_in_hand']);
+    closingCashBreakdown = json['closing_cash_breakdown'] is List
+        ? List<dynamic>.from(json['closing_cash_breakdown'] as List)
+        : null;
+    notes = _stringValue(json['notes']);
     totalOrders = _intValue(json['total_orders']);
     totalSales = _stringValue(json['total_sales']);
     paymentReceived = _stringValue(json['payment_received']);
@@ -277,6 +324,77 @@ class DailySalesCloseSummary {
     if (value is int) return value;
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '');
+  }
+
+  static num? _numValue(dynamic value) {
+    if (value is num) return value;
+    return num.tryParse(value?.toString() ?? '');
+  }
+}
+
+class CashSummary {
+  int? totalSalesCount;
+  String? totalSalesAmount;
+  String? cashCollected;
+  String? onlineCollected;
+  String? creditAmount;
+  String? previousBalanceCollected;
+  String? cashRefunds;
+  String? cashExpenses;
+  String? cashDropAmount;
+  String? openingCashInHand;
+  List<dynamic>? openingCashBreakdown;
+  String? expectedClosingCash;
+  String? closingCashInHand;
+  List<dynamic>? closingCashBreakdown;
+  String? shortCash;
+  String? excessCash;
+  String? notes;
+
+  CashSummary({
+    this.totalSalesCount,
+    this.totalSalesAmount,
+    this.cashCollected,
+    this.onlineCollected,
+    this.creditAmount,
+    this.previousBalanceCollected,
+    this.cashRefunds,
+    this.cashExpenses,
+    this.cashDropAmount,
+    this.openingCashInHand,
+    this.openingCashBreakdown,
+    this.expectedClosingCash,
+    this.closingCashInHand,
+    this.closingCashBreakdown,
+    this.shortCash,
+    this.excessCash,
+    this.notes,
+  });
+
+  CashSummary.fromJson(Map<String, dynamic> json) {
+    totalSalesCount = json['total_sales_count'] is num
+        ? (json['total_sales_count'] as num).toInt()
+        : int.tryParse(json['total_sales_count']?.toString() ?? '');
+    totalSalesAmount = json['total_sales_amount']?.toString();
+    cashCollected = json['cash_collected']?.toString();
+    onlineCollected = json['online_collected']?.toString();
+    creditAmount = json['credit_amount']?.toString();
+    previousBalanceCollected = json['previous_balance_collected']?.toString();
+    cashRefunds = json['cash_refunds']?.toString();
+    cashExpenses = json['cash_expenses']?.toString();
+    cashDropAmount = json['cash_drop_amount']?.toString();
+    openingCashInHand = json['opening_cash_in_hand']?.toString();
+    openingCashBreakdown = json['opening_cash_breakdown'] is List
+        ? List<dynamic>.from(json['opening_cash_breakdown'] as List)
+        : null;
+    expectedClosingCash = json['expected_closing_cash']?.toString();
+    closingCashInHand = json['closing_cash_in_hand']?.toString();
+    closingCashBreakdown = json['closing_cash_breakdown'] is List
+        ? List<dynamic>.from(json['closing_cash_breakdown'] as List)
+        : null;
+    shortCash = json['short_cash']?.toString();
+    excessCash = json['excess_cash']?.toString();
+    notes = json['notes']?.toString();
   }
 }
 

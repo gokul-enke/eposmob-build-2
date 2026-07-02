@@ -204,6 +204,20 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                 const SizedBox(height: 10),
                 _buildSalesSummary(context, data),
                 const SizedBox(height: 20),
+                if (data.cashSummary != null) ...[
+                  _buildSectionHeader('Cash Summary', Icons.account_balance_wallet_outlined),
+                  const SizedBox(height: 10),
+                  _buildCashSummary(context, data.cashSummary!),
+                  const SizedBox(height: 20),
+                  _buildSectionHeader('Cash Denomination Breakdown', Icons.payments_outlined),
+                  const SizedBox(height: 10),
+                  _buildCashBreakdownSection(context, data.cashSummary!),
+                  const SizedBox(height: 20),
+                ],
+                _buildSectionHeader('Key Fields', Icons.info_outline),
+                const SizedBox(height: 10),
+                _buildKeyFields(data),
+                const SizedBox(height: 20),
                 _buildSectionHeader('Closing Range Details', Icons.access_time),
                 const SizedBox(height: 10),
                 _buildClosingRangeDetails(data),
@@ -334,6 +348,14 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
               const SizedBox(height: 20),
               Row(
                 children: [
+                  Expanded(child: _buildDetailItem('Credit Collected', '$currency ${data.totalCreditCollected ?? '0.00'}', valueColor: ColorManager.kSuccessColor, isValueBold: true)),
+                  Expanded(child: _buildDetailItem('Business Date', data.businessDate ?? data.openingDate ?? '-')),
+                  const Expanded(child: SizedBox()),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
                   Expanded(child: _buildDetailItem('Total Returns (Sales Return)', '$currency ${data.totalReturns ?? '0.00'}', valueColor: Colors.red)),
                   Expanded(child: _buildDetailItem('Total Refunds (Vouchers)', '$currency ${data.totalRefunds ?? '0.00'}', valueColor: Colors.red)),
                 ],
@@ -353,6 +375,175 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
           Expanded(child: _buildDetailItem('Opening Time', data.openingTime ?? '-')),
           Expanded(child: _buildDetailItem('Closing Date', data.closingDate ?? '-')),
           Expanded(child: _buildDetailItem('Closing Time', data.closingTime ?? '-')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCashSummary(BuildContext context, CashSummary cashSummary) {
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+        return _buildCard(
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(child: _buildDetailItem('Sales Count', cashSummary.totalSalesCount?.toString() ?? '0', isValueBold: true)),
+                  Expanded(child: _buildDetailItem('Sales Amount', '$currency ${cashSummary.totalSalesAmount ?? '0.00'}', isValueBold: true)),
+                  Expanded(child: _buildDetailItem('Cash Collected', '$currency ${cashSummary.cashCollected ?? '0.00'}')),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _buildDetailItem('Online Collected', '$currency ${cashSummary.onlineCollected ?? '0.00'}')),
+                  Expanded(child: _buildDetailItem('Credit Amount', '$currency ${cashSummary.creditAmount ?? '0.00'}')),
+                  Expanded(child: _buildDetailItem('Previous Balance Collected', '$currency ${cashSummary.previousBalanceCollected ?? '0.00'}')),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _buildDetailItem('Cash Refunds', '$currency ${cashSummary.cashRefunds ?? '0.00'}', valueColor: Colors.red)),
+                  Expanded(child: _buildDetailItem('Cash Expenses', '$currency ${cashSummary.cashExpenses ?? '0.00'}', valueColor: Colors.red)),
+                  Expanded(child: _buildDetailItem('Cash Drop Amount', '$currency ${cashSummary.cashDropAmount ?? '0.00'}')),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _buildDetailItem('Opening Cash In Hand', '$currency ${cashSummary.openingCashInHand ?? '0.00'}')),
+                  Expanded(child: _buildDetailItem('Expected Closing Cash', '$currency ${cashSummary.expectedClosingCash ?? '0.00'}')),
+                  Expanded(child: _buildDetailItem('Closing Cash In Hand', '$currency ${cashSummary.closingCashInHand ?? '0.00'}')),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _buildDetailItem('Short Cash', '$currency ${cashSummary.shortCash ?? '0.00'}', valueColor: Colors.red)),
+                  Expanded(child: _buildDetailItem('Excess Cash', '$currency ${cashSummary.excessCash ?? '0.00'}', valueColor: ColorManager.kSuccessColor)),
+                  Expanded(child: _buildDetailItem('Notes', cashSummary.notes ?? '-')),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCashBreakdownSection(BuildContext context, CashSummary cashSummary) {
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+        return Column(
+          children: [
+            _buildBreakdownCard(
+              title: 'Opening Cash Breakdown',
+              subtitle: 'Saved denomination details for this cash stage.',
+              rows: cashSummary.openingCashBreakdown,
+              currency: currency,
+            ),
+            const SizedBox(height: 14),
+            _buildBreakdownCard(
+              title: 'Closing Cash Breakdown',
+              subtitle: 'Saved denomination details for this cash stage.',
+              rows: cashSummary.closingCashBreakdown,
+              currency: currency,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBreakdownCard({
+    required String title,
+    required String subtitle,
+    required List<dynamic>? rows,
+    required String currency,
+  }) {
+    final normalizedRows = rows
+        ?.whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList() ??
+        [];
+
+    return _buildCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s12,
+              0.21,
+              Colors.grey.shade800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (normalizedRows.isEmpty)
+            Text(
+              'No denomination details available',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: MaterialStateProperty.all(Colors.grey[50]),
+                columns: const [
+                  DataColumn(label: Text('Denomination')),
+                  DataColumn(label: Text('Count')),
+                  DataColumn(label: Text('Total')),
+                ],
+                rows: normalizedRows.map((row) {
+                  final denomination = row['denomination']?.toString() ?? '-';
+                  final countText = row['count']?.toString() ?? '0';
+                  final count = int.tryParse(countText) ?? 0;
+                  final denominationValue = num.tryParse(denomination) ?? 0;
+                  final total = denominationValue * count;
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(denomination)),
+                      DataCell(Text(count.toString())),
+                      DataCell(Text('$currency ${total.toStringAsFixed(2)}')),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKeyFields(DailySalesCloseData data) {
+    return _buildCard(
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: _buildDetailItem('Shift Name', data.shiftName ?? '-')),
+              Expanded(child: _buildDetailItem('Business Date', data.businessDate ?? '-')),
+              Expanded(child: _buildDetailItem('Credit Collected', data.totalCreditCollected ?? '0.00', valueColor: ColorManager.kSuccessColor, isValueBold: true)),
+            ],
+          ),
         ],
       ),
     );

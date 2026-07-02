@@ -28,6 +28,7 @@ class AppSettings {
   final bool autoAssignDefaultCustomer;
   final String autoAssignDefaultCustomerPhone;
   final String currency;
+  final String workingTime;
   final bool zatcaPhase1Enabled;
   final bool zatcaPhase2Enabled;
   final bool showTaxPos;
@@ -62,6 +63,7 @@ class AppSettings {
     required this.autoAssignDefaultCustomer,
     required this.autoAssignDefaultCustomerPhone,
     required this.currency,
+    required this.workingTime,
     required this.zatcaPhase1Enabled,
     required this.zatcaPhase2Enabled,
     required this.showTaxPos,
@@ -142,6 +144,7 @@ class AppSettings {
       autoAssignDefaultCustomerPhone:
           settingsMap['AUTO_ASSIGN_DEFAULT_CUSTOMER']?['value'] ?? "",
       currency: settingsMap['CURRENCY']?['value'] ?? "",
+      workingTime: settingsMap['WORKING_TIME']?['value'] ?? "",
       zatcaPhase1Enabled: settingsMap['ZATCA_PHASE_1']?['status'] ?? false,
       zatcaPhase2Enabled: settingsMap['ZATCA_PHASE_2']?['status'] ?? false,
       showTaxPos: settingsMap['SHOW_TAX_POS']?['status'] ?? false,
@@ -239,6 +242,12 @@ class AppSettings {
           "code": "CURRENCY",
           "value": currency,
           "status": currency.toString(),
+        },
+        {
+          "name": "Working Time",
+          "code": "WORKING_TIME",
+          "value": workingTime,
+          "status": workingTime.isNotEmpty ? "true" : "false",
         },
         {
           "name": "Zatca Phase 1",

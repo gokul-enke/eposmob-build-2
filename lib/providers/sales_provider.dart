@@ -1021,10 +1021,20 @@ class SalesProvider with ChangeNotifier {
   Future<Map<String, dynamic>> createDailySalesClose({
     required String accessToken,
     required int storeId,
+    String? shiftName,
+    String? businessDate,
     String? openingDate,
     String? openingTime,
     String? closingDate,
     String? closingTime,
+    num? cashRefunds,
+    num? cashExpenses,
+    num? cashDropAmount,
+    num? openingCashInHand,
+    List<dynamic>? openingCashBreakdown,
+    num? closingCashInHand,
+    List<dynamic>? closingCashBreakdown,
+    String? notes,
   }) async {
     final queryParameters = <String, String>{
       'store_id': storeId.toString(),
@@ -1038,18 +1048,38 @@ class SalesProvider with ChangeNotifier {
     debugPrint('Query Parameters: $queryParameters');
 
     final Map<String, dynamic> requestBody = {
+      'shift_name': shiftName,
+      'business_date': businessDate,
       'opening_date': openingDate,
       'opening_time': openingTime,
       'closing_date': closingDate,
       'closing_time': closingTime,
+      'cash_refunds': cashRefunds,
+      'cash_expenses': cashExpenses,
+      'cash_drop_amount': cashDropAmount,
+      'opening_cash_in_hand': openingCashInHand,
+      'opening_cash_breakdown': openingCashBreakdown,
+      'closing_cash_in_hand': closingCashInHand,
+      'closing_cash_breakdown': closingCashBreakdown,
+      'notes': notes,
     };
     final requestBodyJson = jsonEncode(requestBody);
     debugPrint('=== DEBUG: createDailySalesClose REQUEST BODY ===');
     debugPrint(requestBodyJson);
+    debugPrint('shift_name: ${requestBody['shift_name']}');
+    debugPrint('business_date: ${requestBody['business_date']}');
     debugPrint('opening_date: ${requestBody['opening_date']}');
     debugPrint('opening_time: ${requestBody['opening_time']}');
     debugPrint('closing_date: ${requestBody['closing_date']}');
     debugPrint('closing_time: ${requestBody['closing_time']}');
+    debugPrint('cash_refunds: ${requestBody['cash_refunds']}');
+    debugPrint('cash_expenses: ${requestBody['cash_expenses']}');
+    debugPrint('cash_drop_amount: ${requestBody['cash_drop_amount']}');
+    debugPrint('opening_cash_in_hand: ${requestBody['opening_cash_in_hand']}');
+    debugPrint('opening_cash_breakdown: ${requestBody['opening_cash_breakdown']}');
+    debugPrint('closing_cash_in_hand: ${requestBody['closing_cash_in_hand']}');
+    debugPrint('closing_cash_breakdown: ${requestBody['closing_cash_breakdown']}');
+    debugPrint('notes: ${requestBody['notes']}');
     debugPrint('=== END REQUEST BODY ===');
 
     try {
