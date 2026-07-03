@@ -11,6 +11,7 @@ import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/master_data.dart';
+import 'package:pos_machine/models/payment_method.dart';
 import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -1156,8 +1157,8 @@ class BillingMobilePaymentController {
   }
 
   String displayNameForMethod(MasterDataValue method) {
-    final description = method.description?.trim();
-    if (description != null && description.isNotEmpty) {
+    final description = method.description.trim();
+    if (description.isNotEmpty) {
       return description;
     }
     return method.value;
@@ -1217,58 +1218,43 @@ class BillingMobilePaymentController {
     );
   }
 
+  /// Builds the mobile payment rows entirely from the backend/config-driven
+  /// [methods] list (already enabled + sorted upstream). No hardcoded core
+  /// scaffold — order, label, icon, and behavior all come from the backend.
+  ///
+  /// `ONLINE`/terminal methods have no inline amount row (the Pine Labs section
+  /// handles them), so they are skipped here.
   List<MobilePaymentItem> paymentItems(
     BillingProvider bp,
-    List<MasterDataValue> backendMethods,
+    List<PaymentMethod> methods,
   ) {
-    final items = <MobilePaymentItem>[
-      MobilePaymentItem(
-        name: 'Cash',
-        type: 'CASH',
-        controller: bp.cashAmountController,
-        selected: bp.isCashSelected,
-      ),
-      MobilePaymentItem(
-        name: 'Card',
-        type: 'CARD',
-        controller: bp.cardAmountController,
-        selected: bp.isCardSelected,
-      ),
-      MobilePaymentItem(
-        name: 'UPI',
-        type: 'UPI',
-        controller: bp.upiAmountController,
-        selected: bp.isUpiSelected,
-      ),
-      MobilePaymentItem(
-        name: 'COD',
-        type: 'COD',
-        controller: bp.codAmountController,
-        selected: bp.isCodSelected,
-      ),
-      MobilePaymentItem(
-        name: 'Credit',
-        type: 'DEBIT',
-        controller: bp.debitAmountController,
-        selected: bp.isDebitSelected,
-        readOnly: true,
-      ),
-    ];
+    final items = <MobilePaymentItem>[];
 
-    for (final method in backendMethods) {
-      if (!isDynamicBackendMethod(method)) continue;
-      final methodId = method.id.toString();
+    for (final method in methods) {
+      // Terminal methods (e.g. ONLINE / Pine Labs) are driven by the dedicated
+      // Pine Labs section, not an inline amount field.
+      if (method.behavior == PaymentBehavior.terminal) continue;
+
+      final code = method.code.toUpperCase();
+      final isCore = bp.isCoreCode(code);
+      final methodId = isCore ? null : (method.id.isNotEmpty ? method.id : code);
+
       items.add(
         MobilePaymentItem(
-          name: displayNameForMethod(method),
-          type: method.value,
+          name: method.label,
+          type: code,
           methodId: methodId,
-          controller: bp.getExtraAmountController(
-            methodId,
-            displayValue: method.value,
+          iconKey: method.iconKey,
+          behavior: method.behavior,
+          controller: bp.amountControllerForCode(
+            code,
+            methodId: methodId,
+            displayValue: code,
           ),
-          selected: bp.isExtraMethodSelected(methodId),
-          isDynamic: true,
+          selected: bp.isCodeSelected(code, methodId: methodId),
+          // Credit (DEBIT) amount is auto-calculated → read-only.
+          readOnly: method.behavior == PaymentBehavior.credit,
+          isDynamic: !isCore,
         ),
       );
     }
@@ -1276,20 +1262,77 @@ class BillingMobilePaymentController {
     return items;
   }
 
-  IconData iconForType(String type) {
-    final lower = type.toLowerCase();
-    if (lower.contains('cash')) return Icons.money;
-    if (lower.contains('card')) return Icons.credit_card;
-    if (lower.contains('upi')) return Icons.qr_code;
-    if (lower.contains('cod')) return Icons.local_shipping;
-    if (lower.contains('debit') || lower.contains('credit')) {
+  /// Syncs core payment method backend ids into [bp] from the model list, so
+  /// order payloads carry the store-specific ids for CASH/CARD/UPI/COD.
+  void syncPaymentMethodIdsFromModels(
+    BillingProvider bp,
+    List<PaymentMethod> methods,
+  ) {
+    String? cashId;
+    String? cardId;
+    String? upiId;
+    String? codId;
+    for (final method in methods) {
+      if (method.id.isEmpty) continue;
+      switch (method.code.toUpperCase()) {
+        case 'CASH':
+          cashId = method.id;
+          break;
+        case 'CARD':
+          cardId = method.id;
+          break;
+        case 'UPI':
+          upiId = method.id;
+          break;
+        case 'COD':
+          codId = method.id;
+          break;
+      }
+    }
+    bp.updatePaymentMethodIds(
+      cashId: cashId,
+      cardId: cardId,
+      upiId: upiId,
+      codId: codId,
+    );
+  }
+
+  /// Icon for a payment row. Prefers the backend [iconKey], then falls back to
+  /// a heuristic on the method code/type.
+  IconData iconForItem(MobilePaymentItem item) {
+    final key = item.iconKey?.trim().toLowerCase();
+    if (key != null && key.isNotEmpty) {
+      final byKey = _iconForKeyword(key);
+      if (byKey != null) return byKey;
+    }
+    return iconForType(item.type);
+  }
+
+  IconData? _iconForKeyword(String value) {
+    if (value.contains('cash')) return Icons.money;
+    if (value.contains('card')) return Icons.credit_card;
+    if (value.contains('upi') || value.contains('qr')) return Icons.qr_code;
+    if (value.contains('cod') || value.contains('ship')) {
+      return Icons.local_shipping;
+    }
+    if (value.contains('debit') ||
+        value.contains('credit') ||
+        value.contains('wallet')) {
       return Icons.account_balance_wallet;
     }
-    return Icons.payment;
+    if (value.contains('bank')) return Icons.account_balance;
+    if (value.contains('online') || value.contains('terminal')) {
+      return Icons.point_of_sale;
+    }
+    return null;
+  }
+
+  IconData iconForType(String type) {
+    return _iconForKeyword(type.toLowerCase()) ?? Icons.payment;
   }
 
   bool shouldShowItem(MobilePaymentItem item, BillingProvider bp) {
-    if (item.type == 'DEBIT') {
+    if (item.behavior == PaymentBehavior.credit || item.type == 'DEBIT') {
       // Pay-from-credit row conflicts with to-customer-credit amount field.
       if (bp.toCustomerCreditEnabled) return false;
       return bp.selectedCustomer != null;
@@ -1980,6 +2023,8 @@ class MobilePaymentItem {
     this.readOnly = false,
     this.methodId,
     this.isDynamic = false,
+    this.iconKey,
+    this.behavior = PaymentBehavior.collected,
   });
 
   final String name;
@@ -1989,6 +2034,12 @@ class MobilePaymentItem {
   final bool readOnly;
   final String? methodId;
   final bool isDynamic;
+
+  /// Optional backend icon hint used by [BillingMobilePaymentController.iconForItem].
+  final String? iconKey;
+
+  /// Behavior class from the backend model (collected/credit/terminal).
+  final PaymentBehavior behavior;
 }
 
 class BillingMobileDeliveryController {

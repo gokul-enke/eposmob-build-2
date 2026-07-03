@@ -122,6 +122,114 @@ class _CustomersScreenState extends State<CustomersScreen> {
         .loadAllCustomers(accessToken);
   }
 
+  Widget _buildFilterField({
+    required String label,
+    required Size size,
+    required TextEditingController controller,
+    required String hintText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              Colors.black.withOpacity(0.6),
+            ),
+          ),
+        ),
+        buildColumnWidgetForTextFields(
+          height: 45,
+          width: double.infinity,
+          onchanged: (value) {
+            searchCustomers();
+          },
+          controller: controller,
+          size: size,
+          hintText: hintText,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBalanceFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Balance",
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              Colors.black.withOpacity(0.6),
+            ),
+          ),
+        ),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          height: 45,
+          width: double.infinity,
+          color: Colors.white,
+          child: DropdownButtonFormField<String>(
+            value: selectedBalanceFilter,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+              isDense: true,
+              filled: true,
+              fillColor: Colors.white,
+            ),
+            dropdownColor: Colors.white,
+            hint: Text(
+              'Select Balance',
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.27,
+                ColorManager.textColor.withOpacity(.5),
+              ),
+            ),
+            items: [
+              'All',
+              'Positive (+ve)',
+              'Negative (-ve)',
+              'Zero (0)'
+            ].map((String balance) {
+              return DropdownMenuItem<String>(
+                value: balance,
+                child: Text(
+                  balance,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s11,
+                    0.27,
+                    ColorManager.textColor.withOpacity(.5),
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (String? value) {
+              setState(() {
+                selectedBalanceFilter = value ?? 'All';
+              });
+              searchCustomers();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTableHeader(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
@@ -135,6 +243,222 @@ class _CustomersScreenState extends State<CustomersScreen> {
           ColorManager.kPrimaryColor,
         ),
       ),
+    );
+  }
+
+  void _openCustomerProfile(
+    CustomerProvider customerProvider,
+    CustomerListModelData customer,
+    SideBarController sideBarController,
+  ) {
+    customerProvider.selectCustomer(customer);
+    sideBarController.index.value = 38;
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      height: 300,
+      width: double.infinity,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.person_search,
+            size: 60,
+            color: ColorManager.kPrimaryColor.withOpacity(0.7),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            'No customers found',
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s18,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try adjusting your search criteria',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.20,
+              Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerCard({
+    required int displayNumber,
+    required CustomerListModelData customer,
+    required VoidCallback onView,
+  }) {
+    final double balance = customer.balance ?? 0;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: ColorManager.boxShadowColor.withOpacity(0.5),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  customer.name != null && customer.name!.isNotEmpty
+                      ? customer.name![0].toUpperCase()
+                      : '#',
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s16,
+                    0.2,
+                    ColorManager.kPrimaryColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customer.name ?? 'Unnamed',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.2,
+                        ColorManager.kTitleTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '#$displayNumber',
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s11,
+                        0.1,
+                        ColorManager.kGreyColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildCustomerTypeBadge(customer.customerType),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCardMetric(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'Balance',
+                  value: balance.toStringAsFixed(2),
+                  valueColor:
+                      balance >= 0 ? ColorManager.kSuccessColor : Colors.red,
+                ),
+              ),
+              Expanded(
+                child: _buildCardMetric(
+                  icon: Icons.phone_outlined,
+                  label: 'Phone',
+                  value: customer.phone ?? '-',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: onView,
+              icon: const Icon(Icons.visibility,
+                  size: 18, color: ColorManager.kPrimaryColor),
+              label: Text(
+                'View Profile',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12,
+                  0.2,
+                  ColorManager.kPrimaryColor,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(44),
+                side: BorderSide(
+                    color: ColorManager.kPrimaryColor.withOpacity(0.4)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardMetric({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: ColorManager.kGreyColor),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.regular,
+                FontSize.s10,
+                0.1,
+                ColorManager.kGreyColor,
+              ),
+            ),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s12,
+                0.1,
+                valueColor ?? ColorManager.textColor,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -186,8 +510,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      runSpacing: 12,
+                      spacing: 12,
                       children: [
                         Text(
                           'Customers',
@@ -210,216 +537,79 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Column(
-                      children: [
-                        // First row with 4 filters
-                        Row(
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double available = constraints.maxWidth;
+                        // 1 column on phones, 2 on tablets, 4 on wide.
+                        int columns = available < 520
+                            ? 1
+                            : available < 900
+                                ? 2
+                                : 4;
+                        const double gap = 15;
+                        final double fieldWidth =
+                            (available - gap * (columns - 1)) / columns;
+                        final filters = <Widget>[
+                          SizedBox(
+                            width: fieldWidth,
+                            child: _buildFilterField(
+                              label: "Name",
+                              size: size,
+                              controller: customerNameController,
+                              hintText: 'Name',
+                            ),
+                          ),
+                          SizedBox(
+                            width: fieldWidth,
+                            child: _buildFilterField(
+                              label: "Email",
+                              size: size,
+                              controller: customerEmailController,
+                              hintText: 'Email',
+                            ),
+                          ),
+                          SizedBox(
+                            width: fieldWidth,
+                            child: _buildFilterField(
+                              label: "Phone",
+                              size: size,
+                              controller: customerPhoneController,
+                              hintText: 'Phone',
+                            ),
+                          ),
+                          SizedBox(
+                            width: fieldWidth,
+                            child: _buildBalanceFilter(),
+                          ),
+                        ];
+                        return Column(
                           children: [
-                            // Name Field
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Name",
-                                      style: buildCustomStyle(
-                                        FontWeightManager.regular,
-                                        FontSize.s14,
-                                        0.27,
-                                        Colors.black.withOpacity(0.6),
-                                      ),
-                                    ),
-                                  ),
-                                  buildColumnWidgetForTextFields(
-                                    height: 45,
-                                    width: double.infinity,
-                                    onchanged: (value) {
-                                      searchCustomers();
-                                    },
-                                    controller: customerNameController,
-                                    size: size,
-                                    hintText: 'Name',
-                                  ),
-                                ],
-                              ),
+                            Wrap(
+                              spacing: gap,
+                              runSpacing: gap,
+                              children: filters,
                             ),
-
-                            const SizedBox(width: 15),
-
-                            // Email Field
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Email",
-                                      style: buildCustomStyle(
-                                        FontWeightManager.regular,
-                                        FontSize.s14,
-                                        0.27,
-                                        Colors.black.withOpacity(0.6),
-                                      ),
-                                    ),
-                                  ),
-                                  buildColumnWidgetForTextFields(
-                                    height: 45,
-                                    width: double.infinity,
-                                    onchanged: (value) {
-                                      searchCustomers();
-                                    },
-                                    controller: customerEmailController,
-                                    size: size,
-                                    hintText: 'Email',
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(width: 15),
-
-                            // Phone Field
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Phone",
-                                      style: buildCustomStyle(
-                                        FontWeightManager.regular,
-                                        FontSize.s14,
-                                        0.27,
-                                        Colors.black.withOpacity(0.6),
-                                      ),
-                                    ),
-                                  ),
-                                  buildColumnWidgetForTextFields(
-                                    height: 45,
-                                    width: double.infinity,
-                                    onchanged: (value) {
-                                      searchCustomers();
-                                    },
-                                    controller: customerPhoneController,
-                                    size: size,
-                                    hintText: 'Phone',
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      "Balance",
-                                      style: buildCustomStyle(
-                                        FontWeightManager.regular,
-                                        FontSize.s14,
-                                        0.27,
-                                        Colors.black.withOpacity(0.6),
-                                      ),
-                                    ),
-                                  ),
-                                  BuildBoxShadowContainer(
-                                    circleRadius: 7,
-                                    height: 45,
-                                    width: double.infinity,
-                                    color: Colors.white,
-                                    child: DropdownButtonFormField<String>(
-                                      value: selectedBalanceFilter,
-                                      decoration: const InputDecoration(
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 15, vertical: 12),
-                                        isDense: true,
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                      ),
-                                      dropdownColor: Colors.white,
-                                      hint: Text(
-                                        'Select Balance',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s11,
-                                          0.27,
-                                          ColorManager.textColor
-                                              .withOpacity(.5),
-                                        ),
-                                      ),
-                                      items: [
-                                        'All',
-                                        'Positive (+ve)',
-                                        'Negative (-ve)',
-                                        'Zero (0)'
-                                      ].map((String balance) {
-                                        return DropdownMenuItem<String>(
-                                          value: balance,
-                                          child: Text(
-                                            balance,
-                                            style: buildCustomStyle(
-                                              FontWeightManager.medium,
-                                              FontSize.s11,
-                                              0.27,
-                                              ColorManager.textColor
-                                                  .withOpacity(.5),
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                      onChanged: (String? value) {
-                                        setState(() {
-                                          selectedBalanceFilter =
-                                              value ?? 'All';
-                                        });
-                                        searchCustomers();
-                                      },
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(height: 15),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: SizedBox(
+                                width: columns == 1 ? double.infinity : 180,
+                                child: CustomRoundButton(
+                                  title: "Reset",
+                                  boxColor: Colors.white,
+                                  textColor: ColorManager.kPrimaryColor,
+                                  fct: () {
+                                    resetSearch();
+                                  },
+                                  height: 45,
+                                  width: double.infinity,
+                                  fontSize: FontSize.s12,
+                                ),
                               ),
                             ),
                           ],
-                        ),
-
-                        const SizedBox(height: 15),
-
-                        // Second row with Reset button
-                        Row(
-                          children: [
-                            // Empty space to push reset button to the end
-                            Expanded(
-                              flex: 3,
-                              child: Container(),
-                            ),
-
-                            const SizedBox(width: 15),
-
-                            // Reset Button
-                            Expanded(
-                              child: CustomRoundButton(
-                                title: "Reset",
-                                boxColor: Colors.white,
-                                textColor: ColorManager.kPrimaryColor,
-                                fct: () {
-                                  resetSearch();
-                                },
-                                height: 45,
-                                width: double.infinity,
-                                fontSize: FontSize.s12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 20),
                     SizedBox(
@@ -436,7 +626,44 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                     ? const Center(
                                         child: CircularProgressIndicator
                                             .adaptive())
-                                    : BuildBoxShadowContainer(
+                                    : LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          final bool isNarrow =
+                                              constraints.maxWidth < 640;
+                                          if (isNarrow) {
+                                            if (customerList == null ||
+                                                customerList.isEmpty) {
+                                              return _buildEmptyState();
+                                            }
+                                            return ListView.builder(
+                                              padding: const EdgeInsets.only(
+                                                  top: 12, bottom: 8),
+                                              physics:
+                                                  const BouncingScrollPhysics(),
+                                              itemCount: customerList.length,
+                                              itemBuilder: (context, index) {
+                                                final customer =
+                                                    customerList[index];
+                                                return _buildCustomerCard(
+                                                  displayNumber: index +
+                                                      1 +
+                                                      (customerProvider
+                                                                  .currentPage -
+                                                              1) *
+                                                          customerProvider
+                                                              .itemsPerPage,
+                                                  customer: customer,
+                                                  onView: () =>
+                                                      _openCustomerProfile(
+                                                    customerProvider,
+                                                    customerList[index],
+                                                    sideBarController,
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                          }
+                                          return BuildBoxShadowContainer(
                                         width: size.width,
                                         margin: const EdgeInsets.only(top: 20),
                                         circleRadius: 7,
@@ -651,8 +878,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                                                                 color: ColorManager.kPrimaryColor.withOpacity(0.9),
                                                                               ),
                                                                               onPressed: () {
-                                                                                customerProvider.selectCustomer(customerList[index]);
-                                                                                sideBarController.index.value = 38;
+                                                                                _openCustomerProfile(customerProvider, customerList[index], sideBarController);
                                                                               },
                                                                               constraints: const BoxConstraints(
                                                                                 minWidth: 36,
@@ -673,6 +899,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                             ),
                                           ],
                                         ),
+                                      );
+                                        },
                                       ),
                               ),
                               const SizedBox(height: 10),

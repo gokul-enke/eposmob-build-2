@@ -155,7 +155,7 @@ class _CustomerInformationEditWidgetState
     final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
     return Expanded(
       child: BuildBoxShadowContainer(
-        margin: const EdgeInsets.all(24),
+        margin: EdgeInsets.all(widget.size.width < 600 ? 10 : 24),
         padding: const EdgeInsets.all(0),
         height: widget.size.height * 0.75,
         circleRadius: 12,

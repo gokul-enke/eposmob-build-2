@@ -70,6 +70,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   bool get _isQuotationPage => widget.mode == BillingPageMode.quotation;
 
+  bool get _skipCheckoutOnConfirmAndPrint {
+    if (_isQuotationPage) return false;
+    return Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.skipCheckoutOnConfirmAndPrint ??
+        false;
+  }
+
   DateTime _quotationDate = DateTime.now();
   DateTime _quotationExpiryDate =
       DateTime.now().add(const Duration(days: 30));
@@ -846,6 +854,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
     if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
       await saveOrderAndPrint();
       return;
+    }
+
+    if (_skipCheckoutOnConfirmAndPrint) {
+      billingDebugLog(
+        'SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct confirm & print',
+      );
+      await _controller.prepareDirectConfirmAndPrint(context);
+      if (!mounted) return;
+      setState(() {});
     }
 
     if (!_isCustomerSatisfiedForCheckout()) {

@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_payment_row.dart';
-import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/newcomponents/custom_round_button.dart';
-import 'package:pos_machine/resources/asset_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
-import 'package:pos_machine/models/master_data.dart';
+import 'package:pos_machine/models/payment_method.dart';
+import 'package:pos_machine/features/billing/controllers/billing_desktop_payment_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
@@ -106,6 +105,8 @@ class PaymentMethodModal extends StatefulWidget {
 }
 
 class _PaymentMethodModalState extends State<PaymentMethodModal> {
+  static const _desktopController = BillingDesktopPaymentController();
+
   late bool isCashSelected;
   late bool isCardSelected;
   late bool isUpiSelected;
@@ -146,20 +147,14 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   String? _cardPaymentMethodId;
   String? _upiPaymentMethodId;
   String? _codPaymentMethodId;
-  List<MasterDataValue> _paymentMethods = [];
+  List<PaymentMethod> _enabledMethods = [];
   bool _isLoadingPaymentMethods = false;
 
-  // Dynamic payment methods returned by the API beyond the four typed ones
-  // (CASH/CARD/UPI/COD). Each gets its own controller/focus-node/selection,
-  // all keyed by the method id (as String). This is what makes the modal
-  // "fully dynamic": any method the backend configures shows up here.
-  final List<MasterDataValue> _extraMethods = [];
+  // Dynamic collected methods (non-core) keyed by backend id.
   final Map<String, TextEditingController> _extraControllers = {};
   final Map<String, FocusNode> _extraFocusNodes = {};
   final Map<String, bool> _extraSelected = {};
   final Map<String, VoidCallback> _extraListeners = {};
-
-  static const Set<String> _typedMethodValues = {'CASH', 'CARD', 'UPI', 'COD'};
 
   // Credit option (visual only, for sales staff)
   bool isCreditSelected = false;
@@ -374,6 +369,98 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     );
   }
 
+  /// Dynamic collected methods from the backend list (non CASH/CARD/UPI/COD).
+  Iterable<PaymentMethod> get _dynamicCollectedMethods => _enabledMethods.where(
+        (m) =>
+            m.behavior == PaymentBehavior.collected &&
+            !_desktopController.isCoreCollectedCode(m.code),
+      );
+
+  List<DesktopPaymentRow> get _desktopRows => _desktopController.modalRows(
+        methods: _enabledMethods,
+        toCustomerCreditEnabled: toCustomerCreditEnabled,
+        hasSelectedCustomer: !widget.isDefaultCustomer,
+        isSelected: _isCodeSelected,
+        controllerFor: _controllerForCode,
+        focusNodeFor: _focusNodeForCode,
+        rowKeyFor: _rowKeyForCode,
+      );
+
+  String _rowKeyForCode(String code) {
+    switch (code.toUpperCase()) {
+      case 'CASH':
+        return 'cash';
+      case 'CARD':
+        return 'card';
+      case 'UPI':
+        return 'upi';
+      case 'COD':
+        return 'cod';
+      case 'DEBIT':
+      case 'CREDIT':
+        return 'credit';
+      default:
+        return _extraMethodKey(code);
+    }
+  }
+
+  bool _isCodeSelected(String code, {String? methodId}) {
+    switch (code.toUpperCase()) {
+      case 'CASH':
+        return isCashSelected;
+      case 'CARD':
+        return isCardSelected;
+      case 'UPI':
+        return isUpiSelected;
+      case 'COD':
+        return isCodSelected;
+      case 'DEBIT':
+      case 'CREDIT':
+        return isCreditSelected;
+      default:
+        final id = methodId ?? code;
+        return _extraSelected[id] ?? false;
+    }
+  }
+
+  TextEditingController _controllerForCode(String code, {String? methodId}) {
+    switch (code.toUpperCase()) {
+      case 'CASH':
+        return cashAmountController;
+      case 'CARD':
+        return cardAmountController;
+      case 'UPI':
+        return upiAmountController;
+      case 'COD':
+        return codAmountController;
+      case 'DEBIT':
+      case 'CREDIT':
+        return creditAmountController;
+      default:
+        final id = methodId ?? code;
+        return _extraControllers[id] ?? TextEditingController();
+    }
+  }
+
+  FocusNode? _focusNodeForCode(String code, {String? methodId}) {
+    switch (code.toUpperCase()) {
+      case 'CASH':
+        return cashAmountFocusNode;
+      case 'CARD':
+        return cardAmountFocusNode;
+      case 'UPI':
+        return upiAmountFocusNode;
+      case 'COD':
+        return codAmountFocusNode;
+      case 'DEBIT':
+      case 'CREDIT':
+        return null;
+      default:
+        final id = methodId ?? code;
+        return _extraFocusNodes[id];
+    }
+  }
+
   void _notifyChanges() {
     if (!mounted) {
       return;
@@ -414,11 +501,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     );
   }
 
-  /// methodId -> entered amount string (only for selected extra methods).
+  /// methodId -> entered amount string (only for selected dynamic methods).
   Map<String, String> _buildExtraAmountsMap() {
     final map = <String, String>{};
-    for (final method in _extraMethods) {
-      final key = method.id.toString();
+    for (final method in _dynamicCollectedMethods) {
+      final key = method.id.isNotEmpty ? method.id : method.code;
       final selected = _extraSelected[key] ?? false;
       final text = _extraControllers[key]?.text ?? '';
       map[key] = selected ? text : '';
@@ -426,11 +513,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     return map;
   }
 
-  /// methodId -> method value/name (e.g. "CHEQUE"), for every extra method.
+  /// methodId -> method code, for every dynamic collected method.
   Map<String, String> _buildExtraValuesMap() {
     final map = <String, String>{};
-    for (final method in _extraMethods) {
-      map[method.id.toString()] = method.value;
+    for (final method in _dynamicCollectedMethods) {
+      final key = method.id.isNotEmpty ? method.id : method.code;
+      map[key] = method.code;
     }
     return map;
   }
@@ -513,7 +601,10 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
     if (event.logicalKey == LogicalKeyboardKey.digit6 ||
         event.logicalKey == LogicalKeyboardKey.numpad6) {
-      if (isCardSelected || isUpiSelected) {
+      if (_desktopController.shouldShowTransactionReference(
+        rows: _desktopRows,
+        isSelected: _isCodeSelected,
+      )) {
         transactionNumberFocusNode.requestFocus();
         Provider.of<KeyboardProvider>(context, listen: false).show(
           'number',
@@ -577,52 +668,39 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   void _focusPaymentFieldByIndex(int index) {
-    final List<MapEntry<TextEditingController, FocusNode>> orderedFields = [];
-    if (_cashPaymentMethodId != null) {
-      orderedFields.add(MapEntry(cashAmountController, cashAmountFocusNode));
-    }
-    if (_cardPaymentMethodId != null) {
-      orderedFields.add(MapEntry(cardAmountController, cardAmountFocusNode));
-    }
-    if (_upiPaymentMethodId != null) {
-      orderedFields.add(MapEntry(upiAmountController, upiAmountFocusNode));
-    }
-    if (_codPaymentMethodId != null) {
-      orderedFields.add(MapEntry(codAmountController, codAmountFocusNode));
-    }
-    if (orderedFields.isEmpty) return;
+    final shortcutRows = _desktopController.shortcutRows(_desktopRows);
+    if (shortcutRows.isEmpty) return;
 
-    final int target = index.clamp(1, orderedFields.length) - 1;
-    final entry = orderedFields[target];
-    entry.value.requestFocus();
-    if (entry.key.text.isNotEmpty) {
-      entry.key.selection = TextSelection(
+    final target = index.clamp(1, shortcutRows.length) - 1;
+    final row = shortcutRows[target];
+    final focusNode = row.focusNode;
+    if (focusNode == null) return;
+
+    focusNode.requestFocus();
+    if (row.controller.text.isNotEmpty) {
+      row.controller.selection = TextSelection(
         baseOffset: 0,
-        extentOffset: entry.key.text.length,
+        extentOffset: row.controller.text.length,
       );
     }
     Provider.of<KeyboardProvider>(context, listen: false).show(
       'number',
-      entry.key,
+      row.controller,
       replaceOnFirstInput: true,
     );
   }
 
   void _toggleOrFocusPaymentByIndex(int index) {
-    final orderedTypes = <String>[];
-    if (_cashPaymentMethodId != null) orderedTypes.add('cash');
-    if (_cardPaymentMethodId != null) orderedTypes.add('card');
-    if (_upiPaymentMethodId != null) orderedTypes.add('upi');
-    if (_codPaymentMethodId != null) orderedTypes.add('cod');
-    if (orderedTypes.isEmpty) return;
+    final shortcutRows = _desktopController.shortcutRows(_desktopRows);
+    if (shortcutRows.isEmpty) return;
 
-    final target = orderedTypes[index.clamp(1, orderedTypes.length) - 1];
-    if (_isPaymentTypeSelected(target)) {
+    final target = shortcutRows[index.clamp(1, shortcutRows.length) - 1];
+    if (target.selected) {
       _focusPaymentFieldByIndex(index);
       return;
     }
 
-    _togglePaymentMethod(target);
+    _togglePaymentMethod(target.rowKey);
   }
 
   bool _amountsEqual(String a, String b) {
@@ -790,8 +868,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
         focusNode: codAmountFocusNode,
       ));
     }
-    for (final method in _extraMethods) {
-      final id = method.id.toString();
+    for (final method in _dynamicCollectedMethods) {
+      final id = method.id.isNotEmpty ? method.id : method.code;
       if (_extraSelected[id] ?? false) {
         entries.add((
           key: _extraMethodKey(id),
@@ -810,8 +888,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     if (isCardSelected) amounts['card'] = cardAmountController.text;
     if (isUpiSelected) amounts['upi'] = upiAmountController.text;
     if (isCodSelected) amounts['cod'] = codAmountController.text;
-    for (final method in _extraMethods) {
-      final id = method.id.toString();
+    for (final method in _dynamicCollectedMethods) {
+      final id = method.id.isNotEmpty ? method.id : method.code;
       if (_extraSelected[id] ?? false) {
         amounts[_extraMethodKey(id)] = _extraControllers[id]?.text ?? '';
       }
@@ -868,56 +946,43 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
   }
 
-  String? _shortcutForPaymentType(String type) {
-    int idx = 0;
-    if (_cashPaymentMethodId != null) {
-      idx++;
-      if (type == 'cash') return 'C+$idx';
-    }
-    if (_cardPaymentMethodId != null) {
-      idx++;
-      if (type == 'card') return 'C+$idx';
-    }
-    if (_upiPaymentMethodId != null) {
-      idx++;
-      if (type == 'upi') return 'C+$idx';
-    }
-    if (_codPaymentMethodId != null) {
-      idx++;
-      if (type == 'cod') return 'C+$idx';
-    }
-    return null;
+  String? _shortcutForRow(DesktopPaymentRow row) {
+    final shortcutRows = _desktopController.shortcutRows(_desktopRows);
+    final index = shortcutRows.indexWhere((r) => r.rowKey == row.rowKey);
+    if (index < 0) return null;
+    return _desktopController.shortcutLabelForRow(shortcutRows, index);
   }
 
-  /// Load payment methods from API and assign IDs
+  /// Load payment methods from MasterDataProvider (backend-driven list).
   Future<void> _loadPaymentMethods() async {
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
 
-    // Check if payment methods are already cached in the provider
-    final cachedMethods = masterDataProvider.paymentMethods;
-    if (cachedMethods != null && cachedMethods.isNotEmpty) {
+    final cachedModels = masterDataProvider.paymentMethodModels;
+    if (cachedModels != null && cachedModels.isNotEmpty) {
       debugPrint(
-          '📋 [Payment Modal] Using cached payment methods: ${cachedMethods.length}');
-      _assignPaymentMethodIds(cachedMethods);
+          '📋 [Payment Modal] Using cached payment methods: ${cachedModels.length}');
+      _applyPaymentMethods(masterDataProvider.enabledSortedPaymentMethods);
       return;
     }
 
-    // No cache, fetch from API
     setState(() {
       _isLoadingPaymentMethods = true;
     });
 
     try {
-      final paymentMethods = await masterDataProvider.fetchPaymentMethods();
-
-      if (mounted && paymentMethods != null) {
+      await masterDataProvider.fetchPaymentMethods();
+      if (mounted) {
+        final methods = masterDataProvider.enabledSortedPaymentMethods;
         debugPrint(
-            '📋 [Payment Modal] Loaded payment methods: ${paymentMethods.length}');
-        _assignPaymentMethodIds(paymentMethods);
+            '📋 [Payment Modal] Loaded payment methods: ${methods.length}');
+        _applyPaymentMethods(methods);
       }
     } catch (e) {
       debugPrint('❌ [Payment Modal] Error loading payment methods: $e');
+      if (mounted) {
+        _applyPaymentMethods(masterDataProvider.enabledSortedPaymentMethods);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -927,8 +992,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
   }
 
-  /// Assign payment method IDs by matching value field
-  void _assignPaymentMethodIds(List<MasterDataValue> methods) {
+  /// Apply backend payment methods and wire dynamic method controllers.
+  void _applyPaymentMethods(List<PaymentMethod> methods) {
     final preservedExtraAmounts = <String, String>{};
     final preservedExtraSelected = <String, bool>{};
     for (final entry in _extraControllers.entries) {
@@ -937,44 +1002,40 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           _extraSelected[entry.key] ?? entry.value.text.isNotEmpty;
     }
 
-    // Sort to put CASH first
-    final sortedMethods = List<MasterDataValue>.from(methods);
-    sortedMethods.sort((a, b) {
-      if (a.value.toUpperCase() == 'CASH') return -1;
-      if (b.value.toUpperCase() == 'CASH') return 1;
-      return a.value.compareTo(b.value);
-    });
-
     setState(() {
-      _paymentMethods = sortedMethods;
+      _enabledMethods = methods;
       _isLoadingPaymentMethods = false;
 
-      // Assign IDs based on value field
-      for (final method in sortedMethods) {
-        final value = method.value.toUpperCase();
-        if (value == 'CASH') {
-          _cashPaymentMethodId = method.id.toString();
-          debugPrint('💵 CASH ID: $_cashPaymentMethodId');
-        } else if (value == 'CARD') {
-          _cardPaymentMethodId = method.id.toString();
-          debugPrint('💳 CARD ID: $_cardPaymentMethodId');
-        } else if (value == 'UPI') {
-          _upiPaymentMethodId = method.id.toString();
-          debugPrint('📱 UPI ID: $_upiPaymentMethodId');
-        } else if (value == 'COD') {
-          _codPaymentMethodId = method.id.toString();
-          debugPrint('📦 COD ID: $_codPaymentMethodId');
+      _cashPaymentMethodId = null;
+      _cardPaymentMethodId = null;
+      _upiPaymentMethodId = null;
+      _codPaymentMethodId = null;
+
+      for (final method in methods) {
+        if (method.id.isEmpty) continue;
+        switch (method.code.toUpperCase()) {
+          case 'CASH':
+            _cashPaymentMethodId = method.id;
+            break;
+          case 'CARD':
+            _cardPaymentMethodId = method.id;
+            break;
+          case 'UPI':
+            _upiPaymentMethodId = method.id;
+            break;
+          case 'COD':
+            _codPaymentMethodId = method.id;
+            break;
         }
       }
 
-      // Build dynamic rows for any method that is not one of the four typed
-      // ones. Re-derive from scratch so repeated calls (cache + fetch) don't
-      // create duplicate controllers.
       _disposeExtraMethods();
-      for (final method in sortedMethods) {
-        if (_typedMethodValues.contains(method.value.toUpperCase())) continue;
-        final key = method.id.toString();
-        _extraMethods.add(method);
+      for (final method in methods) {
+        if (method.behavior == PaymentBehavior.terminal) continue;
+        if (method.behavior == PaymentBehavior.credit) continue;
+        if (_desktopController.isCoreCollectedCode(method.code)) continue;
+
+        final key = method.id.isNotEmpty ? method.id : method.code;
         final initialAmount = widget.initialExtraAmounts?[key] ??
             preservedExtraAmounts[key] ??
             '';
@@ -987,12 +1048,12 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             ? true
             : (preservedExtraSelected[key] ?? false);
         _extraListeners[key] = listener;
-        debugPrint('🧾 EXTRA method "${method.value}" ID: $key');
+        debugPrint('🧾 Dynamic method "${method.code}" ID: $key');
       }
 
       if (_pristineMethod == null) {
-        for (final method in _extraMethods) {
-          final key = method.id.toString();
+        for (final method in _dynamicCollectedMethods) {
+          final key = method.id.isNotEmpty ? method.id : method.code;
           final controller = _extraControllers[key];
           if ((_extraSelected[key] ?? false) &&
               controller != null &&
@@ -1005,8 +1066,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       }
     });
 
-    // Notify parent with the newly loaded payment method IDs
-    // This ensures parent receives IDs as soon as they're available
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _notifyChanges();
@@ -1214,7 +1273,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     for (final node in _extraFocusNodes.values) {
       node.dispose();
     }
-    _extraMethods.clear();
     _extraControllers.clear();
     _extraFocusNodes.clear();
     _extraSelected.clear();
@@ -1516,7 +1574,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               child: CircularProgressIndicator(),
                             ),
                           )
-                        else if (_paymentMethods.isEmpty)
+                        else if (_enabledMethods.isEmpty)
                           Center(
                             child: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -1532,109 +1590,45 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                             ),
                           )
                         else ...[
-                          // Cash Payment
-                          if (_cashPaymentMethodId != null) ...[
-                            FocusTraversalOrder(
-                              order: const NumericFocusOrder(10),
-                              child: _buildModalPaymentRow(
-                                isSelected: isCashSelected,
-                                type: 'cash',
-                                icon: ImageAssets.cashIcon,
-                                label: 'billing.cash'.tr,
-                                controller: cashAmountController,
-                                focusNode: cashAmountFocusNode,
-                                size: size,
-                                onToggle: () => _togglePaymentMethod('cash'),
-                                shortcutLabel: _shortcutForPaymentType('cash'),
-                              ),
-                            ),
-                            SizedBox(height: isDenseEmbedded ? 10 : 15),
-                          ],
-
-                          // Card Payment
-                          if (_cardPaymentMethodId != null) ...[
-                            FocusTraversalOrder(
-                              order: const NumericFocusOrder(20),
-                              child: _buildModalPaymentRow(
-                                isSelected: isCardSelected,
-                                type: 'card',
-                                icon: ImageAssets.creditCardIcon,
-                                label: 'billing.card'.tr,
-                                controller: cardAmountController,
-                                focusNode: cardAmountFocusNode,
-                                size: size,
-                                onToggle: () => _togglePaymentMethod('card'),
-                                shortcutLabel: _shortcutForPaymentType('card'),
-                              ),
-                            ),
-                            SizedBox(height: isDenseEmbedded ? 10 : 15),
-                          ],
-
-                          // UPI Payment
-                          if (_upiPaymentMethodId != null) ...[
-                            FocusTraversalOrder(
-                              order: const NumericFocusOrder(30),
-                              child: _buildModalPaymentRow(
-                                isSelected: isUpiSelected,
-                                type: 'upi',
-                                icon: ImageAssets.creditCardIcon,
-                                label: 'billing.upi'.tr,
-                                controller: upiAmountController,
-                                focusNode: upiAmountFocusNode,
-                                size: size,
-                                onToggle: () => _togglePaymentMethod('upi'),
-                                shortcutLabel: _shortcutForPaymentType('upi'),
-                              ),
-                            ),
-                            SizedBox(height: isDenseEmbedded ? 10 : 15),
-                          ],
-
-                          // COD Payment
-                          if (_codPaymentMethodId != null) ...[
-                            FocusTraversalOrder(
-                              order: const NumericFocusOrder(40),
-                              child: _buildModalPaymentRow(
-                                isSelected: isCodSelected,
-                                type: 'cod',
-                                icon: ImageAssets.cashIcon,
-                                label: 'COD',
-                                controller: codAmountController,
-                                focusNode: codAmountFocusNode,
-                                size: size,
-                                onToggle: () => _togglePaymentMethod('cod'),
-                                shortcutLabel: _shortcutForPaymentType('cod'),
-                              ),
-                            ),
-                            SizedBox(height: isDenseEmbedded ? 10 : 15),
-                          ],
-
-                          // Dynamic / extra payment methods (Cheque, Wallet,
-                          // Bank Transfer, ... — anything the API returns
-                          // beyond the four typed methods).
-                          for (final method in _extraMethods) ...[
-                            _buildExtraPaymentRow(method, size),
-                            SizedBox(height: isDenseEmbedded ? 10 : 15),
-                          ],
-
-                          // Credit Payment (visual only)
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(50),
-                            child: _buildModalPaymentRow(
-                              isSelected: isCreditSelected,
-                              type: 'credit',
-                              icon: ImageAssets.creditCardIcon,
-                              label: 'Credit',
-                              controller: creditAmountController,
-                              focusNode: null,
-                              size: size,
-                              onToggle: () => _togglePaymentMethod('credit'),
+                          Padding(
+                            padding: EdgeInsets.only(
+                                bottom: isDenseEmbedded ? 10 : 14),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  icon: const Icon(Icons.payments_outlined,
+                                      size: 16),
+                                  label: Text('billing.exact_cash'.tr),
+                                  onPressed: _fillExactCash,
+                                ),
+                                OutlinedButton.icon(
+                                  icon:
+                                      const Icon(Icons.clear_all, size: 16),
+                                  label: Text('billing.clear_payments'.tr),
+                                  onPressed: _clearAllCollectedPayments,
+                                ),
+                              ],
                             ),
                           ),
-                          SizedBox(height: isDenseEmbedded ? 10 : 15),
+                          for (var i = 0; i < _desktopRows.length; i++) ...[
+                            FocusTraversalOrder(
+                              order: NumericFocusOrder((i + 1) * 10.0),
+                              child: _buildRowFromDesktopItem(
+                                _desktopRows[i],
+                                size,
+                              ),
+                            ),
+                            SizedBox(height: isDenseEmbedded ? 10 : 15),
+                          ],
                         ],
 
                         // Transaction Reference Field
-                        if (isCardSelected || isUpiSelected) ...[
+                        if (_desktopController.shouldShowTransactionReference(
+                          rows: _desktopRows,
+                          isSelected: _isCodeSelected,
+                        )) ...[
                           const SizedBox(height: 10),
                           FocusTraversalOrder(
                             order: const NumericFocusOrder(60),
@@ -1974,6 +1968,112 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     return content;
   }
 
+  void _fillExactCash() {
+    _desktopController.fillExactCash(
+      cartTotal: widget.cartTotal,
+      setSelected: (code, selected) {
+        switch (code.toUpperCase()) {
+          case 'CASH':
+            isCashSelected = selected;
+            break;
+          case 'CARD':
+            isCardSelected = selected;
+            break;
+          case 'UPI':
+            isUpiSelected = selected;
+            break;
+          case 'COD':
+            isCodSelected = selected;
+            break;
+        }
+      },
+      cashController: cashAmountController,
+      setPristine: (key, amount) {
+        _pristineMethod = key;
+        _pristineAmount = amount ?? '';
+      },
+      clearOthers: () {
+        isCardSelected = false;
+        isUpiSelected = false;
+        isCodSelected = false;
+        isCreditSelected = false;
+        cardAmountController.clear();
+        upiAmountController.clear();
+        codAmountController.clear();
+        creditAmountController.clear();
+        for (final id in _extraSelected.keys.toList()) {
+          _extraSelected[id] = false;
+          _extraControllers[id]?.clear();
+        }
+        toCustomerCreditEnabled = false;
+        toCustomerCreditController.clear();
+        toCustomerCredit = 0.0;
+      },
+    );
+    setState(() {
+      _calculateBalance();
+      _notifyChanges();
+    });
+  }
+
+  void _clearAllCollectedPayments() {
+    setState(() {
+      _desktopController.clearAllCollectedPayments(
+        rows: _desktopRows,
+        setSelected: (code, selected) {
+          switch (code.toUpperCase()) {
+            case 'CASH':
+              isCashSelected = selected;
+              break;
+            case 'CARD':
+              isCardSelected = selected;
+              break;
+            case 'UPI':
+              isUpiSelected = selected;
+              break;
+            case 'COD':
+              isCodSelected = selected;
+              break;
+          }
+        },
+        clearExtra: (methodId) {
+          _extraSelected[methodId] = false;
+        },
+      );
+      isCreditSelected = false;
+      creditAmountController.clear();
+      _pristineMethod = null;
+      _pristineAmount = '';
+      _calculateBalance();
+      _notifyChanges();
+    });
+  }
+
+  Widget _buildRowFromDesktopItem(DesktopPaymentRow row, Size size) {
+    VoidCallback onToggle;
+    if (row.methodId != null &&
+        !_desktopController.isCoreCollectedCode(row.code)) {
+      onToggle = () => _toggleExtraMethod(row.methodId!);
+    } else {
+      onToggle = () => _togglePaymentMethod(row.rowKey);
+    }
+
+    return _buildModalPaymentRow(
+      isSelected: row.selected,
+      type: row.rowKey,
+      icon: row.iconAsset,
+      label: row.label,
+      controller: row.controller,
+      focusNode: row.focusNode,
+      size: size,
+      readOnly: row.readOnly,
+      onToggle: onToggle,
+      shortcutLabel: row.method.behavior == PaymentBehavior.collected
+          ? _shortcutForRow(row)
+          : null,
+    );
+  }
+
   Widget _buildModalPaymentRow({
     required bool isSelected,
     required String type,
@@ -1984,6 +2084,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     required Size size,
     required VoidCallback onToggle,
     String? shortcutLabel,
+    bool readOnly = false,
   }) {
     final bool isFocused = _focusedPaymentKey == type;
     final isDenseEmbedded =
@@ -2062,34 +2163,47 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             controller: controller,
             size: size,
             height: size.height * .06,
-            hintText: label == 'Balance' || type == 'credit'
+            hintText: readOnly || type == 'credit'
                 ? 'Auto-calculated'
                 : 'Enter $label amount',
             keyboardType: TextInputType.number,
             focusNode: focusNode,
-            readOnly: label == 'Balance' || type == 'credit',
-            onTap: (type == 'Balance')
+            readOnly: readOnly || type == 'credit',
+            onTap: readOnly
                 ? null
                 : (type == 'credit'
                     ? null
                     : () {
-                        // Update selection state if not already selected
                         setState(() {
-                          if (type == 'cash')
-                            isCashSelected = true;
-                          else if (type == 'card')
-                            isCardSelected = true;
-                          else if (type == 'upi')
-                            isUpiSelected = true;
-                          else if (type == 'cod') isCodSelected = true;
-
-                          if (type != 'credit') {
-                            final didSwitch =
+                          final extraId = _extraMethodIdFromKey(type);
+                          if (extraId != null) {
+                            final wasSelected = _extraSelected[extraId] ?? false;
+                            _extraSelected[extraId] = true;
+                            final didSwitch = !wasSelected &&
                                 _applyPristineSwitch(type, controller);
                             if (!didSwitch) {
-                              _autoFillSelectedMethodAmount(type);
+                              _autoFillRemainingForMethod(type, controller);
                             }
                             _recordPristineIfFullTotal(type, controller);
+                          } else {
+                            if (type == 'cash') {
+                              isCashSelected = true;
+                            } else if (type == 'card') {
+                              isCardSelected = true;
+                            } else if (type == 'upi') {
+                              isUpiSelected = true;
+                            } else if (type == 'cod') {
+                              isCodSelected = true;
+                            }
+
+                            if (type != 'credit') {
+                              final didSwitch =
+                                  _applyPristineSwitch(type, controller);
+                              if (!didSwitch) {
+                                _autoFillSelectedMethodAmount(type);
+                              }
+                              _recordPristineIfFullTotal(type, controller);
+                            }
                           }
                           _notifyChanges();
                         });
@@ -2114,124 +2228,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           replaceOnFirstInput: true,
                         );
                       }),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// Row for a dynamic/extra payment method. Mirrors [_buildModalPaymentRow]
-  /// visually but is driven entirely by the per-method maps keyed by method id.
-  Widget _buildExtraPaymentRow(MasterDataValue method, Size size) {
-    final key = method.id.toString();
-    final controller = _extraControllers[key];
-    final focusNode = _extraFocusNodes[key];
-    if (controller == null) return const SizedBox.shrink();
-    final bool isSelected = _extraSelected[key] ?? false;
-    final String focusKey = 'extra_$key';
-    final bool isFocused = _focusedPaymentKey == focusKey;
-    final isDenseEmbedded =
-        widget.fullWidth && (size.width <= 1100 || size.height <= 800);
-    final String label = method.description.isNotEmpty
-        ? method.description
-        : method.value;
-
-    return Row(
-      children: [
-        Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
-          child: InkWell(
-            onTap: () => _toggleExtraMethod(key),
-            borderRadius: BorderRadius.circular(5),
-            onFocusChange: (focused) {
-              setState(() {
-                _focusedPaymentKey = focused ? focusKey : null;
-              });
-            },
-            child: BuildBoxShadowContainer(
-              border: isFocused
-                  ? Border.all(color: Colors.orange, width: 3)
-                  : isSelected
-                      ? Border.all(color: ColorManager.kPrimaryColor, width: 2)
-                      : Border.all(color: Colors.grey.shade300),
-              padding: EdgeInsets.symmetric(
-                horizontal: isDenseEmbedded ? 6 : 8,
-                vertical: isDenseEmbedded ? 5 : 6,
-              ),
-              blurRadius: isFocused ? 8 : 4,
-              circleRadius: 5,
-              height: size.height * .06,
-              width: isDenseEmbedded ? 118 : 132,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  WebsafeSvg.asset(
-                    ImageAssets.creditCardIcon,
-                    width: 14,
-                    height: 14,
-                    colorFilter: ColorFilter.mode(
-                        isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                        BlendMode.srcIn),
-                    fit: BoxFit.none,
-                  ),
-                  SizedBox(width: isDenseEmbedded ? 4 : 6),
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        isDenseEmbedded ? FontSize.s10 : FontSize.s11,
-                        0.12,
-                        isSelected ? ColorManager.kPrimaryColor : Colors.grey,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        SizedBox(width: isDenseEmbedded ? 10 : 15),
-        Expanded(
-          child: buildColumnWidgetForTextFields(
-            controller: controller,
-            size: size,
-            height: size.height * .06,
-            hintText: 'Enter $label amount',
-            keyboardType: TextInputType.number,
-            focusNode: focusNode,
-            onTap: () {
-              setState(() {
-                final wasSelected = isSelected;
-                _extraSelected[key] = true;
-                final methodKey = _extraMethodKey(key);
-                final didSwitch = !wasSelected &&
-                    _applyPristineSwitch(methodKey, controller);
-                if (!didSwitch) {
-                  _autoFillRemainingForMethod(methodKey, controller);
-                }
-                _recordPristineIfFullTotal(methodKey, controller);
-                _notifyChanges();
-              });
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (controller.text.isNotEmpty &&
-                    focusNode != null &&
-                    focusNode.hasFocus) {
-                  controller.selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: controller.text.length,
-                  );
-                }
-              });
-              Provider.of<KeyboardProvider>(context, listen: false).show(
-                'number',
-                controller,
-                replaceOnFirstInput: true,
-              );
-            },
           ),
         ),
       ],

@@ -57,6 +57,7 @@ enum MobileBillingShortcutAction {
 class BillingMobileController {
   static const _customerController = BillingMobileCustomerController();
   static const _settingsController = BillingMobileSettingsController();
+  static const _paymentController = BillingMobilePaymentController();
 
   // ---------------------------------------------------------------------------
   // Order rehydration / restore
@@ -653,6 +654,80 @@ class BillingMobileController {
       Provider.of<BillingProvider>(context, listen: false)
           .getSelectedPaymentMethodsExcludingEmpty()
           .isNotEmpty;
+
+  /// Prepares default customer, payment, and delivery for direct confirm & print
+  /// when [AppSettings.skipCheckoutOnConfirmAndPrint] is enabled.
+  /// Mirrors desktop `_confirmAndPrintWithoutCheckoutModal` prep steps.
+  Future<void> prepareDirectConfirmAndPrint(BuildContext context) async {
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    final customerSelectionProvider =
+        Provider.of<CustomerSelectionProvider>(context, listen: false);
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+
+    try {
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+      final cachedCustomers = customerProvider.allCustomers;
+      if (cachedCustomers != null && cachedCustomers.isNotEmpty) {
+        billingProvider.setCustomerList(
+          List<CustomerListModelData>.from(cachedCustomers),
+        );
+      }
+    } catch (_) {
+      // CustomerProvider may be absent in isolated unit tests.
+    }
+
+    final defaultResult =
+        _customerController.applyDefaultCustomerFromCacheIfNeeded(
+      localProductProvider: localProductProvider,
+      billingProvider: billingProvider,
+      customerSelectionProvider: customerSelectionProvider,
+      appSettings: appSettings,
+      customers: billingProvider.customerList,
+    );
+    _customerController.applyDefaultCustomerResult(
+      result: defaultResult,
+      customerSelectionProvider: customerSelectionProvider,
+      billingProvider: billingProvider,
+      cartProvider: Provider.of<CartProvider>(context, listen: false),
+      auth: Provider.of<AuthModel>(context, listen: false),
+    );
+
+    final masterDataProvider =
+        Provider.of<MasterDataProvider>(context, listen: false);
+    final methods = await masterDataProvider.fetchPaymentMethods();
+    if (methods != null && context.mounted) {
+      _paymentController.syncPaymentMethodIdsFromModels(
+        billingProvider,
+        masterDataProvider.enabledSortedPaymentMethods,
+      );
+    }
+
+    if (!context.mounted) return;
+
+    if (!billingProvider.hasAnyPaymentSelected()) {
+      _settingsController.applyDefaultPaymentMethodIfNeeded(
+        billingProvider: billingProvider,
+        appSettings: appSettings,
+      );
+    }
+
+    _settingsController.syncDefaultDeliveryMethod(
+      billingProvider: billingProvider,
+      deliveryMethodsProvider: deliveryMethodsProvider,
+      appSettings: appSettings,
+    );
+
+    _paymentController.syncPaymentAutofillIfNeeded(billingProvider);
+    billingProvider.markPaymentStepVisited();
+    billingProvider.calculateBalance();
+  }
 
   Future<SaveOrderResult> saveOrder(BuildContext context) async {
     return await CheckoutService(context).saveOrder();

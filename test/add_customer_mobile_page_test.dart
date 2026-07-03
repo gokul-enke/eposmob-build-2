@@ -149,6 +149,7 @@ void main() {
       expect(find.textContaining('Email Address'), findsOneWidget);
       expect(find.textContaining('Phone Number'), findsOneWidget);
       expect(find.textContaining('Building / Apartment'), findsOneWidget);
+      expect(find.textContaining('Street Address'), findsOneWidget);
       expect(find.textContaining('Country'), findsOneWidget);
       expect(find.textContaining('States / Provinces'), findsOneWidget);
       expect(find.textContaining('District / City'), findsOneWidget);
