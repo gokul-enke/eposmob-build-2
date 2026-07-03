@@ -8,7 +8,6 @@ import '../../providers/customer_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
-import 'add_customer_modal.dart';
 
 class CustomersMobileView extends StatefulWidget {
   final TextEditingController nameController;
@@ -18,6 +17,8 @@ class CustomersMobileView extends StatefulWidget {
   final ValueChanged<String?> onBalanceChanged;
   final VoidCallback onReset;
   final VoidCallback onAddCustomer;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onSearch;
 
   const CustomersMobileView({
     super.key,
@@ -28,6 +29,8 @@ class CustomersMobileView extends StatefulWidget {
     required this.onBalanceChanged,
     required this.onReset,
     required this.onAddCustomer,
+    required this.onRefresh,
+    required this.onSearch,
   });
 
   @override
@@ -100,11 +103,11 @@ class _CustomersMobileViewState extends State<CustomersMobileView> {
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: Column(
               children: [
-                _inputField(widget.nameController, 'Name'),
+                _inputField(widget.nameController, 'Name', (_) => widget.onSearch()),
                 const SizedBox(height: 8),
-                _inputField(widget.emailController, 'Email'),
+                _inputField(widget.emailController, 'Email', (_) => widget.onSearch()),
                 const SizedBox(height: 8),
-                _inputField(widget.phoneController, 'Phone'),
+                _inputField(widget.phoneController, 'Phone', (_) => widget.onSearch()),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: widget.selectedBalanceFilter,
@@ -138,9 +141,14 @@ class _CustomersMobileViewState extends State<CustomersMobileView> {
     );
   }
 
-  Widget _inputField(TextEditingController controller, String hint) {
+  Widget _inputField(
+    TextEditingController controller,
+    String hint,
+    ValueChanged<String> onChanged,
+  ) {
     return TextFormField(
       controller: controller,
+      onChanged: onChanged,
       style: buildCustomStyle(
           FontWeightManager.medium, FontSize.s12, 0.18, ColorManager.textColor),
       decoration: _inputDecoration(hint),
@@ -177,17 +185,32 @@ class _CustomersMobileViewState extends State<CustomersMobileView> {
         }
         final customers = provider.getCustomerList;
         if (customers == null || customers.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          return RefreshIndicator(
+            onRefresh: widget.onRefresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                Icon(Icons.person_search,
-                    size: 60,
-                    color: ColorManager.kPrimaryColor.withOpacity(0.5)),
-                const SizedBox(height: 12),
-                Text('No customers found',
-                    style: buildCustomStyle(FontWeightManager.medium,
-                        FontSize.s16, 0.27, ColorManager.textColor)),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.4,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.person_search,
+                            size: 60,
+                            color:
+                                ColorManager.kPrimaryColor.withOpacity(0.5)),
+                        const SizedBox(height: 12),
+                        Text('No customers found',
+                            style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s16,
+                                0.27,
+                                ColorManager.textColor)),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           );
@@ -195,9 +218,12 @@ class _CustomersMobileViewState extends State<CustomersMobileView> {
         return Column(
           children: [
             Expanded(
-              child: ListView.separated(
-                itemCount: customers.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
+              child: RefreshIndicator(
+                onRefresh: widget.onRefresh,
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: customers.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final customer = customers[index];
                   final balance = customer.balance ?? 0.0;
@@ -315,6 +341,7 @@ class _CustomersMobileViewState extends State<CustomersMobileView> {
                     ),
                   );
                 },
+                ),
               ),
             ),
             const SizedBox(height: 8),

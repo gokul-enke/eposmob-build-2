@@ -502,6 +502,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
             onReset: resetSearch,
             onAddCustomer: () =>
                 showAddCustomerModal(context, size, mobileNumber: ''),
+            onRefresh: refreshData,
+            onSearch: searchCustomers,
           ),
         ),
       );
