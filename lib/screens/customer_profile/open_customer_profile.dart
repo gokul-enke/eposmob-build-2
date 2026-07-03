@@ -38,16 +38,86 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
     });
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     CustomerProvider customerProvider = Provider.of<CustomerProvider>(context);
     CustomerListModelData? selectedCustomer =
         customerProvider.getSelectedCustomer;
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
+    final isMobile = size.width < 700;
 
     if (selectedCustomer == null) {
       return const Center(child: Text("No customer selected."));
+    }
+
+    if (isMobile) {
+      return SafeArea(
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CustomBackButton(
+                  onPressed: () => sideBarController.index.value = 5,
+                  text: 'All Customers',
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Customer Profile',
+                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s20,
+                      0, ColorManager.kTitleTextColor),
+                ),
+                const SizedBox(height: 10),
+                // Compact profile header
+                Row(
+                  children: [
+                    const BuildProfilePicture(),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          selectedCustomer.name ?? 'Customer Name',
+                          style: buildCustomStyle(FontWeightManager.bold,
+                              FontSize.s14, 0, ColorManager.kTitleTextColor),
+                        ),
+                        Text(
+                          'ID: ${selectedCustomer.id}',
+                          style: buildCustomStyle(FontWeightManager.regular,
+                              FontSize.s12, 0, ColorManager.kGreyColor),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Horizontal scrollable tab bar
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _mobileTab(0, 'Info', Icons.person_outline),
+                      _mobileTab(1, 'Edit', Icons.edit_outlined),
+                      _mobileTab(2, 'Transactions', Icons.receipt_long_outlined),
+                      _mobileTab(3, 'Orders', Icons.shopping_bag_outlined),
+                      _mobileTab(6, 'Address', Icons.location_on_outlined),
+                      _mobileTab(4, 'Loyalty', Icons.card_membership_outlined),
+                      _mobileTab(5, 'Chat', Icons.chat_outlined),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: _buildMainContent(size, selectedCustomer),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return SafeArea(
@@ -73,12 +143,10 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sidebar
                     SizedBox(
                       width: size.width / 4,
                       child: _buildSidebar(size, selectedCustomer),
                     ),
-                    // Main Content
                     Expanded(
                       child: _buildMainContent(size, selectedCustomer),
                     ),
@@ -87,6 +155,43 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _mobileTab(int index, String label, IconData icon) {
+    final isSelected = selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => selectedIndex = index),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? ColorManager.kPrimaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? ColorManager.kPrimaryColor
+                : Colors.grey.shade300,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 14,
+                color: isSelected ? Colors.white : Colors.grey.shade600),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+              ),
+            ),
+          ],
         ),
       ),
     );

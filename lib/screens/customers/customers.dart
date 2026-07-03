@@ -15,6 +15,7 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'add_customer_modal.dart';
+import 'customers_mobile.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -158,6 +159,29 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Widget build(BuildContext context) {
     SideBarController sideBarController = Get.put(SideBarController());
     Size size = MediaQuery.of(context).size;
+
+    final isMobile = size.width < 700;
+
+    if (isMobile) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: CustomersMobileView(
+            nameController: customerNameController,
+            emailController: customerEmailController,
+            phoneController: customerPhoneController,
+            selectedBalanceFilter: selectedBalanceFilter,
+            onBalanceChanged: (val) {
+              setState(() => selectedBalanceFilter = val ?? 'All');
+              searchCustomers();
+            },
+            onReset: resetSearch,
+            onAddCustomer: () =>
+                showAddCustomerModal(context, size, mobileNumber: ''),
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       child: RefreshIndicator(

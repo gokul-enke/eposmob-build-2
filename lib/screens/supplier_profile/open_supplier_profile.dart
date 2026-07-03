@@ -69,18 +69,61 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
                     ColorManager.kTitleTextColor),
               ),
               const SizedBox(height: 20),
+             Expanded(
+                child: size.width < 700
+                    ? _buildMobileLayout(size, selectedSupplier)
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: size.width / 4,
+                            child: _buildSidebar(size, selectedSupplier),
+                          ),
+                          Expanded(
+                            child: _buildMainContent(size, selectedSupplier),
+                          ),
+                        ],
+                      ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(Size size, Supplier supplier) {
+    final List<String> tabTitles = [
+      'Information',
+      'Edit Details',
+      'Transactions',
+      'All Orders',
+      'Address',
+    ];
+
+    return Column(
+      children: [
+        BuildBoxShadowContainer(
+          padding: const EdgeInsets.all(16),
+          circleRadius: 12,
+          child: Row(
+            children: [
+              const BuildProfilePicture(),
+              const SizedBox(width: 12),
               Expanded(
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sidebar
-                    SizedBox(
-                      width: size.width / 4,
-                      child: _buildSidebar(size, selectedSupplier),
+                    Text(
+                      supplier.name ?? 'Supplier Name',
+                      style: buildCustomStyle(FontWeightManager.bold,
+                          FontSize.s16, 0, ColorManager.kTitleTextColor),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    // Main Content
-                    Expanded(
-                      child: _buildMainContent(size, selectedSupplier),
+                    Text(
+                      'ID: ${supplier.id}',
+                      style: buildCustomStyle(FontWeightManager.regular,
+                          FontSize.s12, 0, ColorManager.kGreyColor),
                     ),
                   ],
                 ),
@@ -88,7 +131,48 @@ class _OpenSupplierProfileScreenState extends State<OpenSupplierProfileScreen> {
             ],
           ),
         ),
-      ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(tabTitles.length, (index) {
+              final isSelected = selectedIndex == index;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () => setState(() => selectedIndex = index),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? ColorManager.kPrimaryColor
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.transparent
+                            : ColorManager.kBgDarkColor,
+                      ),
+                    ),
+                    child: Text(
+                      tabTitles[index],
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s13,
+                        0,
+                        isSelected ? Colors.white : ColorManager.kTitleTextColor,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Expanded(child: _buildMainContent(size, supplier)),
+      ],
     );
   }
 

@@ -35,7 +35,12 @@ Future<dynamic> showAddCustomerModal(
             borderRadius: BorderRadius.circular(20),
           ),
           backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width > 700 ? 600 : double.infinity,
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
@@ -100,6 +105,7 @@ class _AddCustomersModalState extends State<AddCustomersModal> {
             initialMobileNumber: widget.mobileNumber,
             initialCustomerName: widget.customerName,
             isModal: true,
+            isMobileLayout: MediaQuery.of(context).size.width < 700,
             onSuccess: () {
               // Form handles success internally for modal
             },

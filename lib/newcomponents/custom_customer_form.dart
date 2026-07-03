@@ -964,7 +964,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           ElevatedButton(
             onPressed: () => _submitForm(locationProvider, accessToken),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF166534),
+              backgroundColor: ColorManager.kPrimaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               elevation: 0,

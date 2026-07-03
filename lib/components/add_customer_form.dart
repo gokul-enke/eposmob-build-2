@@ -191,142 +191,109 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
     final locationProvider = Provider.of<LocationProvider>(context);
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = widget.isModal || constraints.maxWidth < 600;
+        return _buildForm(context, size, locationProvider, accessToken, isMobile);
+      },
+    );
+  }
+
+  Widget _buildForm(BuildContext context, Size size, LocationProvider locationProvider, String? accessToken, bool isMobile) {
+
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Row 1: First Name, Last Name, Email
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  "First Name",
-                  firstNameTextController,
-                  TextInputType.text,
-                  size,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildTextField(
-                  "Last Name",
-                  lastNameTextController,
-                  TextInputType.text,
-                  size,
-                ),
-              ),
-              if (!widget.isModal) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildTextField(
-                    "Email Address",
-                    emailTextController,
-                    TextInputType.emailAddress,
-                    size,
-                    validator: validateEmail,
-                  ),
-                ),
-              ],
-            ],
-          ),
+          isMobile
+              ? Column(children: [
+                  _buildTextField("First Name", firstNameTextController, TextInputType.text, size),
+                  const SizedBox(height: 10),
+                  _buildTextField("Last Name", lastNameTextController, TextInputType.text, size),
+                  if (!widget.isModal) ...[
+                    const SizedBox(height: 10),
+                    _buildTextField("Email Address", emailTextController, TextInputType.emailAddress, size, validator: validateEmail),
+                  ],
+                ])
+              : Row(children: [
+                  Expanded(child: _buildTextField("First Name", firstNameTextController, TextInputType.text, size)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildTextField("Last Name", lastNameTextController, TextInputType.text, size)),
+                  if (!widget.isModal) ...[
+                    const SizedBox(width: 10),
+                    Expanded(child: _buildTextField("Email Address", emailTextController, TextInputType.emailAddress, size, validator: validateEmail)),
+                  ],
+                ]),
           const SizedBox(height: 15),
 
-          // Row 2: Phone, Building/Apartment, Email (for modal) or Country
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  "Phone Number",
-                  phoneNumberController,
-                  TextInputType.number,
-                  size,
-                  inputFormatter: PhoneNumberFormatter(),
-                  validator: validatePhoneNumber,
-                  isRequired: true,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildTextField(
-                  "Building / Apartment",
-                  addressTextController,
-                  TextInputType.text,
-                  size,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: widget.isModal
-                    ? _buildTextField(
-                        "Email Address",
-                        emailTextController,
-                        TextInputType.emailAddress,
-                        size,
-                        validator: validateEmail,
-                      )
-                    : _buildTextField(
-                        "Country",
-                        countryTextController,
-                        TextInputType.text,
-                        size,
-                      ),
-              ),
-            ],
-          ),
+          // Row 2: Phone, Building, Email/Country
+          isMobile
+              ? Column(children: [
+                  _buildTextField("Phone Number", phoneNumberController, TextInputType.number, size, inputFormatter: PhoneNumberFormatter(), validator: validatePhoneNumber, isRequired: true),
+                  const SizedBox(height: 10),
+                  _buildTextField("Building / Apartment", addressTextController, TextInputType.text, size),
+                  const SizedBox(height: 10),
+                  widget.isModal
+                      ? _buildTextField("Email Address", emailTextController, TextInputType.emailAddress, size, validator: validateEmail)
+                      : _buildTextField("Country", countryTextController, TextInputType.text, size),
+                ])
+              : Row(children: [
+                  Expanded(child: _buildTextField("Phone Number", phoneNumberController, TextInputType.number, size, inputFormatter: PhoneNumberFormatter(), validator: validatePhoneNumber, isRequired: true)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildTextField("Building / Apartment", addressTextController, TextInputType.text, size)),
+                  const SizedBox(width: 10),
+                  Expanded(child: widget.isModal
+                      ? _buildTextField("Email Address", emailTextController, TextInputType.emailAddress, size, validator: validateEmail)
+                      : _buildTextField("Country", countryTextController, TextInputType.text, size)),
+                ]),
           const SizedBox(height: 15),
 
-          // Row 3: States/Provinces, District/City, Pincode/Country
-          Row(
-            children: [
-              Expanded(
-                child: widget.isModal
-                    ? _buildStateDropdownWithSearch(size, locationProvider, accessToken)
-                    : _buildStateDropdown(size, locationProvider, accessToken),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: widget.isModal
-                    ? _buildDistrictDropdownWithSearch(size, locationProvider)
-                    : _buildDistrictDropdown(size, locationProvider),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: widget.isModal
-                    ? _buildTextField(
-                        "Country",
-                        countryTextController,
-                        TextInputType.text,
-                        size,
-                      )
-                    : _buildPincodeDropdown(size, locationProvider),
-              ),
-            ],
-          ),
+          // Row 3: State, District, Pincode/Country
+          isMobile
+              ? Column(children: [
+                  widget.isModal
+                      ? _buildStateDropdownWithSearch(size, locationProvider, accessToken)
+                      : _buildStateDropdown(size, locationProvider, accessToken),
+                  const SizedBox(height: 10),
+                  widget.isModal
+                      ? _buildDistrictDropdownWithSearch(size, locationProvider)
+                      : _buildDistrictDropdown(size, locationProvider),
+                  const SizedBox(height: 10),
+                  widget.isModal
+                      ? _buildTextField("Country", countryTextController, TextInputType.text, size)
+                      : _buildPincodeDropdown(size, locationProvider),
+                ])
+              : Row(children: [
+                  Expanded(child: widget.isModal
+                      ? _buildStateDropdownWithSearch(size, locationProvider, accessToken)
+                      : _buildStateDropdown(size, locationProvider, accessToken)),
+                  const SizedBox(width: 10),
+                  Expanded(child: widget.isModal
+                      ? _buildDistrictDropdownWithSearch(size, locationProvider)
+                      : _buildDistrictDropdown(size, locationProvider)),
+                  const SizedBox(width: 10),
+                  Expanded(child: widget.isModal
+                      ? _buildTextField("Country", countryTextController, TextInputType.text, size)
+                      : _buildPincodeDropdown(size, locationProvider)),
+                ]),
           const SizedBox(height: 15),
 
-          // Row 4: Balance and Payment Type
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  "Balance",
-                  balanceTextController,
-                  TextInputType.number,
-                  size,
-                  inputFormatter: FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: _buildPaymentTypeSection(size),
-              ),
-            ],
-          ),
+          // Row 4: Balance + Payment Type
+          isMobile
+              ? Column(children: [
+                  _buildTextField("Balance", balanceTextController, TextInputType.number, size, inputFormatter: FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))),
+                  const SizedBox(height: 10),
+                  _buildPaymentTypeSection(size),
+                ])
+              : Row(children: [
+                  Expanded(child: _buildTextField("Balance", balanceTextController, TextInputType.number, size, inputFormatter: FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')))),
+                  const SizedBox(width: 10),
+                  Expanded(flex: 2, child: _buildPaymentTypeSection(size)),
+                ]),
           const SizedBox(height: 25),
 
-          // Submit buttons
           _buildSubmitButtons(size, locationProvider, accessToken),
         ],
       ),
@@ -830,7 +797,9 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           title: "Submit",
           fct: () => _submitForm(locationProvider, accessToken),
           height: 50,
-          width: MediaQuery.of(context).size.width * 0.19,
+          width: MediaQuery.of(context).size.width < 700 
+              ? double.infinity 
+              : MediaQuery.of(context).size.width * 0.19,
           fontSize: FontSize.s12,
         ),
       );
