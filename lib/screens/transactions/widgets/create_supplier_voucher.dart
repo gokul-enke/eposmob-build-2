@@ -328,6 +328,8 @@ class _CreateSupplierVoucherScreenState
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 700;
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
@@ -348,13 +350,16 @@ class _CreateSupplierVoucherScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+             Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    "Create Supplier Voucher",
-                    style: buildCustomStyle(FontWeightManager.bold,
-                        FontSize.s24, 0.36, Colors.black),
+                  Expanded(
+                    child: Text(
+                      "Create Supplier Voucher",
+                      style: buildCustomStyle(FontWeightManager.bold,
+                          isMobile ? FontSize.s18 : FontSize.s24, 0.36, Colors.black),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -370,35 +375,40 @@ class _CreateSupplierVoucherScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // First row: Type, Total Amount
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildSupplierDropdown(),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTypeDropdown(),
-                          ),
-                          const SizedBox(width: 16),
-                          // Expanded(
-                          //   child: _buildTextField(
-                          //     'Total Voucher Amount',
-                          //     totalAmountController,
-                          //     '0',
-                          //     readOnly: true,
-                          //   ),
-                          // ),
-                          Expanded(
-                            child: _buildDateField(
-                              'Voucher date',
-                              selectedVoucherDate,
-                              (DateTime date) =>
-                                  setState(() => selectedVoucherDate = date),
-                              voucherDateFocus,
+                      isMobile
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildSupplierDropdown(),
+                                const SizedBox(height: 12),
+                                _buildTypeDropdown(),
+                                const SizedBox(height: 12),
+                                _buildDateField(
+                                  'Voucher date',
+                                  selectedVoucherDate,
+                                  (DateTime date) =>
+                                      setState(() => selectedVoucherDate = date),
+                                  voucherDateFocus,
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Expanded(child: _buildSupplierDropdown()),
+                                const SizedBox(width: 16),
+                                Expanded(child: _buildTypeDropdown()),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildDateField(
+                                    'Voucher date',
+                                    selectedVoucherDate,
+                                    (DateTime date) =>
+                                        setState(() => selectedVoucherDate = date),
+                                    voucherDateFocus,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                       // const SizedBox(height: 16),
                       // Second row: Voucher Date, Due Date, Status
                       // Row(
@@ -446,95 +456,61 @@ class _CreateSupplierVoucherScreenState
                             FontSize.s16, 0.27, Colors.black),
                       ),
                       const SizedBox(height: 10),
-                      _buildItemsTableHeader(),
-                      const SizedBox(height: 8),
-                      ..._buildItemRows(),
+                      isMobile
+                          ? SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: SizedBox(
+                                width: 650,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildItemsTableHeader(),
+                                    const SizedBox(height: 8),
+                                    ..._buildItemRows(),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildItemsTableHeader(),
+                                const SizedBox(height: 8),
+                                ..._buildItemRows(),
+                              ],
+                            ),
                       const SizedBox(height: 16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _buildPaymentMethodDropdown()),
-                          Expanded(flex: 2, child: const SizedBox()),
-                          Expanded(
-                              child: Column(
-                            children: [
-                              Divider(),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Text(
-                                    'Net Total',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                     isMobile
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildPaymentMethodDropdown(),
+                                const SizedBox(height: 16),
+                                const Divider(),
+                                const SizedBox(height: 8),
+                                _buildSummaryLine('Net Total', netTotalController.text),
+                                _buildSummaryLine('Total Tax', totalTaxController.text),
+                                _buildSummaryLine('Total Payable', totalAmountController.text),
+                              ],
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildPaymentMethodDropdown()),
+                                Expanded(flex: 2, child: const SizedBox()),
+                                Expanded(
+                                  child: Column(
+                                    children: [
+                                      const Divider(),
+                                      const SizedBox(height: 8),
+                                      _buildSummaryLine('Net Total', netTotalController.text),
+                                      _buildSummaryLine('Total Tax', totalTaxController.text),
+                                      _buildSummaryLine('Total Payable', totalAmountController.text),
+                                    ],
                                   ),
-                                  const Spacer(),
-                                  Text(
-                                    netTotalController.text.toString().isEmpty
-                                        ? '0'
-                                        : netTotalController.text.toString(),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    'Total Tax',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    totalTaxController.text.toString().isEmpty
-                                        ? '0'
-                                        : totalTaxController.text.toString(),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Text(
-                                    'Total Payable',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    totalAmountController.text
-                                            .toString()
-                                            .isEmpty
-                                        ? '0'
-                                        : totalAmountController.text.toString(),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          )),
-                        ],
-                      ),
+                                ),
+                              ],
+                            ),
                       // Center(
                       // child: CustomRoundButton(
                       //   title: "Add to voucher items",
@@ -556,36 +532,92 @@ class _CreateSupplierVoucherScreenState
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomRoundButton(
-                    title: "Cancel",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    borderColor: ColorManager.kPrimaryColor,
-                    fct: () => sideBarController.index.value =
-                        (sideBarController.index.value == 76) ? 75 : 72,
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                  const SizedBox(width: 16),
-                  CustomRoundButton(
-                    title: _isLoading ? "Submitting..." : "Submit",
-                    boxColor: ColorManager.kPrimaryColor,
-                    textColor: Colors.white,
-                    fct: _isLoading ? () {} : _submitVoucher,
-                    height: 45,
-                    width: 120,
-                    fontSize: FontSize.s12,
-                  ),
-                ],
-              ),
+              isMobile
+                  ? Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: CustomRoundButton(
+                            title: _isLoading ? "Submitting..." : "Submit",
+                            boxColor: ColorManager.kPrimaryColor,
+                            textColor: Colors.white,
+                            fct: _isLoading ? () {} : _submitVoucher,
+                            height: 45,
+                            width: double.infinity,
+                            fontSize: FontSize.s12,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: CustomRoundButton(
+                            title: "Cancel",
+                            boxColor: Colors.white,
+                            textColor: ColorManager.kPrimaryColor,
+                            borderColor: ColorManager.kPrimaryColor,
+                            fct: () => sideBarController.index.value =
+                                (sideBarController.index.value == 76) ? 75 : 72,
+                            height: 45,
+                            width: double.infinity,
+                            fontSize: FontSize.s12,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        CustomRoundButton(
+                          title: "Cancel",
+                          boxColor: Colors.white,
+                          textColor: ColorManager.kPrimaryColor,
+                          borderColor: ColorManager.kPrimaryColor,
+                          fct: () => sideBarController.index.value =
+                              (sideBarController.index.value == 76) ? 75 : 72,
+                          height: 45,
+                          width: 120,
+                          fontSize: FontSize.s12,
+                        ),
+                        const SizedBox(width: 16),
+                        CustomRoundButton(
+                          title: _isLoading ? "Submitting..." : "Submit",
+                          boxColor: ColorManager.kPrimaryColor,
+                          textColor: Colors.white,
+                          fct: _isLoading ? () {} : _submitVoucher,
+                          height: 45,
+                          width: 120,
+                          fontSize: FontSize.s12,
+                        ),
+                      ],
+                    ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSummaryLine(String label, String value) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value.isEmpty ? '0' : value,
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 

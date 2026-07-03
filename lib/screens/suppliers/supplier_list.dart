@@ -16,6 +16,7 @@ import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
 import 'add_supplier_modal.dart';
+import 'supplier_list_mobile.dart';
 
 class SupplierListScreen extends StatefulWidget {
   const SupplierListScreen({super.key});
@@ -147,6 +148,53 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+
+    final isMobile = size.width < 700;
+
+    if (isMobile) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: SupplierListMobileView(
+            nameController: searchTextController,
+            emailController: searchEmailController,
+            phoneController: searchPhoneController,
+            selectedBalanceFilter: selectedBalanceFilter,
+            onBalanceChanged: (val) {
+              setState(() => selectedBalanceFilter = val ?? 'All');
+              searchSuppliers(
+                name: searchTextController.text,
+                email: searchEmailController.text,
+                phone: searchPhoneController.text,
+                balance: val ?? 'All',
+              );
+            },
+            onReset: () {
+              setState(() {
+                searchTextController.clear();
+                searchEmailController.clear();
+                searchPhoneController.clear();
+                selectedBalanceFilter = 'All';
+              });
+              Future.microtask(() {
+                Provider.of<SupplierProvider>(context, listen: false)
+                    .resetFilters();
+              });
+            },
+            onAddSupplier: () async {
+              final result = await showAddSupplierModal(context, size);
+              if (result != null && result["status"] == "success") {
+                refreshData();
+              }
+            },
+            onSearch: ({name = '', email = '', phone = '', balance = 'All'}) {
+              searchSuppliers(
+                  name: name, email: email, phone: phone, balance: balance);
+            },
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       child: RefreshIndicator(

@@ -368,6 +368,40 @@ class _TransactionScreenState extends State<TransactionScreen> {
     Size size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
 
+    final isMobile = size.width < 700;
+
+    if (isMobile) {
+      return SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _onRefresh,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Supplier Transactions',
+                  style: buildCustomStyle(FontWeightManager.semiBold,
+                      FontSize.s18, 0.25, ColorManager.textColor),
+                ),
+                const SizedBox(height: 10),
+                _buildMobileFilters(size, transactionProvider),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: initLoading || transactionProvider.transactionIsLoading
+                      ? const Center(child: CircularProgressIndicator.adaptive())
+                      : transactionProvider.listTransactionModelDataList == null ||
+                              transactionProvider.listTransactionModelDataList!.isEmpty
+                          ? _buildEmptyState(transactionProvider)
+                          : _buildMobileList(transactionProvider),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: _onRefresh,
@@ -770,6 +804,300 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ],
     );
   }
+  Widget _buildMobileFilters(Size size, TransactionProvider transactionProvider) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: ExpansionTile(
+        leading: const Icon(Icons.filter_list, size: 18),
+        title: Text('Filters',
+            style: buildCustomStyle(FontWeightManager.medium,
+                FontSize.s12, 0.18, ColorManager.textColor)),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Column(
+              children: [
+                // Search
+                TextFormField(
+                  controller: searchController,
+                  onChanged: (_) => searchTransactions(),
+                  decoration: _mobileInputDecoration('Search by name, reference'),
+                ),
+                const SizedBox(height: 8),
+                // Supplier autocomplete — reuse existing field in a box
+                TextFormField(
+                  controller: supplierSearchController,
+                  onChanged: (_) => searchTransactions(),
+                  decoration: _mobileInputDecoration('Supplier'),
+                ),
+                const SizedBox(height: 8),
+                _mobileDropdown(
+                  value: transactionTypeController.text,
+                  hint: 'Trans. Type',
+                  items: const ['All', 'Invoice', 'Voucher'],
+                  onChanged: (v) {
+                    setState(() => transactionTypeController.text = v!);
+                    searchTransactions();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _mobileDropdown(
+                  value: typeController.text,
+                  hint: 'Type',
+                  items: const ['All Types', 'Credit', 'Debit'],
+                  onChanged: (v) {
+                    setState(() => typeController.text = v!);
+                    searchTransactions();
+                  },
+                ),
+                const SizedBox(height: 8),
+                _mobileDropdown(
+                  value: statusController.text,
+                  hint: 'Status',
+                  items: transactionProvider.getStatusOptions(),
+                  onChanged: (v) {
+                    setState(() => statusController.text = v!);
+                    searchTransactions();
+                  },
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: resetSearch,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ColorManager.kPrimaryColor,
+                      side: const BorderSide(color: ColorManager.kPrimaryColor),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6)),
+                    ),
+                    child: const Text('Reset Filters'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _mobileInputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: buildCustomStyle(
+          FontWeightManager.medium, FontSize.s12, 0.18, Colors.grey),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide: BorderSide(color: Colors.grey.shade300)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide: BorderSide(color: Colors.grey.shade300)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide:
+              const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2)),
+      isDense: true,
+    );
+  }
+
+  Widget _mobileDropdown({
+    required String value,
+    required String hint,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items: items
+          .map((s) => DropdownMenuItem(
+              value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
+          .toList(),
+      onChanged: onChanged,
+      decoration: _mobileInputDecoration(hint),
+      isExpanded: true,
+    );
+  }
+
+  Widget _buildMobileList(TransactionProvider provider) {
+    final transactions = provider.listTransactionModelDataList!;
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.separated(
+            itemCount: transactions.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final tx = transactions[index];
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            tx.supplier.user.name,
+                            style: buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s13, 0.19, ColorManager.textColor),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        _buildStatusChip(tx.status),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        _buildTypeCell(tx.type),
+                        const SizedBox(width: 8),
+                        Text(tx.transactionType,
+                            style: buildCustomStyle(FontWeightManager.regular,
+                                FontSize.s11, 0.16, Colors.grey)),
+                        const Spacer(),
+                        Text(
+                          '${tx.currency} ${tx.amount}',
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s13, 0.19, ColorManager.kPrimaryColor),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined,
+                            size: 12, color: Colors.grey.shade400),
+                        const SizedBox(width: 4),
+                        Text(DateHelper.formatISODate(tx.date),
+                            style: buildCustomStyle(FontWeightManager.regular,
+                                FontSize.s11, 0.16, Colors.grey)),
+                        const Spacer(),
+                        Text('Ref: ${tx.reference}',
+                            style: buildCustomStyle(FontWeightManager.regular,
+                                FontSize.s11, 0.16, Colors.grey)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: InkWell(
+                        onTap: () => _showTransactionDetails(tx),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                                color:
+                                    ColorManager.kPrimaryColor.withOpacity(0.3)),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.visibility_outlined,
+                                  size: 13,
+                                  color: ColorManager.kPrimaryColor),
+                              const SizedBox(width: 4),
+                              Text('View',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: ColorManager.kPrimaryColor)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        PaginationControl(
+          currentPage: provider.transactionCurrentPage,
+          totalPages: provider.transactionTotalPages,
+          onPageChanged: (page) {
+            String? supplierId;
+            if (supplierSearchController.text.isNotEmpty) {
+              supplierId = provider
+                  .lookupSupplierIdByName(supplierSearchController.text)
+                  ?.toString();
+            }
+            provider.fetchTransactionsFromServerV2(
+              supplierId: supplierId,
+              transactionType: transactionTypeController.text == 'All'
+                  ? null
+                  : transactionTypeController.text,
+              type: typeController.text == 'All Types'
+                  ? null
+                  : typeController.text,
+              page: page,
+              perPage: 50,
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////------------------------///////////////////////////////////////
