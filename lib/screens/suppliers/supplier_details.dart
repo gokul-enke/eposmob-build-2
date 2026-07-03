@@ -113,20 +113,22 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
                               _buildHeader(),
                               const SizedBox(height: 10),
                               Text(
-                                'Supplier Details - ${supplier!.name}',
-                                style: ResponsiveWidget.isMobile(context)
-                                    ? buildCustomStyle(
-                                        FontWeightManager.semiBold,
-                                        FontSize.s12,
-                                        0.30,
-                                        ColorManager.textColor)
-                                    : buildCustomStyle(
-                                        FontWeightManager.semiBold,
-                                        FontSize.s20,
-                                        0.30,
-                                        ColorManager.textColor),
-                                overflow:
-                                    TextOverflow.ellipsis, // Handle overflow
+                                'Supplier Profile',
+                                style: buildCustomStyle(
+                                    FontWeightManager.semiBold,
+                                    FontSize.s20,
+                                    0.30,
+                                    ColorManager.textColor),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                supplier!.name,
+                                style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s14,
+                                    0.30,
+                                    ColorManager.textColor.withOpacity(0.6)),
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 10),
                               _buildSupplierDetails(),
@@ -236,7 +238,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 150,
+            width: 120,
             child: Text(
               label,
               style: buildCustomStyle(
@@ -247,7 +249,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
@@ -257,6 +259,8 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
                 0.27,
                 ColorManager.textColor.withOpacity(.7),
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
           ),
         ],
@@ -278,7 +282,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 150,
+            width: 120,
             child: Text(
               label,
               style: buildCustomStyle(
@@ -289,7 +293,7 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
@@ -299,6 +303,8 @@ class _SupplierDetailsScreenState extends State<SupplierDetailsScreen> {
                 0.27,
                 valueColor,
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
           ),
         ],

@@ -31,7 +31,6 @@ class OpenCustomerProfileScreen extends StatefulWidget {
 class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
   int selectedIndex = 0;
 
-  // Method to navigate to specific tab
   void navigateToTab(int index) {
     setState(() {
       selectedIndex = index;
@@ -45,9 +44,57 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
         customerProvider.getSelectedCustomer;
     Size size = MediaQuery.of(context).size;
     SideBarController sideBarController = Get.put(SideBarController());
+    final isMobile = size.width < 700;
 
     if (selectedCustomer == null) {
       return const Center(child: Text("No customer selected."));
+    }
+
+    if (isMobile) {
+      return SafeArea(
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CustomBackButton(
+                  onPressed: () => sideBarController.index.value = 5,
+                  text: 'All Customers',
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Customer Profile',
+                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s20,
+                      0, ColorManager.kTitleTextColor),
+                ),
+                const SizedBox(height: 10),
+                _buildMobileProfileHeader(selectedCustomer),
+                const SizedBox(height: 10),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _mobileTab(0, 'Info', Icons.person_outline),
+                      _mobileTab(1, 'Edit', Icons.edit_outlined),
+                      _mobileTab(2, 'Transactions', Icons.receipt_long_outlined),
+                      _mobileTab(3, 'Orders', Icons.shopping_bag_outlined),
+                      _mobileTab(6, 'Address', Icons.location_on_outlined),
+                      _mobileTab(4, 'Loyalty', Icons.card_membership_outlined),
+                      _mobileTab(5, 'Chat', Icons.chat_outlined),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: _buildMainContent(size, selectedCustomer),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return SafeArea(
@@ -55,8 +102,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
         backgroundColor: Colors.white,
         body: LayoutBuilder(
           builder: (context, constraints) {
-            final bool isMobile = constraints.maxWidth < 600;
-            final double pagePadding = isMobile ? 14 : 20;
+            final double pagePadding = constraints.maxWidth < 900 ? 16 : 20;
             return Padding(
               padding: EdgeInsets.fromLTRB(
                   pagePadding, pagePadding, pagePadding, pagePadding),
@@ -72,44 +118,26 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                     'Customer Profile',
                     style: buildCustomStyle(
                         FontWeightManager.bold,
-                        isMobile ? FontSize.s20 : FontSize.s24,
+                        FontSize.s24,
                         0,
                         ColorManager.kTitleTextColor),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   Expanded(
-                    child: isMobile
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildMobileProfileHeader(selectedCustomer),
-                              const SizedBox(height: 12),
-                              _buildMobileTabBar(),
-                              const SizedBox(height: 4),
-                              Expanded(
-                                child: Row(
-                                  children: [
-                                    _buildMainContent(size, selectedCustomer),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          )
-                        : Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Sidebar
-                              SizedBox(
-                                width: size.width / 4,
-                                child: _buildSidebar(size, selectedCustomer),
-                              ),
-                              // Main Content
-                              Expanded(
-                                child:
-                                    _buildMainContent(size, selectedCustomer),
-                              ),
-                            ],
-                          ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: constraints.maxWidth < 900
+                              ? constraints.maxWidth * 0.3
+                              : constraints.maxWidth / 4,
+                          child: _buildSidebar(size, selectedCustomer),
+                        ),
+                        Expanded(
+                          child: _buildMainContent(size, selectedCustomer),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -119,16 +147,6 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
       ),
     );
   }
-
-  static const List<Map<String, dynamic>> _tabs = [
-    {'index': 0, 'title': 'Information'},
-    {'index': 1, 'title': 'Edit Details'},
-    {'index': 2, 'title': 'Transactions'},
-    {'index': 3, 'title': 'All Orders'},
-    {'index': 6, 'title': 'Customer Address'},
-    {'index': 4, 'title': 'Loyalty Card'},
-    {'index': 5, 'title': 'Chat'},
-  ];
 
   Widget _buildMobileProfileHeader(CustomerListModelData customer) {
     return Container(
@@ -177,47 +195,39 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
     );
   }
 
-  Widget _buildMobileTabBar() {
-    return SizedBox(
-      height: 42,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _tabs.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final tab = _tabs[i];
-          final int index = tab['index'] as int;
-          final bool isSelected = selectedIndex == index;
-          return Material(
-            color: isSelected ? ColorManager.kPrimaryColor : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            child: InkWell(
-              onTap: () => setState(() => selectedIndex = index),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSelected
-                        ? Colors.transparent
-                        : ColorManager.kBgDarkColor,
-                  ),
-                ),
-                child: Text(
-                  tab['title'] as String,
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s13,
-                    0,
-                    isSelected ? Colors.white : ColorManager.kTitleTextColor,
-                  ),
-                ),
+  Widget _mobileTab(int index, String label, IconData icon) {
+    final isSelected = selectedIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => selectedIndex = index),
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? ColorManager.kPrimaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? ColorManager.kPrimaryColor
+                : Colors.grey.shade300,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 14,
+                color: isSelected ? Colors.white : Colors.grey.shade600),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.white : Colors.grey.shade700,
               ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
@@ -323,7 +333,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
   Widget _buildMainContent(Size size, CustomerListModelData customer) {
     final List<Widget> pages = [
       CustomerInformationViewWidget(
-        size: size, 
+        size: size,
         customer: customer,
         onEditCustomer: () => navigateToTab(1),
         onViewOrders: () => navigateToTab(3),
