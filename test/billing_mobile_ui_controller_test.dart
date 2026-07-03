@@ -12,6 +12,7 @@ import 'package:pos_machine/models/delivery_method.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/models/master_data.dart';
+import 'package:pos_machine/models/payment_method.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -372,7 +373,7 @@ void main() {
         MasterDataValue(id: 1, value: 'CASH', description: ''),
         MasterDataValue(id: 2, value: 'CARD', description: ''),
         MasterDataValue(id: 99, value: 'CHEQUE', description: 'Cheque'),
-      ];
+      ].map(PaymentMethod.fromMasterDataValue).toList();
 
       final items = controller.paymentItems(bp, backendMethods);
       final dynamicItems =

@@ -1275,11 +1275,8 @@ class BillingPageState extends State<BillingPage>
             initialStep: 3);
       } else if (event.logicalKey == LogicalKeyboardKey.f6) {
         debugPrint(
-            "⌨️ [BillingPage] Handling F6 -> open checkout confirm & print");
-        _showCheckoutModal(
-            actionMode: _isQuotationPage
-                ? CheckoutActionMode.quotation
-                : CheckoutActionMode.confirm);
+            "⌨️ [BillingPage] Handling F6 -> confirm & print");
+        _handleConfirmAndPrint();
       } else if (event.logicalKey == LogicalKeyboardKey.f7) {
         debugPrint("⌨️ [BillingPage] Handling F7 -> create new order");
         _createNewOrder();
@@ -5684,8 +5681,7 @@ class BillingPageState extends State<BillingPage>
                 child: _buildActionButton(
                   text: 'billing.confirm_and_print'.tr,
                   color: ColorManager.kButtonBlue,
-                  onPressed: () => _showCheckoutModal(
-                      actionMode: CheckoutActionMode.confirm),
+                  onPressed: () => _handleConfirmAndPrint(),
                   isLoading: isLoadingCreateOrder,
                   isDisabled: disableActions && !isLoadingCreateOrder,
                   shortcutLabel: 'F6',
@@ -7133,42 +7129,111 @@ class BillingPageState extends State<BillingPage>
     });
   }
 
-  /// Shows the checkout modal for customer selection, delivery, discount, and payment
-  /// This is called when clicking Confirm Order or Confirm & Print buttons
-  void _showCheckoutModal({
-    CheckoutActionMode actionMode = CheckoutActionMode.confirm,
-    int? initialStep,
-  }) async {
-    final isSaveMode = actionMode == CheckoutActionMode.save;
-    final isQuotationMode = actionMode == CheckoutActionMode.quotation;
-    bool checkoutActionTriggered = false;
-    debugPrint(
-        "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
-    if (_isOrderActionBusy) {
-      debugPrint(
-          "⌨️ [BillingPage] _showCheckoutModal ignored because order action is busy");
+  bool get _skipCheckoutOnConfirmAndPrint {
+    if (_isQuotationPage) return false;
+    return Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.skipCheckoutOnConfirmAndPrint ??
+        false;
+  }
+
+  Future<void> _handleConfirmAndPrint() async {
+    if (_skipCheckoutOnConfirmAndPrint) {
+      await _confirmAndPrintWithoutCheckoutModal();
+      return;
+    }
+    _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
+  }
+
+  bool _hasExistingPaymentState() {
+    return _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected ||
+        _toCustomerCreditEnabled ||
+        _extraPaymentAmounts.isNotEmpty ||
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_debitAmountController.text) ?? 0) > 0;
+  }
+
+  void _applyDefaultDeliveryMethodIfNeeded() {
+    if (deliveryMethod.isNotEmpty && deliveryMethodId.isNotEmpty) {
       return;
     }
 
-    debugPrint(
-        "⌨️ [BillingPage] Releasing focus before checkout modal | ${_focusDebugSummary()}");
-    // Release global shortcut focus so modal text fields receive keyboard input reliably.
-    _focusNode.unfocus();
-    FocusManager.instance.primaryFocus?.unfocus();
-    debugPrint(
-        "⌨️ [BillingPage] Focus released before checkout modal | ${_focusDebugSummary()}");
+    final deliveryMethodsProvider =
+        Provider.of<DeliveryMethodsProvider>(context, listen: false);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
 
-    // Quotations should not silently inherit the billing default customer.
-    _hydrateCustomerListFromProviderCache(
-      applyDefaultCustomer: !isQuotationMode,
+    if (deliveryMethodsProvider.isLoading ||
+        deliveryMethodsProvider.deliveryMethods.isEmpty) {
+      return;
+    }
+
+    final defaultMethod = deliveryMethodsProvider.resolveDefaultDeliveryMethod(
+      appSettingsDefault:
+          appSettingsProvider.appSettings?.defaultDeliveryMethod,
     );
-    if (isQuotationMode) {
-      _clearAutomaticDefaultCustomerForQuotation();
+    if (defaultMethod == null) return;
+
+    deliveryMethod = defaultMethod.name;
+    deliveryMethodId = defaultMethod.id;
+    debugPrint(
+        "🚚 Applied default delivery for direct confirm: ${defaultMethod.name} (ID: ${defaultMethod.id})");
+  }
+
+  void _autoFillDefaultPaymentAmounts() {
+    final effectiveTotal = _getEffectiveOrderTotal();
+    if (effectiveTotal <= 0) return;
+
+    final hasAnyAmount = (double.tryParse(_cashAmountController.text) ?? 0) >
+            0 ||
+        (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(_debitAmountController.text) ?? 0) > 0;
+    if (hasAnyAmount) return;
+
+    final totalStr = effectiveTotal.toStringAsFixed(2);
+    if (_isCashSelected) {
+      _cashAmountController.text = totalStr;
+    } else if (_isCardSelected) {
+      _cardAmountController.text = totalStr;
+    } else if (_isUpiSelected) {
+      _upiAmountController.text = totalStr;
+    } else if (_isCodSelected) {
+      _codAmountController.text = totalStr;
+    } else if (_isDebitSelected) {
+      _debitAmountController.text = totalStr;
     } else {
+      _isCashSelected = true;
+      _cashAmountController.text = totalStr;
+    }
+
+    final total = (double.tryParse(_cashAmountController.text) ?? 0) +
+        (double.tryParse(_cardAmountController.text) ?? 0) +
+        (double.tryParse(_upiAmountController.text) ?? 0) +
+        (double.tryParse(_codAmountController.text) ?? 0) +
+        _sumExtraPaidAmounts();
+    _paidAmountController.text = total.toStringAsFixed(2);
+  }
+
+  Future<void> _prepareCheckoutDefaults({
+    required bool applyDefaultCustomer,
+    required bool applyDefaultPayment,
+  }) async {
+    _hydrateCustomerListFromProviderCache(
+      applyDefaultCustomer: applyDefaultCustomer,
+    );
+    if (applyDefaultCustomer) {
       _applyDefaultCustomerFromCacheIfNeeded();
     }
 
-    // Reload payment methods
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
     final methods = await masterDataProvider.fetchPaymentMethods();
@@ -7197,24 +7262,93 @@ class BillingPageState extends State<BillingPage>
       );
     }
 
-    final hasExistingPaymentState = _isCashSelected ||
-        _isCardSelected ||
-        _isUpiSelected ||
-        _isCodSelected ||
-        _isDebitSelected ||
-        _toCustomerCreditEnabled ||
-        _extraPaymentAmounts.isNotEmpty ||
-        (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
-        (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
-        (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
-        (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
-        (double.tryParse(_debitAmountController.text) ?? 0) > 0;
+    if (!mounted) return;
 
-    // Apply default payment method only when no existing/rehydrated payment state exists.
-    // Quotations are estimates, so payment must stay unconfigured unless a future
-    // explicit advance-payment flow is added.
-    if (!isQuotationMode && !hasExistingPaymentState) {
+    if (applyDefaultPayment && !_hasExistingPaymentState()) {
       _applyDefaultPaymentMethod();
+    }
+
+    _applyDefaultDeliveryMethodIfNeeded();
+  }
+
+  Future<void> _confirmAndPrintWithoutCheckoutModal() async {
+    if (_isOrderActionBusy) {
+      debugPrint(
+          "⌨️ [BillingPage] Direct confirm & print ignored because order action is busy");
+      return;
+    }
+
+    debugPrint(
+        "⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct confirm & print");
+
+    await _prepareCheckoutDefaults(
+      applyDefaultCustomer: true,
+      applyDefaultPayment: true,
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _autoFillDefaultPaymentAmounts();
+      _hasOpenedPaymentModalOnce = true;
+    });
+    _updateBalanceAmount();
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.updatePaymentFromModal(
+      isCash: _isCashSelected,
+      isCard: _isCardSelected,
+      isUpi: _isUpiSelected,
+      isCod: _isCodSelected,
+      isDebit: _isDebitSelected,
+      cashAmount: _cashAmountController.text,
+      cardAmount: _cardAmountController.text,
+      upiAmount: _upiAmountController.text,
+      codAmount: _codAmountController.text,
+      debitAmount: _debitAmountController.text,
+      transactionNumber: _transactionNumberController.text,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      cashMethodId: billingProvider.cashPaymentMethodId,
+      cardMethodId: billingProvider.cardPaymentMethodId,
+      upiMethodId: billingProvider.upiPaymentMethodId,
+      codMethodId: billingProvider.codPaymentMethodId,
+    );
+
+    await _createOrderAndPrint();
+  }
+
+  /// Shows the checkout modal for customer selection, delivery, discount, and payment
+  /// This is called when clicking Confirm Order or Confirm & Print buttons
+  void _showCheckoutModal({
+    CheckoutActionMode actionMode = CheckoutActionMode.confirm,
+    int? initialStep,
+  }) async {
+    final isSaveMode = actionMode == CheckoutActionMode.save;
+    final isQuotationMode = actionMode == CheckoutActionMode.quotation;
+    bool checkoutActionTriggered = false;
+    debugPrint(
+        "⌨️ [BillingPage] _showCheckoutModal requested | mode=$actionMode | initialStep=$initialStep | ${_focusDebugSummary()}");
+    if (_isOrderActionBusy) {
+      debugPrint(
+          "⌨️ [BillingPage] _showCheckoutModal ignored because order action is busy");
+      return;
+    }
+
+    debugPrint(
+        "⌨️ [BillingPage] Releasing focus before checkout modal | ${_focusDebugSummary()}");
+    // Release global shortcut focus so modal text fields receive keyboard input reliably.
+    _focusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+    debugPrint(
+        "⌨️ [BillingPage] Focus released before checkout modal | ${_focusDebugSummary()}");
+
+    await _prepareCheckoutDefaults(
+      applyDefaultCustomer: !isQuotationMode,
+      applyDefaultPayment: !isQuotationMode,
+    );
+    if (!mounted) return;
+    if (isQuotationMode) {
+      _clearAutomaticDefaultCustomerForQuotation();
     }
 
     final localProductProvider =

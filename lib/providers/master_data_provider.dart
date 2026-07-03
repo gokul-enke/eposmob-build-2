@@ -3,12 +3,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/models/master_data.dart';
+import 'package:pos_machine/models/payment_method.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MasterDataProvider with ChangeNotifier {
   static const String _paymentMethodsCacheKeyPrefix =
       'payment_methods_cache';
+  static const String _paymentMethodModelsCacheKeyPrefix =
+      'payment_method_models_cache';
 
   MasterData? _masterData;
   bool _isLoading = false;
@@ -18,6 +21,10 @@ class MasterDataProvider with ChangeNotifier {
   List<MasterDataValue>? _paymentMethods;
   int? _paymentMethodsStoreId;
   bool _isLoadingPaymentMethods = false;
+
+  // Backend/config-driven payment method models (parsed with all optional
+  // fields honored: code/label/enabled/sort_order/icon_key/behavior/etc).
+  List<PaymentMethod>? _paymentMethodModels;
 
   // Stock grouping fields cache
   Set<String>? _stockGroupingFields;
@@ -56,6 +63,29 @@ class MasterDataProvider with ChangeNotifier {
   // Payment methods getters
   List<MasterDataValue>? get paymentMethods => _paymentMethods;
   bool get isLoadingPaymentMethods => _isLoadingPaymentMethods;
+
+  /// Backend/config-driven payment methods (all optional fields honored).
+  List<PaymentMethod>? get paymentMethodModels => _paymentMethodModels;
+
+  /// Enabled payment methods sorted by (sortOrder, label). Falls back to the
+  /// minimal default list (single CASH) so billing is never blocked when both
+  /// the API and cache are empty.
+  List<PaymentMethod> get enabledSortedPaymentMethods {
+    final models = _paymentMethodModels;
+    if (models == null || models.isEmpty) {
+      return PaymentMethod.minimalDefaults;
+    }
+    final enabled = models.where((m) => m.enabled).toList();
+    if (enabled.isEmpty) {
+      return PaymentMethod.minimalDefaults;
+    }
+    enabled.sort((a, b) {
+      final byOrder = a.sortOrder.compareTo(b.sortOrder);
+      if (byOrder != 0) return byOrder;
+      return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+    });
+    return enabled;
+  }
 
   // Stock grouping fields getters
   Set<String>? get stockGroupingFields => _stockGroupingFields;
@@ -124,6 +154,7 @@ class MasterDataProvider with ChangeNotifier {
       final cachedMethods = _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
       if (cachedMethods != null && cachedMethods.isNotEmpty) {
         _setPaymentMethods(cachedMethods, activeStoreId);
+        _loadPaymentMethodModelsFromLocalCacheInto(prefs, activeStoreId);
         return _paymentMethods;
       }
     }
@@ -165,10 +196,22 @@ class MasterDataProvider with ChangeNotifier {
             dataList.map((item) => MasterDataValue.fromJson(item)).toList(),
             activeStoreId,
           );
+          // Re-parse rich models directly from raw JSON so the optional
+          // backend fields (code/label/enabled/sort_order/icon_key/behavior/
+          // requires_reference) are honored, not just id/value/description.
+          _paymentMethodModels = dataList
+              .whereType<Map<String, dynamic>>()
+              .map((item) => PaymentMethod.fromJson(item))
+              .toList();
           await _savePaymentMethodsToLocalCache(
             prefs,
             activeStoreId,
             _paymentMethods!,
+          );
+          await _savePaymentMethodModelsToLocalCache(
+            prefs,
+            activeStoreId,
+            _paymentMethodModels!,
           );
           debugPrint('✅ Payment methods fetched successfully');
           debugPrint('📋 Payment methods: $_paymentMethods');
@@ -200,6 +243,7 @@ class MasterDataProvider with ChangeNotifier {
     final cachedMethods = _loadPaymentMethodsFromLocalCache(prefs, activeStoreId);
     if (cachedMethods != null && cachedMethods.isNotEmpty) {
       _setPaymentMethods(cachedMethods, activeStoreId);
+      _loadPaymentMethodModelsFromLocalCacheInto(prefs, activeStoreId);
       return _paymentMethods;
     }
 
@@ -259,9 +303,60 @@ class MasterDataProvider with ChangeNotifier {
         : '${_paymentMethodsCacheKeyPrefix}_$activeStoreId';
   }
 
+  String _paymentMethodModelsCacheKey(int? activeStoreId) {
+    return activeStoreId == null
+        ? _paymentMethodModelsCacheKeyPrefix
+        : '${_paymentMethodModelsCacheKeyPrefix}_$activeStoreId';
+  }
+
+  Future<void> _savePaymentMethodModelsToLocalCache(
+    SharedPreferences prefs,
+    int? activeStoreId,
+    List<PaymentMethod> models,
+  ) async {
+    try {
+      await prefs.setString(
+        _paymentMethodModelsCacheKey(activeStoreId),
+        json.encode(models.map((item) => item.toJson()).toList()),
+      );
+    } catch (error) {
+      debugPrint('❌ Failed to cache payment method models locally: $error');
+    }
+  }
+
+  /// Loads rich payment method models from the local cache into memory.
+  /// Falls back to deriving them from [_paymentMethods] when the richer cache
+  /// is absent (older cache written before this field existed).
+  void _loadPaymentMethodModelsFromLocalCacheInto(
+    SharedPreferences prefs,
+    int? activeStoreId,
+  ) {
+    final raw = prefs.getString(_paymentMethodModelsCacheKey(activeStoreId));
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = json.decode(raw) as List<dynamic>;
+        final models = decoded
+            .whereType<Map<String, dynamic>>()
+            .map((item) => PaymentMethod.fromJson(item))
+            .toList();
+        if (models.isNotEmpty) {
+          _paymentMethodModels = models;
+          return;
+        }
+      } catch (error) {
+        debugPrint('❌ Failed to read cached payment method models: $error');
+      }
+    }
+    // Fallback: derive from legacy MasterDataValue cache (already loaded).
+    _paymentMethodModels = _paymentMethods
+        ?.map((value) => PaymentMethod.fromMasterDataValue(value))
+        .toList();
+  }
+
   /// Clears payment methods cache to force re-fetch
   void clearPaymentMethodsCache() {
     _setPaymentMethods(null, null);
+    _paymentMethodModels = null;
     notifyListeners();
   }
 
@@ -333,6 +428,9 @@ class MasterDataProvider with ChangeNotifier {
   void _setPaymentMethods(List<MasterDataValue>? methods, int? storeId) {
     _paymentMethods = methods;
     _paymentMethodsStoreId = storeId;
+    _paymentMethodModels = methods
+        ?.map((value) => PaymentMethod.fromMasterDataValue(value))
+        .toList();
   }
 
   Future<MasterData?> fetchMasterData(String code) async {

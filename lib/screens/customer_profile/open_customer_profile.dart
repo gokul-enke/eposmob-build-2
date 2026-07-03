@@ -53,41 +53,171 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
     return SafeArea(
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CustomBackButton(
-                onPressed: () => sideBarController.index.value = 5,
-                text: 'All Customers',
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isMobile = constraints.maxWidth < 600;
+            final double pagePadding = isMobile ? 14 : 20;
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                  pagePadding, pagePadding, pagePadding, pagePadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomBackButton(
+                    onPressed: () => sideBarController.index.value = 5,
+                    text: 'All Customers',
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Customer Profile',
+                    style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        isMobile ? FontSize.s20 : FontSize.s24,
+                        0,
+                        ColorManager.kTitleTextColor),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: isMobile
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildMobileProfileHeader(selectedCustomer),
+                              const SizedBox(height: 12),
+                              _buildMobileTabBar(),
+                              const SizedBox(height: 4),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    _buildMainContent(size, selectedCustomer),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Sidebar
+                              SizedBox(
+                                width: size.width / 4,
+                                child: _buildSidebar(size, selectedCustomer),
+                              ),
+                              // Main Content
+                              Expanded(
+                                child:
+                                    _buildMainContent(size, selectedCustomer),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              Text(
-                'Customer Profile',
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s24,
-                    0, ColorManager.kTitleTextColor),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Sidebar
-                    SizedBox(
-                      width: size.width / 4,
-                      child: _buildSidebar(size, selectedCustomer),
-                    ),
-                    // Main Content
-                    Expanded(
-                      child: _buildMainContent(size, selectedCustomer),
-                    ),
-                  ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  static const List<Map<String, dynamic>> _tabs = [
+    {'index': 0, 'title': 'Information'},
+    {'index': 1, 'title': 'Edit Details'},
+    {'index': 2, 'title': 'Transactions'},
+    {'index': 3, 'title': 'All Orders'},
+    {'index': 6, 'title': 'Customer Address'},
+    {'index': 4, 'title': 'Loyalty Card'},
+    {'index': 5, 'title': 'Chat'},
+  ];
+
+  Widget _buildMobileProfileHeader(CustomerListModelData customer) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ColorManager.kPrimaryWithOpacity10,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: ColorManager.kPrimaryColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Icon(Icons.person,
+                color: ColorManager.kPrimaryColor, size: 26),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  customer.name ?? 'Customer Name',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                      0, ColorManager.kTitleTextColor),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'ID: ${customer.id}',
+                  style: buildCustomStyle(FontWeightManager.regular,
+                      FontSize.s12, 0, ColorManager.kGreyColor),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileTabBar() {
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _tabs.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final tab = _tabs[i];
+          final int index = tab['index'] as int;
+          final bool isSelected = selectedIndex == index;
+          return Material(
+            color: isSelected ? ColorManager.kPrimaryColor : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+              onTap: () => setState(() => selectedIndex = index),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isSelected
+                        ? Colors.transparent
+                        : ColorManager.kBgDarkColor,
+                  ),
+                ),
+                child: Text(
+                  tab['title'] as String,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s13,
+                    0,
+                    isSelected ? Colors.white : ColorManager.kTitleTextColor,
+                  ),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

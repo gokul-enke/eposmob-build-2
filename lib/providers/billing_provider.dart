@@ -1057,6 +1057,123 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------------------------------------------------------------------
+  // Generic, code-keyed payment facade (backend/config-driven).
+  //
+  // The concrete storage is still the typed booleans/controllers above (for
+  // CASH/CARD/UPI/COD/DEBIT/ONLINE) and the [_extra*] maps (for dynamic backend
+  // methods). These helpers let callers work purely in terms of a method
+  // `code` so the UI can be driven entirely from the backend payment list.
+  // ---------------------------------------------------------------------------
+
+  /// The backend id most recently associated with a core code, if known.
+  String? paymentMethodIdForCode(String code) {
+    switch (code.toUpperCase()) {
+      case 'CASH':
+        return _cashPaymentMethodId;
+      case 'CARD':
+        return _cardPaymentMethodId;
+      case 'UPI':
+        return _upiPaymentMethodId;
+      case 'COD':
+        return _codPaymentMethodId;
+      default:
+        return null;
+    }
+  }
+
+  /// Whether [code] maps to one of the typed core methods.
+  bool isCoreCode(String code) {
+    final c = code.toUpperCase();
+    return c == 'CASH' ||
+        c == 'CARD' ||
+        c == 'UPI' ||
+        c == 'COD' ||
+        c == 'DEBIT' ||
+        c == 'ONLINE';
+  }
+
+  /// Amount controller for any method [code]. Core codes return their typed
+  /// controller; anything else is treated as a dynamic/extra method keyed by
+  /// its backend id ([methodId] falls back to [code]).
+  TextEditingController amountControllerForCode(
+    String code, {
+    String? methodId,
+    String? displayValue,
+  }) {
+    switch (code.toUpperCase()) {
+      case 'CASH':
+        return cashAmountController;
+      case 'CARD':
+        return cardAmountController;
+      case 'UPI':
+        return upiAmountController;
+      case 'COD':
+        return codAmountController;
+      case 'DEBIT':
+        return debitAmountController;
+      default:
+        return getExtraAmountController(
+          methodId ?? code,
+          displayValue: displayValue ?? code,
+        );
+    }
+  }
+
+  /// Whether the method [code] is currently selected.
+  bool isCodeSelected(String code, {String? methodId}) {
+    switch (code.toUpperCase()) {
+      case 'CASH':
+        return _isCashSelected;
+      case 'CARD':
+        return _isCardSelected;
+      case 'UPI':
+        return _isUpiSelected;
+      case 'COD':
+        return _isCodSelected;
+      case 'DEBIT':
+        return _isDebitSelected;
+      case 'ONLINE':
+        return _isOnlineSelected;
+      default:
+        return _selectedExtraMethodIds.contains(methodId ?? code);
+    }
+  }
+
+  /// Selects / deselects any method by [code]. Core codes route through
+  /// [setPaymentMethod]; dynamic methods toggle their extra selection.
+  void setCodeSelected(
+    String code,
+    bool selected, {
+    String? methodId,
+    String? displayValue,
+  }) {
+    if (isCoreCode(code)) {
+      setPaymentMethod(code.toUpperCase(), selected);
+      return;
+    }
+    final id = methodId ?? code;
+    final isSelected = _selectedExtraMethodIds.contains(id);
+    if (selected && !isSelected) {
+      selectExtraMethod(id, displayValue: displayValue ?? code);
+    } else if (!selected && isSelected) {
+      setExtraPaymentAmount(id, '', displayValue: displayValue ?? code);
+    }
+  }
+
+  /// All currently-selected method codes (core + dynamic ids).
+  Set<String> get selectedPaymentCodes {
+    final codes = <String>{};
+    if (_isCashSelected) codes.add('CASH');
+    if (_isCardSelected) codes.add('CARD');
+    if (_isUpiSelected) codes.add('UPI');
+    if (_isCodSelected) codes.add('COD');
+    if (_isDebitSelected) codes.add('DEBIT');
+    if (_isOnlineSelected) codes.add('ONLINE');
+    codes.addAll(_selectedExtraMethodIds);
+    return codes;
+  }
+
   void setToCustomerCreditEnabled(bool enabled) {
     _toCustomerCreditEnabled = enabled;
     notifyListeners();
@@ -1488,6 +1605,8 @@ class BillingProvider extends ChangeNotifier {
     String? cardMethodId,
     String? upiMethodId,
     String? codMethodId,
+    Map<String, String>? extraMethodAmounts,
+    Map<String, String>? extraMethodValues,
   }) {
     _isCashSelected = isCash;
     _isCardSelected = isCard;
@@ -1508,6 +1627,29 @@ class BillingProvider extends ChangeNotifier {
     codAmountController.text = codAmount;
     debitAmountController.text = debitAmount;
     transactionNumberController.text = transactionNumber;
+
+    if (extraMethodAmounts != null) {
+      _selectedExtraMethodIds.clear();
+      _extraPaymentAmounts.clear();
+      _extraPaymentValues.clear();
+      extraMethodValues?.forEach((methodId, displayValue) {
+        _extraPaymentValues[methodId] = displayValue;
+      });
+      extraMethodAmounts.forEach((methodId, amount) {
+        final parsed = double.tryParse(amount) ?? 0.0;
+        if (parsed > 0) {
+          selectExtraMethod(
+            methodId,
+            displayValue: extraMethodValues?[methodId],
+          );
+          setExtraPaymentAmount(
+            methodId,
+            amount,
+            displayValue: extraMethodValues?[methodId],
+          );
+        }
+      });
+    }
 
     validatePayment();
     calculateBalance();

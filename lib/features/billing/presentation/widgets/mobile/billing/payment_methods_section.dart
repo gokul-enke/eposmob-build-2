@@ -9,7 +9,7 @@ import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
-import 'package:pos_machine/models/master_data.dart';
+import 'package:pos_machine/models/payment_method.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/pine_labs_section.dart';
 
@@ -27,7 +27,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   static const _customerController = BillingMobileCustomerController();
   static const _settingsController = BillingMobileSettingsController();
   bool _isLoadingPaymentMethods = false;
-  List<MasterDataValue> _paymentMethods = [];
+  List<PaymentMethod> _paymentMethods = [];
 
   @override
   void initState() {
@@ -44,9 +44,9 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   Future<void> _loadPaymentMethods() async {
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
-    final cachedMethods = masterDataProvider.paymentMethods;
-    if (cachedMethods != null && cachedMethods.isNotEmpty) {
-      _assignPaymentMethodIds(cachedMethods);
+    final cachedModels = masterDataProvider.paymentMethodModels;
+    if (cachedModels != null && cachedModels.isNotEmpty) {
+      _applyPaymentMethods(masterDataProvider.enabledSortedPaymentMethods);
       return;
     }
 
@@ -57,12 +57,17 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
     }
 
     try {
-      final methods = await masterDataProvider.fetchPaymentMethods();
-      if (mounted && methods != null) {
-        _assignPaymentMethodIds(methods);
+      await masterDataProvider.fetchPaymentMethods();
+      if (mounted) {
+        _applyPaymentMethods(masterDataProvider.enabledSortedPaymentMethods);
       }
     } catch (e) {
       billingDebugLog('Error loading payment methods: $e');
+      // Degrade gracefully to the minimal default (single CASH) so billing is
+      // never blocked when both API and cache are empty.
+      if (mounted) {
+        _applyPaymentMethods(masterDataProvider.enabledSortedPaymentMethods);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -72,19 +77,17 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
     }
   }
 
-  void _assignPaymentMethodIds(List<MasterDataValue> methods) {
-    final sortedMethods = _controller.preparePaymentMethods(methods);
-
+  void _applyPaymentMethods(List<PaymentMethod> methods) {
     if (mounted) {
       setState(() {
-        _paymentMethods = sortedMethods;
+        _paymentMethods = methods;
       });
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final bp = Provider.of<BillingProvider>(context, listen: false);
-        _controller.syncPaymentMethodIds(bp, sortedMethods);
+        _controller.syncPaymentMethodIdsFromModels(bp, methods);
       }
     });
   }
@@ -158,7 +161,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                   return const SizedBox.shrink();
                 }
 
-                if (type == 'DEBIT' &&
+                if (item.behavior == PaymentBehavior.credit &&
                     isSelected &&
                     snapshot.totalOrderAmount > 0 &&
                     !snapshot.toCustomerCreditEnabled) {
@@ -199,7 +202,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
                           Row(
                             children: [
                               Icon(
-                                _controller.iconForType(type),
+                                _controller.iconForItem(item),
                                 color: isSelected
                                     ? const Color(0xFF0066CC)
                                     : Colors.grey.shade700,

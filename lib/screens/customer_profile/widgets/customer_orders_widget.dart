@@ -109,7 +109,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
   Widget build(BuildContext context) {
     return Expanded(
       child: BuildBoxShadowContainer(
-        margin: const EdgeInsets.all(24),
+        margin: EdgeInsets.all(widget.size.width < 600 ? 10 : 24),
         padding: const EdgeInsets.all(0),
         height: widget.size.height * 0.75,
         width: widget.size.width / 1.8,

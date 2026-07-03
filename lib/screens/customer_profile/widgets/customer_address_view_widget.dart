@@ -83,7 +83,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
 
     return Expanded(
       child: BuildBoxShadowContainer(
-        margin: const EdgeInsets.all(24),
+        margin: EdgeInsets.all(size.width < 600 ? 10 : 24),
         padding: const EdgeInsets.all(0),
         height: size.height * 0.75,
         circleRadius: 12,

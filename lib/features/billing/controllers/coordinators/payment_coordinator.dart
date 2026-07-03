@@ -8,24 +8,32 @@ import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/coupon_modal.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/delivery_method_modal.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/features/billing/controllers/billing_desktop_payment_controller.dart';
+
 import 'package:pos_machine/features/billing/presentation/widgets/payment_method_modal.dart';
 
 class PaymentCoordinator {
   const PaymentCoordinator._();
 
+  static const _desktopPaymentController = BillingDesktopPaymentController();
+
   static void showPaymentMethodModal(BuildContext context) {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final bp = Provider.of<BillingProvider>(context, listen: false);
+    final masterData =
+        Provider.of<MasterDataProvider>(context, listen: false);
+
+    _desktopPaymentController.syncPaymentMethodIdsFromModels(
+      bp,
+      masterData.enabledSortedPaymentMethods,
+    );
 
     String autoFillCashAmount = bp.cashAmountController.text;
     bool autoSelectCash = bp.isCashSelected;
 
-    if (!bp.isCashSelected &&
-        !bp.isCardSelected &&
-        !bp.isUpiSelected &&
-        !bp.isCodSelected &&
-        !bp.isDebitSelected) {
+    if (!bp.hasAnyPaymentSelected()) {
       autoFillCashAmount = localProductProvider.cartTotal.toStringAsFixed(2);
       autoSelectCash = true;
     }
@@ -44,6 +52,7 @@ class PaymentCoordinator {
         initialCodAmount: bp.codAmountController.text,
         initialDebitAmount: bp.debitAmountController.text,
         initialTransactionNumber: bp.transactionNumberController.text,
+        initialExtraAmounts: bp.extraPaymentAmounts,
         cartTotal: localProductProvider.cartTotal,
         customerPrevBalance: bp.selectedCustomer?.balance ?? 0.0,
         onPaymentMethodSelected: (
@@ -83,6 +92,8 @@ class PaymentCoordinator {
             cardMethodId: cardMethodId,
             upiMethodId: upiMethodId,
             codMethodId: codMethodId,
+            extraMethodAmounts: extraMethodAmounts,
+            extraMethodValues: extraMethodValues,
           );
           // Recalculate balance with current cart total
           final netTotal =

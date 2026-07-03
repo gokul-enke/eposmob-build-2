@@ -52,6 +52,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
   final emailTextController = TextEditingController();
   final phoneNumberController = TextEditingController();
   final addressTextController = TextEditingController();
+  final streetAddressTextController = TextEditingController();
   final countryTextController = TextEditingController();
   final stateSearchController = TextEditingController();
   final districtSearchController = TextEditingController();
@@ -311,6 +312,16 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             ],
           ),
           SizedBox(height: fieldGap),
+          _buildTextField(
+            "Street Address",
+            streetAddressTextController,
+            TextInputType.streetAddress,
+            size,
+            maxLines: 2,
+            minLines: 2,
+            hintText: "Street name, area, locality",
+          ),
+          SizedBox(height: fieldGap),
           _buildFieldRow(
             size,
             [
@@ -542,7 +553,14 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
       {FormFieldValidator<String>? validator,
       TextInputFormatter? inputFormatter,
       bool isRequired = false,
-      FocusNode? focusNode}) {
+      FocusNode? focusNode,
+      int maxLines = 1,
+      int minLines = 1,
+      String? hintText}) {
+    final isMultiline = maxLines > 1;
+    final fieldHeight =
+        isMultiline ? _fieldHeight(size) * 1.85 : _fieldHeight(size);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -578,22 +596,40 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         const SizedBox(height: 4),
         CustomBoxShadowContainer(
           circleRadius: 7,
-          alignment: Alignment.centerLeft,
+          alignment: isMultiline ? Alignment.topLeft : Alignment.centerLeft,
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-          padding: const EdgeInsets.only(left: 12),
-          height: _fieldHeight(size),
+          padding: EdgeInsets.only(
+            left: 12,
+            top: isMultiline ? 8 : 0,
+            right: isMultiline ? 8 : 0,
+          ),
+          height: fieldHeight,
           width: size.width,
           child: TextFormField(
             controller: controller,
             focusNode: focusNode,
             keyboardType: keyboardType,
-            textInputAction: TextInputAction.next,
+            maxLines: maxLines,
+            minLines: minLines,
+            textInputAction:
+                isMultiline ? TextInputAction.newline : TextInputAction.next,
             inputFormatters: inputFormatter != null ? [inputFormatter] : null,
             cursorColor: ColorManager.kPrimaryColor,
-            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-            decoration: const InputDecoration(
+            onFieldSubmitted: isMultiline
+                ? null
+                : (_) => FocusScope.of(context).nextFocus(),
+            decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(vertical: 12),
+              hintText: hintText,
+              hintStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.27,
+                ColorManager.colorPlaceholder,
+              ),
+              contentPadding: EdgeInsets.symmetric(
+                vertical: isMultiline ? 4 : 12,
+              ),
             ),
             validator: validator,
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s11,
@@ -602,6 +638,15 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         ),
       ],
     );
+  }
+
+  String _composeAddress() {
+    final building = addressTextController.text.trim();
+    final street = streetAddressTextController.text.trim();
+    final parts = <String>[];
+    if (building.isNotEmpty) parts.add(building);
+    if (street.isNotEmpty) parts.add(street);
+    return parts.join(', ');
   }
 
   Widget _buildStateDropdownWithSearch(
@@ -721,7 +766,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 FontWeightManager.regular,
                 FontSize.s12,
                 0.27,
-                ColorManager.textColor.withOpacity(.5),
+                ColorManager.colorPlaceholder,
               ),
             ),
             items: locationProvider.stateList.map((state) {
@@ -808,7 +853,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                       0.27,
                       selectedStateId == null
                           ? Colors.grey
-                          : ColorManager.textColor.withOpacity(.5),
+                          : ColorManager.colorPlaceholder,
                     ),
                   ),
                   items: locationProvider.districtList.isEmpty
@@ -918,7 +963,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                       0.27,
                       selectedDistrictId == null
                           ? Colors.grey
-                          : ColorManager.textColor.withOpacity(.5),
+                          : ColorManager.colorPlaceholder,
                     ),
                   ),
                   items: locationProvider.pincodeList.isEmpty
@@ -1117,7 +1162,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           storeId,
           "${firstNameTextController.text} ${lastNameTextController.text}",
           emailTextController.text,
-          addressTextController.text,
+          _composeAddress(),
           pincodeValue,
           cityId,
           stateId,
@@ -1212,7 +1257,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                 FontWeightManager.regular,
                 FontSize.s12,
                 0.27,
-                ColorManager.textColor.withOpacity(.5),
+                ColorManager.colorPlaceholder,
               ),
             ),
             items: const [
@@ -1273,10 +1318,16 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
                     "${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
               }
             },
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               border: InputBorder.none,
               hintText: 'YYYY-MM-DD',
-              contentPadding: EdgeInsets.symmetric(vertical: 8),
+              hintStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.27,
+                ColorManager.colorPlaceholder,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
             ),
             cursorColor: ColorManager.kPrimaryColor,
             style: buildCustomStyle(
@@ -1299,6 +1350,7 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         lastNameTextController.clear();
         firstNameTextController.clear();
         addressTextController.clear();
+        streetAddressTextController.clear();
         countryTextController.clear();
         stateSearchController.clear();
         districtSearchController.clear();

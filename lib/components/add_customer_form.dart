@@ -43,6 +43,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
   final emailTextController = TextEditingController();
   final phoneNumberController = TextEditingController();
   final addressTextController = TextEditingController();
+  final streetAddressTextController = TextEditingController();
   final countryTextController = TextEditingController();
   final stateSearchController = TextEditingController();
   final districtSearchController = TextEditingController();
@@ -276,6 +277,17 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           ),
           const SizedBox(height: 15),
 
+          _buildTextField(
+            "Street Address",
+            streetAddressTextController,
+            TextInputType.streetAddress,
+            size,
+            maxLines: 2,
+            minLines: 2,
+            hintText: "Street name, area, locality",
+          ),
+          const SizedBox(height: 15),
+
           // Row 3: States/Provinces, District/City, Pincode/Country
           Row(
             children: [
@@ -337,7 +349,14 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
       TextInputType keyboardType, Size size,
       {FormFieldValidator<String>? validator,
       TextInputFormatter? inputFormatter,
-      bool isRequired = false}) {
+      bool isRequired = false,
+      int maxLines = 1,
+      int minLines = 1,
+      String? hintText}) {
+    final isMultiline = maxLines > 1;
+    final fieldHeight =
+        isMultiline ? size.height * .12 : size.height * .07;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -358,17 +377,35 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
         ),
         BuildBoxShadowContainer(
           circleRadius: 7,
-          alignment: Alignment.centerLeft,
+          alignment: isMultiline ? Alignment.topLeft : Alignment.centerLeft,
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          padding: const EdgeInsets.only(left: 15),
-          height: size.height * .07,
+          padding: EdgeInsets.only(
+            left: 15,
+            top: isMultiline ? 8 : 0,
+            right: isMultiline ? 8 : 0,
+          ),
+          height: fieldHeight,
           width: size.width,
           child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
+            maxLines: maxLines,
+            minLines: minLines,
             inputFormatters: inputFormatter != null ? [inputFormatter] : null,
             cursorColor: ColorManager.kPrimaryColor,
-            decoration: const InputDecoration(border: InputBorder.none),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: hintText,
+              hintStyle: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s12,
+                0.27,
+                ColorManager.colorPlaceholder,
+              ),
+              contentPadding: EdgeInsets.symmetric(
+                vertical: isMultiline ? 4 : 0,
+              ),
+            ),
             validator: validator,
             style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                 0.27, ColorManager.textColor.withOpacity(.5)),
@@ -376,6 +413,15 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
         ),
       ],
     );
+  }
+
+  String _composeAddress() {
+    final building = addressTextController.text.trim();
+    final street = streetAddressTextController.text.trim();
+    final parts = <String>[];
+    if (building.isNotEmpty) parts.add(building);
+    if (street.isNotEmpty) parts.add(street);
+    return parts.join(', ');
   }
 
   Widget _buildStateDropdownWithSearch(
@@ -477,7 +523,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                 FontWeightManager.regular,
                 FontSize.s12,
                 0.27,
-                ColorManager.textColor.withOpacity(.5),
+                ColorManager.colorPlaceholder,
               ),
             ),
             items: locationProvider.stateList.map((state) {
@@ -580,7 +626,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                       0.27,
                       selectedStateId == null
                           ? Colors.grey
-                          : ColorManager.textColor.withOpacity(.5),
+                          : ColorManager.colorPlaceholder,
                     ),
                   ),
                   items: locationProvider.districtList.isEmpty
@@ -689,7 +735,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
                       0.27,
                       selectedDistrictId == null
                           ? Colors.grey
-                          : ColorManager.textColor.withOpacity(.5),
+                          : ColorManager.colorPlaceholder,
                     ),
                   ),
                   items: locationProvider.pincodeList.isEmpty
@@ -892,7 +938,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
           "1",
           "${firstNameTextController.text} ${lastNameTextController.text}",
           emailTextController.text,
-          addressTextController.text,
+          _composeAddress(),
           widget.isModal ? "" : pincodeValue,
           stateName,
           districtName,
@@ -960,6 +1006,7 @@ class _AddCustomerFormState extends State<AddCustomerForm> {
         lastNameTextController.clear();
         firstNameTextController.clear();
         addressTextController.clear();
+        streetAddressTextController.clear();
         countryTextController.clear();
         stateSearchController.clear();
         districtSearchController.clear();
