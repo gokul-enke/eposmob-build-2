@@ -30,6 +30,7 @@ AppSettings _minimalAppSettings({bool companyB2BEnabled = false}) {
     autoAssignDefaultCustomer: false,
     autoAssignDefaultCustomerPhone: '',
     currency: 'INR',
+    workingTime: '',
     zatcaPhase1Enabled: false,
     zatcaPhase2Enabled: false,
     showTaxPos: false,

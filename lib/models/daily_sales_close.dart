@@ -309,7 +309,9 @@ class DailySalesCloseSummary {
     totalOrders = _intValue(json['total_orders']);
     totalSales = _stringValue(json['total_sales']);
     paymentReceived = _stringValue(json['payment_received']);
-    collectedOnSale = _stringValue(json['collected_on_sale']);
+    collectedOnSale = _stringValue(
+      json['collected_on_sales'] ?? json['collected_on_sale'],
+    );
     cashSales = _stringValue(json['cash_sales']);
     onlineSales = _stringValue(json['online_sales']);
     creditAmount = _stringValue(json['credit_amount']);

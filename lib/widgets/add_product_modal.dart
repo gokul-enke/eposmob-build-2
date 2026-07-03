@@ -25,19 +25,23 @@ class _SaleUnitFormRow {
     this.selectedUnitId,
     String conversionRate = '',
     String barcode = '',
+    String price = '',
   })  : conversionRateController = TextEditingController(text: conversionRate),
         barcodeController = TextEditingController(text: barcode),
+        priceController = TextEditingController(text: price),
         searchController = TextEditingController();
 
   String? selectedUnitId;
   final TextEditingController conversionRateController;
   final TextEditingController barcodeController;
+  final TextEditingController priceController;
   final TextEditingController searchController;
   bool isGeneratingBarcode = false;
 
   void dispose() {
     conversionRateController.dispose();
     barcodeController.dispose();
+    priceController.dispose();
     searchController.dispose();
   }
 }
@@ -725,6 +729,7 @@ class _AddProductWithBarcodeModalState
           selectedUnitId: saleUnit.unitId?.toString(),
           conversionRate: saleUnit.conversionRate ?? '',
           barcode: saleUnit.barcode ?? '',
+          price: saleUnit.price?.toString() ?? '',
         ),
       );
     }
@@ -989,6 +994,24 @@ class _AddProductWithBarcodeModalState
         return false;
       }
       usedBarcodes.add(barcode);
+
+      final price = row.priceController.text.trim();
+      if (price.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: 'Enter a price for every sale unit.',
+        );
+        return false;
+      }
+
+      final parsedPrice = num.tryParse(price);
+      if (parsedPrice == null || parsedPrice <= 0) {
+        showScaffoldError(
+          context: context,
+          message: 'Price must be greater than 0.',
+        );
+        return false;
+      }
     }
 
     return true;
@@ -1008,6 +1031,7 @@ class _AddProductWithBarcodeModalState
               'conversion_rate':
                   num.parse(row.conversionRateController.text.trim()),
               'barcode': row.barcodeController.text.trim(),
+              'price': num.parse(row.priceController.text.trim()),
             })
         .toList(growable: false);
   }
@@ -2310,7 +2334,8 @@ class _AddProductWithBarcodeModalState
           color: _showSaleUnitValidation &&
                   ((row.selectedUnitId?.isEmpty ?? true) ||
                       row.conversionRateController.text.trim().isEmpty ||
-                      row.barcodeController.text.trim().isEmpty)
+                      row.barcodeController.text.trim().isEmpty ||
+                      row.priceController.text.trim().isEmpty)
               ? Colors.red.shade200
               : Colors.grey.shade200,
         ),
@@ -2399,6 +2424,24 @@ class _AddProductWithBarcodeModalState
               const SizedBox(width: 8),
               Expanded(
                 child: _buildBarcodeEditorField(size, row),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  'Price',
+                  row.priceController,
+                  TextInputType.number,
+                  size,
+                  isRequired: true,
+                  inputFormatter: FilteringTextInputFormatter.allow(
+                    RegExp(r'^\d*\.?\d{0,2}$'),
+                  ),
+                ),
               ),
             ],
           ),

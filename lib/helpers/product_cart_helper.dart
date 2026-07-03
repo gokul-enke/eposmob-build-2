@@ -419,9 +419,9 @@ class ProductCartHelper {
               null; // Don't pass MRP, let addToCart preserve existing MRP
         } else {
           debugPrint(
-              "💰 New product to cart - using calculated price: $finalPrice, MRP: $finalMrp");
-          priceToUse = finalPrice;
-          mrpToUse = finalMrp;
+              "💰 New product to cart - deferring price/MRP to provider resolution (sale-unit chain)");
+          priceToUse = null;
+          mrpToUse = null;
         }
       } else {
         debugPrint(

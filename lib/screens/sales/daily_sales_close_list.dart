@@ -14,6 +14,8 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/providers/master_data_provider.dart';
+import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -717,11 +719,35 @@ class _DayCloseModalState extends State<DayCloseModal> {
   final List<TextEditingController> _closingDenominationControllers = [];
   final List<TextEditingController> _closingCountControllers = [];
 
+  List<MasterDataValue> _cashDenominations = [];
+  bool _isLoadingDenominations = true;
+
   @override
   void initState() {
     super.initState();
     _fetchSummary();
+    _fetchDenominations();
     _ensureBreakdownRows();
+  }
+
+  Future<void> _fetchDenominations() async {
+    try {
+      final masterDataProvider =
+          Provider.of<MasterDataProvider>(context, listen: false);
+      final result = await masterDataProvider.fetchCashDenominations();
+      if (mounted) {
+        setState(() {
+          _cashDenominations = result ?? [];
+          _isLoadingDenominations = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingDenominations = false;
+        });
+      }
+    }
   }
 
   void _ensureBreakdownRows() {
@@ -1499,10 +1525,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
         isNarrow
             ? Column(
                 children: [
-                  _buildCompactField(
-                    label: 'Denomination',
+                  _buildDenominationDropdown(
                     controller: denominationController,
-                    keyboardType: TextInputType.text,
                   ),
                   const SizedBox(height: 6),
                   _buildCompactField(
@@ -1515,10 +1539,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
             : Row(
                 children: [
                   Expanded(
-                    child: _buildCompactField(
-                      label: 'Denomination',
+                    child: _buildDenominationDropdown(
                       controller: denominationController,
-                      keyboardType: TextInputType.text,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -1531,6 +1553,87 @@ class _DayCloseModalState extends State<DayCloseModal> {
                   ),
                 ],
               ),
+      ],
+    );
+  }
+
+  Widget _buildDenominationDropdown({
+    required TextEditingController controller,
+  }) {
+    final currentValue = controller.text.trim().isEmpty
+        ? null
+        : controller.text.trim();
+    final hasMatch =
+        _cashDenominations.any((d) => d.value == currentValue);
+    final selectedValue = hasMatch ? currentValue : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Denomination',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          height: 36,
+          width: double.infinity,
+          child: _isLoadingDenominations
+              ? const Center(
+                  child: SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    isDense: true,
+                    value: selectedValue,
+                    hint: Text(
+                      'Select',
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s10,
+                        0.20,
+                        ColorManager.textColor.withOpacity(.5),
+                      ),
+                    ),
+                    items: _cashDenominations
+                        .map(
+                          (d) => DropdownMenuItem<String>(
+                            value: d.value,
+                            child: Text(
+                              d.description.isNotEmpty
+                                  ? d.description
+                                  : d.value,
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s10,
+                                0.20,
+                                ColorManager.textColor,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        controller.text = value ?? '';
+                      });
+                    },
+                  ),
+                ),
+        ),
       ],
     );
   }

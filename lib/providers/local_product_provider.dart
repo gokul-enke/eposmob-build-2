@@ -571,12 +571,74 @@ class LocalProductProvider extends ChangeNotifier {
         quantity >= wholesaleMinUnit;
   }
 
+  /// Finds the [SaleUnit] on [product] matching [saleUnitId].
+  SaleUnit? _findSaleUnit(GetProduct product, int? saleUnitId) {
+    if (saleUnitId == null) return null;
+    final saleUnits = product.saleUnits;
+    if (saleUnits == null) return null;
+    for (final saleUnit in saleUnits) {
+      if (saleUnit.id == saleUnitId) return saleUnit;
+    }
+    return null;
+  }
+
+  /// Resolves the per-BASE-unit price for a chosen sale unit following the
+  /// documented fallback chain: batch override -> master price ->
+  /// resolved_price -> auto (base x conversion). Returns null when the sale
+  /// unit carries no explicit pricing, letting the caller fall back to the
+  /// normal base/wholesale resolution (which already yields a per-base price).
+  ///
+  /// Sale-unit prices are expressed per sale unit (e.g. per Dozen), so we
+  /// divide by the conversion rate to keep the internal per-base invariant;
+  /// downstream display/payload logic scales it back up by the same rate.
+  double? _resolveSaleUnitBasePrice({
+    required GetProduct product,
+    required int? saleUnitId,
+    Stock? selectedStock,
+  }) {
+    if (saleUnitId == null) return null;
+    final saleUnit = _findSaleUnit(product, saleUnitId);
+    final conversionRate = saleUnit?.conversionRateValue;
+    if (saleUnit == null || conversionRate == null) return null;
+
+    // 1. Batch-specific override wins over everything (incl. wholesale).
+    final override = selectedStock?.unitPriceOverrideFor(saleUnitId);
+    if (override != null && override > 0) {
+      return override / conversionRate;
+    }
+
+    // 2. Master price set on the sale unit.
+    final masterPrice = saleUnit.price;
+    if (masterPrice != null && masterPrice > 0) {
+      return masterPrice / conversionRate;
+    }
+
+    // 3. Backend-resolved price for the default batch.
+    final resolved = saleUnit.resolvedPrice;
+    if (resolved != null && resolved > 0) {
+      return resolved / conversionRate;
+    }
+
+    // 4. Auto (base x conversion) -> handled by base resolution below.
+    return null;
+  }
+
   double _resolveUnitPrice({
     required GetProduct product,
     required num quantity,
     Stock? selectedStock,
     double? fallbackPrice,
+    int? saleUnitId,
   }) {
+    final saleUnitBasePrice = _resolveSaleUnitBasePrice(
+      product: product,
+      saleUnitId: saleUnitId,
+      selectedStock: selectedStock,
+    );
+    if (saleUnitBasePrice != null) {
+      return saleUnitBasePrice;
+    }
+
     final wholesalePrice = _resolveWholesalePrice(selectedStock);
     if (wholesalePrice != null &&
         _qualifiesForWholesalePrice(
@@ -613,6 +675,7 @@ class LocalProductProvider extends ChangeNotifier {
         quantity: item.quantity,
         selectedStock: effectiveStock,
         fallbackPrice: item.price,
+        saleUnitId: item.saleUnitId,
       );
     }
 
@@ -1734,6 +1797,7 @@ class LocalProductProvider extends ChangeNotifier {
     bool sellableOnly = false,
   }) async {
     List<GetProduct> allProducts = [];
+    final Set<int> deletedProductIds = {};
     int currentPage = 1;
     const int batchSize = 3; // Fetch 3 pages concurrently
     final prefsProvider = prefs_provider.SharedPreferenceProvider();
@@ -1844,6 +1908,10 @@ class LocalProductProvider extends ChangeNotifier {
             GetProductModel getProductModel =
                 GetProductModel.fromJson(jsonData);
 
+            if (getProductModel.deletedProductIds != null) {
+              deletedProductIds.addAll(getProductModel.deletedProductIds!);
+            }
+
             final productsFetched = getProductModel.product?.length ?? 0;
 
             if (getProductModel.product == null ||
@@ -1908,6 +1976,20 @@ class LocalProductProvider extends ChangeNotifier {
       } else {
         _products = allProducts;
       }
+
+      // Remove any products the server reported as deleted so local Hive
+      // storage stays in sync (important for delta syncs).
+      if (deletedProductIds.isNotEmpty) {
+        final beforeCount = _products.length;
+        _products = _products
+            .where((p) =>
+                p.productId == null ||
+                !deletedProductIds.contains(p.productId))
+            .toList();
+        debugPrint(
+            "🗑️ [Sync] Removed ${beforeCount - _products.length} product(s) via deleted_product_ids (${deletedProductIds.length} id(s) reported)");
+      }
+
       _filteredProducts = List.from(_products);
       _rebuildBarcodeIndex();
       _updatePagination();
@@ -2479,6 +2561,7 @@ class LocalProductProvider extends ChangeNotifier {
             product: product,
             quantity: cartQuantity,
             selectedStock: selectedStock,
+            saleUnitId: saleUnitId,
           );
       final double productMrp = mrp ??
           _resolveMrp(
@@ -2848,6 +2931,7 @@ class LocalProductProvider extends ChangeNotifier {
                 quantity: item.quantity,
                 selectedStock: item.selectedStock,
                 fallbackPrice: newPrice,
+                saleUnitId: item.saleUnitId,
               );
         if (updatedProduct != null) {
           _cartItems[i] = LocalCartItem(
@@ -2903,6 +2987,7 @@ class LocalProductProvider extends ChangeNotifier {
                   quantity: orderItem.quantity,
                   selectedStock: orderItem.selectedStock,
                   fallbackPrice: newPrice,
+                  saleUnitId: orderItem.saleUnitId,
                 );
           if (updatedProduct != null) {
             order.items[i] = LocalCartItem(
@@ -2993,6 +3078,7 @@ class LocalProductProvider extends ChangeNotifier {
                 quantity: item.quantity,
                 selectedStock: resolvedStock,
                 fallbackPrice: newPrice,
+                saleUnitId: item.saleUnitId,
               );
         _cartItems[i] = LocalCartItem(
           product: updatedProduct ?? item.product,
@@ -3039,6 +3125,7 @@ class LocalProductProvider extends ChangeNotifier {
                   quantity: orderItem.quantity,
                   selectedStock: resolvedStock,
                   fallbackPrice: newPrice,
+                  saleUnitId: orderItem.saleUnitId,
                 );
           order.items[i] = LocalCartItem(
             product: updatedProduct ?? orderItem.product,

@@ -51,6 +51,7 @@ AppSettings _appSettings({required bool askDeliveryDate}) {
     autoAssignDefaultCustomer: false,
     autoAssignDefaultCustomerPhone: '',
     currency: 'SAR',
+    workingTime: '',
     zatcaPhase1Enabled: false,
     zatcaPhase2Enabled: false,
     showTaxPos: false,

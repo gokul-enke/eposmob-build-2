@@ -456,6 +456,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           selectedUnitId: saleUnit.unitId?.toString(),
           conversionRate: saleUnit.conversionRate ?? '',
           barcode: saleUnit.barcode ?? '',
+          price: AddProductFormHelpers.formatDynamicNumber(saleUnit.price),
         ),
       );
     }
@@ -1704,7 +1705,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     final hasValidationError = _showSaleUnitValidation &&
         ((row.selectedUnitId?.isEmpty ?? true) ||
             row.conversionRateController.text.trim().isEmpty ||
-            row.barcodeController.text.trim().isEmpty);
+            row.barcodeController.text.trim().isEmpty ||
+            row.priceController.text.trim().isEmpty);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1799,6 +1801,15 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                       ),
               icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
             ),
+          ),
+          const SizedBox(height: 12),
+          _buildInputField(
+            label: 'Price',
+            hintText: '0.00',
+            controller: row.priceController,
+            isRequired: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [_decimalInputFormatter],
           ),
         ],
       ),

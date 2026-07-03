@@ -24,6 +24,11 @@ class MasterDataProvider with ChangeNotifier {
   int? _stockGroupingFieldsStoreId;
   bool _isLoadingStockGroupingFields = false;
 
+  // Cash denominations cache
+  List<MasterDataValue>? _cashDenominations;
+  int? _cashDenominationsStoreId;
+  bool _isLoadingCashDenominations = false;
+
   /// Maps API master data values (UPPERCASE) to Stock model field names (camelCase)
   static const Map<String, String> stockFieldMapping = {
     'PRICE': 'price',
@@ -55,6 +60,10 @@ class MasterDataProvider with ChangeNotifier {
   // Stock grouping fields getters
   Set<String>? get stockGroupingFields => _stockGroupingFields;
   bool get isLoadingStockGroupingFields => _isLoadingStockGroupingFields;
+
+  // Cash denominations getters
+  List<MasterDataValue>? get cashDenominations => _cashDenominations;
+  bool get isLoadingCashDenominations => _isLoadingCashDenominations;
 
   /// Returns the active stock grouping fields, falling back to price+unit
   /// if master data hasn't been fetched yet.
@@ -388,6 +397,51 @@ class MasterDataProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Fetches cash denominations (code CASH_DENOMINATIONS) and caches them
+  /// in memory per active store. Returns a sorted list (descending value).
+  Future<List<MasterDataValue>?> fetchCashDenominations({
+    bool forceRefresh = false,
+  }) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (!forceRefresh &&
+        _cashDenominations != null &&
+        _cashDenominations!.isNotEmpty &&
+        _cashDenominationsStoreId == activeStoreId) {
+      return _cashDenominations;
+    }
+
+    _isLoadingCashDenominations = true;
+    notifyListeners();
+
+    try {
+      final result = await fetchMasterData('CASH_DENOMINATIONS');
+      final denominations = result?.data ?? [];
+      denominations.sort((a, b) {
+        final aVal = num.tryParse(a.value) ?? 0;
+        final bVal = num.tryParse(b.value) ?? 0;
+        return bVal.compareTo(aVal);
+      });
+      _cashDenominations = denominations;
+      _cashDenominationsStoreId = activeStoreId;
+      return _cashDenominations;
+    } catch (e) {
+      debugPrint('⚠️ Failed to fetch cash denominations: $e');
+      return _cashDenominations;
+    } finally {
+      _isLoadingCashDenominations = false;
+      notifyListeners();
+    }
+  }
+
+  /// Clears cash denominations cache to force re-fetch
+  void clearCashDenominationsCache() {
+    _cashDenominations = null;
+    _cashDenominationsStoreId = null;
+    notifyListeners();
   }
 
   // Clear current data
