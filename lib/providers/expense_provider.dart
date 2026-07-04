@@ -109,7 +109,21 @@ class ExpenseProvider extends ChangeNotifier {
     if (normalized.isEmpty) return;
 
     categoryOptions = normalized;
-    notifyListeners();
+    debugPrint("📦 categoryOptions loaded: $categoryOptions");
+
+    // Re-resolve category names for already-loaded expenses
+    for (int i = 0; i < _allExpenses.length; i++) {
+      final exp = _allExpenses[i];
+      final resolved = resolveOptionLabel(
+        categoryOptions,
+        exp.category,
+        id: exp.categoryId,
+      );
+      if (resolved != exp.category) {
+        _allExpenses[i] = exp.copyWith(category: resolved);
+      }
+    }
+    _applyFilters();
   }
   void setPaymentMethodOptionsFromMasterData(List<MasterDataValue> methods) {
     final normalized = methods
@@ -324,7 +338,14 @@ class ExpenseProvider extends ChangeNotifier {
 
         _allExpenses.clear();
         for (var item in rawList) {
-          _allExpenses.add(Expense.fromJson(item));
+          final expense = Expense.fromJson(item);
+          final resolvedCategory = resolveOptionLabel(
+            categoryOptions,
+            expense.category,
+            id: expense.categoryId,
+          );
+          _allExpenses.add(expense.copyWith(category: resolvedCategory));
+           debugPrint("🏷️ category raw: ${expense.category}, id: ${expense.categoryId}, resolved: $resolvedCategory");
         }
         _applyFilters();
       } else {
@@ -452,9 +473,19 @@ class ExpenseProvider extends ChangeNotifier {
           'data': responseData['data']
         };
       } else {
+        // Extract the first field-level error message if available (e.g. from 422 responses)
+        final errors = responseData['errors'];
+        String errorMessage = responseData['message'] ?? 'Server error ${response.statusCode}';
+        if (errors is Map && errors.isNotEmpty) {
+          final firstFieldErrors = errors.values.first;
+          if (firstFieldErrors is List && firstFieldErrors.isNotEmpty) {
+            errorMessage = firstFieldErrors.first.toString();
+          }
+        }
         return {
           'status': 'error',
-          'message': responseData['message'] ?? 'Server error ${response.statusCode}'
+          'message': errorMessage,
+          'errors': errors,
         };
       }
     } catch (e) {
