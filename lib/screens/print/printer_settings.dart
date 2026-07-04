@@ -61,6 +61,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'premium', 'name': 'Premium'},
     {'id': 'premium1', 'name': 'Premium 1'},
     {'id': 'premium2', 'name': 'Premium 2'},
+    {'id': 'supermarket_en', 'name': 'Supermarket En'},
     {'id': 'standard', 'name': 'Standard'},
     {'id': 'arabic_and_english', 'name': 'Arabic&English'},
     {'id': 'arabic_english_table_headers', 'name': 'Arabic&English 2'},

@@ -8,6 +8,7 @@ import 'classic_receipt_layout.dart';
 import 'premium_receipt_layout.dart';
 import 'premium1_receipt_layout.dart';
 import 'premium2_receipt_layout.dart';
+import 'supermarket En_receipt_layout.dart';
 import 'standard_receipt_layout.dart';
 import 'supermarket_receipt_layout.dart';
 import 'supermarket2_receipt_layout.dart';
@@ -33,6 +34,7 @@ class ReceiptLayoutFactory {
     'premium': () => PremiumReceiptLayout(),
     'premium1': () => Premium1ReceiptLayout(),
     'premium2': () => Premium2ReceiptLayout(),
+    'supermarket_en': () => SupermarketEnReceiptLayout(),
     'standard': () => StandardReceiptLayout(),
     'arabic_and_english': () => ArabicAndEnglishReceiptLayout(),
     'arabic_english_table_headers': () =>
