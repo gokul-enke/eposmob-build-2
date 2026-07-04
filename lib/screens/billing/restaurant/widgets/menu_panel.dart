@@ -27,6 +27,9 @@ class MenuPanel extends StatefulWidget {
   final Size screenSize;
   final dynamic selectedOrder; // New parameter to receive selected order
 
+  /// Header title — "Menu" for restaurant, "Products" in store mode.
+  final String headerTitle;
+
   const MenuPanel({
     super.key,
     required this.onCategoryChanged,
@@ -36,6 +39,7 @@ class MenuPanel extends StatefulWidget {
     this.useFontCardModeInCompact = false,
     required this.screenSize,
     this.selectedOrder, // Make it optional for now, as it might be null
+    this.headerTitle = 'Menu',
   });
 
   @override
@@ -893,7 +897,7 @@ class MenuPanelState extends State<MenuPanel> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Menu',
+                      widget.headerTitle,
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           widget.isCompact ? FontSize.s14 : FontSize.s16,

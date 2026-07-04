@@ -23,6 +23,9 @@ class TablesPanel extends StatelessWidget {
   final Size screenSize;
   final String? selectedDeliveryMethodId;
   final bool showDeliveryMethods;
+
+  /// Store mode: hide the table grid entirely (walk-in/delivery only).
+  final bool showTables;
   final void Function(String id, String name) onDeliveryMethodSelected;
 
   const TablesPanel({
@@ -34,6 +37,7 @@ class TablesPanel extends StatelessWidget {
     required this.screenSize,
     this.selectedDeliveryMethodId,
     this.showDeliveryMethods = true,
+    this.showTables = true,
     required this.onDeliveryMethodSelected,
   });
 
@@ -140,14 +144,16 @@ class TablesPanel extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        Icons.table_restaurant,
+                        showTables
+                            ? Icons.table_restaurant
+                            : Icons.delivery_dining,
                         color: const Color(0xFF2563EB),
                         size: isCompact ? 14 : 16,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Tables',
+                      showTables ? 'Tables' : 'Walk-in / Delivery',
                       style: buildCustomStyle(
                           FontWeightManager.bold,
                           isCompact ? FontSize.s14 : FontSize.s16,
@@ -155,19 +161,20 @@ class TablesPanel extends StatelessWidget {
                           const Color(0xFF1E293B)),
                     ),
                     const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF059669).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                    if (showTables)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${tables.length}',
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s11, 0.21, const Color(0xFF059669)),
+                        ),
                       ),
-                      child: Text(
-                        '${tables.length}',
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s11, 0.21, const Color(0xFF059669)),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -177,10 +184,13 @@ class TablesPanel extends StatelessWidget {
                 _buildDeliveryMethodsSection(context),
               // Tables list/grid
               Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => tableProvider.refreshTables(),
-                  child: _buildTablesView(tables, context), // Pass context here
-                ),
+                child: showTables
+                    ? RefreshIndicator(
+                        onRefresh: () => tableProvider.refreshTables(),
+                        child: _buildTablesView(
+                            tables, context), // Pass context here
+                      )
+                    : _buildWalkInOnlyPlaceholder(),
               ),
               if (!isMobile && showDeliveryMethods)
                 _buildDeliveryMethodsSection(context),
@@ -188,6 +198,34 @@ class TablesPanel extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildWalkInOnlyPlaceholder() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.storefront_rounded,
+            size: 44,
+            color: ColorManager.textColor.withOpacity(0.25),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Walk-in / delivery billing',
+            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
+                0.21, ColorManager.textColor.withOpacity(0.75)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Pick a delivery method above or just start billing',
+            textAlign: TextAlign.center,
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
+                0.21, ColorManager.textColor.withOpacity(0.55)),
+          ),
+        ],
+      ),
     );
   }
 

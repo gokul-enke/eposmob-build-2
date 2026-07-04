@@ -47,15 +47,17 @@ class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
   final bool defaultCounterBillingMode;
 
-  /// Store mode: hide the order panel's footer action buttons and show
-  /// only the payment summary (used by the "Store" sidebar entry).
-  final bool hideOrderPanelActionButtons;
+  /// Store mode (used by the "Store" sidebar entry): the order panel shows
+  /// only the payment summary (no footer action buttons), the Ongoing tab
+  /// is hidden, and the delivery method cannot be chosen — the default
+  /// delivery method is always applied.
+  final bool storeMode;
 
   const RestaurantPage({
     super.key,
     this.allowCounterBillingFromAttender = true,
     this.defaultCounterBillingMode = false,
-    this.hideOrderPanelActionButtons = false,
+    this.storeMode = false,
   });
 
   @override
@@ -110,6 +112,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
   AppSettingsProvider? _appSettingsProviderForDefaults;
   DeliveryMethodsProvider? _deliveryMethodsProviderForDefaults;
   GeneralSettingsProvider? _generalSettingsProviderForStock;
+
+  String get _menuTitle => widget.storeMode ? 'Products' : 'Menu';
 
   void _syncStockEnabledSetting() {
     final stockEnabled =
@@ -596,8 +600,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                           _resetCounterOrderContextAfterSave,
                       onCheckoutActionLoadingChanged:
                           _setCounterCheckoutLoading,
-                      hideFooterActionButtons:
-                          widget.hideOrderPanelActionButtons,
+                      hideFooterActionButtons: widget.storeMode,
+                      hideOngoingOrdersTab: widget.storeMode,
                     ),
                   ),
                 ],
@@ -634,6 +638,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       useFontCardModeInCompact: isCompact,
       screenSize: screenSize,
       selectedOrder: _selectedOrderFromOrderPanel,
+      headerTitle: _menuTitle,
     );
 
     if (!_isCounterBillingMode) {
@@ -724,15 +729,18 @@ class _RestaurantPageState extends State<RestaurantPage> {
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
               child: Column(
                 children: [
-                  _buildCounterSelectorButton(
-                    icon: Icons.restaurant_rounded,
-                    title: 'Dining',
-                    value: _counterDiningLabel(fallback: 'Select table'),
-                    color: const Color(0xFF2563EB),
-                    isSelected: _hasCounterDiningSelection,
-                    onTap: _showDiningSelectionModal,
-                  ),
-                  const SizedBox(height: 10),
+                  // Store mode is walk-in/delivery billing only — no tables.
+                  if (!widget.storeMode) ...[
+                    _buildCounterSelectorButton(
+                      icon: Icons.restaurant_rounded,
+                      title: 'Dining',
+                      value: _counterDiningLabel(fallback: 'Select table'),
+                      color: const Color(0xFF2563EB),
+                      isSelected: _hasCounterDiningSelection,
+                      onTap: _showDiningSelectionModal,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   _buildCounterSelectorButton(
                     icon: Icons.person_rounded,
                     title: 'Customer',
@@ -1543,15 +1551,17 @@ class _RestaurantPageState extends State<RestaurantPage> {
     double? chipMaxWidth,
   }) {
     return [
-      _buildTopBarContextChip(
-        icon: Icons.restaurant_rounded,
-        label: _counterDiningLabel(fallback: 'Dining'),
-        color: const Color(0xFF2563EB),
-        isSelected: _hasCounterDiningSelection,
-        onTap: _showDiningSelectionModal,
-        isCompact: isCompact,
-        maxWidth: chipMaxWidth,
-      ),
+      // Store mode is walk-in/delivery billing only — no table selection.
+      if (!widget.storeMode)
+        _buildTopBarContextChip(
+          icon: Icons.restaurant_rounded,
+          label: _counterDiningLabel(fallback: 'Dining'),
+          color: const Color(0xFF2563EB),
+          isSelected: _hasCounterDiningSelection,
+          onTap: _showDiningSelectionModal,
+          isCompact: isCompact,
+          maxWidth: chipMaxWidth,
+        ),
       _buildTopBarContextChip(
         icon: Icons.person_rounded,
         label: _counterCustomerLabel(
@@ -2316,8 +2326,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
         child: Row(
           children: [
             _buildMobileNavItem(
-              icon: Icons.table_restaurant_rounded,
-              label: 'Tables',
+              icon: widget.storeMode
+                  ? Icons.local_shipping_rounded
+                  : Icons.table_restaurant_rounded,
+              label: widget.storeMode ? 'Delivery' : 'Tables',
               isSelected: _currentMobileView == MobileView.tables,
               onTap: () {
                 if (_currentMobileView != MobileView.tables) {
@@ -2327,7 +2339,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             ),
             _buildMobileNavItem(
               icon: Icons.restaurant_menu_rounded,
-              label: 'Menu',
+              label: _menuTitle,
               isSelected: false,
               onTap: () => _showProductsBottomSheet(context),
             ),
@@ -2449,6 +2461,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         Expanded(
           child: TablesPanel(
             isMobile: true,
+            showTables: !widget.storeMode,
             activeTableId: _activeTableId,
             onSelect: (id) {
               // Reuse the shared selection logic (auto-save, payment modal
@@ -2535,7 +2548,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 icon:
                     const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
                 onPressed: () => _showProductsBottomSheet(context),
-                tooltip: 'Menu',
+                tooltip: _menuTitle,
               ),
             ],
           ),
@@ -2578,7 +2591,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onLocalDraftSaved: _resetCounterOrderContextAfterSave,
             onEditedOrderConfirmed: _resetCounterOrderContextAfterSave,
             onCheckoutActionLoadingChanged: _setCounterCheckoutLoading,
-            hideFooterActionButtons: widget.hideOrderPanelActionButtons,
+            hideFooterActionButtons: widget.storeMode,
+            hideOngoingOrdersTab: widget.storeMode,
           ),
         ),
       ],
@@ -2628,7 +2642,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Menu',
+                              _menuTitle,
                               style: buildCustomStyle(
                                 FontWeightManager.bold,
                                 FontSize.s16,
@@ -2662,6 +2676,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         },
                         screenSize: MediaQuery.of(context).size,
                         selectedOrder: _selectedOrderFromOrderPanel,
+                        headerTitle: _menuTitle,
                       ),
                     ),
                     // Pinned "View Order" footer (local cart only; hidden

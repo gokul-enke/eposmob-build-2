@@ -224,7 +224,7 @@ class SideBarController extends GetxController {
     RestaurantPage(
       allowCounterBillingFromAttender: true,
       defaultCounterBillingMode: true,
-      hideOrderPanelActionButtons: true,
+      storeMode: true,
     ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
   ];
 }

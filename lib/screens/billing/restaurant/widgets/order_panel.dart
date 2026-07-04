@@ -76,6 +76,9 @@ class OrderPanel extends StatefulWidget {
   /// Store mode: hide the footer action buttons (Send Kitchen, KOT + BILL,
   /// Confirm, Print KOT, comment, ...) and show only the payment summary.
   final bool hideFooterActionButtons;
+
+  /// Store mode: hide the "Ongoing" tab from the panel tab bar.
+  final bool hideOngoingOrdersTab;
   final void Function({
     required bool isLoading,
     required bool printBill,
@@ -105,6 +108,7 @@ class OrderPanel extends StatefulWidget {
     this.onEditedOrderConfirmed,
     this.onCheckoutActionLoadingChanged,
     this.hideFooterActionButtons = false,
+    this.hideOngoingOrdersTab = false,
   });
 
   @override
@@ -534,8 +538,10 @@ class OrderPanelState extends State<OrderPanel> {
     };
   }
 
+  int get _maxOrderPanelTabIndex => widget.hideOngoingOrdersTab ? 1 : 2;
+
   OrderPanelTab _tabForIndex(int index) {
-    return switch (index.clamp(0, 2)) {
+    return switch (index.clamp(0, _maxOrderPanelTabIndex)) {
       0 => OrderPanelTab.cart,
       1 => OrderPanelTab.saved,
       _ => OrderPanelTab.ongoing,
@@ -548,14 +554,14 @@ class OrderPanelState extends State<OrderPanel> {
     if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
       setState(() {
         _focusedOrderPanelTabIndex =
-            (_focusedOrderPanelTabIndex + 1).clamp(0, 2);
+            (_focusedOrderPanelTabIndex + 1).clamp(0, _maxOrderPanelTabIndex);
       });
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
       setState(() {
         _focusedOrderPanelTabIndex =
-            (_focusedOrderPanelTabIndex - 1).clamp(0, 2);
+            (_focusedOrderPanelTabIndex - 1).clamp(0, _maxOrderPanelTabIndex);
       });
       return KeyEventResult.handled;
     }
@@ -5029,13 +5035,14 @@ class OrderPanelState extends State<OrderPanel> {
                     count: _localDrafts.length,
                     showIcon: showIcon,
                   ),
-                  segment(
-                    label: 'Ongoing',
-                    icon: Icons.fact_check_rounded,
-                    tab: OrderPanelTab.ongoing,
-                    count: _savedOrders.length,
-                    showIcon: showIcon,
-                  ),
+                  if (!widget.hideOngoingOrdersTab)
+                    segment(
+                      label: 'Ongoing',
+                      icon: Icons.fact_check_rounded,
+                      tab: OrderPanelTab.ongoing,
+                      count: _savedOrders.length,
+                      showIcon: showIcon,
+                    ),
                 ],
               ),
             ),
