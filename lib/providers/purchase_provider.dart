@@ -85,6 +85,30 @@ class PurchaseProvider extends ChangeNotifier {
     status: "Y",
   );
 
+  void clearCachedStores() {
+    storeList = [];
+    notifyListeners();
+    debugPrint('Cleared cached stores');
+  }
+
+  void clearCachedSuppliers() {
+    supplierList = [];
+    notifyListeners();
+    debugPrint('Cleared cached purchase suppliers');
+  }
+
+  void clearCachedUnits() {
+    unitList = {};
+    notifyListeners();
+    debugPrint('Cleared cached units');
+  }
+
+  void clearCachedRacks() {
+    masterDataValues = {};
+    notifyListeners();
+    debugPrint('Cleared cached rack metadata');
+  }
+
   String getStoreNameFromId(int storeId) {
     if (storeList == null || storeList!.isEmpty) {
       return "Unknown";

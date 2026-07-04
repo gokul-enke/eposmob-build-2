@@ -15,6 +15,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
+import 'package:pos_machine/providers/offline_cache_clear_service.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -96,9 +97,60 @@ class _OfflineDataList extends StatelessWidget {
     }
   }
 
+  Future<void> _runClear(
+    BuildContext context, {
+    required OfflineCacheTarget target,
+  }) async {
+    final syncProvider = context.read<SyncProvider>();
+    if (syncProvider.isSyncing) return;
+
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text(OfflineCacheClearService.confirmTitleFor(target)),
+        content: Text(OfflineCacheClearService.confirmMessageFor(target)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(
+              'Clear',
+              style: TextStyle(color: ColorManager.kButtonRed),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldClear != true || !context.mounted) return;
+
+    try {
+      await OfflineCacheClearService.clearTarget(context, target);
+      if (!context.mounted) return;
+      showScaffold(
+        context: context,
+        message:
+            '${OfflineCacheClearService.labelFor(target)} cleared from this device',
+      );
+      onRefresh();
+    } catch (e) {
+      if (!context.mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Clear failed: ${e.toString()}',
+      );
+    }
+  }
+
   bool _canSync(BillingProvider billing, SyncProvider sync) {
     return billing.hasInternet && !sync.isSyncing;
   }
+
+  bool _canClear(SyncProvider sync) => !sync.isSyncing;
 
   int _cartItemsCount() {
     if (!Hive.isBoxOpen('cart_items')) return 0;
@@ -137,6 +189,7 @@ class _OfflineDataList extends StatelessWidget {
     final billingProvider = context.watch<BillingProvider>();
     final syncProvider = context.watch<SyncProvider>();
     final canSync = _canSync(billingProvider, syncProvider);
+    final canClear = _canClear(syncProvider);
 
     final productCount = productProvider.sellableProducts.length;
     final categoryCount = categoryProvider.categoryList?.length ?? 0;
@@ -198,6 +251,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Products synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.products,
+          ),
+          canClear: canClear,
         ),
         _OfflineDataTile(
           icon: FontAwesomeIcons.tags,
@@ -217,6 +275,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Categories synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.categories,
+          ),
+          canClear: canClear,
         ),
         FutureBuilder<String?>(
           future: SharedPreferenceProvider().getLastProductSyncIso(),
@@ -232,6 +295,11 @@ class _OfflineDataList extends StatelessWidget {
               title: 'Last product sync',
               subtitle: 'When products were last downloaded',
               value: label,
+              canClear: canClear && iso != null,
+              onClear: () => _runClear(
+                context,
+                target: OfflineCacheTarget.productSyncTimestamp,
+              ),
             );
           },
         ),
@@ -269,6 +337,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Payment methods synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.paymentMethods,
+          ),
+          canClear: canClear,
         ),
         _OfflineDataTile(
           icon: FontAwesomeIcons.truck,
@@ -289,6 +362,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Delivery methods synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.deliveryMethods,
+          ),
+          canClear: canClear,
         ),
         _OfflineDataTile(
           icon: FontAwesomeIcons.fileLines,
@@ -309,6 +387,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Document configs synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.documentConfigs,
+          ),
+          canClear: canClear,
         ),
         const SizedBox(height: 8),
         _SectionHeader(
@@ -344,6 +427,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Customers synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.customers,
+          ),
+          canClear: canClear,
         ),
         _OfflineDataTile(
           icon: FontAwesomeIcons.truckField,
@@ -363,6 +451,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Suppliers synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.suppliers,
+          ),
+          canClear: canClear,
         ),
         const SizedBox(height: 8),
         _SectionHeader(
@@ -397,6 +490,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Stores synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.stores,
+          ),
+          canClear: canClear,
         ),
         _OfflineDataTile(
           icon: FontAwesomeIcons.ruler,
@@ -415,6 +513,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Units synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.units,
+          ),
+          canClear: canClear,
         ),
         _OfflineDataTile(
           icon: FontAwesomeIcons.warehouse,
@@ -433,6 +536,11 @@ class _OfflineDataList extends StatelessWidget {
             ),
             successMessage: 'Rack data synced',
           ),
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.racks,
+          ),
+          canClear: canClear,
         ),
         FutureBuilder<Map<String, dynamic>?>(
           future: SharedPreferenceProvider().getActiveStoreDetails(),
@@ -462,6 +570,11 @@ class _OfflineDataList extends StatelessWidget {
           title: 'Cart items',
           subtitle: 'Items held in the local cart',
           value: _countLabel(_cartItemsCount(), unit: 'items'),
+          canClear: canClear && _cartItemsCount() > 0,
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.cartItems,
+          ),
         ),
         _OfflineDataTile(
           icon: FontAwesomeIcons.bookmark,
@@ -470,6 +583,11 @@ class _OfflineDataList extends StatelessWidget {
           title: 'Saved orders',
           subtitle: 'Draft orders not yet confirmed',
           value: _countLabel(_savedOrdersCount(), unit: 'orders'),
+          canClear: canClear && _savedOrdersCount() > 0,
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.savedOrders,
+          ),
         ),
         _OfflineDataTile(
           icon: FontAwesomeIcons.circleCheck,
@@ -478,6 +596,11 @@ class _OfflineDataList extends StatelessWidget {
           title: 'Confirmed orders',
           subtitle: 'Orders confirmed locally',
           value: _countLabel(_confirmedOrdersCount(), unit: 'orders'),
+          canClear: canClear && _confirmedOrdersCount() > 0,
+          onClear: () => _runClear(
+            context,
+            target: OfflineCacheTarget.confirmedOrders,
+          ),
         ),
         const SizedBox(height: 8),
         _SectionHeader(title: 'Connection'),
@@ -605,7 +728,7 @@ class _StatusBanner extends StatelessWidget {
           Expanded(
             child: Text(
               canSync
-                  ? 'Use sync on each row, sync a whole section, or Sync All below.'
+                  ? 'Use sync or clear on each row, sync a whole section, or Sync All below.'
                   : billingProvider.isManualOfflineMode
                       ? 'Offline mode is on. Disable it in Settings to sync.'
                       : 'No internet connection. Sync is unavailable right now.',
@@ -782,8 +905,10 @@ class _OfflineDataTile extends StatelessWidget {
   final String subtitle;
   final String value;
   final bool canSync;
+  final bool canClear;
   final bool isSyncing;
   final VoidCallback? onSync;
+  final VoidCallback? onClear;
 
   const _OfflineDataTile({
     required this.icon,
@@ -793,8 +918,10 @@ class _OfflineDataTile extends StatelessWidget {
     required this.subtitle,
     required this.value,
     this.canSync = false,
+    this.canClear = false,
     this.isSyncing = false,
     this.onSync,
+    this.onClear,
   });
 
   @override
@@ -864,56 +991,93 @@ class _OfflineDataTile extends StatelessWidget {
                       : ColorManager.textColor,
                 ),
               ),
-              if (onSync != null) ...[
+              if (onSync != null || onClear != null) ...[
                 const SizedBox(height: 6),
-                InkWell(
-                  onTap: canSync && !isSyncing ? onSync : null,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 4,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isSyncing)
-                          SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: ColorManager.kPrimaryColor,
-                            ),
-                          )
-                        else
-                          Icon(
-                            Icons.sync,
-                            size: 14,
-                            color: canSync
-                                ? ColorManager.kPrimaryColor
-                                : Colors.grey.shade400,
-                          ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isSyncing ? 'Syncing' : 'Sync',
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s8,
-                            0.12,
-                            canSync
-                                ? ColorManager.kPrimaryColor
-                                : Colors.grey.shade400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onSync != null)
+                      _TileActionButton(
+                        label: isSyncing ? 'Syncing' : 'Sync',
+                        icon: Icons.sync,
+                        enabled: canSync && !isSyncing,
+                        isLoading: isSyncing,
+                        color: ColorManager.kPrimaryColor,
+                        onTap: onSync!,
+                      ),
+                    if (onSync != null && onClear != null)
+                      const SizedBox(width: 8),
+                    if (onClear != null)
+                      _TileActionButton(
+                        label: 'Clear',
+                        icon: Icons.delete_outline,
+                        enabled: canClear,
+                        color: ColorManager.kButtonRed,
+                        onTap: onClear!,
+                      ),
+                  ],
                 ),
               ],
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TileActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool enabled;
+  final bool isLoading;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _TileActionButton({
+    required this.label,
+    required this.icon,
+    required this.enabled,
+    required this.color,
+    required this.onTap,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final actionColor = enabled ? color : Colors.grey.shade400;
+
+    return InkWell(
+      onTap: enabled && !isLoading ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isLoading)
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: color,
+                ),
+              )
+            else
+              Icon(icon, size: 14, color: actionColor),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s8,
+                0.12,
+                actionColor,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -75,6 +75,20 @@ class SupplierProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears in-memory supplier cache for offline data management.
+  void clearCachedSuppliers() {
+    _supplierList = [];
+    _allSuppliers = [];
+    _currentPage = 1;
+    _totalPages = 1;
+    _filterName = null;
+    _filterEmail = null;
+    _filterPhone = null;
+    _filterBalance = null;
+    notifyListeners();
+    debugPrint('Cleared cached suppliers');
+  }
+
   // Apply local pagination and filtering
   void applyFiltersLocally({
     String? supplierName,

@@ -324,6 +324,20 @@ class DeliveryMethodsProvider with ChangeNotifier {
     }
   }
 
+  /// Clears in-memory and SharedPreferences delivery method cache.
+  Future<void> clearCachedDeliveryMethods() async {
+    final prefs = await SharedPreferences.getInstance();
+    final activeStoreId = prefs.getInt('active_store_id');
+
+    await prefs.remove(_deliveryMethodsCacheKey(activeStoreId));
+    await prefs.remove(_deliveryMethodsCacheKeyPrefix);
+
+    _setDeliveryMethods([], null);
+    _hasFetchedOnce = false;
+    notifyListeners();
+    debugPrint('$_tag Cleared delivery methods cache');
+  }
+
   String _deliveryMethodsCacheKey(int? activeStoreId) {
     return activeStoreId == null
         ? _deliveryMethodsCacheKeyPrefix

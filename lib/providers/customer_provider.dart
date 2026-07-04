@@ -265,6 +265,31 @@ class CustomerProvider extends ChangeNotifier {
     return true;
   }
 
+  /// Clears Hive and in-memory customer cache without affecting login credentials.
+  Future<void> clearCachedCustomers() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storeId = prefs.getInt('active_store_id');
+
+    if (Hive.isBoxOpen(_customerCacheBoxName)) {
+      final box = Hive.box(_customerCacheBoxName);
+      await box.delete(_buildCustomerCacheKey(storeId));
+    }
+
+    customerList = [];
+    _allCustomers = [];
+    selectedCustomer = null;
+    selectedCustomerId = null;
+    selectedCustomerName = null;
+    _currentPage = 1;
+    _totalPages = 1;
+    _filterName = null;
+    _filterEmail = null;
+    _filterPhone = null;
+    _filterBalance = null;
+    notifyListeners();
+    debugPrint('Cleared cached customers');
+  }
+
   Future<dynamic> listCustomer({
     required String accessToken,
     String? filterName,
