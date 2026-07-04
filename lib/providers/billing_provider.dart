@@ -1224,7 +1224,6 @@ class BillingProvider extends ChangeNotifier {
       controller.clear();
     }
     _extraPaymentAmounts.clear();
-    _extraPaymentValues.clear();
 
     calculateBalance();
     validatePayment();
@@ -1311,8 +1310,10 @@ class BillingProvider extends ChangeNotifier {
       _extraPaymentValues[methodId] = displayValue;
     }
 
-    final controller = getExtraAmountController(methodId, displayValue: displayValue);
-    if (controller.text.isEmpty || (double.tryParse(controller.text) ?? 0.0) == 0.0) {
+    final controller =
+        getExtraAmountController(methodId, displayValue: displayValue);
+    if (controller.text.isEmpty ||
+        (double.tryParse(controller.text) ?? 0.0) == 0.0) {
       final remaining = _effectiveOrderTotal - getTotalPaidAmount();
       if (remaining > 0) {
         setExtraPaymentAmount(
@@ -1427,10 +1428,11 @@ class BillingProvider extends ChangeNotifier {
     final upiId = upiPaymentMethodId ?? "UPI";
     final codId = codPaymentMethodId ?? "COD";
 
-    if (_isCashSelected) {
+    final double cashAmount = double.tryParse(cashAmountController.text) ?? 0;
+    if (_isCashSelected && cashAmount > 0) {
       paidMethods.add({
         "method": cashId,
-        "amount": double.tryParse(cashAmountController.text) ?? 0,
+        "amount": cashAmount,
       });
     }
 
@@ -1496,9 +1498,8 @@ class BillingProvider extends ChangeNotifier {
     }
 
     final isDefaultCustomer = _resolveIsDefaultCustomerForPayment();
-    final customerPrevBalance = isDefaultCustomer
-        ? 0.0
-        : (_selectedCustomer?.balance ?? 0.0);
+    final customerPrevBalance =
+        isDefaultCustomer ? 0.0 : (_selectedCustomer?.balance ?? 0.0);
 
     final result = PaymentValidation.validateForOrder(
       orderTotal: _effectiveOrderTotal,
@@ -2894,7 +2895,8 @@ class BillingProvider extends ChangeNotifier {
 
       if (customerPrevBalance < 0) {
         // Customer has debt - use transaction excess logic for consistency with auto-fill
-        _debugBalanceLog('💳 Customer has debt - using transaction excess logic');
+        _debugBalanceLog(
+            '💳 Customer has debt - using transaction excess logic');
         final transactionExcess = totalCollected - cartTotal;
         _debugBalanceLog(
             '💰 Transaction excess: $currency${transactionExcess.toStringAsFixed(2)}');
@@ -2921,7 +2923,8 @@ class BillingProvider extends ChangeNotifier {
         }
       } else {
         // Customer has positive/zero balance - use Net Due logic
-        _debugBalanceLog('💵 Customer has credit/zero balance - using Net Due logic');
+        _debugBalanceLog(
+            '💵 Customer has credit/zero balance - using Net Due logic');
         // Net Due = Purchase Total - Customer Previous Balance
         double netDue = cartTotal - customerPrevBalance;
         _debugBalanceLog('💰 Net Due calculation:');

@@ -21,6 +21,7 @@ import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/features/billing/domain/barcode_scan_queue.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/billing_status_header.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/payment_methods_sheet.dart';
 import 'package:pos_machine/services/checkout_service.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home_tab.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/mobile_bottom_nav.dart';
@@ -78,9 +79,22 @@ class BillingPageMobileState extends State<BillingPageMobile>
         false;
   }
 
+  bool get _showConfirmOrderButton {
+    return Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.showConfirmOrderButton ??
+        true;
+  }
+
+  bool get _showConfirmOrderAndPrintButton {
+    return Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.showConfirmOrderAndPrintButton ??
+        true;
+  }
+
   DateTime _quotationDate = DateTime.now();
-  DateTime _quotationExpiryDate =
-      DateTime.now().add(const Duration(days: 30));
+  DateTime _quotationExpiryDate = DateTime.now().add(const Duration(days: 30));
   late final TextEditingController _quotationInlineNameController;
   late final TextEditingController _quotationInlinePhoneController;
 
@@ -319,7 +333,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
       billingProvider: billingProvider,
       appSettings: appSettings,
     );
-    _paymentController.syncPaymentAutofillIfNeeded(billingProvider);
     _settingsController.syncDefaultDeliveryMethod(
       billingProvider: billingProvider,
       deliveryMethodsProvider: deliveryMethodsProvider,
@@ -338,8 +351,7 @@ class BillingPageMobileState extends State<BillingPageMobile>
     _generalSettingsListener ??= () {
       if (!mounted) return;
       _settingsController.syncStockEnabled(
-        stockEnabled:
-            generalSettingsProvider.generalSettings?.stockEnabled,
+        stockEnabled: generalSettingsProvider.generalSettings?.stockEnabled,
         localProductProvider:
             Provider.of<LocalProductProvider>(context, listen: false),
       );
@@ -360,7 +372,6 @@ class BillingPageMobileState extends State<BillingPageMobile>
         billingProvider: billingProvider,
         appSettings: appSettings,
       );
-      _paymentController.syncPaymentAutofillIfNeeded(billingProvider);
       _settingsController.syncDefaultDeliveryMethod(
         billingProvider: billingProvider,
         deliveryMethodsProvider: deliveryMethodsProvider,
@@ -410,15 +421,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
       _salesExecutiveListener ??= () {
         if (!mounted) return;
         final changed = _customerController.handleSalesExecutiveChanged(
-          billingProvider:
-              Provider.of<BillingProvider>(context, listen: false),
+          billingProvider: Provider.of<BillingProvider>(context, listen: false),
           customerSelectionProvider:
               Provider.of<CustomerSelectionProvider>(context, listen: false),
-          autoAssignEnabled: Provider.of<AppSettingsProvider>(context,
-                      listen: false)
-                  .appSettings
-                  ?.autoAssignDefaultCustomer ??
-              true,
+          autoAssignEnabled:
+              Provider.of<AppSettingsProvider>(context, listen: false)
+                      .appSettings
+                      ?.autoAssignDefaultCustomer ??
+                  true,
         );
         if (changed) {
           setState(() => _autocompletePhoneKey = GlobalKey());
@@ -429,15 +439,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
       _authUserListener ??= () {
         if (!mounted) return;
         final changed = _customerController.handleUserSwitched(
-          billingProvider:
-              Provider.of<BillingProvider>(context, listen: false),
+          billingProvider: Provider.of<BillingProvider>(context, listen: false),
           customerSelectionProvider:
               Provider.of<CustomerSelectionProvider>(context, listen: false),
-          autoAssignEnabled: Provider.of<AppSettingsProvider>(context,
-                      listen: false)
-                  .appSettings
-                  ?.autoAssignDefaultCustomer ??
-              true,
+          autoAssignEnabled:
+              Provider.of<AppSettingsProvider>(context, listen: false)
+                      .appSettings
+                      ?.autoAssignDefaultCustomer ??
+                  true,
         );
         if (changed) {
           setState(() => _autocompletePhoneKey = GlobalKey());
@@ -552,13 +561,12 @@ class BillingPageMobileState extends State<BillingPageMobile>
     final result = _customerController.applyDefaultCustomerFromCacheIfNeeded(
       localProductProvider:
           Provider.of<LocalProductProvider>(context, listen: false),
-      billingProvider:
-          Provider.of<BillingProvider>(context, listen: false),
+      billingProvider: Provider.of<BillingProvider>(context, listen: false),
       customerSelectionProvider:
           Provider.of<CustomerSelectionProvider>(context, listen: false),
       appSettings: appSettingsProvider.appSettings,
-      customers: Provider.of<BillingProvider>(context, listen: false)
-          .customerList,
+      customers:
+          Provider.of<BillingProvider>(context, listen: false).customerList,
     );
     _customerController.applyDefaultCustomerResult(
       result: result,
@@ -660,7 +668,8 @@ class BillingPageMobileState extends State<BillingPageMobile>
     } catch (e) {
       billingDebugLog('Error clearing cart: $e');
       showScaffoldError(
-          context: context, message: BillingMobileErrorMessages.clearCartFailed);
+          context: context,
+          message: BillingMobileErrorMessages.clearCartFailed);
     } finally {
       billingProvider.setLoadingClearCart(false);
       if (mounted) {
@@ -686,7 +695,13 @@ class BillingPageMobileState extends State<BillingPageMobile>
       // snackbar; keeping the cart intact prevents data loss.
       if (result == SaveOrderResult.savedNew ||
           result == SaveOrderResult.updatedExisting) {
-        clearCart();
+        setState(() {
+          _controller.clearCartData(context);
+          _lastRehydratedOrderId = null;
+          _autocompleteProductKey = GlobalKey();
+          _autocompletePhoneKey = GlobalKey();
+        });
+        _focusTextField();
       }
     } finally {
       billingProvider.setLoadingSaveOrder(false);
@@ -699,11 +714,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
   bool _isCustomerSatisfiedForCheckout() {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
-    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
-        .appSettings;
     return _customerController.isCustomerSatisfiedForCheckout(
       billingProvider: billingProvider,
-      skipCustomerSelection: appSettings?.skipCustomerSelection ?? false,
+      skipCustomerSelection: false,
     );
   }
 
@@ -734,10 +747,12 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
     if (!_controller.hasSelectedPayment(context)) {
       showScaffoldError(
-          context: context, message: BillingMobileErrorMessages.selectPaymentMethod);
+          context: context,
+          message: BillingMobileErrorMessages.selectPaymentMethod);
       if (switchToBillingTab) {
         _switchToTab(1);
       }
+      _openPaymentSheetAfterFrame();
       return false;
     }
 
@@ -748,11 +763,13 @@ class BillingPageMobileState extends State<BillingPageMobile>
     if (!ready.isValid) {
       showScaffoldError(
         context: context,
-        message: ready.message ?? BillingMobileErrorMessages.configurePaymentBeforeConfirm,
+        message: ready.message ??
+            BillingMobileErrorMessages.configurePaymentBeforeConfirm,
       );
       if (switchToBillingTab) {
         _switchToTab(1);
       }
+      _openPaymentSheetAfterFrame();
       return false;
     }
 
@@ -768,6 +785,17 @@ class BillingPageMobileState extends State<BillingPageMobile>
     }
 
     return true;
+  }
+
+  /// Opens the payment methods bottom sheet after the current frame (so any
+  /// pending tab switch has taken effect) whenever confirm-time validation
+  /// rejects the order because payment isn't ready — landing the user
+  /// directly in the sheet instead of just showing an error.
+  void _openPaymentSheetAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showPaymentMethodsSheet(context);
+    });
   }
 
   void _showPrintRetrySnackBar(String orderNumber) {
@@ -792,7 +820,9 @@ class BillingPageMobileState extends State<BillingPageMobile>
       await _controller.retryPrintOrder(context, orderNumber);
       if (!mounted) return;
       _pendingPrintOrderNumber = null;
-      showScaffold(context: context, message: BillingMobileErrorMessages.printRetrySuccess);
+      showScaffold(
+          context: context,
+          message: BillingMobileErrorMessages.printRetrySuccess);
     } catch (error) {
       if (!mounted) return;
       showScaffoldError(
@@ -804,11 +834,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   Future<void> confirmOrder() async {
     if (_isConfirmingOrder || _isConfirmingAndPrinting) return;
+    if (!_isQuotationPage && !_showConfirmOrderButton) return;
 
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
-      await saveOrderAndPrint();
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.noInternetConfirm,
+      );
       return;
     }
 
@@ -848,11 +882,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
 
   Future<void> createOrderAndPrint() async {
     if (_isConfirmingAndPrinting || _isConfirmingOrder) return;
+    if (!_isQuotationPage && !_showConfirmOrderAndPrintButton) return;
 
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     if (_connectivityController.shouldBlockOnlineCheckout(billingProvider)) {
-      await saveOrderAndPrint();
+      showScaffoldError(
+        context: context,
+        message: BillingMobileErrorMessages.noInternetCreateOrder,
+      );
       return;
     }
 
@@ -943,12 +981,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
       if (!result.success) {
         showScaffoldError(
           context: context,
-          message: result.errorMessage ?? BillingMobileErrorMessages.quotationCreateFailed,
+          message: result.errorMessage ??
+              BillingMobileErrorMessages.quotationCreateFailed,
         );
         return;
       }
 
-      showScaffold(context: context, message: 'Quotation created successfully!');
+      showScaffold(
+          context: context, message: 'Quotation created successfully!');
       if (result.printError != null) {
         showScaffoldError(context: context, message: result.printError!);
       }
@@ -1124,11 +1164,13 @@ class BillingPageMobileState extends State<BillingPageMobile>
       // Switch to cart tab to show loaded cart
       _switchToTab(3);
 
-      showScaffold(context: context, message: 'billing.order_loaded_editing'.tr);
+      showScaffold(
+          context: context, message: 'billing.order_loaded_editing'.tr);
     } catch (error) {
       billingDebugLog('Error loading order: $error');
       showScaffoldError(
-          context: context, message: BillingMobileErrorMessages.loadOrderFailed);
+          context: context,
+          message: BillingMobileErrorMessages.loadOrderFailed);
     } finally {
       billingProvider.setLoadingOrder(false);
       if (mounted) {
@@ -1145,98 +1187,102 @@ class BillingPageMobileState extends State<BillingPageMobile>
       focusNode: _focusNode,
       onKeyEvent: _handleKeyPress,
       child: Scaffold(
-          backgroundColor: Colors.white,
-          body: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                const BillingStatusHeader(),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                // Home Tab
-                MobileHomeTab(
-                  autocompleteProductKey: _autocompleteProductKey,
-                  onProcessBarcode: _barcodeScanQueue.enqueue,
-                  onClearProductFields: () {
-                    setState(() {
-                      _autocompleteProductKey = GlobalKey();
-                      final billingProvider =
-                          Provider.of<BillingProvider>(context, listen: false);
-                      billingProvider.quantityController.clear();
-                      billingProvider.barcodeController.clear();
-                      billingProvider.selectedProductIdController.clear();
-                      billingProvider.unitPriceController.clear();
-                    });
-                  },
-                  focusTextField: _focusTextField,
-                  onClearCart: clearCart,
+        backgroundColor: Colors.white,
+        body: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              const BillingStatusHeader(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    // Home Tab
+                    MobileHomeTab(
+                      autocompleteProductKey: _autocompleteProductKey,
+                      onProcessBarcode: _barcodeScanQueue.enqueue,
+                      onClearProductFields: () {
+                        setState(() {
+                          _autocompleteProductKey = GlobalKey();
+                          final billingProvider = Provider.of<BillingProvider>(
+                              context,
+                              listen: false);
+                          billingProvider.quantityController.clear();
+                          billingProvider.barcodeController.clear();
+                          billingProvider.selectedProductIdController.clear();
+                          billingProvider.unitPriceController.clear();
+                        });
+                      },
+                      focusTextField: _focusTextField,
+                      onClearCart: clearCart,
+                    ),
+                    // Billing Tab
+                    MobileBillingTab(
+                      isQuotationMode: _isQuotationPage,
+                      autocompletePhoneKey: _autocompletePhoneKey,
+                      onConfirmOrder: confirmOrder,
+                      onSaveOrder: saveOrder,
+                      onCreateOrderAndPrint: createOrderAndPrint,
+                      onSaveAndPrint: saveOrderAndPrint,
+                      onCreateQuotation: () =>
+                          createQuotation(shouldPrint: false),
+                      onCreateQuotationAndPrint: createQuotationAndPrint,
+                      onOpenQuotationList: _openQuotationList,
+                      quotationDate: _quotationDate,
+                      quotationExpiryDate: _quotationExpiryDate,
+                      onQuotationDateChanged: (date) {
+                        setState(() {
+                          _quotationDate = date;
+                          if (_quotationExpiryDate.isBefore(date)) {
+                            _quotationExpiryDate =
+                                date.add(const Duration(days: 30));
+                          }
+                        });
+                      },
+                      onQuotationExpiryDateChanged: (date) {
+                        setState(() => _quotationExpiryDate = date);
+                      },
+                      quotationInlineNameController:
+                          _quotationInlineNameController,
+                      quotationInlinePhoneController:
+                          _quotationInlinePhoneController,
+                      onQuotationInlineCustomerChanged:
+                          _handleQuotationInlineCustomerChanged,
+                      isSavingOrder: _isSavingOrder,
+                      isConfirmingOrder: _isConfirmingOrder,
+                      isConfirmingAndPrinting: _isConfirmingAndPrinting,
+                      isSavingAndPrinting: _isSavingAndPrinting,
+                    ),
+                    // Orders Tab
+                    MobileOrdersTab(
+                      onOrderSelected: loadSavedOrderForEditing,
+                      onPrintOrder: printSavedOrder,
+                      onDeleteOrder: deleteSavedOrder,
+                      onNewOrder: createNewOrder,
+                      isLoadingOrder: _isLoadingOrder,
+                      isCreatingNewOrder: _isCreatingNewOrder,
+                    ),
+                    // Cart Tab
+                    MobileCartTab(
+                      onBackToMarket: () => _switchToTab(0),
+                      onProceedToPayment: () => _switchToTab(1),
+                      onSaveOrder: saveOrder,
+                      onClearCart: clearCart,
+                      isSavingOrder: _isSavingOrder,
+                      isClearingCart: _isClearingCart,
+                    ),
+                  ],
                 ),
-                // Billing Tab
-                MobileBillingTab(
-                  isQuotationMode: _isQuotationPage,
-                  autocompletePhoneKey: _autocompletePhoneKey,
-                  onConfirmOrder: confirmOrder,
-                  onSaveOrder: saveOrder,
-                  onCreateOrderAndPrint: createOrderAndPrint,
-                  onSaveAndPrint: saveOrderAndPrint,
-                  onCreateQuotation: () => createQuotation(shouldPrint: false),
-                  onCreateQuotationAndPrint: createQuotationAndPrint,
-                  onOpenQuotationList: _openQuotationList,
-                  quotationDate: _quotationDate,
-                  quotationExpiryDate: _quotationExpiryDate,
-                  onQuotationDateChanged: (date) {
-                    setState(() {
-                      _quotationDate = date;
-                      if (_quotationExpiryDate.isBefore(date)) {
-                        _quotationExpiryDate =
-                            date.add(const Duration(days: 30));
-                      }
-                    });
-                  },
-                  onQuotationExpiryDateChanged: (date) {
-                    setState(() => _quotationExpiryDate = date);
-                  },
-                  quotationInlineNameController: _quotationInlineNameController,
-                  quotationInlinePhoneController: _quotationInlinePhoneController,
-                  onQuotationInlineCustomerChanged:
-                      _handleQuotationInlineCustomerChanged,
-                  isSavingOrder: _isSavingOrder,
-                  isConfirmingOrder: _isConfirmingOrder,
-                  isConfirmingAndPrinting: _isConfirmingAndPrinting,
-                  isSavingAndPrinting: _isSavingAndPrinting,
-                ),
-                // Orders Tab
-                MobileOrdersTab(
-                  onOrderSelected: loadSavedOrderForEditing,
-                  onPrintOrder: printSavedOrder,
-                  onDeleteOrder: deleteSavedOrder,
-                  onNewOrder: createNewOrder,
-                  isLoadingOrder: _isLoadingOrder,
-                  isCreatingNewOrder: _isCreatingNewOrder,
-                ),
-                // Cart Tab
-                MobileCartTab(
-                  onBackToMarket: () => _switchToTab(0),
-                  onProceedToPayment: () => _switchToTab(1),
-                  onSaveOrder: saveOrder,
-                  onClearCart: clearCart,
-                  isSavingOrder: _isSavingOrder,
-                  isClearingCart: _isClearingCart,
-                ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          bottomNavigationBar: MobileBottomNav(
-            currentIndex: _currentTabIndex,
-            onTap: _switchToTab,
+              ),
+            ],
           ),
         ),
+        bottomNavigationBar: MobileBottomNav(
+          currentIndex: _currentTabIndex,
+          onTap: _switchToTab,
+        ),
+      ),
     );
   }
 }

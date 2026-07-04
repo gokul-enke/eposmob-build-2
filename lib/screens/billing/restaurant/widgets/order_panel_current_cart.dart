@@ -149,8 +149,8 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => _showEditItemQuantityDialog(cartItem,
-                          isLocal: true),
+                      onTap: () =>
+                          _showEditItemQuantityDialog(cartItem, isLocal: true),
                       child: Container(
                         width: widget.isCompact ? 32 : 40,
                         alignment: Alignment.center,
@@ -284,8 +284,10 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
         (appSettings?.enableSendToKitchenButton ?? true);
     final showKitchenActions =
         showSendToKitchen || showKotBillForKitchenContext;
-    final showConfirmOrder =
-        _usesCounterOrderTabs && hasInternet && !hasKitchenOrderContext;
+    final showConfirmOrder = _usesCounterOrderTabs &&
+        hasInternet &&
+        !hasKitchenOrderContext &&
+        (appSettings?.showConfirmOrderButton ?? true);
     final showOfflineSaveAndPrint = !hasInternet && !_usesCounterOrderTabs;
     final hasOfflineOrderContext = hasKitchenOrderContext ||
         (widget.allowCounterBilling && widget.isCounterBillingMode);

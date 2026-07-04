@@ -67,14 +67,15 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       } else {
         debugPrint(
             "📥 [AddCategory] Loading categories from API - not loaded or empty");
+        await categoryProvider.listAllCategory(force: false);
+        categoryProvider.searchCategoryList = categoryProvider.categoryList;
+        categoryProvider.currentPage = 1;
+        categoryProvider.totalPages = 1;
         if (mounted) {
           setState(() {
             categoryList = categoryProvider.category;
           });
         }
-        await categoryProvider.searchAllCategory(
-          page: 1,
-        );
       }
     } catch (error) {
       debugPrint("Error in loadInitData: $error");

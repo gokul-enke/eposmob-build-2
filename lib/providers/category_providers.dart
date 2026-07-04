@@ -247,14 +247,7 @@ class CategoryProvider extends ChangeNotifier {
 
   // Add a method to force refresh categories (useful for manual refresh)
   Future<void> refreshCategories() async {
-    _isCategoriesLoaded = false;
-    categoryList?.clear();
-    _originalCategoryList?.clear();
-
-    // Clear Hive cache for fresh data
-    await clearCategoriesFromHive();
-
-    await listAllCategory();
+    await listAllCategory(force: true);
   }
 
   // Add a method to check if categories are properly loaded
@@ -348,11 +341,22 @@ class CategoryProvider extends ChangeNotifier {
 
         searchCategoryList = categoryListModel.category;
 
-        // debugPrint("categoryListModel.pagination?.toString()");
-        // debugPrint(categoryListModel.pagination?.toString());
-
         currentPage = categoryListModel.pagination?.currentPage ?? 1;
         totalPages = categoryListModel.pagination?.lastPage ?? 1;
+
+        // Keep main cache + Hive in sync when loading the full unfiltered list.
+        final isUnfiltered =
+            (filterName == null || filterName.isEmpty) &&
+            (filterParent == null || filterParent.isEmpty);
+        if (isUnfiltered && effectivePage == 1) {
+          categoryList = searchCategoryList;
+          _originalCategoryList = List.from(categoryList ?? []);
+          _isCategoriesLoaded = categoryList != null && categoryList!.isNotEmpty;
+          _lastSuccessfulCategoryFetchAt = DateTime.now();
+          if (categoryList != null && categoryList!.isNotEmpty) {
+            await saveCategoriesToHive(categoryList!);
+          }
+        }
 
         notifyListeners();
       } else {
@@ -517,9 +521,13 @@ class CategoryProvider extends ChangeNotifier {
       debugPrint("ADD CATEGORY RESPONSE: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = json.decode(response.body);
         await listAllCategory(force: true);
+        searchCategoryList = categoryList;
+        currentPage = 1;
+        totalPages = 1;
         notifyListeners();
-        return json.decode(response.body);
+        return decoded;
       }
 
       final decodedBody = response.body.isNotEmpty
