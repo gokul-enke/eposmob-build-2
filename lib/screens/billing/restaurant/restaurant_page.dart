@@ -452,12 +452,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Modern light background
       body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: isSmallScreen
-              ? _buildMobileLayout(screenSize)
-              : _buildDesktopLayout(screenSize, isLargeScreen),
-        ),
+        // Note: no AnimatedSwitcher here — both layouts hold OrderPanel with
+        // the same GlobalKey, so cross-fading them would duplicate the key.
+        child: isSmallScreen
+            ? _buildMobileLayout(screenSize)
+            : _buildDesktopLayout(screenSize, isLargeScreen),
       ),
     );
   }
@@ -1356,7 +1355,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
-  Widget _buildAttenderTopBar({required bool isCompact}) {
+  Widget _buildAttenderTopBar({required bool isCompact, bool isMobile = false}) {
     final customerSelectionProvider =
         Provider.of<CustomerSelectionProvider>(context);
     final isCounterEnabled =
@@ -1373,6 +1372,16 @@ class _RestaurantPageState extends State<RestaurantPage> {
         : isCounterEnabled
             ? Icons.point_of_sale_rounded
             : Icons.delivery_dining_rounded;
+
+    if (isMobile) {
+      return _buildMobileTopBar(
+        customerSelectionProvider: customerSelectionProvider,
+        isCounterEnabled: isCounterEnabled,
+        title: title,
+        contextLabel: contextLabel,
+        contextIcon: contextIcon,
+      );
+    }
 
     return Container(
       margin: EdgeInsets.fromLTRB(8, isCompact ? 6 : 8, 8, 0),
@@ -1450,71 +1459,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     const Color(0xFF1E293B),
                   ),
                 ),
-                if (isCounterEnabled) ...[
-                  _buildTopBarContextChip(
-                    icon: Icons.restaurant_rounded,
-                    label: _counterDiningLabel(fallback: 'Dining'),
-                    color: const Color(0xFF2563EB),
-                    isSelected: _hasCounterDiningSelection,
-                    onTap: _showDiningSelectionModal,
+                if (isCounterEnabled)
+                  ..._buildCounterContextChips(
+                    customerSelectionProvider: customerSelectionProvider,
                     isCompact: isCompact,
-                  ),
-                  _buildTopBarContextChip(
-                    icon: Icons.person_rounded,
-                    label: _counterCustomerLabel(
-                      customerSelectionProvider,
-                      fallback: 'Customer',
-                    ),
-                    color: const Color(0xFF7C3AED),
-                    isSelected: _hasCounterCustomer(customerSelectionProvider),
-                    isCompact: isCompact,
-                    onTap: () async {
-                      final state = _orderPanelKey.currentState;
-                      if (state == null) {
-                        showScaffoldError(
-                          context: context,
-                          message: 'Customer selector is not ready yet',
-                        );
-                        return;
-                      }
-                      await state.showCustomerSelectionModal();
-                      if (mounted) setState(() {});
-                    },
-                  ),
-                  _buildTopBarContextChip(
-                    icon: Icons.local_shipping_rounded,
-                    label: _counterDeliveryLabel(fallback: 'Delivery'),
-                    color: const Color(0xFF059669),
-                    isSelected: _hasCounterDeliverySelection,
-                    isCompact: isCompact,
-                    onTap: () async {
-                      final state = _orderPanelKey.currentState;
-                      if (state == null) {
-                        showScaffoldError(
-                          context: context,
-                          message: 'Delivery selector is not ready yet',
-                        );
-                        return;
-                      }
-                      await state.showDeliverySelectionModalFromParent();
-                      if (!mounted) return;
-                      final deliveryMethodId =
-                          state.selectedDeliveryMethodIdForDraft;
-                      final deliveryMethod =
-                          state.selectedDeliveryMethodForDraft;
-                      if (deliveryMethodId.isNotEmpty) {
-                        _selectDeliveryMethod(
-                          deliveryMethodId,
-                          deliveryMethod.isNotEmpty
-                              ? deliveryMethod
-                              : 'Delivery',
-                        );
-                      } else {
-                        setState(() {});
-                      }
-                    },
-                  ),
-                ] else if (!isCompact)
+                  )
+                else if (!isCompact)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -1566,6 +1516,198 @@ class _RestaurantPageState extends State<RestaurantPage> {
               const SizedBox(width: 6),
               const LiveClock(),
             ],
+          ] else if (isMobile) ...[
+            const SizedBox(width: 6),
+            const SyncButton(
+              showTooltip: true,
+              showText: false,
+            ),
+            const SizedBox(width: 4),
+            _buildConnectivityIndicator(isCompact: true),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildCounterContextChips({
+    required CustomerSelectionProvider customerSelectionProvider,
+    required bool isCompact,
+    double? chipMaxWidth,
+  }) {
+    return [
+      _buildTopBarContextChip(
+        icon: Icons.restaurant_rounded,
+        label: _counterDiningLabel(fallback: 'Dining'),
+        color: const Color(0xFF2563EB),
+        isSelected: _hasCounterDiningSelection,
+        onTap: _showDiningSelectionModal,
+        isCompact: isCompact,
+        maxWidth: chipMaxWidth,
+      ),
+      _buildTopBarContextChip(
+        icon: Icons.person_rounded,
+        label: _counterCustomerLabel(
+          customerSelectionProvider,
+          fallback: 'Customer',
+        ),
+        color: const Color(0xFF7C3AED),
+        isSelected: _hasCounterCustomer(customerSelectionProvider),
+        isCompact: isCompact,
+        maxWidth: chipMaxWidth,
+        onTap: () async {
+          final state = _orderPanelKey.currentState;
+          if (state == null) {
+            showScaffoldError(
+              context: context,
+              message: 'Customer selector is not ready yet',
+            );
+            return;
+          }
+          await state.showCustomerSelectionModal();
+          if (mounted) setState(() {});
+        },
+      ),
+      _buildTopBarContextChip(
+        icon: Icons.local_shipping_rounded,
+        label: _counterDeliveryLabel(fallback: 'Delivery'),
+        color: const Color(0xFF059669),
+        isSelected: _hasCounterDeliverySelection,
+        isCompact: isCompact,
+        maxWidth: chipMaxWidth,
+        onTap: () async {
+          final state = _orderPanelKey.currentState;
+          if (state == null) {
+            showScaffoldError(
+              context: context,
+              message: 'Delivery selector is not ready yet',
+            );
+            return;
+          }
+          await state.showDeliverySelectionModalFromParent();
+          if (!mounted) return;
+          final deliveryMethodId = state.selectedDeliveryMethodIdForDraft;
+          final deliveryMethod = state.selectedDeliveryMethodForDraft;
+          if (deliveryMethodId.isNotEmpty) {
+            _selectDeliveryMethod(
+              deliveryMethodId,
+              deliveryMethod.isNotEmpty ? deliveryMethod : 'Delivery',
+            );
+          } else {
+            setState(() {});
+          }
+        },
+      ),
+    ];
+  }
+
+  /// Two-row top bar for phones: title + actions, then a horizontally
+  /// scrollable context-chip rail. No tables-panel toggle here — that
+  /// only affects the desktop layout.
+  Widget _buildMobileTopBar({
+    required CustomerSelectionProvider customerSelectionProvider,
+    required bool isCounterEnabled,
+    required String title,
+    required String contextLabel,
+    required IconData contextIcon,
+  }) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s15,
+                    0.30,
+                    const Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              if (widget.allowCounterBillingFromAttender)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  constraints:
+                      const BoxConstraints(minWidth: 30, minHeight: 30),
+                  icon: const Icon(
+                    Icons.add_shopping_cart_rounded,
+                    size: 18,
+                    color: Color(0xFF2563EB),
+                  ),
+                  tooltip: 'New Order',
+                  onPressed: _startNewCounterOrder,
+                ),
+              const SyncButton(
+                showTooltip: true,
+                showText: false,
+              ),
+              const SizedBox(width: 4),
+              _buildConnectivityIndicator(isCompact: true),
+            ],
+          ),
+          if (isCounterEnabled) ...[
+            const SizedBox(height: 6),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final chip in _buildCounterContextChips(
+                    customerSelectionProvider: customerSelectionProvider,
+                    isCompact: true,
+                    chipMaxWidth: 200,
+                  )) ...[
+                    chip,
+                    const SizedBox(width: 6),
+                  ],
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  contextIcon,
+                  size: 14,
+                  color: const Color(0xFF2563EB),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    contextLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s12,
+                      0.21,
+                      const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ),
@@ -1864,6 +2006,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     required bool isSelected,
     required VoidCallback onTap,
     bool isCompact = false,
+    double? maxWidth,
   }) {
     return Material(
       color: Colors.transparent,
@@ -1871,7 +2014,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          constraints: BoxConstraints(maxWidth: isCompact ? 108 : 150),
+          constraints:
+              BoxConstraints(maxWidth: maxWidth ?? (isCompact ? 108 : 150)),
           padding: EdgeInsets.symmetric(
             horizontal: isCompact ? 8 : 10,
             vertical: isCompact ? 4 : 5,
@@ -1984,33 +2128,37 @@ class _RestaurantPageState extends State<RestaurantPage> {
           showTooltip: true,
           showText: false,
         ),
-        Consumer<BillingProvider>(
-          builder: (context, billingProvider, child) {
-            final hasInternet = billingProvider.hasInternet;
-            return Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: isCompact ? 3 : 4,
-                vertical: isCompact ? 3 : 4,
-              ),
-              decoration: BoxDecoration(
-                color: hasInternet
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: hasInternet ? Colors.green : Colors.red,
-                  width: 1,
-                ),
-              ),
-              child: Icon(
-                hasInternet ? Icons.wifi : Icons.wifi_off,
-                size: isCompact ? 14 : 16,
-                color: hasInternet ? Colors.green : Colors.red,
-              ),
-            );
-          },
-        ),
+        _buildConnectivityIndicator(isCompact: isCompact),
       ],
+    );
+  }
+
+  Widget _buildConnectivityIndicator({bool isCompact = false}) {
+    return Consumer<BillingProvider>(
+      builder: (context, billingProvider, child) {
+        final hasInternet = billingProvider.hasInternet;
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 3 : 4,
+            vertical: isCompact ? 3 : 4,
+          ),
+          decoration: BoxDecoration(
+            color: hasInternet
+                ? Colors.green.withOpacity(0.1)
+                : Colors.red.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: hasInternet ? Colors.green : Colors.red,
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            hasInternet ? Icons.wifi : Icons.wifi_off,
+            size: isCompact ? 14 : 16,
+            color: hasInternet ? Colors.green : Colors.red,
+          ),
+        );
+      },
     );
   }
 
@@ -2127,7 +2275,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
   Widget _buildMobileLayout(Size screenSize) {
     return Column(
       children: [
-        _buildAttenderTopBar(isCompact: true),
+        _buildAttenderTopBar(isCompact: true, isMobile: true),
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
@@ -2136,7 +2284,151 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 : _buildOrdersView(screenSize),
           ),
         ),
+        _buildMobileBottomNav(),
       ],
+    );
+  }
+
+  Widget _buildMobileBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(
+          top: BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            _buildMobileNavItem(
+              icon: Icons.table_restaurant_rounded,
+              label: 'Tables',
+              isSelected: _currentMobileView == MobileView.tables,
+              onTap: () {
+                if (_currentMobileView != MobileView.tables) {
+                  setState(() => _currentMobileView = MobileView.tables);
+                }
+              },
+            ),
+            _buildMobileNavItem(
+              icon: Icons.restaurant_menu_rounded,
+              label: 'Menu',
+              isSelected: false,
+              onTap: () => _showProductsBottomSheet(context),
+            ),
+            Consumer<LocalProductProvider>(
+              builder: (context, localProductProvider, _) {
+                final itemCount = localProductProvider.cartItems.fold<int>(
+                  0,
+                  (sum, item) => sum + item.quantity.toInt(),
+                );
+                return _buildMobileNavItem(
+                  icon: Icons.receipt_long_rounded,
+                  label: 'Order',
+                  isSelected: _currentMobileView == MobileView.orders,
+                  badgeCount: itemCount,
+                  onTap: () {
+                    if (_currentMobileView != MobileView.orders) {
+                      setState(() => _currentMobileView = MobileView.orders);
+                    }
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileNavItem({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    int badgeCount = 0,
+  }) {
+    final color =
+        isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B);
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF2563EB).withOpacity(0.10)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Icon(icon, color: color, size: 22),
+                    ),
+                    if (badgeCount > 0)
+                      Positioned(
+                        top: -4,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
+                          constraints: const BoxConstraints(minWidth: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF233C),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: Colors.white, width: 1),
+                          ),
+                          child: Text(
+                            badgeCount > 99 ? '99+' : '$badgeCount',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: buildCustomStyle(
+                    isSelected
+                        ? FontWeightManager.bold
+                        : FontWeightManager.medium,
+                    FontSize.s11,
+                    0.21,
+                    color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -2145,95 +2437,24 @@ class _RestaurantPageState extends State<RestaurantPage> {
     return Column(
       key: const ValueKey('tables_view'),
       children: [
-        // Header
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.table_restaurant,
-                color: const Color(0xFF2563EB),
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Select a Table',
-                style: buildCustomStyle(
-                  FontWeightManager.bold,
-                  FontSize.s20,
-                  0.30,
-                  const Color(0xFF1E293B),
-                ),
-              ),
-              const Spacer(),
-              // Menu button
-              IconButton(
-                icon:
-                    const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
-                onPressed: () => _showProductsBottomSheet(context),
-                tooltip: 'Menu',
-              ),
-            ],
-          ),
-        ),
-        // Tables Panel - full page
+        // Tables Panel - full page (has its own "Tables" header, so no
+        // extra page header here — vertical space is precious on phones)
         Expanded(
           child: TablesPanel(
+            isMobile: true,
             activeTableId: _activeTableId,
             onSelect: (id) {
-              if (!_isCounterBillingMode) {
-                _autoSaveCurrentTableBeforeSwitch();
-              }
-              // Get table name from provider
-              final tableProvider =
-                  Provider.of<TableProvider>(context, listen: false);
-              final selectedTable = tableProvider.tables.firstWhere(
-                (table) => table.id == id,
-                orElse: () => tableProvider.tables.first,
-              );
-              setState(() {
-                _activeTableId = id;
-                _selectedTableName = selectedTable.name;
-                _selectedDeliveryMethodId = null;
-                _selectedDeliveryMethodName = null;
-                _currentMobileView =
-                    MobileView.orders; // Navigate to orders view
-              });
+              // Reuse the shared selection logic (auto-save, payment modal
+              // reset, current-order tab) then navigate to the orders view.
+              _selectDiningTable(id);
+              setState(() => _currentMobileView = MobileView.orders);
             },
             selectedDeliveryMethodId: _selectedDeliveryMethodId,
             showDeliveryMethods: _isCounterBillingMode,
             onDeliveryMethodSelected: (id, name) {
-              if (id.isEmpty) {
-                setState(() {
-                  _selectedDeliveryMethodId = null;
-                  _selectedDeliveryMethodName = null;
-                });
-                return;
-              }
-              if (!_isCounterBillingMode) {
-                _autoSaveCurrentTableBeforeSwitch();
-              }
-              setState(() {
-                _selectedDeliveryMethodId = id;
-                _selectedDeliveryMethodName = name;
-                _activeTableId = null;
-                _selectedTableName = null;
-                _currentMobileView = MobileView.orders;
-              });
-              final orderPanelState = _orderPanelKey.currentState;
-              orderPanelState?.resetPaymentModalFlag();
-              if (!(orderPanelState?.isViewingCounterListTab ?? false)) {
-                orderPanelState?.showCurrentOrderTab();
+              _selectDeliveryMethod(id, name);
+              if (id.isNotEmpty) {
+                setState(() => _currentMobileView = MobileView.orders);
               }
             },
             screenSize: screenSize,
@@ -2248,49 +2469,62 @@ class _RestaurantPageState extends State<RestaurantPage> {
     return Column(
       key: const ValueKey('orders_view'),
       children: [
-        // Header with back button
+        // Header with back button — styled as an inset card so it aligns
+        // with the top bar above and the order panel below.
         Container(
-          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           decoration: BoxDecoration(
             color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Row(
             children: [
               IconButton(
+                visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
+                tooltip: 'Back to tables',
                 onPressed: () {
                   setState(() {
                     _currentMobileView = MobileView.tables;
                   });
                 },
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               Icon(
-                Icons.receipt_long,
+                _activeTableId != null
+                    ? Icons.table_restaurant_rounded
+                    : _selectedDeliveryMethodId != null
+                        ? Icons.local_shipping_rounded
+                        : Icons.receipt_long,
                 color: const Color(0xFF2563EB),
-                size: 24,
+                size: 22,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  _selectedTableName ?? 'Orders',
+                  _selectedTableName ?? _selectedDeliveryMethodName ?? 'Orders',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
-                    FontSize.s20,
+                    FontSize.s16,
                     0.30,
                     const Color(0xFF1E293B),
                   ),
                 ),
               ),
-              // Menu button
+              // Menu shortcut (also available in the bottom nav)
               IconButton(
+                visualDensity: VisualDensity.compact,
                 icon:
                     const Icon(Icons.restaurant_menu, color: Color(0xFF2563EB)),
                 onPressed: () => _showProductsBottomSheet(context),
@@ -2365,7 +2599,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   children: [
                     // Drag handle
                     Container(
-                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      margin: const EdgeInsets.only(top: 10, bottom: 6),
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
@@ -2373,14 +2607,30 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    // Header with only close button
+                    // Header
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 8, 4),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          const Icon(
+                            Icons.restaurant_menu_rounded,
+                            color: Color(0xFF2563EB),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Menu',
+                              style: buildCustomStyle(
+                                FontWeightManager.bold,
+                                FontSize.s16,
+                                0.30,
+                                const Color(0xFF1E293B),
+                              ),
+                            ),
+                          ),
                           IconButton(
+                            visualDensity: VisualDensity.compact,
                             icon: const Icon(Icons.close),
                             onPressed: () => Navigator.pop(context),
                           ),
@@ -2405,6 +2655,55 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         screenSize: MediaQuery.of(context).size,
                         selectedOrder: _selectedOrderFromOrderPanel,
                       ),
+                    ),
+                    // Pinned "View Order" footer (local cart only; hidden
+                    // while editing an existing order, which adds via API)
+                    Consumer<LocalProductProvider>(
+                      builder: (context, localProductProvider, _) {
+                        final itemCount =
+                            localProductProvider.cartItems.fold<int>(
+                          0,
+                          (sum, item) => sum + item.quantity.toInt(),
+                        );
+                        if (itemCount == 0) return const SizedBox.shrink();
+                        return SafeArea(
+                          top: false,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 46,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  setState(() {
+                                    _currentMobileView = MobileView.orders;
+                                  });
+                                },
+                                icon: const Icon(
+                                  Icons.receipt_long_rounded,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  'View Order  •  $itemCount item${itemCount == 1 ? '' : 's'}',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2563EB),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),

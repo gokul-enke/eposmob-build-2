@@ -16,6 +16,10 @@ class TablesPanel extends StatelessWidget {
   final String? activeTableId;
   final ValueChanged<String> onSelect;
   final bool isCompact;
+
+  /// Phone layout: auto-fit compact table cards and a horizontal
+  /// delivery-method chip rail at the top instead of the bottom block.
+  final bool isMobile;
   final Size screenSize;
   final String? selectedDeliveryMethodId;
   final bool showDeliveryMethods;
@@ -26,6 +30,7 @@ class TablesPanel extends StatelessWidget {
     required this.activeTableId,
     required this.onSelect,
     this.isCompact = false,
+    this.isMobile = false,
     required this.screenSize,
     this.selectedDeliveryMethodId,
     this.showDeliveryMethods = true,
@@ -166,6 +171,10 @@ class TablesPanel extends StatelessWidget {
                   ],
                 ),
               ),
+              // On mobile the delivery methods sit above the grid as a
+              // horizontal chip rail so the tables get the remaining space.
+              if (isMobile && showDeliveryMethods)
+                _buildDeliveryMethodsSection(context),
               // Tables list/grid
               Expanded(
                 child: RefreshIndicator(
@@ -173,7 +182,8 @@ class TablesPanel extends StatelessWidget {
                   child: _buildTablesView(tables, context), // Pass context here
                 ),
               ),
-              if (showDeliveryMethods) _buildDeliveryMethodsSection(context),
+              if (!isMobile && showDeliveryMethods)
+                _buildDeliveryMethodsSection(context),
             ],
           ),
         );
@@ -246,6 +256,61 @@ class TablesPanel extends StatelessWidget {
 
         debugPrint(
             '🚚 [TablesPanel] Rendering ${methods.length} delivery method chips (selected=$selectedDeliveryMethodId)');
+
+        if (isMobile) {
+          return Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.delivery_dining,
+                    color: const Color(0xFF1A56DB),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  if (selectedDeliveryMethodId != null) ...[
+                    GestureDetector(
+                      onTap: () => onDeliveryMethodSelected('', ''),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  for (final method in methods) ...[
+                    _buildDeliveryChip(
+                      method.id,
+                      method.name,
+                      horizontalPadding: 14,
+                      verticalPadding: 8,
+                      fontSize: FontSize.s12,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
+
         return Container(
           decoration: BoxDecoration(
             border: Border(
@@ -301,57 +366,71 @@ class TablesPanel extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: methods.map((method) {
-                  final isSelected = selectedDeliveryMethodId == method.id;
-                  return GestureDetector(
-                    onTap: () =>
-                        onDeliveryMethodSelected(method.id, method.name),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isCompact ? 8 : 10,
-                        vertical: isCompact ? 5 : 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF1A56DB)
-                            : const Color(0xFF1A56DB).withOpacity(0.07),
-                        border: Border.all(
-                          color: isSelected
-                              ? const Color(0xFF1A56DB)
-                              : const Color(0xFF1A56DB).withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color:
-                                      const Color(0xFF1A56DB).withOpacity(0.25),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : [],
-                      ),
-                      child: Text(
-                        method.name,
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          isCompact ? FontSize.s10 : FontSize.s11,
-                          0.21,
-                          isSelected ? Colors.white : const Color(0xFF1A56DB),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  );
-                }).toList(),
+                children: methods
+                    .map((method) => _buildDeliveryChip(
+                          method.id,
+                          method.name,
+                          horizontalPadding: isCompact ? 8 : 10,
+                          verticalPadding: isCompact ? 5 : 6,
+                          fontSize: isCompact ? FontSize.s10 : FontSize.s11,
+                        ))
+                    .toList(),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDeliveryChip(
+    String id,
+    String name, {
+    required double horizontalPadding,
+    required double verticalPadding,
+    required double fontSize,
+  }) {
+    final isSelected = selectedDeliveryMethodId == id;
+    return GestureDetector(
+      onTap: () => onDeliveryMethodSelected(id, name),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF1A56DB)
+              : const Color(0xFF1A56DB).withOpacity(0.07),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF1A56DB)
+                : const Color(0xFF1A56DB).withOpacity(0.3),
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF1A56DB).withOpacity(0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
+        ),
+        child: Text(
+          name,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            fontSize,
+            0.21,
+            isSelected ? Colors.white : const Color(0xFF1A56DB),
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     );
   }
 
@@ -378,11 +457,119 @@ class TablesPanel extends StatelessWidget {
     }
 
     // Determine layout based on screen size and compact mode
-    if (isCompact) {
+    if (isMobile) {
+      return _buildMobileTableGrid(tables, context);
+    } else if (isCompact) {
       return _buildCompactTablesList(tables, context); // Pass context here
     } else {
       return _buildTableGrid(tables, context); // Pass context here
     }
+  }
+
+  Widget _buildMobileTableGrid(List<TableModel> tables, BuildContext context) {
+    return GridView.builder(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 130,
+        mainAxisExtent: 104,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+      ),
+      itemCount: tables.length,
+      itemBuilder: (context, index) {
+        final table = tables[index];
+        final isActive = table.id == activeTableId;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => onSelect(table.id),
+            borderRadius: BorderRadius.circular(14),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                color: _getTableBackgroundColor(table.status),
+                border: isActive
+                    ? Border.all(color: const Color(0xFF2563EB), width: 2.5)
+                    : Border.all(color: Colors.grey.shade200, width: 1),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: isActive
+                        ? const Color(0xFF2563EB).withOpacity(0.15)
+                        : Colors.black.withOpacity(0.04),
+                    blurRadius: isActive ? 10 : 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: _tableColor(table.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.table_restaurant,
+                      color: _tableColor(table.status),
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Text(
+                      table.name,
+                      style: buildCustomStyle(FontWeightManager.bold,
+                          FontSize.s13, 0.21, const Color(0xFF1E293B)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _tableColor(table.status).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _tableColor(table.status),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _getStatusText(table.status),
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s9,
+                              0.14,
+                              _tableColor(table.status)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildCompactTablesList(
