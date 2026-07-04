@@ -44,6 +44,8 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
   GetProductListFileModelData? selctedImageFile;
   String? _selectedImagePath;
   String? _selectedIconPath;
+  bool _isSellable = true;
+  bool _isPurchasable = true;
 
   void getData() {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
@@ -109,6 +111,10 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
       categoryIDController.text = viewCategory?.id?.toString() ?? '';
       imageFilePathController.text = viewCategory?.categoryImage?.toString() ?? '';
       iconFilePathController.text = viewCategory?.categoryIcon?.toString() ?? '';
+      setState(() {
+        _isSellable = viewCategory?.isSellable ?? true;
+        _isPurchasable = viewCategory?.isPurchasable ?? true;
+      });
       // selectedIconIndex = int.parse(viewCategory.categoryIcon!);
       // selectedImageIndex = int.parse(viewCategory.categoryImage!);
 
@@ -217,13 +223,12 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
+                           Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  SizedBox(
-                                    height: size.height * .17,
+                                  Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         BuildTextTile(
                                           isStarRed: false,
@@ -236,100 +241,42 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                             Colors.black.withOpacity(0.6),
                                           ),
                                         ),
-                                        //**************** For Category Listing ****************
                                         BuildBoxShadowContainer(
                                           circleRadius: 7,
                                           alignment: Alignment.centerLeft,
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 5, vertical: 0),
-                                          padding:
-                                              const EdgeInsets.only(left: 15),
-                                          height: size.height * .07,
-                                          width: size.width / 3,
-                                          child:
-                                              DropdownButtonFormField<Category>(
-                                            decoration: const InputDecoration(
-                                              border: InputBorder
-                                                  .none, // Remove the underline
-                                            ),
-                                            value: categoryProvider
-                                                        .selectedCategoryIndex >=
-                                                    0
-                                                ? categoryList![categoryProvider
-                                                    .selectedCategoryIndex]
+                                          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                                          padding: const EdgeInsets.only(left: 15),
+                                          height: 50,
+                                          child: DropdownButtonFormField<Category>(
+                                            decoration: const InputDecoration(border: InputBorder.none),
+                                            isExpanded: true,
+                                            value: categoryProvider.selectedCategoryIndex >= 0
+                                                ? categoryList![categoryProvider.selectedCategoryIndex]
                                                 : null,
-                                            hint: Text(
-                                              'Select Category',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                            ),
-                                            items: categoryList!
-                                                .map((Category category) {
-                                                  return DropdownMenuItem<
-                                                          Category>(
-                                                      value: category,
-                                                      child: category
-                                                                  .categoryName ==
-                                                              "ALL"
-                                                          ? Text(
-                                                              ' New Category',
-                                                              style:
-                                                                  buildCustomStyle(
-                                                                FontWeightManager
-                                                                    .medium,
-                                                                FontSize.s12,
-                                                                0.27,
-                                                                ColorManager
-                                                                    .textColor
-                                                                    .withOpacity(
-                                                                        .5),
-                                                              ),
-                                                            )
-                                                          : Text(
-                                                              category.categoryName ??
-                                                                  '',
-                                                              style:
-                                                                  buildCustomStyle(
-                                                                FontWeightManager
-                                                                    .medium,
-                                                                FontSize.s12,
-                                                                0.27,
-                                                                ColorManager
-                                                                    .textColor
-                                                                    .withOpacity(
-                                                                        .5),
-                                                              ),
-                                                            ));
-                                                })
-                                                .toSet()
-                                                .toList(),
-                                            onChanged:
-                                                (Category? selectedCategory) {
+                                            hint: Text('Select Category',
+                                                style: buildCustomStyle(FontWeightManager.medium,
+                                                    FontSize.s12, 0.27, ColorManager.textColor.withOpacity(.5))),
+                                            items: categoryList!.map((Category category) {
+                                              return DropdownMenuItem<Category>(
+                                                value: category,
+                                                child: Text(
+                                                  category.categoryName == "ALL" ? 'New Category' : category.categoryName ?? '',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: buildCustomStyle(FontWeightManager.medium,
+                                                      FontSize.s12, 0.27, ColorManager.textColor.withOpacity(.5)),
+                                                ),
+                                              );
+                                            }).toSet().toList(),
+                                            onChanged: (Category? selectedCategory) {
                                               if (selectedCategory != null) {
-                                                // Update the selected category in the provider
                                                 categoryProvider.selectCategory(
-                                                  categoryList.indexOf(
-                                                      selectedCategory),
-                                                  selectedCategory
-                                                          .categoryName ??
-                                                      '',
-                                                  selectedCategory
-                                                          .productsCount ??
-                                                      0,
+                                                  categoryList.indexOf(selectedCategory),
+                                                  selectedCategory.categoryName ?? '',
+                                                  selectedCategory.productsCount ?? 0,
                                                 );
-                                                debugPrint(
-                                                    "onChanged ${selectedCategory.categoryId}");
-                                                categoryIDController.text =
-                                                    "${selectedCategory.categoryId}";
-                                                debugPrint(
-                                                    "categoryIdController ${categoryIDController.text}");
-                                                categoryProvider.setParentCategory(
-                                                    "${selectedCategory.categoryId ?? 0}");
+                                                categoryIDController.text = "${selectedCategory.categoryId}";
+                                                categoryProvider.setParentCategory("${selectedCategory.categoryId ?? 0}");
                                               }
                                             },
                                           ),
@@ -337,29 +284,29 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       ],
                                     ),
                                   ),
-                                  buildColumnWidgetForTextFields(
-                                    onchanged: ((value) {
-                                      categoryNameEnglishController.text = value ?? '';
-                                      categorySlugController.text = categoryNameController
-                                          .text
-                                          .toLowerCase() // Convert to lowercase
-                                          .replaceAll(RegExp(r'\s+'),
-                                              '-') // Replace spaces with hyphens
-                                          .replaceAll(RegExp(r'[^a-z0-9-]'),
-                                              ''); // Remove non-alphanumeric characters except hyphens
-                                    }),
-                                    isLeft: false,
-                                    readOnly: false,
-                                    controller: categoryNameController,
-                                    size: size,
-                                    title: 'Category Name',
-                                    hintText: 'Category Name',
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: buildColumnWidgetForTextFields(
+                                      onchanged: (value) {
+                                        categoryNameEnglishController.text = value ?? '';
+                                        categorySlugController.text = categoryNameController.text
+                                            .toLowerCase()
+                                            .replaceAll(RegExp(r'\s+'), '-')
+                                            .replaceAll(RegExp(r'[^a-z0-9-]'), '');
+                                      },
+                                      isLeft: false,
+                                      readOnly: false,
+                                      controller: categoryNameController,
+                                      size: size,
+                                      title: 'Category Name',
+                                      hintText: 'Category Name',
+                                    ),
                                   ),
-                                  SizedBox(
-                                    height: size.height * .17,
+                                  const SizedBox(width: 16),
+                                  Expanded(
                                     child: buildColumnWidgetForTextFields(
                                       onchanged: (value) {},
-                                      isLeft: true,
+                                      isLeft: false,
                                       readOnly: true,
                                       controller: categoryNameEnglishController,
                                       size: size,
@@ -369,157 +316,84 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 16),
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  SizedBox(
-                                    height: size.height * .17,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        BuildTextTile(
-                                          isStarRed: false,
-                                          isTextField: true,
-                                          title: "Select Parent Category",
-                                          textStyle: buildCustomStyle(
-                                            FontWeightManager.regular,
-                                            FontSize.s14,
-                                            0.27,
-                                            Colors.black.withOpacity(0.6),
-                                          ),
-                                        ),
-                                        //**************** For Category Listing ****************
-                                        BuildBoxShadowContainer(
-                                          circleRadius: 7,
-                                          alignment: Alignment.centerLeft,
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 5, vertical: 0),
-                                          padding:
-                                              const EdgeInsets.only(left: 15),
-                                          height: size.height * .07,
-                                          width: size.width / 3,
-                                          child:
-                                              DropdownButtonFormField<Category>(
-                                            decoration: const InputDecoration(
-                                              border: InputBorder
-                                                  .none, // Remove the underline
-                                            ),
-                                            value: categoryProvider
-                                                        .selectedCategoryIndex >=
-                                                    0
-                                                ? categoryList![categoryProvider
-                                                    .selectedCategoryIndex]
-                                                : null,
-                                            hint: Text(
-                                              'Select Category',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.medium,
-                                                FontSize.s12,
-                                                0.27,
-                                                ColorManager.textColor
-                                                    .withOpacity(.5),
-                                              ),
-                                            ),
-                                            items: categoryList!
-                                                .map((Category category) {
-                                                  return DropdownMenuItem<
-                                                          Category>(
-                                                      value: category,
-                                                      child: category
-                                                                  .categoryName ==
-                                                              "ALL"
-                                                          ? Text(
-                                                              ' New Category',
-                                                              style:
-                                                                  buildCustomStyle(
-                                                                FontWeightManager
-                                                                    .medium,
-                                                                FontSize.s12,
-                                                                0.27,
-                                                                ColorManager
-                                                                    .textColor
-                                                                    .withOpacity(
-                                                                        .5),
-                                                              ),
-                                                            )
-                                                          : Text(
-                                                              category.categoryName ??
-                                                                  '',
-                                                              style:
-                                                                  buildCustomStyle(
-                                                                FontWeightManager
-                                                                    .medium,
-                                                                FontSize.s12,
-                                                                0.27,
-                                                                ColorManager
-                                                                    .textColor
-                                                                    .withOpacity(
-                                                                        .5),
-                                                              ),
-                                                            ));
-                                                })
-                                                .toSet()
-                                                .toList(),
-                                            onChanged:
-                                                (Category? selectedCategory) {
-                                              if (selectedCategory != null) {
-                                                // Update the selected category in the provider
-                                                categoryProvider.selectCategory(
-                                                  categoryList.indexOf(
-                                                      selectedCategory),
-                                                  selectedCategory
-                                                          .categoryName ??
-                                                      '',
-                                                  selectedCategory
-                                                          .productsCount ??
-                                                      0,
-                                                );
-                                                debugPrint(
-                                                    "onChanged ${selectedCategory.categoryId}");
-                                                categoryIDController.text =
-                                                    "${selectedCategory.categoryId}";
-                                                debugPrint(
-                                                    "categoryIdController ${categoryIDController.text}");
-                                                categoryProvider.setParentCategory(
-                                                    "${selectedCategory.categoryId ?? 0}");
-                                              }
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  buildColumnWidgetForTextFields(
-                                    onchanged: (value) {},
-                                    isLeft: true,
-                                    readOnly: false,
-                                    controller: categoryNameHindiController,
-                                    size: size,
-                                    title: "Category Name - Hindi(IND)*",
-                                    hintText: 'Enter...',
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  buildColumnWidgetForTextFields(
+                                  Expanded(
+                                    child: buildColumnWidgetForTextFields(
                                       onchanged: (value) {},
                                       isLeft: false,
                                       controller: categorySlugController,
                                       size: size,
                                       title: "Category Slug",
                                       hintText: 'Url Slug',
-                                      readOnly: true),
-                                  buildColumnWidgetForTextFields(
+                                      readOnly: true,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: buildColumnWidgetForTextFields(
                                       onchanged: (value) {},
-                                      isLeft: true,
+                                      isLeft: false,
+                                      readOnly: false,
+                                      controller: categoryNameHindiController,
+                                      size: size,
+                                      title: "Category Name - Hindi(IND)",
+                                      hintText: 'Enter...',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: buildColumnWidgetForTextFields(
+                                      onchanged: (value) {},
+                                      isLeft: false,
                                       controller: categoryNameArabicController,
                                       size: size,
-                                      title: "Category Name - Arabic(AR)*",
+                                      title: "Category Name - Arabic(AR)",
                                       hintText: 'Enter...',
-                                      readOnly: false),
+                                      readOnly: false,
+                                    ),
+                                  ),
                                 ],
                               ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Switch(
+                                          value: _isSellable,
+                                          onChanged: (val) => setState(() => _isSellable = val),
+                                          activeColor: ColorManager.kPrimaryColor,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text('Sellable',
+                                            style: buildCustomStyle(FontWeightManager.regular,
+                                                FontSize.s14, 0.27, Colors.black.withOpacity(0.6))),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Switch(
+                                          value: _isPurchasable,
+                                          onChanged: (val) => setState(() => _isPurchasable = val),
+                                          activeColor: ColorManager.kPrimaryColor,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text('Purchasable',
+                                            style: buildCustomStyle(FontWeightManager.regular,
+                                                FontSize.s14, 0.27, Colors.black.withOpacity(0.6))),
+                                      ],
+                                    ),
+                                  ),
+                                  const Expanded(child: SizedBox()),
+                                ],
+                              ),
+                              
                               /*
                               Row(
                                 children: [
@@ -714,6 +588,8 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                               iconPath:
                                                   iconFilePathController.text,
                                               accessToken: accessToken ?? "",
+                                              isSellable: _isSellable,
+                                              isPurchasable: _isPurchasable,
                                             )
                                                 .then((value) {
                                               if (value["status"] ==

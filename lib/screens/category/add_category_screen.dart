@@ -71,6 +71,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   GetProductListFileModelData? selctedImageFile;
   String? _selectedImagePath;
   String? _selectedIconPath;
+  bool _isSellable = true;
+  bool _isPurchasable = true;
   @override
   void initState() {
     super.initState();
@@ -151,7 +153,10 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                 categoryNameArabic: categoryNameArabicController.text,
                 imagePath: imageFilePathController.text,
                 iconPath: iconFilePathController.text,
-                accessToken: accessToken ?? "")
+                accessToken: accessToken ?? "",
+                isSellable: _isSellable,
+                isPurchasable: _isPurchasable,
+            )
             .then((value) async {
           if (value["status"] == "success") {
             if (!context.mounted) return;
@@ -161,6 +166,8 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
               context: context,
               message: '${value["message"]}',
             );
+
+            await categoryProvider.refreshCategories();
 
             clearText();
             sideBarController.index.value = 12;
@@ -630,6 +637,47 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                 ],
                               ),
                               */
+                              SizedBox(height: fieldGap),
+                              fieldPair(
+                                first: Row(
+                                    children: [
+                                      Switch(
+                                        value: _isSellable,
+                                        onChanged: (val) => setState(() => _isSellable = val),
+                                        activeColor: ColorManager.kPrimaryColor,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Sellable',
+                                        style: buildCustomStyle(
+                                          FontWeightManager.regular,
+                                          FontSize.s14,
+                                          0.27,
+                                          Colors.black.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                second: Row(
+                                  children: [
+                                    Switch(
+                                      value: _isPurchasable,
+                                      onChanged: (val) => setState(() => _isPurchasable = val),
+                                      activeColor: ColorManager.kPrimaryColor,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Purchasable',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s14,
+                                        0.27,
+                                        Colors.black.withOpacity(0.6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               const SizedBox(height: 25),
                               buildActionButtons(constraints.maxWidth),
                               const SizedBox(height: 25),

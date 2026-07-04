@@ -330,10 +330,18 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         children: [
           _buildHeader(provider),
           const SizedBox(height: 12),
-          if (!isPhone || _showFilters) ...[
-            _buildFiltersCard(),
+        if (!isPhone || _showFilters) ...[
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.55,
+              ),
+              child: SingleChildScrollView(
+                child: _buildFiltersCard(),
+              ),
+            ),
             const SizedBox(height: 12),
           ],
+          
           Expanded(
             child: PurchaseOrdersContentCard(
               padding: EdgeInsets.zero,
@@ -407,7 +415,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         children: [
           const PurchaseOrdersSectionTitle(title: 'Filters'),
           const SizedBox(height: 12),
-          if (isPhone) ...[
+         if (isPhone) ...[
             _buildFilterDropdown(
               "Supplier",
               supplierController,
@@ -428,15 +436,31 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             const SizedBox(height: 10),
             _buildFilterDate("To Date", toDateController, expanded: false),
             const SizedBox(height: 12),
-            CustomRoundButton(
-              title: "Reset",
-              boxColor: Colors.white,
-              textColor: ColorManager.kPrimaryColor,
-              borderColor: ColorManager.kPrimaryColor,
-              fct: resetSearch,
-              height: 44,
-              width: double.infinity,
-              fontSize: FontSize.s12,
+            Row(
+              children: [
+                Expanded(
+                  child: CustomRoundButton(
+                    title: "Reset",
+                    boxColor: Colors.white,
+                    textColor: ColorManager.kPrimaryColor,
+                    borderColor: ColorManager.kPrimaryColor,
+                    fct: resetSearch,
+                    height: 44,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: CustomRoundButton(
+                    title: "Apply",
+                    fct: _fetchPurchases,
+                    height: 44,
+                    width: double.infinity,
+                    fontSize: FontSize.s12,
+                  ),
+                ),
+              ],
             ),
           ] else ...[
             Row(

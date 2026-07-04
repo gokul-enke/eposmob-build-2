@@ -192,9 +192,12 @@ class _CalendarPickerTableCellState extends State<CalendarPickerTableCell> {
                       }
                       return Colors.white;
                     }),
-                    dayForegroundColor: MaterialStateProperty.resolveWith((states) {
+                   dayForegroundColor: MaterialStateProperty.resolveWith((states) {
                       if (states.contains(MaterialState.selected)) {
                         return Colors.white;
+                      }
+                      if (states.contains(MaterialState.disabled)) {
+                        return Colors.grey.shade300;
                       }
                       return ColorManager.textColor;
                     }),
