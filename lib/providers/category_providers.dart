@@ -196,6 +196,7 @@ class CategoryProvider extends ChangeNotifier {
     }
 
     try {
+      debugPrint("🌐 Category list URL: $uri");
       final response = await http.get(
         uri,
         headers: {
@@ -409,18 +410,20 @@ class CategoryProvider extends ChangeNotifier {
   //          *********************** ADD CATEGORY  API ***************************************************
 
   Future<dynamic> addCategory(
-      {required String categoryName,
-      required String slug,
-      required String parentCategory,
-      required String categoryNameEnglish,
-      required String categoryNameHindi,
-      required String categoryNameArabic,
-      required String imagePath,
-      required String iconPath,
-      required String accessToken,
-      String? description,
-      List<int>? productPropertyIds,
-      Map<String, String>? categoryLangNames}) async {
+    {required String categoryName,
+    required String slug,
+    required String parentCategory,
+    required String categoryNameEnglish,
+    required String categoryNameHindi,
+    required String categoryNameArabic,
+    required String imagePath,
+    required String iconPath,
+    required String accessToken,
+    bool isSellable = true,
+    bool isPurchasable = true,
+    String? description,
+    List<int>? productPropertyIds,
+    Map<String, String>? categoryLangNames}) async {
     // debugPrint("ADD CATEGORY  API parentCategory $parentCategory ");
     // debugPrint("ADD CATEGORY  API categoryName $categoryName ");
     // debugPrint("ADD CATEGORY  API slug $slug ");
@@ -442,7 +445,9 @@ class CategoryProvider extends ChangeNotifier {
       ..headers['X-Tenant'] = apiKey
       ..fields['name'] = categoryName
       ..fields['slug'] = slug
-      ..fields['sort_order'] = '0';
+      ..fields['sort_order'] = '0'
+      ..fields['is_sellable'] = isSellable ? '1' : '0'
+      ..fields['is_purchasable'] = isPurchasable ? '1' : '0';
 
     if (parentCategory.trim().isNotEmpty && parentCategory.trim() != '0') {
       request.fields['parent_category'] = parentCategory.trim();
@@ -599,8 +604,9 @@ class CategoryProvider extends ChangeNotifier {
       required String categoryNameArabic,
       required String imagePath,
       required String iconPath,
-      required String accessToken}) async {
-
+      required String accessToken,
+      bool isSellable = true,
+      bool isPurchasable = true}) async {
     final url = Uri.parse("${APPUrl.editCategoryUrl}/$categoryId");
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -615,8 +621,10 @@ class CategoryProvider extends ChangeNotifier {
       ..headers['X-Tenant'] = apiKey
       ..fields['name'] = categoryName
       ..fields['slug'] = slug
-      ..fields['sort_order'] = '0';
+            ..fields['sort_order'] = '0';
 
+    request.fields['is_sellable'] = isSellable ? '1' : '0';
+    request.fields['is_purchasable'] = isPurchasable ? '1' : '0';
     if (parentCategory.trim().isNotEmpty && parentCategory.trim() != '0') {
       request.fields['parent_category'] = parentCategory.trim();
     }

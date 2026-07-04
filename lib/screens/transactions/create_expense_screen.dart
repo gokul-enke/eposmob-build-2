@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_back_button.dart';
+import '../../newcomponents/custom_dialog_box.dart';
 import '../../newcomponents/custom_round_button.dart';
 import '../../newcomponents/custom_container_box.dart';
 import '../../newcomponents/custom_dropdown_with_search.dart';
@@ -125,13 +126,21 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
   }
 
   Future<void> _pickDate(BuildContext context) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day); // strip time component
+
     final DateTime? picked = await showAutoDismissDatePicker(
       context: context,
-      initialDate: selectedDate,
+      initialDate: selectedDate.isAfter(today) ? today : selectedDate,
       firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      lastDate: today,
     );
     if (picked != null && picked != selectedDate) {
+      // Safety guard: reject if future date somehow slips through
+      if (picked.isAfter(today)) {
+        showScaffoldError(context: context, message: "Future dates cannot be selected");
+        return;
+      }
       setState(() {
         selectedDate = picked;
       });
@@ -142,62 +151,31 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
     if (selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select an Expense Category")),
-      );
+      showScaffoldError(context: context, message: "Please select an Expense Category");
       return;
     }
     if (selectedDebitAccount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a Debit Account")),
-      );
+      showScaffoldError(context: context, message: "Please select a Debit Account");
       return;
     }
     if (selectedCreditAccount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a Credit Account")),
-      );
+      showScaffoldError(context: context, message: "Please select a Credit Account");
       return;
     }
     if (selectedPaymentMethod == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a Payment Method")),
-      );
-      return;
-    }
-
-    // Validation for cash/bank compatibility
-    final creditName = (selectedCreditAccount!['name']?.toString() ?? '').toLowerCase();
-    final isCashAccount = creditName.contains('cash');
-    final methodName = (selectedPaymentMethod!['name']?.toString() ?? '').toLowerCase();
-    final isCashMethod = methodName.contains('cash');
-    
-    if (isCashAccount && !isCashMethod) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("For Cash Account, only Cash payment method is allowed.")),
-      );
-      return;
-    }
-    if (!isCashAccount && isCashMethod) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("For Bank/other Account, Cash payment method is not allowed.")),
-      );
+      showScaffoldError(context: context, message: "Please select a Payment Method");
       return;
     }
 
     final double amount = double.tryParse(amountController.text) ?? 0.0;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid amount greater than zero")),
-      );
+      showScaffoldError(context: context, message: "Please enter a valid amount greater than zero");
       return;
     }
 
     final token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Authentication token missing. Please log in again.")),
-      );
+      showScaffoldError(context: context, message: "Authentication token missing. Please log in again.");
       return;
     }
 
@@ -224,9 +202,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
         _isSubmitting = false;
       });
       if (result['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Expense created successfully")),
-        );
+        showScaffold(context: context, message: "Expense created successfully");
         if (createAnother) {
           setState(() {
             descriptionController.clear();
@@ -243,30 +219,9 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
           sideBarController.index.value = 93;
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to create expense: ${result['message']}")),
-        );
+        showScaffoldError(context: context, message: result['message'] ?? 'Failed to create expense');
       }
     });
-  }
-
-  List<Map<String, dynamic>> _getFilteredPaymentMethods(ExpenseProvider provider) {
-    if (selectedCreditAccount == null) {
-      return provider.paymentMethodOptions;
-    }
-
-    final creditName =
-        (selectedCreditAccount!['name']?.toString() ?? '').toLowerCase();
-    final isCashAccount = creditName.contains('cash');
-
-    final filtered = provider.paymentMethodOptions.where((method) {
-      final methodName = (method['name']?.toString() ?? '').toLowerCase();
-      final isCashMethod = methodName.contains('cash');
-
-      return isCashAccount ? isCashMethod : !isCashMethod;
-    }).toList();
-
-    return filtered.isNotEmpty ? filtered : provider.paymentMethodOptions;
   }
 
   bool _isPhone(BuildContext context) =>
@@ -393,19 +348,6 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
             onChanged: (val) {
               setState(() {
                 selectedCreditAccount = val;
-                if (val != null && selectedPaymentMethod != null) {
-                  final creditName =
-                      (val['name']?.toString() ?? '').toLowerCase();
-                  final isCashAccount = creditName.contains('cash');
-                  final methodName = (selectedPaymentMethod!['name']
-                              ?.toString() ??
-                          '')
-                      .toLowerCase();
-                  final isCashMethod = methodName.contains('cash');
-                  if (isCashAccount != isCashMethod) {
-                    selectedPaymentMethod = null;
-                  }
-                }
               });
             },
           ),
@@ -419,7 +361,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
             focusNode: paymentMethodFocus,
             hint: "Select an option",
             value: selectedPaymentMethod,
-            items: _getFilteredPaymentMethods(provider),
+            items: provider.paymentMethodOptions,
             displayText: (item) => item['name'] ?? '',
             onChanged: (val) => setState(() => selectedPaymentMethod = val),
           ),
@@ -609,12 +551,23 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
   }
 
   Widget _buildDatePickerField(FocusNode focusNode) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     return SizedBox(
       height: 42,
       child: CalendarPickerTableCell(
         focusNode: focusNode,
         initialDate: selectedDate,
+        firstDate: DateTime(2000),
+        lastDate: today,
         onDateSelected: (DateTime date) {
+          if (date.isAfter(today)) {
+            showScaffoldError(
+              context: context,
+              message: "Future dates cannot be selected",
+            );
+            return;
+          }
           setState(() {
             selectedDate = date;
           });

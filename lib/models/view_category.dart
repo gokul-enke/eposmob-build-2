@@ -51,6 +51,8 @@ class ViewCategory {
   final String? categoryImageFullPath;
   final String? categoryIconFullPath;
   final CategoryNames? names;
+  final bool? isSellable;
+  final bool? isPurchasable;
 
   ViewCategory({
     this.id,
@@ -67,6 +69,8 @@ class ViewCategory {
     this.categoryIconFullPath,
     this.categoryImageFullPath,
     this.names,
+    this.isPurchasable,
+    this.isSellable,
   });
 
   factory ViewCategory.fromJson(Map<String, dynamic> json) => ViewCategory(
@@ -84,6 +88,8 @@ class ViewCategory {
         names: json["names"] == null
             ? null
             : CategoryNames.fromJson(json["names"]),
+        isPurchasable: json["is_purchasable"],
+        isSellable: json["is_sellable"],
         createdAt: json["created_at"] == null
             ? null
             : DateTime.parse(json["created_at"]),
@@ -107,6 +113,8 @@ class ViewCategory {
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
         "names": names?.toJson(),
+        "is_purchasable": isPurchasable,
+        "is_sellable": isSellable,
       };
 }
 
