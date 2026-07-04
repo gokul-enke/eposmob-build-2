@@ -146,8 +146,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
           message: response['message']?.toString() ?? 'Category added successfully',
         );
 
-        await categoryProvider.refreshCategories();
-        await categoryProvider.searchAllCategory(page: 1);
+        await categoryProvider.refreshManagementCategories();
 
         if (mounted) {
           Navigator.of(context).pop(true);

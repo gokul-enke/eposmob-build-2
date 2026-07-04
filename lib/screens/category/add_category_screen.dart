@@ -20,6 +20,7 @@ import '../../models/category_list.dart';
 
 import '../../providers/auth_model.dart';
 import '../../providers/category_providers.dart';
+import '../../providers/category_list_scope.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -76,6 +77,10 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   void initState() {
     super.initState();
     getData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CategoryProvider>(context, listen: false)
+          .ensureCategories(CategoryListScope.all);
+    });
   }
 
   void getData() {
@@ -230,7 +235,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
     );
 
     // Access the category list
-    List<Category>? categoryList = categoryProvider.category;
+    List<Category>? categoryList = categoryProvider.allCategories;
 
     void clearText() {
       categoryIDController.clear();

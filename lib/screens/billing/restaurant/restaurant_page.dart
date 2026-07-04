@@ -415,7 +415,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
     // Load categories if not already loaded
     if (!categoryProvider.isCategoriesLoaded) {
-      await categoryProvider.listAllCategory();
+      await categoryProvider.ensureCategoriesLoaded();
     }
 
     // Load all products (refreshProducts is void, so no await needed)

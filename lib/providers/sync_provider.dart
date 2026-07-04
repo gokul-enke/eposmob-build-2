@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import '../providers/local_product_provider.dart';
 import '../providers/category_providers.dart';
+import '../providers/category_list_scope.dart';
 import '../providers/document_config_provider.dart';
 import '../providers/invoice_provider.dart';
 import '../providers/purchase_provider.dart';
@@ -420,10 +421,9 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("📂 Syncing categories...");
       final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
       // Use the same loader as Category screen to keep lists consistent
-      await categoryProvider.searchAllCategory(
-        page: 1,
-        sellableOnly: true,
-        scopeToActiveStore: true,
+      await categoryProvider.ensureCategories(
+        CategoryListScope.sellable,
+        force: true,
       );
       debugPrint("✅ Categories synced successfully");
     } catch (e) {

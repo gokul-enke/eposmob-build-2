@@ -192,7 +192,7 @@ class _OfflineDataList extends StatelessWidget {
     final canClear = _canClear(syncProvider);
 
     final productCount = productProvider.sellableProducts.length;
-    final categoryCount = categoryProvider.categoryList?.length ?? 0;
+    final categoryCount = categoryProvider.sellableCategories.length;
     final deliveryCount = deliveryProvider.deliveryMethods.length;
     final paymentCount = invoiceProvider.getPaymentType?.length ?? 0;
     final customerCount =

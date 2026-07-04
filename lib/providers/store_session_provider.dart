@@ -213,9 +213,12 @@ class StoreSessionProvider extends ChangeNotifier {
 
       await _updateStatus('Refreshing product categories...');
       try {
-        await categoryProvider.listAllCategory(force: true);
-        final categoryCount = categoryProvider.categoryList?.length ?? 0;
-        await _updateStatus('Categories ready: $categoryCount found.');
+        await categoryProvider.prefetchAllScopesForStore(force: true);
+        final categoryCount = categoryProvider.sellableCategories.length;
+        await _updateStatus(
+          'Categories ready: $categoryCount sellable, '
+          '${categoryProvider.allCategories.length} total.',
+        );
       } catch (e) {
         debugPrint(
             'Warning: Failed to load categories after store selection: $e');
