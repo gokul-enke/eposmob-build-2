@@ -8,7 +8,7 @@ import 'classic_receipt_layout.dart';
 import 'premium_receipt_layout.dart';
 import 'premium1_receipt_layout.dart';
 import 'premium2_receipt_layout.dart';
-import 'supermarket En_receipt_layout.dart';
+import 'supermarket_en_receipt_layout.dart';
 import 'standard_receipt_layout.dart';
 import 'supermarket_receipt_layout.dart';
 import 'supermarket2_receipt_layout.dart';

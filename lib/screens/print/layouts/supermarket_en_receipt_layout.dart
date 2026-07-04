@@ -268,7 +268,7 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
   @override
   Future<pw.Document> buildPdf(ReceiptLayoutParams params) async {
     debugPrint(
-        "[PremiumReceiptLayout] buildPdf - delegating to StandardPrinter");
+        "[SupermarketEnReceiptLayout] buildPdf - delegating to StandardPrinter");
     return pw.Document();
   }
 
@@ -1600,7 +1600,8 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
         try {
           final Map<String, dynamic> paymentData =
               json.decode(params.paymentMethod!);
-          if (paymentData['isMultiPayment'] == true) {
+          if (paymentData['isMultiPayment'] == true &&
+              paymentData['amounts'] is Map) {
             isMultiPayment = true;
             final Map<String, dynamic> amounts = paymentData['amounts'];
             amounts.forEach((method, amount) {
