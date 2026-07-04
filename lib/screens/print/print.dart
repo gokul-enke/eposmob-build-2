@@ -1103,8 +1103,10 @@ class _PrintPageState extends State<PrintPage> {
 
     if (_isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
+        body: SafeArea(
+          child: Center(
+            child: CircularProgressIndicator(),
+          ),
         ),
       );
     }
@@ -1130,9 +1132,10 @@ class _PrintPageState extends State<PrintPage> {
         elevation: 0,
         backgroundColor: primaryColor,
       ),
-      body: Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      body: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Paper Size Selection Card
@@ -1412,6 +1415,7 @@ class _PrintPageState extends State<PrintPage> {
               ),
             ),
           ],
+        ),
         ),
       ),
       floatingActionButton: FloatingActionButton(

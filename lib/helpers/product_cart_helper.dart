@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:pos_machine/helpers/zero_price_quick_entry_helper.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:provider/provider.dart';
 
@@ -368,7 +369,9 @@ class ProductCartHelper {
     // STEP 4: Add to cart if required
     if (addToCartDirectly) {
       // Set final values with defaults
-      final cartQuantity = finalQuantity ?? 1;
+      num cartQuantity = finalQuantity ?? 1;
+      double? existingCartItemPrice;
+      bool markPriceAsManualOverride = hasExplicitPriceOverride;
 
       // 🔧 FIX: Check if product already exists in cart with custom price
       // If explicit custom price was provided (from parameter), use that
@@ -413,6 +416,7 @@ class ProductCartHelper {
 
           debugPrint(
               "💰 Product already in cart - preserving existing custom price: ${existingItem.price}, MRP: ${existingItem.mrp}");
+          existingCartItemPrice = existingItem.price;
           priceToUse =
               null; // Don't pass price, let addToCart preserve existing price
           mrpToUse =
@@ -426,6 +430,32 @@ class ProductCartHelper {
       } else {
         debugPrint(
             "💰 Using explicit custom price from parameter: $priceToUse, MRP: $mrpToUse");
+      }
+
+      // Zero-priced products need a price before entering the cart: open the
+      // quick price/quantity entry modal (pre-filled with the default
+      // customer's last bought price). Cancelling aborts the add.
+      final double predictedUnitPrice =
+          priceToUse ?? existingCartItemPrice ?? finalPrice;
+      if (ZeroPriceQuickEntryHelper.isZeroPrice(predictedUnitPrice)) {
+        final entry = await ZeroPriceQuickEntryHelper.promptForProduct(
+          context: context,
+          product: product,
+          initialQuantity: cartQuantity,
+          mrp: mrpToUse ?? finalMrp,
+          selectedStock: selectedStock,
+        );
+        if (entry == null || !context.mounted) {
+          debugPrint(
+              "❌ Zero-price entry cancelled - product not added to cart");
+          debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+          return;
+        }
+        priceToUse = entry.price;
+        cartQuantity = entry.quantity;
+        markPriceAsManualOverride = true;
+        debugPrint(
+            "💰 Zero-price entry applied: price=${entry.price}, quantity=${entry.quantity}");
       }
 
       debugPrint("🛒 STEP 4: ADDING TO CART");
@@ -443,7 +473,7 @@ class ProductCartHelper {
         mrp: mrpToUse,
         selectedStock: selectedStock,
         stockGroupIds: selectedStockGroupIds,
-        markPriceAsManualOverride: hasExplicitPriceOverride,
+        markPriceAsManualOverride: markPriceAsManualOverride,
         saleUnitId: selectedSaleUnit?.id,
         saleUnitName: selectedSaleUnit?.unitName,
         saleUnitConversionRate: _parseSaleUnitConversionRate(selectedSaleUnit),
