@@ -10,18 +10,46 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/models/local_models.dart';
 
 import '../resources/app_url.dart';
+import 'category_list_scope.dart';
+
+class _ScopeCache {
+  List<Category> items = [];
+  int? storeId;
+  DateTime? fetchedAt;
+
+  bool isValidForStore(int? activeStoreId) {
+    return storeId == activeStoreId && items.isNotEmpty;
+  }
+
+  void clear() {
+    items = [];
+    storeId = null;
+    fetchedAt = null;
+  }
+}
 
 class CategoryProvider extends ChangeNotifier {
+  static const int _managementPageSize = 20;
+  static const String _hiveBoxSellable = 'categories';
+  static const String _hiveBoxAll = 'categories_all';
+  static const String _hiveBoxPurchasable = 'categories_purchasable';
+
   bool isLoading = false;
-  bool _isCategoriesLoaded =
-      false; // Add this flag to track if categories are loaded
-  DateTime? _lastSuccessfulCategoryFetchAt;
-  static const Duration _categoryCacheValidity = Duration(minutes: 2);
+  bool _isCategoriesLoaded = false;
+
+  final Map<CategoryListScope, _ScopeCache> _scopeCaches = {
+    for (final scope in CategoryListScope.values) scope: _ScopeCache(),
+  };
+
+  final Map<CategoryListScope, Future<void>?> _inFlightLoads = {};
+
+  // Legacy fields kept for existing UI bindings.
   List<Category>? categoryList = [];
   List<Category>? searchCategoryList = [];
   List<Category>? filteredcategoryList = [];
   List<Category>? categoryListWithoutQuery = [];
-  List<Category>? _originalCategoryList = []; // Store original unfiltered list
+  List<Category>? _originalCategoryList = [];
+  List<Category>? _managementFilteredAll = [];
   String categoryText = '';
   ViewCategory? viewCategory;
   String parentCategory = '0';
@@ -77,6 +105,28 @@ class CategoryProvider extends ChangeNotifier {
 
   List<Category>? get category => categoryList;
   List<Category>? get searchCategory => searchCategoryList;
+
+  List<Category> get sellableCategories =>
+      List<Category>.from(_scopeCaches[CategoryListScope.sellable]!.items);
+
+  List<Category> get allCategories =>
+      List<Category>.from(_scopeCaches[CategoryListScope.all]!.items);
+
+  List<Category> get purchasableCategories =>
+      List<Category>.from(_scopeCaches[CategoryListScope.purchasable]!.items);
+
+  List<Category> categoriesFor(CategoryListScope scope) {
+    return List<Category>.from(_scopeCaches[scope]!.items);
+  }
+
+  bool isScopeLoaded(CategoryListScope scope, {int? storeId}) {
+    final cache = _scopeCaches[scope]!;
+    if (storeId != null) {
+      return cache.isValidForStore(storeId);
+    }
+    return cache.items.isNotEmpty;
+  }
+
   List<Category>? get filteredcategory => filteredcategoryList!
       .where((category) => category.categoryId != 0)
       .toList();
@@ -97,8 +147,316 @@ class CategoryProvider extends ChangeNotifier {
   // CategoryProvider() {
   //   listAllCategory();
   // }
-  //          *********************** LIST ALL CATEGORY  API ***************************************************
+  //          *********************** SCOPED CATEGORY LIST API ***************************************************
 
+  String _urlForScope(CategoryListScope scope) {
+    return switch (scope) {
+      CategoryListScope.sellable => APPUrl.getSellableCategoryListUrl,
+      CategoryListScope.purchasable => APPUrl.getPurchasableCategoryListUrl,
+      CategoryListScope.all => APPUrl.getRawCategoryListUrl,
+    };
+  }
+
+  String _hiveBoxNameForScope(CategoryListScope scope) {
+    return switch (scope) {
+      CategoryListScope.sellable => _hiveBoxSellable,
+      CategoryListScope.purchasable => _hiveBoxPurchasable,
+      CategoryListScope.all => _hiveBoxAll,
+    };
+  }
+
+  /// Load sellable + all + purchasable once (store bootstrap / store switch).
+  Future<void> prefetchAllScopesForStore({bool force = false}) async {
+    await Future.wait([
+      ensureCategories(CategoryListScope.sellable, force: force),
+      ensureCategories(CategoryListScope.all, force: force),
+      ensureCategories(CategoryListScope.purchasable, force: force),
+    ]);
+  }
+
+  /// Ensure a scoped category bucket is loaded for the active store.
+  Future<void> ensureCategories(
+    CategoryListScope scope, {
+    bool force = false,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (!force && _scopeCaches[scope]!.isValidForStore(activeStoreId)) {
+      debugPrint(
+        '🏷️ [CategoryProvider] Using in-memory ${scope.name} categories: ${_scopeCaches[scope]!.items.length}',
+      );
+      _syncLegacyLists(scope);
+      return;
+    }
+
+    final inFlight = _inFlightLoads[scope];
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+
+    final loadFuture = _loadScopeFromNetwork(
+      scope,
+      activeStoreId: activeStoreId,
+      force: force,
+    );
+    _inFlightLoads[scope] = loadFuture;
+    try {
+      await loadFuture;
+    } finally {
+      _inFlightLoads[scope] = null;
+    }
+  }
+
+  Future<void> _loadScopeFromNetwork(
+    CategoryListScope scope, {
+    required int? activeStoreId,
+    required bool force,
+  }) async {
+    if (!force &&
+        (categoryList == null || categoryList!.isEmpty) &&
+        scope == CategoryListScope.sellable) {
+      final cached = await loadCategoriesFromHive(boxName: _hiveBoxSellable);
+      if (cached.isNotEmpty) {
+        _applyScopeItems(scope, cached, activeStoreId);
+        _syncLegacyLists(scope);
+        notifyListeners();
+        debugPrint(
+          '🏷️ [CategoryProvider] Hydrated sellable categories from Hive (${cached.length})',
+        );
+      }
+    }
+
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final items = await _fetchAllPagesForScope(
+        scope,
+        storeId: activeStoreId,
+      );
+      _applyScopeItems(scope, items, activeStoreId);
+      await saveCategoriesToHive(items, boxName: _hiveBoxNameForScope(scope));
+      _syncLegacyLists(scope);
+      debugPrint(
+        '🏷️ [CategoryProvider] Loaded ${items.length} ${scope.name} categories from API',
+      );
+    } catch (error) {
+      debugPrint(
+        '🏷️ [CategoryProvider] Failed loading ${scope.name} categories: $error',
+      );
+      if (scope == CategoryListScope.purchasable) {
+        debugPrint(
+          '🏷️ [CategoryProvider] Purchasable endpoint failed — falling back to all categories',
+        );
+        if (_scopeCaches[CategoryListScope.all]!
+            .isValidForStore(activeStoreId)) {
+          _applyScopeItems(
+            CategoryListScope.purchasable,
+            allCategories,
+            activeStoreId,
+          );
+        } else {
+          await ensureCategories(CategoryListScope.all, force: true);
+          _applyScopeItems(
+            CategoryListScope.purchasable,
+            allCategories,
+            activeStoreId,
+          );
+        }
+        _syncLegacyLists(CategoryListScope.purchasable);
+      } else {
+        rethrow;
+      }
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void _applyScopeItems(
+    CategoryListScope scope,
+    List<Category> items,
+    int? storeId,
+  ) {
+    final cache = _scopeCaches[scope]!;
+    cache.items = List<Category>.from(items);
+    cache.storeId = storeId;
+    cache.fetchedAt = DateTime.now();
+  }
+
+  void _syncLegacyLists([CategoryListScope? changedScope]) {
+    final sellable = sellableCategories;
+    categoryList = List<Category>.from(sellable);
+    _originalCategoryList = List<Category>.from(sellable);
+    filteredcategoryList = List<Category>.from(sellable);
+    categoryListWithoutQuery = List<Category>.from(allCategories);
+    _isCategoriesLoaded = sellable.isNotEmpty;
+
+    if (changedScope == null ||
+        changedScope == CategoryListScope.all ||
+        searchCategoryList == null ||
+        searchCategoryList!.isEmpty) {
+      filterManagementCategories(page: currentPage);
+    }
+  }
+
+  Future<List<Category>> _fetchAllPagesForScope(
+    CategoryListScope scope, {
+    required int? storeId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final apiKey = prefs.getString('api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException('API key not found. Please restart the app.');
+    }
+
+    final collected = <Category>[];
+    var page = 1;
+    var lastPage = 1;
+
+    do {
+      final pageResult = await _fetchCategoryPage(
+        scope: scope,
+        page: page,
+        storeId: storeId,
+        apiKey: apiKey,
+      );
+      collected.addAll(pageResult.items);
+      lastPage = pageResult.lastPage;
+      page++;
+    } while (page <= lastPage);
+
+    return collected;
+  }
+
+  Future<({List<Category> items, int lastPage})> _fetchCategoryPage({
+    required CategoryListScope scope,
+    required int page,
+    required int? storeId,
+    required String apiKey,
+  }) async {
+    final queryParameters = <String, String>{
+      'page': page.toString(),
+    };
+    if (storeId != null) {
+      queryParameters['store_id'] = storeId.toString();
+    }
+
+    final baseUri = Uri.parse(_urlForScope(scope));
+    final uri = baseUri.replace(
+      queryParameters: {
+        ...baseUri.queryParameters,
+        ...queryParameters,
+      },
+    );
+
+    debugPrint('🏷️ [CategoryProvider] GET $uri (scope=${scope.name})');
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant': apiKey,
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode != 200) {
+      throw HttpException(
+        'Category list failed (${response.statusCode}) for scope ${scope.name}',
+      );
+    }
+
+    final jsonData = json.decode(response.body);
+    final model = CategoryListModel.fromJson(jsonData);
+    final items = model.category ?? [];
+    final lastPage = model.pagination?.lastPage ?? 1;
+    return (items: items, lastPage: lastPage);
+  }
+
+  void applyBillingCategoryFilter({
+    String? filterName,
+    String? filterParent,
+  }) {
+    var filtered = List<Category>.from(sellableCategories);
+    if (filterName != null && filterName.isNotEmpty) {
+      final query = filterName.toLowerCase();
+      filtered = filtered
+          .where(
+            (category) =>
+                category.categoryName?.toLowerCase().contains(query) ?? false,
+          )
+          .toList();
+    }
+    if (filterParent != null && filterParent.isNotEmpty) {
+      filtered = filtered
+          .where(
+            (category) => category.parent?.id?.toString() == filterParent,
+          )
+          .toList();
+    }
+    categoryList = filtered;
+    notifyListeners();
+  }
+
+  void filterManagementCategories({
+    String? filterName,
+    String? filterParent,
+    int page = 1,
+  }) {
+    var filtered = List<Category>.from(allCategories);
+
+    if (filterName != null && filterName.isNotEmpty) {
+      final query = filterName.toLowerCase();
+      filtered = filtered
+          .where(
+            (category) =>
+                category.categoryName?.toLowerCase().contains(query) ?? false,
+          )
+          .toList();
+    }
+
+    if (filterParent != null && filterParent.isNotEmpty) {
+      filtered = filtered
+          .where(
+            (category) => category.parent?.id?.toString() == filterParent,
+          )
+          .toList();
+    }
+
+    _managementFilteredAll = filtered;
+    totalPages = filtered.isEmpty
+        ? 1
+        : ((filtered.length + _managementPageSize - 1) ~/ _managementPageSize);
+    currentPage = page.clamp(1, totalPages);
+
+    if (filtered.isEmpty) {
+      searchCategoryList = [];
+    } else {
+      final startIndex = (currentPage - 1) * _managementPageSize;
+      final endIndex =
+          (startIndex + _managementPageSize).clamp(0, filtered.length);
+      searchCategoryList = filtered.sublist(
+        startIndex.clamp(0, filtered.length),
+        endIndex,
+      );
+    }
+    notifyListeners();
+  }
+
+  void invalidateCategories({CategoryListScope? scope}) {
+    if (scope != null) {
+      _scopeCaches[scope]!.clear();
+    } else {
+      for (final cache in _scopeCaches.values) {
+        cache.clear();
+      }
+    }
+    _isCategoriesLoaded = false;
+  }
+
+  /// Legacy entry point — maps to scoped cache + optional local billing filter.
   Future<void> listAllCategory({
     String? filterName,
     String? filterParent,
@@ -107,195 +465,64 @@ class CategoryProvider extends ChangeNotifier {
     bool scopeToActiveStore = true,
     bool force = false,
   }) async {
-    final bool isUnfilteredRequest = filterName == null && filterParent == null;
-    final bool hasInMemoryCategories =
-        categoryList != null && categoryList!.isNotEmpty;
-    final bool cacheIsFresh = _lastSuccessfulCategoryFetchAt != null &&
-        DateTime.now().difference(_lastSuccessfulCategoryFetchAt!) <
-            _categoryCacheValidity;
+    final scope = sellableOnly
+        ? CategoryListScope.sellable
+        : CategoryListScope.all;
+    await ensureCategories(scope, force: force);
 
-    // If categories are already loaded and no filtering is applied, return early
-    // BUT also check if categoryList is not empty to avoid empty list issues
-    if (!force &&
-        _isCategoriesLoaded &&
-        isUnfilteredRequest &&
-        hasInMemoryCategories &&
-        cacheIsFresh) {
-      debugPrint(
-          "🏷️ [CategoryProvider] Using cached categories: ${categoryList!.length}");
-      return;
-    }
-
-    bool loadedFromHiveCache = false;
-
-    // If filtering is applied, we need to make a new API call regardless
     if (filterName != null || filterParent != null) {
-      debugPrint(
-          "🏷️ [CategoryProvider] Making API call for filtering: filterName=$filterName");
-      // Don't reset the loaded flag for filtered results, just make the call
-    } else {
-      debugPrint(
-          "🏷️ [CategoryProvider] Making initial API call for categories");
-
-      // Try to load from Hive first for non-filtered requests
-      if (categoryList == null || categoryList!.isEmpty) {
-        final cachedCategories = await loadCategoriesFromHive();
-        if (cachedCategories.isNotEmpty) {
-          categoryList = cachedCategories;
-          _originalCategoryList = List.from(categoryList!);
-          _isCategoriesLoaded = true;
-          loadedFromHiveCache = true;
-          notifyListeners();
-          debugPrint("🏷️ [CategoryProvider] Using categories from Hive cache");
-        }
+      if (scope == CategoryListScope.sellable) {
+        applyBillingCategoryFilter(
+          filterName: filterName,
+          filterParent: filterParent,
+        );
       }
-    }
-
-    if (loadedFromHiveCache) {
-      debugPrint(
-          "🏷️ [CategoryProvider] Refreshing categories from API in background");
-    } else {
-      isLoading = true;
-      notifyListeners();
-    }
-
-    // Get API key for store_id
-    final prefs = await SharedPreferences.getInstance();
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    // Ensure we always send a valid page number; default to 1 if not provided
-    final int effectivePage = page ?? 1;
-    final queryParameters = <String, String>{
-      'page': effectivePage.toString(),
-    };
-
-    if (filterName != null && filterName.isNotEmpty) {
-      queryParameters['filter_name'] = filterName;
-    }
-    if (filterParent != null && filterParent.isNotEmpty) {
-      queryParameters['filter_parent'] = filterParent;
-    }
-    if (scopeToActiveStore && activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
-    }
-
-    // Choose the appropriate URL based on the sellableOnly flag
-    final urlString = sellableOnly
-        ? APPUrl.getSellableCategoryListUrl
-        : APPUrl.getRawCategoryListUrl;
-
-    final baseUri = Uri.parse(urlString);
-    final finalQueryParameters =
-        Map<String, dynamic>.from(baseUri.queryParameters)
-          ..addAll(queryParameters);
-    final uri = baseUri.replace(queryParameters: finalQueryParameters);
-
-    debugPrint(
-      '🏷️ [CategoryProvider] GET $uri (sellableOnly=$sellableOnly, scopeToStore=$scopeToActiveStore)',
-    );
-
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        CategoryListModel categoryListModel =
-            CategoryListModel.fromJson(jsonData);
-
-        categoryList = categoryListModel.category;
-
-        // Store the original unfiltered list only when no filtering is applied
-        if (filterName == null && filterParent == null) {
-          _originalCategoryList = List.from(categoryList!);
-          _isCategoriesLoaded = true;
-          _lastSuccessfulCategoryFetchAt = DateTime.now();
-
-          // Save to Hive for future offline use
-          if (categoryList != null && categoryList!.isNotEmpty) {
-            await saveCategoriesToHive(categoryList!);
-          }
-        }
-
-        isLoading = false;
-        notifyListeners();
-      } else {
-        isLoading = false;
-        notifyListeners();
-        throw Exception('Failed to load categories');
-      }
-    } catch (error) {
-      isLoading = false;
-      if (categoryList == null || categoryList!.isEmpty) {
-        _isCategoriesLoaded =
-            false; // Reset flag on error only when no fallback
-      }
-      notifyListeners();
-      debugPrint('Error fetching categories: $error');
-      if (loadedFromHiveCache) {
-        return;
-      }
-      rethrow;
     }
   }
 
-  // Add a method to force refresh categories (useful for manual refresh)
   Future<void> refreshCategories() async {
     await refreshManagementCategories();
   }
 
-  /// Sellable categories for the active store (billing & category management).
+  /// Full category directory for management screens.
   Future<void> refreshManagementCategories({bool force = true}) async {
-    await listAllCategory(
-      force: force,
-      sellableOnly: true,
-      scopeToActiveStore: true,
-    );
-    searchCategoryList = categoryList != null
-        ? List<Category>.from(categoryList!)
-        : [];
-    currentPage = 1;
-    totalPages = 1;
-    notifyListeners();
+    await ensureCategories(CategoryListScope.all, force: force);
+    filterManagementCategories(page: 1);
   }
 
   Future<void> upsertCategoryInCache(Category category) async {
-    categoryList ??= [];
     final categoryId = category.categoryId;
     if (categoryId == null) return;
 
-    categoryList!.removeWhere((item) => item.categoryId == categoryId);
-    categoryList!.insert(0, category);
-    _originalCategoryList = List<Category>.from(categoryList!);
-    searchCategoryList = List<Category>.from(categoryList!);
-    _isCategoriesLoaded = true;
-    _lastSuccessfulCategoryFetchAt = DateTime.now();
-    await saveCategoriesToHive(categoryList!);
+    for (final scope in CategoryListScope.values) {
+      final cache = _scopeCaches[scope]!;
+      cache.items.removeWhere((item) => item.categoryId == categoryId);
+      cache.items.insert(0, category);
+    }
+
+    _syncLegacyLists();
+    await saveCategoriesToHive(
+      sellableCategories,
+      boxName: _hiveBoxSellable,
+    );
+    await saveCategoriesToHive(
+      allCategories,
+      boxName: _hiveBoxAll,
+    );
     notifyListeners();
   }
 
   Future<void> _refreshAfterCategoryMutation(Map<String, dynamic> decoded) async {
-    await refreshManagementCategories(force: true);
+    invalidateCategories();
+    await prefetchAllScopesForStore(force: true);
 
     final data = decoded['data'];
     if (data is! Map<String, dynamic>) return;
 
     final newCategory = Category.fromJson(data);
-    final alreadyListed = categoryList?.any(
-          (category) => category.categoryId == newCategory.categoryId,
-        ) ??
-        false;
+    final alreadyListed = allCategories.any(
+      (category) => category.categoryId == newCategory.categoryId,
+    );
 
     if (!alreadyListed) {
       debugPrint(
@@ -305,45 +532,29 @@ class CategoryProvider extends ChangeNotifier {
     }
   }
 
-  // Add a method to check if categories are properly loaded
-  bool get hasValidCategories =>
-      categoryList != null && categoryList!.isNotEmpty;
+  bool get hasValidCategories => sellableCategories.isNotEmpty;
 
-  // Add a getter to check if categories are loaded
   bool get isCategoriesLoaded => _isCategoriesLoaded;
 
-  // Add a setter to update the categories loaded flag
   set isCategoriesLoaded(bool value) {
     _isCategoriesLoaded = value;
     notifyListeners();
   }
 
-  // Method to ensure categories are available for UI components like sidebar
   Future<void> ensureCategoriesLoaded() async {
-    if (!_isCategoriesLoaded || categoryList == null || categoryList!.isEmpty) {
-      debugPrint(
-          "🏷️ [CategoryProvider] ensureCategoriesLoaded - loading categories");
-      await listAllCategory();
-    } else {
-      debugPrint(
-          "🏷️ [CategoryProvider] ensureCategoriesLoaded - categories already available: ${categoryList!.length}");
-    }
+    await ensureCategories(CategoryListScope.sellable);
   }
 
-  /// Resets the category filter without making an API call
-  /// This method restores the original unfiltered category list
   void resetCategoryFilter() {
-    // Restore the original unfiltered category list if available
     if (_originalCategoryList != null && _originalCategoryList!.isNotEmpty) {
       categoryList = List.from(_originalCategoryList!);
       notifyListeners();
-    } else {
-      // Fallback: reload categories if original list is not available
-      _isCategoriesLoaded = false;
-      listAllCategory();
+      return;
     }
+    ensureCategories(CategoryListScope.sellable);
   }
 
+  /// Legacy management search — local filter on the all-categories cache.
   Future<void> searchAllCategory({
     String? filterName,
     String? filterParent,
@@ -351,81 +562,22 @@ class CategoryProvider extends ChangeNotifier {
     bool sellableOnly = true,
     bool scopeToActiveStore = true,
   }) async {
-    // Get API key for store_id
-    final prefs = await SharedPreferences.getInstance();
-    final int? activeStoreId = prefs.getInt('active_store_id');
-
-    // Ensure we always send a valid page number; default to 1 if not provided
-    final int effectivePage = page ?? 1;
-    final queryParameters = <String, String>{
-      'page': effectivePage.toString(),
-    };
-
-    if (filterName != null && filterName.isNotEmpty) {
-      queryParameters['filter_name'] = filterName;
-    }
-    if (filterParent != null && filterParent.isNotEmpty) {
-      queryParameters['filter_parent'] = filterParent;
-    }
-    if (scopeToActiveStore && activeStoreId != null) {
-      queryParameters['store_id'] = activeStoreId.toString();
+    final scope =
+        sellableOnly ? CategoryListScope.sellable : CategoryListScope.all;
+    await ensureCategories(scope);
+    if (scope == CategoryListScope.all) {
+      filterManagementCategories(
+        filterName: filterName,
+        filterParent: filterParent,
+        page: page ?? 1,
+      );
+      return;
     }
 
-    final urlString = sellableOnly
-        ? APPUrl.getSellableCategoryListUrl
-        : APPUrl.getRawCategoryListUrl;
-    final baseUri = Uri.parse(urlString);
-    final finalQueryParameters =
-        Map<String, dynamic>.from(baseUri.queryParameters)
-          ..addAll(queryParameters);
-    final uri = baseUri.replace(queryParameters: finalQueryParameters);
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    try {
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        CategoryListModel categoryListModel =
-            CategoryListModel.fromJson(jsonData);
-
-        searchCategoryList = categoryListModel.category;
-
-        currentPage = categoryListModel.pagination?.currentPage ?? 1;
-        totalPages = categoryListModel.pagination?.lastPage ?? 1;
-
-        // Keep main cache + Hive in sync when loading the full unfiltered list.
-        final isUnfiltered =
-            (filterName == null || filterName.isEmpty) &&
-            (filterParent == null || filterParent.isEmpty);
-        if (isUnfiltered && effectivePage == 1) {
-          categoryList = searchCategoryList;
-          _originalCategoryList = List.from(categoryList ?? []);
-          _isCategoriesLoaded = categoryList != null && categoryList!.isNotEmpty;
-          _lastSuccessfulCategoryFetchAt = DateTime.now();
-          if (categoryList != null && categoryList!.isNotEmpty) {
-            await saveCategoriesToHive(categoryList!);
-          }
-        }
-
-        notifyListeners();
-      } else {
-        throw Exception('Failed to load categories');
-      }
-    } catch (error) {
-      // debugPrint('Error fetching categories: $error');
-      rethrow;
-    }
+    applyBillingCategoryFilter(
+      filterName: filterName,
+      filterParent: filterParent,
+    );
   }
 
   //          *********************** VIEW  CATEGORY USING CATEGORY ID API ***************************************************
@@ -797,59 +949,70 @@ class CategoryProvider extends ChangeNotifier {
   }
 
   // Hive storage methods for categories
-  Future<void> saveCategoriesToHive(List<Category> categories) async {
+  Future<void> saveCategoriesToHive(
+    List<Category> categories, {
+    String boxName = 'categories',
+  }) async {
     try {
-      final categoriesBox = await Hive.openBox<HiveCategory>('categories');
+      if (!Hive.isBoxOpen(boxName)) {
+        await Hive.openBox<HiveCategory>(boxName);
+      }
+      final categoriesBox = Hive.box<HiveCategory>(boxName);
 
-      // Clear existing categories
       await categoriesBox.clear();
 
-      // Save new categories
       for (Category category in categories) {
         final hiveCategory = HiveCategory.fromCategory(category);
         await categoriesBox.put(category.categoryId, hiveCategory);
       }
 
       debugPrint(
-          "🏷️ [CategoryProvider] Saved ${categories.length} categories to Hive");
+        '🏷️ [CategoryProvider] Saved ${categories.length} categories to Hive ($boxName)',
+      );
     } catch (e) {
-      debugPrint("🏷️ [CategoryProvider] Error saving categories to Hive: $e");
+      debugPrint(
+        '🏷️ [CategoryProvider] Error saving categories to Hive ($boxName): $e',
+      );
     }
   }
 
-  Future<List<Category>> loadCategoriesFromHive() async {
+  Future<List<Category>> loadCategoriesFromHive({
+    String boxName = 'categories',
+  }) async {
     try {
-      if (!Hive.isBoxOpen('categories')) {
-        await Hive.openBox<HiveCategory>('categories');
+      if (!Hive.isBoxOpen(boxName)) {
+        await Hive.openBox<HiveCategory>(boxName);
       }
 
-      final categoriesBox = Hive.box<HiveCategory>('categories');
+      final categoriesBox = Hive.box<HiveCategory>(boxName);
       final hiveCategories = categoriesBox.values.toList();
 
-      // Convert Hive categories back to app model
       final categories = hiveCategories
           .map((hiveCategory) => hiveCategory.toCategory())
           .toList();
 
       debugPrint(
-          "🏷️ [CategoryProvider] Loaded ${categories.length} categories from Hive");
+        '🏷️ [CategoryProvider] Loaded ${categories.length} categories from Hive ($boxName)',
+      );
       return categories;
     } catch (e) {
       debugPrint(
-          "🏷️ [CategoryProvider] Error loading categories from Hive: $e");
+        '🏷️ [CategoryProvider] Error loading categories from Hive ($boxName): $e',
+      );
       return [];
     }
   }
 
-  Future<void> clearCategoriesFromHive() async {
+  Future<void> clearCategoriesFromHive({String boxName = 'categories'}) async {
     try {
-      if (Hive.isBoxOpen('categories')) {
-        await Hive.box<HiveCategory>('categories').clear();
-        debugPrint("🏷️ [CategoryProvider] Cleared categories from Hive");
+      if (Hive.isBoxOpen(boxName)) {
+        await Hive.box<HiveCategory>(boxName).clear();
+        debugPrint('🏷️ [CategoryProvider] Cleared Hive box $boxName');
       }
     } catch (e) {
       debugPrint(
-          "🏷️ [CategoryProvider] Error clearing categories from Hive: $e");
+        '🏷️ [CategoryProvider] Error clearing Hive box $boxName: $e',
+      );
     }
   }
 
@@ -857,20 +1020,21 @@ class CategoryProvider extends ChangeNotifier {
   /// Call this during logout or when switching API keys (tenants)
   /// to prevent data leakage between different tenants.
   Future<void> clearAllCategories() async {
-    debugPrint("🧹 CLEARING ALL CATEGORY DATA FOR TENANT ISOLATION");
+    debugPrint('🧹 CLEARING ALL CATEGORY DATA FOR TENANT ISOLATION');
 
     try {
-      // Clear Hive storage
-      await clearCategoriesFromHive();
+      for (final scope in CategoryListScope.values) {
+        await clearCategoriesFromHive(boxName: _hiveBoxNameForScope(scope));
+        _scopeCaches[scope]!.clear();
+      }
 
-      // Clear in-memory lists
       categoryList?.clear();
       searchCategoryList?.clear();
       filteredcategoryList?.clear();
       categoryListWithoutQuery?.clear();
       _originalCategoryList?.clear();
+      _managementFilteredAll?.clear();
 
-      // Reset state
       _isCategoriesLoaded = false;
       viewCategory = null;
       categoryText = '';
@@ -884,9 +1048,9 @@ class CategoryProvider extends ChangeNotifier {
       _selectedCategoryIndex = 0;
 
       notifyListeners();
-      debugPrint("✅ ALL CATEGORY DATA CLEARED SUCCESSFULLY");
+      debugPrint('✅ ALL CATEGORY DATA CLEARED SUCCESSFULLY');
     } catch (e) {
-      debugPrint("❌ Error clearing category data: $e");
+      debugPrint('❌ Error clearing category data: $e');
       rethrow;
     }
   }

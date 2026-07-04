@@ -22,6 +22,8 @@ class APPUrl {
       '$baseURL/api/v1/category/list-category?type=sellable';
   static String get getSellableCategoryListUrl =>
       '$baseURL/api/v1/category/list-category?type=sellable';
+  static String get getPurchasableCategoryListUrl =>
+      '$baseURL/api/v1/category/list-category?type=purchasable';
   static String get getRawCategoryListUrl =>
       '$baseURL/api/v1/category/list-category';
   static String get viewCategoryListUrl => '$baseURL/api/v1/category-details';

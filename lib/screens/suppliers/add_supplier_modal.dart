@@ -83,7 +83,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     try {
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      await categoryProvider.listAllCategory();
+      await categoryProvider.ensureCategoriesLoaded();
     } catch (error) {
       debugPrint("Error loading categories: $error");
     } finally {

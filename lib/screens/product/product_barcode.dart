@@ -83,7 +83,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           Provider.of<CategoryProvider>(context, listen: false);
       if (!categoryProvider.isCategoriesLoaded) {
         debugPrint("📥 Loading categories from API...");
-        await categoryProvider.listAllCategory();
+        await categoryProvider.ensureCategoriesLoaded();
         debugPrint("✅ Categories loaded and cached");
       } else {
         debugPrint(

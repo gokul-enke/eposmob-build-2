@@ -205,6 +205,8 @@ Future<void> _initializeHiveBoxes() async {
     'saved_orders',
     'confirmed_orders',
     'categories',
+    'categories_all',
+    'categories_purchasable',
     'document_configs'
   ];
 
@@ -238,6 +240,8 @@ Future<void> _initializeHiveBoxes() async {
             await Hive.openBox<HiveSavedOrder>(boxName);
             break;
           case 'categories':
+          case 'categories_all':
+          case 'categories_purchasable':
             await Hive.openBox<HiveCategory>(boxName);
             break;
           case 'document_configs':

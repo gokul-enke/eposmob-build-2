@@ -17,6 +17,7 @@ import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/category_list_scope.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
@@ -534,7 +535,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       try {
         final categoryProvider =
             Provider.of<CategoryProvider>(context, listen: false);
-        final categoryList = categoryProvider.category;
+        final categoryList = categoryProvider.purchasableCategories;
         if (categoryList != null) {
           final category = categoryList.firstWhere(
             (c) => c.categoryId == categoryId,
@@ -1086,9 +1087,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           Provider.of<CategoryProvider>(context, listen: false);
       // Load categories with caching (same as sidebar and stock)
       // Force load raw categories (ignoring sellable filter) for stock adding
-      debugPrint("📥 Loading raw categories for stock adding...");
-      await categoryProvider.listAllCategory(sellableOnly: false, force: true);
-      debugPrint("✅ Raw categories loaded");
+      debugPrint('📥 Loading purchasable categories for stock adding...');
+      await categoryProvider.ensureCategories(CategoryListScope.purchasable);
+      debugPrint('✅ Purchasable categories ready');
     } catch (e) {
       debugPrint('Error loading categories: $e');
     }
@@ -1392,7 +1393,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     try {
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
-      final categoryList = categoryProvider.category;
+      final categoryList = categoryProvider.purchasableCategories;
       if (categoryList != null && categoryList.isNotEmpty) {
         final dynamic categoryNameDyn = pendingData['categoryName'];
         final String? categoryName = categoryNameDyn?.toString();
@@ -2066,7 +2067,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                 Provider.of<CategoryProvider>(context, listen: false);
             List<Category>? categoryList = categoryProvider.searchCategory;
             if (categoryList == null || categoryList.isEmpty) {
-              categoryList = categoryProvider.category;
+              categoryList = categoryProvider.purchasableCategories;
             }
             if (categoryList != null && categoryList.isNotEmpty) {
               Category? matchingCategory;
@@ -4566,7 +4567,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               Provider.of<CategoryProvider>(context, listen: false);
           List<Category>? categoryList = categoryProvider.searchCategory;
           if (categoryList == null || categoryList.isEmpty) {
-            categoryList = categoryProvider.category;
+            categoryList = categoryProvider.purchasableCategories;
           }
           if (categoryList != null && categoryList.isNotEmpty) {
             // Debug print all loaded categories for visibility
@@ -5238,7 +5239,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                   List<Category>? categoryList =
                       categoryProvider.searchCategory;
                   if (categoryList == null || categoryList.isEmpty) {
-                    categoryList = categoryProvider.category;
+                    categoryList = categoryProvider.purchasableCategories;
                   }
                   if (categoryList != null && categoryList.isNotEmpty) {
                     // Debug print all loaded categories for visibility

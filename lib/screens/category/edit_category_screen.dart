@@ -19,6 +19,7 @@ import '../../models/category_list.dart';
 
 import '../../providers/auth_model.dart';
 import '../../providers/category_providers.dart';
+import '../../providers/category_list_scope.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -90,6 +91,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
     Future.microtask(() {
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
+      categoryProvider.ensureCategories(CategoryListScope.all);
       final viewCategory = categoryProvider.getViewCategory;
 
       // Set the initial values for the text controllers
@@ -113,13 +115,14 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
       if (viewCategory?.parentId != null) {
         String parentCategory = viewCategory!.parentId.toString();
         categoryProvider.setParentCategory(parentCategory);
-        int? categoryIndex = categoryProvider.category?.indexWhere(
+        final categoryIndex = categoryProvider.allCategories.indexWhere(
             (category) => category.categoryId == viewCategory.parentId);
-        if (categoryIndex != null && categoryIndex >= 0) {
+        if (categoryIndex >= 0) {
+          final parent = categoryProvider.allCategories[categoryIndex];
           categoryProvider.selectCategory(
             categoryIndex,
-            categoryProvider.category![categoryIndex].categoryName ?? '',
-            categoryProvider.category![categoryIndex].productsCount ?? 0,
+            parent.categoryName ?? '',
+            parent.productsCount ?? 0,
           );
         }
       }
@@ -159,7 +162,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
   @override
   Widget build(BuildContext context) {
     final categoryProvider = Provider.of<CategoryProvider>(context);
-    final categoryList = categoryProvider.category;
+    final categoryList = categoryProvider.allCategories;
     final size = MediaQuery.of(context).size;
     final bool isMobile = _isMobile(context);
     final double horizontalMargin = isMobile ? 8 : 12;

@@ -82,9 +82,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
       final categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
       if (!categoryProvider.isCategoriesLoaded) {
-        debugPrint("📥 Loading categories from API...");
-        await categoryProvider.listAllCategory();
-        debugPrint("✅ Categories loaded and cached");
+        debugPrint('📥 Ensuring sellable categories are loaded...');
+        await categoryProvider.ensureCategoriesLoaded();
+        debugPrint('✅ Categories ready');
       } else {
         debugPrint(
             "📋 Using cached categories (${categoryProvider.category?.length ?? 0} items)");

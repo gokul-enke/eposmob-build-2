@@ -9,6 +9,7 @@ import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/category_list.dart';
 import '../../providers/category_providers.dart';
+import '../../providers/category_list_scope.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -48,10 +49,10 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
 
-      await categoryProvider.refreshManagementCategories(force: false);
+      await categoryProvider.ensureCategories(CategoryListScope.all);
       if (mounted) {
         setState(() {
-          categoryList = categoryProvider.category;
+          categoryList = categoryProvider.allCategories;
         });
       }
     } catch (error) {
@@ -75,8 +76,8 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
 
-      // Always make API call for search/filter operations
-      await categoryProvider.searchAllCategory(
+      await categoryProvider.ensureCategories(CategoryListScope.all);
+      categoryProvider.filterManagementCategories(
         filterName:
             _searchController.text.isNotEmpty ? _searchController.text : null,
         filterParent: selectedParentCategoryId,
@@ -105,16 +106,11 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
         Provider.of<CategoryProvider>(context, listen: false);
 
     // Use already loaded categories if available, otherwise make API call
-    if (categoryProvider.isCategoriesLoaded &&
-        categoryProvider.hasValidCategories) {
-      debugPrint("✅ [AddCategory] Reset using cached categories");
-      categoryProvider.searchCategoryList = categoryProvider.categoryList;
-      categoryProvider.currentPage = 1;
-      categoryProvider.totalPages = 1;
-      categoryProvider.notifyListeners();
+    if (categoryProvider.isScopeLoaded(CategoryListScope.all)) {
+      debugPrint('✅ [AddCategory] Reset using cached all categories');
+      categoryProvider.filterManagementCategories(page: 1);
     } else {
-      debugPrint(
-          "📥 [AddCategory] Reset with API call - categories not cached");
+      debugPrint('📥 [AddCategory] Reset — loading all categories');
       await categoryProvider.refreshManagementCategories(force: true);
     }
 

@@ -37,7 +37,8 @@ class _KioskScreenState extends State<KioskScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<CategoryProvider>(context, listen: false).listAllCategory();
+      Provider.of<CategoryProvider>(context, listen: false)
+          .ensureCategoriesLoaded();
       Provider.of<GridSelectionProvider>(context, listen: false)
           .listAllProducts();
     });
