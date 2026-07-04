@@ -13,6 +13,7 @@ import 'general_settings_provider.dart';
 import 'app_settings_provider.dart';
 import '../providers/delivery_methods_provider.dart';
 import '../providers/customer_provider.dart';
+import 'offline_sync_endpoints.dart';
 
 enum OfflineSyncTarget {
   products,
@@ -90,6 +91,10 @@ class SyncProvider extends ChangeNotifier {
     BuildContext context,
     OfflineSyncTarget target,
   ) async {
+    await OfflineSyncEndpoints.logTarget(
+      'Row sync → ${_labelForTarget(target)}',
+      target,
+    );
     _ensureCanSync(context);
     final accessToken = await _requireAccessToken(context);
 
@@ -172,6 +177,10 @@ class SyncProvider extends ChangeNotifier {
     BuildContext context,
     OfflineSyncSection section,
   ) async {
+    await OfflineSyncEndpoints.logSection(
+      'Section sync → ${section.name}',
+      section,
+    );
     _ensureCanSync(context);
 
     final targets = switch (section) {
@@ -291,6 +300,8 @@ class SyncProvider extends ChangeNotifier {
       return;
     }
 
+    await OfflineSyncEndpoints.logSyncAll('Sync All (footer button)');
+
     _ensureCanSync(context);
     _startSync();
     _activeSyncKey = 'all';
@@ -409,7 +420,11 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("📂 Syncing categories...");
       final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
       // Use the same loader as Category screen to keep lists consistent
-      await categoryProvider.searchAllCategory(page: 1);
+      await categoryProvider.searchAllCategory(
+        page: 1,
+        sellableOnly: true,
+        scopeToActiveStore: true,
+      );
       debugPrint("✅ Categories synced successfully");
     } catch (e) {
       debugPrint("❌ Failed to sync categories: $e");

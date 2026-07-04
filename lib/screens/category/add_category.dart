@@ -48,34 +48,11 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
       CategoryProvider categoryProvider =
           Provider.of<CategoryProvider>(context, listen: false);
 
-      // Check if categories are already loaded from login
-      if (categoryProvider.isCategoriesLoaded &&
-          categoryProvider.hasValidCategories) {
-        debugPrint(
-            "✅ [AddCategory] Using already loaded categories: ${categoryProvider.categoryList?.length} categories");
-        // Use the already loaded categories for search display
-        if (mounted) {
-          setState(() {
-            categoryList = categoryProvider.category;
-          });
-        }
-        // Set the search categories to the loaded categories
-        categoryProvider.searchCategoryList = categoryProvider.categoryList;
-        categoryProvider.currentPage = 1;
-        categoryProvider.totalPages = 1;
-        categoryProvider.notifyListeners();
-      } else {
-        debugPrint(
-            "📥 [AddCategory] Loading categories from API - not loaded or empty");
-        await categoryProvider.listAllCategory(force: false);
-        categoryProvider.searchCategoryList = categoryProvider.categoryList;
-        categoryProvider.currentPage = 1;
-        categoryProvider.totalPages = 1;
-        if (mounted) {
-          setState(() {
-            categoryList = categoryProvider.category;
-          });
-        }
+      await categoryProvider.refreshManagementCategories(force: false);
+      if (mounted) {
+        setState(() {
+          categoryList = categoryProvider.category;
+        });
       }
     } catch (error) {
       debugPrint("Error in loadInitData: $error");
@@ -131,7 +108,6 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     if (categoryProvider.isCategoriesLoaded &&
         categoryProvider.hasValidCategories) {
       debugPrint("✅ [AddCategory] Reset using cached categories");
-      // Reset to show all loaded categories
       categoryProvider.searchCategoryList = categoryProvider.categoryList;
       categoryProvider.currentPage = 1;
       categoryProvider.totalPages = 1;
@@ -139,9 +115,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     } else {
       debugPrint(
           "📥 [AddCategory] Reset with API call - categories not cached");
-      await categoryProvider.searchAllCategory(
-        page: 1,
-      );
+      await categoryProvider.refreshManagementCategories(force: true);
     }
 
     if (mounted) {
