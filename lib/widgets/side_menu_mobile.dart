@@ -224,6 +224,15 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   selected: sideBarController.index.value == 89,
                 ),
               ),
+            if (hasRestaurant)
+              Obx(
+                () => _MobileDrawerTile(
+                  icon: Icons.storefront_rounded,
+                  title: 'Store',
+                  onTap: () => navigate(97),
+                  selected: sideBarController.index.value == 97,
+                ),
+              ),
             if (hasAttender)
               Obx(
                 () => _MobileDrawerTile(

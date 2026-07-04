@@ -221,5 +221,10 @@ class SideBarController extends GetxController {
     CreateExpenseScreen(), // 94
     ViewExpenseScreen(), // 95
     OfflineDataPage(), // 96 Offline Data
+    RestaurantPage(
+      allowCounterBillingFromAttender: true,
+      defaultCounterBillingMode: true,
+      storeMode: true,
+    ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
   ];
 }

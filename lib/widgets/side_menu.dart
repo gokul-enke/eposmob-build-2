@@ -380,6 +380,29 @@ class _SideMenuState extends State<SideMenu> {
             },
           ),
 
+          // 3.5. STORE (Index: 97) - Restaurant billing with summary-only order panel
+          Consumer<RoleProvider>(
+            builder: (context, roleProvider, child) {
+              final hasPermission = roleProvider
+                  .currentUserHasPermissionSync('menu.restaurant.main.access');
+
+              if (!hasPermission) {
+                return const SizedBox.shrink();
+              }
+
+              return Obx(
+                () => DrawerListTile(
+                  icon: fa.FontAwesomeIcons.cashRegister,
+                  title: 'Store',
+                  onTap: () {
+                    sideBarController.index.value = 97;
+                  },
+                  selected: sideBarController.index.value == 97,
+                ),
+              );
+            },
+          ),
+
           // 3. RESTAURANT (Index: 55) - Only for attender role
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
