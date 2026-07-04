@@ -72,6 +72,10 @@ class OrderPanel extends StatefulWidget {
   final ValueChanged<SavedOrder>? onLocalDraftLoaded;
   final VoidCallback? onLocalDraftSaved;
   final VoidCallback? onEditedOrderConfirmed;
+
+  /// Store mode: hide the footer action buttons (Send Kitchen, KOT + BILL,
+  /// Confirm, Print KOT, comment, ...) and show only the payment summary.
+  final bool hideFooterActionButtons;
   final void Function({
     required bool isLoading,
     required bool printBill,
@@ -100,6 +104,7 @@ class OrderPanel extends StatefulWidget {
     this.onLocalDraftSaved,
     this.onEditedOrderConfirmed,
     this.onCheckoutActionLoadingChanged,
+    this.hideFooterActionButtons = false,
   });
 
   @override
@@ -5189,6 +5194,7 @@ class OrderPanelState extends State<OrderPanel> {
           children: [
             // New Compact Summary
             _buildCompactOneLineSummary(),
+            if (!widget.hideFooterActionButtons) ...[
             const SizedBox(height: 12),
             // Row: Print KOT and Confirm buttons
             Row(
@@ -5415,6 +5421,7 @@ class OrderPanelState extends State<OrderPanel> {
                 ),
               ],
             ),
+            ],
           ],
         ),
       ),

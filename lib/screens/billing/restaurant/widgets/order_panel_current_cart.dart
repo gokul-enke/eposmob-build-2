@@ -328,6 +328,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildCurrentCartSummaryCard(cartItems),
+              if (!widget.hideFooterActionButtons) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -440,6 +441,7 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
                   _buildCurrentCartCommentIconButton(),
                 ],
               ),
+              ],
             ],
           ),
         ),

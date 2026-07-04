@@ -47,10 +47,15 @@ class RestaurantPage extends StatefulWidget {
   final bool allowCounterBillingFromAttender;
   final bool defaultCounterBillingMode;
 
+  /// Store mode: hide the order panel's footer action buttons and show
+  /// only the payment summary (used by the "Store" sidebar entry).
+  final bool hideOrderPanelActionButtons;
+
   const RestaurantPage({
     super.key,
     this.allowCounterBillingFromAttender = true,
     this.defaultCounterBillingMode = false,
+    this.hideOrderPanelActionButtons = false,
   });
 
   @override
@@ -591,6 +596,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
                           _resetCounterOrderContextAfterSave,
                       onCheckoutActionLoadingChanged:
                           _setCounterCheckoutLoading,
+                      hideFooterActionButtons:
+                          widget.hideOrderPanelActionButtons,
                     ),
                   ),
                 ],
@@ -2571,6 +2578,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             onLocalDraftSaved: _resetCounterOrderContextAfterSave,
             onEditedOrderConfirmed: _resetCounterOrderContextAfterSave,
             onCheckoutActionLoadingChanged: _setCounterCheckoutLoading,
+            hideFooterActionButtons: widget.hideOrderPanelActionButtons,
           ),
         ),
       ],
