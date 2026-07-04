@@ -3299,6 +3299,24 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Clears saved draft orders from memory and Hive.
+  Future<void> clearSavedOrdersCache() async {
+    _savedOrders.clear();
+    await _savedOrdersBox.clear();
+    notifyListeners();
+    debugPrint('Cleared saved orders cache');
+  }
+
+  /// Clears locally confirmed orders from memory and Hive.
+  Future<void> clearConfirmedOrdersCache() async {
+    _confirmedOrders.clear();
+    if (_isConfirmedBoxInitialized) {
+      await _confirmedOrdersBox.clear();
+    }
+    notifyListeners();
+    debugPrint('Cleared confirmed orders cache');
+  }
+
   /// Refreshes products by reinitializing the filtered list to the full product list.
   void refreshProducts() {
     _filteredProducts = List.from(_products);

@@ -1102,6 +1102,21 @@ class InvoiceProvider extends ChangeNotifier {
     _paymentListStoreId = storeId;
   }
 
+  /// Clears in-memory and SharedPreferences payment method cache for offline data.
+  Future<void> clearPaymentMethodsCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    final activeStoreId = prefs.getInt('active_store_id');
+
+    await prefs.remove(_paymentMethodsCacheKeyPrefix);
+    if (activeStoreId != null) {
+      await prefs.remove(_paymentListCacheKey(activeStoreId));
+    }
+
+    _setPaymentList(null, null);
+    notifyListeners();
+    debugPrint('[InvoiceProvider] Cleared payment methods cache');
+  }
+
   //          *********************** ZATCA PHASE 1 INVOICE PRINT ***************************************************
   Future<dynamic> zatcaPhase1InvoicePrint({
     required int id,
