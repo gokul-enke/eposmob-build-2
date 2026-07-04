@@ -11,12 +11,15 @@ import 'package:pos_machine/providers/pine_labs_terminal_provider.dart';
 import 'package:pos_machine/providers/sales_executive_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
+import 'package:pos_machine/models/delivery_method.dart';
+import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/payment_summary.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/billing_accordion_card.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/customer_summary_card.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/payment_methods_section.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/delivery_options_section.dart';
-import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/coupon_section.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/billing_section_row.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/delivery_options_sheet.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/coupon_sheet.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/payment_methods_sheet.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/billing_action_buttons.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/quotation_checkout_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/select_customer_page.dart';
@@ -77,6 +80,7 @@ class MobileBillingTab extends StatefulWidget {
 class _MobileBillingTabState extends State<MobileBillingTab> {
   static const _customerController = BillingMobileCustomerController();
   static const _settingsController = BillingMobileSettingsController();
+  static const _deliveryController = BillingMobileDeliveryController();
 
   @override
   void initState() {
@@ -109,6 +113,76 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
 
   void _markPaymentStepVisited() {
     Provider.of<BillingProvider>(context, listen: false).markPaymentStepVisited();
+  }
+
+  /// Summary text for the delivery row value, e.g. "Door Delivery · SAR 5.00"
+  /// or just the method name when the fee can't be cheaply resolved.
+  String _deliveryValueText(
+    BillingProvider bp,
+    DeliveryMethodsProvider deliveryMethodsProvider,
+    String currency,
+  ) {
+    if (bp.deliveryMethod.isEmpty) return 'Select';
+
+    DeliveryMethod? selected;
+    for (final method in deliveryMethodsProvider.deliveryMethods) {
+      if (method.id == bp.deliveryMethodId || method.name == bp.deliveryMethod) {
+        selected = method;
+        break;
+      }
+    }
+    if (selected == null) return bp.deliveryMethod;
+
+    final feeLabel = _deliveryController.feeLabel(selected, currency);
+    return '${selected.name} · $feeLabel';
+  }
+
+  /// Summary text for the coupon row value, e.g. "SAVE10 · 10% off" or
+  /// "SAVE10 · SAR 20.00 off" when applied, else "None applied".
+  String _couponValueText(
+    BillingProvider bp,
+    LocalProductProvider localProductProvider,
+    String currency,
+  ) {
+    if (!bp.isCouponApplied) return 'None applied';
+
+    final code = bp.coupenCodeTextController.text.trim();
+    final currentDiscounts = localProductProvider.getCurrentDiscount();
+    final flat = currentDiscounts['flatDiscount'] ?? 0.0;
+    final pct = currentDiscounts['percentageDiscount'] ?? 0.0;
+
+    String amountText;
+    if (pct > 0) {
+      amountText = '${pct.toStringAsFixed(0)}% off';
+    } else if (flat > 0) {
+      amountText = '$currency ${flat.toStringAsFixed(2)} off';
+    } else {
+      amountText = 'Applied';
+    }
+
+    return code.isNotEmpty ? '$code · $amountText' : amountText;
+  }
+
+  /// Summary text for the payment methods row value, e.g.
+  /// "Cash + Card · SAR 150.00" or "Select payment" when nothing is chosen.
+  String _paymentValueText(BillingProvider bp, String currency) {
+    final selectedNames = <String>[];
+    if (bp.isCashSelected) selectedNames.add('Cash');
+    if (bp.isCardSelected) selectedNames.add('Card');
+    if (bp.isUpiSelected) selectedNames.add('UPI');
+    if (bp.isCodSelected) selectedNames.add('COD');
+    if (bp.selectedExtraMethodIds.isNotEmpty) {
+      selectedNames.add(
+        bp.selectedExtraMethodIds.length == 1
+            ? '1 other method'
+            : '${bp.selectedExtraMethodIds.length} other methods',
+      );
+    }
+
+    if (selectedNames.isEmpty) return 'Select payment';
+
+    return '${selectedNames.join(' + ')} · $currency '
+        '${AmountHelper.formatAmount(bp.totalPaidAmount)}';
   }
 
   /// Navigate to the full-screen Select Customer page.
@@ -217,8 +291,8 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
   Widget build(BuildContext context) {
     final customerSelection = Provider.of<CustomerSelectionProvider>(context);
     final billingProvider = Provider.of<BillingProvider>(context);
-    final localProductProvider =
-        Provider.of<LocalProductProvider>(context, listen: false);
+    final deliveryMethodsProvider = Provider.of<DeliveryMethodsProvider>(context);
+    final localProductProvider = Provider.of<LocalProductProvider>(context);
     final selectedCustomer = customerSelection.selectedCustomer;
     final defaultPhoneCustomer = _customerController
         .defaultSalesExecutivePhoneCustomer(
@@ -323,43 +397,88 @@ class _MobileBillingTabState extends State<MobileBillingTab> {
                   ],
 
                   // Delivery & Options Section (Select Delivery Method)
-                  const BillingAccordionCard(
+                  BillingSectionRow(
+                    icon: Icons.local_shipping_outlined,
                     title: 'Select Delivery Method',
-                    initiallyExpanded: true,
-                    child: DeliveryOptionsSection(),
+                    value: _deliveryValueText(
+                      billingProvider,
+                      deliveryMethodsProvider,
+                      appSettings?.currency ?? '',
+                    ),
+                    onTap: () => showDeliveryOptionsSheet(context),
                   ),
                   const SizedBox(height: 12),
 
                   if (showCouponSection) ...[
-                    const BillingAccordionCard(
+                    BillingSectionRow(
+                      icon: Icons.local_offer_outlined,
                       title: 'Coupon',
-                      initiallyExpanded: false,
-                      child: CouponSection(),
+                      value: _couponValueText(
+                        billingProvider,
+                        localProductProvider,
+                        appSettings?.currency ?? '',
+                      ),
+                      isHighlighted: billingProvider.isCouponApplied,
+                      onTap: () => showCouponSheet(context),
                     ),
                     const SizedBox(height: 12),
                   ],
 
                   if (!isQuotationMode) ...[
-                    BillingAccordionCard(
+                    BillingSectionRow(
+                      icon: Icons.payment_outlined,
                       title: 'billing.payment_methods'.tr,
-                      initiallyExpanded: true,
-                      onExpandedChanged: (expanded) {
-                        if (expanded) _markPaymentStepVisited();
+                      value: _paymentValueText(
+                        billingProvider,
+                        appSettings?.currency ?? '',
+                      ),
+                      isHighlighted: billingProvider.totalPaidAmount > 0,
+                      onTap: () async {
+                        _markPaymentStepVisited();
+                        await showPaymentMethodsSheet(context);
                       },
-                      child: const PaymentMethodsSection(),
                     ),
                     const SizedBox(height: 12),
                   ],
 
-                  // Order Summary
-                  const BillingAccordionCard(
-                    title: 'Order Summary',
-                    initiallyExpanded: true,
-                    child: PaymentSummary(
-                      compact: false,
-                      showToCustomerCreditToggle: false,
-                      taxBreakdownEnabled: true,
-                      taxBreakdownUseBottomSheet: true,
+                  // Order Summary — always visible, no longer an accordion.
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.01),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Order Summary',
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0066CC),
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          PaymentSummary(
+                            compact: false,
+                            showToCustomerCreditToggle: false,
+                            taxBreakdownEnabled: true,
+                            taxBreakdownUseBottomSheet: true,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

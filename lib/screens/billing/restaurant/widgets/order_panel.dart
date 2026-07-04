@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -169,6 +170,16 @@ class OrderPanelState extends State<OrderPanel> {
 
   bool get isViewingCounterListTab =>
       _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
+
+  bool get _skipCheckoutOnCounterConfirmAndPrint {
+    if (!widget.allowCounterBilling || !widget.isCounterBillingMode) {
+      return false;
+    }
+    return Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.skipCheckoutOnConfirmAndPrint ??
+        false;
+  }
 
   // Scroll + highlight for newly added items in edit-order view
   final ScrollController _editOrderScrollController = ScrollController();
@@ -7901,7 +7912,141 @@ class OrderPanelState extends State<OrderPanel> {
 
   Future<void> saveCurrentCartFromParent() => _saveCurrentCartAsPending();
 
+  bool _hasAnySelectedPaymentAmount() {
+    return (_isCashSelected && (double.tryParse(_cashAmount) ?? 0) > 0) ||
+        (_isCardSelected && (double.tryParse(_cardAmount) ?? 0) > 0) ||
+        (_isUpiSelected && (double.tryParse(_upiAmount) ?? 0) > 0) ||
+        (_isCodSelected && (double.tryParse(_codAmount) ?? 0) > 0) ||
+        (_isDebitSelected && (double.tryParse(_debitAmount) ?? 0) > 0);
+  }
+
+  void _applyDefaultPaymentForDirectConfirmAndPrint() {
+    final orderTotal = _getEffectiveOrderTotal();
+    if (orderTotal <= 0) return;
+
+    final hasSelection = _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected;
+    if (!hasSelection) {
+      final defaultPayment =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.defaultPaymentMethod
+              .trim()
+              .toUpperCase();
+      switch (defaultPayment) {
+        case 'CARD':
+          _isCardSelected = true;
+          break;
+        case 'UPI':
+          _isUpiSelected = true;
+          break;
+        case 'COD':
+          _isCodSelected = true;
+          break;
+        case 'DEBIT':
+          _isDebitSelected = true;
+          break;
+        case 'CASH':
+        default:
+          _isCashSelected = true;
+          break;
+      }
+    }
+
+    if (_hasAnySelectedPaymentAmount()) return;
+
+    final totalText = orderTotal.toStringAsFixed(2);
+    if (_isCashSelected) {
+      _cashAmount = totalText;
+    } else if (_isCardSelected) {
+      _cardAmount = totalText;
+    } else if (_isUpiSelected) {
+      _upiAmount = totalText;
+    } else if (_isCodSelected) {
+      _codAmount = totalText;
+    } else if (_isDebitSelected) {
+      _debitAmount = totalText;
+    }
+  }
+
+  Future<void> _confirmCurrentCartAndPrintWithoutCheckoutModal() async {
+    if (_isLoadingConfirm) return;
+
+    debugPrint(
+      '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct counter confirm & print',
+    );
+
+    _hydrateCustomerListFromProviderCache();
+    if (!mounted) return;
+
+    setState(() {
+      if (_deliveryMethodId.isEmpty) {
+        final defaultDeliveryMethod = _getDefaultDeliveryMethod();
+        _deliveryMethod = defaultDeliveryMethod.name;
+        _deliveryMethodId = defaultDeliveryMethod.id;
+      }
+      _applyDefaultPaymentForDirectConfirmAndPrint();
+      _hasOpenedPaymentModalOnce = true;
+      _balanceAmount = _calculateBalanceAmount();
+    });
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.updatePaymentFromModal(
+      isCash: _isCashSelected,
+      isCard: _isCardSelected,
+      isUpi: _isUpiSelected,
+      isCod: _isCodSelected,
+      isDebit: _isDebitSelected,
+      cashAmount: _cashAmount,
+      cardAmount: _cardAmount,
+      upiAmount: _upiAmount,
+      codAmount: _codAmount,
+      debitAmount: _debitAmount,
+      transactionNumber: _transactionNumber,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      cashMethodId: billingProvider.cashPaymentMethodId,
+      cardMethodId: billingProvider.cardPaymentMethodId,
+      upiMethodId: billingProvider.upiPaymentMethodId,
+      codMethodId: billingProvider.codPaymentMethodId,
+    );
+
+    widget.onCheckoutActionLoadingChanged?.call(
+      isLoading: true,
+      printBill: true,
+    );
+    try {
+      await _confirmCurrentCart(printBill: true);
+    } finally {
+      widget.onCheckoutActionLoadingChanged?.call(
+        isLoading: false,
+        printBill: true,
+      );
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  void showCurrentCartConfirmAndPrintFromParent() {
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (!(appSettings?.showConfirmOrderAndPrintButton ?? true)) return;
+
+    if (_skipCheckoutOnCounterConfirmAndPrint) {
+      unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
+      return;
+    }
+    showCheckoutFromParent(forCurrentCart: true);
+  }
+
   void showCurrentCartCheckoutFromParent() {
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (!(appSettings?.showConfirmOrderButton ?? true)) return;
     showCheckoutFromParent(forCurrentCart: true);
   }
 

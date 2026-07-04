@@ -53,10 +53,10 @@ class BillingActionButtons extends StatelessWidget {
     final billingProvider = Provider.of<BillingProvider>(context);
     final hasItems = localProvider.cartItems.isNotEmpty;
     final hasInternet = billingProvider.hasInternet;
-    final showConfirmButton = Provider.of<AppSettingsProvider>(context)
-            .appSettings
-            ?.showConfirmOrderButton ??
-        true;
+    final appSettings = Provider.of<AppSettingsProvider>(context).appSettings;
+    final showConfirmButton = appSettings?.showConfirmOrderButton ?? true;
+    final showConfirmAndPrintButton =
+        appSettings?.showConfirmOrderAndPrintButton ?? true;
 
     if (isQuotationMode) {
       return _buildQuotationActions(hasItems: hasItems);
@@ -94,10 +94,10 @@ class BillingActionButtons extends StatelessWidget {
                 ),
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
-                  backgroundColor: hasItems
-                      ? const Color(0xFFEAB308)
-                      : Colors.grey.shade300,
-                  minimumSize: const Size(double.infinity, kBillingMinTouchTarget),
+                  backgroundColor:
+                      hasItems ? const Color(0xFFEAB308) : Colors.grey.shade300,
+                  minimumSize:
+                      const Size(double.infinity, kBillingMinTouchTarget),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -112,6 +112,7 @@ class BillingActionButtons extends StatelessWidget {
             _buildOnlineActions(
               hasItems: hasItems,
               showConfirmButton: showConfirmButton,
+              showConfirmAndPrintButton: showConfirmAndPrintButton,
             )
           else
             _buildOfflineActions(hasItems: hasItems),
@@ -155,15 +156,15 @@ class BillingActionButtons extends StatelessWidget {
                   elevation: 0,
                   backgroundColor:
                       hasItems ? const Color(0xFF14B8A6) : Colors.grey.shade300,
-                  minimumSize: const Size(double.infinity, kBillingMinTouchTarget),
+                  minimumSize:
+                      const Size(double.infinity, kBillingMinTouchTarget),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                onPressed: (hasItems && !_isCheckoutBusy)
-                    ? onCreateQuotation
-                    : null,
+                onPressed:
+                    (hasItems && !_isCheckoutBusy) ? onCreateQuotation : null,
               ),
             ),
           ),
@@ -235,8 +236,7 @@ class BillingActionButtons extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      onPressed:
-                          !_isCheckoutBusy ? onOpenQuotationList : null,
+                      onPressed: !_isCheckoutBusy ? onOpenQuotationList : null,
                     ),
                   ),
                 ),
@@ -291,6 +291,7 @@ class BillingActionButtons extends StatelessWidget {
   Widget _buildOnlineActions({
     required bool hasItems,
     required bool showConfirmButton,
+    required bool showConfirmAndPrintButton,
   }) {
     return Row(
       children: [
@@ -339,47 +340,49 @@ class BillingActionButtons extends StatelessWidget {
           ),
           const SizedBox(width: 12),
         ],
-        Expanded(
-          child: Semantics(
-            label: 'Confirm & Print',
-            button: true,
-            child: ExcludeSemantics(
-              child: ElevatedButton.icon(
-                icon: isConfirmingAndPrinting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(Icons.print, color: Colors.white, size: 18),
-                label: const Text(
-                  'Confirm & Print',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+        if (showConfirmAndPrintButton)
+          Expanded(
+            child: Semantics(
+              label: 'Confirm & Print',
+              button: true,
+              child: ExcludeSemantics(
+                child: ElevatedButton.icon(
+                  icon: isConfirmingAndPrinting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.print, color: Colors.white, size: 18),
+                  label: const Text(
+                    'Confirm & Print',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  elevation: 0,
-                  backgroundColor:
-                      hasItems ? const Color(0xFF15803D) : Colors.grey.shade300,
-                  minimumSize: const Size(0, kBillingMinTouchTarget),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: hasItems
+                        ? const Color(0xFF15803D)
+                        : Colors.grey.shade300,
+                    minimumSize: const Size(0, kBillingMinTouchTarget),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
+                  onPressed: (hasItems && !_isCheckoutBusy)
+                      ? onCreateOrderAndPrint
+                      : null,
                 ),
-                onPressed: (hasItems && !_isCheckoutBusy)
-                    ? onCreateOrderAndPrint
-                    : null,
               ),
             ),
           ),
-        ),
       ],
     );
   }

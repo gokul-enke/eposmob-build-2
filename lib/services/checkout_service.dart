@@ -6,7 +6,6 @@ import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_contr
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/helpers/delivery_charge_helper.dart';
-import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
@@ -47,6 +46,76 @@ class CheckoutService {
             false);
   }
 
+  String? _phoneForOrder(BillingProvider billingProvider) {
+    return OrderCustomerFields.phoneForOrder(
+      selectedPhone: billingProvider.selectedCustomerPhone,
+      customerPhone: billingProvider.selectedCustomer?.phone,
+      mobileNumberText: billingProvider.mobileNumberText,
+      controllerText: billingProvider.mobileNumberTextController.text,
+    );
+  }
+
+  String? _nameForOrder(BillingProvider billingProvider) {
+    return OrderCustomerFields.nameForOrder(
+      billingProvider.selectedCustomer?.name,
+    );
+  }
+
+  bool _validateFinalCheckout({
+    required BillingProvider billingProvider,
+    required bool showErrors,
+    required bool requirePaymentVisited,
+  }) {
+    if (!_hasCustomerForCheckout(billingProvider)) {
+      if (showErrors) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.selectCustomer,
+        );
+      }
+      return false;
+    }
+
+    if (!billingProvider.hasAnyPaymentSelected()) {
+      if (showErrors) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.selectPaymentMethod,
+        );
+      }
+      return false;
+    }
+
+    final ready =
+        const BillingMobilePaymentController().validatePaymentReadyForConfirm(
+      billingProvider,
+      paymentStepVisited:
+          requirePaymentVisited ? billingProvider.paymentStepVisited : true,
+    );
+    if (!ready.isValid) {
+      if (showErrors) {
+        showScaffoldError(
+          context: context,
+          message: ready.message ??
+              BillingMobileErrorMessages.configurePaymentBeforeConfirm,
+        );
+      }
+      return false;
+    }
+
+    if (!billingProvider.validateCarNumberIfNeeded()) {
+      if (showErrors) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.enterCarNumber,
+        );
+      }
+      return false;
+    }
+
+    return true;
+  }
+
   /// Confirms the current order via the API. Returns `true` when the server
   /// accepted the order (an `order_id` was returned), so callers can run the
   /// post-confirm workspace reset (default-customer re-apply, etc.).
@@ -67,20 +136,6 @@ class CheckoutService {
     bool orderConfirmed = false;
     billingProvider.setLoadingConfirmOrder(true);
     try {
-      final skipCustomerSelection = Provider.of<AppSettingsProvider>(
-            context,
-            listen: false,
-          ).appSettings?.skipCustomerSelection ??
-          false;
-      if (!skipCustomerSelection && !_hasCustomerForCheckout(billingProvider)) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.selectCustomer,
-        );
-        return false;
-      }
-
-      // Check if any payment method is selected (provider-level helper)
       List<String> selectedPaymentMethods =
           billingProvider.getSelectedPaymentMethodsForApi();
 
@@ -90,19 +145,15 @@ class CheckoutService {
         hasPayment: billingProvider.hasAnyPaymentSelected(),
       );
 
-      if (!billingProvider.hasAnyPaymentSelected()) {
-        billingDebugCheckout('confirmOrder', 'validationFailed', errorType: 'noPayment');
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.selectPaymentMethod,
-        );
-        return false;
-      }
-
-      if (!billingProvider.validateCarNumberIfNeeded()) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.enterCarNumber,
+      if (!_validateFinalCheckout(
+        billingProvider: billingProvider,
+        showErrors: true,
+        requirePaymentVisited: true,
+      )) {
+        billingDebugCheckout(
+          'confirmOrder',
+          'validationFailed',
+          errorType: 'finalCheckout',
         );
         return false;
       }
@@ -123,20 +174,22 @@ class CheckoutService {
         return false;
       }
 
-      // Validate that all items have valid pricing before API call
-      bool hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-          item.price == null ||
-          item.price! < 0 ||
-          item.mrp == null ||
-          item.mrp! < 0);
-
-      if (hasInvalidPricing) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
-        );
-        return false;
-      }
+      // Desktop parity: do not block POS order throughput on local price/MRP
+      // validation here. TODO: backend validation should reject invalid
+      // price/MRP later without blocking mobile POS checkout.
+      // final hasInvalidPricing = localProductProvider.cartItems.any((item) =>
+      //     item.price == null ||
+      //     item.price! < 0 ||
+      //     item.mrp == null ||
+      //     item.mrp! < 0);
+      //
+      // if (hasInvalidPricing) {
+      //   showScaffoldError(
+      //     context: context,
+      //     message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
+      //   );
+      //   return false;
+      // }
 
       final items = localProductProvider.buildOrderItemsPayload();
       final paidMethods =
@@ -163,8 +216,7 @@ class CheckoutService {
         transactionId: billingProvider.transactionNumberController.text,
         totalPrice: orderTotal.toString(),
         customerId: billingProvider.selectedCustomerID,
-        customerPhone: billingProvider.selectedCustomerPhone ??
-            billingProvider.mobileNumberText,
+        customerPhone: _phoneForOrder(billingProvider),
         // Always use multi-payment format
         paymentMethod: null,
         paidAmount: null,
@@ -281,20 +333,6 @@ class CheckoutService {
     billingProvider.setLoadingCreateOrder(true);
     String? createdOrderNumber;
     try {
-      final skipCustomerSelection = Provider.of<AppSettingsProvider>(
-            context,
-            listen: false,
-          ).appSettings?.skipCustomerSelection ??
-          false;
-      if (!skipCustomerSelection && !_hasCustomerForCheckout(billingProvider)) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.selectCustomer,
-        );
-        return null;
-      }
-
-      // Guard: require at least one payment method (provider-level helper)
       final selectedPaymentMethods =
           billingProvider.getSelectedPaymentMethodsForApi();
 
@@ -304,24 +342,15 @@ class CheckoutService {
         hasPayment: billingProvider.hasAnyPaymentSelected(),
       );
 
-      if (!billingProvider.hasAnyPaymentSelected()) {
+      if (!_validateFinalCheckout(
+        billingProvider: billingProvider,
+        showErrors: true,
+        requirePaymentVisited: true,
+      )) {
         billingDebugCheckout(
           'createOrderAndPrint',
           'validationFailed',
-          errorType: 'noPayment',
-        );
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.selectPaymentMethod,
-        );
-        return null;
-      }
-
-      // Car number required for car delivery
-      if (!billingProvider.validateCarNumberIfNeeded()) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.enterCarNumber,
+          errorType: 'finalCheckout',
         );
         return null;
       }
@@ -341,19 +370,21 @@ class CheckoutService {
         return null;
       }
 
-      // Validate item pricing
-      final hasInvalidPricing = localProductProvider.cartItems.any((item) =>
-          item.price == null ||
-          item.price! < 0 ||
-          item.mrp == null ||
-          item.mrp! < 0);
-      if (hasInvalidPricing) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
-        );
-        return null;
-      }
+      // Desktop parity: do not block POS order throughput on local price/MRP
+      // validation here. TODO: backend validation should reject invalid
+      // price/MRP later without blocking mobile POS checkout.
+      // final hasInvalidPricing = localProductProvider.cartItems.any((item) =>
+      //     item.price == null ||
+      //     item.price! < 0 ||
+      //     item.mrp == null ||
+      //     item.mrp! < 0);
+      // if (hasInvalidPricing) {
+      //   showScaffoldError(
+      //     context: context,
+      //     message: BillingMobileErrorMessages.invalidPricingBeforeConfirm,
+      //   );
+      //   return null;
+      // }
 
       final items = localProductProvider.buildOrderItemsPayload();
 
@@ -378,8 +409,7 @@ class CheckoutService {
         transactionId: billingProvider.transactionNumberController.text,
         totalPrice: orderTotal.toString(),
         customerId: billingProvider.selectedCustomerID,
-        customerPhone: billingProvider.selectedCustomerPhone ??
-            billingProvider.mobileNumberText,
+        customerPhone: _phoneForOrder(billingProvider),
         // Always use multi-payment format
         paymentMethod: null,
         paidAmount: null,
@@ -502,30 +532,13 @@ class CheckoutService {
         return SaveOrderResult.validationFailed;
       }
 
-      // Validate that all items have valid pricing
-      final hasInvalidPricing = localProductProvider.cartItems
-          .any((item) => item.price == null || item.price! < 0);
-      if (hasInvalidPricing) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.invalidPricingBeforeSave,
-        );
-        return SaveOrderResult.validationFailed;
-      }
-
       final orderData = billingProvider.createOrderData();
       final paymentMethod = orderData['paymentMethod']?.toString() ?? "";
       final paidAmount = orderData['paidAmount']?.toString() ?? "0";
 
       final currentOrder = localProductProvider.currentOrder;
-      final customerNameToSave =
-          OrderCustomerFields.nameForOrder(billingProvider.selectedCustomer?.name);
-      final customerPhoneToSave = OrderCustomerFields.phoneForOrder(
-        selectedPhone: billingProvider.selectedCustomerPhone,
-        customerPhone: billingProvider.selectedCustomer?.phone,
-        mobileNumberText: billingProvider.mobileNumberText,
-        controllerText: billingProvider.mobileNumberTextController.text,
-      );
+      final customerNameToSave = _nameForOrder(billingProvider);
+      final customerPhoneToSave = _phoneForOrder(billingProvider);
       final customerTypeToSave = billingProvider.selectedCustomer?.customerType;
       final deliveryCharge = resolveDeliveryCharge(context);
 
@@ -621,14 +634,11 @@ class CheckoutService {
         return null;
       }
 
-      // Validate that all items have valid pricing
-      final hasInvalidPricing = localProductProvider.cartItems
-          .any((item) => item.price == null || item.price! < 0);
-      if (hasInvalidPricing) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.invalidPricingBeforeSave,
-        );
+      if (!_validateFinalCheckout(
+        billingProvider: billingProvider,
+        showErrors: true,
+        requirePaymentVisited: true,
+      )) {
         return null;
       }
 
@@ -638,9 +648,8 @@ class CheckoutService {
 
       SavedOrder? result;
       final currentOrder = localProductProvider.currentOrder;
-      final customerNameToSave = billingProvider.selectedCustomer?.name;
-      final customerPhoneToSave = billingProvider.selectedCustomerPhone ??
-          billingProvider.mobileNumberText;
+      final customerNameToSave = _nameForOrder(billingProvider);
+      final customerPhoneToSave = _phoneForOrder(billingProvider);
       final customerTypeToSave = billingProvider.selectedCustomer?.customerType;
       final deliveryCharge = resolveDeliveryCharge(context);
 
@@ -745,9 +754,7 @@ class CheckoutService {
         );
       }
 
-      if (result != null) {
-        localProductProvider.clearCartAfterOrder();
-      }
+      localProductProvider.clearCartAfterOrder();
 
       return result;
     } catch (e) {

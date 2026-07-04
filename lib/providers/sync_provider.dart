@@ -12,6 +12,30 @@ import '../providers/supplier_provider.dart';
 import 'general_settings_provider.dart';
 import 'app_settings_provider.dart';
 import '../providers/delivery_methods_provider.dart';
+import '../providers/customer_provider.dart';
+import 'offline_sync_endpoints.dart';
+
+enum OfflineSyncTarget {
+  products,
+  categories,
+  stock,
+  paymentMethods,
+  deliveryMethods,
+  documentConfigs,
+  customers,
+  suppliers,
+  stores,
+  units,
+  racks,
+  settings,
+}
+
+enum OfflineSyncSection {
+  catalog,
+  billing,
+  customersAndSuppliers,
+  storeReference,
+}
 
 /// Comprehensive sync provider that handles synchronization of all data
 /// across the application. Follows the Provider Pattern preference for
@@ -24,6 +48,7 @@ class SyncProvider extends ChangeNotifier {
   bool _hasError = false;
   String _errorMessage = '';
   DateTime? _lastSyncTime;
+  String? _activeSyncKey;
 
   // Getters
   bool get isSyncing => _isSyncing;
@@ -32,12 +57,22 @@ class SyncProvider extends ChangeNotifier {
   bool get hasError => _hasError;
   String get errorMessage => _errorMessage;
   DateTime? get lastSyncTime => _lastSyncTime;
+  String? get activeSyncKey => _activeSyncKey;
 
-  /// Main sync method that coordinates all data synchronization
-  Future<void> syncAllData(BuildContext context) async {
+  bool isSyncingKey(String key) => _isSyncing && _activeSyncKey == key;
+
+  Future<String> _requireAccessToken(BuildContext context) async {
+    final authModel = Provider.of<AuthModel>(context, listen: false);
+    final accessToken = authModel.token;
+    if (accessToken == null || accessToken.isEmpty) {
+      throw Exception('No access token available. Please login again.');
+    }
+    return accessToken;
+  }
+
+  void _ensureCanSync(BuildContext context) {
     if (_isSyncing) {
-      debugPrint("Sync already in progress, skipping...");
-      return;
+      throw Exception('Another sync is already in progress.');
     }
 
     final billingProvider =
@@ -49,16 +84,230 @@ class SyncProvider extends ChangeNotifier {
       _syncError(message);
       throw Exception(message);
     }
+  }
+
+  /// Sync a single offline data type.
+  Future<void> syncTarget(
+    BuildContext context,
+    OfflineSyncTarget target,
+  ) async {
+    await OfflineSyncEndpoints.logTarget(
+      'Row sync → ${_labelForTarget(target)}',
+      target,
+    );
+    _ensureCanSync(context);
+    final accessToken = await _requireAccessToken(context);
 
     _startSync();
+    _activeSyncKey = target.name;
+
+    try {
+      switch (target) {
+        case OfflineSyncTarget.products:
+          _updateProgress(0.5, 'Syncing products...');
+          await _syncProducts(context, accessToken);
+          break;
+        case OfflineSyncTarget.categories:
+          _updateProgress(0.5, 'Syncing categories...');
+          await _syncCategories(context);
+          break;
+        case OfflineSyncTarget.stock:
+          _updateProgress(0.5, 'Syncing stock quantities...');
+          await _syncStockData(context, accessToken);
+          break;
+        case OfflineSyncTarget.paymentMethods:
+          _updateProgress(0.5, 'Syncing payment methods...');
+          await Provider.of<InvoiceProvider>(context, listen: false)
+              .listAllPaymentList(accessToken, forceRefresh: true);
+          break;
+        case OfflineSyncTarget.deliveryMethods:
+          _updateProgress(0.5, 'Syncing delivery methods...');
+          await _syncDeliveryMethods(context);
+          break;
+        case OfflineSyncTarget.documentConfigs:
+          _updateProgress(0.5, 'Syncing document configurations...');
+          await _syncDocumentConfigurations(context, accessToken);
+          break;
+        case OfflineSyncTarget.customers:
+          _updateProgress(0.5, 'Syncing customers...');
+          await Provider.of<CustomerProvider>(context, listen: false)
+              .fetchCustomers(accessToken: accessToken, listAll: true);
+          break;
+        case OfflineSyncTarget.suppliers:
+          _updateProgress(0.5, 'Syncing suppliers...');
+          await _syncSuppliers(context, accessToken);
+          break;
+        case OfflineSyncTarget.stores:
+          _updateProgress(0.5, 'Syncing stores...');
+          await Provider.of<PurchaseProvider>(context, listen: false)
+              .listAllStores(accessToken, null);
+          break;
+        case OfflineSyncTarget.units:
+          _updateProgress(0.5, 'Syncing units...');
+          await Provider.of<PurchaseProvider>(context, listen: false)
+              .listAllUnits(accessToken);
+          break;
+        case OfflineSyncTarget.racks:
+          _updateProgress(0.5, 'Syncing rack metadata...');
+          await Provider.of<PurchaseProvider>(context, listen: false)
+              .listMasterDataValues(accessToken, 'RACKS');
+          break;
+        case OfflineSyncTarget.settings:
+          _updateProgress(0.5, 'Syncing settings...');
+          await Provider.of<GeneralSettingsProvider>(context, listen: false)
+              .fetchGeneralSettings();
+          await Provider.of<AppSettingsProvider>(context, listen: false)
+              .fetchAppSettings();
+          break;
+      }
+
+      _updateProgress(1.0, 'Sync completed!');
+      _lastSyncTime = DateTime.now();
+      await Future.delayed(const Duration(milliseconds: 400));
+      _completSync();
+    } catch (e) {
+      debugPrint('❌ Target sync failed ($target): $e');
+      _syncError(e.toString());
+      rethrow;
+    }
+  }
+
+  /// Sync all targets in a section (e.g. catalog, billing).
+  Future<void> syncSection(
+    BuildContext context,
+    OfflineSyncSection section,
+  ) async {
+    await OfflineSyncEndpoints.logSection(
+      'Section sync → ${section.name}',
+      section,
+    );
+    _ensureCanSync(context);
+
+    final targets = switch (section) {
+      OfflineSyncSection.catalog => [
+          OfflineSyncTarget.products,
+          OfflineSyncTarget.categories,
+          OfflineSyncTarget.stock,
+        ],
+      OfflineSyncSection.billing => [
+          OfflineSyncTarget.paymentMethods,
+          OfflineSyncTarget.deliveryMethods,
+          OfflineSyncTarget.documentConfigs,
+        ],
+      OfflineSyncSection.customersAndSuppliers => [
+          OfflineSyncTarget.customers,
+          OfflineSyncTarget.suppliers,
+        ],
+      OfflineSyncSection.storeReference => [
+          OfflineSyncTarget.stores,
+          OfflineSyncTarget.units,
+          OfflineSyncTarget.racks,
+        ],
+    };
+
+    _startSync();
+    _activeSyncKey = 'section:${section.name}';
+
+    try {
+      final accessToken = await _requireAccessToken(context);
+      final total = targets.length;
+
+      for (var i = 0; i < targets.length; i++) {
+        final target = targets[i];
+        final progress = (i + 1) / total;
+        _updateProgress(progress, 'Syncing ${_labelForTarget(target)}...');
+
+        switch (target) {
+          case OfflineSyncTarget.products:
+            await _syncProducts(context, accessToken);
+            break;
+          case OfflineSyncTarget.categories:
+            await _syncCategories(context);
+            break;
+          case OfflineSyncTarget.stock:
+            await _syncStockData(context, accessToken);
+            break;
+          case OfflineSyncTarget.paymentMethods:
+            await Provider.of<InvoiceProvider>(context, listen: false)
+                .listAllPaymentList(accessToken, forceRefresh: true);
+            break;
+          case OfflineSyncTarget.deliveryMethods:
+            await _syncDeliveryMethods(context);
+            break;
+          case OfflineSyncTarget.documentConfigs:
+            await _syncDocumentConfigurations(context, accessToken);
+            break;
+          case OfflineSyncTarget.customers:
+            await Provider.of<CustomerProvider>(context, listen: false)
+                .fetchCustomers(accessToken: accessToken, listAll: true);
+            break;
+          case OfflineSyncTarget.suppliers:
+            await _syncSuppliers(context, accessToken);
+            break;
+          case OfflineSyncTarget.stores:
+            await Provider.of<PurchaseProvider>(context, listen: false)
+                .listAllStores(accessToken, null);
+            break;
+          case OfflineSyncTarget.units:
+            await Provider.of<PurchaseProvider>(context, listen: false)
+                .listAllUnits(accessToken);
+            break;
+          case OfflineSyncTarget.racks:
+            await Provider.of<PurchaseProvider>(context, listen: false)
+                .listMasterDataValues(accessToken, 'RACKS');
+            break;
+          case OfflineSyncTarget.settings:
+            await Provider.of<GeneralSettingsProvider>(context, listen: false)
+                .fetchGeneralSettings();
+            await Provider.of<AppSettingsProvider>(context, listen: false)
+                .fetchAppSettings();
+            break;
+        }
+      }
+
+      _updateProgress(1.0, 'Section sync completed!');
+      _lastSyncTime = DateTime.now();
+      await Future.delayed(const Duration(milliseconds: 400));
+      _completSync();
+    } catch (e) {
+      debugPrint('❌ Section sync failed ($section): $e');
+      _syncError(e.toString());
+      rethrow;
+    }
+  }
+
+  String _labelForTarget(OfflineSyncTarget target) {
+    return switch (target) {
+      OfflineSyncTarget.products => 'products',
+      OfflineSyncTarget.categories => 'categories',
+      OfflineSyncTarget.stock => 'stock',
+      OfflineSyncTarget.paymentMethods => 'payment methods',
+      OfflineSyncTarget.deliveryMethods => 'delivery methods',
+      OfflineSyncTarget.documentConfigs => 'document configs',
+      OfflineSyncTarget.customers => 'customers',
+      OfflineSyncTarget.suppliers => 'suppliers',
+      OfflineSyncTarget.stores => 'stores',
+      OfflineSyncTarget.units => 'units',
+      OfflineSyncTarget.racks => 'rack data',
+      OfflineSyncTarget.settings => 'settings',
+    };
+  }
+
+  /// Main sync method that coordinates all data synchronization
+  Future<void> syncAllData(BuildContext context) async {
+    if (_isSyncing) {
+      debugPrint("Sync already in progress, skipping...");
+      return;
+    }
+
+    await OfflineSyncEndpoints.logSyncAll('Sync All (footer button)');
+
+    _ensureCanSync(context);
+    _startSync();
+    _activeSyncKey = 'all';
     
     try {
-      final authModel = Provider.of<AuthModel>(context, listen: false);
-      final accessToken = authModel.token;
-
-      if (accessToken == null || accessToken.isEmpty) {
-        throw Exception('No access token available. Please login again.');
-      }
+      final accessToken = await _requireAccessToken(context);
 
       debugPrint("🔄 Starting comprehensive data sync...");
       debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
@@ -171,7 +420,11 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("📂 Syncing categories...");
       final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
       // Use the same loader as Category screen to keep lists consistent
-      await categoryProvider.searchAllCategory(page: 1);
+      await categoryProvider.searchAllCategory(
+        page: 1,
+        sellableOnly: true,
+        scopeToActiveStore: true,
+      );
       debugPrint("✅ Categories synced successfully");
     } catch (e) {
       debugPrint("❌ Failed to sync categories: $e");
@@ -282,6 +535,10 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _clearActiveSyncKey() {
+    _activeSyncKey = null;
+  }
+
   /// Update sync progress
   void _updateProgress(double progress, String message) {
     if (_cancelRequested) return;
@@ -298,6 +555,7 @@ class SyncProvider extends ChangeNotifier {
       _hasError = false;
       _syncProgress = 0.0;
       _syncMessage = 'Sync cancelled';
+      _clearActiveSyncKey();
       notifyListeners();
       return;
     }
@@ -305,6 +563,7 @@ class SyncProvider extends ChangeNotifier {
     _hasError = false;
     _syncProgress = 1.0;
     _syncMessage = 'Sync completed successfully!';
+    _clearActiveSyncKey();
     notifyListeners();
   }
 
@@ -316,6 +575,7 @@ class SyncProvider extends ChangeNotifier {
       _errorMessage = '';
       _syncMessage = 'Sync cancelled';
       _syncProgress = 0.0;
+      _clearActiveSyncKey();
       notifyListeners();
       return;
     }
@@ -324,6 +584,7 @@ class SyncProvider extends ChangeNotifier {
     _errorMessage = error;
     _syncMessage = 'Sync failed';
     _syncProgress = 0.0;
+    _clearActiveSyncKey();
     notifyListeners();
   }
 
@@ -342,6 +603,7 @@ class SyncProvider extends ChangeNotifier {
     _syncProgress = 0.0;
     _syncMessage = '';
     _lastSyncTime = null;
+    _clearActiveSyncKey();
     notifyListeners();
   }
 

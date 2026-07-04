@@ -340,7 +340,8 @@ class BillingMobileMarketController {
     return double.tryParse(product.mrp ?? '0') ?? 0;
   }
 
-  String formatAddFieldPrice(double value) => _cartController.formatPrice(value);
+  String formatAddFieldPrice(double value) =>
+      _cartController.formatPrice(value);
 
   List<MobileCartUnitOption> saleUnitOptionsForProduct(GetProduct product) {
     final uniqueSaleUnits = <int, SaleUnit>{};
@@ -853,9 +854,12 @@ class MobileCartTotals {
 }
 
 class MobileDiscountValidationResult {
-  const MobileDiscountValidationResult.valid() : isValid = true, errorMessage = null;
+  const MobileDiscountValidationResult.valid()
+      : isValid = true,
+        errorMessage = null;
 
-  const MobileDiscountValidationResult.invalid(this.errorMessage) : isValid = false;
+  const MobileDiscountValidationResult.invalid(this.errorMessage)
+      : isValid = false;
 
   final bool isValid;
   final String? errorMessage;
@@ -942,8 +946,7 @@ class BillingMobileCouponController {
     required double originalSubTotal,
   }) {
     final flatDiscount = double.tryParse(flatDiscountText) ?? 0.0;
-    final percentageDiscount =
-        double.tryParse(percentageDiscountText) ?? 0.0;
+    final percentageDiscount = double.tryParse(percentageDiscountText) ?? 0.0;
 
     if (flatDiscount < 0 || percentageDiscount < 0) {
       return const MobileDiscountValidationResult.invalid(
@@ -1237,7 +1240,8 @@ class BillingMobilePaymentController {
 
       final code = method.code.toUpperCase();
       final isCore = bp.isCoreCode(code);
-      final methodId = isCore ? null : (method.id.isNotEmpty ? method.id : code);
+      final methodId =
+          isCore ? null : (method.id.isNotEmpty ? method.id : code);
 
       items.add(
         MobilePaymentItem(
@@ -1476,7 +1480,8 @@ class BillingMobilePaymentController {
     }
   }
 
-  TextEditingController? _controllerForKey(String methodKey, BillingProvider bp) {
+  TextEditingController? _controllerForKey(
+      String methodKey, BillingProvider bp) {
     if (methodKey.startsWith('extra_')) {
       final id = methodKey.substring('extra_'.length);
       return bp.getExtraAmountController(
@@ -1519,7 +1524,8 @@ class BillingMobilePaymentController {
     if (pristineController == null || !_isMethodActive(pristineKey, bp)) {
       return false;
     }
-    if (!_amountsEqual(pristineController.text, bp.pristinePaymentAmount ?? '')) {
+    if (!_amountsEqual(
+        pristineController.text, bp.pristinePaymentAmount ?? '')) {
       return false;
     }
 
@@ -1569,9 +1575,12 @@ class BillingMobilePaymentController {
   void syncCreditAmountWithRemaining(BillingProvider bp) {
     if (!bp.toCustomerCreditEnabled) return;
 
-    final remainingAmount = bp.effectiveOrderTotal - bp.getTotalPaidAmount();
-    if (remainingAmount > 0) {
-      bp.debitAmountController.text = remainingAmount.toStringAsFixed(2);
+    final excessAmount = bp.getTotalPaidAmount() - bp.effectiveOrderTotal;
+    if (excessAmount > 0) {
+      final maxCredit = maxToCustomerCreditAmount(bp);
+      final creditAmount =
+          maxCredit > 0 ? excessAmount.clamp(0.0, maxCredit) : excessAmount;
+      bp.debitAmountController.text = creditAmount.toStringAsFixed(2);
     } else {
       bp.debitAmountController.clear();
     }
@@ -1698,7 +1707,6 @@ class BillingMobilePaymentController {
     if ((double.tryParse(bp.cardAmountController.text) ?? 0) > 0) return true;
     if ((double.tryParse(bp.upiAmountController.text) ?? 0) > 0) return true;
     if ((double.tryParse(bp.codAmountController.text) ?? 0) > 0) return true;
-    if ((double.tryParse(bp.debitAmountController.text) ?? 0) > 0) return true;
     for (final entry in bp.extraPaymentAmounts.entries) {
       if ((double.tryParse(entry.value) ?? 0) > 0) return true;
     }
@@ -1728,9 +1736,6 @@ class BillingMobilePaymentController {
     } else if (bp.isCodSelected) {
       bp.codAmountController.text = totalStr;
       pristineKey = 'COD';
-    } else if (bp.isDebitSelected) {
-      bp.debitAmountController.text = totalStr;
-      pristineKey = 'DEBIT';
     } else if (bp.selectedExtraMethodIds.isNotEmpty) {
       final methodId = bp.selectedExtraMethodIds.first;
       bp.setExtraPaymentAmount(
@@ -2208,8 +2213,7 @@ class BillingMobileCustomerController {
         )) {
       return false;
     }
-    if (salesExecutivePhone != null &&
-        customer!.phone == salesExecutivePhone) {
+    if (salesExecutivePhone != null && customer!.phone == salesExecutivePhone) {
       return false;
     }
     return customer?.balance != null;
