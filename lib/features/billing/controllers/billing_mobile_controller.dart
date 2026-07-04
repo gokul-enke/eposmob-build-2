@@ -19,7 +19,8 @@ import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/services/checkout_service.dart';
-export 'package:pos_machine/services/checkout_service.dart' show SaveOrderResult;
+export 'package:pos_machine/services/checkout_service.dart'
+    show SaveOrderResult;
 import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/features/billing/presentation/pages/add_product_mobile.dart';
 import 'package:pos_machine/features/billing/domain/billing_debug_log.dart';
@@ -74,7 +75,8 @@ class BillingMobileController {
     final SavedOrder? currentOrder = localProductProvider.currentOrder;
     if (currentOrder == null) return;
 
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     billingProvider.clearSelectedCustomer();
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
@@ -129,7 +131,8 @@ class BillingMobileController {
       );
 
       billingProvider.setSelectedCustomer(customerToSet, isManual: true);
-      final restoredCustomer = billingProvider.selectedCustomer ?? customerToSet;
+      final restoredCustomer =
+          billingProvider.selectedCustomer ?? customerToSet;
       Provider.of<CustomerSelectionProvider>(context, listen: false)
           .setSelectedCustomer(restoredCustomer);
     }
@@ -141,6 +144,7 @@ class BillingMobileController {
     String? Function(String methodId)? resolvePaymentMethodValue,
   }) {
     billingProvider.clearAllPaymentMethods();
+    var restoredPaymentData = false;
 
     if (currentOrder.paymentMethod != null) {
       final pm = currentOrder.paymentMethod!;
@@ -152,6 +156,9 @@ class BillingMobileController {
                 List<String>.from(multi['methods'] ?? []);
             final Map<String, dynamic> amounts =
                 Map<String, dynamic>.from(multi['amounts'] ?? {});
+            restoredPaymentData = methods.isNotEmpty ||
+                amounts.entries.any((entry) =>
+                    (double.tryParse(entry.value.toString()) ?? 0) > 0);
 
             bool hasMethodOrAmount(List<String> candidates) {
               final hasMethod = methods.any(candidates.contains);
@@ -174,18 +181,15 @@ class BillingMobileController {
 
             if (hasMethodOrAmount(['CASH'])) {
               billingProvider.setPaymentMethod('CASH', true);
-              billingProvider.cashAmountController.text =
-                  firstAmount(['CASH']);
+              billingProvider.cashAmountController.text = firstAmount(['CASH']);
             }
             if (hasMethodOrAmount(['CARD'])) {
               billingProvider.setPaymentMethod('CARD', true);
-              billingProvider.cardAmountController.text =
-                  firstAmount(['CARD']);
+              billingProvider.cardAmountController.text = firstAmount(['CARD']);
             }
             if (hasMethodOrAmount(['UPI'])) {
               billingProvider.setPaymentMethod('UPI', true);
-              billingProvider.upiAmountController.text =
-                  firstAmount(['UPI']);
+              billingProvider.upiAmountController.text = firstAmount(['UPI']);
             }
             if (hasMethodOrAmount(['DEBIT'])) {
               billingProvider.setPaymentMethod('DEBIT', true);
@@ -209,8 +213,7 @@ class BillingMobileController {
               billingProvider.cardAmountController.text =
                   firstAmount(['CARD', cardId]);
             }
-            if (!methods.contains('UPI') &&
-                hasMethodOrAmount(['UPI', upiId])) {
+            if (!methods.contains('UPI') && hasMethodOrAmount(['UPI', upiId])) {
               billingProvider.setPaymentMethod('UPI', true);
               billingProvider.upiAmountController.text =
                   firstAmount(['UPI', upiId]);
@@ -221,11 +224,11 @@ class BillingMobileController {
                   firstAmount(['COD', codId]);
             }
             if (methods.contains('ONLINE') ||
-                ((double.tryParse((amounts['ONLINE'] ?? '0').toString()) ??
-                            0) >
-                        0)) {
+                ((double.tryParse((amounts['ONLINE'] ?? '0').toString()) ?? 0) >
+                    0)) {
               billingProvider.setPaymentMethod('ONLINE', true);
               billingProvider.setPineLabsPaymentSuccess(true);
+              restoredPaymentData = true;
             }
 
             billingProvider.restoreExtraPaymentsFromAmounts(
@@ -238,6 +241,7 @@ class BillingMobileController {
         }
       } else {
         billingProvider.setPaymentMethod(pm.toUpperCase(), true);
+        restoredPaymentData = pm.trim().isNotEmpty;
         final paid = currentOrder.paidAmount ?? '0.0';
 
         switch (pm.toUpperCase()) {
@@ -273,6 +277,20 @@ class BillingMobileController {
           billingProvider.setPineLabsPaymentSuccess(true);
         }
       }
+    }
+
+    final hasCoreAmount = (double.tryParse(
+                    billingProvider.cashAmountController.text) ??
+                0) >
+            0 ||
+        (double.tryParse(billingProvider.cardAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(billingProvider.upiAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(billingProvider.codAmountController.text) ?? 0) > 0 ||
+        (double.tryParse(billingProvider.debitAmountController.text) ?? 0) > 0;
+    if (restoredPaymentData ||
+        hasCoreAmount ||
+        billingProvider.hasAnyPaymentSelected()) {
+      billingProvider.markPaymentStepVisited();
     }
   }
 
@@ -382,7 +400,8 @@ class BillingMobileController {
   /// is preserved).
 
   void focusTextField(BuildContext context) {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     billingProvider.focusTextField(
@@ -448,9 +467,14 @@ class BillingMobileController {
         case MobileBillingShortcutAction.clearCart:
           billingProvider.executeKeyboardShortcut('clearCart');
         case MobileBillingShortcutAction.confirmOrder:
-          billingProvider.executeKeyboardShortcut('confirmOrder');
+          if (appSettingsProvider.appSettings?.showConfirmOrderButton ?? true) {
+            billingProvider.executeKeyboardShortcut('confirmOrder');
+          }
         case MobileBillingShortcutAction.createOrderAndPrint:
-          billingProvider.executeKeyboardShortcut('createOrderAndPrint');
+          if (appSettingsProvider.appSettings?.showConfirmOrderAndPrintButton ??
+              true) {
+            billingProvider.executeKeyboardShortcut('createOrderAndPrint');
+          }
         case MobileBillingShortcutAction.newOrder:
           billingProvider.executeKeyboardShortcut('newOrder');
         case MobileBillingShortcutAction.saveOrder:
@@ -479,7 +503,8 @@ class BillingMobileController {
     String barcode, {
     required VoidCallback onProductKeyRegen,
   }) async {
-    final billingProvider = Provider.of<BillingProvider>(context, listen: false);
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
 
     if (barcode.isEmpty) return;
 
@@ -491,9 +516,9 @@ class BillingMobileController {
       // + weight/qty payload; parsing lives in the pure EmbeddedBarcode helper.
       final bool isEmbedded = EmbeddedBarcode.isEmbedded(query);
 
-      filteredProducts =
-          Provider.of<LocalProductProvider>(context, listen: false)
-              .filterProductByBarcode(barCode: EmbeddedBarcode.searchCode(query));
+      filteredProducts = Provider.of<LocalProductProvider>(context,
+              listen: false)
+          .filterProductByBarcode(barCode: EmbeddedBarcode.searchCode(query));
 
       if (filteredProducts.isNotEmpty) {
         GetProduct product = filteredProducts.first;
@@ -514,8 +539,7 @@ class BillingMobileController {
             isEmbedded) {
           quantity = EmbeddedBarcode.pieceQuantity(query);
         } else if (matchedSaleUnit != null) {
-          quantity =
-              BarcodeSaleUnit.resolveSaleUnitQuantity(matchedSaleUnit);
+          quantity = BarcodeSaleUnit.resolveSaleUnitQuantity(matchedSaleUnit);
         }
 
         await addProductWithVariantResolution(
@@ -743,11 +767,10 @@ class BillingMobileController {
         Provider.of<BillingProvider>(context, listen: false);
     final customerSelectionProvider =
         Provider.of<CustomerSelectionProvider>(context, listen: false);
-    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
-        .appSettings;
-    final selectedCustomer =
-        customerSelectionProvider.selectedCustomer ??
-            billingProvider.selectedCustomer;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final selectedCustomer = customerSelectionProvider.selectedCustomer ??
+        billingProvider.selectedCustomer;
     final isDefaultCustomer = _customerController.isDefaultCustomer(
       customer: selectedCustomer,
       customerSelectionProvider: customerSelectionProvider,
@@ -805,8 +828,7 @@ class BillingMobileController {
     }
   }
 
-  Future<bool> retryPrintOrder(
-      BuildContext context, String orderNumber) async {
+  Future<bool> retryPrintOrder(BuildContext context, String orderNumber) async {
     return const PrintService().printOrderById(context, orderNumber);
   }
 
@@ -852,8 +874,8 @@ class BillingMobileController {
     final orderData = billingProvider.createOrderData();
     final paymentMethod = orderData['paymentMethod']?.toString() ?? '';
     final paidAmount = orderData['paidAmount']?.toString() ?? '0';
-    final customerNameToSave =
-        OrderCustomerFields.nameForOrder(billingProvider.selectedCustomer?.name);
+    final customerNameToSave = OrderCustomerFields.nameForOrder(
+        billingProvider.selectedCustomer?.name);
     final customerPhoneToSave = OrderCustomerFields.phoneForOrder(
       selectedPhone: billingProvider.selectedCustomerPhone,
       customerPhone: billingProvider.selectedCustomer?.phone,
@@ -1060,6 +1082,8 @@ class BillingMobileController {
     }
 
     billingProvider.clearCollectedPaymentAmountsOnly();
+    billingProvider.resetPaymentStepVisited();
+    billingProvider.clearPristinePaymentState();
   }
 
   /// Clears auto-assigned default customer when opening quotation checkout.
@@ -1075,8 +1099,8 @@ class BillingMobileController {
         Provider.of<CustomerSelectionProvider>(context, listen: false);
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
-    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
-        .appSettings;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final defaultPhone = appSettings?.autoAssignDefaultCustomerPhone ?? '';
 
     final isAutoDefault = customerSelectionProvider.isDefaultCustomer ||
@@ -1178,7 +1202,7 @@ class BillingMobileController {
                     .isNotEmpty ==
                 true
             ? (customerProvider.selectedCustomerPhone ??
-                billingProvider.selectedCustomerPhone)
+                    billingProvider.selectedCustomerPhone)
                 ?.trim()
             : quoteCustomer?.phone?.trim());
     final hasExistingCustomer = quoteCustomerId != null;
@@ -1230,7 +1254,8 @@ class BillingMobileController {
         String? printError;
 
         if (shouldPrint) {
-          final quotationId = QuotationCheckout.extractCreatedQuotationId(response);
+          final quotationId =
+              QuotationCheckout.extractCreatedQuotationId(response);
           if (quotationId == null) {
             printError = BillingMobileErrorMessages.quotationPrintMissingId;
           } else {
@@ -1242,9 +1267,11 @@ class BillingMobileController {
               return const CreateQuotationResult(success: true);
             }
             if (details == null) {
-              printError = BillingMobileErrorMessages.quotationPrintDetailsFailed;
+              printError =
+                  BillingMobileErrorMessages.quotationPrintDetailsFailed;
             } else {
-              Future<bool> printOnce() => printQuotationDetails(context, details);
+              Future<bool> printOnce() =>
+                  printQuotationDetails(context, details);
               printSucceeded = await printOnce();
               if (!context.mounted) {
                 return const CreateQuotationResult(success: true);
@@ -1284,11 +1311,10 @@ class BillingMobileController {
         Provider.of<BillingProvider>(context, listen: false);
     final customerSelectionProvider =
         Provider.of<CustomerSelectionProvider>(context, listen: false);
-    final appSettings = Provider.of<AppSettingsProvider>(context, listen: false)
-        .appSettings;
-    final selectedCustomer =
-        customerSelectionProvider.selectedCustomer ??
-            billingProvider.selectedCustomer;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final selectedCustomer = customerSelectionProvider.selectedCustomer ??
+        billingProvider.selectedCustomer;
     final isDefaultCustomer = _customerController.isDefaultCustomer(
       customer: selectedCustomer,
       customerSelectionProvider: customerSelectionProvider,
@@ -1298,9 +1324,7 @@ class BillingMobileController {
     return const QuotationPrintService().printQuotationDetails(
       context,
       details,
-      customerOldBalance: isDefaultCustomer
-          ? null
-          : selectedCustomer?.balance,
+      customerOldBalance: isDefaultCustomer ? null : selectedCustomer?.balance,
       paidAmount: null,
       paymentMethod: null,
       paymentBreakdown: null,

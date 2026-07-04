@@ -4487,18 +4487,22 @@ class BillingPageState extends State<BillingPageRestaurant>
               ),
             ),
             if (_hasInternet) ...[
-              FocusTraversalOrder(
-                order:
-                    const NumericFocusOrder(BillingFocusOrders.confirmAndPrint),
-                child: _buildActionButton(
-                  text: 'billing.confirm_and_print'.tr,
-                  color: ColorManager.kButtonBlue,
-                  onPressed: () => _showCheckoutModal(
-                      actionMode: CheckoutActionMode.confirm),
-                  isLoading: isLoadingCreateOrder,
-                  shortcutLabel: 'F6',
+              if (Provider.of<AppSettingsProvider>(context, listen: false)
+                      .appSettings
+                      ?.showConfirmOrderAndPrintButton ??
+                  true)
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(
+                      BillingFocusOrders.confirmAndPrint),
+                  child: _buildActionButton(
+                    text: 'billing.confirm_and_print'.tr,
+                    color: ColorManager.kButtonBlue,
+                    onPressed: () => _showCheckoutModal(
+                        actionMode: CheckoutActionMode.confirm),
+                    isLoading: isLoadingCreateOrder,
+                    shortcutLabel: 'F6',
+                  ),
                 ),
-              ),
               if (Provider.of<AppSettingsProvider>(context, listen: false)
                       .appSettings
                       ?.showConfirmOrderButton ??

@@ -61,6 +61,7 @@ import 'package:pos_machine/screens/sales_return/sales_return_list.dart';
 import 'package:pos_machine/screens/settings/settings.dart';
 import 'package:pos_machine/screens/settings/whatsapp_settings.dart';
 import 'package:pos_machine/screens/settings/company_info.dart';
+import 'package:pos_machine/screens/settings/widgets/offline_data_page.dart';
 import 'package:pos_machine/screens/support/support.dart';
 import 'package:pos_machine/screens/transactions/invoice_list.dart';
 import 'package:pos_machine/screens/transactions/proforma_invoice_list.dart';
@@ -219,5 +220,6 @@ class SideBarController extends GetxController {
     ExpenseListScreen(), // 93
     CreateExpenseScreen(), // 94
     ViewExpenseScreen(), // 95
+    OfflineDataPage(), // 96 Offline Data
   ];
 }

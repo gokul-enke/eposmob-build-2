@@ -43,12 +43,16 @@ class ActionButtons extends StatelessWidget {
             isLoading: bp.isLoadingSaveOrder,
           ),
           if (bp.hasInternet) ...[
-            _buildActionButton(
-              text: 'Confirm and Print',
-              color: ColorManager.kButtonBlue,
-              onPressed: onCreateOrderAndPrint,
-              isLoading: bp.isLoadingCreateOrder,
-            ),
+            if (Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings
+                    ?.showConfirmOrderAndPrintButton ??
+                true)
+              _buildActionButton(
+                text: 'Confirm and Print',
+                color: ColorManager.kButtonBlue,
+                onPressed: onCreateOrderAndPrint,
+                isLoading: bp.isLoadingCreateOrder,
+              ),
             if (Provider.of<AppSettingsProvider>(context, listen: false)
                     .appSettings
                     ?.showConfirmOrderButton ??

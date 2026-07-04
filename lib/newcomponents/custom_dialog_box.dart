@@ -110,7 +110,8 @@ ScaffoldMessengerState showScaffold({required BuildContext context, message}) {
   return ScaffoldMessenger.of(context);
 }
 
-void showLoadingOverlay(BuildContext context, {String message = 'Please wait...'}) {
+void showLoadingOverlay(BuildContext context,
+    {String message = 'Please wait...'}) {
   _loadingOverlayEntry?.remove();
   final screenWidth = MediaQuery.of(context).size.width;
   final isMobile = screenWidth < 600;

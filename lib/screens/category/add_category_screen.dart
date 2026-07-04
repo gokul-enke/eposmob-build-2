@@ -147,18 +147,16 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                 imagePath: imageFilePathController.text,
                 iconPath: iconFilePathController.text,
                 accessToken: accessToken ?? "")
-            .then((value) {
+            .then((value) async {
           if (value["status"] == "success") {
+            if (!context.mounted) return;
+            Navigator.pop(context);
+
             showScaffold(
               context: context,
               message: '${value["message"]}',
             );
 
-            final categoryProvider =
-                Provider.of<CategoryProvider>(context, listen: false);
-            categoryProvider.refreshCategories();
-
-            Navigator.pop(context);
             clearText();
             sideBarController.index.value = 12;
           } else {

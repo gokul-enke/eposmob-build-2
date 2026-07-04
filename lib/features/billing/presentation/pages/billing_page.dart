@@ -621,7 +621,8 @@ class BillingPageState extends State<BillingPage>
     if (!validation.isValid) {
       showScaffoldError(
         context: context,
-        message: validation.message ?? 'Please configure payment before confirm',
+        message:
+            validation.message ?? 'Please configure payment before confirm',
       );
       _showPaymentMethodModal(onAfterApply: retryAction);
       return false;
@@ -827,16 +828,21 @@ class BillingPageState extends State<BillingPage>
                 final masterDataProvider =
                     Provider.of<MasterDataProvider>(context, listen: false);
                 final typedKeys = {
-                  'CASH', cashId,
-                  'CARD', cardId,
-                  'UPI', upiId,
-                  'COD', codId,
-                  'DEBIT', 'BALANCE', 'ONLINE',
+                  'CASH',
+                  cashId,
+                  'CARD',
+                  cardId,
+                  'UPI',
+                  upiId,
+                  'COD',
+                  codId,
+                  'DEBIT',
+                  'BALANCE',
+                  'ONLINE',
                 };
                 for (final entry in amounts.entries) {
                   if (typedKeys.contains(entry.key)) continue;
-                  final amount =
-                      double.tryParse(entry.value.toString()) ?? 0;
+                  final amount = double.tryParse(entry.value.toString()) ?? 0;
                   if (amount <= 0) continue;
                   _extraPaymentAmounts[entry.key] = entry.value.toString();
                   final resolvedId = int.tryParse(entry.key);
@@ -1244,6 +1250,7 @@ class BillingPageState extends State<BillingPage>
         debugPrint("⌨️ [BillingPage] Handling F1 -> clear cart");
         _clearCart();
       } else if (event.logicalKey == LogicalKeyboardKey.f2) {
+        if (!_isQuotationPage && !_showConfirmOrderButton) return;
         debugPrint("⌨️ [BillingPage] Handling F2 -> open checkout confirm");
         _showCheckoutModal(
             actionMode: _isQuotationPage
@@ -1274,8 +1281,8 @@ class BillingPageState extends State<BillingPage>
                 : CheckoutActionMode.confirm,
             initialStep: 3);
       } else if (event.logicalKey == LogicalKeyboardKey.f6) {
-        debugPrint(
-            "⌨️ [BillingPage] Handling F6 -> confirm & print");
+        if (!_isQuotationPage && !_showConfirmOrderAndPrintButton) return;
+        debugPrint("⌨️ [BillingPage] Handling F6 -> confirm & print");
         _handleConfirmAndPrint();
       } else if (event.logicalKey == LogicalKeyboardKey.f7) {
         debugPrint("⌨️ [BillingPage] Handling F7 -> create new order");
@@ -3299,10 +3306,9 @@ class BillingPageState extends State<BillingPage>
             appSettings?.showCustomerLastBuyedPriceList == true &&
                 customerSelectionProvider.hasSelectedCustomer &&
                 !customerSelectionProvider.isDefaultCustomer;
-        final bool canViewBillingProductDetails = Provider.of<RoleProvider>(
-                context,
-                listen: true)
-            .currentUserHasPermissionSync('billing.product.view');
+        final bool canViewBillingProductDetails =
+            Provider.of<RoleProvider>(context, listen: true)
+                .currentUserHasPermissionSync('billing.product.view');
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
 
@@ -3488,12 +3494,11 @@ class BillingPageState extends State<BillingPage>
                                                         const Duration(
                                                             milliseconds: 400),
                                                     child: InkWell(
-                                                      onTap:
-                                                          canViewBillingProductDetails
-                                                              ? () =>
-                                                                  _showProductDetailsDialog(
-                                                                      item)
-                                                              : null,
+                                                      onTap: canViewBillingProductDetails
+                                                          ? () =>
+                                                              _showProductDetailsDialog(
+                                                                  item)
+                                                          : null,
                                                       borderRadius:
                                                           BorderRadius.circular(
                                                               16),
@@ -5675,22 +5680,20 @@ class BillingPageState extends State<BillingPage>
               ),
             ],
             if (!_isQuotationPage && _hasInternet) ...[
-              FocusTraversalOrder(
-                order:
-                    const NumericFocusOrder(BillingFocusOrders.confirmAndPrint),
-                child: _buildActionButton(
-                  text: 'billing.confirm_and_print'.tr,
-                  color: ColorManager.kButtonBlue,
-                  onPressed: () => _handleConfirmAndPrint(),
-                  isLoading: isLoadingCreateOrder,
-                  isDisabled: disableActions && !isLoadingCreateOrder,
-                  shortcutLabel: 'F6',
+              if (_showConfirmOrderAndPrintButton)
+                FocusTraversalOrder(
+                  order: const NumericFocusOrder(
+                      BillingFocusOrders.confirmAndPrint),
+                  child: _buildActionButton(
+                    text: 'billing.confirm_and_print'.tr,
+                    color: ColorManager.kButtonBlue,
+                    onPressed: () => _handleConfirmAndPrint(),
+                    isLoading: isLoadingCreateOrder,
+                    isDisabled: disableActions && !isLoadingCreateOrder,
+                    shortcutLabel: 'F6',
+                  ),
                 ),
-              ),
-              if (Provider.of<AppSettingsProvider>(context, listen: false)
-                      .appSettings
-                      ?.showConfirmOrderButton ??
-                  true)
+              if (_showConfirmOrderButton)
                 FocusTraversalOrder(
                   order:
                       const NumericFocusOrder(BillingFocusOrders.confirmOrder),
@@ -6652,7 +6655,8 @@ class BillingPageState extends State<BillingPage>
                     isDefaultCustomer || _isDefaultCustomerPhone(customerPhone),
                 netExcTax: orderDetails.data!.cart!.priceSummary?.netExcTax
                     ?.toString(),
-                apiTotalTax: orderDetails.data?.priceSummary?.totalTax?.toDouble(),
+                apiTotalTax:
+                    orderDetails.data?.priceSummary?.totalTax?.toDouble(),
               );
             }
 
@@ -7137,7 +7141,22 @@ class BillingPageState extends State<BillingPage>
         false;
   }
 
+  bool get _showConfirmOrderButton {
+    return Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.showConfirmOrderButton ??
+        true;
+  }
+
+  bool get _showConfirmOrderAndPrintButton {
+    return Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.showConfirmOrderAndPrintButton ??
+        true;
+  }
+
   Future<void> _handleConfirmAndPrint() async {
+    if (!_showConfirmOrderAndPrintButton) return;
     if (_skipCheckoutOnConfirmAndPrint) {
       await _confirmAndPrintWithoutCheckoutModal();
       return;
@@ -7191,12 +7210,12 @@ class BillingPageState extends State<BillingPage>
     final effectiveTotal = _getEffectiveOrderTotal();
     if (effectiveTotal <= 0) return;
 
-    final hasAnyAmount = (double.tryParse(_cashAmountController.text) ?? 0) >
-            0 ||
-        (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
-        (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
-        (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
-        (double.tryParse(_debitAmountController.text) ?? 0) > 0;
+    final hasAnyAmount =
+        (double.tryParse(_cashAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_cardAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_upiAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_codAmountController.text) ?? 0) > 0 ||
+            (double.tryParse(_debitAmountController.text) ?? 0) > 0;
     if (hasAnyAmount) return;
 
     final totalStr = effectiveTotal.toStringAsFixed(2);
@@ -8710,7 +8729,8 @@ class BillingPageState extends State<BillingPage>
             _isCodSelected = isCod;
             _isDebitSelected = isDebit;
             if (extraMethodAmounts != null) {
-              _extraPaymentAmounts = Map<String, String>.from(extraMethodAmounts);
+              _extraPaymentAmounts =
+                  Map<String, String>.from(extraMethodAmounts);
             }
             if (extraMethodValues != null) {
               _extraPaymentValues = Map<String, String>.from(extraMethodValues);

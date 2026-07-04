@@ -35,6 +35,7 @@ class AppSettings {
   final bool showMrpPos;
   final bool showTaxRatePos;
   final bool showConfirmOrderButton;
+  final bool showConfirmOrderAndPrintButton;
   final bool enableKOTPrint;
   final String defaultDeliveryMethod;
   final String defaultPaymentMethod;
@@ -71,6 +72,7 @@ class AppSettings {
     required this.showMrpPos,
     required this.showTaxRatePos,
     required this.showConfirmOrderButton,
+    this.showConfirmOrderAndPrintButton = true,
     required this.enableKOTPrint,
     required this.defaultDeliveryMethod,
     required this.defaultPaymentMethod,
@@ -154,6 +156,11 @@ class AppSettings {
       showTaxRatePos: settingsMap['SHOW_TAXRATE_POS']?['status'] ?? false,
       showConfirmOrderButton:
           settingsMap['SHOW_CONFIRM_ORDER_BUTTON']?['status'] ?? true,
+      showConfirmOrderAndPrintButton: _readSettingStatus(
+        settingsMap,
+        'SHOW_CONFIRM_ORDER_AND_PRINT_BUTTON',
+        defaultValue: true,
+      ),
       enableKOTPrint: settingsMap['ENABLE_KOT_PRINT']?['status'] ?? false,
       defaultDeliveryMethod:
           settingsMap['DEFAULT_DELIVERY_METHOD']?['value'] ?? "",
@@ -290,6 +297,12 @@ class AppSettings {
           "code": "SHOW_CONFIRM_ORDER_BUTTON",
           "value": "",
           "status": showConfirmOrderButton.toString(),
+        },
+        {
+          "name": "Show Confirm Order And Print Button",
+          "code": "SHOW_CONFIRM_ORDER_AND_PRINT_BUTTON",
+          "value": "",
+          "status": showConfirmOrderAndPrintButton.toString(),
         },
         {
           "name": "Enable KOT Print",

@@ -17,6 +17,7 @@ import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
+import 'package:pos_machine/screens/settings/widgets/offline_data_page.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart'
     as custom_dialog_box;
@@ -350,6 +351,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: const Color(0xFFE3F2FD),
         iconColor: const Color(0xFF1565C0),
         onTap: () => _showLanguagePicker(context),
+      ),
+      Consumer<LocalProductProvider>(
+        builder: (context, productProvider, _) {
+          final count = productProvider.sellableProducts.length;
+          final subtitle = count > 0
+              ? '$count products cached locally'
+              : 'View cached billing data';
+          return _SettingsInfoCard(
+            title: 'Offline Data',
+            subtitle: subtitle,
+            icon: FontAwesomeIcons.database,
+            backgroundColor: const Color(0xFFE8F5E9),
+            iconColor: const Color(0xFF2E7D32),
+            onTap: () {
+              Get.find<SideBarController>().index.value =
+                  OfflineDataPage.sidebarIndex;
+            },
+          );
+        },
       ),
       FutureBuilder<String?>(
         future: SharedPreferenceProvider().getLastProductSyncIso(),

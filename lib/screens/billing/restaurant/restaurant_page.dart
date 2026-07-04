@@ -198,6 +198,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
     final orderPanelState = _orderPanelKey.currentState;
     final hasInternet =
         Provider.of<BillingProvider>(context, listen: false).hasInternet;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final showConfirmOrderButton = appSettings?.showConfirmOrderButton ?? true;
+    final showConfirmAndPrintButton =
+        appSettings?.showConfirmOrderAndPrintButton ?? true;
 
     try {
       if (key == LogicalKeyboardKey.escape) {
@@ -265,6 +270,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
             Future<void>.value());
       } else if (key == LogicalKeyboardKey.f2) {
         if (disableCounterConfirmActions) return;
+        if (hasInternet && !showConfirmOrderButton) return;
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent();
         } else {
@@ -291,8 +297,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
         }
       } else if (key == LogicalKeyboardKey.f6) {
         if (disableCounterConfirmActions) return;
+        if (hasInternet && !showConfirmAndPrintButton) return;
         if (hasInternet) {
-          orderPanelState?.showCheckoutFromParent(initialStep: 3);
+          orderPanelState?.showCurrentCartConfirmAndPrintFromParent();
         } else {
           orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
         }
@@ -865,16 +872,16 @@ class _RestaurantPageState extends State<RestaurantPage> {
         final appSettings =
             Provider.of<AppSettingsProvider>(context).appSettings;
         final showConfirmAndPrintButton =
-            appSettings?.showConfirmOrderButton ?? true;
+            appSettings?.showConfirmOrderAndPrintButton ?? true;
         final canCheckout = hasItems;
         final isCheckoutActionLoading =
             _isLoadingCounterConfirmOrder || _isLoadingCounterConfirmAndPrint;
         final disableConfirmActions =
             _shouldDisableCounterCheckoutActions() || isCheckoutActionLoading;
-        final showCartPanelConfirmOrder = false;
         final showFooterConfirmOrder = widget.allowCounterBillingFromAttender &&
             _isCounterBillingMode &&
-            hasInternet;
+            hasInternet &&
+            (appSettings?.showConfirmOrderButton ?? true);
         final hasFooterCheckoutAction =
             !hasInternet || showConfirmAndPrintButton || showFooterConfirmOrder;
         final confirmOrderIsLoading = _isLoadingCounterConfirmOrder ||
@@ -926,7 +933,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: _isLoadingCounterConfirmAndPrint,
                         onPressed: () => _orderPanelKey.currentState
-                            ?.showCurrentCartCheckoutFromParent(),
+                            ?.showCurrentCartConfirmAndPrintFromParent(),
                       ),
                       if (showFooterConfirmOrder) const SizedBox(width: 12),
                     ],
