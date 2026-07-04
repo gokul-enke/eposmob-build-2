@@ -599,6 +599,43 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     );
   }
 
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: buildCustomStyle(
+                FontWeightManager.medium,
+                FontSize.s11,
+                0.1,
+                Colors.grey.shade500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s11,
+                0.1,
+                ColorManager.textColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMobileList(List<Expense> expenseList, String currency) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -608,68 +645,46 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         final exp = expenseList[index];
         final dateStr = _formatPaymentDate(exp.paymentDate);
 
-        return ExpenseListContentCard(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      exp.referenceNumber,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+        return InkWell(
+          onTap: () => _openExpenseView(exp.referenceNumber),
+          borderRadius: BorderRadius.circular(14),
+          child: ExpenseListContentCard(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        exp.referenceNumber,
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s13,
+                          0.15,
+                          ColorManager.textColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$currency ${exp.amount.toStringAsFixed(2)}',
                       style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s14,
-                        0.20,
+                        FontWeightManager.bold,
+                        FontSize.s13,
+                        0.1,
                         ColorManager.textColor,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  ExpenseListStatusPill(status: exp.status),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ExpenseListInfoChip(label: 'Payment date', value: dateStr),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ExpenseListInfoChip(
-                      label: 'Amount',
-                      value: '$currency ${exp.amount.toStringAsFixed(2)}',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: ExpenseListInfoChip(label: 'Category', value: exp.category),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ExpenseListInfoChip(label: 'Debit A/c', value: exp.debitAccount),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ExpenseListInfoChip(label: 'Credit A/c', value: exp.creditAccount),
-              const SizedBox(height: 12),
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: ExpenseListViewAction(
-                  onPressed: () => _openExpenseView(exp.referenceNumber),
+                    const SizedBox(width: 8),
+                    ExpenseListStatusPill(status: exp.status),
+                  ],
                 ),
-              ),
-            ],
+                Divider(color: Colors.grey.withOpacity(0.08), height: 16),
+                _buildInfoRow('Payment date', dateStr),
+                _buildInfoRow('Category', exp.category),
+              ],
+            ),
           ),
         );
       },
