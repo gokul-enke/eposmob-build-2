@@ -1153,13 +1153,21 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   @override
   Widget build(BuildContext context) {
+    final body = isLoading
+        ? const PrinterSettingsLoadingState()
+        : selectedSettingsType == 'Barcode'
+            ? _buildBarcodeBody()
+            : _buildDefaultBody();
+
     return PrinterSettingsPageShell(
       scrollable: selectedSettingsType != 'Barcode',
-      child: isLoading
-          ? const PrinterSettingsLoadingState()
-          : selectedSettingsType == 'Barcode'
-              ? _buildBarcodeBody()
-              : _buildDefaultBody(),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1280),
+          child: body,
+        ),
+      ),
     );
   }
 
@@ -1172,6 +1180,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         _buildHeader(),
         SizedBox(height: gap),
         _buildTabToggle(),
+        SizedBox(height: gap),
         Expanded(
           child: BarcodeLayoutSettingsPanel(
             printerListWidget: _buildPrinterList(),
@@ -1435,88 +1444,101 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final isCompact = printerIsCompact(context);
     final cardPadding = printerCardPadding(context);
 
-    return PrinterSettingsCard(
-      padding: cardPadding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final titleBlock = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          height: isCompact ? 40 : 48,
+          width: isCompact ? 40 : 48,
+          decoration: BoxDecoration(
+            color: ColorManager.kPrimaryColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
+          ),
+          child: Icon(
+            Icons.print_rounded,
+            color: ColorManager.kPrimaryColor,
+            size: isCompact ? 22 : 26,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: isCompact ? 40 : 48,
-                width: isCompact ? 40 : 48,
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(isCompact ? 10 : 12),
-                ),
-                child: Icon(
-                  Icons.print_rounded,
-                  color: ColorManager.kPrimaryColor,
-                  size: isCompact ? 22 : 26,
+              Text(
+                'Printer Settings',
+                style: buildCustomStyle(
+                  FontWeightManager.semiBold,
+                  isCompact ? FontSize.s18 : FontSize.s20,
+                  0.30,
+                  ColorManager.textColor,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Printer Settings',
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        isCompact ? FontSize.s18 : FontSize.s20,
-                        0.30,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Configure printers, paper sizes and receipt themes',
-                      maxLines: isCompact ? 2 : 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s12,
-                        0.10,
-                        Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 4),
+              Text(
+                'Configure printers, paper sizes and receipt themes',
+                maxLines: isCompact ? 2 : 3,
+                overflow: TextOverflow.ellipsis,
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12,
+                  0.10,
+                  Colors.grey.shade600,
                 ),
               ),
             ],
           ),
-          SizedBox(height: isCompact ? 12 : 16),
-          SettingsActionRow(
-            children: [
-              CustomRoundButton(
-                fct: _isResyncingDocConfig ? () {} : _resyncDocumentConfigurations,
-                title: _isResyncingDocConfig
-                    ? 'Resyncing...'
-                    : (isCompact ? 'Resync Doc' : 'Resync Doc Config'),
-                height: 44,
-                width: isCompact ? double.infinity : 210,
-                fontSize: isCompact ? 13 : 14,
-                borderColor: ColorManager.kPrimaryColor,
-                boxColor: ColorManager.kPrimaryColor,
-                textColor: Colors.white,
-                isLoading: _isResyncingDocConfig,
-              ),
-              CustomRoundButton(
-                fct: () => {clearDefaultPrinter()},
-                title: isCompact ? 'Clear' : 'Clear Default Printer',
-                height: 44,
-                width: isCompact ? double.infinity : 180,
-                fontSize: isCompact ? 13 : 14,
-                borderColor: ColorManager.kButtonRed,
-                boxColor: ColorManager.kButtonRed,
-                textColor: Colors.white,
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    final actionRow = SettingsActionRow(
+      children: [
+        CustomRoundButton(
+          fct: _isResyncingDocConfig ? () {} : _resyncDocumentConfigurations,
+          title: _isResyncingDocConfig
+              ? 'Resyncing...'
+              : (isCompact ? 'Resync Doc' : 'Resync Doc Config'),
+          height: 44,
+          width: isCompact ? double.infinity : 180,
+          fontSize: isCompact ? 13 : 14,
+          borderColor: ColorManager.kPrimaryColor,
+          boxColor: ColorManager.kPrimaryColor,
+          textColor: Colors.white,
+          isLoading: _isResyncingDocConfig,
+        ),
+        CustomRoundButton(
+          fct: () => {clearDefaultPrinter()},
+          title: isCompact ? 'Clear' : 'Clear Default Printer',
+          height: 44,
+          width: isCompact ? double.infinity : 170,
+          fontSize: isCompact ? 13 : 14,
+          borderColor: ColorManager.kButtonRed,
+          boxColor: ColorManager.kButtonRed,
+          textColor: Colors.white,
+        ),
+      ],
+    );
+
+    return PrinterSettingsCard(
+      padding: cardPadding,
+      child: isCompact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                titleBlock,
+                const SizedBox(height: 12),
+                actionRow,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: titleBlock),
+                const SizedBox(width: 16),
+                actionRow,
+              ],
+            ),
     );
   }
 

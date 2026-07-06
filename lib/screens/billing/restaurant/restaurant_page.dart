@@ -65,7 +65,7 @@ class RestaurantPage extends StatefulWidget {
 }
 
 // Mobile view navigation enum
-enum MobileView { tables, orders }
+enum MobileView { tables, orders, products }
 
 class _RestaurantPageState extends State<RestaurantPage> {
   String? _activeTableId;
@@ -127,6 +127,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
   void initState() {
     super.initState();
     _isCounterBillingMode = widget.defaultCounterBillingMode;
+    // Store mode on mobile lands directly on the products view — the
+    // default delivery method is pre-selected, so billing can start
+    // immediately (it stays changeable via the delivery chip rail).
+    if (widget.storeMode) {
+      _currentMobileView = MobileView.products;
+    }
     HardwareKeyboard.instance.addHandler(_onRestaurantHardwareKey);
     _loadTablesPanelPreference();
     _loadPanelWidthPreferences();
@@ -263,9 +269,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
         setState(() {
           _showTablesPanel = !_showTablesPanel;
           if (MediaQuery.of(context).size.width < 900) {
-            _currentMobileView = _currentMobileView == MobileView.tables
-                ? MobileView.orders
-                : MobileView.tables;
+            final homeView =
+                widget.storeMode ? MobileView.products : MobileView.tables;
+            _currentMobileView = _currentMobileView == MobileView.orders
+                ? homeView
+                : MobileView.orders;
           }
         });
         _saveTablesPanelPreference(_showTablesPanel);
@@ -878,7 +886,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
     );
   }
 
-  Widget _buildCounterActionBar() {
+  Widget _buildCounterActionBar({bool showShortcuts = true}) {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, _) {
         final hasItems = localProductProvider.cartItems.isNotEmpty;
@@ -922,7 +930,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 children: [
                   _buildCounterActionButton(
                     text: 'Clear Cart',
-                    shortcutLabel: 'F1',
+                    shortcutLabel: showShortcuts ? 'F1' : null,
                     color: const Color(0xFFEF233C),
                     isDisabled: !hasItems || isCheckoutActionLoading,
                     onPressed: () => _orderPanelKey.currentState
@@ -931,7 +939,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   const SizedBox(width: 12),
                   _buildCounterActionButton(
                     text: 'Save Order',
-                    shortcutLabel: 'F8',
+                    shortcutLabel: showShortcuts ? 'F8' : null,
                     color: const Color(0xFFF59E0B),
                     isDisabled: !hasItems || isCheckoutActionLoading,
                     onPressed: () => _orderPanelKey.currentState
@@ -942,7 +950,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     if (showConfirmAndPrintButton) ...[
                       _buildCounterActionButton(
                         text: 'Confirm and Print',
-                        shortcutLabel: 'F6',
+                        shortcutLabel: showShortcuts ? 'F6' : null,
                         color: const Color(0xFF5B8DEF),
                         isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: _isLoadingCounterConfirmAndPrint,
@@ -954,7 +962,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     if (showFooterConfirmOrder)
                       _buildCounterActionButton(
                         text: 'Confirm Order',
-                        shortcutLabel: 'F2',
+                        shortcutLabel: showShortcuts ? 'F2' : null,
                         color: const Color(0xFF08C63F),
                         isDisabled: !canCheckout || disableConfirmActions,
                         isLoading: confirmOrderIsLoading,
@@ -964,7 +972,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ] else
                     _buildCounterActionButton(
                       text: 'Save & Print',
-                      shortcutLabel: 'F9',
+                      shortcutLabel: showShortcuts ? 'F9' : null,
                       color: const Color(0xFFF59E0B),
                       isDisabled: !canCheckout || disableConfirmActions,
                       isLoading: isCheckoutActionLoading,
@@ -1028,7 +1036,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
   Widget _buildCounterActionButton({
     required String text,
-    required String shortcutLabel,
+    String? shortcutLabel,
     required Color color,
     required VoidCallback onPressed,
     bool isDisabled = false,
@@ -1079,24 +1087,26 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: shortcutBackgroundColor,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: shortcutBorderColor),
-                    ),
-                    child: Text(
-                      shortcutLabel,
-                      style: TextStyle(
-                        color: foregroundColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+                  if (shortcutLabel != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: shortcutBackgroundColor,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: shortcutBorderColor),
+                      ),
+                      child: Text(
+                        shortcutLabel,
+                        style: TextStyle(
+                          color: foregroundColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
       ),
@@ -2296,13 +2306,189 @@ class _RestaurantPageState extends State<RestaurantPage> {
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: _currentMobileView == MobileView.tables
-                ? _buildTablesView(screenSize)
-                : _buildOrdersView(screenSize),
+            child: switch (_currentMobileView) {
+              MobileView.tables => _buildTablesView(screenSize),
+              MobileView.orders => _buildOrdersView(screenSize),
+              MobileView.products => _buildMobileProductsView(screenSize),
+            },
           ),
         ),
         _buildMobileBottomNav(),
       ],
+    );
+  }
+
+  // Full-page products view (Store mode home): delivery chip rail on top,
+  // products grid, and a sticky cart bar when the cart has items.
+  Widget _buildMobileProductsView(Size screenSize) {
+    return Column(
+      key: const ValueKey('products_view'),
+      children: [
+        _buildMobileDeliveryRail(),
+        Expanded(
+          child: MenuPanel(
+            onCategoryChanged: (cid) => setState(() => _activeCategoryId = cid),
+            activeCategoryId: _activeCategoryId,
+            onItemAdd: _handleItemAdd,
+            screenSize: screenSize,
+            selectedOrder: _selectedOrderFromOrderPanel,
+            headerTitle: _menuTitle,
+          ),
+        ),
+        _buildMobileCartBar(),
+      ],
+    );
+  }
+
+  Widget _buildMobileDeliveryRail() {
+    return Consumer<DeliveryMethodsProvider>(
+      builder: (context, deliveryMethodsProvider, _) {
+        final methods = deliveryMethodsProvider.deliveryMethods;
+        if (methods.isEmpty) return const SizedBox.shrink();
+        return Container(
+          margin: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.delivery_dining,
+                  color: Color(0xFF1A56DB),
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                for (final method in methods) ...[
+                  _buildMobileDeliveryChip(method.id, method.name),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMobileDeliveryChip(String id, String name) {
+    final isSelected = _selectedDeliveryMethodId == id;
+    return GestureDetector(
+      onTap: () => _selectDeliveryMethod(id, name),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF1A56DB)
+              : const Color(0xFF1A56DB).withOpacity(0.07),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF1A56DB)
+                : const Color(0xFF1A56DB).withOpacity(0.3),
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          name,
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s12,
+            0.21,
+            isSelected ? Colors.white : const Color(0xFF1A56DB),
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  // Sticky "N items • total → View Order" bar shown while the cart has items.
+  Widget _buildMobileCartBar() {
+    return Consumer<LocalProductProvider>(
+      builder: (context, localProductProvider, _) {
+        final items = localProductProvider.cartItems;
+        final itemCount =
+            items.fold<int>(0, (sum, item) => sum + item.quantity.toInt());
+        if (itemCount == 0) return const SizedBox.shrink();
+
+        double total = 0;
+        for (final item in items) {
+          total += (item.price ?? 0) * item.quantity;
+        }
+        final currency = Provider.of<AppSettingsProvider>(context,
+                    listen: false)
+                .appSettings
+                ?.currency ??
+            'INR';
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+          child: Material(
+            color: const Color(0xFF2563EB),
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              onTap: () =>
+                  setState(() => _currentMobileView = MobileView.orders),
+              borderRadius: BorderRadius.circular(14),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$itemCount item${itemCount == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '$currency ${total.toStringAsFixed(2)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'View Order',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_forward_rounded,
+                        color: Colors.white, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -2325,24 +2511,35 @@ class _RestaurantPageState extends State<RestaurantPage> {
         top: false,
         child: Row(
           children: [
-            _buildMobileNavItem(
-              icon: widget.storeMode
-                  ? Icons.local_shipping_rounded
-                  : Icons.table_restaurant_rounded,
-              label: widget.storeMode ? 'Delivery' : 'Tables',
-              isSelected: _currentMobileView == MobileView.tables,
-              onTap: () {
-                if (_currentMobileView != MobileView.tables) {
-                  setState(() => _currentMobileView = MobileView.tables);
-                }
-              },
-            ),
-            _buildMobileNavItem(
-              icon: Icons.restaurant_menu_rounded,
-              label: _menuTitle,
-              isSelected: false,
-              onTap: () => _showProductsBottomSheet(context),
-            ),
+            if (widget.storeMode)
+              _buildMobileNavItem(
+                icon: Icons.storefront_rounded,
+                label: 'Products',
+                isSelected: _currentMobileView == MobileView.products,
+                onTap: () {
+                  if (_currentMobileView != MobileView.products) {
+                    setState(() => _currentMobileView = MobileView.products);
+                  }
+                },
+              )
+            else ...[
+              _buildMobileNavItem(
+                icon: Icons.table_restaurant_rounded,
+                label: 'Tables',
+                isSelected: _currentMobileView == MobileView.tables,
+                onTap: () {
+                  if (_currentMobileView != MobileView.tables) {
+                    setState(() => _currentMobileView = MobileView.tables);
+                  }
+                },
+              ),
+              _buildMobileNavItem(
+                icon: Icons.restaurant_menu_rounded,
+                label: _menuTitle,
+                isSelected: false,
+                onTap: () => _showProductsBottomSheet(context),
+              ),
+            ],
             Consumer<LocalProductProvider>(
               builder: (context, localProductProvider, _) {
                 final itemCount = localProductProvider.cartItems.fold<int>(
@@ -2511,10 +2708,13 @@ class _RestaurantPageState extends State<RestaurantPage> {
               IconButton(
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.arrow_back, color: Color(0xFF2563EB)),
-                tooltip: 'Back to tables',
+                tooltip:
+                    widget.storeMode ? 'Back to products' : 'Back to tables',
                 onPressed: () {
                   setState(() {
-                    _currentMobileView = MobileView.tables;
+                    _currentMobileView = widget.storeMode
+                        ? MobileView.products
+                        : MobileView.tables;
                   });
                 },
               ),
@@ -2595,6 +2795,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
             hideOngoingOrdersTab: widget.storeMode,
           ),
         ),
+        // Store mode hides the order panel's own footer buttons, so the
+        // checkout actions live in this bar instead (same as desktop).
+        if (widget.storeMode) _buildCounterActionBar(showShortcuts: false),
       ],
     );
   }

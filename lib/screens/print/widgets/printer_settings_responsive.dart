@@ -291,11 +291,11 @@ class PrinterSegmentSelector extends StatelessWidget {
           onTap: () => onSelected(segment),
           borderRadius: BorderRadius.circular(20),
           child: Container(
-            height: 44,
+            height: isCompact ? 44 : 38,
             width: isCompact ? double.infinity : null,
             padding: EdgeInsets.symmetric(
-              horizontal: isCompact ? 10 : 20,
-              vertical: 10,
+              horizontal: isCompact ? 10 : 18,
+              vertical: isCompact ? 10 : 8,
             ),
             decoration: BoxDecoration(
               color: isActive
@@ -334,22 +334,25 @@ class PrinterSegmentSelector extends StatelessWidget {
       segmentPill('B2B', isCompact ? 'B2B' : 'B2B (Business)'),
     ];
 
+    final selectorRow = Row(
+      mainAxisSize: isCompact ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        isCompact ? Expanded(child: pills[0]) : pills[0],
+        const SizedBox(width: 8),
+        isCompact ? Expanded(child: pills[1]) : pills[1],
+      ],
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (isCompact)
-          Row(
-            children: [
-              Expanded(child: pills[0]),
-              const SizedBox(width: 8),
-              Expanded(child: pills[1]),
-            ],
-          )
+          selectorRow
         else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: pills,
+          FractionallySizedBox(
+            widthFactor: 0.5,
+            alignment: Alignment.centerLeft,
+            child: selectorRow,
           ),
         const SizedBox(height: 8),
         Text(
@@ -600,9 +603,9 @@ class PrinterSettingsSplitLayout extends StatelessWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(flex: 2, child: settingsColumn),
-            const SizedBox(width: 16),
-            Expanded(flex: 3, child: printerColumn),
+            Expanded(flex: 5, child: settingsColumn),
+            const SizedBox(width: 20),
+            Expanded(flex: 6, child: printerColumn),
           ],
         );
       },
