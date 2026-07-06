@@ -205,8 +205,10 @@ class ProductBarcodeIconAction extends StatelessWidget {
         child: BuildBoxShadowContainer(
           color: backgroundColor,
           circleRadius: 10,
+          showShadow: true,
+          blurRadius: 4,
           child: IconButton(
-            icon: Icon(icon, size: 18, color: iconColor),
+            icon: Icon(icon, size: 22, color: iconColor),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: onPressed,
