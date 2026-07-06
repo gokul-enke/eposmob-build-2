@@ -278,12 +278,13 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
               labelStyle: labelStyle),
 
           // Items Table
-          if (displayConfig?['showSLNumber']?.visible == true ||
+          if (!params.isReturnOnly &&
+              (displayConfig?['showSLNumber']?.visible == true ||
               displayConfig?['showParticulars']?.visible == true ||
               displayConfig?['showMRP']?.visible == true ||
               displayConfig?['showQty']?.visible == true ||
               displayConfig?['showRate']?.visible == true ||
-              displayConfig?['showTotal']?.visible == true)
+              displayConfig?['showTotal']?.visible == true))
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(vertical: 4),
               child: _buildPdfItemsTable(
@@ -291,17 +292,19 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
             ),
 
           // Cart Total Row
+          if (!params.isReturnOnly)
           _buildCartTotalRow(params, summaryStyle, isRtl, arabicFont,
               arabicFontBold, currency),
 
           pw.SizedBox(height: 3),
 
           // Summary Section
-          if (displayConfig?['showItemsCount']?.visible == true ||
+          if (!params.isReturnOnly &&
+              (displayConfig?['showItemsCount']?.visible == true ||
               (displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible) == true ||
               displayConfig?['showSaved']?.visible == true ||
               displayConfig?['showDiscount']?.visible == true ||
-              displayConfig?['showNetAmount']?.visible == true)
+              displayConfig?['showNetAmount']?.visible == true))
             pw.Container(
               padding:
                   const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 8),
@@ -357,21 +360,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           ],
 
           // Total Summary (when returns exist)
-          if (params.hasReturns) ...[
-            _buildTotalSummarySection(params, subheaderStyle, summaryStyle,
-                netTotalStyle, currency, isRtl),
-            pw.SizedBox(height: 10),
-          ],
-
-          // Order Returns
-          if (params.hasReturns) ...[
-            pw.SizedBox(height: 5),
-            _buildOrderReturnsSection(params, subheaderStyle, bodyStyle,
-                tableHeaderStyle, summaryStyle, netTotalStyle, isRtl),
-          ],
-
-          // Total Summary (when returns exist)
-          if (params.hasReturns) ...[
+          if (!params.isReturnOnly && params.hasReturns) ...[
             _buildTotalSummarySection(params, subheaderStyle, summaryStyle,
                 netTotalStyle, currency, isRtl),
             pw.SizedBox(height: 10),

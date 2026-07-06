@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.694
-git push build v0.1.0-dev.694
+git tag v0.1.0-dev.696
+git push build v0.1.0-dev.696
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
 git tag v0.1.0-dev.468
@@ -30,6 +30,7 @@ salesexecutive2@cyclopedia.in
 DEMO_FUNZCART_vqguo7a24ezI8a69o2q0FlQsPXPZRzrw
 salesexecutive2@funzcart.in
 123456
+
 kitchenmaster@funzcart.in
 attender@funzcart.in
 restaurantsales@funzcart.in

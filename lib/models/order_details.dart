@@ -524,6 +524,33 @@ class OrderDetailsModelDataCartItem {
                 : Names.fromJson(json["product_names"]),
       );
 
+  OrderDetailsModelDataCartItem copyWith({
+    num? quantity,
+    String? totalPrice,
+    String? taxAmount,
+  }) =>
+      OrderDetailsModelDataCartItem(
+        id: id,
+        productId: productId,
+        productName: productName,
+        productAttachment: productAttachment,
+        categoryId: categoryId,
+        categoryName: categoryName,
+        quantity: quantity ?? this.quantity,
+        productUnit: productUnit,
+        unitPrice: unitPrice,
+        mrp: mrp,
+        totalPrice: totalPrice ?? this.totalPrice,
+        currency: currency,
+        taxAmount: taxAmount ?? this.taxAmount,
+        saleUnitId: saleUnitId,
+        productSaleUnitId: productSaleUnitId,
+        saleUnitName: saleUnitName,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+        names: names,
+      );
+
   Map<String, dynamic> toJson() => {
         "id": id,
         "product_id": productId,

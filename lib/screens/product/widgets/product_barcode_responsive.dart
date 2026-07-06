@@ -178,10 +178,9 @@ class ProductBarcodeSelectionBadge extends StatelessWidget {
   }
 }
 
-/// Icon action with >=44px tap target.
+/// Icon action with plain colored icon on a white shadow box.
 class ProductBarcodeIconAction extends StatelessWidget {
   final IconData icon;
-  final Color backgroundColor;
   final Color iconColor;
   final String tooltip;
   final VoidCallback onPressed;
@@ -189,7 +188,6 @@ class ProductBarcodeIconAction extends StatelessWidget {
   const ProductBarcodeIconAction({
     super.key,
     required this.icon,
-    required this.backgroundColor,
     required this.iconColor,
     required this.tooltip,
     required this.onPressed,
@@ -200,15 +198,15 @@ class ProductBarcodeIconAction extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: SizedBox(
-        width: 44,
-        height: 44,
+        width: 32,
+        height: 32,
         child: BuildBoxShadowContainer(
-          color: backgroundColor,
-          circleRadius: 10,
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          circleRadius: 5,
           child: IconButton(
             icon: Icon(icon, size: 18, color: iconColor),
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             onPressed: onPressed,
           ),
         ),

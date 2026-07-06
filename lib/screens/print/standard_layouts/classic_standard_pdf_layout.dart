@@ -58,6 +58,7 @@ class ClassicStandardPdfLayout implements StandardPdfLayout {
       storeLocation: params.storeLocation,
       storePhone: params.storePhone,
       storeEmail: params.storeEmail,
+      isReturnOnly: params.isReturnOnly,
     );
   }
 

@@ -19,6 +19,7 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
+import 'tax_invoice_returns_pdf_section.dart';
 
 /// Letterhead Tax Invoice PDF layout — bilingual ZATCA tax invoice with a
 /// tri-column letterhead, matching the Architectural Power Trading reference.
@@ -693,6 +694,7 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // ═══════════════════════════════════════════════════════
             // SECTION 4: ITEMS TABLE (fully config-driven columns)
             // ═══════════════════════════════════════════════════════
+            if (!params.isReturnOnly) ...[
             _buildItemsTable(params, dc, resolvedLabels, itemsHeaderEn,
                 itemsHeaderAr, itemsBodyStyle),
             pw.SizedBox(height: 6),
@@ -798,6 +800,18 @@ class LetterheadTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               ],
             ),
             pw.SizedBox(height: 8),
+            ],
+
+            if (params.orderReturns != null &&
+                params.orderReturns!.returnItems != null &&
+                params.orderReturns!.returnItems!.isNotEmpty) ...[
+              ...TaxInvoiceReturnsPdfSection.buildReturnsSection(
+                  params, dc, currency, font, fontBold, isA5),
+              if (!params.isReturnOnly)
+                ...TaxInvoiceReturnsPdfSection.buildFinalSummarySection(
+                    params, dc, currency, font, fontBold, isA5,
+                    isDualLanguage: isDualLanguage, configLang: configLang),
+            ],
 
             // ═══════════════════════════════════════════════════════
             // TERMS

@@ -19,6 +19,7 @@ import 'package:pos_machine/models/order_details.dart';
 
 class ReturnBillPrintPage extends StatefulWidget {
   final List<OrderReturnItem> returnItems;
+  final List<OrderDetailsModelDataCartItem>? originalCartItems;
   final String? storeName;
   final String returnTotalAmount;
   final String orderDate;
@@ -32,6 +33,7 @@ class ReturnBillPrintPage extends StatefulWidget {
   const ReturnBillPrintPage({
     super.key,
     required this.returnItems,
+    this.originalCartItems,
     required this.returnTotalAmount,
     this.storeName,
     required this.orderDate,
@@ -393,6 +395,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
     await thermalPrinter.printReturnBill(
       selectedPrinter: selectedPrinter!,
       returnItems: widget.returnItems,
+      originalCartItems: widget.originalCartItems,
       returnTotalAmount: widget.returnTotalAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,
@@ -415,6 +418,7 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
     await standardPrinter.generateAndPrintPDF(
       selectedPrinter: selectedPrinter,
       returnItems: widget.returnItems,
+      originalCartItems: widget.originalCartItems,
       returnTotalAmount: widget.returnTotalAmount,
       orderDate: widget.orderDate,
       orderNumber: widget.orderNumber,

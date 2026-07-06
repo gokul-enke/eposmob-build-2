@@ -647,6 +647,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
       screenSize: screenSize,
       selectedOrder: _selectedOrderFromOrderPanel,
       headerTitle: _menuTitle,
+      storeMode: widget.storeMode,
     );
 
     if (!_isCounterBillingMode) {
