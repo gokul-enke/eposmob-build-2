@@ -19,6 +19,7 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
+import 'tax_invoice_returns_pdf_section.dart';
 
 /// Corporate Tax Invoice PDF layout — formal bilingual A4/A5 tax invoice
 /// matching the Makhdoom/Expert reference template.
@@ -685,6 +686,7 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // ═══════════════════════════════════════════════════════
             // SECTION 7: ITEMS TABLE
             // ═══════════════════════════════════════════════════════
+            if (!params.isReturnOnly) ...[
             _buildItemsTable(params, dc, resolvedLabels, itemsHeaderEn,
                 itemsHeaderAr, itemsBodyStyle, itemsBodyAr),
             pw.SizedBox(height: 8),
@@ -812,6 +814,18 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               ],
             ),
             pw.SizedBox(height: 8),
+            ],
+
+            if (params.orderReturns != null &&
+                params.orderReturns!.returnItems != null &&
+                params.orderReturns!.returnItems!.isNotEmpty) ...[
+              ...TaxInvoiceReturnsPdfSection.buildReturnsSection(
+                  params, dc, currency, font, fontBold, isA5),
+              if (!params.isReturnOnly)
+                ...TaxInvoiceReturnsPdfSection.buildFinalSummarySection(
+                    params, dc, currency, font, fontBold, isA5,
+                    isDualLanguage: isDualLanguage, configLang: configLang),
+            ],
 
             // ═══════════════════════════════════════════════════════
             // TERMS & THANK YOU

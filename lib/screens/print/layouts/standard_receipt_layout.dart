@@ -131,11 +131,15 @@ class StandardReceiptLayout implements ReceiptLayout {
       _buildCustomerSection(part1Rows, params, displayConfig, isEnglish);
 
       // ========== CART ITEMS SECTION ==========
-      _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
+      if (!params.isReturnOnly) {
+        _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
+      }
 
       // ========== TOTALS SECTION (Bilingual Style) ==========
-      _buildTotalsSection(part1Rows, params, displayConfig, isEnglish,
-          sarSymbol, appSettings?.currency ?? 'INR');
+      if (!params.isReturnOnly) {
+        _buildTotalsSection(part1Rows, params, displayConfig, isEnglish,
+            sarSymbol, appSettings?.currency ?? 'INR');
+      }
 
       // ========== RETURN ITEMS SECTION ==========
       if (params.orderReturns != null &&
@@ -143,8 +147,10 @@ class StandardReceiptLayout implements ReceiptLayout {
           params.orderReturns!.returnItems!.isNotEmpty) {
         _buildReturnSection(part1Rows, params, displayConfig, isEnglish,
             sarSymbol, appSettings?.currency ?? 'INR');
-        _buildFinalSummarySection(part1Rows, params, displayConfig, isEnglish,
-            sarSymbol, appSettings?.currency ?? 'INR');
+        if (!params.isReturnOnly) {
+          _buildFinalSummarySection(part1Rows, params, displayConfig, isEnglish,
+              sarSymbol, appSettings?.currency ?? 'INR');
+        }
       }
 
       // ========== FOOTER SECTION (Part 2) ==========

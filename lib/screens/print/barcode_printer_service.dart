@@ -11,6 +11,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/screens/product/widgets/confirm_barcode_print_modal.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -517,6 +518,15 @@ class BarcodePrinterService {
         final header = barcodeConfig?.header?.trim();
         if (header != null && header.isNotEmpty) {
           storeName = header;
+        }
+      }
+      if (storeName.isEmpty) {
+        final sessionStoreName = Provider.of<StoreSessionProvider>(
+          context,
+          listen: false,
+        ).activeStore?.storeName?.trim();
+        if (sessionStoreName != null && sessionStoreName.isNotEmpty) {
+          storeName = sessionStoreName;
         }
       }
 
