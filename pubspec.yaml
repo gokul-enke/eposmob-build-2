@@ -98,6 +98,11 @@ dependencies:
   file_picker: ^8.1.7
   convert: ^3.1.2  # For ZATCA Phase 1 QR code TLV encoding
   package_info_plus: ^8.1.0
+  webview_flutter: ^4.9.0
+  webview_windows: ^0.4.0
+  webview_flutter_android: ^4.1.0
+  flutter_dotenv: ^5.1.0
+  geolocator: ^13.0.0
 
 msix_config:
   display_name: CLOUDPOS - Billing App
@@ -106,7 +111,7 @@ msix_config:
   identity_name: enkeconsulting.CLOUDPOS-BillingApp
   msix_version: 1.0.6.0
   logo_path: windows/runner/resources/app_icon.ico
-  capabilities: internetClient, bluetooth
+  capabilities: internetClient, bluetooth, location
   output_name: cloudpos
   certificate_path: certificate.pfx
   certificate_password: 1234
@@ -145,6 +150,8 @@ flutter:
     - assets/images/
     - assets/logo/
     - lib/resources/i18n/
+    - assets/html/
+    - .env
     - assets/fonts/NotoSansArabic-Regular.ttf
     - assets/fonts/NotoSansArabic-Bold.ttf
 

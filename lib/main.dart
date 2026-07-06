@@ -72,6 +72,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'resources/localization_service.dart';
 import 'resources/app_translations.dart';
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -129,6 +130,7 @@ void main() async {
 
   Get.put(CategoryProvider());
   HttpOverrides.global = MyHttpOverrides();
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 

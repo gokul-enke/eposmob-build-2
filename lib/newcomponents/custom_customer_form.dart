@@ -8,6 +8,8 @@ import 'package:pos_machine/providers/location_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
+import 'package:collection/collection.dart';
+import 'package:pos_machine/widgets/customer/location_picker_dialog.dart';
 
 import '../newcomponents/custom_container_box.dart';
 import '../newcomponents/custom_round_button.dart';
@@ -312,14 +314,70 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
             ],
           ),
           SizedBox(height: fieldGap),
-          _buildTextField(
-            "Street Address",
-            streetAddressTextController,
-            TextInputType.streetAddress,
-            size,
-            maxLines: 2,
-            minLines: 2,
-            hintText: "Street name, area, locality",
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Street Address",
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.27,
+                      Colors.black.withOpacity(0.6),
+                    ),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    icon: const Icon(Icons.location_pin, size: 14, color: Colors.blue),
+                    label: const Text(
+                      "Pick on Map",
+                      style: TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                    onPressed: _openLocationPicker,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              CustomBoxShadowContainer(
+                circleRadius: 7,
+                alignment: Alignment.topLeft,
+                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+                padding: const EdgeInsets.only(left: 12),
+                height: _fieldHeight(size) * 1.85,
+                width: size.width,
+                child: TextFormField(
+                  controller: streetAddressTextController,
+                  keyboardType: TextInputType.streetAddress,
+                  maxLines: 2,
+                  minLines: 2,
+                  cursorColor: ColorManager.kPrimaryColor,
+                  style: buildCustomStyle(
+                    FontWeightManager.regular,
+                    FontSize.s12,
+                    0.27,
+                    ColorManager.textColor,
+                  ),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: "Street name, area, locality",
+                    hintStyle: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s12,
+                      0.27,
+                      ColorManager.colorPlaceholder,
+                    ),
+                    contentPadding: const EdgeInsets.only(top: 8, bottom: 8),
+                  ),
+                ),
+              ),
+            ],
           ),
           SizedBox(height: fieldGap),
           _buildFieldRow(
@@ -715,11 +773,33 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
           items: locationProvider.districtList
               .map((district) => district.key)
               .toList(),
-          onChanged: (String? newValue) {
+          onChanged: (String? newValue) async {
             setState(() {
               selectedDistrictId = newValue;
               selectedPincodeId = null;
+              pincodeDropdownKey = UniqueKey();
+              isLoadingPincodes = true;
             });
+            if (newValue != null) {
+              String? accessToken =
+                  Provider.of<AuthModel>(context, listen: false).token;
+              try {
+                await locationProvider.listAllPincodes(
+                    districtId: newValue, accessToken: accessToken!);
+              } catch (e) {
+                debugPrint("Error loading pincodes: $e");
+              } finally {
+                if (mounted) {
+                  setState(() {
+                    isLoadingPincodes = false;
+                  });
+                }
+              }
+            } else {
+              setState(() {
+                isLoadingPincodes = false;
+              });
+            }
           },
           displayText: (String districtId) {
             final district = locationProvider.districtList.firstWhere(
@@ -1365,6 +1445,175 @@ class _CustomCustomerFormState extends State<CustomCustomerForm> {
         stateDropdownKey = UniqueKey();
         pincodeDropdownKey = UniqueKey();
       });
+    }
+  }
+
+  Future<void> _openLocationPicker() async {
+    final result = await showDialog<LocationResult>(
+      context: context,
+      builder: (_) => const LocationPickerDialog(),
+    );
+    if (result != null && mounted) {
+      await _autoFillFromLocation(result);
+    }
+  }
+
+  int _levenshtein(String a, String b) {
+    if (a.isEmpty) return b.length;
+    if (b.isEmpty) return a.length;
+
+    List<List<int>> matrix = List.generate(
+      a.length + 1,
+      (i) => List<int>.filled(b.length + 1, 0),
+    );
+
+    for (int i = 0; i <= a.length; i++) {
+      matrix[i][0] = i;
+    }
+    for (int j = 0; j <= b.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (int i = 1; i <= a.length; i++) {
+      for (int j = 1; j <= b.length; j++) {
+        int cost = (a[i - 1] == b[j - 1]) ? 0 : 1;
+        matrix[i][j] = [
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost,
+        ].reduce((curr, next) => curr < next ? curr : next);
+      }
+    }
+    return matrix[a.length][b.length];
+  }
+
+  bool _fuzzyMatch(String source, String target) {
+    final wordsToRemove = [
+      'province',
+      'region',
+      'governorate',
+      'district',
+      'municipality',
+      'city',
+      'state'
+    ];
+
+    String normalize(String input) {
+      String clean = input.toLowerCase().trim();
+      for (final word in wordsToRemove) {
+        clean = clean.replaceAll(word, '');
+      }
+      return clean.trim().replaceAll(RegExp(r'\s+'), ' ');
+    }
+
+    final normSource = normalize(source);
+    final normTarget = normalize(target);
+
+    if (normSource.isEmpty || normTarget.isEmpty) return false;
+    if (normSource == normTarget) return true;
+    if (normSource.contains(normTarget) || normTarget.contains(normSource)) return true;
+
+    final lev = _levenshtein(normSource, normTarget);
+    final maxLen = normSource.length > normTarget.length
+        ? normSource.length
+        : normTarget.length;
+    final score = 1.0 - (lev / maxLen);
+
+    return score >= 0.75;
+  }
+
+  Future<void> _autoFillFromLocation(LocationResult result) async {
+    final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+
+    setState(() {
+      selectedStateId = null;
+      selectedDistrictId = null;
+      selectedPincodeId = null;
+      stateDropdownKey = UniqueKey();
+      districtDropdownKey = UniqueKey();
+      pincodeDropdownKey = UniqueKey();
+      isLoadingDistricts = false;
+      isLoadingPincodes = false;
+    });
+
+    // 1. Fill free text fields immediately
+    setState(() {
+      countryTextController.text = result.country;
+      streetAddressTextController.text = result.formattedAddress;
+    });
+
+    // 2. Fuzzy match State
+    final matchedState = locationProvider.stateList.firstWhereOrNull(
+      (s) => _fuzzyMatch(s.value, result.state),
+    );
+
+    if (matchedState != null) {
+      setState(() {
+        selectedStateId = matchedState.key;
+        selectedDistrictId = null;
+        selectedPincodeId = null;
+        isLoadingDistricts = true;
+        stateDropdownKey = UniqueKey();
+      });
+
+      try {
+        await locationProvider.listAllDistricts(
+          stateId: matchedState.key,
+          accessToken: accessToken!,
+        );
+      } catch (e) {
+        debugPrint("Error loading districts for map autofill: $e");
+      } finally {
+        if (mounted) {
+          setState(() {
+            isLoadingDistricts = false;
+            districtDropdownKey = UniqueKey();
+          });
+        }
+      }
+
+      // 3. Fuzzy match District (only if state was matched)
+      final matchedDistrict = locationProvider.districtList.firstWhereOrNull(
+        (d) => _fuzzyMatch(d.value, result.city),
+      );
+
+      if (matchedDistrict != null) {
+        setState(() {
+          selectedDistrictId = matchedDistrict.key;
+          selectedPincodeId = null;
+          isLoadingPincodes = true;
+          districtDropdownKey = UniqueKey();
+        });
+
+        try {
+          await locationProvider.listAllPincodes(
+            districtId: matchedDistrict.key,
+            accessToken: accessToken!,
+          );
+        } catch (e) {
+          debugPrint("Error loading pincodes for map autofill: $e");
+        } finally {
+          if (mounted) {
+            setState(() {
+              isLoadingPincodes = false;
+              pincodeDropdownKey = UniqueKey();
+            });
+          }
+        }
+
+        // 4. Fuzzy match Pincode (only if district was matched)
+        final matchedPincode = locationProvider.pincodeList.firstWhereOrNull(
+          (p) => _fuzzyMatch(p.value, result.pincode),
+        );
+
+        if (matchedPincode != null) {
+          setState(() {
+            selectedPincodeId = matchedPincode.key;
+            pincodeDropdownKey = UniqueKey();
+          });
+        }
+      }
     }
   }
 
