@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
-import 'package:pdf/pdf.dart' as pw;
-import 'package:get/get.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
@@ -12,12 +10,10 @@ import 'dart:ui' as ui;
 import 'dart:convert';
 
 import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/models/document_configurations.dart';
-import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/utils/arabic_printer_helper.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
@@ -154,11 +150,15 @@ class Premium2ReceiptLayout implements ReceiptLayout {
       _buildCustomerSection(part1Rows, params, displayConfig, isEnglish);
 
       // ========== CART ITEMS SECTION ==========
-      _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
+      if (!params.isReturnOnly) {
+        _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
+      }
 
       // ========== TOTALS SECTION (Bilingual Style) ==========
-      _buildTotalsSection(
-          part1Rows, params, displayConfig, isEnglish, sarSymbol, appSettings);
+      if (!params.isReturnOnly) {
+        _buildTotalsSection(
+            part1Rows, params, displayConfig, isEnglish, sarSymbol, appSettings);
+      }
 
       // ========== RETURN ITEMS SECTION ==========
       if (params.orderReturns != null &&
@@ -166,8 +166,10 @@ class Premium2ReceiptLayout implements ReceiptLayout {
           params.orderReturns!.returnItems!.isNotEmpty) {
         _buildReturnSection(part1Rows, params, displayConfig, isEnglish,
             sarSymbol, appSettings);
-        _buildFinalSummarySection(part1Rows, params, displayConfig, isEnglish,
-            sarSymbol, appSettings);
+        if (!params.isReturnOnly) {
+          _buildFinalSummarySection(part1Rows, params, displayConfig, isEnglish,
+              sarSymbol, appSettings);
+        }
       }
 
       // ========== FOOTER SECTION (Part 2) ==========
@@ -404,8 +406,6 @@ class Premium2ReceiptLayout implements ReceiptLayout {
     rows.add(SpacingRow(_itemGap));
 
     // Invoice/Token Number - hide header invoice when footer invoice number is enabled
-    final bool showFooterInvoice =
-        displayConfig?['showOrderNumberInFooter']?.visible == true;
     final bool showInvoiceNumber =
         displayConfig?['showInvoiceNumber']?.visible == true;
     final bool showTokenNumber =
@@ -803,6 +803,10 @@ class Premium2ReceiptLayout implements ReceiptLayout {
         tableScale,
         tableMinScale,
         tableCellPadding);
+
+    if (params.isReturnOnly) {
+      return;
+    }
 
     // Build cart items
     for (var i = 0; i < params.cartItems.length; i++) {
@@ -1503,10 +1507,6 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
     final cashLabel =
         _getLabel(displayConfig, 'showCash', null, isEnglish ? "Cash" : "نقدي");
-    final changeLabel = _getLabel(
-        displayConfig, 'showChange', null, isEnglish ? "CHANGE" : "متبقي");
-    final changeLabelFull = changeLabel;
-
     // Prepare boxed items
     List<BoxedLineItem> boxedItems = [];
 

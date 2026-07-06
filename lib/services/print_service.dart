@@ -334,6 +334,7 @@ class PrintService {
         MaterialPageRoute(
           builder: (context) => ReturnBillPrintPage(
             returnItems: orderReturns!.returnItems!,
+            originalCartItems: cart.cartItems!,
             returnTotalAmount: orderReturns.returnTotalAmount ?? '0.00',
             storeName: cart.storeName,
             orderDate: orderDetails.data?.orderDate ?? '',
