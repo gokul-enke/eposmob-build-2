@@ -1,6 +1,6 @@
 demo build
-git tag v0.1.0-dev.695
-git push build v0.1.0-dev.695
+git tag v0.1.0-dev.696
+git push build v0.1.0-dev.696
 git push https://govindhansv@github.com/govindhansv/eposmob-buildnew.git gokul-dev 
 
 git tag v0.1.0-dev.468

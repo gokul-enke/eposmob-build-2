@@ -790,7 +790,7 @@ class BillingMobileController {
       );
     }
 
-    Future<bool> printOnce() => const PrintService().printOrderById(
+    Future<bool> printOnce() => const PrintService().printOrderByIdWithOptions(
           context,
           createdOrderNumber,
           useCheckoutBalanceFields: true,
@@ -829,7 +829,7 @@ class BillingMobileController {
   }
 
   Future<bool> retryPrintOrder(BuildContext context, String orderNumber) async {
-    return const PrintService().printOrderById(context, orderNumber);
+    return const PrintService().printOrderByIdWithOptions(context, orderNumber);
   }
 
   Future<void> printSavedOrder(

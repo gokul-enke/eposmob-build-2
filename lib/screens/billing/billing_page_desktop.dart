@@ -1119,7 +1119,7 @@ class BillingPageState extends State<BillingPage>
         await CheckoutService(context).createOrderAndPrint();
     if (createdOrderNumber != null && createdOrderNumber.isNotEmpty) {
       try {
-        await const PrintService().printOrderById(context, createdOrderNumber);
+        await const PrintService().printOrderByIdWithOptions(context, createdOrderNumber);
       } catch (error) {
         debugPrint("❌ Error fetching order details for print: $error");
       }
