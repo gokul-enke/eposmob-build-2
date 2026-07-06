@@ -15,6 +15,7 @@ import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
 import 'standard_pdf_layout.dart';
+import 'tax_invoice_returns_pdf_section.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -611,6 +612,7 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // SECTION 4: ITEMS TABLE
             // Bilingual headers, bordered, exact column widths
             // ═══════════════════════════════════════════════════════
+            if (!params.isReturnOnly) ...[
             _buildItemsTable(
                 params, dc, config, itemsHeaderStyle, itemsBodyStyle),
             pw.SizedBox(height: 15),
@@ -728,6 +730,29 @@ class TaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               ),
 
             pw.SizedBox(height: 8),
+            ],
+
+            if (params.orderReturns != null &&
+                params.orderReturns!.returnItems != null &&
+                params.orderReturns!.returnItems!.isNotEmpty) ...[
+              ...TaxInvoiceReturnsPdfSection.buildReturnsSection(
+                  params,
+                  dc,
+                  currency,
+                  font,
+                  fontBold,
+                  params.selectedPaperSize.toUpperCase() == 'A5'),
+              if (!params.isReturnOnly)
+                ...TaxInvoiceReturnsPdfSection.buildFinalSummarySection(
+                  params,
+                  dc,
+                  currency,
+                  font,
+                  fontBold,
+                  params.selectedPaperSize.toUpperCase() == 'A5',
+                  configLang: configLang,
+                ),
+            ],
 
             // ═══════════════════════════════════════════════════════
             // TERMS & CONDITIONS

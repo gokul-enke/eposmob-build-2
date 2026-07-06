@@ -703,13 +703,16 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // ═══════════════════════════════════════════════════════
             // SECTION 4: ITEMS TABLE (fully config-driven columns)
             // ═══════════════════════════════════════════════════════
-            _buildItemsTable(params, dc, resolvedLabels, isEnglish,
-                itemsHeaderEn, itemsHeaderAr, itemsBodyStyle),
-            pw.SizedBox(height: 6),
+            if (!params.isReturnOnly) ...[
+              _buildItemsTable(params, dc, resolvedLabels, isEnglish,
+                  itemsHeaderEn, itemsHeaderAr, itemsBodyStyle),
+              pw.SizedBox(height: 6),
+            ],
 
             // ═══════════════════════════════════════════════════════
             // SECTION 5: LEFT INFO + TOTALS BOX
             // ═══════════════════════════════════════════════════════
+            if (!params.isReturnOnly) ...[
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
@@ -745,12 +748,13 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                       ...paymentLines,
                       ..._customerBalanceLines(
                           params, dc, currency, wordsStyle, wordsBold),
-                      if (cfgVisible('showItemsCount'))
+                      if (!params.isReturnOnly && cfgVisible('showItemsCount'))
                         _autoText(
                           '${_withColon(_getLabel(dc, 'showItemsCount', null, 'Items'))} ${params.cartItems.length}',
                           wordsStyle,
                         ),
-                      if (cfgVisible('showQuantityCount'))
+                      if (!params.isReturnOnly &&
+                          cfgVisible('showQuantityCount'))
                         _autoText(
                           '${_withColon(_getLabel(dc, 'showQuantityCount', null, 'Total Qty'))} ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
                           wordsStyle,
@@ -820,6 +824,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               ],
             ),
             pw.SizedBox(height: 6),
+            ],
 
             // ═══════════════════════════════════════════════════════
             // SECTION 5b: RETURNS TABLE + FINAL SUMMARY
@@ -829,9 +834,10 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 params.orderReturns!.returnItems!.isNotEmpty) ...[
               ..._buildReturnsPdfSection(
                   params, dc, currency, font, fontBold, isA5),
-              ..._buildFinalSummaryPdfSection(
-                  params, dc, currency, font, fontBold, isA5,
-                  isDualLanguage, configLang),
+              if (!params.isReturnOnly)
+                ..._buildFinalSummaryPdfSection(
+                    params, dc, currency, font, fontBold, isA5,
+                    isDualLanguage, configLang),
             ],
 
             // ═══════════════════════════════════════════════════════

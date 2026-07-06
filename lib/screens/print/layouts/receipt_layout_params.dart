@@ -56,6 +56,7 @@ class ReceiptLayoutParams {
   // Pre-computed total tax from API price_summary.total_tax (post-discount).
   // Null for offline/local-storage orders, which fall back to item-level sum.
   final double? apiTotalTax;
+  final bool isReturnOnly;
 
   const ReceiptLayoutParams({
     required this.context,
@@ -100,6 +101,7 @@ class ReceiptLayoutParams {
     this.storePhone,
     this.storeEmail,
     this.apiTotalTax,
+    this.isReturnOnly = false,
   });
 
   /// Get the display configuration options from the document config

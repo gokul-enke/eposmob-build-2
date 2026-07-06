@@ -150,6 +150,7 @@ class StandardPrinter {
     String? storeLocation,
     String? storePhone,
     String? storeEmail,
+    bool isReturnOnly = false,
   }) async {
     debugPrint(
         "[LOGO_DEBUG] generateAndPrintPDF started for order: $orderNumber");
@@ -637,12 +638,13 @@ class StandardPrinter {
               ),
 
             // Items table - minimal design without borders
-            if ((updatedSettings?['showSLNumber']?.visible == true) ||
+            if (!isReturnOnly &&
+                ((updatedSettings?['showSLNumber']?.visible == true) ||
                 (updatedSettings?['showParticulars']?.visible == true) ||
                 (updatedSettings?['showMRP']?.visible == true) ||
                 (updatedSettings?['showQty']?.visible == true) ||
                 (updatedSettings?['showRate']?.visible == true) ||
-                (updatedSettings?['showTotal']?.visible == true))
+                (updatedSettings?['showTotal']?.visible == true)))
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(
                     vertical: 5, horizontal: 8), // Reduced padding
@@ -658,6 +660,7 @@ class StandardPrinter {
               ),
 
             // Cart Total Row - added after items table
+            if (!isReturnOnly)
             _buildCartTotalRow(
                 selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle,
                 isRtl: isRtl,
@@ -669,11 +672,12 @@ class StandardPrinter {
             pw.SizedBox(height: 5), // Reduced from 8
 
             // Summary - minimal design without borders
-            if ((updatedSettings?['showItemsCount']?.visible == true) ||
+            if (!isReturnOnly &&
+                ((updatedSettings?['showItemsCount']?.visible == true) ||
                 (updatedSettings?['showMRPTotal']?.visible == true) ||
                 (updatedSettings?['showSaved']?.visible == true) ||
                 (updatedSettings?['showDiscount']?.visible == true) ||
-                (updatedSettings?['showNetAmount']?.visible == true))
+                (updatedSettings?['showNetAmount']?.visible == true)))
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(
                     vertical: 5, horizontal: 8), // Reduced padding
@@ -774,7 +778,8 @@ class StandardPrinter {
             ],
 
             // Add Total Summary section ONLY when there are returns
-            if (orderReturns != null &&
+            if (!isReturnOnly &&
+                orderReturns != null &&
                 orderReturns.returnItems != null &&
                 orderReturns.returnItems!.isNotEmpty) ...[
               _buildTotalSummarySection(
@@ -2780,6 +2785,7 @@ class StandardPrinter {
     String? storeLocation,
     String? storePhone,
     String? storeEmail,
+    bool isReturnOnly = false,
   }) async {
     try {
       // Ensure billDocumentConfig is loaded before generating PDF
@@ -3195,12 +3201,13 @@ class StandardPrinter {
                   ),
 
                 // Items table - minimal design without borders
-                if ((updatedSettings?['showSLNumber']?.visible == true) ||
+                if (!isReturnOnly &&
+                    ((updatedSettings?['showSLNumber']?.visible == true) ||
                     (updatedSettings?['showParticulars']?.visible == true) ||
                     (updatedSettings?['showMRP']?.visible == true) ||
                     (updatedSettings?['showQty']?.visible == true) ||
                     (updatedSettings?['showRate']?.visible == true) ||
-                    (updatedSettings?['showTotal']?.visible == true))
+                    (updatedSettings?['showTotal']?.visible == true)))
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(
                         vertical: 5, horizontal: 8), // Reduced padding
@@ -3220,6 +3227,7 @@ class StandardPrinter {
                   ),
 
                 // Cart Total Row - added after items table
+                if (!isReturnOnly)
                 _buildCartTotalRow(selectedPaperSize, cartItems,
                     isFromLocalStorage, summaryStyle,
                     isRtl: isRtl,
@@ -3231,11 +3239,12 @@ class StandardPrinter {
                 pw.SizedBox(height: 5), // Reduced from 8
 
                 // Summary - minimal design without borders
-                if ((updatedSettings?['showItemsCount']?.visible == true) ||
+                if (!isReturnOnly &&
+                    ((updatedSettings?['showItemsCount']?.visible == true) ||
                     (updatedSettings?['showMRPTotal']?.visible == true) ||
                     (updatedSettings?['showSaved']?.visible == true) ||
                     (updatedSettings?['showDiscount']?.visible == true) ||
-                    (updatedSettings?['showNetAmount']?.visible == true))
+                    (updatedSettings?['showNetAmount']?.visible == true)))
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(
                         vertical: 5, horizontal: 8), // Reduced padding
@@ -3320,7 +3329,8 @@ class StandardPrinter {
                 ],
 
                 // Total Summary section - ONLY when there are returns
-                if (orderReturns != null &&
+                if (!isReturnOnly &&
+                    orderReturns != null &&
                     (orderReturns.returnItems?.isNotEmpty ?? false)) ...[
                   _buildTotalSummarySection(
                     selectedPaperSize,

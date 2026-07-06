@@ -30,6 +30,9 @@ class MenuPanel extends StatefulWidget {
   /// Header title — "Menu" for restaurant, "Products" in store mode.
   final String headerTitle;
 
+  /// Whether in store mode (walk-in/delivery only) vs restaurant mode (with tables).
+  final bool storeMode;
+
   const MenuPanel({
     super.key,
     required this.onCategoryChanged,
@@ -40,6 +43,7 @@ class MenuPanel extends StatefulWidget {
     required this.screenSize,
     this.selectedOrder, // Make it optional for now, as it might be null
     this.headerTitle = 'Menu',
+    this.storeMode = false,
   });
 
   @override
@@ -890,7 +894,7 @@ class MenuPanelState extends State<MenuPanel> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        Icons.restaurant_menu,
+                        widget.storeMode ? Icons.shopping_bag_rounded : Icons.restaurant_menu,
                         color: const Color(0xFF059669),
                         size: widget.isCompact ? 14 : 16,
                       ),
@@ -925,7 +929,7 @@ class MenuPanelState extends State<MenuPanel> {
                             onEditingComplete: focusMenuGrid,
                             onChanged: _onSearchChanged,
                             decoration: InputDecoration(
-                              hintText: 'Search menu items...',
+                              hintText: 'Search items',
                               hintStyle: buildCustomStyle(
                                 FontWeightManager.medium,
                                 FontSize.s13,

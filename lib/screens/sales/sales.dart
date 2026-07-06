@@ -26,8 +26,8 @@ import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/whatsapp_provider.dart';
 import 'package:pos_machine/resources/asset_manager.dart';
-import 'package:pos_machine/screens/print/print.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
+import 'package:pos_machine/services/print_service.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:provider/provider.dart';
@@ -112,16 +112,6 @@ class _SalesScreenState extends State<SalesScreen> {
     }
 
     return eposDirectory;
-  }
-
-  /// Helper method to check if a phone number matches the default customer phone from app settings
-  bool _isDefaultCustomerPhone(String? phone) {
-    if (phone == null || phone.isEmpty) return false;
-    final appSettingsProvider =
-        Provider.of<AppSettingsProvider>(context, listen: false);
-    final defaultPhone =
-        appSettingsProvider.appSettings?.autoAssignDefaultCustomerPhone ?? "";
-    return defaultPhone.isNotEmpty && phone == defaultPhone;
   }
 
   final List<String> statusOptions = [
@@ -1359,230 +1349,13 @@ Powered by CloudPOS''',
           color: Colors.blue,
           onPressed: () async {
             try {
-              String ordersId = order.orderNumber.toString();
-              String? accessToken =
-                  Provider.of<AuthModel>(context, listen: false).token;
+              final orderNumber = order.orderNumber?.toString();
+              if (orderNumber == null || orderNumber.isEmpty) return;
 
-              final OrderDetailsresponse = await SalesProvider()
-                  .listOrderDetails(context, ordersId, accessToken ?? "");
-
-              if (OrderDetailsresponse["status"] == "success") {
-                OrderDetailsModel orderDetails =
-                    OrderDetailsModel.fromJson(OrderDetailsresponse);
-
-                String formattedTotal = orderDetails
-                        .data?.cart?.priceSummary?.netPayable
-                        ?.toString() ??
-                    orderDetails.data?.cart?.priceSummary?.netTotal
-                        .toString() ??
-                    "0.00";
-                String? savedTotal = orderDetails
-                    .data?.cart?.priceSummary?.savedTotal
-                    .toString();
-                String? discountAmount =
-                    orderDetails.data?.priceSummary?.discount?.toString();
-
-                String storeName = orderDetails.data!.cart!.storeName ?? "";
-                String orderDate = orderDetails.data!.orderDate ?? "";
-
-                // Extract customer details
-                String? customerName = orderDetails.data?.customerDetails?.name;
-                String? customerPhone =
-                    orderDetails.data?.customerDetails?.phone;
-                String? customerEmail =
-                    orderDetails.data?.customerDetails?.email;
-                String? customerAddress =
-                    orderDetails.data?.getCustomerAddressForDisplay();
-                String? customerAlternatePhone =
-                    orderDetails.data?.customerDetails?.alternatePhone;
-                String? customerType =
-                    orderDetails.data?.customerDetails?.customerType;
-                String? customerVatNumber =
-                    orderDetails.data?.kycInfo?.vatNumber;
-                String? customerCrNumber = orderDetails.data?.kycInfo?.crNumber;
-                String? paymentMethod =
-                    orderDetails.data?.paymentDetails?.paymentMethod;
-                String? deliveryMethod = orderDetails.data?.deliveryMethodName;
-
-                debugPrint(
-                    "[SalesPrint] order=${orderDetails.data?.orderNumber}, customerType=${customerType ?? 'null'}");
-
-                String? orderComment;
-                if (orderDetails.data?.orderProps != null) {
-                  try {
-                    final commentProp =
-                        orderDetails.data!.orderProps!.firstWhere(
-                      (prop) => prop.propsCode == "COMMENT",
-                      orElse: () => OrderDetailsModelDataOrderProp(),
-                    );
-                    orderComment = commentProp.propsValue;
-                  } catch (e) {
-                    debugPrint("Error extracting order comment: $e");
-                  }
-                }
-
-                // Calculate Paid Amount and Payment Breakdown
-                double paidAmount = 0.0;
-                Map<String, dynamic> paymentBreakdown = {};
-
-                if (orderDetails.data?.payments != null) {
-                  // If payments map is available, use it directly
-                  orderDetails.data!.payments!.forEach((key, value) {
-                    double amount = double.tryParse(value.toString()) ?? 0.0;
-                    paidAmount += amount;
-                    if (amount > 0) {
-                      paymentBreakdown[key] = amount;
-                    }
-                  });
-                } else if (orderDetails.data?.paymentStatus?.toLowerCase() ==
-                    'paid') {
-                  // Fallback: If paid but no breakdown, assume full amount paid via paymentMethod
-                  paidAmount = double.tryParse(formattedTotal) ?? 0.0;
-
-                  if (paymentMethod != null && paymentMethod.isNotEmpty) {
-                    // If multiple methods (comma separated), we can't split amount accurately
-                    // so we just list them. But for PrintPage we need a map.
-                    // If it's a single method, assign full amount.
-                    if (!paymentMethod.contains(',')) {
-                      paymentBreakdown[paymentMethod] = paidAmount;
-                    } else {
-                      // Multiple methods but no breakdown amounts available.
-                      // We can't populate paymentBreakdown accurately.
-                      // The PrintPage will fall back to displaying paymentMethod string.
-                    }
-                  }
-                }
-
-                // Calculate Balance from orderProps
-                double? customerCurrentBalance;
-                if (orderDetails.data?.orderProps != null) {
-                  try {
-                    final balanceProp =
-                        orderDetails.data!.orderProps!.firstWhere(
-                      (prop) => prop.propsCode == "BALANCE",
-                      orElse: () => OrderDetailsModelDataOrderProp(),
-                    );
-                    if (balanceProp.propsValue != null) {
-                      customerCurrentBalance =
-                          double.tryParse(balanceProp.propsValue.toString());
-                    }
-                  } catch (e) {
-                    debugPrint("Error extracting balance: $e");
-                  }
-                }
-
-                // Debug: Verify cart items before printing
-                final cartItemsForPrint =
-                    orderDetails.data?.cart?.cartItems ?? [];
-                debugPrint("===== SALES PRINT DEBUG =====");
-                debugPrint(
-                    "Order=${orderDetails.data?.orderNumber}, token=${orderDetails.data?.tokenNumber}, customer=$customerName");
-                debugPrint(
-                    "Totals: formattedTotal=$formattedTotal, savedTotal=$savedTotal, discountAmount=$discountAmount");
-                debugPrint(
-                    "Payment: method=$paymentMethod, breakdown=$paymentBreakdown, paidAmount=$paidAmount");
-                debugPrint("Cart items count: ${cartItemsForPrint.length}");
-                for (int i = 0; i < cartItemsForPrint.length; i++) {
-                  final item = cartItemsForPrint[i];
-                  debugPrint(
-                      "Item $i: name=${item.productName}, qty=${item.quantity}, price=${item.totalPrice}, tax=${item.taxAmount}");
-                }
-                debugPrint("=============================");
-
-                // Try auto-print with default printer first
-                final autoPrintSuccess = await PrintPage.autoPrint(
-                  context,
-                  storeName: storeName,
-                  cartItems: cartItemsForPrint,
-                  formattedTotal: formattedTotal,
-                  savedTotal: savedTotal,
-                  discountAmount: discountAmount,
-                  orderDate: orderDate,
-                  orderNumber: orderDetails.data!.orderNumber.toString(),
-                  tokenNumber: orderDetails.data?.tokenNumber,
-                  customerName: customerName,
-                  customerPhone: customerPhone,
-                  customerEmail: customerEmail,
-                  customerAddress: customerAddress,
-                  customerAlternatePhone: customerAlternatePhone,
-                  customerVatNumber: customerVatNumber,
-                  customerCrNumber: customerCrNumber,
-                  customerType: customerType,
-                  paymentMethod: paymentMethod,
-                  paymentBreakdown:
-                      paymentBreakdown.isNotEmpty ? paymentBreakdown : null,
-                  orderComment: orderComment,
-                  deliveryMethod: deliveryMethod,
-                  orderReturns: orderDetails.data?.orderReturns,
-                  paidAmount: paidAmount > 0 ? paidAmount : null,
-                  customerCurrentBalance: customerCurrentBalance,
-                  isDefaultCustomer: _isDefaultCustomerPhone(customerPhone),
-                  netExcTax: orderDetails.data?.cart!.priceSummary?.netExcTax
-                      ?.toString(),
-                  apiTotalTax:
-                      orderDetails.data?.priceSummary?.totalTax?.toDouble(),
-                  documentConfigType: orderDetails.data?.orderReturns != null &&
-                          (orderDetails.data?.orderReturns?.returnItems
-                                  ?.isNotEmpty ??
-                              false)
-                      ? 'Sales and Return Bill'
-                      : 'Bill',
-                );
-                debugPrint(
-                    "[SALES][PRINT] autoPrintSuccess=$autoPrintSuccess for order=${orderDetails.data?.orderNumber}");
-
-                // Only show print page if auto-print failed
-                if (!autoPrintSuccess && mounted) {
-                  debugPrint(
-                      "[SALES][PRINT] Opening PrintPage because auto print failed.");
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PrintPage(
-                        storeName: storeName,
-                        cartItems: orderDetails.data?.cart?.cartItems ?? [],
-                        formattedTotal: formattedTotal,
-                        savedTotal: savedTotal,
-                        discountAmount: discountAmount,
-                        orderDate: orderDate,
-                        orderNumber: orderDetails.data!.orderNumber.toString(),
-                        tokenNumber: orderDetails.data?.tokenNumber,
-                        customerName: customerName,
-                        customerPhone: customerPhone,
-                        customerEmail: customerEmail,
-                        customerAddress: customerAddress,
-                        customerAlternatePhone: customerAlternatePhone,
-                        customerVatNumber: customerVatNumber,
-                        customerCrNumber: customerCrNumber,
-                        customerType: customerType,
-                        paymentMethod: paymentMethod,
-                        paymentBreakdown: paymentBreakdown.isNotEmpty
-                            ? paymentBreakdown
-                            : null,
-                        orderComment: orderComment,
-                        deliveryMethod: deliveryMethod,
-                        orderReturns: orderDetails.data?.orderReturns,
-                        paidAmount: paidAmount > 0 ? paidAmount : null,
-                        customerCurrentBalance: customerCurrentBalance,
-                        isDefaultCustomer:
-                            _isDefaultCustomerPhone(customerPhone),
-                        netExcTax: orderDetails
-                            .data?.cart!.priceSummary?.netExcTax
-                            ?.toString(),
-                        apiTotalTax: orderDetails.data?.priceSummary?.totalTax
-                            ?.toDouble(),
-                        documentConfigType:
-                            orderDetails.data?.orderReturns != null &&
-                                    (orderDetails.data?.orderReturns
-                                            ?.returnItems?.isNotEmpty ??
-                                        false)
-                                ? 'Sales and Return Bill'
-                                : 'Bill',
-                      ),
-                    ),
-                  );
-                }
-              }
+              await const PrintService().printOrderByIdWithOptions(
+                context,
+                orderNumber,
+              );
             } catch (error) {
               debugPrint(error.toString());
             }

@@ -131,11 +131,15 @@ class ArabicAndEnglishReceiptLayout implements ReceiptLayout {
       _buildCustomerSection(part1Rows, params, displayConfig, isEnglish);
 
       // ========== CART ITEMS SECTION ==========
-      _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
+      if (!params.isReturnOnly) {
+        _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
+      }
 
       // ========== TOTALS SECTION (Bilingual Style) ==========
-      _buildTotalsSection(part1Rows, params, displayConfig, isEnglish,
-          sarSymbol, appSettings?.currency ?? 'INR');
+      if (!params.isReturnOnly) {
+        _buildTotalsSection(part1Rows, params, displayConfig, isEnglish,
+            sarSymbol, appSettings?.currency ?? 'INR');
+      }
 
       // ========== FOOTER SECTION (Part 2) ==========
       _buildFooterSection(part2Rows, params, displayConfig, isEnglish, context);

@@ -11,6 +11,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/screens/product/widgets/confirm_barcode_print_modal.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -204,6 +205,16 @@ class BarcodePrinterService {
     if (englishName.isNotEmpty) return englishName;
     final fallback = (product.productName ?? '').trim();
     return fallback;
+  }
+
+  bool _isRtlText(String text) {
+    // Arabic, Arabic Supplement, and Arabic Presentation Forms ranges.
+    return RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]')
+        .hasMatch(text);
+  }
+
+  pw.TextDirection _textDirectionFor(String text) {
+    return _isRtlText(text) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
   }
 
   String _normalizeProductNameMode(String rawValue) {
@@ -509,6 +520,15 @@ class BarcodePrinterService {
           storeName = header;
         }
       }
+      if (storeName.isEmpty) {
+        final sessionStoreName = Provider.of<StoreSessionProvider>(
+          context,
+          listen: false,
+        ).activeStore?.storeName?.trim();
+        if (sessionStoreName != null && sessionStoreName.isNotEmpty) {
+          storeName = sessionStoreName;
+        }
+      }
 
       debugPrint(
           '[BarcodePrint] Config -> id=${barcodeConfig?.id}, type=${barcodeConfig?.type}, template=${barcodeConfig?.template}, updatedAt=${barcodeConfig?.updatedAt}');
@@ -805,6 +825,7 @@ class BarcodePrinterService {
                     storeName,
                     style: storeNameStyle,
                     textAlign: pw.TextAlign.center,
+                    textDirection: _textDirectionFor(storeName),
                   ),
                 ),
                 pw.SizedBox(height: elementSpacing),
@@ -855,6 +876,7 @@ class BarcodePrinterService {
                     productName,
                     style: nameStyle,
                     textAlign: pw.TextAlign.center,
+                    textDirection: _textDirectionFor(productName),
                   ),
                 ),
                 pw.SizedBox(height: elementSpacing),
