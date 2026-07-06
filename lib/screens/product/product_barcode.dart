@@ -747,15 +747,13 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
               children: [
                 ProductBarcodeIconAction(
                   icon: Icons.visibility,
-                  backgroundColor: Colors.green.withOpacity(0.18),
-                  iconColor: Colors.green.shade700,
+                  iconColor: ColorManager.kPrimaryColor.withOpacity(0.9),
                   tooltip: 'View Details',
                   onPressed: () => _showProductDetails(product),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 5),
                 ProductBarcodeIconAction(
                   icon: Icons.print,
-                  backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.18),
                   iconColor: ColorManager.kPrimaryColor,
                   tooltip: 'Print Barcode',
                   onPressed: () => _handlePrintSingle(product),
@@ -904,18 +902,15 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                 children: [
                                   ProductBarcodeIconAction(
                                     icon: Icons.visibility,
-                                    backgroundColor:
-                                        Colors.green.withOpacity(0.18),
-                                    iconColor: Colors.green.shade700,
+                                    iconColor: ColorManager.kPrimaryColor
+                                        .withOpacity(0.9),
                                     tooltip: 'View Details',
                                     onPressed: () =>
                                         _showProductDetails(product),
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 5),
                                   ProductBarcodeIconAction(
                                     icon: Icons.print,
-                                    backgroundColor: ColorManager.kPrimaryColor
-                                        .withOpacity(0.18),
                                     iconColor: ColorManager.kPrimaryColor,
                                     tooltip: 'Print Barcode',
                                     onPressed: () =>

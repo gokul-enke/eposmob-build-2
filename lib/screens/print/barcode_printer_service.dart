@@ -206,6 +206,16 @@ class BarcodePrinterService {
     return fallback;
   }
 
+  bool _isRtlText(String text) {
+    // Arabic, Arabic Supplement, and Arabic Presentation Forms ranges.
+    return RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]')
+        .hasMatch(text);
+  }
+
+  pw.TextDirection _textDirectionFor(String text) {
+    return _isRtlText(text) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
+  }
+
   String _normalizeProductNameMode(String rawValue) {
     final normalized = rawValue.trim().toLowerCase();
     switch (normalized) {
@@ -805,6 +815,7 @@ class BarcodePrinterService {
                     storeName,
                     style: storeNameStyle,
                     textAlign: pw.TextAlign.center,
+                    textDirection: _textDirectionFor(storeName),
                   ),
                 ),
                 pw.SizedBox(height: elementSpacing),
@@ -855,6 +866,7 @@ class BarcodePrinterService {
                     productName,
                     style: nameStyle,
                     textAlign: pw.TextAlign.center,
+                    textDirection: _textDirectionFor(productName),
                   ),
                 ),
                 pw.SizedBox(height: elementSpacing),
