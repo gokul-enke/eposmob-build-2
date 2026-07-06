@@ -49,6 +49,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
   Key _expiryDateKey = UniqueKey();
 
   bool _isLoading = false;
+  bool _showFilters = false;
   bool _isPrintingQuotation = false;
   bool _isConvertingQuotation = false;
 
@@ -465,6 +466,7 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = quotationsIsPhone(context);
     return Consumer<QuotationsProvider>(
       builder: (context, provider, child) {
         return QuotationsListShell(
@@ -474,7 +476,17 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
             children: [
               _buildHeader(),
               const SizedBox(height: 16),
-              _buildFiltersCard(),
+              if (!isPhone || _showFilters) ...[
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.55,
+                  ),
+                  child: SingleChildScrollView(
+                    child: _buildFiltersCard(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               const SizedBox(height: 16),
               Expanded(
                 child: QuotationsContentCard(
@@ -509,6 +521,19 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
     return QuotationsPageHeader(
       title: 'Quotation List',
       subtitle: 'Search, view and convert quotations to orders',
+      leading: isPhone
+          ? IconButton(
+              icon: Icon(
+                _showFilters ? Icons.filter_list_off : Icons.filter_list,
+                color: ColorManager.kPrimaryColor,
+              ),
+              onPressed: () {
+                setState(() {
+                  _showFilters = !_showFilters;
+                });
+              },
+            )
+          : null,
       trailing: SizedBox(
         width: isPhone ? double.infinity : 160,
         child: CustomRoundButton(

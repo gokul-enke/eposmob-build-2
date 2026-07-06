@@ -116,12 +116,14 @@ class QuotationsContentCard extends StatelessWidget {
 class QuotationsPageHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
+  final Widget? leading;
   final Widget? trailing;
 
   const QuotationsPageHeader({
     super.key,
     required this.title,
     this.subtitle,
+    this.leading,
     this.trailing,
   });
 
@@ -129,18 +131,28 @@ class QuotationsPageHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPhone = quotationsIsPhone(context);
 
-    if (isPhone && trailing != null) {
+    if (isPhone) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s20,
-              0.30,
-              ColorManager.textColor,
-            ),
+          Row(
+            children: [
+              if (leading != null) ...[
+                leading!,
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: Text(
+                  title,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s20,
+                    0.30,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ),
+            ],
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
@@ -154,8 +166,10 @@ class QuotationsPageHeader extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 10),
-          trailing!,
+          if (trailing != null) ...[
+            const SizedBox(height: 10),
+            trailing!,
+          ],
         ],
       );
     }
@@ -163,6 +177,10 @@ class QuotationsPageHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (leading != null) ...[
+          leading!,
+          const SizedBox(width: 8),
+        ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

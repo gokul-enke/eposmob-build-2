@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Customer Location Picker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta charset="utf-8">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    .search-container {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 480px;
+      z-index: 5;
+    }
+    #search-box {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 16px;
+      font-size: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      outline: none;
+      background-color: white;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    #search-box:focus {
+      border-color: #4285F4;
+      box-shadow: 0 4px 16px rgba(66, 133, 244, 0.25);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="search-container">
+    <input id="search-box" type="text" placeholder="Search address or area...">
+  </div>
+
+  <div id="map"></div>
+
+  <script>
+    let map;
+    let marker;
+    let autocomplete;
+    let geocoder;
+
+    function initMap() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const latParam = parseFloat(urlParams.get('lat'));
+      const lngParam = parseFloat(urlParams.get('lng'));
+
+      let center = { lat: 0, lng: 0 };
+      let zoom = 2;
+      let hasValidCoords = false;
+
+      if (!isNaN(latParam) && !isNaN(lngParam)) {
+        center = { lat: latParam, lng: lngParam };
+        zoom = 15;
+        hasValidCoords = true;
+      }
+
+      // Initialize Map
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: center,
+        zoom: zoom,
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
+      });
+
+      geocoder = new google.maps.Geocoder();
+
+      // Initialize Draggable Marker
+      marker = new google.maps.Marker({
+        position: center,
+        map: map,
+        draggable: true
+      });
+
+      // Initialize Places Autocomplete
+      const input = document.getElementById('search-box');
+      autocomplete = new google.maps.places.Autocomplete(input);
+      autocomplete.bindTo('bounds', map);
+
+      // Listeners
+      autocomplete.addListener('place_changed', onPlaceChanged);
+
+      map.addListener('click', (event) => {
+        updateLocation(event.latLng);
+      });
+
+      marker.addListener('dragend', (event) => {
+        updateLocation(event.latLng);
+      });
+
+      // If coordinates are initially passed, run geocode once to load and populate fields in Flutter
+      if (hasValidCoords) {
+        reverseGeocode(new google.maps.LatLng(latParam, lngParam));
+      }
+    }
+
+    function onPlaceChanged() {
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) {
+        return;
+      }
+
+      marker.setPosition(place.geometry.location);
+      map.panTo(place.geometry.location);
+      map.setZoom(16);
+
+      processGeocodeResult(place.geometry.location.lat(), place.geometry.location.lng(), [place]);
+    }
+
+    function updateLocation(latLng) {
+      marker.setPosition(latLng);
+      map.panTo(latLng);
+      reverseGeocode(latLng);
+    }
+
+    function reverseGeocode(latLng) {
+      geocoder.geocode({ location: latLng }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+          processGeocodeResult(latLng.lat(), latLng.lng(), results);
+        } else {
+          console.error('Reverse geocode failed: ' + status);
+        }
+      });
+    }
+
+    function processGeocodeResult(lat, lng, results) {
+      const result = results[0];
+      const addressComponents = result.address_components || [];
+
+      let landmark = '';
+      let country = '';
+      let state = '';
+      let city = '';
+      let pincode = '';
+
+      for (const component of addressComponents) {
+        const types = component.types || [];
+        if (types.includes('point_of_interest') || types.includes('establishment')) {
+          landmark = component.long_name;
+        }
+        if (types.includes('country')) {
+          country = component.long_name;
+        }
+        if (types.includes('administrative_area_level_1')) {
+          state = component.long_name;
+        }
+        if (types.includes('locality')) {
+          city = component.long_name;
+        } else if (!city && types.includes('administrative_area_level_2')) {
+          city = component.long_name;
+        }
+        if (types.includes('postal_code')) {
+          pincode = component.long_name;
+        }
+      }
+
+      const payload = {
+        formatted_address: result.formatted_address || '',
+        latitude: lat,
+        longitude: lng,
+        place_id: result.place_id || '',
+        landmark: landmark,
+        country: country,
+        state: state,
+        city: city,
+        pincode: pincode
+      };
+
+      sendToFlutter(JSON.stringify(payload));
+    }
+
+    function sendToFlutter(jsonString) {
+      if (window.FlutterChannel) {
+        window.FlutterChannel.postMessage(jsonString); // Android webview_flutter
+      } else if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(jsonString); // Windows webview_windows
+      }
+    }
+  </script>
+  <!-- Script API key placeholder gets replaced by Flutter runtime loader -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAPS_API_KEY_PLACEHOLDER&libraries=places&callback=initMap" async defer></script>
+</body>
+</html>
