@@ -130,7 +130,11 @@ void main() async {
 
   Get.put(CategoryProvider());
   HttpOverrides.global = MyHttpOverrides();
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("main: .env not found or failed to load, continuing without it: $e");
+  }
   runApp(const MyApp());
 }
 
