@@ -52,6 +52,7 @@ class AppSettings {
   final bool kotBillAllowedForDineIn;
   final bool pineLabPayment;
   final bool skipCheckoutOnConfirmAndPrint;
+  final bool compulsoryDayCloseRegister;
 
   AppSettings({
     required this.barcodeSales,
@@ -89,6 +90,7 @@ class AppSettings {
     required this.kotBillAllowedForDineIn,
     this.pineLabPayment = false,
     this.skipCheckoutOnConfirmAndPrint = false,
+    this.compulsoryDayCloseRegister = false,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -189,6 +191,10 @@ class AppSettings {
       skipCheckoutOnConfirmAndPrint: _readSettingStatus(
         settingsMap,
         'SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT',
+      ),
+      compulsoryDayCloseRegister: _readSettingStatus(
+        settingsMap,
+        'COMPULSORY_DAY_CLOSE_REGISTER',
       ),
     );
   }
@@ -393,6 +399,12 @@ class AppSettings {
           "code": "SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT",
           "value": "",
           "status": skipCheckoutOnConfirmAndPrint.toString(),
+        },
+        {
+          "name": "Compulsory Day Close Register",
+          "code": "COMPULSORY_DAY_CLOSE_REGISTER",
+          "value": "",
+          "status": compulsoryDayCloseRegister.toString(),
         },
       ],
     };

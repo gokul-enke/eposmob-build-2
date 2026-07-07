@@ -7,6 +7,10 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/main_screen.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/sales_provider.dart';
+import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
 
 class StoreSelectionScreen extends StatefulWidget {
   final List<Store> stores;
@@ -383,11 +387,95 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
             '${selectedStore.storeName ?? "Store"} ready. Loading dashboard...',
       );
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const MainScreen(),
-        ),
-      );
+      // Check compulsory day close
+      bool shouldNavigateToMainScreen = true;
+      bool dayCloseSubmitted = false;
+
+      final appSettings = Provider.of<AppSettingsProvider>(
+        context, listen: false).appSettings;
+      final bool compulsoryDayClose = 
+        appSettings?.compulsoryDayCloseRegister ?? false;
+
+      if (compulsoryDayClose) {
+        final accessToken = Provider.of<AuthModel>(
+          context, listen: false).token ?? '';
+        final salesProvider = Provider.of<SalesProvider>(
+          context, listen: false);
+
+        final pendingStatus = await salesProvider
+          .fetchDayClosePendingStatus(
+            accessToken: accessToken,
+            storeId: selectedStore.storeId ?? 0,
+          );
+
+        if (!mounted) return;
+
+        if (pendingStatus != null && pendingStatus.pendingDayClose) {
+          shouldNavigateToMainScreen = false;
+
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Day Close Pending'),
+              content: Text(
+                '${pendingStatus.message}\n'
+                '${pendingStatus.confirmationMessage}'
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => DayCloseModal(
+                        onSuccess: () {
+                          dayCloseSubmitted = true;
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => const MainScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ).then((_) {
+                      if (mounted && !dayCloseSubmitted) {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => const MainScreen(),
+                          ),
+                        );
+                      }
+                    });
+                  },
+                  child: const Text('Yes'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => const MainScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('No'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+
+      if (!mounted) return;
+      if (shouldNavigateToMainScreen) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const MainScreen(),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

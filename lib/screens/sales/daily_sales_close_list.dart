@@ -1446,6 +1446,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                         denominationController: denominationControllers[index],
                         countController: countControllers[index],
                         isNarrow: true,
+                        allDenominationControllers: denominationControllers,
+                        index: index,
                       ),
                       const SizedBox(height: 4),
                       Align(
@@ -1482,6 +1484,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                           denominationController: denominationControllers[index],
                           countController: countControllers[index],
                           isNarrow: false,
+                          allDenominationControllers: denominationControllers,
+                          index: index,
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -1518,6 +1522,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
     required TextEditingController denominationController,
     required TextEditingController countController,
     required bool isNarrow,
+    required List<TextEditingController> allDenominationControllers,
+    required int index,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1527,6 +1533,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                 children: [
                   _buildDenominationDropdown(
                     controller: denominationController,
+                    allDenominationControllers: allDenominationControllers,
+                    index: index,
                   ),
                   const SizedBox(height: 6),
                   _buildCompactField(
@@ -1541,6 +1549,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                   Expanded(
                     child: _buildDenominationDropdown(
                       controller: denominationController,
+                      allDenominationControllers: allDenominationControllers,
+                      index: index,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -1559,6 +1569,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
 
   Widget _buildDenominationDropdown({
     required TextEditingController controller,
+    required List<TextEditingController> allDenominationControllers,
+    required int index,
   }) {
     final currentValue = controller.text.trim().isEmpty
         ? null
@@ -1609,6 +1621,19 @@ class _DayCloseModalState extends State<DayCloseModal> {
                       ),
                     ),
                     items: _cashDenominations
+                        .where((d) {
+                          // Get all currently selected denominations 
+                          // except the current row's own selection
+                          final selectedOthers = allDenominationControllers
+                              .asMap()
+                              .entries
+                              .where((e) => e.key != index)
+                              .map((e) => e.value.text.trim())
+                              .toSet();
+                          // Allow this denomination if not selected 
+                          // in any other row, or if it's empty
+                          return !selectedOthers.contains(d.value ?? '');
+                        })
                         .map(
                           (d) => DropdownMenuItem<String>(
                             value: d.value,

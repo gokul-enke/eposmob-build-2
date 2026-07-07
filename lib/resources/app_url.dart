@@ -290,6 +290,8 @@ class APPUrl {
       '$baseURL/api/v1/daily-sales-close/list';
   static String viewDailySalesClose(String id) =>
       '$baseURL/api/v1/daily-sales-close/view/$id';
+  static String get dailySalesClosePendingStatus =>
+      '$baseURL/api/v1/daily-sales-close/pending-status';
   static String get dailySalesCloseSummary =>
       '$baseURL/api/v1/daily-sales-close/summary';
   static String get dailySalesCloseCreate =>
