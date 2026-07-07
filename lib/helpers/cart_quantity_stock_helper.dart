@@ -110,6 +110,7 @@ class CartQuantityStockHelper {
       product: currentProduct,
       selectedStock: cartItem.selectedStock,
       stockGroupIds: cartItem.stockGroupIds,
+      variantId: cartItem.variantId,
     );
 
     final quantityOnCurrentSelection = cartItem.hasSaleUnit
@@ -132,6 +133,8 @@ class CartQuantityStockHelper {
         saleUnitId: cartItem.saleUnitId,
         saleUnitName: cartItem.saleUnitName,
         saleUnitConversionRate: cartItem.saleUnitConversionRate,
+        variantId: cartItem.variantId,
+        variantAttributes: cartItem.variantAttributes,
       );
 
       appliedQuantity += quantityOnCurrentSelection;
@@ -148,6 +151,7 @@ class CartQuantityStockHelper {
         stockGroupIds: cartItem.stockGroupIds,
         activeStoreId: activeStoreId,
         activeStoreName: activeStoreName,
+        variantId: cartItem.variantId,
       );
 
       if (alternativeStocks.isEmpty) {
@@ -192,6 +196,7 @@ class CartQuantityStockHelper {
         product: refreshedProduct,
         selectedStock: selection.selectedStock,
         stockGroupIds: selection.stockGroupIds,
+        variantId: cartItem.variantId,
       );
 
       if (availableForSelection <= 0) {
@@ -227,6 +232,8 @@ class CartQuantityStockHelper {
         saleUnitId: cartItem.saleUnitId,
         saleUnitName: cartItem.saleUnitName,
         saleUnitConversionRate: cartItem.saleUnitConversionRate,
+        variantId: cartItem.variantId,
+        variantAttributes: cartItem.variantAttributes,
       );
 
       appliedQuantity += quantityForSelection;

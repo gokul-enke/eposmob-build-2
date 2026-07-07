@@ -460,6 +460,9 @@ class OrderDetailsModelDataCartItem {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final Names? names; // Add bilingual names support
+  final int? productVariantId; // Variant chosen for this order line (nullable)
+  final Map<String, dynamic>?
+      variantAttributes; // Snapshot map e.g. {"COLOR":"Red","SIZE":"L"}
 
   OrderDetailsModelDataCartItem({
     this.id,
@@ -481,7 +484,21 @@ class OrderDetailsModelDataCartItem {
     this.createdAt,
     this.updatedAt,
     this.names, // Add to constructor
+    this.productVariantId,
+    this.variantAttributes,
   });
+
+  /// Formatted variant attribute line (values joined with " | "), matching
+  /// ProductVariant.formattedAttributes style. Empty when there are no
+  /// attributes to display.
+  String get formattedVariantAttributes {
+    final attrs = variantAttributes;
+    if (attrs == null || attrs.isEmpty) return '';
+    return attrs.values
+        .map((value) => value?.toString() ?? '')
+        .where((value) => value.isNotEmpty)
+        .join(' | ');
+  }
 
   factory OrderDetailsModelDataCartItem.fromJson(Map<String, dynamic> json) =>
       OrderDetailsModelDataCartItem(
@@ -522,7 +539,32 @@ class OrderDetailsModelDataCartItem {
                     (json["product_names"] as List).isEmpty
                 ? null // Handle empty array case
                 : Names.fromJson(json["product_names"]),
+        productVariantId: _parseNullableInt(json["product_variant_id"]),
+        variantAttributes: _parseVariantAttributes(json["variant_attributes"]),
       );
+
+  // variant_attributes may arrive as a Map or as a JSON-encoded String; parse
+  // defensively and return null when empty/unparseable.
+  static Map<String, dynamic>? _parseVariantAttributes(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Map) {
+      if (raw.isEmpty) return null;
+      return Map<String, dynamic>.from(raw);
+    }
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return null;
+      try {
+        final decoded = json.decode(trimmed);
+        if (decoded is Map && decoded.isNotEmpty) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      } catch (_) {
+        // Not valid JSON; ignore and fall through.
+      }
+    }
+    return null;
+  }
 
   OrderDetailsModelDataCartItem copyWith({
     num? quantity,
@@ -549,6 +591,8 @@ class OrderDetailsModelDataCartItem {
         createdAt: createdAt,
         updatedAt: updatedAt,
         names: names,
+        productVariantId: productVariantId,
+        variantAttributes: variantAttributes,
       );
 
   Map<String, dynamic> toJson() => {
@@ -573,6 +617,8 @@ class OrderDetailsModelDataCartItem {
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
         "names": names?.toJson(), // Add names to serialization
+        "product_variant_id": productVariantId,
+        "variant_attributes": variantAttributes,
       };
 
   static int? _parseNullableInt(dynamic value) {
@@ -888,13 +934,28 @@ class OrderReturnItem {
   final String? productName;
   final int? quantity;
   final String? reason;
+  final int? productVariantId;
+  final Map<String, dynamic>? variantAttributes;
 
   OrderReturnItem({
     this.id,
     this.productName,
     this.quantity,
     this.reason,
+    this.productVariantId,
+    this.variantAttributes,
   });
+
+  /// Formatted variant attribute line (values joined with " | "). Empty when
+  /// there are no attributes to display.
+  String get formattedVariantAttributes {
+    final attrs = variantAttributes;
+    if (attrs == null || attrs.isEmpty) return '';
+    return attrs.values
+        .map((value) => value?.toString() ?? '')
+        .where((value) => value.isNotEmpty)
+        .join(' | ');
+  }
 
   factory OrderReturnItem.fromJson(Map<String, dynamic> json) =>
       OrderReturnItem(
@@ -902,6 +963,12 @@ class OrderReturnItem {
         productName: json["product_name"],
         quantity: json["quantity"],
         reason: json["reason"],
+        productVariantId:
+            OrderDetailsModelDataCartItem._parseNullableInt(
+                json["product_variant_id"]),
+        variantAttributes:
+            OrderDetailsModelDataCartItem._parseVariantAttributes(
+                json["variant_attributes"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -909,5 +976,7 @@ class OrderReturnItem {
         "product_name": productName,
         "quantity": quantity,
         "reason": reason,
+        "product_variant_id": productVariantId,
+        "variant_attributes": variantAttributes,
       };
 }

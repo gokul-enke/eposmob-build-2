@@ -194,11 +194,17 @@ class ProductCartHelper {
     if (stockEnabled && product.stock != null && product.stock!.isNotEmpty) {
       debugPrint("📦 STEP 1: Handling stock selection...");
 
+      // Variant-scoped stock (server rule §4): when a variant is chosen, draw
+      // only from its scoped stock rows; if it has none, fall back to general
+      // (non-variant) stock. Null variant → list unchanged (identical behavior).
       final List<Stock> availableStocks =
-          localProductProvider.getStockOptionsForStore(
-        product,
-        activeStoreId: activeStore?.storeId,
-        activeStoreName: activeStore?.storeName,
+          LocalProductProvider.filterStocksForVariant(
+        localProductProvider.getStockOptionsForStore(
+          product,
+          activeStoreId: activeStore?.storeId,
+          activeStoreName: activeStore?.storeName,
+        ),
+        selectedVariant?.id,
       );
 
       debugPrint("🏪 Active store filter applied:");

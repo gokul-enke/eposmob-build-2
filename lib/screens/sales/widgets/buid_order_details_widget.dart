@@ -985,16 +985,35 @@ class OrderDetailWidget extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  item.productName ?? 'N/A',
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s12,
-                    0.18,
-                    ColorManager.textColor,
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.productName ?? 'N/A',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s12,
+                        0.18,
+                        ColorManager.textColor,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (item.formattedVariantAttributes.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        item.formattedVariantAttributes,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s10,
+                          0.16,
+                          Colors.grey,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(width: 8),
@@ -1101,7 +1120,9 @@ class OrderDetailWidget extends StatelessWidget {
                 ),
                 children: [
                   _buildTableCell('${index + 1}', align: TextAlign.center),
-                  _buildTableCell(item.productName ?? 'N/A'),
+                  _buildTableCell(item.formattedVariantAttributes.isEmpty
+                      ? (item.productName ?? 'N/A')
+                      : '${item.productName ?? 'N/A'}\n${item.formattedVariantAttributes}'),
                   _buildTableCell('$currency ${_fmt(item.mrp)}',
                       align: TextAlign.right),
                   _buildTableCell('${_fmtQty(item.quantity)}',

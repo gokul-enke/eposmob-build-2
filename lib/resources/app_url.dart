@@ -109,6 +109,8 @@ class APPUrl {
 
   static String get createProductUrl =>
       '$baseURL/api/v1/product/create-product';
+  static String get listProductProperties =>
+      '$baseURL/api/v1/product/list-product-properties';
   static String get addProductUrl =>
       '$baseURL/api/v1/product/add-product-general-item';
   static String get addProductNameUrl =>

@@ -784,6 +784,7 @@ class Meta {
 class Stock {
   final int? id;
   final int? productId;
+  final int? productVariantId;
   final int? storeId;
   final String? storeName;
   final String? supplier;
@@ -820,6 +821,7 @@ class Stock {
   Stock({
     this.id,
     this.productId,
+    this.productVariantId,
     this.storeId,
     this.storeName,
     this.supplier,
@@ -848,6 +850,7 @@ class Stock {
   Stock copyWith({
     int? id,
     int? productId,
+    int? productVariantId,
     int? storeId,
     String? storeName,
     String? supplier,
@@ -875,6 +878,7 @@ class Stock {
     return Stock(
       id: id ?? this.id,
       productId: productId ?? this.productId,
+      productVariantId: productVariantId ?? this.productVariantId,
       storeId: storeId ?? this.storeId,
       storeName: storeName ?? this.storeName,
       supplier: supplier ?? this.supplier,
@@ -906,6 +910,9 @@ class Stock {
         productId: json["product_id"] is String
             ? int.tryParse(json["product_id"])
             : json["product_id"],
+        productVariantId: json["product_variant_id"] is String
+            ? int.tryParse(json["product_variant_id"])
+            : json["product_variant_id"],
         storeId: json["store_id"] is String
             ? int.tryParse(json["store_id"])
             : json["store_id"] ?? json["storeId"],
@@ -962,6 +969,7 @@ class Stock {
   Map<String, dynamic> toJson() => {
         "id": id,
         "product_id": productId,
+        "product_variant_id": productVariantId,
         "store_id": storeId,
         "store_name": storeName,
         "supplier": supplier,
@@ -1095,6 +1103,30 @@ class ProductVariant {
         'active': active,
         'attributes': attributes,
       };
+
+  ProductVariant copyWith({
+    int? id,
+    String? sku,
+    String? barcode,
+    double? price,
+    double? mrp,
+    double? purchasePrice,
+    num? quantity,
+    bool? active,
+    Map<String, dynamic>? attributes,
+  }) {
+    return ProductVariant(
+      id: id ?? this.id,
+      sku: sku ?? this.sku,
+      barcode: barcode ?? this.barcode,
+      price: price ?? this.price,
+      mrp: mrp ?? this.mrp,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      quantity: quantity ?? this.quantity,
+      active: active ?? this.active,
+      attributes: attributes ?? this.attributes,
+    );
+  }
 
   String get formattedAttributes =>
       attributes.values.map((value) => value.toString()).join(' | ');

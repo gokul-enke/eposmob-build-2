@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cart &amp; Billing Flows — Analysis</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --panel: #ffffff;
+      --bg: #f6f8fb;
+      --blue: #2563eb;
+      --green: #059669;
+      --amber: #d97706;
+      --violet: #7c3aed;
+      --red: #dc2626;
+      --cyan: #0891b2;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(1320px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    header {
+      padding: 24px 28px;
+      background: linear-gradient(135deg, #ffffff 0%, #f0f5ff 100%);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 28px; margin-bottom: 6px; letter-spacing: -0.02em; }
+    h2 { font-size: 18px; margin-bottom: 10px; }
+    .subtitle { color: var(--muted); max-width: 72ch; margin-bottom: 0; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .stat .num {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .stat .label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 4px;
+    }
+
+    .stat.total .num { color: var(--ink); }
+    .stat.ok .num { color: var(--green); }
+    .stat.fix .num { color: var(--blue); }
+    .stat.warn .num { color: var(--amber); }
+    .stat.gap .num { color: var(--red); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      position: sticky;
+      top: 10px;
+      z-index: 10;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+    }
+
+    .toolbar input[type="search"] {
+      flex: 1 1 220px;
+      min-width: 180px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .toolbar input[type="search"]:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .chip:hover { background: #eef2ff; border-color: #c7d2fe; }
+    .chip.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+    .chip[data-status="ok"].active { background: var(--green); border-color: var(--green); }
+    .chip[data-status="fix"].active { background: var(--blue); border-color: var(--blue); }
+    .chip[data-status="warn"].active { background: var(--amber); border-color: var(--amber); }
+    .chip[data-status="gap"].active { background: var(--red); border-color: var(--red); }
+
+    .view-toggle {
+      display: flex;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .view-toggle button {
+      border: 0;
+      background: #f8fafc;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .view-toggle button.active {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .result-count {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .flow-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .flow-card:hover {
+      border-color: #c7d2fe;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .flow-card.hidden { display: none; }
+
+    .flow-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .flow-id {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--violet);
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    .tag {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .tag.ok { background: var(--green); }
+    .tag.fix { background: var(--blue); }
+    .tag.warn { background: var(--amber); }
+    .tag.gap { background: var(--red); }
+
+    .scenario {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      font-size: 11px;
+      font-weight: 700;
+      color: #334155;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 4px 8px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .section-body {
+      font-size: 13px;
+      color: #334155;
+      margin: 0;
+    }
+
+    .refs {
+      font-size: 12px;
+      color: #475569;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      word-break: break-word;
+    }
+
+    code, .code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      color: #1d4ed8;
+      font-weight: 600;
+      background: #eff6ff;
+      border-radius: 4px;
+      padding: 1px 4px;
+    }
+
+    .table-wrap {
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .table-wrap.active { display: block; }
+    .cards.hidden { display: none; }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 10.5px;
+      line-height: 1.35;
+    }
+
+    .data-table col.col-id { width: 2.5%; }
+    .data-table col.col-status { width: 3.5%; }
+    .data-table col.col-scenario { width: 13%; }
+    .data-table col.col-entry { width: 9%; }
+    .data-table col.col-handling { width: 26%; }
+    .data-table col.col-note { width: 22%; }
+    .data-table col.col-refs { width: 24%; }
+
+    .data-table th,
+    .data-table td {
+      text-align: left;
+      vertical-align: top;
+      padding: 6px 7px;
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid #edf2f7;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      hyphens: auto;
+    }
+
+    .data-table th:last-child,
+    .data-table td:last-child {
+      border-right: 0;
+    }
+
+    .data-table th {
+      background: #edf3ff;
+      color: #23324d;
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      white-space: normal;
+    }
+
+    .data-table tbody tr:hover td {
+      background: #fafbff;
+    }
+
+    .data-table tbody tr.hidden { display: none; }
+    .data-table tbody tr:last-child td { border-bottom: 0; }
+
+    .data-table .cell-id {
+      font-weight: 800;
+      color: var(--violet);
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .data-table .tag {
+      font-size: 8px;
+      padding: 2px 5px;
+      letter-spacing: 0.02em;
+    }
+
+    .data-table code,
+    .data-table .code {
+      font-size: 9.5px;
+      padding: 0 2px;
+      font-weight: 600;
+    }
+
+    .data-table .refs-inline {
+      font-size: 9.5px;
+      color: #475569;
+      line-height: 1.3;
+    }
+
+    .data-table .refs-inline .code {
+      display: inline;
+      background: transparent;
+      color: #334155;
+      font-weight: 500;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 18px;
+      padding: 14px 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+    .empty {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      background: var(--panel);
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .empty.show { display: block; }
+
+    footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      main { width: min(100% - 20px, 1320px); padding-top: 16px; }
+      header { padding: 18px; }
+      .toolbar { position: static; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Cart &amp; Billing Flows Analysis</h1>
+      <p class="subtitle">
+        Interactive review of 35 POS add-to-cart, stock-reservation, variant, sale-unit,
+        quantity, pricing, and checkout flows. Sourced from
+        <code>docs/cart_billing_flows_analysis.csv</code>.
+      </p>
+    </header>
+
+    <section class="stats" id="stats"></section>
+
+    <section class="toolbar">
+      <input type="search" id="search" placeholder="Search scenario, entry point, handling, files…" autocomplete="off">
+      <div class="filter-group" id="statusFilters"></div>
+      <div class="view-toggle">
+        <button type="button" class="active" data-view="cards">Cards</button>
+        <button type="button" data-view="table">Table</button>
+      </div>
+    </section>
+
+    <div class="result-count" id="resultCount"></div>
+    <div class="empty" id="emptyState">No flows match your filters.</div>
+
+    <section class="cards" id="cardView"></section>
+
+    <section class="table-wrap" id="tableView">
+      <table class="data-table">
+        <colgroup>
+          <col class="col-id">
+          <col class="col-status">
+          <col class="col-scenario">
+          <col class="col-entry">
+          <col class="col-handling">
+          <col class="col-note">
+          <col class="col-refs">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>St</th>
+            <th>Scenario</th>
+            <th>Entry</th>
+            <th>Handling</th>
+            <th>Assessment</th>
+            <th>Files</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </section>
+
+    <section class="legend">
+      <span><span class="tag ok">OK</span> Correct behavior, no change needed</span>
+      <span><span class="tag fix">Fix</span> Recently fixed inconsistency</span>
+      <span><span class="tag warn">Warn</span> Minor inconsistency or UX improvement</span>
+      <span><span class="tag gap">Gap</span> Real gap — action recommended</span>
+    </section>
+
+    <footer>Generated preview · eposmob billing analysis</footer>
+  </main>
+
+  <script>
+    const FLOWS = [
+      { id:"F01", scenario:"Cashier scans/taps a product with stock enabled, sufficient stock, single matching stock batch", entry:"Barcode scan, product grid tap", handling:"`_handleProductSelectionImpl` filters store stocks via `getStockOptionsForStore`, groups by pricing via `groupStocksByPricing`; exactly 1 group auto-selects and reserves stock via `_reserveStockForSelection`, then calls `addToCart`. Success toast `showScaffold('Added To Cart')`.", note:"None — correct fast-path behavior for the common case, no unnecessary prompts.", refs:"lib/helpers/product_cart_helper.dart:219-256, 536-539; lib/providers/local_product_provider.dart:2439 (addToCart), 1048 (_reserveStockForSelection)", category:"stock" },
+      { id:"F02", scenario:"Product has multiple stock batches at different prices/purchase costs (e.g. two purchase lots), cashier must pick which batch to sell from", entry:"Barcode scan, product grid tap", handling:"`groupStocksByPricing` produces >1 group; `StockSelectionModal` shown for cashier to choose. Selection then reserves stock and adds to cart.", note:"None — correct, since price/cost genuinely differs between batches and the system cannot silently pick one.", refs:"lib/helpers/product_cart_helper.dart:219-354; lib/widgets/stock_selection_modal.dart:93-96,128 (groupStocksByPricing)", category:"stock" },
+      { id:"F03", scenario:"Product/store has stock tracking disabled entirely (no batches recorded), cashier still needs to sell it", entry:"Barcode scan, product grid tap", handling:"`isStockEnabled` false short-circuits all reservation logic; item added directly using base `product.price`/`mrp`, no stock deduction, no prompts.", note:"None — correct; stock-disabled products are intentionally untracked and should never block a sale.", refs:"lib/helpers/product_cart_helper.dart:151-217; lib/providers/local_product_provider.dart:1048-1060 (early no-op when stock disabled)", category:"stock" },
+      { id:"F04", scenario:"Product has zero stock rows recorded at all (never received into this store)", entry:"Barcode scan, product grid tap", handling:"`getStockOptionsForStore` returns empty list; code falls back to `product.price?.price`/`product.mrp` base pricing and adds directly, no batch to reserve, no prompt.", note:"None — correct fallback; without any stock rows there is nothing to reserve against, so base pricing is the only sane behavior.", refs:"lib/helpers/product_cart_helper.dart:194-217", category:"stock" },
+      { id:"F05", scenario:"Product has stock rows but every batch quantity is 0 (fully depleted, none replenished)", entry:"Barcode scan, product grid tap", handling:"Same as F04 path — `getStockOptionsForStore` only returns qty>0 rows, so all-zero rows are filtered out and it falls back to base price/mrp, adds without a stock-mismatch prompt.", note:"Minor inconsistency: unlike the explicit out-of-stock-variant confirm (F07), a fully-depleted non-variant product sells silently with no \"sell anyway\" visibility to the cashier that stock is at zero. Consider surfacing the same confirm here for consistency.", refs:"lib/helpers/product_cart_helper.dart:194-217; lib/providers/local_product_provider.dart:4111-4120 (getStockOptions/getStockOptionsForStore, qty>0 filter)", category:"stock" },
+      { id:"F06", scenario:"Stock rows exist for the product but tagged to a different store_id than the active store (e.g. central warehouse rows never adjusted for this branch)", entry:"Barcode scan, product grid tap", handling:"`getStockOptionsForStore` filters by `activeStore.storeId` (falls back to store-name match only if no id); mismatched rows are excluded, so item falls back to base master price instead of any batch price.", note:"Cashier could unknowingly sell at master price when a batch price existed for a different store — not incorrect per se (cross-store batches shouldn't apply), but there's no toast telling the cashier \"no store-specific stock found, using base price,\" which could mask a data-sync problem.", refs:"lib/helpers/product_cart_helper.dart:194-217; lib/providers/local_product_provider.dart:4120 (getStockOptionsForStore)", category:"stock" },
+      { id:"F07", scenario:"Cashier selects/taps a product variant that shows 0 recorded quantity in the system, but the physical item is in the customer's basket", entry:"Product grid tap -> variant auto-resolve or picker", handling:"`ProductVariantSelection.isOutOfStock` true (quantity==0) when stock enabled triggers `showSellAnywayConfirmDialog` with message \"$label shows 0 stock in the system. Sell it anyway?\". Confirm adds to cart; cancel aborts silently (no separate error toast).", note:"None — correct oversell-allowed behavior with explicit cashier confirmation; matches the fixed design intent. Minor: cancel path shows no toast, but abort is the cashier's own explicit choice so silence is acceptable here.", refs:"lib/helpers/product_cart_helper.dart:151-167; lib/features/billing/domain/product_variant_selection.dart:11 (isOutOfStock); lib/components/build_dialog_box.dart:116 (showSellAnywayConfirmDialog)", category:"variant" },
+      { id:"F08", scenario:"Cashier scans a barcode that resolves directly to a specific out-of-stock variant (barcode encodes the variant, not just the base product)", entry:"Barcode scan", handling:"`tryResolveWithoutPicker` auto-resolves the variant from the scanned barcode (including OOS variants, by design) and hands off to `handleProductSelection`, which then raises the same sell-anyway confirm as F07.", note:"None — consistent with F07; barcode-resolved variants get the same protection as manually-picked ones.", refs:"lib/features/billing/domain/product_variant_selection.dart:41 (tryResolveWithoutPicker); lib/helpers/product_cart_helper.dart:151-167", category:"variant" },
+      { id:"F09", scenario:"Product has multiple active variants and needs the picker sheet; one of the variants is out of stock but the others are not", entry:"Variant picker (grid tap on multi-variant product)", handling:"`mobile_variant_picker_sheet.dart` renders OOS variants at 60% opacity with a red \"Out of stock\" label but keeps them fully tappable; \"Add to Cart\" is only disabled when no variant is selected at all, not based on stock state. Selecting an OOS variant proceeds to the same sell-anyway confirm (F07).", note:"None — correct; hiding or disabling OOS variants would recreate the original bug (cashier physically holds the item but system refuses). Visual dimming + label gives enough signal without blocking.", refs:"lib/features/billing/presentation/widgets/mobile/home/mobile_variant_picker_sheet.dart:89-99,145-155; lib/features/billing/domain/add_product_with_variant.dart:9", category:"variant" },
+      { id:"F10", scenario:"Cashier scans a CASE/PACK/BOX barcode and there is enough base-unit stock to cover the case conversion", entry:"Barcode scan (sale-unit barcode)", handling:"`_findMatchingSaleUnit` matches the sale-unit barcode; conversion rate computed via `_parseSaleUnitConversionRate`; sufficient stock found in preferred sale-unit stock group, auto-selected and reserved, added without prompt.", note:"None — correct fast path when stock genuinely covers the case quantity.", refs:"lib/helpers/product_cart_helper.dart:258-297,378-400; lib/features/billing/presentation/pages/billing_page.dart:1582 (_findMatchingSaleUnit), 1510-1511 (useSaleUnit)", category:"sale-unit" },
+      { id:"F11", scenario:"Cashier scans a CASE barcode but base-unit stock is short of the amount needed for that case (e.g. 1 case = 12 units, only 8 recorded)", entry:"Barcode scan (sale-unit barcode)", handling:"`selectedStock.quantity < requestedQuantity` triggers `showSellAnywayConfirmDialog` with `insufficientStockConfirm` message (\"Only $available in stock for $unitLabel (needs $requested). Sell anyway?\"). Confirm proceeds; `addToCart`/`_reserveStockForSelection` reserves what's available and lets the rest go unreserved (oversell).", note:"None — correct oversell-allowed behavior with explicit shortfall detail shown to the cashier, matching the fixed design intent.", refs:"lib/helpers/product_cart_helper.dart:378-400; lib/providers/local_product_provider.dart:1048-1106 (_reserveStockForSelection oversell fallthrough)", category:"sale-unit" },
+      { id:"F12", scenario:"Cashier scans a CASE barcode for a product that has zero stock rows entirely (never tracked in this store)", entry:"Barcode scan (sale-unit barcode)", handling:"No stock rows at all -> falls into the same base-price fallback path as F04, bypassing the insufficient-stock check entirely (there's no `selectedStock` to compare against) — sells directly with no confirm prompt at all.", note:"Inconsistency vs F11: a case-barcode scan with SOME insufficient stock gets a sell-anyway confirm, but a case-barcode scan with NO stock at all sells silently with zero friction. Cashier gets less warning in the more extreme shortage case. Consider triggering the same confirm (or a stronger one) when stock is entirely absent for a sale-unit scan.", refs:"lib/helpers/product_cart_helper.dart:194-217,378-400", category:"sale-unit" },
+      { id:"F13", scenario:"Cashier switches an existing cart line's unit from base (PCS) to CASE (or vice versa) via the cart unit dropdown, with sufficient or insufficient stock for the new unit", entry:"Cart line unit dropdown (`_selectCartUnitOption`)", handling:"`changeCartItemSaleUnit` recomputes target base quantity via conversion rate; if quantity increases it calls `_reserveStockForSelection` which allows oversell (comment explicitly notes insufficient stock never blocks a unit change); if quantity decreases, restores reservations via `_restoreStockReservations`. On provider exception, `_selectCartUnitOption` shows `showScaffoldError('Unable to change unit for this cart item.')`.", note:"None — correct; consistent with the fixed oversell-allowed design so cashiers can freely re-express quantity in a different unit without being blocked mid-sale.", refs:"lib/providers/local_product_provider.dart:2616-2701 (changeCartItemSaleUnit); lib/features/billing/presentation/pages/billing_page.dart:3042,3063-3066,3098-3105 (_selectCartUnitOption)", category:"sale-unit" },
+      { id:"F14", scenario:"Cashier taps the '+' stepper on a cart line and the currently-selected stock batch still has enough quantity to cover the increment", entry:"Cart quantity +/- stepper", handling:"`syncCartItemQuantity` first tries to satisfy the increase from `getAvailableQuantityForSelection` on the current selection; if sufficient, calls `provider.setCartItemQuantity` directly with no prompts.", note:"None — correct, no interruption needed when stock is genuinely available.", refs:"lib/helpers/cart_quantity_stock_helper.dart:36,108-140; lib/providers/local_product_provider.dart:4173 (getAvailableQuantityForSelection), 4294 (setCartItemQuantity)", category:"quantity" },
+      { id:"F15", scenario:"Cashier taps '+' and the current batch is exhausted, but an alternative batch (or several) exists for the same product", entry:"Cart quantity +/- stepper", handling:"`getAlternativeStockOptions` (FEFO-sorted) returns candidates; `_selectAdditionalStock`/`selectionResolver` auto-picks if exactly one pricing group, otherwise shows `StockSelectionModal` for the cashier to choose.", note:"None — correct; mirrors the same single-vs-multiple-group UX used at initial add-to-cart (F01/F02).", refs:"lib/helpers/cart_quantity_stock_helper.dart:142-235,256 (_selectAdditionalStock); lib/providers/local_product_provider.dart:4198 (getAlternativeStockOptions)", category:"quantity" },
+      { id:"F16", scenario:"Cashier taps '+' with no alternative batch available anywhere, from a screen with a BuildContext (normal UI stepper)", entry:"Cart quantity +/- stepper (UI, context available)", handling:"Shows `showSellAnywayConfirmDialog` (\"No more stock recorded for this item (requested $remainingIncrease more). Sell anyway?\"); confirm hard-sets `newQuantity` via `setCartItemQuantity`, bypassing normal reservation (oversell allowed).", note:"None — correct; matches the fixed design intent of never hard-blocking a cashier with the item physically in hand, while still surfacing the stock discrepancy.", refs:"lib/helpers/cart_quantity_stock_helper.dart:142-177", category:"quantity" },
+      { id:"F17", scenario:"Same as F16 but the increment is triggered programmatically/headlessly with no BuildContext available (e.g. automated sync, batch reprocessing, tests)", entry:"Cart quantity +/- stepper (headless/programmatic caller)", handling:"Falls to `onBlocked('Selected stock is exhausted. No other stock is available.')` — a hard block is preserved, since there's no UI to show a confirm dialog to.", note:"None — intentional and documented tradeoff: headless callers can't present a confirm dialog, so a hard block is the only safe default there; this only affects non-interactive callers, not cashiers at the till.", refs:"lib/helpers/cart_quantity_stock_helper.dart:142-158,178", category:"quantity" },
+      { id:"F18", scenario:"Cashier taps '-' on a cart line to reduce quantity, or removes the line entirely", entry:"Cart quantity +/- stepper (decrement) / swipe-to-remove", handling:"`decrementCartItem` reduces by 1 base unit (or 1 sale-unit's base equivalent) and restores the corresponding stock reservation; removes the line if quantity would drop to/below the decrement amount. `setCartItemQuantity` with newQuantity<=0 also removes the item and restores all previously deducted stock.", note:"None — correct; stock is properly returned to available pool on decrement/removal, preventing permanent stock leakage.", refs:"lib/providers/local_product_provider.dart:3170 (decrementCartItem), 4294,4347-4358 (setCartItemQuantity <=0 path)", category:"quantity" },
+      { id:"F19", scenario:"Product is marked sellable=false (e.g. discontinued, internal-use-only item) but still exists in the catalog", entry:"Product grid tap, barcode scan, search+Add Item — all entry points", handling:"`_handleProductSelectionImpl` checks `product.sellable == false` first and calls `showScaffoldError(productNotSellable(name))` = \"$name is marked as not sellable\", returning before any stock/variant/price logic runs. Grid also hides such products visually.", note:"None — this is the fix: previously barcode scan could bypass the grid's visual hiding; now every entry point funnels through the same sellable check, closing that inconsistency.", refs:"lib/helpers/product_cart_helper.dart:98-108; lib/features/billing/controllers/billing_mobile_ui_controller.dart:90-91 (productNotSellable)", category:"validation" },
+      { id:"F20", scenario:"Cashier scans a barcode that matches no product in the local catalog at all", entry:"Barcode scan", handling:"`filteredProducts.isEmpty` opens `AddProductWithBarcodeModal(barcode: query, isAddToCart: true)` letting the cashier register a new product on the fly and add it to cart in one step.", note:"None — reasonable UX for handling genuinely new/unregistered SKUs at the till without stopping the sale.", refs:"lib/features/billing/presentation/pages/billing_page.dart:1538-1546", category:"validation" },
+      { id:"F21", scenario:"Scanned barcode encodes an embedded weight/count (prefix '000', 14 digits) but the embedded digits are malformed/non-numeric (label printer glitch, damaged barcode)", entry:"Barcode scan (weight/count-embedded barcode)", handling:"`double.tryParse`/`int.tryParse` failures set `quantity = null` instead of throwing; `handleProductSelection` defaults `quantity ?? 1`, so the item is added with quantity 1 instead of crashing or showing a false 'invalid barcode' error.", note:"Silent quantity substitution: cashier gets no toast indicating the embedded weight/count was unreadable and defaulted to 1 — for a weight-priced item (e.g. deli meat) this could under- or over-charge without any signal. Consider a brief warning toast when the fallback path is taken, not just a silent default.", refs:"lib/features/billing/presentation/pages/billing_page.dart:1404,1475-1481", category:"validation" },
+      { id:"F22", scenario:"Product's resolved unit price is zero (no price configured, or price data pending) but cashier needs to sell it now", entry:"Barcode scan, product grid tap", handling:"`ZeroPriceQuickEntryHelper.isZeroPrice` triggers a quick price/qty entry modal (`promptForProduct`) before adding; cancel now shows `showScaffoldError(zeroPriceEntryCancelled)` = \"Price not entered — item was not added to cart\" instead of silently doing nothing.", note:"None — this is the fix; the cashier now gets explicit feedback that the item was NOT added, preventing a customer from walking out with an unrung item nobody notices.", refs:"lib/helpers/product_cart_helper.dart:476-510; lib/features/billing/controllers/billing_mobile_ui_controller.dart:87-88 (zeroPriceEntryCancelled)", category:"validation" },
+      { id:"F23", scenario:"Customer's purchase-history price (used to auto-suggest a price based on prior purchases) would fall below the configured minimum margin/price floor for the product", entry:"Customer purchase-history price auto-apply (cart price field)", handling:"`applyPurchaseHistoryPrice` computes `minimumSalePriceForProduct` (based on min margin % and/or min margin price, whichever floor is more restrictive) and rejects the historical price (applied:false, belowMinimumPrice set) if it's under that floor; `commitDisplayPrice` also clamps any manually-typed price up to the floor.", note:"None — correct; prevents a stale/discounted historical price from underselling below the store's configured margin protection.", refs:"lib/features/billing/controllers/billing_mobile_ui_controller.dart:681 (commitDisplayPrice), 821 (applyPurchaseHistoryPrice); lib/providers/local_product_provider.dart:2810 (minimumSalePriceForProduct)", category:"pricing" },
+      { id:"F24", scenario:"Cashier re-scans/re-adds a product that's already on the cart with a manually-overridden price (e.g. negotiated discount) — does the override survive or get overwritten by catalog price?", entry:"Barcode scan / grid tap on a product already in cart", handling:"`handleProductSelection` detects a matching existing cart line (by productId+saleUnitId+variantId+stockGroupIds) and passes `priceToUse = null`, deferring to `addToCart`'s existing-item branch which only overwrites `price`/`mrp` when the incoming value is non-null and `isManualPriceOverride` isn't set — so the manual override is preserved, just the quantity increments.", note:"None — correct; a cashier's negotiated/manual price isn't silently clobbered by a re-scan, while quantity still increases as expected.", refs:"lib/helpers/product_cart_helper.dart:417-474; lib/providers/local_product_provider.dart:2486-2541 (addToCart existing-item branch)", category:"pricing" },
+      { id:"F25", scenario:"addToCart (or a related lookup) is invoked with a productId that doesn't exist locally yet — e.g. product record hasn't finished syncing down from server", entry:"Barcode scan, programmatic re-add, sync-triggered cart rebuild", handling:"`getProductById` uses `_products.firstWhere(...)` wrapped so a not-found case returns `null` rather than throwing; callers that previously used unguarded `firstWhere` (which threw an uncaught exception) are now null-safe.", note:"None — this is the fix; removes a crash vector when the local product cache is momentarily behind the cart/order data (common in an offline-first sync model).", refs:"lib/providers/local_product_provider.dart:3511 (getProductById)", category:"sync" },
+      { id:"F26", scenario:"Cashier opens the multi-batch stock-selection modal (>1 pricing group) then dismisses it by tapping outside or hitting cancel, without picking a batch", entry:"Stock selection modal (shown from F02/F15 flows)", handling:"`result == null` from the modal now triggers `showScaffoldError(stockNotSelected)` = \"No batch selected — item was not added to cart\" instead of silently doing nothing.", note:"None — this is the fix; previously an accidental outside-tap silently dropped the add with zero feedback, which could mean a cashier believes an item is rung up when it isn't.", refs:"lib/helpers/product_cart_helper.dart:303-354; lib/features/billing/controllers/billing_mobile_ui_controller.dart:85-86 (stockNotSelected)", category:"stock" },
+      { id:"F27", scenario:"Product has multiple stock batches at the SAME price but different expiry/received dates; repeated adds of the same product should deplete oldest stock first", entry:"Repeated barcode scans / stepper increments of the same product", handling:"`_sortStocksForReservation` sorts candidate stocks by `expiryDate` ascending, then `date` (received) ascending, then `id` ascending (FEFO), and `_reserveStockForSelection` deducts across candidates in that order; `getAlternativeStockOptions` and the modal's `CombinedStock.firstStock` use the same ordering for display.", note:"None — correct FEFO behavior, minimizing spoilage/expiry write-offs, and consistently applied both for deduction and for what metadata is shown to the cashier.", refs:"lib/providers/local_product_provider.dart:962 (_sortStocksForReservation), 1048-1106, 4198 (getAlternativeStockOptions); lib/widgets/stock_selection_modal.dart:39 (CombinedStock.firstStock)", category:"stock" },
+      { id:"F28", scenario:"Multiple stock batches share identical pricing-relevant fields (price, unit, tax rate, etc.) — should they collapse into a single cart line, or does each distinct-priced batch need its own line?", entry:"Add-to-cart grouping / stock selection modal", handling:"`groupStocksByPricing` builds a grouping key from `kDefaultStockGroupingFields` (price, unit) plus other active fields (mrp, purchasePrice, hsnCode, taxRate, wholesalePrice, wholesaleMinUnit) via `buildStockGroupingKey`; batches sharing the same key collapse into one `CombinedStock`/cart line, while genuinely different pricing produces separate groups (and thus the F02 modal).", note:"None — correct; avoids splitting a sale across visually-identical-priced batches into confusing duplicate cart lines, while still separating genuinely different price tiers.", refs:"lib/widgets/stock_selection_modal.dart:15 (CombinedStock), 93-96 (kDefaultStockGroupingFields), 101 (buildStockGroupingKey), 128 (groupStocksByPricing)", category:"stock" },
+      { id:"F29", scenario:"Cashier increases quantity on a cart line past the wholesale minimum-unit threshold (e.g. buying 12+ units triggers a case/wholesale price)", entry:"Cart quantity +/- stepper, setCartItemQuantity", handling:"`setCartItemQuantity` recomputes wholesale eligibility on every quantity change via `_qualifiesForWholesalePrice` (quantity >= wholesaleMinUnit AND wholesalePrice configured), and `_resolveUnitPrice`'s fallback chain applies wholesale price as second priority (after sale-unit price, before retail/base price) when eligible.", note:"None — correct automatic re-pricing; cashier doesn't need to manually swap units or apply a manual discount to get the wholesale rate once the threshold is crossed.", refs:"lib/providers/local_product_provider.dart:555 (_resolveWholesalePrice), 547 (_resolveWholesaleMinUnit), 563 (_qualifiesForWholesalePrice), 626-664 (_resolveUnitPrice), 4294,4364+ (setCartItemQuantity wholesale recheck)", category:"pricing" },
+      { id:"F30", scenario:"Cashier attempts to save/confirm/checkout an order or quotation while the cart is empty", entry:"Save order / confirm order / save quotation buttons", handling:"Multiple explicit empty-cart guards throughout `billing_page.dart` check `cartItems.isEmpty` before each checkout-adjacent action and show a contextual `showScaffoldError` (e.g. 'billing.add_items_to_cart'.tr for save order, 'Please add items to quote first.' for quotation).", note:"None — correct and consistently guarded across all the relevant checkout entry points found (save order, confirm, save quotation).", refs:"lib/features/billing/presentation/pages/billing_page.dart:3870,3947,6015,6463,6813,7782; lib/features/billing/controllers/billing_mobile_ui_controller.dart:33 (emptyCart)", category:"checkout" },
+      { id:"F31", scenario:"Cashier scans the same barcode twice in very quick succession (double-scan from a fast trigger-happy scanner, or a queued duplicate)", entry:"Rapid/duplicate barcode scans", handling:"Barcodes are serialized through `_enqueueBarcode`/`_processNextBarcode`, processing one at a time via `_processBarcodeInternal`; each call goes through the full stock-reservation path sequentially, so a second scan sees the already-decremented stock from the first and reserves/oversells accordingly rather than racing on stale data.", note:"None apparent from the queueing design — sequential processing avoids a race condition on stock deduction; would need a live device test to confirm no queue item can be dropped, but the code structure protects against concurrent double-deduction.", refs:"lib/features/billing/presentation/pages/billing_page.dart:1372-1404 (_enqueueBarcode/_processNextBarcode/_processBarcodeInternal)", category:"barcode" },
+      { id:"F32", scenario:"Store has no internet connectivity — does any part of the add-to-cart/quantity-change flow get blocked because of it (it shouldn't, since this is an offline-first POS)", entry:"Any cart operation while offline", handling:"No connectivity/`isOnline` gating was found wrapping `addToCart`, `setCartItemQuantity`, `changeCartItemSaleUnit`, or any of the stock-reservation helpers. Connectivity gating is confined to online-only actions (confirm/create-order network calls) via `BillingMobileConnectivityController.canConfirmOnline`/`shouldBlockOnlineCheckout`, using distinct messages (`noInternetConfirm`, `noInternetCreateOrder`).", note:"None — correct; cart building and stock reservation remain fully local/offline-capable as required for a POS, with connectivity checks scoped only to genuinely server-dependent actions.", refs:"lib/features/billing/controllers/billing_mobile_ui_controller.dart:157-178 (BillingMobileConnectivityController); lib/features/billing/presentation/pages/billing_page.dart:635,642 (_initConnectivityListener)", category:"sync" },
+      { id:"F33", scenario:"Cashier applies a discount or coupon to the cart when the cart is empty, or enters a negative/oversized discount value", entry:"Discount / coupon entry UI", handling:"Explicit validation messages exist: `emptyCartDiscount`, `discountNegative`, `discountPercentMax`, `discountFlatExceedsTotal`, `applyCouponFailed`, `couponInvalid(name)` — each guards its respective bad-input case before applying.", note:"None apparent from the message set — validation appears comprehensive for the common bad-input cases (empty cart, negative, over-100%, flat discount exceeding total, invalid coupon code).", refs:"lib/features/billing/controllers/billing_mobile_ui_controller.dart:94-104", category:"pricing" },
+      { id:"F34", scenario:"Cart line quantity or price changes, and inclusive tax must be recalculated for the line (tax-inclusive pricing model)", entry:"Cart quantity +/- stepper, price override entry", handling:"`inclusiveTaxAmount` recomputes as `(unitPrice * qty * rate) / (100 + rate)` on demand whenever quantity or price changes, and `addToCart`'s new-item branch resolves tax rate/amount via `_resolveCartTaxRate`/`_calculateTaxAmount` at insertion time.", note:"None — correct; tax recalculates live off current unit price and quantity rather than being cached/stale after a quantity or price edit.", refs:"lib/features/billing/controllers/billing_mobile_ui_controller.dart:660-671 (inclusiveTaxAmount); lib/providers/local_product_provider.dart:2542-2602 (addToCart new-item tax resolution)", category:"pricing" },
+      { id:"F35", scenario:"Cart add-to-cart is invoked via the older `handleAddProductToCart` helper (a separate/legacy entry point) rather than through `ProductCartHelper`", entry:"Any screen still wired to the legacy stock_selection_helper entry point", handling:"`handleAddProductToCart` in `lib/helpers/stock_selection_helper.dart` duplicates stock-group auto-select/modal logic independently of `ProductCartHelper`, and does not appear to include the sellable==false check, variant OOS confirm, or zero-price quick-entry flow that `ProductCartHelper` now has.", note:"Real gap: if any screen still calls this legacy helper instead of `ProductCartHelper.handleProductSelection`, it would bypass all the recent fixes (F07, F19, F22, F26) for that entry point, reintroducing the original inconsistency between entry points. Recommend auditing all callers and either routing them through `ProductCartHelper` or porting the same checks into this helper.", refs:"lib/helpers/stock_selection_helper.dart:25-165", category:"legacy" }
+    ];
+
+    function classifyStatus(note) {
+      const n = note.toLowerCase();
+      if (n.startsWith("real gap") || n.includes("real gap:")) return "gap";
+      if (n.startsWith("minor inconsistency") || n.startsWith("inconsistency") || n.startsWith("silent quantity") || (n.includes("consider ") && !n.startsWith("none"))) return "warn";
+      if (n.includes("this is the fix")) return "fix";
+      if (n.startsWith("none")) return "ok";
+      if (n.includes("cashier could unknowingly") || n.includes("data-sync problem")) return "warn";
+      return "ok";
+    }
+
+    function statusLabel(status) {
+      return { ok: "OK", fix: "Fix", warn: "Warn", gap: "Gap" }[status];
+    }
+
+    function formatCode(text) {
+      return text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    }
+
+    function formatRefs(text) {
+      return text.split(/;\s*/).map(part => `<span class="code">${part.trim()}</span>`).join(" · ");
+    }
+
+    function formatRefsInline(text) {
+      return text.split(/;\s*/).map(part => `<span class="code">${part.trim()}</span>`).join("<br>");
+    }
+
+    const enriched = FLOWS.map(f => ({ ...f, status: classifyStatus(f.note) }));
+
+    const statsEl = document.getElementById("stats");
+    const counts = { total: enriched.length, ok: 0, fix: 0, warn: 0, gap: 0 };
+    enriched.forEach(f => counts[f.status]++);
+
+    statsEl.innerHTML = [
+      ["total", "Total flows", counts.total],
+      ["ok", "Correct / OK", counts.ok],
+      ["fix", "Recent fixes", counts.fix],
+      ["warn", "Improvements", counts.warn],
+      ["gap", "Real gaps", counts.gap]
+    ].map(([cls, label, num]) => `
+      <div class="stat ${cls}">
+        <div class="num">${num}</div>
+        <div class="label">${label}</div>
+      </div>
+    `).join("");
+
+    const statusFilters = document.getElementById("statusFilters");
+    const filters = [
+      { id: "all", label: "All", status: null },
+      { id: "ok", label: "OK", status: "ok" },
+      { id: "fix", label: "Fixes", status: "fix" },
+      { id: "warn", label: "Warnings", status: "warn" },
+      { id: "gap", label: "Gaps", status: "gap" }
+    ];
+
+    let activeStatus = null;
+    let activeView = "cards";
+    let searchTerm = "";
+
+    statusFilters.innerHTML = filters.map((f, i) =>
+      `<button type="button" class="chip${i === 0 ? " active" : ""}" data-status="${f.status || "all"}">${f.label}</button>`
+    ).join("");
+
+    const cardView = document.getElementById("cardView");
+    const tableBody = document.getElementById("tableBody");
+
+    cardView.innerHTML = enriched.map(f => `
+      <article class="flow-card" data-id="${f.id}" data-status="${f.status}" data-search="${[f.id, f.scenario, f.entry, f.handling, f.note, f.refs, f.category].join(" ").toLowerCase()}">
+        <div class="flow-top">
+          <span class="flow-id">${f.id}</span>
+          <span class="tag ${f.status}">${statusLabel(f.status)}</span>
+        </div>
+        <h3 class="scenario">${f.scenario}</h3>
+        <div class="meta-row">
+          <span class="pill">${f.entry}</span>
+          <span class="pill">${f.category}</span>
+        </div>
+        <div>
+          <div class="section-label">Current handling</div>
+          <p class="section-body">${formatCode(f.handling)}</p>
+        </div>
+        <div>
+          <div class="section-label">Assessment</div>
+          <p class="section-body">${formatCode(f.note)}</p>
+        </div>
+        <div class="refs">${formatRefs(f.refs)}</div>
+      </article>
+    `).join("");
+
+    tableBody.innerHTML = enriched.map(f => `
+      <tr data-id="${f.id}" data-status="${f.status}" data-search="${[f.id, f.scenario, f.entry, f.handling, f.note, f.refs, f.category].join(" ").toLowerCase()}">
+        <td class="cell-id">${f.id}</td>
+        <td><span class="tag ${f.status}">${statusLabel(f.status)}</span></td>
+        <td>${f.scenario}</td>
+        <td>${f.entry}</td>
+        <td>${formatCode(f.handling)}</td>
+        <td>${formatCode(f.note)}</td>
+        <td class="refs-inline">${formatRefsInline(f.refs)}</td>
+      </tr>
+    `).join("");
+
+    function matches(flowEl) {
+      const status = flowEl.dataset.status;
+      const text = flowEl.dataset.search;
+      const statusOk = !activeStatus || status === activeStatus;
+      const searchOk = !searchTerm || text.includes(searchTerm);
+      return statusOk && searchOk;
+    }
+
+    function activeItems() {
+      return activeView === "table"
+        ? document.querySelectorAll("#tableBody tr")
+        : document.querySelectorAll("#cardView .flow-card");
+    }
+
+    function render() {
+      let visible = 0;
+      document.querySelectorAll(".flow-card, #tableBody tr").forEach(el => {
+        const show = matches(el);
+        el.classList.toggle("hidden", !show);
+      });
+      activeItems().forEach(el => {
+        if (!el.classList.contains("hidden")) visible++;
+      });
+      document.getElementById("resultCount").textContent = `Showing ${visible} of ${enriched.length} flows`;
+      document.getElementById("emptyState").classList.toggle("show", visible === 0);
+    }
+
+    statusFilters.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip");
+      if (!btn) return;
+      statusFilters.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+      btn.classList.add("active");
+      const val = btn.dataset.status;
+      activeStatus = val === "all" ? null : val;
+      render();
+    });
+
+    document.getElementById("search").addEventListener("input", (e) => {
+      searchTerm = e.target.value.trim().toLowerCase();
+      render();
+    });
+
+    document.querySelector(".view-toggle").addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-view]");
+      if (!btn) return;
+      activeView = btn.dataset.view;
+      document.querySelectorAll(".view-toggle button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("cardView").classList.toggle("hidden", activeView !== "cards");
+      document.getElementById("tableView").classList.toggle("active", activeView === "table");
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
