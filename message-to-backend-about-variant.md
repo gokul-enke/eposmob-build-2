@@ -6,9 +6,24 @@ tests pass (589/589), but a few things in the doc were either unspecified or
 had to be guessed defensively on the client. Need these confirmed/clarified
 before we can trust the variant system in production.
 
+## Endpoints referenced below
+
+| # | Endpoint | Question |
+|---|----------|----------|
+| 1 | `GET /api/v1/product/list-product-properties` | Exact response shape |
+| 2 | Settings API (tenant settings response) | `PRODUCT_VARIANT_ENABLED` value format |
+| 3 | `GET /api/v1/product/list-products`, `GET /api/v1/product/product/{slug}` | Is `product_stocks.product_variant_id` populated |
+| 4 | `POST /api/v1/product/edit-product/{id}` | SKU auto-gen on new variant rows |
+| 5 | `POST /api/v1/product/edit-product/{id}` | Attribute replace-on-edit semantics |
+| 6 | `POST /api/v1/order/sales-return` | Variant stock restoration target |
+| 7 | `POST /api/v1/order/add-to-order` | `product_variant_id` + `sale_unit_id` interaction |
+
 ---
 
 ## 1. `GET /api/v1/product/list-product-properties` — exact response shape
+
+**Endpoint:** `GET /api/v1/product/list-product-properties`
+
 
 This is the biggest unknown. The API doc doesn't show a sample response for
 this endpoint, so `lib/models/product_property.dart` parses **defensively**
@@ -31,6 +46,9 @@ error — we'd rather fix the parser now than discover this in the field.
 
 ## 2. `PRODUCT_VARIANT_ENABLED` setting — value format
 
+**Endpoint:** tenant settings response (whichever endpoint
+`AppSettingsProvider` fetches from — the general app-settings/config call)
+
 Confirm the exact format this arrives in from the settings API — is it:
 - `"1"` / `"0"` (string)
 - `true` / `false` (boolean)
@@ -46,6 +64,9 @@ default be when the setting is absent from the response?**
 ---
 
 ## 3. `product_stocks.product_variant_id` — is it actually populated?
+
+**Endpoints:** `GET /api/v1/product/list-products`,
+`GET /api/v1/product/product/{slug}`, `GET /api/v1/product/executive/list-products`
 
 The API doc says stock rows carry `product_variant_id` when scoped to a
 variant. Please confirm:
@@ -66,6 +87,9 @@ confirmed live.
 
 ## 4. Variant SKU auto-generation on edit
 
+**Endpoint:** `POST /api/v1/product/edit-product/{id}` (compare against
+`POST /api/v1/product/create-product`)
+
 The doc says (§1, Create): `sku: null` auto-generates from product SKU +
 attributes when creating a variant. Please confirm this **also** applies
 when a **new** variant row (no `id`) is added to an existing product via the
@@ -75,6 +99,8 @@ create-product endpoint?
 ---
 
 ## 5. Attribute replace-on-edit — confirm full delete+recreate
+
+**Endpoint:** `POST /api/v1/product/edit-product/{id}`
 
 Doc says (§2): "On every update the variant's attributes are fully replaced
 (delete + recreate)". Client always sends the **complete** attribute set for
@@ -88,6 +114,8 @@ rather than silently keep stale ones.
 
 ## 6. Sales return — variant stock restoration target
 
+**Endpoint:** `POST /api/v1/order/sales-return`
+
 Doc §5 says returns operate on the original order item, which already
 carries `product_variant_id`, and "stock is restored to the correct variant."
 Please confirm restoration targets the **same variant-scoped stock batch**
@@ -98,6 +126,8 @@ drift over time as returns "leak" back into the wrong bucket.
 ---
 
 ## 7. Add-to-order with both `product_variant_id` AND a sale unit
+
+**Endpoint:** `POST /api/v1/order/add-to-order`
 
 Doc §4 shows `product_variant_id` and `sale_unit_id` as independent optional
 fields on an order line. Please confirm the interaction is well-defined
