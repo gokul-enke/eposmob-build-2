@@ -111,11 +111,15 @@ class ClassicReceiptLayout implements ReceiptLayout {
       _buildCustomerSection(part1Rows, params, displayConfig, isEnglish);
 
       // ========== CART ITEMS SECTION ==========
-      _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
+      if (!params.isReturnOnly) {
+        _buildCartItemsSection(part1Rows, params, displayConfig, isEnglish);
+      }
 
       // ========== TOTALS SECTION ==========
-      _buildTotalsSection(
-          part1Rows, params, displayConfig, isEnglish, appSettings);
+      if (!params.isReturnOnly) {
+        _buildTotalsSection(
+            part1Rows, params, displayConfig, isEnglish, appSettings);
+      }
 
       // ========== RETURN ITEMS SECTION ==========
       if (params.orderReturns != null &&
@@ -123,8 +127,10 @@ class ClassicReceiptLayout implements ReceiptLayout {
           params.orderReturns!.returnItems!.isNotEmpty) {
         _buildReturnSection(
             part1Rows, params, displayConfig, isEnglish, appSettings);
-        _buildFinalSummarySection(
-            part1Rows, params, displayConfig, isEnglish, appSettings);
+        if (!params.isReturnOnly) {
+          _buildFinalSummarySection(
+              part1Rows, params, displayConfig, isEnglish, appSettings);
+        }
       }
 
       // ========== FOOTER SECTION (Part 2) ==========

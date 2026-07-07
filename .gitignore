@@ -56,5 +56,4 @@ Todo.md
 /.gradle-user-home
 .gradle-user-home/
 
-#Google Map Api key 
-.env
+.env*
