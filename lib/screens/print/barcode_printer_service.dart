@@ -73,6 +73,7 @@ class BarcodePrinterService {
   // Cache for fonts
   static pw.Font? _regularFont;
   static pw.Font? _boldFont;
+  static pw.MemoryImage? _sarCurrencyImage;
 
   Future<pw.Font> _loadRegularFont() async {
     if (_regularFont != null) return _regularFont!;
@@ -98,6 +99,85 @@ class BarcodePrinterService {
       debugPrint('Error loading bold font: $e');
       rethrow;
     }
+  }
+
+  Future<pw.MemoryImage?> _loadSarCurrencyImage() async {
+    if (_sarCurrencyImage != null) return _sarCurrencyImage;
+    try {
+      final imageData =
+          await rootBundle.load('assets/images/saudi_riyal_symbol.png');
+      _sarCurrencyImage = pw.MemoryImage(imageData.buffer.asUint8List());
+      return _sarCurrencyImage;
+    } catch (e) {
+      debugPrint('[BarcodePrint] Error loading SAR symbol: $e');
+      return null;
+    }
+  }
+
+  /// INR uses text ₹; other currencies (e.g. SAR) use the riyal PNG when available.
+  ({String? textSymbol, pw.MemoryImage? image, String? textPrefix})
+      _resolveCurrencyDisplay(String currency, pw.MemoryImage? sarImage) {
+    final code = currency.trim().toUpperCase();
+    if (code == 'INR') {
+      return (textSymbol: '\u20B9', image: null, textPrefix: null);
+    }
+    if (sarImage != null) {
+      return (textSymbol: null, image: sarImage, textPrefix: null);
+    }
+    return (textSymbol: null, image: null, textPrefix: code.isEmpty ? null : code);
+  }
+
+  pw.Widget _buildPriceRow({
+    required String priceToShow,
+    required pw.TextStyle priceStyle,
+    required String? currencyTextSymbol,
+    required pw.MemoryImage? currencyImage,
+    required String? currencyTextPrefix,
+  }) {
+    final double symbolHeight = priceStyle.fontSize ?? 10;
+
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.center,
+      mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        if (currencyImage != null)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(right: 3),
+            child: pw.Image(
+              currencyImage,
+              height: symbolHeight * 0.85,
+              fit: pw.BoxFit.contain,
+            ),
+          )
+        else if (currencyTextSymbol != null)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(right: 3),
+            child: pw.Text(currencyTextSymbol, style: priceStyle),
+          )
+        else if (currencyTextPrefix != null)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(right: 3),
+            child: pw.Text('$currencyTextPrefix ', style: priceStyle),
+          ),
+        pw.Text(priceToShow, style: priceStyle),
+      ],
+    );
+  }
+
+  String _formatPriceForThermal({
+    required String currency,
+    required String priceToShow,
+    required bool useSarImage,
+  }) {
+    final code = currency.trim().toUpperCase();
+    if (code == 'INR') {
+      return '\u20B9 $priceToShow';
+    }
+    if (useSarImage) {
+      return priceToShow;
+    }
+    return code.isEmpty ? priceToShow : '$code $priceToShow';
   }
 
   Future<Directory> _getEposDirectory() async {
@@ -314,6 +394,7 @@ class BarcodePrinterService {
     required bool showBarcodeNumber,
     required bool showMfgDate,
     required bool showExpiryDate,
+    pw.MemoryImage? sarCurrencyImage,
   }) async {
     final selectedPrinter = await _loadSelectedBarcodePrinter();
     if (selectedPrinter == null) {
@@ -330,6 +411,7 @@ class BarcodePrinterService {
           stickerSize == '91x24mm' ? PaperSize.mm80 : PaperSize.mm58;
       final generator = Generator(paperSize, profile);
       final bytes = <int>[];
+      final currencyDisplay = _resolveCurrencyDisplay(currency, sarCurrencyImage);
 
       for (final item in printItems) {
         if (item.quantity < 1) continue;
@@ -382,7 +464,11 @@ class BarcodePrinterService {
 
           if (showPrice) {
             bytes.addAll(generator.text(
-              '$currency $priceToShow',
+              _sanitizeForThermal(_formatPriceForThermal(
+                currency: currency,
+                priceToShow: priceToShow,
+                useSarImage: currencyDisplay.image != null,
+              )),
               styles: const PosStyles(
                 align: PosAlign.center,
                 bold: true,
@@ -543,6 +629,10 @@ class BarcodePrinterService {
       final layoutSettings = await loadBarcodeLayoutSettings();
       final regularFont = await _loadRegularFont();
       final boldFont = await _loadBoldFont();
+      final sarCurrencyImage = await _loadSarCurrencyImage();
+      final currencyDisplay = _resolveCurrencyDisplay(currency, sarCurrencyImage);
+      debugPrint(
+          '[BarcodePrint] Currency display -> sarSymbolLoaded=${currencyDisplay.image != null}, textSymbol=${currencyDisplay.textSymbol != null}');
 
       // Use stickerSize from parameter (per-print override) but use layout
       // settings for font sizes, spacing, barcode height, margin, gap etc.
@@ -664,7 +754,6 @@ class BarcodePrinterService {
             barcodeHeight: barcodeHeight,
             elementSpacing: elementSpacing,
             storeName: storeName,
-            currency: currency,
             showStoreName: showStoreName,
             showProductName: showProductName,
             productNameMode: productNameMode,
@@ -672,6 +761,9 @@ class BarcodePrinterService {
             showBarcodeNumber: showBarcodeNumber,
             showMfgDate: showMfgDate,
             showExpiryDate: showExpiryDate,
+            currencyTextSymbol: currencyDisplay.textSymbol,
+            currencyImage: currencyDisplay.image,
+            currencyTextPrefix: currencyDisplay.textPrefix,
           ));
         }
       }
@@ -773,7 +865,6 @@ class BarcodePrinterService {
     required double barcodeHeight,
     required double elementSpacing,
     required String storeName,
-    required String currency,
     required bool showStoreName,
     required bool showProductName,
     required String productNameMode,
@@ -781,6 +872,9 @@ class BarcodePrinterService {
     required bool showBarcodeNumber,
     required bool showMfgDate,
     required bool showExpiryDate,
+    required String? currencyTextSymbol,
+    required pw.MemoryImage? currencyImage,
+    required String? currencyTextPrefix,
   }) {
     final product = item.product;
     final productName = _resolveProductName(product, productNameMode);
@@ -858,10 +952,12 @@ class BarcodePrinterService {
                 pw.FittedBox(
                   fit: pw.BoxFit.scaleDown,
                   alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    '$currency $priceToShow',
-                    style: priceStyle,
-                    textAlign: pw.TextAlign.center,
+                  child: _buildPriceRow(
+                    priceToShow: priceToShow,
+                    priceStyle: priceStyle,
+                    currencyTextSymbol: currencyTextSymbol,
+                    currencyImage: currencyImage,
+                    currencyTextPrefix: currencyTextPrefix,
                   ),
                 ),
                 pw.SizedBox(height: elementSpacing),
