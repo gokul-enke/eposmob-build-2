@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/mobile_variant_picker_sheet.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
@@ -21,29 +19,13 @@ Future<void> addProductWithVariantResolution({
   String? customerName,
   SaleUnit? selectedSaleUnit,
 }) async {
+  // Out-of-stock variants are NOT blocked here: the physical item may be in
+  // front of the cashier. ProductCartHelper asks for an oversell confirmation
+  // (only when stock management is enabled) instead of refusing the sale.
   ProductVariant? selectedVariant = ProductVariantSelection.tryResolveWithoutPicker(
     product,
     scannedBarcode: scannedBarcode,
   );
-
-  if (selectedVariant == null &&
-      product.hasVariants &&
-      product.activeVariants.length == 1) {
-    final onlyVariant = product.activeVariants.first;
-    if (ProductVariantSelection.isOutOfStock(onlyVariant)) {
-      if (context.mounted) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.variantOutOfStock(
-            onlyVariant.formattedAttributes.isEmpty
-                ? (onlyVariant.sku ?? 'This variant')
-                : onlyVariant.formattedAttributes,
-          ),
-        );
-      }
-      return;
-    }
-  }
 
   if (selectedVariant == null && ProductVariantSelection.needsVariantPicker(product)) {
     selectedVariant = await showMobileVariantPickerSheet(
@@ -53,21 +35,6 @@ Future<void> addProductWithVariantResolution({
     if (selectedVariant == null || !context.mounted) {
       return;
     }
-  }
-
-  if (selectedVariant != null &&
-      ProductVariantSelection.isOutOfStock(selectedVariant)) {
-    if (context.mounted) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.variantOutOfStock(
-          selectedVariant.formattedAttributes.isEmpty
-              ? (selectedVariant.sku ?? 'This variant')
-              : selectedVariant.formattedAttributes,
-        ),
-      );
-    }
-    return;
   }
 
   final productPrice = ProductVariantSelection.productBasePrice(product);

@@ -151,6 +151,30 @@ class CartQuantityStockHelper {
       );
 
       if (alternativeStocks.isEmpty) {
+        // No other batch to draw from, but the cashier may still be counting
+        // out physical units in hand. Offer an oversell confirmation when we
+        // have a context to show it in; otherwise (headless callers) keep the
+        // hard block so existing explicit-resolver integrations are unaffected.
+        if (context != null && context.mounted) {
+          final sellAnyway = await showSellAnywayConfirmDialog(
+            context: context,
+            message:
+                'No more stock recorded for this item (requested $remainingIncrease more). Sell anyway?',
+          );
+          if (sellAnyway && context.mounted) {
+            provider.setCartItemQuantity(
+              productId,
+              cartItem.selectedStock,
+              newQuantity,
+              stockGroupIds: cartItem.stockGroupIds,
+              saleUnitId: cartItem.saleUnitId,
+            );
+            appliedQuantity = newQuantity;
+            remainingIncrease = 0;
+            changed = true;
+            break;
+          }
+        }
         onBlocked('Selected stock is exhausted. No other stock is available.');
         break;
       }

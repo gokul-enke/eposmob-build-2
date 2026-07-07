@@ -34,6 +34,10 @@ class ProductVariantSelection {
   ///
   /// Returns `null` when the product has no variants, when multiple variants
   /// require user choice, or when no barcode match was found among many variants.
+  ///
+  /// Out-of-stock variants ARE resolved here: a zero quantity is a data
+  /// signal, not a sales block. The add-to-cart flow asks the cashier to
+  /// confirm an oversell instead of refusing the sale.
   static ProductVariant? tryResolveWithoutPicker(
     GetProduct product, {
     String? scannedBarcode,
@@ -45,13 +49,13 @@ class ProductVariantSelection {
     final scanned = normalizeBarcode(scannedBarcode);
     if (scanned.isNotEmpty) {
       final matched = findVariantByBarcode(product, scanned);
-      if (matched != null && !isOutOfStock(matched)) {
+      if (matched != null) {
         return matched;
       }
     }
 
     final active = product.activeVariants;
-    if (active.length == 1 && !isOutOfStock(active.first)) {
+    if (active.length == 1) {
       return active.first;
     }
 

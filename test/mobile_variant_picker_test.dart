@@ -111,7 +111,11 @@ void main() {
       expect(selected, isNull);
     });
 
-    testWidgets('cannot confirm out-of-stock variant selection', (tester) async {
+    testWidgets('can select and confirm an out-of-stock variant', (tester) async {
+      // Real-world POS rule: an out-of-stock variant is still selectable —
+      // the cashier may be holding the physical item, and the confirmation
+      // to oversell happens downstream in ProductCartHelper, not by disabling
+      // the picker. Blocking selection here would refuse a legitimate sale.
       ProductVariant? selected;
 
       await tester.pumpWidget(
@@ -142,15 +146,19 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      // Blue | M is out of stock — tap should not select it.
+      // Blue | M is out of stock — tap should still select it.
       await tester.tap(find.text('Blue | M'));
       await tester.pumpAndSettle();
 
       final addButton = tester.widget<ElevatedButton>(
         find.widgetWithText(ElevatedButton, 'Add to Cart'),
       );
-      expect(addButton.onPressed, isNull);
-      expect(selected, isNull);
+      expect(addButton.onPressed, isNotNull);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Add to Cart'));
+      await tester.pumpAndSettle();
+
+      expect(selected?.formattedAttributes, 'Blue | M');
     });
   });
 }

@@ -2462,7 +2462,7 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("Stock Management Enabled: $isStockEnabled");
 
     if (productId != null) {
-      product = _products.firstWhere((p) => p.productId == productId);
+      product = getProductById(productId) ?? product;
     }
 
     if (product == null) {
@@ -2657,23 +2657,9 @@ class LocalProductProvider extends ChangeNotifier {
     final quantityDifference = targetBaseQuantity - sourceItem.quantity;
     var didMutateStock = false;
 
-    if (isStockEnabled &&
-        sourceItem.selectedStock != null &&
-        quantityDifference > 0) {
-      final availableQuantity = getAvailableQuantityForSelection(
-        product: sourceItem.product,
-        selectedStock: sourceItem.selectedStock,
-        stockGroupIds: sourceItem.stockGroupIds,
-      );
-      if (availableQuantity < quantityDifference) {
-        debugPrint(
-          "Insufficient stock to change sale unit for productId=$productId: "
-          "needed=$quantityDifference, available=$availableQuantity",
-        );
-        return false;
-      }
-    }
-
+    // Insufficient stock never blocks the unit change: the physical goods are
+    // in front of the cashier. _reserveStockForSelection deducts whatever is
+    // available and the sale continues (same oversell rule as addToCart).
     if (isStockEnabled &&
         sourceItem.selectedStock != null &&
         quantityDifference != 0) {

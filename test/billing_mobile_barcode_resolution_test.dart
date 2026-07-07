@@ -174,7 +174,10 @@ void main() {
       );
     });
 
-    test('out-of-stock variant barcode does not auto-resolve (picker path)', () {
+    // Real-world POS rule: a zero-quantity variant barcode still auto-resolves
+    // — the cashier is scanning a physical item in hand. ProductCartHelper is
+    // responsible for the oversell confirmation, not variant resolution.
+    test('out-of-stock variant barcode still auto-resolves for oversell confirmation', () {
       final product = GetProduct(
         productId: 5,
         productName: 'Hoodie',
@@ -197,13 +200,13 @@ void main() {
         ],
       );
 
-      expect(
-        ProductVariantSelection.tryResolveWithoutPicker(
-          product,
-          scannedBarcode: 'VAR-OOS',
-        ),
-        isNull,
+      final resolvedOos = ProductVariantSelection.tryResolveWithoutPicker(
+        product,
+        scannedBarcode: 'VAR-OOS',
       );
+      expect(resolvedOos?.id, 1);
+      expect(ProductVariantSelection.isOutOfStock(resolvedOos!), isTrue);
+
       expect(
         ProductVariantSelection.tryResolveWithoutPicker(
           product,

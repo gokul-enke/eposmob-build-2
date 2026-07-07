@@ -1472,13 +1472,18 @@ class BillingPageState extends State<BillingPage>
           String weightKg = lastFive!.substring(0, 2); // First 2 digits = KG
           String weightGrams =
               lastFive.substring(2, 5); // Last 3 digits = Grams
-          quantity =
-              double.parse(weightKg) + (double.parse(weightGrams) / 1000);
+          // Malformed digits must not abort the sale — fall back to qty 1
+          // (cashier can correct the quantity in the cart).
+          final parsedKg = double.tryParse(weightKg);
+          final parsedGrams = double.tryParse(weightGrams);
+          quantity = (parsedKg == null || parsedGrams == null)
+              ? null
+              : parsedKg + (parsedGrams / 1000);
         } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
             prefix == '000' &&
             query.length == 14) {
-          // Count-based product
-          quantity = int.parse(lastFive!); // Last 5 digits represent quantity
+          // Count-based product; malformed digits fall back to qty 1.
+          quantity = int.tryParse(lastFive!);
         } else if (matchedSaleUnit != null) {
           quantity = _resolveSaleUnitQuantity(matchedSaleUnit);
           debugPrint(
@@ -3091,10 +3096,11 @@ class BillingPageState extends State<BillingPage>
       newSaleUnitConversionRate: selectedRate,
     );
     if (!changed) {
+      // The provider no longer refuses on stock shortage (oversell is
+      // allowed); a false result means the cart line could not be resolved.
       showScaffoldError(
         context: context,
-        message:
-            'Insufficient stock for ${selectedSaleUnit.unitName ?? item.product.unit ?? "selected unit"}.',
+        message: 'Unable to change unit for this cart item.',
       );
     }
   }
