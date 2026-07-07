@@ -647,8 +647,18 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                     itemCount: salesProvider
                                         .dailySalesCloseList.length,
                                     itemBuilder: (context, index) {
-                                      // TODO: Create mobile card widget if needed
-                                      return const SizedBox.shrink();
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 10),
+                                        child: _DayCloseMobileCard(
+                                          data: salesProvider.dailySalesCloseList[index],
+                                          onTap: () {
+                                            _showViewDetailModal(
+                                              context,
+                                              salesProvider.dailySalesCloseList[index],
+                                            );
+                                          },
+                                        ),
+                                      );
                                     },
                                   )
                                 : _buildDailySalesTable(salesProvider),
@@ -2266,6 +2276,130 @@ class _DayCloseModalState extends State<DayCloseModal> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _DayCloseMobileCard extends StatelessWidget {
+  final DailySalesCloseData data;
+  final VoidCallback onTap;
+  
+  const _DayCloseMobileCard({
+    required this.data,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = Provider.of<AppSettingsProvider>(
+      context, listen: false)
+      .appSettings?.currency ?? 'SAR';
+      
+    return GestureDetector(
+      onTap: onTap,
+      child: BuildBoxShadowContainer(
+        circleRadius: 10,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top row: closing period + total sales
+              Row(
+                mainAxisAlignment: 
+                  MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    data.closingPeriod ?? '-',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s13, 0.19,
+                      ColorManager.textColor),
+                  ),
+                  Text(
+                    '$currency ${data.totalSales ?? "0"}',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s13, 0.19,
+                      ColorManager.kPrimaryColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Sales executive
+              Text(
+                data.salesExecutive?.name ?? '-',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12, 0.18,
+                  Colors.black87),
+              ),
+              const SizedBox(height: 4),
+              // Store
+              Text(
+                data.store?.name ?? '-',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12, 0.18,
+                  Colors.black54),
+              ),
+              const SizedBox(height: 6),
+              // Orders + Cash row
+              Row(
+                children: [
+                  Text(
+                    'Orders: ${data.totalOrders ?? 0}',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11, 0.16,
+                      Colors.black87),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Cash: $currency ${data.totalCash ?? "0"}',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11, 0.16,
+                      Colors.black87),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // Online + Credit row
+              Row(
+                children: [
+                  Text(
+                    'Online: $currency ${data.totalOnline ?? "0"}',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11, 0.16,
+                      Colors.black87),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Credit: $currency ${data.totalCredit ?? "0"}',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11, 0.16,
+                      Colors.black87),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 6),
+              // Business date
+              Text(
+                'Business Date: ${data.businessDate ?? "-"}',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s11, 0.16,
+                  Colors.grey),
+              ),
+            ],
+          ),
         ),
       ),
     );

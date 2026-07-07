@@ -109,8 +109,9 @@ proceeding to the dashboard.
   dedicated pending-status API (cleaner, 
   purpose-built, backend handles all logic)
 - Denomination Selection Fix: Updated dropdown rows in `DayCloseModal` to dynamically filter out options selected in other rows to prevent duplicate cash breakdown entries.
+- Mobile View Fix: Implemented the dynamic `_DayCloseMobileCard` layout in the daily sales close list screen to replace the placeholder empty widget and enable responsive item rendering on mobile.
 
 ---
 *Task 298 complete and tested on Windows. 
 Popup appears correctly on login when flag is 
-enabled and day close is pending. Cash breakdown duplicate options filtered out.*
+enabled and day close is pending. Cash breakdown duplicate options filtered out. Mobile view lists all items beautifully with tap navigation.*
