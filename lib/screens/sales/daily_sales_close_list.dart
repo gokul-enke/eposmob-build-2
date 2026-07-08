@@ -647,8 +647,18 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                                     itemCount: salesProvider
                                         .dailySalesCloseList.length,
                                     itemBuilder: (context, index) {
-                                      // TODO: Create mobile card widget if needed
-                                      return const SizedBox.shrink();
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 10),
+                                        child: _DayCloseMobileCard(
+                                          data: salesProvider.dailySalesCloseList[index],
+                                          onTap: () {
+                                            _showViewDetailModal(
+                                              context,
+                                              salesProvider.dailySalesCloseList[index],
+                                            );
+                                          },
+                                        ),
+                                      );
                                     },
                                   )
                                 : _buildDailySalesTable(salesProvider),
@@ -1446,6 +1456,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                         denominationController: denominationControllers[index],
                         countController: countControllers[index],
                         isNarrow: true,
+                        allDenominationControllers: denominationControllers,
+                        index: index,
                       ),
                       const SizedBox(height: 4),
                       Align(
@@ -1482,6 +1494,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                           denominationController: denominationControllers[index],
                           countController: countControllers[index],
                           isNarrow: false,
+                          allDenominationControllers: denominationControllers,
+                          index: index,
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -1518,6 +1532,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
     required TextEditingController denominationController,
     required TextEditingController countController,
     required bool isNarrow,
+    required List<TextEditingController> allDenominationControllers,
+    required int index,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1527,6 +1543,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                 children: [
                   _buildDenominationDropdown(
                     controller: denominationController,
+                    allDenominationControllers: allDenominationControllers,
+                    index: index,
                   ),
                   const SizedBox(height: 6),
                   _buildCompactField(
@@ -1541,6 +1559,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                   Expanded(
                     child: _buildDenominationDropdown(
                       controller: denominationController,
+                      allDenominationControllers: allDenominationControllers,
+                      index: index,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -1559,6 +1579,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
 
   Widget _buildDenominationDropdown({
     required TextEditingController controller,
+    required List<TextEditingController> allDenominationControllers,
+    required int index,
   }) {
     final currentValue = controller.text.trim().isEmpty
         ? null
@@ -1609,6 +1631,19 @@ class _DayCloseModalState extends State<DayCloseModal> {
                       ),
                     ),
                     items: _cashDenominations
+                        .where((d) {
+                          // Get all currently selected denominations 
+                          // except the current row's own selection
+                          final selectedOthers = allDenominationControllers
+                              .asMap()
+                              .entries
+                              .where((e) => e.key != index)
+                              .map((e) => e.value.text.trim())
+                              .toSet();
+                          // Allow this denomination if not selected 
+                          // in any other row, or if it's empty
+                          return !selectedOthers.contains(d.value ?? '');
+                        })
                         .map(
                           (d) => DropdownMenuItem<String>(
                             value: d.value,
@@ -2241,6 +2276,130 @@ class _DayCloseModalState extends State<DayCloseModal> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _DayCloseMobileCard extends StatelessWidget {
+  final DailySalesCloseData data;
+  final VoidCallback onTap;
+  
+  const _DayCloseMobileCard({
+    required this.data,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = Provider.of<AppSettingsProvider>(
+      context, listen: false)
+      .appSettings?.currency ?? 'SAR';
+      
+    return GestureDetector(
+      onTap: onTap,
+      child: BuildBoxShadowContainer(
+        circleRadius: 10,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top row: closing period + total sales
+              Row(
+                mainAxisAlignment: 
+                  MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    data.closingPeriod ?? '-',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s13, 0.19,
+                      ColorManager.textColor),
+                  ),
+                  Text(
+                    '$currency ${data.totalSales ?? "0"}',
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s13, 0.19,
+                      ColorManager.kPrimaryColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Sales executive
+              Text(
+                data.salesExecutive?.name ?? '-',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s12, 0.18,
+                  Colors.black87),
+              ),
+              const SizedBox(height: 4),
+              // Store
+              Text(
+                data.store?.name ?? '-',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s12, 0.18,
+                  Colors.black54),
+              ),
+              const SizedBox(height: 6),
+              // Orders + Cash row
+              Row(
+                children: [
+                  Text(
+                    'Orders: ${data.totalOrders ?? 0}',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11, 0.16,
+                      Colors.black87),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Cash: $currency ${data.totalCash ?? "0"}',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11, 0.16,
+                      Colors.black87),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // Online + Credit row
+              Row(
+                children: [
+                  Text(
+                    'Online: $currency ${data.totalOnline ?? "0"}',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11, 0.16,
+                      Colors.black87),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Credit: $currency ${data.totalCredit ?? "0"}',
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11, 0.16,
+                      Colors.black87),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 6),
+              // Business date
+              Text(
+                'Business Date: ${data.businessDate ?? "-"}',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s11, 0.16,
+                  Colors.grey),
+              ),
+            ],
+          ),
         ),
       ),
     );

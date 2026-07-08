@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:pos_machine/helpers/api_response_helper.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
+import 'package:pos_machine/models/day_close_pending_status.dart';
 import 'package:pos_machine/models/list_sales_return.dart';
 import 'package:pos_machine/models/list_sales_return_items.dart';
 import 'package:pos_machine/models/sales_return_refund_breakdown.dart';
@@ -1124,6 +1125,41 @@ class SalesProvider with ChangeNotifier {
         'success': false,
         'message': error.toString(),
       };
+    }
+  }
+
+  Future<DayClosePendingStatus?> fetchDayClosePendingStatus({
+    required String accessToken,
+    required int storeId,
+  }) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final uri = Uri.parse(
+        '${APPUrl.dailySalesClosePendingStatus}'
+        '?store_id=$storeId'
+      );
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+          'X-Tenant': apiKey,
+        },
+      );
+      final data = jsonDecode(response.body);
+      if (data['success'] == true && data['data'] != null) {
+        return DayClosePendingStatus.fromJson(data['data']);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching day close pending status: $e');
+      return null;
     }
   }
 }

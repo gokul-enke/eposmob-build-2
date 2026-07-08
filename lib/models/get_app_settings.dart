@@ -52,6 +52,7 @@ class AppSettings {
   final bool kotBillAllowedForDineIn;
   final bool pineLabPayment;
   final bool skipCheckoutOnConfirmAndPrint;
+  final bool compulsoryDayCloseRegister;
   final bool productVariantEnabled;
 
   AppSettings({
@@ -90,10 +91,8 @@ class AppSettings {
     required this.kotBillAllowedForDineIn,
     this.pineLabPayment = false,
     this.skipCheckoutOnConfirmAndPrint = false,
-    // Defaults to TRUE: variants already work today ungated, so an absent
-    // PRODUCT_VARIANT_ENABLED setting must not silently hide existing variant
-    // behavior for current users. The setting only turns variants OFF explicitly.
-    this.productVariantEnabled = true,
+    this.compulsoryDayCloseRegister = false,
+    this.productVariantEnabled = false,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -195,6 +194,9 @@ class AppSettings {
         settingsMap,
         'SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT',
       ),
+      compulsoryDayCloseRegister: _readSettingStatus(
+        settingsMap,
+        'COMPULSORY_DAY_CLOSE_REGISTER',
       productVariantEnabled: _readSettingStatus(
         settingsMap,
         'PRODUCT_VARIANT_ENABLED',
@@ -405,6 +407,10 @@ class AppSettings {
           "status": skipCheckoutOnConfirmAndPrint.toString(),
         },
         {
+          "name": "Compulsory Day Close Register",
+          "code": "COMPULSORY_DAY_CLOSE_REGISTER",
+          "value": "",
+          "status": compulsoryDayCloseRegister.toString(),
           "name": "Product Variant Enabled",
           "code": "PRODUCT_VARIANT_ENABLED",
           "value": "",
