@@ -433,7 +433,10 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
               child: _buildOptionGroupRow(controller.optionGroups[index], index),
             ),
           ),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               TextButton.icon(
                 onPressed: () => setState(() => controller.addOptionGroup()),
@@ -443,7 +446,6 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
                   foregroundColor: ColorManager.kPrimaryColor,
                 ),
               ),
-              const Spacer(),
               if (controller.optionGroups.isNotEmpty)
                 ElevatedButton.icon(
                   onPressed: () =>
@@ -467,38 +469,59 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
 
   Widget _buildOptionGroupRow(VariantOptionGroup group, int index) {
     final selectedProp = _propertyById(group.productPropId);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 160,
-          child: CustomDropDownWithSearch<ProductProperty>(
-            title: '',
-            hintText: 'Select option',
-            value: selectedProp,
-            height: 42,
-            margin: EdgeInsets.zero,
-            items: widget.properties,
-            onChanged: (prop) {
-              setState(() {
-                group.productPropId = prop?.id;
-                group.values.clear();
-              });
-            },
-            displayText: (prop) => prop.label,
-            searchController: group.propSearchController,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildOptionValuesInput(group, selectedProp),
-        ),
-        IconButton(
-          onPressed: () => setState(() => widget.controller.removeOptionGroup(index)),
-          splashRadius: 16,
-          icon: const Icon(Icons.close, size: 18, color: Colors.black45),
-        ),
-      ],
+    final propertyDropdown = CustomDropDownWithSearch<ProductProperty>(
+      title: '',
+      hintText: 'Select option',
+      value: selectedProp,
+      height: 42,
+      margin: EdgeInsets.zero,
+      items: widget.properties,
+      onChanged: (prop) {
+        setState(() {
+          group.productPropId = prop?.id;
+          group.values.clear();
+        });
+      },
+      displayText: (prop) => prop.label,
+      searchController: group.propSearchController,
+    );
+    final deleteButton = IconButton(
+      onPressed: () => setState(() => widget.controller.removeOptionGroup(index)),
+      splashRadius: 16,
+      icon: const Icon(Icons.close, size: 18, color: Colors.black45),
+    );
+    final valuesInput = _buildOptionValuesInput(group, selectedProp);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Below ~420px (mobile) the property dropdown and value picker don't
+        // both fit on one line; stack them instead of overflowing.
+        if (constraints.maxWidth < 420) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: propertyDropdown),
+                  deleteButton,
+                ],
+              ),
+              const SizedBox(height: 8),
+              valuesInput,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 160, child: propertyDropdown),
+            const SizedBox(width: 8),
+            Expanded(child: valuesInput),
+            deleteButton,
+          ],
+        );
+      },
     );
   }
 
@@ -506,72 +529,74 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
     final availableValues =
         (prop != null && prop.isList) ? prop.values : const <String>[];
 
-    return Container(
-      constraints: const BoxConstraints(minHeight: 42),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          for (final value in group.values)
-            Chip(
-              label: Text(value, style: const TextStyle(fontSize: 11)),
-              visualDensity: VisualDensity.compact,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              onDeleted: () => setState(() => group.values.remove(value)),
-            ),
-          if (availableValues.isNotEmpty)
-            SizedBox(
-              width: 140,
-              child: CustomDropDownWithSearch<String>(
-                title: '',
-                hintText: 'Add value',
-                value: null,
-                height: 32,
-                margin: EdgeInsets.zero,
-                items: availableValues
-                    .where((v) => !group.values.contains(v))
-                    .toList(),
-                onChanged: (value) {
-                  if (value == null) return;
-                  setState(() => group.values.add(value));
-                },
-                displayText: (value) => value,
-                searchController: group.valueInputController,
-              ),
-            )
-          else
-            SizedBox(
-              width: 120,
-              child: TextField(
-                controller: group.valueInputController,
-                style: const TextStyle(fontSize: 12),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  border: InputBorder.none,
-                  hintText: 'Type + Enter',
-                  hintStyle: TextStyle(fontSize: 11, color: Colors.black38),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (group.values.isNotEmpty) ...[
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final value in group.values)
+                Chip(
+                  label: Text(value, style: const TextStyle(fontSize: 11)),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onDeleted: () => setState(() => group.values.remove(value)),
                 ),
-                onSubmitted: (value) {
-                  final trimmed = value.trim();
-                  if (trimmed.isEmpty) return;
-                  setState(() {
-                    if (!group.values.contains(trimmed)) {
-                      group.values.add(trimmed);
-                    }
-                    group.valueInputController.clear();
-                  });
-                },
-              ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 6),
         ],
-      ),
+        if (availableValues.isNotEmpty)
+          CustomDropDownWithSearch<String>(
+            title: '',
+            hintText: 'Add value',
+            value: null,
+            height: 42,
+            margin: EdgeInsets.zero,
+            items: availableValues
+                .where((v) => !group.values.contains(v))
+                .toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => group.values.add(value));
+            },
+            displayText: (value) => value,
+            searchController: group.valueInputController,
+          )
+        else
+          Container(
+            height: 42,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: TextField(
+              controller: group.valueInputController,
+              style: const TextStyle(fontSize: 12),
+              decoration: const InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Type value + Enter',
+                hintStyle: TextStyle(fontSize: 11, color: Colors.black38),
+              ),
+              onSubmitted: (value) {
+                final trimmed = value.trim();
+                if (trimmed.isEmpty) return;
+                setState(() {
+                  if (!group.values.contains(trimmed)) {
+                    group.values.add(trimmed);
+                  }
+                  group.valueInputController.clear();
+                });
+              },
+            ),
+          ),
+      ],
     );
   }
 

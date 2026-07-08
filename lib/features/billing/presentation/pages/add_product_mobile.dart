@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/add_created_product_to_cart.dart';
 import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
+import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
+import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/language.dart';
@@ -14,6 +16,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 
@@ -71,6 +74,10 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
   final _baseConversionRateController = TextEditingController(text: '1');
   final List<AddProductSaleUnitRow> _saleUnitRows = [];
 
+  final VariantEditorController _variantController = VariantEditorController();
+  bool _variantPropertiesRequested = false;
+  bool _isLoadingVariantProperties = false;
+
   static final _decimalInputFormatter =
       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'));
   static final _conversionRateFormatter =
@@ -85,6 +92,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     _barcodeFocusNode.addListener(_handleBarcodeFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchLanguages();
+      _fetchVariantProperties();
     });
   }
 
@@ -111,6 +119,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     _unitSearchController.dispose();
     _baseConversionRateController.dispose();
     _clearSaleUnitRows();
+    _variantController.dispose();
     super.dispose();
   }
 
@@ -140,6 +149,35 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     if (languageProvider.error != null) {
       showScaffoldError(context: context, message: languageProvider.error!);
     }
+  }
+
+  Future<void> _fetchVariantProperties() async {
+    if (_variantPropertiesRequested) return;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (appSettings?.productVariantEnabled != true) return;
+    _variantPropertiesRequested = true;
+
+    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    if (productProvider.hasProductProperties) return;
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) return;
+
+    setState(() => _isLoadingVariantProperties = true);
+    try {
+      await productProvider.fetchProductProperties(accessToken: accessToken);
+    } catch (e) {
+      debugPrint('⚠️ fetchProductProperties failed: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingVariantProperties = false);
+    }
+  }
+
+  void _retryFetchVariantProperties() {
+    _variantPropertiesRequested = false;
+    _fetchVariantProperties();
   }
 
   void _retryFetchLanguages() {
@@ -689,6 +727,19 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       return;
     }
 
+    final variantEnabled = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.productVariantEnabled ??
+        true;
+    if (variantEnabled && _variantController.hasRows) {
+      final variantError =
+          validateVariantRows(_variantController.toCreateInputs());
+      if (variantError != null) {
+        showScaffoldError(context: context, message: variantError);
+        return;
+      }
+    }
+
     if (_showAdvancedOptions) {
       final baseRate = _baseConversionRateController.text.trim();
       if (baseRate.isEmpty) {
@@ -743,6 +794,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         selectedUnit: _selectedUnit,
         saleUnitRows: _saleUnitRows,
       );
+      final variants = (variantEnabled && _variantController.hasRows)
+          ? buildCreateVariantsPayload(_variantController.toCreateInputs())
+          : const <Map<String, dynamic>>[];
 
       final result = await gridProvider.createProductAPI(
         categoryId: _selectedCategory!.categoryId.toString(),
@@ -756,6 +810,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         purchasePrice: _purchasePriceController.text,
         productNames: productNames.isNotEmpty ? productNames : null,
         saleUnits: saleUnits.isNotEmpty ? saleUnits : null,
+        variants: variants.isNotEmpty ? variants : null,
         conversionRateBase: _baseConversionRateController.text.trim().isNotEmpty
             ? _baseConversionRateController.text.trim()
             : '1',
@@ -859,6 +914,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       _showSaleUnitValidation = false;
       _currentStep = 1;
       _clearSaleUnitRows();
+      _variantController.clear();
     });
   }
 
@@ -1518,8 +1574,30 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             const SizedBox(height: 24),
             _buildAdvancedSaleUnitsSection(),
           ],
+          const SizedBox(height: 24),
+          _buildVariantsSection(),
         ],
       ),
+    );
+  }
+
+  Widget _buildVariantsSection() {
+    return Consumer2<AppSettingsProvider, ProductProvider>(
+      builder: (context, appSettingsProvider, productProvider, child) {
+        final variantEnabled =
+            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+        if (!variantEnabled) {
+          return const SizedBox.shrink();
+        }
+        return VariantEditorSection(
+          controller: _variantController,
+          properties: productProvider.productProperties,
+          isLoadingProperties: _isLoadingVariantProperties,
+          onRetryLoadProperties: _retryFetchVariantProperties,
+          onGenerateBarcode: (target, setLoading) =>
+              _generateBarcodeIntoController(target, onLoadingChanged: setLoading),
+        );
+      },
     );
   }
 
