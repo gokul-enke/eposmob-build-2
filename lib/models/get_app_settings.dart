@@ -197,6 +197,7 @@ class AppSettings {
       compulsoryDayCloseRegister: _readSettingStatus(
         settingsMap,
         'COMPULSORY_DAY_CLOSE_REGISTER',
+      ),
       productVariantEnabled: _readSettingStatus(
         settingsMap,
         'PRODUCT_VARIANT_ENABLED',
@@ -411,6 +412,8 @@ class AppSettings {
           "code": "COMPULSORY_DAY_CLOSE_REGISTER",
           "value": "",
           "status": compulsoryDayCloseRegister.toString(),
+        },
+        {
           "name": "Product Variant Enabled",
           "code": "PRODUCT_VARIANT_ENABLED",
           "value": "",
