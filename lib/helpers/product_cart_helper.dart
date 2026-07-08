@@ -93,16 +93,16 @@ class ProductCartHelper {
     debugPrint("Custom Price: $customPrice");
     debugPrint("Custom MRP: $customMrp");
 
-    if (selectedVariant != null &&
-        ProductVariantSelection.isOutOfStock(selectedVariant)) {
-      final label = selectedVariant.formattedAttributes.isEmpty
-          ? (selectedVariant.sku ?? 'Selected variant')
-          : selectedVariant.formattedAttributes;
+    // Products explicitly flagged as non-sellable must not be billed from any
+    // entry point (grid already hides them; this covers barcode/search adds).
+    if (product.sellable == false) {
       showScaffoldError(
         context: context,
-        message: BillingMobileErrorMessages.variantOutOfStock(label),
+        message: BillingMobileErrorMessages.productNotSellable(
+          product.productName ?? 'This product',
+        ),
       );
-      debugPrint("❌ Variant out of stock — aborting add");
+      debugPrint("❌ Product is not sellable — aborting add");
       debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
       return;
     }
@@ -145,6 +145,27 @@ class ProductCartHelper {
     // Set the stock enabled status in LocalProductProvider
     localProductProvider.setStockEnabled(stockEnabled);
 
+    // A variant reporting zero stock is a data signal, not a hard stop: the
+    // cashier may be holding the physical item. Confirm instead of refusing,
+    // and only when stock management is actually enabled.
+    if (stockEnabled &&
+        selectedVariant != null &&
+        ProductVariantSelection.isOutOfStock(selectedVariant)) {
+      final label = selectedVariant.formattedAttributes.isEmpty
+          ? (selectedVariant.sku ?? 'Selected variant')
+          : selectedVariant.formattedAttributes;
+      final sellAnyway = await showSellAnywayConfirmDialog(
+        context: context,
+        message: BillingMobileErrorMessages.variantOutOfStockConfirm(label),
+      );
+      if (!sellAnyway || !context.mounted) {
+        debugPrint("❌ Variant out of stock — cashier declined oversell");
+        debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+        return;
+      }
+      debugPrint("⚠️ Variant out of stock — cashier confirmed oversell");
+    }
+
     // Mirror the configured grouping fields so cart merge decisions use the
     // same pricing signature as stock grouping.
     localProductProvider
@@ -173,11 +194,17 @@ class ProductCartHelper {
     if (stockEnabled && product.stock != null && product.stock!.isNotEmpty) {
       debugPrint("📦 STEP 1: Handling stock selection...");
 
+      // Variant-scoped stock (server rule §4): when a variant is chosen, draw
+      // only from its scoped stock rows; if it has none, fall back to general
+      // (non-variant) stock. Null variant → list unchanged (identical behavior).
       final List<Stock> availableStocks =
-          localProductProvider.getStockOptionsForStore(
-        product,
-        activeStoreId: activeStore?.storeId,
-        activeStoreName: activeStore?.storeName,
+          LocalProductProvider.filterStocksForVariant(
+        localProductProvider.getStockOptionsForStore(
+          product,
+          activeStoreId: activeStore?.storeId,
+          activeStoreName: activeStore?.storeName,
+        ),
+        selectedVariant?.id,
       );
 
       debugPrint("🏪 Active store filter applied:");
@@ -317,6 +344,14 @@ class ProductCartHelper {
               finalMrp =
                   finalMrp ?? double.tryParse(selectedStock.mrp ?? "0") ?? 0;
             } else {
+              // Not silent: an accidental outside-tap dismiss must be visible
+              // so the cashier knows the item was NOT billed.
+              if (context.mounted) {
+                showScaffoldError(
+                  context: context,
+                  message: BillingMobileErrorMessages.stockNotSelected,
+                );
+              }
               debugPrint("❌ User cancelled stock selection - aborting");
               debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
               return;
@@ -342,20 +377,32 @@ class ProductCartHelper {
       debugPrint("  - Final MRP: $finalMrp");
     }
 
+    // Sale-unit shortfall (e.g. CASE barcode scanned but the system tracks
+    // fewer base units): the physical case exists, so offer an oversell
+    // confirmation instead of refusing the sale. This matches the base-unit
+    // behavior where addToCart reserves what it can and sells the rest.
     if (stockEnabled &&
         selectedSaleUnit != null &&
         selectedStock != null &&
         (selectedStock.quantity ?? 0) < requestedQuantity) {
-      showScaffoldError(
+      if (!context.mounted) {
+        return;
+      }
+      final sellAnyway = await showSellAnywayConfirmDialog(
         context: context,
-        message: BillingMobileErrorMessages.insufficientStock(
+        message: BillingMobileErrorMessages.insufficientStockConfirm(
           selectedSaleUnit.unitName ?? product.unit ?? 'selected unit',
+          selectedStock.quantity ?? 0,
+          requestedQuantity,
         ),
       );
-      debugPrint(
-          "❌ Selected stock does not cover requested sale-unit quantity");
-      debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
-      return;
+      if (!sellAnyway || !context.mounted) {
+        debugPrint(
+            "❌ Sale-unit stock shortfall — cashier declined oversell");
+        debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+        return;
+      }
+      debugPrint("⚠️ Sale-unit stock shortfall — cashier confirmed oversell");
     }
 
     // STEP 3: Handle onSelected callback if provided
@@ -438,6 +485,9 @@ class ProductCartHelper {
       final double predictedUnitPrice =
           priceToUse ?? existingCartItemPrice ?? finalPrice;
       if (ZeroPriceQuickEntryHelper.isZeroPrice(predictedUnitPrice)) {
+        if (!context.mounted) {
+          return;
+        }
         final entry = await ZeroPriceQuickEntryHelper.promptForProduct(
           context: context,
           product: product,
@@ -446,6 +496,13 @@ class ProductCartHelper {
           selectedStock: selectedStock,
         );
         if (entry == null || !context.mounted) {
+          // Not silent: the cashier must know the item was NOT billed.
+          if (context.mounted) {
+            showScaffoldError(
+              context: context,
+              message: BillingMobileErrorMessages.zeroPriceEntryCancelled,
+            );
+          }
           debugPrint(
               "❌ Zero-price entry cancelled - product not added to cart");
           debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
@@ -481,10 +538,12 @@ class ProductCartHelper {
         variantAttributes: selectedVariant?.attributes,
       );
 
-      showScaffold(
-        context: context,
-        message: 'Added To Cart',
-      );
+      if (context.mounted) {
+        showScaffold(
+          context: context,
+          message: 'Added To Cart',
+        );
+      }
     }
 
     debugPrint("=== PRODUCT CART HELPER DEBUG END ===");

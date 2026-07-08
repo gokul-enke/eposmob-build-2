@@ -52,6 +52,7 @@ class AppSettings {
   final bool kotBillAllowedForDineIn;
   final bool pineLabPayment;
   final bool skipCheckoutOnConfirmAndPrint;
+  final bool productVariantEnabled;
 
   AppSettings({
     required this.barcodeSales,
@@ -89,6 +90,10 @@ class AppSettings {
     required this.kotBillAllowedForDineIn,
     this.pineLabPayment = false,
     this.skipCheckoutOnConfirmAndPrint = false,
+    // Defaults to TRUE: variants already work today ungated, so an absent
+    // PRODUCT_VARIANT_ENABLED setting must not silently hide existing variant
+    // behavior for current users. The setting only turns variants OFF explicitly.
+    this.productVariantEnabled = true,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -189,6 +194,11 @@ class AppSettings {
       skipCheckoutOnConfirmAndPrint: _readSettingStatus(
         settingsMap,
         'SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT',
+      ),
+      productVariantEnabled: _readSettingStatus(
+        settingsMap,
+        'PRODUCT_VARIANT_ENABLED',
+        defaultValue: false,
       ),
     );
   }
@@ -393,6 +403,12 @@ class AppSettings {
           "code": "SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT",
           "value": "",
           "status": skipCheckoutOnConfirmAndPrint.toString(),
+        },
+        {
+          "name": "Product Variant Enabled",
+          "code": "PRODUCT_VARIANT_ENABLED",
+          "value": "",
+          "status": productVariantEnabled.toString(),
         },
       ],
     };

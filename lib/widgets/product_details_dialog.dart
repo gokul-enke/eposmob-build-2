@@ -24,6 +24,9 @@ import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/grid_provider.dart';
+import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
+import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 
 class _DropdownOption {
   final String id;
@@ -97,6 +100,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   bool _requestedUnitRackData = false;
   final Map<int, Stock> _editedStockRows = {};
 
+  final VariantEditorController _variantController = VariantEditorController();
+  bool _variantPropertiesRequested = false;
+  bool _isLoadingVariantProperties = false;
+  bool _variantsPrefilled = false;
+
   bool _canEditProduct(BuildContext context) {
     final roleProvider = Provider.of<RoleProvider>(context, listen: false);
     if (widget.useBillingProductPermissions) {
@@ -163,7 +171,56 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchLanguages();
+      _fetchVariantPropertiesAndPrefill();
     });
+  }
+
+  Future<void> _fetchVariantPropertiesAndPrefill() async {
+    if (_variantPropertiesRequested) return;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (appSettings?.productVariantEnabled != true) return;
+    _variantPropertiesRequested = true;
+
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
+    if (!productProvider.hasProductProperties) {
+      final accessToken =
+          Provider.of<AuthModel>(context, listen: false).token ?? '';
+      if (accessToken.isNotEmpty) {
+        setState(() => _isLoadingVariantProperties = true);
+        try {
+          await productProvider.fetchProductProperties(
+              accessToken: accessToken);
+        } catch (e) {
+          debugPrint('⚠️ fetchProductProperties failed: $e');
+        } finally {
+          if (mounted) setState(() => _isLoadingVariantProperties = false);
+        }
+      }
+    }
+
+    if (!mounted) return;
+    _prefillVariants();
+  }
+
+  void _retryFetchVariantProperties() {
+    _variantPropertiesRequested = false;
+    _fetchVariantPropertiesAndPrefill();
+  }
+
+  void _prefillVariants() {
+    if (_variantsPrefilled) return;
+    final product = selectedProduct;
+    if (product == null) return;
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
+    _variantController.loadFromVariants(
+      product.variants ?? const [],
+      productProvider.productProperties,
+    );
+    _variantsPrefilled = true;
+    if (mounted) setState(() {});
   }
 
   Future<void> _fetchLanguages() async {
@@ -528,6 +585,27 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       return;
     }
 
+    final bool variantEnabled = Provider.of<AppSettingsProvider>(context,
+                listen: false)
+            .appSettings
+            ?.productVariantEnabled ??
+        true;
+    List<Map<String, dynamic>>? variantsPayload;
+    if (variantEnabled) {
+      final variantError =
+          validateVariantRows(_variantController.toEditInputs());
+      if (variantError != null) {
+        showScaffoldError(context: context, message: variantError);
+        return;
+      }
+      // Send the full set + deletions whenever there is anything to sync.
+      if (_variantController.hasRows ||
+          _variantController.deletedVariantIds.isNotEmpty) {
+        variantsPayload =
+            buildEditVariantsPayload(_variantController.toEditInputs());
+      }
+    }
+
     FocusScope.of(context).unfocus();
 
     debugPrint(
@@ -635,6 +713,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         rackNumber: rackForApi,
         quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
+        variants: variantsPayload,
         // Pass the raw text (even when empty) so an erased field is sent to the
         // server as null to clear it, rather than being omitted from the body.
         minMarginPercentage: updatedMinMargin,
@@ -772,6 +851,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           '(price=$updatedPriceValue, mrp=$updatedMrpValue, tax=$updatedTaxValue)');
 
       if (!mounted) return;
+      // Deletions have been persisted; drop them so a subsequent save does not
+      // re-send delete instructions for already-removed variants.
+      _variantController.deletedVariantIds.clear();
       setState(() {
         selectedProduct = resolvedUpdatedProduct;
         _controllersInitialized = false;
@@ -822,6 +904,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     }
     _languageNameControllers.clear();
     _languageTranslating.clear();
+    _variantController.dispose();
     super.dispose();
   }
 
@@ -1589,6 +1672,72 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
+  Widget _buildVariantsSection() {
+    return Consumer2<AppSettingsProvider, ProductProvider>(
+      builder: (context, appSettingsProvider, productProvider, child) {
+        final variantEnabled =
+            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+        if (!variantEnabled) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: VariantEditorSection(
+            controller: _variantController,
+            properties: productProvider.productProperties,
+            isLoadingProperties: _isLoadingVariantProperties,
+            onRetryLoadProperties: _retryFetchVariantProperties,
+            onGenerateBarcode: _generateVariantBarcode,
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _generateVariantBarcode(
+    TextEditingController target,
+    void Function(bool loading) setLoading,
+  ) async {
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Authentication token not found. Please log in again.',
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      final gridSelectionProvider =
+          Provider.of<GridSelectionProvider>(context, listen: false);
+      final result = await gridSelectionProvider.generateBarcodeAPI(
+          accessToken: accessToken);
+      if (!mounted) return;
+      if (result != null &&
+          result['status'] == 'success' &&
+          result['data'] != null) {
+        target.text = result['data']['barcode'].toString();
+        showScaffold(context: context, message: 'Barcode generated');
+      } else {
+        showScaffoldError(
+          context: context,
+          message: result?['message']?.toString() ?? 'Failed to generate barcode',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error generating barcode: $e',
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   Widget _buildEditTab(GetProduct product) {
     final size = MediaQuery.of(context).size;
     final categoryProvider = Provider.of<CategoryProvider>(context);
@@ -1916,6 +2065,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                       ],
                     ),
                     const SizedBox(height: verticalGap),
+                    _buildVariantsSection(),
                     // if (product.stock != null && product.stock!.isNotEmpty)
                     //   Text(
                     //     'Price and MRP changes apply to all stock entries for this product.',

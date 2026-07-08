@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create .env file
+        run: echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" > .env
+
       - name: Build Windows app
         run: flutter build windows --release --dart-define=BASE_URL=${{ matrix.url }}
 

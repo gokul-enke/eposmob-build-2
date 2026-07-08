@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
-import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:provider/provider.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/mobile_variant_picker_sheet.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 
 /// Mobile product-add entry that resolves variant selection before delegating to
 /// [ProductCartHelper]. Desktop billing can reuse the domain helper later.
@@ -20,32 +20,32 @@ Future<void> addProductWithVariantResolution({
   int? customerId,
   String? customerName,
   SaleUnit? selectedSaleUnit,
+  bool? variantEnabled,
 }) async {
-  ProductVariant? selectedVariant = ProductVariantSelection.tryResolveWithoutPicker(
-    product,
-    scannedBarcode: scannedBarcode,
-  );
+  // Gate variant resolution behind the PRODUCT_VARIANT_ENABLED setting. When
+  // disabled, the product is treated as a plain product (no variant resolution
+  // or picker). Defaults to true (variants on) when the setting/provider is
+  // unavailable so existing behavior is preserved. The gate lives here at the
+  // orchestration layer so the pure domain helpers stay UI/provider-free.
+  bool variantsOn = variantEnabled ??
+      (Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.productVariantEnabled ??
+          true);
 
-  if (selectedVariant == null &&
-      product.hasVariants &&
-      product.activeVariants.length == 1) {
-    final onlyVariant = product.activeVariants.first;
-    if (ProductVariantSelection.isOutOfStock(onlyVariant)) {
-      if (context.mounted) {
-        showScaffoldError(
-          context: context,
-          message: BillingMobileErrorMessages.variantOutOfStock(
-            onlyVariant.formattedAttributes.isEmpty
-                ? (onlyVariant.sku ?? 'This variant')
-                : onlyVariant.formattedAttributes,
-          ),
-        );
-      }
-      return;
-    }
-  }
+  // Out-of-stock variants are NOT blocked here: the physical item may be in
+  // front of the cashier. ProductCartHelper asks for an oversell confirmation
+  // (only when stock management is enabled) instead of refusing the sale.
+  ProductVariant? selectedVariant = variantsOn
+      ? ProductVariantSelection.tryResolveWithoutPicker(
+          product,
+          scannedBarcode: scannedBarcode,
+        )
+      : null;
 
-  if (selectedVariant == null && ProductVariantSelection.needsVariantPicker(product)) {
+  if (variantsOn &&
+      selectedVariant == null &&
+      ProductVariantSelection.needsVariantPicker(product)) {
     selectedVariant = await showMobileVariantPickerSheet(
       context: context,
       product: product,
@@ -53,21 +53,6 @@ Future<void> addProductWithVariantResolution({
     if (selectedVariant == null || !context.mounted) {
       return;
     }
-  }
-
-  if (selectedVariant != null &&
-      ProductVariantSelection.isOutOfStock(selectedVariant)) {
-    if (context.mounted) {
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.variantOutOfStock(
-          selectedVariant.formattedAttributes.isEmpty
-              ? (selectedVariant.sku ?? 'This variant')
-              : selectedVariant.formattedAttributes,
-        ),
-      );
-    }
-    return;
   }
 
   final productPrice = ProductVariantSelection.productBasePrice(product);

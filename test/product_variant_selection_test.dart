@@ -164,28 +164,35 @@ void main() {
           isFalse);
     });
 
-    test('tryResolveWithoutPicker skips out-of-stock single variant', () {
+    // Real-world POS rule: a zero-quantity variant is a data signal, not a
+    // sales block — the cashier may be holding the physical item. Resolution
+    // still auto-selects it; ProductCartHelper is responsible for asking the
+    // cashier to confirm an oversell before it reaches the cart.
+    test('tryResolveWithoutPicker still auto-selects out-of-stock single variant', () {
       final product = _variantProduct(variants: [
         _variant(id: 5, attributes: {'SIZE': 'M'}, quantity: 0),
       ]);
 
-      expect(ProductVariantSelection.tryResolveWithoutPicker(product), isNull);
+      final resolved = ProductVariantSelection.tryResolveWithoutPicker(product);
+
+      expect(resolved?.id, 5);
+      expect(ProductVariantSelection.isOutOfStock(resolved!), isTrue);
       expect(ProductVariantSelection.needsVariantPicker(product), isFalse);
     });
 
-    test('tryResolveWithoutPicker skips out-of-stock barcode match', () {
+    test('tryResolveWithoutPicker still resolves out-of-stock barcode match', () {
       final product = _variantProduct(variants: [
         _variant(id: 1, barcode: 'AAA', quantity: 0),
         _variant(id: 2, barcode: 'BBB', quantity: 5),
       ]);
 
-      expect(
-        ProductVariantSelection.tryResolveWithoutPicker(
-          product,
-          scannedBarcode: 'AAA',
-        ),
-        isNull,
+      final resolved = ProductVariantSelection.tryResolveWithoutPicker(
+        product,
+        scannedBarcode: 'AAA',
       );
+      expect(resolved?.id, 1);
+      expect(ProductVariantSelection.isOutOfStock(resolved!), isTrue);
+
       expect(
         ProductVariantSelection.tryResolveWithoutPicker(
           product,

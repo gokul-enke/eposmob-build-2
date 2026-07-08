@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pos_machine/models/product_property.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,6 +16,69 @@ class ProductProvider extends ChangeNotifier {
     if (_isUpdating != value) {
       _isUpdating = value;
       notifyListeners();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Product properties (attributes used to build variants).
+  // ---------------------------------------------------------------------------
+  List<ProductProperty>? _productProperties;
+  bool _isFetchingProperties = false;
+
+  List<ProductProperty> get productProperties =>
+      _productProperties ?? const <ProductProperty>[];
+  bool get hasProductProperties => _productProperties != null;
+  bool get isFetchingProperties => _isFetchingProperties;
+
+  /// Fetches the selectable product properties from
+  /// `GET /api/v1/product/list-product-properties`. Results are cached for the
+  /// provider lifetime; pass [forceRefresh] to re-fetch.
+  Future<List<ProductProperty>> fetchProductProperties({
+    required String accessToken,
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh && _productProperties != null) {
+      return _productProperties!;
+    }
+    if (_isFetchingProperties) {
+      return _productProperties ?? const <ProductProperty>[];
+    }
+
+    _isFetchingProperties = true;
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? apiKey = prefs.getString('api_key');
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException('API key not found. Please restart the app.');
+      }
+
+      final uri = Uri.parse(APPUrl.listProductProperties);
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+      );
+
+      debugPrint(
+          '📦 fetchProductProperties ← ${response.statusCode}: ${response.body}');
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final properties =
+            ProductProperty.listFromJsonString(response.body);
+        _productProperties = properties;
+        notifyListeners();
+        return properties;
+      }
+
+      throw HttpException(
+          'Failed to load product properties (status ${response.statusCode}).');
+    } on SocketException {
+      throw const HttpException('No internet connection. Please try again.');
+    } finally {
+      _isFetchingProperties = false;
     }
   }
 
@@ -32,6 +96,7 @@ class ProductProvider extends ChangeNotifier {
     int? rackNumber,
     num? quantity,
     List<Map<String, dynamic>>? productNames,
+    List<Map<String, dynamic>>? variants,
     String? minMarginPercentage,
     String? minMarginPrice,
     required String accessToken,
@@ -68,6 +133,10 @@ class ProductProvider extends ChangeNotifier {
       'store_id': activeStoreId,
       if (productNames != null && productNames.isNotEmpty)
         'product_names': productNames,
+      // Variants: sent whenever the caller provides a (possibly empty) list so
+      // create/update/delete semantics from the editor reach the server. Added
+      // to the map after removeWhere below via a direct assignment so an empty
+      // list is not stripped.
     }..removeWhere((key, value) {
         if (value == null) return true;
         if (value is String) {
@@ -90,6 +159,13 @@ class ProductProvider extends ChangeNotifier {
       body['min_margin_price'] = minMarginPrice.trim().isEmpty
           ? 0
           : (num.tryParse(minMarginPrice.trim()) ?? 0);
+    }
+
+    // Include variants whenever the caller supplies a list (added after
+    // removeWhere so an empty list survives, though the caller only passes a
+    // non-null list when the variant section is active).
+    if (variants != null) {
+      body['variants'] = variants;
     }
 
     _setUpdating(true);

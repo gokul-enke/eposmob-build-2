@@ -110,6 +110,7 @@ class CartQuantityStockHelper {
       product: currentProduct,
       selectedStock: cartItem.selectedStock,
       stockGroupIds: cartItem.stockGroupIds,
+      variantId: cartItem.variantId,
     );
 
     final quantityOnCurrentSelection = cartItem.hasSaleUnit
@@ -132,6 +133,8 @@ class CartQuantityStockHelper {
         saleUnitId: cartItem.saleUnitId,
         saleUnitName: cartItem.saleUnitName,
         saleUnitConversionRate: cartItem.saleUnitConversionRate,
+        variantId: cartItem.variantId,
+        variantAttributes: cartItem.variantAttributes,
       );
 
       appliedQuantity += quantityOnCurrentSelection;
@@ -148,9 +151,34 @@ class CartQuantityStockHelper {
         stockGroupIds: cartItem.stockGroupIds,
         activeStoreId: activeStoreId,
         activeStoreName: activeStoreName,
+        variantId: cartItem.variantId,
       );
 
       if (alternativeStocks.isEmpty) {
+        // No other batch to draw from, but the cashier may still be counting
+        // out physical units in hand. Offer an oversell confirmation when we
+        // have a context to show it in; otherwise (headless callers) keep the
+        // hard block so existing explicit-resolver integrations are unaffected.
+        if (context != null && context.mounted) {
+          final sellAnyway = await showSellAnywayConfirmDialog(
+            context: context,
+            message:
+                'No more stock recorded for this item (requested $remainingIncrease more). Sell anyway?',
+          );
+          if (sellAnyway && context.mounted) {
+            provider.setCartItemQuantity(
+              productId,
+              cartItem.selectedStock,
+              newQuantity,
+              stockGroupIds: cartItem.stockGroupIds,
+              saleUnitId: cartItem.saleUnitId,
+            );
+            appliedQuantity = newQuantity;
+            remainingIncrease = 0;
+            changed = true;
+            break;
+          }
+        }
         onBlocked('Selected stock is exhausted. No other stock is available.');
         break;
       }
@@ -168,6 +196,7 @@ class CartQuantityStockHelper {
         product: refreshedProduct,
         selectedStock: selection.selectedStock,
         stockGroupIds: selection.stockGroupIds,
+        variantId: cartItem.variantId,
       );
 
       if (availableForSelection <= 0) {
@@ -203,6 +232,8 @@ class CartQuantityStockHelper {
         saleUnitId: cartItem.saleUnitId,
         saleUnitName: cartItem.saleUnitName,
         saleUnitConversionRate: cartItem.saleUnitConversionRate,
+        variantId: cartItem.variantId,
+        variantAttributes: cartItem.variantAttributes,
       );
 
       appliedQuantity += quantityForSelection;

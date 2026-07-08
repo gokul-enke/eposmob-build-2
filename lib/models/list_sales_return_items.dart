@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class SalesReturnItemsResponse {
   final String status;
   final String message;
@@ -68,6 +70,8 @@ class SalesReturnCart {
   final double returnedQuantity;
   final String returnedTotal;
   final bool isReturned;
+  final int? productVariantId;
+  final Map<String, dynamic>? variantAttributes;
 
   SalesReturnCart({
     required this.cartItemId,
@@ -77,9 +81,47 @@ class SalesReturnCart {
     required this.unitPrice,
     required this.totalPrice,
     required this.returnedQuantity,
-    required this.returnedTotal,  
+    required this.returnedTotal,
     required this.isReturned,
+    this.productVariantId,
+    this.variantAttributes,
   });
+
+  /// Formatted variant attribute line (values joined with " | "). Empty when
+  /// there are no attributes to display.
+  String get formattedVariantAttributes {
+    final attrs = variantAttributes;
+    if (attrs == null || attrs.isEmpty) return '';
+    return attrs.values
+        .map((value) => value?.toString() ?? '')
+        .where((value) => value.isNotEmpty)
+        .join(' | ');
+  }
+
+  static int? _parseNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
+
+  // variant_attributes may arrive as a Map or a JSON-encoded String.
+  static Map<String, dynamic>? _parseVariantAttributes(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Map) {
+      return raw.isEmpty ? null : Map<String, dynamic>.from(raw);
+    }
+    if (raw is String) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return null;
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map && decoded.isNotEmpty) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
 
   factory SalesReturnCart.fromJson(Map<String, dynamic> json) {
     return SalesReturnCart(
@@ -94,6 +136,8 @@ class SalesReturnCart {
           : 0,
       returnedTotal: json['returned_total']?.toString() ?? '0',
       isReturned: json['is_returned'],
+      productVariantId: _parseNullableInt(json['product_variant_id']),
+      variantAttributes: _parseVariantAttributes(json['variant_attributes']),
     );
   }
 }
