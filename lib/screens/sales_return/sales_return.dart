@@ -1786,16 +1786,35 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  item.productName.toString(),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s13,
-                    0.20,
-                    ColorManager.textColor,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.productName.toString(),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s13,
+                        0.20,
+                        ColorManager.textColor,
+                      ),
+                    ),
+                    if (item.formattedVariantAttributes.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        item.formattedVariantAttributes,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s11,
+                          0.16,
+                          Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               Icon(

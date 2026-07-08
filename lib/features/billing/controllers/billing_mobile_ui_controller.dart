@@ -75,6 +75,21 @@ class BillingMobileErrorMessages {
   static String variantOutOfStock(String variantLabel) =>
       '$variantLabel is out of stock';
 
+  static String variantOutOfStockConfirm(String variantLabel) =>
+      '$variantLabel shows 0 stock in the system. Sell it anyway?';
+
+  static String insufficientStockConfirm(
+          String unitLabel, num available, num requested) =>
+      'Only $available in stock for $unitLabel (needs $requested). Sell anyway?';
+
+  static const stockNotSelected =
+      'No batch selected — item was not added to cart';
+  static const zeroPriceEntryCancelled =
+      'Price not entered — item was not added to cart';
+
+  static String productNotSellable(String productName) =>
+      '$productName is marked as not sellable';
+
   // Coupon / discount
   static const emptyCartDiscount = 'Cannot apply discount to empty cart';
   static const discountNegative = 'Discount cannot be negative';

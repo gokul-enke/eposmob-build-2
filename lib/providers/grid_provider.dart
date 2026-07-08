@@ -652,6 +652,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String purchasePrice,
     List<Map<String, dynamic>>? productNames,
     List<Map<String, dynamic>>? saleUnits,
+    List<Map<String, dynamic>>? variants,
     String? conversionRateBase,
     String? itemCode,
     String? minMarginPercentage,
@@ -687,6 +688,10 @@ class GridSelectionProvider extends ChangeNotifier {
 
     if (saleUnits != null && saleUnits.isNotEmpty) {
       apiBodyData['sale_units'] = saleUnits;
+    }
+
+    if (variants != null && variants.isNotEmpty) {
+      apiBodyData['variants'] = variants;
     }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");
@@ -734,6 +739,7 @@ class GridSelectionProvider extends ChangeNotifier {
     required String purchasePrice,
     List<Map<String, dynamic>>? productNames,
     List<Map<String, dynamic>>? saleUnits,
+    List<Map<String, dynamic>>? variants,
     String? conversionRateBase,
     String? itemCode,
     String? minMarginPercentage,
@@ -768,6 +774,10 @@ class GridSelectionProvider extends ChangeNotifier {
 
     if (saleUnits != null && saleUnits.isNotEmpty) {
       apiBodyData['sale_units'] = saleUnits;
+    }
+
+    if (variants != null && variants.isNotEmpty) {
+      apiBodyData['variants'] = variants;
     }
 
     debugPrint("apiBodyData ${apiBodyData.toString()}");

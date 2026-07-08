@@ -993,9 +993,13 @@ class LocalProductProvider extends ChangeNotifier {
     required GetProduct product,
     Stock? selectedStock,
     List<int>? stockGroupIds,
+    int? variantId,
   }) {
     final currentProduct = getProductById(product.productId ?? -1) ?? product;
-    final currentStocks = currentProduct.stock ?? const <Stock>[];
+    final currentStocks = filterStocksForVariant(
+      currentProduct.stock ?? const <Stock>[],
+      variantId,
+    );
     final normalizedGroupIds = _normalizeStockGroupIds(stockGroupIds);
 
     if (normalizedGroupIds.length > 1) {
@@ -1051,6 +1055,7 @@ class LocalProductProvider extends ChangeNotifier {
     required String operation,
     Stock? selectedStock,
     List<int>? stockGroupIds,
+    int? variantId,
   }) {
     if (!isStockEnabled || selectedStock == null || quantity <= 0) {
       return <StockReservation>[];
@@ -1063,6 +1068,7 @@ class LocalProductProvider extends ChangeNotifier {
       product: product,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
+      variantId: variantId,
     );
 
     for (final candidate in candidates) {
@@ -1103,6 +1109,13 @@ class LocalProductProvider extends ChangeNotifier {
     if (remaining > 0) {
       debugPrint(
           '📦 Remaining quantity $remaining could not be reserved. Sale continues without further stock deduction.');
+    }
+
+    // Mirror the reserved amount onto the cached variant quantity so the picker
+    // reflects the offline sale immediately.
+    final reserved = quantity - remaining;
+    if (reserved > 0) {
+      _adjustVariantQuantity(product.productId, variantId, -reserved);
     }
 
     return reservations;
@@ -1149,6 +1162,13 @@ class LocalProductProvider extends ChangeNotifier {
     item.stockReservations = workingReservations;
     item.stockDeducted = _sumStockReservations(item.stockReservations);
 
+    // Restore the cached variant quantity by the amount actually returned to
+    // stock so the picker stays consistent with the reserve path.
+    final restored = quantity - remaining;
+    if (restored > 0) {
+      _adjustVariantQuantity(item.product.productId, item.variantId, restored);
+    }
+
     return quantity - remaining;
   }
 
@@ -1166,6 +1186,7 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (sourceReservations.isNotEmpty) {
       final reappliedReservations = <StockReservation>[];
+      num reappliedTotal = 0;
       for (final reservation in sourceReservations) {
         final actualChange = _updateStockQuantityInternal(
           Stock(id: reservation.stockId),
@@ -1174,6 +1195,7 @@ class LocalProductProvider extends ChangeNotifier {
         );
         final reservedQuantity = actualChange.abs();
         if (reservedQuantity > 0) {
+          reappliedTotal += reservedQuantity;
           reappliedReservations.add(
             StockReservation(
               stockId: reservation.stockId,
@@ -1181,6 +1203,10 @@ class LocalProductProvider extends ChangeNotifier {
             ),
           );
         }
+      }
+      if (reappliedTotal > 0) {
+        _adjustVariantQuantity(
+            item.product.productId, item.variantId, -reappliedTotal);
       }
       return reappliedReservations;
     }
@@ -1191,6 +1217,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: item.selectedStock,
       stockGroupIds: item.stockGroupIds,
       operation: operation,
+      variantId: item.variantId,
     );
   }
 
@@ -2416,6 +2443,35 @@ class LocalProductProvider extends ChangeNotifier {
     return 0;
   }
 
+  /// Keeps the cached [ProductVariant.quantity] in step with local stock
+  /// movements so the variant picker's "Qty:" label and out-of-stock state stay
+  /// fresh offline. [delta] is negative when selling and positive when
+  /// restoring. No-op when [variantId] is null or the variant cannot be found.
+  void _adjustVariantQuantity(int? productId, int? variantId, num delta) {
+    if (!isStockEnabled || variantId == null || delta == 0) {
+      return;
+    }
+    for (final product in _products) {
+      if (product.productId != productId) {
+        continue;
+      }
+      final variants = product.variants;
+      if (variants == null) {
+        return;
+      }
+      for (int i = 0; i < variants.length; i++) {
+        if (variants[i].id == variantId) {
+          final previous = variants[i].quantity ?? 0;
+          final raw = previous + delta;
+          final clamped = raw < 0 ? 0 : raw;
+          variants[i] = variants[i].copyWith(quantity: clamped);
+          return;
+        }
+      }
+      return;
+    }
+  }
+
   /// Updates a specific stock entry within the products list
   void _updateProductStockInList(Stock updatedStock) {
     for (var product in _products) {
@@ -2462,7 +2518,7 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("Stock Management Enabled: $isStockEnabled");
 
     if (productId != null) {
-      product = _products.firstWhere((p) => p.productId == productId);
+      product = getProductById(productId) ?? product;
     }
 
     if (product == null) {
@@ -2504,6 +2560,7 @@ class LocalProductProvider extends ChangeNotifier {
           selectedStock: selectedStock,
           stockGroupIds: existingItem.stockGroupIds,
           operation: "ADD_TO_CART_INCREMENT",
+          variantId: variantId,
         );
         _mergeReservationDeltas(existingItem, reservationDeltas);
         didMutateStock = reservationDeltas.isNotEmpty;
@@ -2551,6 +2608,7 @@ class LocalProductProvider extends ChangeNotifier {
           selectedStock: selectedStock,
           stockGroupIds: normalizedStockGroupIds,
           operation: "ADD_TO_CART_NEW",
+          variantId: variantId,
         );
         didMutateStock = initialStockReservations.isNotEmpty;
       }
@@ -2657,23 +2715,9 @@ class LocalProductProvider extends ChangeNotifier {
     final quantityDifference = targetBaseQuantity - sourceItem.quantity;
     var didMutateStock = false;
 
-    if (isStockEnabled &&
-        sourceItem.selectedStock != null &&
-        quantityDifference > 0) {
-      final availableQuantity = getAvailableQuantityForSelection(
-        product: sourceItem.product,
-        selectedStock: sourceItem.selectedStock,
-        stockGroupIds: sourceItem.stockGroupIds,
-      );
-      if (availableQuantity < quantityDifference) {
-        debugPrint(
-          "Insufficient stock to change sale unit for productId=$productId: "
-          "needed=$quantityDifference, available=$availableQuantity",
-        );
-        return false;
-      }
-    }
-
+    // Insufficient stock never blocks the unit change: the physical goods are
+    // in front of the cashier. _reserveStockForSelection deducts whatever is
+    // available and the sale continues (same oversell rule as addToCart).
     if (isStockEnabled &&
         sourceItem.selectedStock != null &&
         quantityDifference != 0) {
@@ -2684,6 +2728,7 @@ class LocalProductProvider extends ChangeNotifier {
           selectedStock: sourceItem.selectedStock,
           stockGroupIds: sourceItem.stockGroupIds,
           operation: "CHANGE_CART_ITEM_SALE_UNIT_INCREASE",
+          variantId: sourceItem.variantId,
         );
         _mergeReservationDeltas(sourceItem, reservationDeltas);
       } else {
@@ -4118,6 +4163,29 @@ class LocalProductProvider extends ChangeNotifier {
     return product.stock!.fold(0, (sum, stock) => sum + (stock.quantity ?? 0));
   }
 
+  /// Filters [stocks] to the rows relevant for [variantId], mirroring the
+  /// server rule (§4 of PRODUCT_VARIANTS_API.md): when a variant is chosen its
+  /// own scoped stock rows are used; if it has none, fall back to general
+  /// (non-variant) stock rows. When [variantId] is null the list is returned
+  /// unchanged so non-variant behavior stays byte-for-byte identical.
+  static List<Stock> filterStocksForVariant(
+    List<Stock> stocks,
+    int? variantId,
+  ) {
+    if (variantId == null) {
+      return stocks;
+    }
+    final scoped = stocks
+        .where((stock) => stock.productVariantId == variantId)
+        .toList();
+    if (scoped.isNotEmpty) {
+      return scoped;
+    }
+    return stocks
+        .where((stock) => stock.productVariantId == null)
+        .toList();
+  }
+
   /// Gets a list of stock options for a product with qty > 0.
   /// When stock management is enabled only positive-quantity entries are
   /// relevant for selection.  If every entry has qty <= 0 the caller
@@ -4188,9 +4256,13 @@ class LocalProductProvider extends ChangeNotifier {
     required GetProduct product,
     Stock? selectedStock,
     List<int>? stockGroupIds,
+    int? variantId,
   }) {
     final currentProduct = getProductById(product.productId ?? -1) ?? product;
-    final currentStocks = currentProduct.stock ?? const <Stock>[];
+    final currentStocks = filterStocksForVariant(
+      currentProduct.stock ?? const <Stock>[],
+      variantId,
+    );
     final selectionStockIds = getSelectionStockIds(
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
@@ -4215,6 +4287,7 @@ class LocalProductProvider extends ChangeNotifier {
     List<int>? stockGroupIds,
     int? activeStoreId,
     String? activeStoreName,
+    int? variantId,
   }) {
     final currentProduct = getProductById(product.productId ?? -1) ?? product;
     final excludedStockIds = getSelectionStockIds(
@@ -4222,10 +4295,13 @@ class LocalProductProvider extends ChangeNotifier {
       stockGroupIds: stockGroupIds,
     ).toSet();
 
-    final availableStocks = getStockOptionsForStore(
-      currentProduct,
-      activeStoreId: activeStoreId,
-      activeStoreName: activeStoreName,
+    final availableStocks = filterStocksForVariant(
+      getStockOptionsForStore(
+        currentProduct,
+        activeStoreId: activeStoreId,
+        activeStoreName: activeStoreName,
+      ),
+      variantId,
     );
 
     final filteredStocks = availableStocks.where((stock) {
@@ -4306,7 +4382,7 @@ class LocalProductProvider extends ChangeNotifier {
   /// If [newQuantity] is 0 or less, the item is removed from the cart.
   /// Stock levels are adjusted based on the difference between old and new quantities.
   void setCartItemQuantity(int productId, Stock? selectedStock, num newQuantity,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     debugPrint("🔄 SET CART ITEM QUANTITY STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -4318,6 +4394,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index == -1) {
@@ -4341,6 +4418,7 @@ class LocalProductProvider extends ChangeNotifier {
           selectedStock: selectedStock,
           stockGroupIds: _cartItems[index].stockGroupIds,
           operation: "SET_CART_ITEM_QUANTITY_INCREASE",
+          variantId: _cartItems[index].variantId,
         );
         _mergeReservationDeltas(_cartItems[index], reservationDeltas);
       } else {

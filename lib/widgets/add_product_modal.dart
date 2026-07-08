@@ -12,7 +12,10 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
+import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -114,6 +117,10 @@ class _AddProductWithBarcodeModalState
   bool _showSaleUnitValidation = false;
   final List<_SaleUnitFormRow> _saleUnitRows = [];
 
+  final VariantEditorController _variantController = VariantEditorController();
+  bool _variantPropertiesRequested = false;
+  bool _isLoadingVariantProperties = false;
+
   @override
   void initState() {
     if (widget.barcode != null) {
@@ -131,7 +138,38 @@ class _AddProductWithBarcodeModalState
         _productNameFocusNode.requestFocus();
       }
       _fetchLanguages();
+      _fetchVariantProperties();
     });
+  }
+
+  Future<void> _fetchVariantProperties() async {
+    if (_variantPropertiesRequested) return;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (appSettings?.productVariantEnabled != true) return;
+    _variantPropertiesRequested = true;
+
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
+    if (productProvider.hasProductProperties) return;
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) return;
+
+    setState(() => _isLoadingVariantProperties = true);
+    try {
+      await productProvider.fetchProductProperties(accessToken: accessToken);
+    } catch (e) {
+      debugPrint('⚠️ fetchProductProperties failed: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingVariantProperties = false);
+    }
+  }
+
+  void _retryFetchVariantProperties() {
+    _variantPropertiesRequested = false;
+    _fetchVariantProperties();
   }
 
   // Helper method to unfocus all text fields except the specified one
@@ -1059,6 +1097,7 @@ class _AddProductWithBarcodeModalState
     _languageNameControllers.clear();
     _languageTranslating.clear();
     _clearSaleUnitRows();
+    _variantController.dispose();
     for (final node in _translateButtonFocusNodes.values) {
       node.dispose();
     }
@@ -1518,6 +1557,7 @@ class _AddProductWithBarcodeModalState
                     _buildAdvancedOptionsSection(size, unitList),
                     const SizedBox(height: 20),
                   ],
+                  _buildVariantsSection(),
 
                   // Buttons
                   Row(
@@ -2146,6 +2186,32 @@ class _AddProductWithBarcodeModalState
     );
   }
 
+  Widget _buildVariantsSection() {
+    return Consumer2<AppSettingsProvider, ProductProvider>(
+      builder: (context, appSettingsProvider, productProvider, child) {
+        final variantEnabled =
+            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+        if (!variantEnabled) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: VariantEditorSection(
+            controller: _variantController,
+            properties: productProvider.productProperties,
+            isLoadingProperties: _isLoadingVariantProperties,
+            onRetryLoadProperties: _retryFetchVariantProperties,
+            onGenerateBarcode: (target, setLoading) =>
+                _generateBarcodeIntoController(
+              target,
+              onLoadingChanged: setLoading,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildAdvancedOptionsSection(
     Size size,
     Map<String, String>? unitList,
@@ -2683,6 +2749,20 @@ class _AddProductWithBarcodeModalState
         }
       }
 
+      final variantEnabled = Provider.of<AppSettingsProvider>(context,
+                  listen: false)
+              .appSettings
+              ?.productVariantEnabled ??
+          true;
+      if (variantEnabled && _variantController.hasRows) {
+        final variantError =
+            validateVariantRows(_variantController.toCreateInputs());
+        if (variantError != null) {
+          showScaffoldError(context: context, message: variantError);
+          return;
+        }
+      }
+
       final canContinue = await _ensureBarcodeDuplicateConfirmed();
       if (!canContinue) {
         return;
@@ -2707,6 +2787,9 @@ class _AddProductWithBarcodeModalState
         final productNames =
             _buildProductNamesPayload(languageProvider.languages);
         final saleUnits = _buildSaleUnitsPayload();
+        final variants = (variantEnabled && _variantController.hasRows)
+            ? buildCreateVariantsPayload(_variantController.toCreateInputs())
+            : const <Map<String, dynamic>>[];
 
         final itemCodeEnabled = Provider.of<AppSettingsProvider>(context,
                     listen: false)
@@ -2726,6 +2809,7 @@ class _AddProductWithBarcodeModalState
           purchasePrice: _productPurchasePriceController.text,
           productNames: productNames.isNotEmpty ? productNames : null,
           saleUnits: saleUnits.isNotEmpty ? saleUnits : null,
+          variants: variants.isNotEmpty ? variants : null,
           conversionRateBase:
               _baseConversionRateController.text.trim().isNotEmpty
                   ? _baseConversionRateController.text.trim()
@@ -2867,6 +2951,7 @@ class _AddProductWithBarcodeModalState
       _showAdvancedOptions = false;
       _showSaleUnitValidation = false;
       _clearSaleUnitRows();
+      _variantController.clear();
     });
   }
 }

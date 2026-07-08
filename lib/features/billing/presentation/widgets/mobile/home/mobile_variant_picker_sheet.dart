@@ -40,8 +40,7 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
   void initState() {
     super.initState();
     final active = widget.product.activeVariants;
-    if (active.length == 1 &&
-        !ProductVariantSelection.isOutOfStock(active.first)) {
+    if (active.length == 1) {
       _selected = active.first;
     }
   }
@@ -93,17 +92,18 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
                         ? (variant.sku ?? 'Variant ${index + 1}')
                         : variant.formattedAttributes;
 
+                    // Out-of-stock variants stay selectable: the cashier may
+                    // hold the physical item, and the add-to-cart flow asks
+                    // for an oversell confirmation instead of blocking.
                     return Opacity(
-                      opacity: outOfStock ? 0.45 : 1,
+                      opacity: outOfStock ? 0.6 : 1,
                       child: Material(
                         color: isSelected
                             ? ColorManager.kPrimaryColor.withValues(alpha: 0.08)
                             : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(12),
                         child: InkWell(
-                          onTap: outOfStock
-                              ? null
-                              : () => setState(() => _selected = variant),
+                          onTap: () => setState(() => _selected = variant),
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
                             padding: const EdgeInsets.all(14),
@@ -204,8 +204,7 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: _selected == null ||
-                            ProductVariantSelection.isOutOfStock(_selected!)
+                    onPressed: _selected == null
                         ? null
                         : () => Navigator.pop(context, _selected),
                     style: ElevatedButton.styleFrom(

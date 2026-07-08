@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
@@ -20,6 +19,7 @@ import 'package:open_file/open_file.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
+import 'package:pos_machine/screens/print/barcode_sticker_image_renderer.dart';
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -70,34 +70,32 @@ class BarcodePrinterService {
     return null;
   }
 
-  // Cache for fonts
-  static pw.Font? _regularFont;
-  static pw.Font? _boldFont;
-
-  Future<pw.Font> _loadRegularFont() async {
-    if (_regularFont != null) return _regularFont!;
-    try {
-      final fontData =
-          await rootBundle.load('assets/fonts/NotoSansArabic-Regular.ttf');
-      _regularFont = pw.Font.ttf(fontData);
-      return _regularFont!;
-    } catch (e) {
-      debugPrint('Error loading font: $e');
-      rethrow;
+  /// INR uses text ₹; other currencies (e.g. SAR) use the riyal PNG when available.
+  ({String? textSymbol, pw.MemoryImage? image, String? textPrefix})
+      _resolveCurrencyDisplay(String currency, pw.MemoryImage? sarImage) {
+    final code = currency.trim().toUpperCase();
+    if (code == 'INR') {
+      return (textSymbol: '\u20B9', image: null, textPrefix: null);
     }
+    if (sarImage != null) {
+      return (textSymbol: null, image: sarImage, textPrefix: null);
+    }
+    return (textSymbol: null, image: null, textPrefix: code.isEmpty ? null : code);
   }
 
-  Future<pw.Font> _loadBoldFont() async {
-    if (_boldFont != null) return _boldFont!;
-    try {
-      final fontData =
-          await rootBundle.load('assets/fonts/NotoSansArabic-Bold.ttf');
-      _boldFont = pw.Font.ttf(fontData);
-      return _boldFont!;
-    } catch (e) {
-      debugPrint('Error loading bold font: $e');
-      rethrow;
+  String _formatPriceForThermal({
+    required String currency,
+    required String priceToShow,
+    required bool useSarImage,
+  }) {
+    final code = currency.trim().toUpperCase();
+    if (code == 'INR') {
+      return '\u20B9 $priceToShow';
     }
+    if (useSarImage) {
+      return priceToShow;
+    }
+    return code.isEmpty ? priceToShow : '$code $priceToShow';
   }
 
   Future<Directory> _getEposDirectory() async {
@@ -207,16 +205,6 @@ class BarcodePrinterService {
     return fallback;
   }
 
-  bool _isRtlText(String text) {
-    // Arabic, Arabic Supplement, and Arabic Presentation Forms ranges.
-    return RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]')
-        .hasMatch(text);
-  }
-
-  pw.TextDirection _textDirectionFor(String text) {
-    return _isRtlText(text) ? pw.TextDirection.rtl : pw.TextDirection.ltr;
-  }
-
   String _normalizeProductNameMode(String rawValue) {
     final normalized = rawValue.trim().toLowerCase();
     switch (normalized) {
@@ -226,7 +214,7 @@ class BarcodePrinterService {
       case 'ar/en':
         return normalized;
       default:
-        return 'en';
+        return 'en/ar';
     }
   }
 
@@ -314,6 +302,7 @@ class BarcodePrinterService {
     required bool showBarcodeNumber,
     required bool showMfgDate,
     required bool showExpiryDate,
+    pw.MemoryImage? sarCurrencyImage,
   }) async {
     final selectedPrinter = await _loadSelectedBarcodePrinter();
     if (selectedPrinter == null) {
@@ -330,6 +319,7 @@ class BarcodePrinterService {
           stickerSize == '91x24mm' ? PaperSize.mm80 : PaperSize.mm58;
       final generator = Generator(paperSize, profile);
       final bytes = <int>[];
+      final currencyDisplay = _resolveCurrencyDisplay(currency, sarCurrencyImage);
 
       for (final item in printItems) {
         if (item.quantity < 1) continue;
@@ -382,7 +372,11 @@ class BarcodePrinterService {
 
           if (showPrice) {
             bytes.addAll(generator.text(
-              '$currency $priceToShow',
+              _sanitizeForThermal(_formatPriceForThermal(
+                currency: currency,
+                priceToShow: priceToShow,
+                useSarImage: currencyDisplay.image != null,
+              )),
               styles: const PosStyles(
                 align: PosAlign.center,
                 bold: true,
@@ -502,7 +496,7 @@ class BarcodePrinterService {
         return '';
       }
 
-      final showStoreName = readVisible('showStoreName', fallback: false);
+      final showStoreName = readVisible('showStoreName', fallback: true);
       final showProductName = readVisible('showProductName', fallback: true);
       final productNameMode = showProductName
           ? _normalizeProductNameMode(readValue('showProductName'))
@@ -541,8 +535,6 @@ class BarcodePrinterService {
 
       // Load user-configured barcode layout settings
       final layoutSettings = await loadBarcodeLayoutSettings();
-      final regularFont = await _loadRegularFont();
-      final boldFont = await _loadBoldFont();
 
       // Use stickerSize from parameter (per-print override) but use layout
       // settings for font sizes, spacing, barcode height, margin, gap etc.
@@ -582,39 +574,6 @@ class BarcodePrinterService {
         stickerH = 25 * PdfPageFormat.mm;
       }
 
-      final double nameFontSize = layoutSettings.productNameFontSize;
-      final double storeNameFontSize = layoutSettings.storeNameFontSize;
-      final double priceFontSize = layoutSettings.priceFontSize;
-      final double dateFontSize = layoutSettings.dateFontSize;
-      final double barcodeFontSize = layoutSettings.barcodeNumberFontSize;
-      final double barcodeHeight = layoutSettings.barcodeHeight;
-      final double elementSpacing = layoutSettings.elementSpacing;
-
-      final nameStyle = pw.TextStyle(
-        font: boldFont,
-        fontSize: nameFontSize,
-        fontWeight: pw.FontWeight.bold,
-      );
-      final storeNameStyle = pw.TextStyle(
-        font: boldFont,
-        fontSize: storeNameFontSize,
-        fontWeight: pw.FontWeight.bold,
-      );
-      final priceStyle = pw.TextStyle(
-        font: boldFont,
-        fontSize: priceFontSize,
-        fontWeight: pw.FontWeight.bold,
-      );
-      final dateStyle = pw.TextStyle(
-        font: boldFont,
-        fontSize: dateFontSize,
-        fontWeight: pw.FontWeight.bold,
-      );
-      final barcodeTextStyle = pw.TextStyle(
-        font: regularFont,
-        fontSize: barcodeFontSize,
-      );
-
       final pdf = pw.Document();
 
       final int safeStickersPerRow = stickersPerRow < 1 ? 1 : stickersPerRow;
@@ -631,7 +590,9 @@ class BarcodePrinterService {
       debugPrint(
           '[BarcodePrint] Page(mm) -> width=${(pageWidth / PdfPageFormat.mm).toStringAsFixed(2)}, height=${(pageHeight / PdfPageFormat.mm).toStringAsFixed(2)}, rowWidth=${(rowWidth / PdfPageFormat.mm).toStringAsFixed(2)}, margin=${(pageMargin / PdfPageFormat.mm).toStringAsFixed(2)}, gap=${(gap / PdfPageFormat.mm).toStringAsFixed(2)}');
 
-      // Build flat list of sticker widgets respecting quantity
+      // Build flat list of sticker widgets respecting quantity. Each unique
+      // item is rasterized once via Flutter's text engine (exact line-height
+      // control the pdf package lacks), then reused for all its copies.
       final List<pw.Widget> stickers = [];
       for (int idx = 0; idx < printItems.length; idx++) {
         final item = printItems[idx];
@@ -649,30 +610,54 @@ class BarcodePrinterService {
         if (item.quantity < 1) {
           debugPrint(
               '[BarcodePrint][WARN] Item[$idx] quantity is ${item.quantity}; it will not produce stickers.');
+          continue;
         }
 
+        final rawPriceText =
+            (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
+        final parsedPrice = double.tryParse(rawPriceText);
+        final priceToShow = parsedPrice != null
+            ? parsedPrice.toStringAsFixed(2)
+            : rawPriceText;
+
+        String dateLine = '';
+        if (showMfgDate && item.mfgDate != null) {
+          dateLine += "P:${DateFormat('dd/MM/yyyy').format(item.mfgDate!)}";
+        }
+        if (showExpiryDate && item.expDate != null) {
+          if (dateLine.isNotEmpty) dateLine += ' ';
+          dateLine += "E:${DateFormat('dd/MM/yyyy').format(item.expDate!)}";
+        }
+
+        final pngBytes = await BarcodeStickerImageRenderer.render(
+          widthMm: stickerW / PdfPageFormat.mm,
+          heightMm: stickerH / PdfPageFormat.mm,
+          storeName: showStoreName ? storeName : '',
+          barcodeValue: barcodeValue,
+          showBarcodeNumber: showBarcodeNumber,
+          productName: showProductName ? resolvedProductName : '',
+          priceText: showPrice ? priceToShow : '',
+          currency: currency,
+          dateLine: dateLine,
+          storeNameFontSize: layoutSettings.storeNameFontSize,
+          productNameFontSize: layoutSettings.productNameFontSize,
+          priceFontSize: layoutSettings.priceFontSize,
+          dateFontSize: layoutSettings.dateFontSize,
+          barcodeNumberFontSize: layoutSettings.barcodeNumberFontSize,
+          barcodeHeight: layoutSettings.barcodeHeight,
+        );
+
+        if (pngBytes == null) {
+          debugPrint(
+              '[BarcodePrint][WARN] Item[$idx] produced no sticker image.');
+          continue;
+        }
+
+        final stickerImage = pw.MemoryImage(pngBytes);
         for (int i = 0; i < item.quantity; i++) {
-          stickers.add(_buildSticker(
-            item: item,
-            stickerW: stickerW,
-            stickerH: stickerH,
-            nameStyle: nameStyle,
-            storeNameStyle: storeNameStyle,
-            priceStyle: priceStyle,
-            dateStyle: dateStyle,
-            barcodeTextStyle: barcodeTextStyle,
-            barcodeHeight: barcodeHeight,
-            elementSpacing: elementSpacing,
-            storeName: storeName,
-            currency: currency,
-            showStoreName: showStoreName,
-            showProductName: showProductName,
-            productNameMode: productNameMode,
-            showPrice: showPrice,
-            showBarcodeNumber: showBarcodeNumber,
-            showMfgDate: showMfgDate,
-            showExpiryDate: showExpiryDate,
-          ));
+          stickers.add(
+            pw.Image(stickerImage, width: stickerW, height: stickerH),
+          );
         }
       }
 
@@ -758,146 +743,6 @@ class BarcodePrinterService {
         );
       }
     }
-  }
-
-  /// Build a single sticker widget
-  pw.Widget _buildSticker({
-    required BarcodePrintItem item,
-    required double stickerW,
-    required double stickerH,
-    required pw.TextStyle nameStyle,
-    required pw.TextStyle storeNameStyle,
-    required pw.TextStyle priceStyle,
-    required pw.TextStyle dateStyle,
-    required pw.TextStyle barcodeTextStyle,
-    required double barcodeHeight,
-    required double elementSpacing,
-    required String storeName,
-    required String currency,
-    required bool showStoreName,
-    required bool showProductName,
-    required String productNameMode,
-    required bool showPrice,
-    required bool showBarcodeNumber,
-    required bool showMfgDate,
-    required bool showExpiryDate,
-  }) {
-    final product = item.product;
-    final productName = _resolveProductName(product, productNameMode);
-    // Format price to 2 decimal places
-    final rawPriceText =
-        (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
-    final parsedPrice = double.tryParse(rawPriceText);
-    final priceToShow =
-        parsedPrice != null ? parsedPrice.toStringAsFixed(2) : rawPriceText;
-
-    // Date format matching user reference: P:dd/MM/yyyy E:dd/MM/yyyy
-    String dateLine = '';
-    if (showMfgDate && item.mfgDate != null) {
-      dateLine += "P:${DateFormat('dd/MM/yyyy').format(item.mfgDate!)}";
-    }
-    if (showExpiryDate && item.expDate != null) {
-      if (dateLine.isNotEmpty) dateLine += ' ';
-      dateLine += "E:${DateFormat('dd/MM/yyyy').format(item.expDate!)}";
-    }
-
-    // Use FittedBox with BoxFit.contain to fill width SAFELY without clipping
-    return pw.Container(
-      width: stickerW,
-      height: stickerH,
-      padding: const pw.EdgeInsets.all(0.5),
-      child: pw.FittedBox(
-        fit: pw.BoxFit.contain,
-        alignment: pw.Alignment.center,
-        child: pw.SizedBox(
-          width: stickerW,
-          child: pw.Column(
-            mainAxisSize: pw.MainAxisSize.min,
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              // Store Name
-              if (showStoreName && storeName.isNotEmpty) ...[
-                pw.FittedBox(
-                  fit: pw.BoxFit.scaleDown,
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    storeName,
-                    style: storeNameStyle,
-                    textAlign: pw.TextAlign.center,
-                    textDirection: _textDirectionFor(storeName),
-                  ),
-                ),
-                pw.SizedBox(height: elementSpacing),
-              ],
-
-              // Barcode graphic + number
-              if (product.barcode != null && product.barcode!.isNotEmpty) ...[
-                pw.SizedBox(
-                  width: stickerW * 0.98, // Fill width
-                  child: pw.BarcodeWidget(
-                    barcode: pw.Barcode.code128(),
-                    data: product.barcode!,
-                    height: barcodeHeight,
-                    drawText: false,
-                  ),
-                ),
-                pw.SizedBox(height: elementSpacing / 2),
-                if (showBarcodeNumber) ...[
-                  pw.Text(
-                    product.barcode!,
-                    style: barcodeTextStyle,
-                    textAlign: pw.TextAlign.center,
-                  ),
-                  pw.SizedBox(height: elementSpacing),
-                ],
-              ],
-
-              // Price
-              if (showPrice) ...[
-                pw.FittedBox(
-                  fit: pw.BoxFit.scaleDown,
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    '$currency $priceToShow',
-                    style: priceStyle,
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.SizedBox(height: elementSpacing),
-              ],
-
-              // Product Name
-              if (showProductName && productName.isNotEmpty) ...[
-                pw.FittedBox(
-                  fit: pw.BoxFit.scaleDown,
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    productName,
-                    style: nameStyle,
-                    textAlign: pw.TextAlign.center,
-                    textDirection: _textDirectionFor(productName),
-                  ),
-                ),
-                pw.SizedBox(height: elementSpacing),
-              ],
-
-              // MFG / EXP date
-              if (dateLine.isNotEmpty)
-                pw.FittedBox(
-                  fit: pw.BoxFit.scaleDown,
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    dateLine,
-                    style: dateStyle,
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   // Handle Windows PDF printing — tries silent direct print first, then falls back to dialog

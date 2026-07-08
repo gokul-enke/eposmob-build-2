@@ -53,6 +53,7 @@ class AppSettings {
   final bool pineLabPayment;
   final bool skipCheckoutOnConfirmAndPrint;
   final bool compulsoryDayCloseRegister;
+  final bool productVariantEnabled;
 
   AppSettings({
     required this.barcodeSales,
@@ -91,6 +92,7 @@ class AppSettings {
     this.pineLabPayment = false,
     this.skipCheckoutOnConfirmAndPrint = false,
     this.compulsoryDayCloseRegister = false,
+    this.productVariantEnabled = false,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -195,6 +197,10 @@ class AppSettings {
       compulsoryDayCloseRegister: _readSettingStatus(
         settingsMap,
         'COMPULSORY_DAY_CLOSE_REGISTER',
+      productVariantEnabled: _readSettingStatus(
+        settingsMap,
+        'PRODUCT_VARIANT_ENABLED',
+        defaultValue: false,
       ),
     );
   }
@@ -405,6 +411,10 @@ class AppSettings {
           "code": "COMPULSORY_DAY_CLOSE_REGISTER",
           "value": "",
           "status": compulsoryDayCloseRegister.toString(),
+          "name": "Product Variant Enabled",
+          "code": "PRODUCT_VARIANT_ENABLED",
+          "value": "",
+          "status": productVariantEnabled.toString(),
         },
       ],
     };
