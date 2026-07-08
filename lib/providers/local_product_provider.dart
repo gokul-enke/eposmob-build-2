@@ -135,6 +135,15 @@ class LocalCartItem {
         variantAttributes: variantAttributes,
       );
 
+  String get variantLabel {
+    final attrs = variantAttributes;
+    if (attrs == null || attrs.isEmpty) return '';
+    return attrs.values
+        .map((value) => value?.toString() ?? '')
+        .where((value) => value.trim().isNotEmpty)
+        .join(' | ');
+  }
+
   num get displayQuantity => toDisplayQuantity(quantity);
 
   double? get displayPrice => toDisplayAmount(price);
@@ -533,12 +542,49 @@ class LocalProductProvider extends ChangeNotifier {
     return double.tryParse(value.trim());
   }
 
+  ProductVariant? _findVariantById(GetProduct product, int? variantId) {
+    if (variantId == null || !product.hasVariants) {
+      return null;
+    }
+    for (final variant in product.activeVariants) {
+      if (variant.id == variantId) {
+        return variant;
+      }
+    }
+    return null;
+  }
+
+  double? _resolveVariantPrice(GetProduct product, int? variantId) {
+    final variant = _findVariantById(product, variantId);
+    if (variant == null) {
+      return null;
+    }
+    final productPrice = ProductVariantSelection.productBasePrice(product);
+    return variant.effectivePrice(productPrice);
+  }
+
+  double? _resolveVariantMrp(GetProduct product, int? variantId) {
+    final variant = _findVariantById(product, variantId);
+    if (variant == null) {
+      return null;
+    }
+    final effectivePrice = _resolveVariantPrice(product, variantId) ??
+        ProductVariantSelection.productBasePrice(product);
+    return ProductVariantSelection.resolveVariantMrp(
+      variant: variant,
+      product: product,
+      effectivePrice: effectivePrice,
+    );
+  }
+
   double _resolveMrp({
     required GetProduct product,
     Stock? selectedStock,
     double? fallbackMrp,
+    int? variantId,
   }) {
     return _parseAmount(selectedStock?.mrp) ??
+        _resolveVariantMrp(product, variantId) ??
         _parseAmount(product.mrp?.toString()) ??
         fallbackMrp ??
         0.0;
@@ -629,6 +675,7 @@ class LocalProductProvider extends ChangeNotifier {
     Stock? selectedStock,
     double? fallbackPrice,
     int? saleUnitId,
+    int? variantId,
   }) {
     final saleUnitBasePrice = _resolveSaleUnitBasePrice(
       product: product,
@@ -637,6 +684,11 @@ class LocalProductProvider extends ChangeNotifier {
     );
     if (saleUnitBasePrice != null) {
       return saleUnitBasePrice;
+    }
+
+    final variantPrice = _resolveVariantPrice(product, variantId);
+    if (variantPrice != null) {
+      return variantPrice;
     }
 
     final wholesalePrice = _resolveWholesalePrice(selectedStock);
@@ -676,6 +728,7 @@ class LocalProductProvider extends ChangeNotifier {
         selectedStock: effectiveStock,
         fallbackPrice: item.price,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
     }
 
@@ -683,6 +736,7 @@ class LocalProductProvider extends ChangeNotifier {
       product: item.product,
       selectedStock: effectiveStock,
       fallbackMrp: item.mrp,
+      variantId: item.variantId,
     );
 
     final effectiveTaxRate = _resolveCartTaxRate(
@@ -1286,13 +1340,12 @@ class LocalProductProvider extends ChangeNotifier {
           continue;
         }
 
-        final payloadQuantity =
-            item.canUseSaleUnitPayloadFor(reservation.quantity)
-                ? item.toDisplayQuantity(reservation.quantity)
-                // Base-unit line: guard against fractional reservations on
-                // non-decimal units (e.g. legacy persisted 1.3 splits).
-                : normalizeQuantityForUnit(
-                    reservation.quantity, item.product.unit);
+        final payloadQuantity = item
+                .canUseSaleUnitPayloadFor(reservation.quantity)
+            ? item.toDisplayQuantity(reservation.quantity)
+            // Base-unit line: guard against fractional reservations on
+            // non-decimal units (e.g. legacy persisted 1.3 splits).
+            : normalizeQuantityForUnit(reservation.quantity, item.product.unit);
         final payloadPrice = item.canUseSaleUnitPayloadFor(reservation.quantity)
             ? item.toDisplayAmount(item.price)
             : item.price;
@@ -2010,8 +2063,7 @@ class LocalProductProvider extends ChangeNotifier {
         final beforeCount = _products.length;
         _products = _products
             .where((p) =>
-                p.productId == null ||
-                !deletedProductIds.contains(p.productId))
+                p.productId == null || !deletedProductIds.contains(p.productId))
             .toList();
         debugPrint(
             "🗑️ [Sync] Removed ${beforeCount - _products.length} product(s) via deleted_product_ids (${deletedProductIds.length} id(s) reported)");
@@ -2527,6 +2579,10 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     final cartQuantity = quantity ?? 1;
+    if (cartQuantity <= 0) {
+      debugPrint("❌ Cannot add to cart: quantity must be greater than zero");
+      return;
+    }
     final normalizedStockGroupIds = _normalizeStockGroupIds(stockGroupIds);
 
     int index = _findCartItemIndex(
@@ -2620,11 +2676,13 @@ class LocalProductProvider extends ChangeNotifier {
             quantity: cartQuantity,
             selectedStock: selectedStock,
             saleUnitId: saleUnitId,
+            variantId: variantId,
           );
       final double productMrp = mrp ??
           _resolveMrp(
             product: product,
             selectedStock: selectedStock,
+            variantId: variantId,
           );
 
       final double taxRate = _resolveCartTaxRate(
@@ -2679,12 +2737,14 @@ class LocalProductProvider extends ChangeNotifier {
     int? newSaleUnitId,
     String? newSaleUnitName,
     double? newSaleUnitConversionRate,
+    int? variantId,
   }) {
     final currentIndex = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: currentSaleUnitId,
+      variantId: variantId,
     );
 
     if (currentIndex == -1) {
@@ -2748,6 +2808,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: selectedStock,
       stockGroupIds: sourceItem.stockGroupIds,
       saleUnitId: targetSaleUnitId,
+      variantId: sourceItem.variantId,
     );
 
     if (targetIndex != -1 && targetIndex != currentIndex) {
@@ -2801,12 +2862,13 @@ class LocalProductProvider extends ChangeNotifier {
   /// Updates the comment on a specific cart item by product ID and stock.
   void updateCartItemComment(
       int productId, Stock? selectedStock, String? comment,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
     if (index != -1) {
       _cartItems[index].comment = comment;
@@ -2816,7 +2878,7 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void removeFromCart(int productId, Stock? selectedStock,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     debugPrint("🗑️ REMOVE FROM CART STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -2827,6 +2889,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -2885,7 +2948,9 @@ class LocalProductProvider extends ChangeNotifier {
     if (maxReduction != null && maxReduction > 0) {
       final priceFloor = sellingPrice - maxReduction;
       // Most restrictive floor wins.
-      floor = (floor == null) ? priceFloor : (priceFloor > floor ? priceFloor : floor);
+      floor = (floor == null)
+          ? priceFloor
+          : (priceFloor > floor ? priceFloor : floor);
     }
 
     if (floor == null) {
@@ -2896,12 +2961,13 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemPrice(int productId, Stock? selectedStock, double newPrice,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -2917,12 +2983,13 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemMrp(int productId, Stock? selectedStock, double newMrp,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -2933,12 +3000,13 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemTax(int productId, Stock? selectedStock, double newTaxRate,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -2977,6 +3045,7 @@ class LocalProductProvider extends ChangeNotifier {
                 selectedStock: item.selectedStock,
                 fallbackPrice: newPrice,
                 saleUnitId: item.saleUnitId,
+                variantId: item.variantId,
               );
         if (updatedProduct != null) {
           _cartItems[i] = LocalCartItem(
@@ -3124,6 +3193,7 @@ class LocalProductProvider extends ChangeNotifier {
                 selectedStock: resolvedStock,
                 fallbackPrice: newPrice,
                 saleUnitId: item.saleUnitId,
+                variantId: item.variantId,
               );
         _cartItems[i] = LocalCartItem(
           product: updatedProduct ?? item.product,
@@ -3171,6 +3241,7 @@ class LocalProductProvider extends ChangeNotifier {
                   selectedStock: resolvedStock,
                   fallbackPrice: newPrice,
                   saleUnitId: orderItem.saleUnitId,
+                  variantId: orderItem.variantId,
                 );
           order.items[i] = LocalCartItem(
             product: updatedProduct ?? orderItem.product,
@@ -3227,7 +3298,7 @@ class LocalProductProvider extends ChangeNotifier {
   /// If the quantity becomes less than 1, the product is removed from the cart.
   /// Also handles stock restoration when stock management is enabled.
   void decrementCartItem(int productId, Stock? selectedStock,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     debugPrint("➖ DECREMENT CART ITEM STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -3238,6 +3309,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -4175,15 +4247,12 @@ class LocalProductProvider extends ChangeNotifier {
     if (variantId == null) {
       return stocks;
     }
-    final scoped = stocks
-        .where((stock) => stock.productVariantId == variantId)
-        .toList();
+    final scoped =
+        stocks.where((stock) => stock.productVariantId == variantId).toList();
     if (scoped.isNotEmpty) {
       return scoped;
     }
-    return stocks
-        .where((stock) => stock.productVariantId == null)
-        .toList();
+    return stocks.where((stock) => stock.productVariantId == null).toList();
   }
 
   /// Gets a list of stock options for a product with qty > 0.

@@ -6,11 +6,57 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 
-/// Mobile bottom sheet for choosing a product variant before add-to-cart.
+/// Desktop/wide-window breakpoint: below this width the picker behaves like a
+/// mobile bottom sheet (edge-to-edge, drag handle); at or above it, the same
+/// content is shown as a centered, fully-rounded dialog — matching
+/// [StockSelectionModal]'s presentation on desktop billing screens.
+const double _kDesktopVariantPickerBreakpoint = 700;
+
+/// Shows a variant picker before add-to-cart: a bottom sheet on narrow/mobile
+/// screens, a centered dialog on desktop/wide screens.
 Future<ProductVariant?> showMobileVariantPickerSheet({
   required BuildContext context,
   required GetProduct product,
 }) {
+  final isDesktop =
+      MediaQuery.sizeOf(context).width >= _kDesktopVariantPickerBreakpoint;
+
+  if (isDesktop) {
+    return showDialog<ProductVariant>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: BoxConstraints(
+            maxWidth: 480,
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                spreadRadius: 5,
+                blurRadius: 7,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: _MobileVariantPickerSheet(
+            product: product,
+            expandToFill: false,
+          ),
+        ),
+      ),
+    );
+  }
+
   return showModalBottomSheet<ProductVariant>(
     context: context,
     isScrollControlled: true,
@@ -24,9 +70,17 @@ Future<ProductVariant?> showMobileVariantPickerSheet({
 }
 
 class _MobileVariantPickerSheet extends StatefulWidget {
-  const _MobileVariantPickerSheet({required this.product});
+  const _MobileVariantPickerSheet({
+    required this.product,
+    this.expandToFill = true,
+  });
 
   final GetProduct product;
+
+  /// True for the mobile bottom sheet (fills the draggable sheet extent).
+  /// False for the desktop dialog, where the content should size itself to
+  /// its constraints instead of expanding to fill the screen.
+  final bool expandToFill;
 
   @override
   State<_MobileVariantPickerSheet> createState() =>
@@ -47,10 +101,11 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final variants = widget.product.activeVariants;
-    final productPrice = ProductVariantSelection.productBasePrice(widget.product);
-    final currency =
-        context.watch<AppSettingsProvider>().appSettings?.currency ?? '';
+    if (!widget.expandToFill) {
+      // Desktop dialog: size to content instead of a draggable fraction of
+      // the screen.
+      return _buildContent(context, null);
+    }
 
     return Padding(
       padding: EdgeInsets.only(
@@ -61,11 +116,23 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
         initialChildSize: 0.55,
         minChildSize: 0.35,
         maxChildSize: 0.9,
-        builder: (context, scrollController) {
-          return ColoredBox(
-            color: Colors.white,
-            child: Column(
-            children: [
+        builder: (context, scrollController) =>
+            _buildContent(context, scrollController),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, ScrollController? scrollController) {
+    final variants = widget.product.activeVariants;
+    final productPrice = ProductVariantSelection.productBasePrice(widget.product);
+    final currency =
+        context.watch<AppSettingsProvider>().appSettings?.currency ?? '';
+
+    return ColoredBox(
+      color: Colors.white,
+      child: Column(
+        mainAxisSize: widget.expandToFill ? MainAxisSize.max : MainAxisSize.min,
+        children: [
               MobileSheetHeader(
                 title: widget.product.productName ?? 'Select variant',
                 subtitle: 'Choose a variant to add to cart',
@@ -75,9 +142,11 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
                 ),
                 onClose: () => Navigator.pop(context),
               ),
-              Expanded(
+              Flexible(
+                fit: widget.expandToFill ? FlexFit.tight : FlexFit.loose,
                 child: ListView.separated(
                   controller: scrollController,
+                  shrinkWrap: !widget.expandToFill,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   itemCount: variants.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -227,9 +296,6 @@ class _MobileVariantPickerSheetState extends State<_MobileVariantPickerSheet> {
               ),
             ],
           ),
-          );
-        },
-      ),
     );
   }
 }

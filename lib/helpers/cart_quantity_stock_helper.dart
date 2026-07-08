@@ -65,6 +65,7 @@ class CartQuantityStockHelper {
         newQuantity,
         stockGroupIds: cartItem.stockGroupIds,
         saleUnitId: cartItem.saleUnitId,
+        variantId: cartItem.variantId,
       );
 
       return CartQuantityChangeResult(
@@ -172,6 +173,7 @@ class CartQuantityStockHelper {
               newQuantity,
               stockGroupIds: cartItem.stockGroupIds,
               saleUnitId: cartItem.saleUnitId,
+              variantId: cartItem.variantId,
             );
             appliedQuantity = newQuantity;
             remainingIncrease = 0;

@@ -20,6 +20,7 @@ void main() {
       expect(item.productVariantId, 41);
       expect(item.variantAttributes, {'COLOR': 'Red', 'SIZE': 'L'});
       expect(item.formattedVariantAttributes, 'Red | L');
+      expect(item.displayName, 'Cotton T-Shirt (Red | L)');
     });
 
     test('parses variant_attributes when arriving as a JSON string', () {
@@ -38,6 +39,7 @@ void main() {
       expect(item.productVariantId, 41);
       expect(item.variantAttributes, {'COLOR': 'Red', 'SIZE': 'L'});
       expect(item.formattedVariantAttributes, 'Red | L');
+      expect(item.displayName, 'Cotton T-Shirt (Red | L)');
     });
 
     test('handles missing / null variant fields (plain product)', () {
@@ -54,6 +56,7 @@ void main() {
       expect(item.productVariantId, isNull);
       expect(item.variantAttributes, isNull);
       expect(item.formattedVariantAttributes, '');
+      expect(item.displayName, 'Plain Product');
     });
 
     test('treats empty variant_attributes map/string as no attributes', () {

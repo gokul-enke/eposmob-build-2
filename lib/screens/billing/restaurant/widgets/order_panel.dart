@@ -2692,6 +2692,7 @@ class OrderPanelState extends State<OrderPanel> {
           comment,
           stockGroupIds: cartItem.stockGroupIds,
           saleUnitId: cartItem.saleUnitId,
+          variantId: cartItem.variantId,
         );
       } else {
         // For saved order items, persist comment via addToCartAPI with same payload + comment
@@ -5202,97 +5203,40 @@ class OrderPanelState extends State<OrderPanel> {
             // New Compact Summary
             _buildCompactOneLineSummary(),
             if (!widget.hideFooterActionButtons) ...[
-            const SizedBox(height: 12),
-            // Row: Print KOT and Confirm buttons
-            Row(
-              children: [
-                // 1. Print KOT Button (Left Side)
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap:
-                          _isLoadingPrintKot ? null : _printNewKOTWithLoading,
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: _isLoadingPrintKot
-                              ? const Color(0xFFFFF7ED)
-                              : Colors.white,
-                          border: Border.all(
-                            color: const Color(0xFFD97706),
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: _isLoadingPrintKot
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 20,
-                                  height: widget.isCompact ? 16 : 20,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFFD97706),
-                                    ),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      useCompactActionLabels
-                                          ? 'KOT'
-                                          : 'Print KOT',
-                                      style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
-                                          const Color(0xFFD97706)),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                if (showPreBillButton) ...[
+              const SizedBox(height: 12),
+              // Row: Print KOT and Confirm buttons
+              Row(
+                children: [
+                  // 1. Print KOT Button (Left Side)
                   Expanded(
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: cartItems.isEmpty || _isLoadingPreBill
-                            ? null
-                            : _printSelectedOngoingOrderBillWithLoading,
+                        onTap:
+                            _isLoadingPrintKot ? null : _printNewKOTWithLoading,
                         borderRadius: BorderRadius.circular(12),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           height: widget.isCompact ? 44 : 48,
                           decoration: BoxDecoration(
-                            color: _isLoadingPreBill
-                                ? const Color(0xFFF5F1FF)
+                            color: _isLoadingPrintKot
+                                ? const Color(0xFFFFF7ED)
                                 : Colors.white,
                             border: Border.all(
-                              color: const Color(0xFF7C3AED),
+                              color: const Color(0xFFD97706),
                               width: 1.5,
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Center(
-                            child: _isLoadingPreBill
+                            child: _isLoadingPrintKot
                                 ? SizedBox(
                                     width: widget.isCompact ? 16 : 20,
                                     height: widget.isCompact ? 16 : 20,
                                     child: const CircularProgressIndicator(
                                       strokeWidth: 2,
                                       valueColor: AlwaysStoppedAnimation<Color>(
-                                        Color(0xFF7C3AED),
+                                        Color(0xFFD97706),
                                       ),
                                     ),
                                   )
@@ -5301,16 +5245,15 @@ class OrderPanelState extends State<OrderPanel> {
                                     children: [
                                       Text(
                                         useCompactActionLabels
-                                            ? 'BILL'
-                                            : 'Pre-Bill',
+                                            ? 'KOT'
+                                            : 'Print KOT',
                                         style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
-                                          const Color(0xFF7C3AED),
-                                        ),
+                                            FontWeightManager.semiBold,
+                                            widget.isCompact
+                                                ? FontSize.s13
+                                                : FontSize.s14,
+                                            0.21,
+                                            const Color(0xFFD97706)),
                                       ),
                                     ],
                                   ),
@@ -5320,114 +5263,174 @@ class OrderPanelState extends State<OrderPanel> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                ],
-                // 2. Confirm or Mark Served Button (Right Side)
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: cartItems.isEmpty
-                          ? null
-                          : allItemsServed
-                              ? (_isLoadingConfirm
-                                  ? null
-                                  : () => _showCheckoutModal())
-                              : (_isMarkingServed
-                                  ? null
-                                  : () => _markAllOrderItemsServed()),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: cartItems.isEmpty
-                              ? const Color(0xFF94A3B8)
-                              : allItemsServed
-                                  ? (_isLoadingConfirm
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(0xFF2563EB))
-                                  : (_isMarkingServed
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(
-                                          0xFF059669)), // Green for Mark Served
+                  if (showPreBillButton) ...[
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: cartItems.isEmpty || _isLoadingPreBill
+                              ? null
+                              : _printSelectedOngoingOrderBillWithLoading,
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: cartItems.isNotEmpty &&
-                                  !_isLoadingConfirm &&
-                                  !_isMarkingServed
-                              ? [
-                                  BoxShadow(
-                                    color: (allItemsServed
-                                            ? const Color(0xFF2563EB)
-                                            : const Color(0xFF059669))
-                                        .withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : [],
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            height: widget.isCompact ? 44 : 48,
+                            decoration: BoxDecoration(
+                              color: _isLoadingPreBill
+                                  ? const Color(0xFFF5F1FF)
+                                  : Colors.white,
+                              border: Border.all(
+                                color: const Color(0xFF7C3AED),
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: _isLoadingPreBill
+                                  ? SizedBox(
+                                      width: widget.isCompact ? 16 : 20,
+                                      height: widget.isCompact ? 16 : 20,
+                                      child: const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Color(0xFF7C3AED),
+                                        ),
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          useCompactActionLabels
+                                              ? 'BILL'
+                                              : 'Pre-Bill',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            widget.isCompact
+                                                ? FontSize.s13
+                                                : FontSize.s14,
+                                            0.21,
+                                            const Color(0xFF7C3AED),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
                         ),
-                        child: Center(
-                          child: (_isLoadingConfirm || _isMarkingServed)
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 20,
-                                  height: widget.isCompact ? 16 : 20,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      allItemsServed
-                                          ? 'Confirm'
-                                          : (useCompactActionLabels
-                                              ? 'Serve'
-                                              : 'Mark Served'),
-                                      style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  // 2. Confirm or Mark Served Button (Right Side)
+                  Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: cartItems.isEmpty
+                            ? null
+                            : allItemsServed
+                                ? (_isLoadingConfirm
+                                    ? null
+                                    : () => _showCheckoutModal())
+                                : (_isMarkingServed
+                                    ? null
+                                    : () => _markAllOrderItemsServed()),
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          height: widget.isCompact ? 44 : 48,
+                          decoration: BoxDecoration(
+                            color: cartItems.isEmpty
+                                ? const Color(0xFF94A3B8)
+                                : allItemsServed
+                                    ? (_isLoadingConfirm
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(0xFF2563EB))
+                                    : (_isMarkingServed
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(
+                                            0xFF059669)), // Green for Mark Served
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: cartItems.isNotEmpty &&
+                                    !_isLoadingConfirm &&
+                                    !_isMarkingServed
+                                ? [
+                                    BoxShadow(
+                                      color: (allItemsServed
+                                              ? const Color(0xFF2563EB)
+                                              : const Color(0xFF059669))
+                                          .withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Center(
+                            child: (_isLoadingConfirm || _isMarkingServed)
+                                ? SizedBox(
+                                    width: widget.isCompact ? 16 : 20,
+                                    height: widget.isCompact ? 16 : 20,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
                                           Colors.white),
                                     ),
-                                  ],
-                                ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        allItemsServed
+                                            ? 'Confirm'
+                                            : (useCompactActionLabels
+                                                ? 'Serve'
+                                                : 'Mark Served'),
+                                        style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            widget.isCompact
+                                                ? FontSize.s13
+                                                : FontSize.s14,
+                                            0.21,
+                                            Colors.white),
+                                      ),
+                                    ],
+                                  ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _showCommentDialog,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: widget.isCompact ? 44 : 48,
-                      height: widget.isCompact ? 44 : 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 1.2,
+                  const SizedBox(width: 12),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _showCommentDialog,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: widget.isCompact ? 44 : 48,
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1.2,
+                          ),
                         ),
-                      ),
-                      child: Icon(
-                        Icons.chat_bubble_outline,
-                        size: widget.isCompact ? 18 : 20,
-                        color: const Color(0xFF64748B),
+                        child: Icon(
+                          Icons.chat_bubble_outline,
+                          size: widget.isCompact ? 18 : 20,
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             ],
           ],
         ),
@@ -6982,7 +6985,9 @@ class OrderPanelState extends State<OrderPanel> {
   }) async {
     final printItems = cartItems.map((item) {
       return {
-        'productName': item.product.productName ?? '',
+        'productName': item.displayName,
+        'product_variant_id': item.variantId,
+        'variant_attributes': item.variantAttributes,
         'quantity': item.quantity.toString(),
         'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
         'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
@@ -7127,7 +7132,10 @@ class OrderPanelState extends State<OrderPanel> {
       totalTax += itemTax;
 
       cartItems.add({
-        'productName': item.product.productName ?? 'Unknown',
+        'productName': item.displayName,
+        'product_name': item.displayName,
+        'product_variant_id': item.variantId,
+        'variant_attributes': item.variantAttributes,
         'mrp': itemMrp.toString(),
         'quantity': item.quantity.toString(),
         'product_unit': item.product.unit ?? '',
@@ -7190,7 +7198,9 @@ class OrderPanelState extends State<OrderPanel> {
   Future<void> _printOfflineSavedOrderKot(SavedOrder savedOrder) async {
     final printItems = savedOrder.items.map((item) {
       return {
-        'productName': item.product.productName ?? '',
+        'productName': item.displayName,
+        'product_variant_id': item.variantId,
+        'variant_attributes': item.variantAttributes,
         'quantity': item.quantity.toString(),
         'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
         'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),

@@ -1232,6 +1232,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         item.selectedStock,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
       setState(() {
         _compactCartFocusedIndex = cartItems.length <= 1
@@ -1307,6 +1308,8 @@ class BillingPageState extends State<BillingPageRestaurant>
         saleUnitId: item.saleUnitId,
         saleUnitName: item.saleUnitName,
         saleUnitConversionRate: item.saleUnitConversionRate,
+        variantId: item.variantId,
+        variantAttributes: item.variantAttributes,
       );
       return KeyEventResult.handled;
     }
@@ -1317,6 +1320,7 @@ class BillingPageState extends State<BillingPageRestaurant>
         item.selectedStock,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
       return KeyEventResult.handled;
     }
@@ -3149,18 +3153,45 @@ class BillingPageState extends State<BillingPageRestaurant>
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                       vertical: 2),
-                                              child: Text(
-                                                item.product.productName ??
-                                                    'general.unknown'.tr,
-                                                style: buildCustomStyle(
-                                                  FontWeightManager.regular,
-                                                  fontProvider
-                                                      .billingTableItemSize,
-                                                  0.21,
-                                                  ColorManager.textColor,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    item.product.productName ??
+                                                        'general.unknown'.tr,
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.regular,
+                                                      fontProvider
+                                                          .billingTableItemSize,
+                                                      0.21,
+                                                      ColorManager.textColor,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  if (item
+                                                      .variantLabel.isNotEmpty)
+                                                    Text(
+                                                      item.variantLabel,
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager
+                                                            .medium,
+                                                        (fontProvider
+                                                                    .billingTableItemSize -
+                                                                2)
+                                                            .clamp(9.0, 12.0),
+                                                        0.21,
+                                                        ColorManager
+                                                            .kPrimaryColor,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                ],
                                               ),
                                             ),
                                           ),
@@ -3375,6 +3406,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                             item.selectedStock,
                                             stockGroupIds: item.stockGroupIds,
                                             saleUnitId: item.saleUnitId,
+                                            variantId: item.variantId,
                                           );
                                         },
                                       ),
@@ -4406,7 +4438,9 @@ class BillingPageState extends State<BillingPageRestaurant>
     List<Map<String, dynamic>> printItems = [];
     for (var item in cartItems) {
       printItems.add({
-        'productName': item.product.productName ?? '',
+        'productName': item.displayName,
+        'product_variant_id': item.variantId,
+        'variant_attributes': item.variantAttributes,
         'quantity': item.quantity.toString(),
         'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
         'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
@@ -7034,7 +7068,10 @@ class BillingPageState extends State<BillingPageRestaurant>
         netTotal += itemTotalPrice;
 
         cartItems.add({
-          'productName': item.product.productName ?? 'Unknown',
+          'productName': item.displayName,
+          'product_name': item.displayName,
+          'product_variant_id': item.variantId,
+          'variant_attributes': item.variantAttributes,
           'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
           'product_unit': item.product.unit ?? '',
@@ -7837,6 +7874,8 @@ class BillingPageState extends State<BillingPageRestaurant>
               saleUnitId: item.saleUnitId,
               saleUnitName: item.saleUnitName,
               saleUnitConversionRate: item.saleUnitConversionRate,
+              variantId: item.variantId,
+              variantAttributes: item.variantAttributes,
             );
           } else if (diff < 0) {
             for (int i = 0; i < diff.abs(); i++) {
@@ -7845,6 +7884,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                 item.selectedStock,
                 stockGroupIds: item.stockGroupIds,
                 saleUnitId: item.saleUnitId,
+                variantId: item.variantId,
               );
             }
           }
@@ -8159,6 +8199,7 @@ class BillingPageState extends State<BillingPageRestaurant>
                                             item.product.productId!,
                                             item.selectedStock,
                                             saleUnitId: item.saleUnitId,
+                                            variantId: item.variantId,
                                           );
                                         },
                                         child: Container(
@@ -8229,6 +8270,8 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                                   .stockGroupIds,
                                                               saleUnitId: item
                                                                   .saleUnitId,
+                                                              variantId: item
+                                                                  .variantId,
                                                             );
                                                           },
                                                           child: const Icon(
