@@ -42,6 +42,9 @@ import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
 /// - Streamlined totals section with clear hierarchy
 /// - Minimal, elegant footer
 class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
+  static final RegExp _arabicRegex = RegExp(r'[؀-ۿ]');
+  bool _hasArabic(String? s) => s != null && _arabicRegex.hasMatch(s);
+
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Standard theme spacing constants
@@ -791,58 +794,49 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     final bool isDualLanguage =
         (params.billDocumentConfig.language ?? '').toLowerCase() == 'ar';
 
+    // Cart item table header row: when the document language is Arabic,
+    // the client wants Arabic-only titles here (no stacked English line) —
+    // unlike other sections, this row has no English text at all in that case.
     final String particularsLabel = isDualLanguage
-        ? _getBilingualLabel(
-            displayConfig,
-            'showParticulars',
-            resolvedLabels?.particulars,
-            resolvedLabels?.particularsDefault,
-            'Item',
-            'Item')
+        ? _getLabel(displayConfig, 'showParticulars',
+            resolvedLabels?.particulars, 'الصنف')
         : _getLabel(displayConfig, 'showParticulars',
             resolvedLabels?.particulars, isEnglish ? 'Item' : 'Item');
     final String mrpLabel = isDualLanguage
-        ? _getBilingualLabel(
-            displayConfig, 'showMRP', resolvedLabels?.mrp, null, 'MRP', 'MRP')
+        ? _getLabel(displayConfig, 'showMRP', resolvedLabels?.mrp, 'MRP')
         : _getLabel(displayConfig, 'showMRP', resolvedLabels?.mrp, 'MRP');
     final String qtyLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showQty', resolvedLabels?.qty,
-            resolvedLabels?.qtyDefault, 'Qty', 'Qty')
+        ? _getLabel(
+            displayConfig, 'showQty', resolvedLabels?.qty, 'الكمية')
         : _getLabel(displayConfig, 'showQty', resolvedLabels?.qty,
             isEnglish ? 'Qty' : 'Qty');
     final String rateLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showRate', resolvedLabels?.rate,
-            resolvedLabels?.rateDefault, 'Rate', 'Rate')
+        ? _getLabel(
+            displayConfig, 'showRate', resolvedLabels?.rate, 'السعر')
         : _getLabel(displayConfig, 'showRate', resolvedLabels?.rate,
             isEnglish ? 'Rate' : 'Rate');
     final String rateExcTaxLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showRateExcTax', null, null,
-            'Rate Ex Tax', 'Rate Ex Tax')
+        ? _getLabel(displayConfig, 'showRateExcTax', null, 'السعر بدون ضريبة')
         : _getLabel(displayConfig, 'showRateExcTax', null,
             isEnglish ? 'Rate Ex Tax' : 'Rate Ex Tax');
     final String unitLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showUnit',
-            resolvedLabels?.unitName, null, 'Unit', 'Unit')
+        ? _getLabel(
+            displayConfig, 'showUnit', resolvedLabels?.unitName, 'الوحدة')
         : _getLabel(displayConfig, 'showUnit', resolvedLabels?.unitName,
             isEnglish ? 'Unit' : 'Unit');
     final String totalLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showTotal', resolvedLabels?.total,
-            resolvedLabels?.totalDefault, 'Total', 'Total')
+        ? _getLabel(
+            displayConfig, 'showTotal', resolvedLabels?.total, 'الإجمالي')
         : _getLabel(displayConfig, 'showTotal', resolvedLabels?.total,
             isEnglish ? 'Total' : 'Total');
     final String taxHeaderLabel = isDualLanguage
-        ? _getBilingualLabel(displayConfig, 'showTaxHeader',
-            resolvedLabels?.tax, resolvedLabels?.taxDefault, 'Tax', 'Tax')
+        ? _getLabel(
+            displayConfig, 'showTaxHeader', resolvedLabels?.tax, 'الضريبة')
         : _getLabel(displayConfig, 'showTaxHeader', resolvedLabels?.tax,
             isEnglish ? 'Tax' : 'Tax');
     final String slLabel = isDualLanguage
-        ? _getBilingualLabel(
-            displayConfig,
-            'showSLNumber',
-            resolvedLabels?.slNumber,
-            resolvedLabels?.slNumberDefault,
-            '#',
-            'SL#')
+        ? _getLabel(
+            displayConfig, 'showSLNumber', resolvedLabels?.slNumber, '#')
         : _getLabel(displayConfig, 'showSLNumber', resolvedLabels?.slNumber,
             isEnglish ? 'SL#' : '#');
 
@@ -1160,14 +1154,19 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
               textDirection: TextDirection.ltr),
         ]));
       } else {
+        // Fallback to single name. Some clients only populate the English
+        // name field but store Arabic text in it, so detect the script
+        // instead of assuming the field content is English.
+        final bool nameIsArabic = _hasArabic(productName);
         final itemText = displayConfig?['showSLNumber']?.visible == true
             ? '$slNumber. $productName'
             : productName;
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(itemText,
               weight: 1.0,
-              align: TextAlign.left,
-              textDirection: TextDirection.ltr),
+              align: nameIsArabic ? TextAlign.right : TextAlign.left,
+              textDirection:
+                  nameIsArabic ? TextDirection.rtl : TextDirection.ltr),
         ]));
       }
     }
@@ -1968,7 +1967,10 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     String defaultArabic,
     String defaultEnglish,
   ) {
-    // 1. English part
+    // 1. English part. If the admin left the English label config empty for
+    // this column, treat it as "no English wanted" (Arabic-only header) rather
+    // than silently falling back to the hardcoded English default — some
+    // clients only want Arabic titles on the cart item table header row.
     String english = '';
     final configEn = displayConfig?[key]?.defaultValue;
     if (configEn != null && configEn.isNotEmpty) {
@@ -1976,8 +1978,6 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
     } else if (resolvedLabelEnglish != null &&
         resolvedLabelEnglish.isNotEmpty) {
       english = resolvedLabelEnglish;
-    } else {
-      english = defaultEnglish;
     }
 
     // 2. Arabic part with robust fallback
