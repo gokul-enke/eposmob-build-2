@@ -3143,7 +3143,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   codMethodId: codMethodId,
                                   extraMethodAmounts: extraMethodAmounts,
                                   extraMethodValues: extraMethodValues);
-                              _nextStep();
+                              if (!_isSelectionOnly) {
+                                _nextStep();
+                              }
                             },
                           ),
                         ),
@@ -3151,15 +3153,24 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         // Bottom: Summary
                         Expanded(
                           flex: 2,
-                          child: Column(
-                            children: [
-                              Expanded(child: _buildCompactSummary()),
-                              _buildFooter(
-                                onPrint: _handlePrint,
-                                onConfirm: _handleConfirm,
-                              ),
-                            ],
-                          ),
+                          child: _isSelectionOnly
+                              ? _buildSelectionOnlySidePanel(
+                                  icon: Icons.payments_rounded,
+                                  title: 'Selected Payment',
+                                  value: _selectionOnlyPaymentLabel(),
+                                  supportingText:
+                                      _selectionOnlyPaymentSupportingText(),
+                                  canDone: _hasAnyPaymentMethodSelected(),
+                                )
+                              : Column(
+                                  children: [
+                                    Expanded(child: _buildCompactSummary()),
+                                    _buildFooter(
+                                      onPrint: _handlePrint,
+                                      onConfirm: _handleConfirm,
+                                    ),
+                                  ],
+                                ),
                         ),
                       ],
                     );
@@ -3236,7 +3247,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 codMethodId: codMethodId,
                                 extraMethodAmounts: extraMethodAmounts,
                                 extraMethodValues: extraMethodValues);
-                            _nextStep();
+                            if (!_isSelectionOnly) {
+                              _nextStep();
+                            }
                           },
                         ),
                       ),
@@ -3246,15 +3259,24 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       // Right: Summary
                       Expanded(
                         flex: 2,
-                        child: Column(
-                          children: [
-                            Expanded(child: _buildCompactSummary()),
-                            _buildFooter(
-                              onPrint: _handlePrint,
-                              onConfirm: _handleConfirm,
-                            ),
-                          ],
-                        ),
+                        child: _isSelectionOnly
+                            ? _buildSelectionOnlySidePanel(
+                                icon: Icons.payments_rounded,
+                                title: 'Selected Payment',
+                                value: _selectionOnlyPaymentLabel(),
+                                supportingText:
+                                    _selectionOnlyPaymentSupportingText(),
+                                canDone: _hasAnyPaymentMethodSelected(),
+                              )
+                            : Column(
+                                children: [
+                                  Expanded(child: _buildCompactSummary()),
+                                  _buildFooter(
+                                    onPrint: _handlePrint,
+                                    onConfirm: _handleConfirm,
+                                  ),
+                                ],
+                              ),
                       ),
                     ],
                   );
@@ -3265,6 +3287,34 @@ class _CheckoutModalState extends State<CheckoutModal> {
         ],
       ),
     );
+  }
+
+  bool _hasAnyPaymentMethodSelected() {
+    return _lIsCashSelected ||
+        _lIsCardSelected ||
+        _lIsUpiSelected ||
+        _lIsCodSelected ||
+        _lIsDebitSelected ||
+        _sumLocalExtraPaidAmounts() > 0;
+  }
+
+  String _selectionOnlyPaymentLabel() {
+    final labels = <String>[];
+    if (_lIsCashSelected) labels.add('CASH');
+    if (_lIsCardSelected) labels.add('CARD');
+    if (_lIsUpiSelected) labels.add('UPI');
+    if (_lIsCodSelected) labels.add('COD');
+    if (_lIsDebitSelected) labels.add('CREDIT');
+    if (labels.isEmpty) return 'Not selected';
+    return labels.join(', ');
+  }
+
+  String? _selectionOnlyPaymentSupportingText() {
+    final status = _paymentStatusLabel();
+    if (status == 'Not Configured' && !_hasAnyPaymentMethodSelected()) {
+      return null;
+    }
+    return status;
   }
 
   void _handleConfirm() async {
