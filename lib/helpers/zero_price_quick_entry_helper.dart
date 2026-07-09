@@ -5,6 +5,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/widgets/zero_price_quick_entry_modal.dart';
 import 'package:provider/provider.dart';
@@ -90,6 +91,21 @@ class ZeroPriceQuickEntryHelper {
         minimumPrice: minPrice,
       ),
     );
+
+    // Dialog pop restores focus to the previous field (often product search),
+    // which would auto-open the alphanumeric virtual keyboard in the
+    // background. Clear that before returning.
+    if (context.mounted) {
+      final keyboardProvider =
+          Provider.of<KeyboardProvider>(context, listen: false);
+      keyboardProvider.hide();
+      FocusManager.instance.primaryFocus?.unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        Provider.of<KeyboardProvider>(context, listen: false).hide();
+        FocusManager.instance.primaryFocus?.unfocus();
+      });
+    }
 
     if (result == null) return null;
 

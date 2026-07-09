@@ -28,8 +28,9 @@ class KeyboardProvider extends ChangeNotifier {
   // Hive box for persisting simple keyboard settings
   Box<dynamic>? _settingsBox;
 
-  // Focus listener state
-  bool _focusCheckScheduled = false;
+  // Focus listener state – generation counter so the latest focus always wins
+  // even when multiple focus changes happen in the same frame.
+  int _focusCheckGeneration = 0;
 
   // WidgetsBindingObserver to catch system keyboard opening
   _KeyboardSuppressorObserver? _bindingObserver;
@@ -178,11 +179,23 @@ class KeyboardProvider extends ChangeNotifier {
   void show(String type, TextEditingController controller,
       {bool replaceOnFirstInput = false}) {
     try {
-      hide();
       // This will throw if controller is disposed
       controller.text;
+
+      // Normalize aliases used across the app ('numeric' → 'number').
+      final normalizedType =
+          (type == 'numeric' || type == 'number') ? 'number' : 'text';
+
+      // Already showing for this controller with the same options – no-op.
+      if (_showKeyboard &&
+          identical(_controller, controller) &&
+          _keyboardType == normalizedType &&
+          _shouldReplaceOnFirstInput == replaceOnFirstInput) {
+        return;
+      }
+
       _showKeyboard = true;
-      _keyboardType = type;
+      _keyboardType = normalizedType;
       _controller = controller;
       _shouldReplaceOnFirstInput = replaceOnFirstInput;
       notifyListeners();
@@ -194,9 +207,14 @@ class KeyboardProvider extends ChangeNotifier {
   }
 
   void hide() {
+    if (!_showKeyboard && _controller == null) return;
     _showKeyboard = false;
     _controller = null;
     _shouldReplaceOnFirstInput = false;
+    // Keep the OS keyboard suppressed when the feature is on.
+    if (_showKeyboardFeature) {
+      SystemChannels.textInput.invokeMethod('TextInput.hide');
+    }
     notifyListeners();
   }
 
@@ -255,10 +273,12 @@ class KeyboardProvider extends ChangeNotifier {
     // appears even briefly while we determine the new field.
     SystemChannels.textInput.invokeMethod('TextInput.hide');
 
-    if (_focusCheckScheduled) return;
-    _focusCheckScheduled = true;
+    // Bump generation so every focus change schedules a fresh check.
+    // Previously a boolean latch dropped later focus changes in the same
+    // frame (e.g. dialog auto-focuses quantity, then price.requestFocus()).
+    final int generation = ++_focusCheckGeneration;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusCheckScheduled = false;
+      if (_isDisposed || generation != _focusCheckGeneration) return;
       _autoShowForFocusedField();
     });
   }
@@ -266,60 +286,61 @@ class KeyboardProvider extends ChangeNotifier {
   void _autoShowForFocusedField() {
     if (!_showKeyboardFeature) return;
 
-    final primaryFocus = FocusManager.instance.primaryFocus;
-    if (primaryFocus == null || primaryFocus.context == null) return;
+    final FocusNode? focusNode = FocusManager.instance.primaryFocus;
+    if (focusNode == null) {
+      if (_showKeyboard) hide();
+      return;
+    }
 
-    final ctx = primaryFocus.context!;
+    // A scope holding primary focus means no concrete field is focused yet
+    // (e.g. a dialog route that just opened). Never guess by searching the
+    // scope's subtree – that binds the *first* EditableText in tree order
+    // (quantity) instead of the field that will actually receive focus
+    // (price). Wait for the real field's own focus event.
+    if (focusNode is FocusScopeNode) return;
+
+    final BuildContext? ctx = focusNode.context;
+    if (ctx == null) {
+      // Focus moved onto a non-widget target (e.g. keyboard key). Keep the
+      // current binding so typing continues to go to the active field.
+      return;
+    }
+
+    // A TextField attaches its FocusNode to a Focus widget created *inside*
+    // EditableText.build, so the owning EditableText is the nearest
+    // ancestor of the focus node's context – never a descendant. Walking up
+    // is also precise: it can only ever find the field that truly has focus,
+    // unlike a subtree search which grabs unrelated fields (the whole-app
+    // search from KeyboardDispatcher's focus node used to bind the product
+    // search field and pop an alphanumeric keyboard after dialogs closed).
     EditableText? editableText;
-
-    // 1. Check if focused widget itself is an EditableText
     if (ctx.widget is EditableText) {
       editableText = ctx.widget as EditableText;
     }
-
-    // 2. Check descendants (TextField wraps EditableText as a child)
-    if (editableText == null) {
-      void findEditableText(Element element) {
-        if (editableText != null) return;
-        if (element.widget is EditableText) {
-          editableText = element.widget as EditableText;
-          return;
-        }
-        element.visitChildren(findEditableText);
-      }
-      ctx.visitChildElements(findEditableText);
-    }
-
-    // 3. Check ancestors (edge case)
-    if (editableText == null) {
-      ctx.visitAncestorElements((element) {
-        if (element.widget is EditableText) {
-          editableText = element.widget as EditableText;
-          return false;
-        }
-        return true;
-      });
-    }
+    editableText ??= ctx.findAncestorWidgetOfExactType<EditableText>();
 
     if (editableText != null) {
-      final controller = editableText!.controller;
+      final controller = editableText.controller;
 
       // Skip if already showing for this exact controller
       if (_showKeyboard && identical(_controller, controller)) return;
 
-      final type = _isNumericKeyboardType(editableText!.keyboardType)
+      final type = isNumericKeyboardType(editableText.keyboardType)
           ? 'number'
           : 'text';
       show(type, controller);
-    } else {
-      // Focus moved away from a text field – hide virtual keyboard
-      if (_showKeyboard) hide();
     }
+    // If focus left every EditableText (button, list, keyboard chrome), keep
+    // the current binding. Callers must hide() explicitly on dialog close so
+    // key taps on the virtual keyboard do not tear it down mid-entry.
   }
 
-  static bool _isNumericKeyboardType(TextInputType inputType) {
+  /// True for [TextInputType.number], [TextInputType.phone], and
+  /// [TextInputType.numberWithOptions] (decimal/signed variants share the
+  /// number index but fail `== TextInputType.number`).
+  static bool isNumericKeyboardType(TextInputType inputType) {
     return inputType.index == TextInputType.number.index ||
-        inputType == TextInputType.phone;
+        inputType.index == TextInputType.phone.index;
   }
 }
 

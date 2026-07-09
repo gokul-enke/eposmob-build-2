@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/models/customer_purchase_history.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:provider/provider.dart';
 
 /// Quick price/quantity entry dialog shown for zero-priced products,
 /// before the product is added to the cart.
@@ -41,6 +43,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
   late final TextEditingController _priceController;
   late final TextEditingController _quantityController;
   final FocusNode _priceFocusNode = FocusNode();
+  final FocusNode _quantityFocusNode = FocusNode();
   String? _errorText;
 
   static const _borderColor = Color(0xFFE2E8F0);
@@ -56,22 +59,73 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
     _quantityController = TextEditingController(
       text: _formatQuantity(widget.initialQuantity),
     );
+    _priceFocusNode.addListener(_onPriceFocusChange);
+    _quantityFocusNode.addListener(_onQuantityFocusChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _priceFocusNode.requestFocus();
-        _priceController.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: _priceController.text.length,
-        );
-      }
+      if (!mounted) return;
+      _focusPriceField();
     });
+  }
+
+  void _onPriceFocusChange() {
+    if (!mounted || !_priceFocusNode.hasFocus) return;
+    _bindKeyboard(_priceController);
+  }
+
+  void _onQuantityFocusChange() {
+    if (!mounted || !_quantityFocusNode.hasFocus) return;
+    _bindKeyboard(_quantityController);
+  }
+
+  void _bindKeyboard(TextEditingController controller) {
+    final keyboardProvider =
+        Provider.of<KeyboardProvider>(context, listen: false);
+    if (!keyboardProvider.showKeyboardFeature) return;
+    keyboardProvider.show('number', controller, replaceOnFirstInput: true);
+  }
+
+  void _focusPriceField() {
+    _priceFocusNode.requestFocus();
+    _priceController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _priceController.text.length,
+    );
+    _bindKeyboard(_priceController);
+  }
+
+  void _dismissKeyboardAndUnfocus() {
+    if (!mounted) return;
+    try {
+      final keyboardProvider =
+          Provider.of<KeyboardProvider>(context, listen: false);
+      keyboardProvider.hide();
+    } catch (_) {
+      // Provider may already be gone during teardown.
+    }
+    _priceFocusNode.unfocus();
+    _quantityFocusNode.unfocus();
+    FocusManager.instance.primaryFocus?.unfocus();
+    SystemChannels.textInput.invokeMethod('TextInput.hide');
   }
 
   @override
   void dispose() {
+    _priceFocusNode.removeListener(_onPriceFocusChange);
+    _quantityFocusNode.removeListener(_onQuantityFocusChange);
+    // Hide virtual keyboard so the background search field does not keep an
+    // alphanumeric keyboard open after this dialog closes.
+    try {
+      final keyboardProvider =
+          Provider.of<KeyboardProvider>(context, listen: false);
+      if (identical(keyboardProvider.controller, _priceController) ||
+          identical(keyboardProvider.controller, _quantityController)) {
+        keyboardProvider.hide();
+      }
+    } catch (_) {}
     _priceController.dispose();
     _quantityController.dispose();
     _priceFocusNode.dispose();
+    _quantityFocusNode.dispose();
     super.dispose();
   }
 
@@ -100,23 +154,33 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
 
     if (price == null || price <= 0) {
       setState(() => _errorText = 'Enter a valid price');
+      _focusPriceField();
       return;
     }
     final double? minPrice = widget.minimumPrice;
     if (minPrice != null && price < minPrice - 0.001) {
       setState(() => _errorText =
           'Price is below the minimum sale price of ${minPrice.toStringAsFixed(2)}');
+      _focusPriceField();
       return;
     }
     if (quantity <= 0) {
       setState(() => _errorText = 'Enter a valid quantity');
+      _quantityFocusNode.requestFocus();
+      _bindKeyboard(_quantityController);
       return;
     }
 
+    _dismissKeyboardAndUnfocus();
     Navigator.of(context).pop(<String, dynamic>{
       'price': price,
       'quantity': quantity,
     });
+  }
+
+  void _cancel() {
+    _dismissKeyboardAndUnfocus();
+    Navigator.of(context).pop();
   }
 
   InputDecoration _fieldDecoration({
@@ -240,7 +304,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                   IconButton(
                     icon: Icon(Icons.close, color: Colors.grey.shade500, size: 22),
                     splashRadius: 20,
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _cancel,
                   ),
                 ],
               ),
@@ -322,22 +386,36 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                   const SizedBox(height: 8),
                   _QuantityStepper(
                     controller: _quantityController,
+                    focusNode: _quantityFocusNode,
                     onDecrement: () => _stepQuantity(-1),
                     onIncrement: () => _stepQuantity(1),
+                    onTap: () {
+                      _quantityFocusNode.requestFocus();
+                      _bindKeyboard(_quantityController);
+                    },
                   ),
                   const SizedBox(height: 20),
 
-                  // Price field
+                  // Price field – listed after quantity in the tree, but is the
+                  // intended initial focus target (see _focusPriceField).
                   _sectionLabel('Price (${widget.currency})'),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _priceController,
                     focusNode: _priceFocusNode,
+                    autofocus: true,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                     ],
+                    onTap: () {
+                      _bindKeyboard(_priceController);
+                      _priceController.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: _priceController.text.length,
+                      );
+                    },
                     onSubmitted: (_) => _apply(),
                     onChanged: (_) {
                       if (_errorText != null) {
@@ -412,7 +490,7 @@ class _ZeroPriceQuickEntryModalState extends State<ZeroPriceQuickEntryModal> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: _cancel,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: ColorManager.kTextColor,
                         side: const BorderSide(color: _borderColor),
@@ -567,13 +645,17 @@ class _ProductImage extends StatelessWidget {
 
 class _QuantityStepper extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
+  final VoidCallback? onTap;
 
   const _QuantityStepper({
     required this.controller,
+    required this.focusNode,
     required this.onDecrement,
     required this.onIncrement,
+    this.onTap,
   });
 
   @override
@@ -595,6 +677,7 @@ class _QuantityStepper extends StatelessWidget {
             Expanded(
               child: TextField(
                 controller: controller,
+                focusNode: focusNode,
                 textAlign: TextAlign.center,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -602,6 +685,7 @@ class _QuantityStepper extends StatelessWidget {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
                 ],
+                onTap: onTap,
                 decoration: const InputDecoration(
                   isDense: true,
                   contentPadding: EdgeInsets.symmetric(vertical: 14),
