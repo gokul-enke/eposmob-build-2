@@ -576,7 +576,9 @@ class BarcodePrinterService {
 
       final pdf = pw.Document();
 
-      final int safeStickersPerRow = stickersPerRow < 1 ? 1 : stickersPerRow;
+      // Callers already clamp, but guard here too: 0/negative would divide by
+      // zero below, and an absurd count would size a meter-wide page.
+      final int safeStickersPerRow = stickersPerRow.clamp(1, 10);
       final double pageMargin = layoutSettings.pageMargin * PdfPageFormat.mm;
       final double gap = layoutSettings.stickerGap * PdfPageFormat.mm;
       final double rowWidth =
@@ -645,6 +647,7 @@ class BarcodePrinterService {
           dateFontSize: layoutSettings.dateFontSize,
           barcodeNumberFontSize: layoutSettings.barcodeNumberFontSize,
           barcodeHeight: layoutSettings.barcodeHeight,
+          elementSpacing: layoutSettings.elementSpacing,
         );
 
         if (pngBytes == null) {
@@ -661,9 +664,22 @@ class BarcodePrinterService {
         }
       }
 
-      final totalPages = safeStickersPerRow == 0
-          ? 0
-          : (stickers.length / safeStickersPerRow).ceil();
+      if (stickers.isEmpty) {
+        hideLoadingOverlay();
+        debugPrint(
+            '[BarcodePrint] No printable stickers (all quantities zero or nothing to render). Aborting before PDF save.');
+        debugPrint('========== BARCODE PRINT DEBUG END ==========');
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message:
+                'Nothing to print. Check item quantities and barcode display settings.',
+          );
+        }
+        return;
+      }
+
+      final totalPages = (stickers.length / safeStickersPerRow).ceil();
       debugPrint(
           '[BarcodePrint] Generated ${stickers.length} sticker widgets. Total pages(rows)=$totalPages');
 
@@ -685,16 +701,20 @@ class BarcodePrinterService {
             pageFormat: pageFormat,
             margin: pw.EdgeInsets.all(pageMargin),
             build: (pw.Context ctx) {
+              // Gap only BETWEEN stickers: a full row then measures exactly
+              // n*W + (n-1)*gap, matching the page width. Anchor top-left so a
+              // partial last row keeps the same column positions as full rows
+              // (die-cut label stock needs identical x offsets on every row).
               return pw.Align(
-                alignment: pw.Alignment.topCenter,
+                alignment: pw.Alignment.topLeft,
                 child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
-                  children: rowStickers.map((s) {
-                    return pw.Padding(
-                      padding: pw.EdgeInsets.only(right: gap),
-                      child: s,
-                    );
-                  }).toList(),
+                  mainAxisSize: pw.MainAxisSize.min,
+                  children: [
+                    for (int i = 0; i < rowStickers.length; i++) ...[
+                      if (i > 0) pw.SizedBox(width: gap),
+                      rowStickers[i],
+                    ],
+                  ],
                 ),
               );
             },

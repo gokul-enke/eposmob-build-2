@@ -5,6 +5,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 
 class BarcodePrintItem {
   final GetProduct product;
@@ -35,6 +36,20 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   String stickerSize = '50x25mm';
   int stickersPerRow = 1;
 
+  /// Hard cap for the free-text per-row field; the settings slider only goes
+  /// to 3, but typed input and saved JSON must not produce meter-wide pages.
+  static const int _maxStickersPerRow = 10;
+
+  /// Per-item quantity cap so a typo can't queue a multi-thousand-page PDF.
+  static const int _maxQuantityPerItem = 999;
+
+  // Once the user touches size or per-row, the async settings seed must not
+  // overwrite their input.
+  bool _userAdjustedLayout = false;
+
+  final TextEditingController _stickersPerRowController =
+      TextEditingController(text: '1');
+
   final List<String> stickerSizes = [
     '50x25mm',
     '30x20mm',
@@ -51,6 +66,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   @override
   void initState() {
     super.initState();
+    _applySavedLayoutDefaults();
     final now = DateTime.now();
     final nextMonth = DateTime(now.year, now.month + 1, now.day);
 
@@ -77,6 +93,28 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
         expDate: expDateToUse,
       );
     }).toList();
+  }
+
+  /// Seeds the sticker size and stickers-per-row from Printer Settings, so this
+  /// modal starts at the configured layout. Both stay editable as a per-print
+  /// override and are not written back.
+  Future<void> _applySavedLayoutDefaults() async {
+    final settings = await loadBarcodeLayoutSettings();
+    if (!mounted || _userAdjustedLayout) return;
+
+    setState(() {
+      if (stickerSizes.contains(settings.stickerSize)) {
+        stickerSize = settings.stickerSize;
+      }
+      stickersPerRow = settings.stickersPerRow.clamp(1, _maxStickersPerRow);
+      _stickersPerRowController.text = stickersPerRow.toString();
+    });
+  }
+
+  @override
+  void dispose() {
+    _stickersPerRowController.dispose();
+    super.dispose();
   }
 
   Future<void> _selectDate(BuildContext context, int index, bool isMfg) async {
@@ -205,6 +243,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                       );
                                     }).toList(),
                                     onChanged: (newValue) {
+                                      _userAdjustedLayout = true;
                                       setState(() {
                                         if (newValue != null)
                                           stickerSize = newValue;
@@ -234,7 +273,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                               Container(
                                 height: 45,
                                 child: TextFormField(
-                                  initialValue: stickersPerRow.toString(),
+                                  controller: _stickersPerRowController,
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
                                     contentPadding: const EdgeInsets.symmetric(
@@ -251,6 +290,7 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                     ),
                                   ),
                                   onChanged: (val) {
+                                    _userAdjustedLayout = true;
                                     stickersPerRow = int.tryParse(val) ?? 1;
                                   },
                                 ),
@@ -354,8 +394,13 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                                   border: OutlineInputBorder(),
                                                 ),
                                                 onChanged: (val) {
+                                                  // 0 skips this product at
+                                                  // print time; negatives are
+                                                  // treated the same.
                                                   item.quantity =
-                                                      int.tryParse(val) ?? 1;
+                                                      (int.tryParse(val) ?? 1)
+                                                          .clamp(0,
+                                                              _maxQuantityPerItem);
                                                 },
                                               ),
                                             ),
@@ -445,7 +490,8 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                     textColor: Colors.white,
                     borderColor: const Color(0xFF2962FF),
                     fct: () {
-                      final safeStickersPerRow = stickersPerRow < 1 ? 1 : stickersPerRow;
+                      final safeStickersPerRow =
+                          stickersPerRow.clamp(1, _maxStickersPerRow);
                       Navigator.pop(context, {
                         'items': printItems,
                         'size': stickerSize,

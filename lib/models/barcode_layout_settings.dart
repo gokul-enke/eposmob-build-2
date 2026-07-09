@@ -27,6 +27,10 @@ class BarcodeLayoutSettings {
   // Spacing between elements (pt)
   double elementSpacing;
 
+  /// Default gap between sticker elements. 1.5pt reproduces the 2%-of-height
+  /// gap the renderer used before this became configurable.
+  static const double defaultElementSpacing = 1.5;
+
   BarcodeLayoutSettings({
     this.stickerSize = '50x25mm',
     this.stickersPerRow = 1,
@@ -38,7 +42,7 @@ class BarcodeLayoutSettings {
     this.dateFontSize = 9,
     this.barcodeNumberFontSize = 9,
     this.barcodeHeight = 20,
-    this.elementSpacing = 0.2,
+    this.elementSpacing = defaultElementSpacing,
   });
 
   Map<String, dynamic> toJson() => {
@@ -62,15 +66,16 @@ class BarcodeLayoutSettings {
       pageMargin: (json['pageMargin'] as num?)?.toDouble() ?? 0,
       stickerGap: (json['stickerGap'] as num?)?.toDouble() ?? 5.0,
       storeNameFontSize:
-          (json['storeNameFontSize'] as num?)?.toDouble() ?? 9,
+          (json['storeNameFontSize'] as num?)?.toDouble() ?? 11,
       productNameFontSize:
-          (json['productNameFontSize'] as num?)?.toDouble() ?? 9,
-      priceFontSize: (json['priceFontSize'] as num?)?.toDouble() ?? 11,
-      dateFontSize: (json['dateFontSize'] as num?)?.toDouble() ?? 7,
+          (json['productNameFontSize'] as num?)?.toDouble() ?? 11,
+      priceFontSize: (json['priceFontSize'] as num?)?.toDouble() ?? 13,
+      dateFontSize: (json['dateFontSize'] as num?)?.toDouble() ?? 9,
       barcodeNumberFontSize:
-          (json['barcodeNumberFontSize'] as num?)?.toDouble() ?? 7,
-      barcodeHeight: (json['barcodeHeight'] as num?)?.toDouble() ?? 30,
-      elementSpacing: (json['elementSpacing'] as num?)?.toDouble() ?? 0,
+          (json['barcodeNumberFontSize'] as num?)?.toDouble() ?? 9,
+      barcodeHeight: (json['barcodeHeight'] as num?)?.toDouble() ?? 20,
+      elementSpacing: (json['elementSpacing'] as num?)?.toDouble() ??
+          defaultElementSpacing,
     );
   }
 
