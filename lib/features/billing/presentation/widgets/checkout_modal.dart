@@ -1016,6 +1016,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return size.width <= 1100 || size.height <= 800;
   }
 
+  bool get _isMobileCheckout =>
+      MediaQuery.of(context).size.width < 600;
+
   double get _checkoutPadding => _isDenseCheckout ? 16.0 : 24.0;
   double get _checkoutGap => _isDenseCheckout ? 14.0 : 24.0;
 
@@ -1300,13 +1303,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
           Expanded(
             child: Padding(
               padding: EdgeInsets.all(_checkoutPadding),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left: Search, Selected Customer, and List
-                  Expanded(
-                    flex: 3,
-                    child: Column(
+              child: _isMobileCheckout
+                  ? Column(
                       children: [
                         // Search Bar
                         FocusTraversalOrder(
@@ -1353,13 +1351,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         ],
                         // List
                         Expanded(
+                          flex: 3,
                           child: FocusTraversalOrder(
                             order: const NumericFocusOrder(30),
                             child: _buildCustomerList(),
                           ),
                         ),
                         if (hasInternet) ...[
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 8),
                           // Add Customer Button (online only)
                           FocusTraversalOrder(
                             order: const NumericFocusOrder(40),
@@ -1382,7 +1381,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     : 'Add New Customer'),
                                 style: ElevatedButton.styleFrom(
                                   padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                      const EdgeInsets.symmetric(vertical: 12),
                                   backgroundColor: const Color(0xFFECFDF3),
                                   foregroundColor: const Color(0xFF047857),
                                   side: const BorderSide(
@@ -1395,36 +1394,158 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             ),
                           ),
                         ],
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        // Bottom: Summary & Footer
+                        Expanded(
+                          flex: 2,
+                          child: _isSelectionOnly
+                              ? _buildSelectionOnlySidePanel(
+                                  icon: Icons.person,
+                                  title: 'Selected Customer',
+                                  value:
+                                      _localSelectedCustomer?.name ?? 'Not selected',
+                                  supportingText: _selectedCustomerSupportingText(),
+                                  canDone: _localSelectedCustomer != null,
+                                )
+                              : Column(
+                                  children: [
+                                    Expanded(child: _buildCompactSummary()),
+                                    _buildFooter(
+                                      onPrint: _handlePrint,
+                                      onConfirm: _handleConfirm,
+                                    ),
+                                  ],
+                                ),
+                        ),
                       ],
-                    ),
-                  ),
-                  SizedBox(width: _checkoutGap),
-                  const VerticalDivider(width: 1),
-                  SizedBox(width: _checkoutGap),
-                  // Right: Summary only (no customer card)
-                  Expanded(
-                    flex: 2,
-                    child: _isSelectionOnly
-                        ? _buildSelectionOnlySidePanel(
-                            icon: Icons.person,
-                            title: 'Selected Customer',
-                            value:
-                                _localSelectedCustomer?.name ?? 'Not selected',
-                            supportingText: _selectedCustomerSupportingText(),
-                            canDone: _localSelectedCustomer != null,
-                          )
-                        : Column(
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left: Search, Selected Customer, and List
+                        Expanded(
+                          flex: 3,
+                          child: Column(
                             children: [
-                              Expanded(child: _buildCompactSummary()),
-                              _buildFooter(
-                                onPrint: _handlePrint,
-                                onConfirm: _handleConfirm,
+                              // Search Bar
+                              FocusTraversalOrder(
+                                order: const NumericFocusOrder(10),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: TextField(
+                                    controller: _customerSearchController,
+                                    focusNode: _customerSearchFocusNode,
+                                    onChanged: _filterCustomers,
+                                    decoration: InputDecoration(
+                                      hintText: 'Search by name or phone number...',
+                                      hintStyle:
+                                          TextStyle(color: Colors.grey.shade500),
+                                      prefixIcon: Icon(Icons.search,
+                                          color: Colors.grey.shade500),
+                                      suffixIcon: _customerSearchQuery.isNotEmpty
+                                          ? IconButton(
+                                              focusNode:
+                                                  _customerSearchClearFocusNode,
+                                              icon: Icon(Icons.clear,
+                                                  color: Colors.grey.shade500),
+                                              onPressed: () {
+                                                _customerSearchController.clear();
+                                                _filterCustomers('');
+                                              },
+                                            )
+                                          : null,
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 14),
+                                    ),
+                                  ),
+                                ),
                               ),
+                              const SizedBox(height: 8),
+                              if (_hasQuoteOnlyCustomerNeedingSave) ...[
+                                _buildQuoteOnlyCustomerBanner(),
+                                const SizedBox(height: 8),
+                              ],
+                              // List
+                              Expanded(
+                                child: FocusTraversalOrder(
+                                  order: const NumericFocusOrder(30),
+                                  child: _buildCustomerList(),
+                                ),
+                              ),
+                              if (hasInternet) ...[
+                                const SizedBox(height: 16),
+                                // Add Customer Button (online only)
+                                FocusTraversalOrder(
+                                  order: const NumericFocusOrder(40),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      icon: _isAddingCustomer
+                                          ? const SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation(
+                                                    Colors.grey),
+                                              ),
+                                            )
+                                          : const Icon(Icons.person_add),
+                                      label: Text(_isAddingCustomer
+                                          ? 'Adding...'
+                                          : 'Add New Customer'),
+                                      style: ElevatedButton.styleFrom(
+                                        padding:
+                                            const EdgeInsets.symmetric(vertical: 16),
+                                        backgroundColor: const Color(0xFFECFDF3),
+                                        foregroundColor: const Color(0xFF047857),
+                                        side: const BorderSide(
+                                            color: Color(0xFF34D399)),
+                                      ),
+                                      onPressed: _isAddingCustomer
+                                          ? null
+                                          : _handleAddNewCustomer,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
-                  ),
-                ],
-              ),
+                        ),
+                        SizedBox(width: _checkoutGap),
+                        const VerticalDivider(width: 1),
+                        SizedBox(width: _checkoutGap),
+                        // Right: Summary only (no customer card)
+                        Expanded(
+                          flex: 2,
+                          child: _isSelectionOnly
+                              ? _buildSelectionOnlySidePanel(
+                                  icon: Icons.person,
+                                  title: 'Selected Customer',
+                                  value:
+                                      _localSelectedCustomer?.name ?? 'Not selected',
+                                  supportingText: _selectedCustomerSupportingText(),
+                                  canDone: _localSelectedCustomer != null,
+                                )
+                              : Column(
+                                  children: [
+                                    Expanded(child: _buildCompactSummary()),
+                                    _buildFooter(
+                                      onPrint: _handlePrint,
+                                      onConfirm: _handleConfirm,
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -1795,10 +1916,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
           _handleCustomerListKey(event, displayCustomers),
       child: GridView.builder(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: _customerGridColumns,
+          crossAxisCount: _isMobileCheckout ? 2 : _customerGridColumns,
           mainAxisSpacing: _isDenseCheckout ? 5 : 6,
           crossAxisSpacing: _isDenseCheckout ? 5 : 6,
-          childAspectRatio: _isDenseCheckout ? 3.95 : 3.6,
+          childAspectRatio: _isMobileCheckout ? 2.8 : (_isDenseCheckout ? 3.95 : 3.6),
         ),
         itemCount: displayCustomers.length,
         itemBuilder: (context, index) {
@@ -2039,621 +2160,662 @@ class _CheckoutModalState extends State<CheckoutModal> {
           Expanded(
             child: Padding(
               padding: EdgeInsets.all(_checkoutPadding),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left: Delivery Options
-                  Expanded(
-                    flex: 3,
-                    child: SingleChildScrollView(
-                      child: Consumer<DeliveryMethodsProvider>(
-                        builder: (context, provider, child) {
-                          final appSettings = Provider.of<AppSettingsProvider>(
-                                  context,
-                                  listen: false)
-                              .appSettings;
-                          final isDeliveryChargeDataEnabled =
-                              appSettings?.freeDeliveryEnabled ?? false;
-                          final currency = appSettings?.currency ?? 'SAR';
-                          final minimumAmount = double.tryParse(appSettings
-                                      ?.freeDeliveryMinimumAmount
-                                      .trim() ??
-                                  '') ??
-                              0.0;
-                          final localProductProvider =
-                              Provider.of<LocalProductProvider>(context,
-                                  listen: false);
-                          final netAmount =
-                              localProductProvider.priceSummary?.netTotal ??
-                                  widget.cartTotal;
-                          final shouldApplyDeliveryCharge =
-                              isDeliveryChargeDataEnabled &&
-                                  (minimumAmount <= 0
-                                      ? true
-                                      : netAmount < minimumAmount);
+              child: () {
+                final deliveryOptionsContent = SingleChildScrollView(
+                  child: Consumer<DeliveryMethodsProvider>(
+                    builder: (context, provider, child) {
+                      final appSettings = Provider.of<AppSettingsProvider>(
+                              context,
+                              listen: false)
+                          .appSettings;
+                      final isDeliveryChargeDataEnabled =
+                          appSettings?.freeDeliveryEnabled ?? false;
+                      final currency = appSettings?.currency ?? 'SAR';
+                      final minimumAmount = double.tryParse(appSettings
+                                  ?.freeDeliveryMinimumAmount
+                                  .trim() ??
+                              '') ??
+                          0.0;
+                      final localProductProvider =
+                          Provider.of<LocalProductProvider>(context,
+                              listen: false);
+                      final netAmount =
+                          localProductProvider.priceSummary?.netTotal ??
+                              widget.cartTotal;
+                      final shouldApplyDeliveryCharge =
+                          isDeliveryChargeDataEnabled &&
+                              (minimumAmount <= 0
+                                  ? true
+                                  : netAmount < minimumAmount);
 
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'delivery.delivery_methods'.tr,
-                                style: buildCustomStyle(
-                                  FontWeightManager.semiBold,
-                                  FontSize.s16,
-                                  0.21,
-                                  ColorManager.kPrimaryColor,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              // Arrow keys navigate between delivery method
-                              // tiles via Flutter's built-in focus traversal.
-                              // Tab/Shift+Tab also work via FocusTraversalOrder.
-                              Shortcuts(
-                                shortcuts: const <ShortcutActivator, Intent>{
-                                  SingleActivator(LogicalKeyboardKey.arrowLeft):
-                                      PreviousFocusIntent(),
-                                  SingleActivator(
-                                          LogicalKeyboardKey.arrowRight):
-                                      NextFocusIntent(),
-                                  SingleActivator(LogicalKeyboardKey.arrowUp):
-                                      PreviousFocusIntent(),
-                                  SingleActivator(LogicalKeyboardKey.arrowDown):
-                                      NextFocusIntent(),
-                                },
-                                child: Wrap(
-                                  spacing: 12,
-                                  runSpacing: 12,
-                                  children:
-                                      provider.deliveryMethods.map((method) {
-                                    final methodIndex = provider.deliveryMethods
-                                        .indexOf(method);
-                                    final isSelected =
-                                        _lDeliveryMethod == method.name;
-                                    final isFocused =
-                                        _focusedDeliveryMethodName ==
-                                            method.name;
-                                    return FocusTraversalOrder(
-                                      order: NumericFocusOrder(
-                                          10 + methodIndex.toDouble()),
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: InkWell(
-                                          focusNode:
-                                              _deliveryMethodFocusNodeFor(
-                                                  method),
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'delivery.delivery_methods'.tr,
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s16,
+                              0.21,
+                              ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Arrow keys navigate between delivery method
+                          // tiles via Flutter's built-in focus traversal.
+                          // Tab/Shift+Tab also work via FocusTraversalOrder.
+                          Shortcuts(
+                            shortcuts: const <ShortcutActivator, Intent>{
+                              SingleActivator(LogicalKeyboardKey.arrowLeft):
+                                  PreviousFocusIntent(),
+                              SingleActivator(
+                                      LogicalKeyboardKey.arrowRight):
+                                  NextFocusIntent(),
+                              SingleActivator(LogicalKeyboardKey.arrowUp):
+                                  PreviousFocusIntent(),
+                              SingleActivator(LogicalKeyboardKey.arrowDown):
+                                  NextFocusIntent(),
+                            },
+                            child: Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children:
+                                  provider.deliveryMethods.map((method) {
+                                final methodIndex = provider.deliveryMethods
+                                    .indexOf(method);
+                                final isSelected =
+                                    _lDeliveryMethod == method.name;
+                                final isFocused =
+                                    _focusedDeliveryMethodName ==
+                                        method.name;
+                                return FocusTraversalOrder(
+                                  order: NumericFocusOrder(
+                                      10 + methodIndex.toDouble()),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: InkWell(
+                                      focusNode:
+                                          _deliveryMethodFocusNodeFor(
+                                              method),
+                                      borderRadius:
+                                          BorderRadius.circular(10),
+                                      onFocusChange: (focused) {
+                                        setState(() {
+                                          _focusedDeliveryMethodName =
+                                              focused ? method.name : null;
+                                        });
+                                        if (focused &&
+                                            _lDeliveryMethod !=
+                                                method.name) {
+                                          _selectDeliveryMethod(
+                                            method,
+                                            shouldApplyDeliveryCharge:
+                                                shouldApplyDeliveryCharge,
+                                          );
+                                        }
+                                      },
+                                      onTap: () {
+                                        _selectDeliveryMethod(
+                                          method,
+                                          shouldApplyDeliveryCharge:
+                                              shouldApplyDeliveryCharge,
+                                        );
+                                      },
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                            milliseconds: 200),
+                                        width: _isMobileCheckout ? 100 : 118,
+                                        height: _isMobileCheckout ? 104 : 104,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 8, horizontal: 8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? ColorManager.kPrimaryColor
+                                                  .withOpacity(0.05)
+                                              : Colors.white,
                                           borderRadius:
                                               BorderRadius.circular(10),
-                                          onFocusChange: (focused) {
-                                            setState(() {
-                                              _focusedDeliveryMethodName =
-                                                  focused ? method.name : null;
-                                            });
-                                            if (focused &&
-                                                _lDeliveryMethod !=
-                                                    method.name) {
-                                              _selectDeliveryMethod(
-                                                method,
-                                                shouldApplyDeliveryCharge:
-                                                    shouldApplyDeliveryCharge,
-                                              );
-                                            }
-                                          },
-                                          onTap: () {
-                                            _selectDeliveryMethod(
-                                              method,
-                                              shouldApplyDeliveryCharge:
-                                                  shouldApplyDeliveryCharge,
-                                            );
-                                          },
-                                          child: AnimatedContainer(
-                                            duration: const Duration(
-                                                milliseconds: 200),
-                                            width: 118,
-                                            height: 104,
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 8, horizontal: 8),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? ColorManager.kPrimaryColor
-                                                      .withOpacity(0.05)
-                                                  : Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              border: Border.all(
-                                                color: isFocused
-                                                    ? Colors.orange
-                                                    : isSelected
-                                                        ? ColorManager
-                                                            .kPrimaryColor
-                                                        : Colors.grey.shade200,
-                                                width: isFocused
-                                                    ? 3
-                                                    : (isSelected ? 2 : 1),
-                                              ),
-                                              boxShadow: isFocused
-                                                  ? [
-                                                      BoxShadow(
-                                                        color: Colors.orange
-                                                            .withOpacity(0.35),
-                                                        blurRadius: 8,
-                                                        spreadRadius: 1,
-                                                      ),
-                                                    ]
-                                                  : null,
-                                            ),
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  method.name ==
-                                                          "Store Takeaway"
-                                                      ? Icons.store
+                                          border: Border.all(
+                                            color: isFocused
+                                                ? Colors.orange
+                                                : isSelected
+                                                    ? ColorManager
+                                                        .kPrimaryColor
+                                                    : Colors.grey.shade200,
+                                            width: isFocused
+                                                ? 3
+                                                : (isSelected ? 2 : 1),
+                                          ),
+                                          boxShadow: isFocused
+                                              ? [
+                                                  BoxShadow(
+                                                    color: Colors.orange
+                                                        .withOpacity(0.35),
+                                                    blurRadius: 8,
+                                                    spreadRadius: 1,
+                                                  ),
+                                                ]
+                                              : null,
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              method.name ==
+                                                      "Store Takeaway"
+                                                  ? Icons.store
+                                                  : method.name ==
+                                                          "Car Delivery"
+                                                      ? Icons.car_rental
                                                       : method.name ==
-                                                              "Car Delivery"
-                                                          ? Icons.car_rental
-                                                          : method.name ==
-                                                                  "Door Delivery"
-                                                              ? Icons
-                                                                  .doorbell_outlined
-                                                              : Icons
-                                                                  .local_shipping,
-                                                  size: 22,
-                                                  color: isSelected
-                                                      ? ColorManager
-                                                          .kPrimaryColor
-                                                      : Colors.grey.shade700,
+                                                              "Door Delivery"
+                                                          ? Icons
+                                                              .doorbell_outlined
+                                                          : Icons
+                                                              .local_shipping,
+                                              size: 22,
+                                              color: isSelected
+                                                  ? ColorManager
+                                                      .kPrimaryColor
+                                                  : Colors.grey.shade700,
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Text(
+                                              method.name.tr,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 2,
+                                              overflow:
+                                                  TextOverflow.ellipsis,
+                                              style: buildCustomStyle(
+                                                isSelected
+                                                    ? FontWeightManager
+                                                        .semiBold
+                                                    : FontWeightManager
+                                                        .medium,
+                                                FontSize.s11,
+                                                0.0,
+                                                isSelected
+                                                    ? ColorManager
+                                                        .kPrimaryColor
+                                                    : Colors.black87,
+                                              ),
+                                            ),
+                                            if (isDeliveryChargeDataEnabled) ...[
+                                              const SizedBox(height: 5),
+                                              Container(
+                                                padding: const EdgeInsets
+                                                    .symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                          0xFF059669)
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          10),
                                                 ),
-                                                const SizedBox(height: 5),
-                                                Text(
-                                                  method.name.tr,
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 2,
+                                                child: Text(
+                                                  method.prices
+                                                              .isNotEmpty &&
+                                                          shouldApplyDeliveryCharge
+                                                      ? (() {
+                                                          if (!isSelected) {
+                                                            return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
+                                                          }
+
+                                                          final selectedById = method
+                                                              .prices
+                                                              .where((p) =>
+                                                                  p.id ==
+                                                                  _selectedDeliveryPriceId)
+                                                              .toList();
+                                                          if (selectedById
+                                                              .isNotEmpty) {
+                                                            return '$currency ${selectedById.first.price.toStringAsFixed(2)}';
+                                                          }
+
+                                                          if (_selectedDeliveryCharge !=
+                                                              null) {
+                                                            return '$currency ${_selectedDeliveryCharge!.toStringAsFixed(2)}';
+                                                          }
+
+                                                          return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
+                                                        })()
+                                                      : 'free'.tr,
+                                                  textAlign:
+                                                      TextAlign.center,
+                                                  maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: buildCustomStyle(
-                                                    isSelected
-                                                        ? FontWeightManager
-                                                            .semiBold
-                                                        : FontWeightManager
-                                                            .medium,
-                                                    FontSize.s11,
+                                                    FontWeightManager
+                                                        .semiBold,
+                                                    FontSize.s9,
                                                     0.0,
-                                                    isSelected
-                                                        ? ColorManager
-                                                            .kPrimaryColor
-                                                        : Colors.black87,
+                                                    const Color(0xFF059669),
                                                   ),
                                                 ),
-                                                if (isDeliveryChargeDataEnabled) ...[
-                                                  const SizedBox(height: 5),
-                                                  Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2),
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(
-                                                              0xFF059669)
-                                                          .withOpacity(0.1),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              10),
-                                                    ),
-                                                    child: Text(
-                                                      method.prices
-                                                                  .isNotEmpty &&
-                                                              shouldApplyDeliveryCharge
-                                                          ? (() {
-                                                              if (!isSelected) {
-                                                                return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
-                                                              }
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          if (_lDeliveryMethod.isNotEmpty &&
+                              isDeliveryChargeDataEnabled) ...[
+                            const SizedBox(height: 12),
+                            Builder(builder: (context) {
+                              DeliveryMethod? selectedMethod;
+                              for (final method
+                                  in provider.deliveryMethods) {
+                                if (method.name == _lDeliveryMethod) {
+                                  selectedMethod = method;
+                                  break;
+                                }
+                              }
 
-                                                              final selectedById = method
-                                                                  .prices
-                                                                  .where((p) =>
-                                                                      p.id ==
-                                                                      _selectedDeliveryPriceId)
-                                                                  .toList();
-                                                              if (selectedById
-                                                                  .isNotEmpty) {
-                                                                return '$currency ${selectedById.first.price.toStringAsFixed(2)}';
-                                                              }
+                              final selectedDeliveryMethod = selectedMethod;
 
-                                                              if (_selectedDeliveryCharge !=
-                                                                  null) {
-                                                                return '$currency ${_selectedDeliveryCharge!.toStringAsFixed(2)}';
-                                                              }
+                              if (selectedDeliveryMethod == null ||
+                                  selectedDeliveryMethod.prices.isEmpty) {
+                                  return const SizedBox.shrink();
+                              }
 
-                                                              return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
-                                                            })()
-                                                          : 'free'.tr,
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .semiBold,
-                                                        FontSize.s9,
-                                                        0.0,
-                                                        const Color(0xFF059669),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
+                              if (!shouldApplyDeliveryCharge) {
+                                return Text(
+                                  minimumAmount > 0
+                                      ? 'Free delivery applied for orders above $currency ${minimumAmount.toStringAsFixed(2)}'
+                                      : 'free'.tr,
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s11,
+                                    0.12,
+                                    const Color(0xFF059669),
+                                  ),
+                                );
+                              }
+
+                              final effectiveSelectedPriceId = (() {
+                                if (_selectedDeliveryPriceId != null) {
+                                  final exists = selectedDeliveryMethod
+                                      .prices
+                                      .any((p) =>
+                                          p.id == _selectedDeliveryPriceId);
+                                  if (exists)
+                                    return _selectedDeliveryPriceId!;
+                                }
+
+                                if (_selectedDeliveryCharge != null) {
+                                  for (final price
+                                      in selectedDeliveryMethod.prices) {
+                                    if ((price.price -
+                                                _selectedDeliveryCharge!)
+                                            .abs() <
+                                        0.001) {
+                                      return price.id;
+                                    }
+                                  }
+                                }
+
+                                return selectedDeliveryMethod
+                                    .prices.first.id;
+                              })();
+
+                              return Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Delivery charges',
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s12,
+                                      0.12,
+                                      Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: selectedDeliveryMethod.prices
+                                        .map((price) {
+                                      final isPriceSelected = price.id ==
+                                          effectiveSelectedPriceId;
+
+                                      return OutlinedButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedDeliveryPriceId =
+                                                price.id;
+                                            _selectedDeliveryCharge =
+                                                price.price;
+                                          });
+                                          _handleDeliveryUpdate();
+                                        },
+                                        style: OutlinedButton.styleFrom(
+                                          side: BorderSide(
+                                            color: isPriceSelected
+                                                ? const Color(0xFF059669)
+                                                : const Color(0xFF059669),
+                                            width:
+                                                isPriceSelected ? 2 : 1.5,
+                                          ),
+                                          backgroundColor: isPriceSelected
+                                              ? const Color(0xFF059669)
+                                              : Colors.white,
+                                          foregroundColor: isPriceSelected
+                                              ? Colors.white
+                                              : const Color(0xFF059669),
+                                          padding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 10),
+                                          minimumSize: const Size(0, 44),
+                                          tapTargetSize:
+                                              MaterialTapTargetSize
+                                                  .shrinkWrap,
+                                          visualDensity:
+                                              const VisualDensity(
+                                                  horizontal: 0,
+                                                  vertical: 0),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
+                                        child: Text(
+                                          '$currency ${price.price.toStringAsFixed(2)}',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.bold,
+                                            FontSize.s12,
+                                            0.0,
+                                            isPriceSelected
+                                                ? Colors.white
+                                                : const Color(0xFF059669),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              );
+                            }),
+                          ],
+                          if (Provider.of<AppSettingsProvider>(context,
+                                      listen: false)
+                                  .appSettings
+                                  ?.askDeliveryDate ==
+                              true) ...[
+                            const SizedBox(height: 20),
+                            Text('billing.enter_car_number'.tr,
+                                style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.12,
+                                    Colors.black)),
+                            CalendarPickerTableCell(
+                              initialDate: _lSelectedDeliveryDate,
+                              onDateSelected: (date) {
+                                setState(() {
+                                  _lSelectedDeliveryDate = date;
+                                });
+                                _handleDeliveryUpdate();
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            Text('common.select'.tr,
+                                style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.12,
+                                    Colors.black)),
+                            TimePickerTableCell(
+                              initialTime: _lSelectedDeliveryTime,
+                              onTimeSelected: (time) {
+                                setState(() {
+                                  _lSelectedDeliveryTime = time;
+                                });
+                                _handleDeliveryUpdate();
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 30),
+                          if (_lDeliveryMethod == "Car Delivery") ...[
+                            FocusTraversalOrder(
+                              order: const NumericFocusOrder(60),
+                              child: buildColumnWidgetForTextFields(
+                                controller: _lCarNumberController,
+                                focusNode: _deliveryCarNumberFocusNode,
+                                size: size,
+                                height: 50,
+                                hintText: 'Car Number:',
+                                width: double.infinity,
+                                margin: EdgeInsets.zero,
+                                onTap: () {
+                                  Provider.of<KeyboardProvider>(context,
+                                          listen: false)
+                                      .show('text', _lCarNumberController,
+                                          replaceOnFirstInput: true);
+                                },
+                                onchanged: (_) => _handleDeliveryUpdate(),
                               ),
-                              if (_lDeliveryMethod.isNotEmpty &&
-                                  isDeliveryChargeDataEnabled) ...[
-                                const SizedBox(height: 12),
-                                Builder(builder: (context) {
-                                  DeliveryMethod? selectedMethod;
-                                  for (final method
-                                      in provider.deliveryMethods) {
-                                    if (method.name == _lDeliveryMethod) {
-                                      selectedMethod = method;
-                                      break;
-                                    }
-                                  }
-
-                                  final selectedDeliveryMethod = selectedMethod;
-
-                                  if (selectedDeliveryMethod == null ||
-                                      selectedDeliveryMethod.prices.isEmpty) {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  if (!shouldApplyDeliveryCharge) {
-                                    return Text(
-                                      minimumAmount > 0
-                                          ? 'Free delivery applied for orders above $currency ${minimumAmount.toStringAsFixed(2)}'
-                                          : 'free'.tr,
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                          FocusTraversalOrder(
+                            order: const NumericFocusOrder(70),
+                            child: buildColumnWidgetForTextFields(
+                              controller: _lCommentController,
+                              focusNode: _deliveryCommentFocusNode,
+                              size: size,
+                              height: 50,
+                              hintText: 'Comment:',
+                              width: double.infinity,
+                              margin: EdgeInsets.zero,
+                              onTap: () {
+                                Provider.of<KeyboardProvider>(context,
+                                        listen: false)
+                                    .show('text', _lCommentController,
+                                        replaceOnFirstInput: true);
+                              },
+                              onchanged: (_) => _handleDeliveryUpdate(),
+                            ),
+                          ),
+                          if (_lDeliveryMethod == "Door Delivery") ...[
+                            const SizedBox(height: 10),
+                            Consumer<CustomerSelectionProvider>(
+                              builder: (context, customerProvider, child) {
+                                if (!customerProvider.hasSelectedCustomer ||
+                                    customerProvider
+                                            .selectedCustomer!.addresses ==
+                                        null ||
+                                    customerProvider.selectedCustomer!
+                                        .addresses!.isEmpty) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Choose an address:',
                                       style: buildCustomStyle(
                                         FontWeightManager.medium,
-                                        FontSize.s11,
+                                        FontSize.s12,
                                         0.12,
-                                        const Color(0xFF059669),
+                                        Colors.black87,
                                       ),
-                                    );
-                                  }
-
-                                  final effectiveSelectedPriceId = (() {
-                                    if (_selectedDeliveryPriceId != null) {
-                                      final exists = selectedDeliveryMethod
-                                          .prices
-                                          .any((p) =>
-                                              p.id == _selectedDeliveryPriceId);
-                                      if (exists)
-                                        return _selectedDeliveryPriceId!;
-                                    }
-
-                                    if (_selectedDeliveryCharge != null) {
-                                      for (final price
-                                          in selectedDeliveryMethod.prices) {
-                                        if ((price.price -
-                                                    _selectedDeliveryCharge!)
-                                                .abs() <
-                                            0.001) {
-                                          return price.id;
-                                        }
-                                      }
-                                    }
-
-                                    return selectedDeliveryMethod
-                                        .prices.first.id;
-                                  })();
-
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Delivery charges',
-                                        style: buildCustomStyle(
-                                          FontWeightManager.medium,
-                                          FontSize.s12,
-                                          0.12,
-                                          Colors.black87,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: selectedDeliveryMethod.prices
-                                            .map((price) {
-                                          final isPriceSelected = price.id ==
-                                              effectiveSelectedPriceId;
-
-                                          return OutlinedButton(
-                                            onPressed: () {
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: customerProvider
+                                          .selectedCustomer!.addresses!
+                                          .map((Address address) {
+                                        return Material(
+                                          color: Colors.transparent,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: InkWell(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            onTap: () {
                                               setState(() {
-                                                _selectedDeliveryPriceId =
-                                                    price.id;
-                                                _selectedDeliveryCharge =
-                                                    price.price;
+                                                String fullAddress =
+                                                    "${address.address}, ${address.city}";
+                                                _lAddressController.text =
+                                                    fullAddress;
                                               });
                                               _handleDeliveryUpdate();
                                             },
-                                            style: OutlinedButton.styleFrom(
-                                              side: BorderSide(
-                                                color: isPriceSelected
-                                                    ? const Color(0xFF059669)
-                                                    : const Color(0xFF059669),
-                                                width:
-                                                    isPriceSelected ? 2 : 1.5,
-                                              ),
-                                              backgroundColor: isPriceSelected
-                                                  ? const Color(0xFF059669)
-                                                  : Colors.white,
-                                              foregroundColor: isPriceSelected
-                                                  ? Colors.white
-                                                  : const Color(0xFF059669),
+                                            child: Container(
                                               padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 10),
-                                              minimumSize: const Size(0, 44),
-                                              tapTargetSize:
-                                                  MaterialTapTargetSize
-                                                      .shrinkWrap,
-                                              visualDensity:
-                                                  const VisualDensity(
-                                                      horizontal: 0,
-                                                      vertical: 0),
-                                              shape: RoundedRectangleBorder(
+                                                  const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color: Colors
+                                                        .grey.shade300),
                                                 borderRadius:
-                                                    BorderRadius.circular(20),
+                                                    BorderRadius.circular(
+                                                        8),
+                                                color: Colors.grey.shade50,
                                               ),
-                                            ),
-                                            child: Text(
-                                              '$currency ${price.price.toStringAsFixed(2)}',
-                                              style: buildCustomStyle(
-                                                FontWeightManager.bold,
-                                                FontSize.s12,
-                                                0.0,
-                                                isPriceSelected
-                                                    ? Colors.white
-                                                    : const Color(0xFF059669),
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ],
-                                  );
-                                }),
-                              ],
-                              if (Provider.of<AppSettingsProvider>(context,
-                                          listen: false)
-                                      .appSettings
-                                      ?.askDeliveryDate ==
-                                  true) ...[
-                                const SizedBox(height: 20),
-                                Text('billing.enter_car_number'.tr,
-                                    style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.12,
-                                        Colors.black)),
-                                CalendarPickerTableCell(
-                                  initialDate: _lSelectedDeliveryDate,
-                                  onDateSelected: (date) {
-                                    setState(() {
-                                      _lSelectedDeliveryDate = date;
-                                    });
-                                    _handleDeliveryUpdate();
-                                  },
-                                ),
-                                const SizedBox(height: 10),
-                                Text('common.select'.tr,
-                                    style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.12,
-                                        Colors.black)),
-                                TimePickerTableCell(
-                                  initialTime: _lSelectedDeliveryTime,
-                                  onTimeSelected: (time) {
-                                    setState(() {
-                                      _lSelectedDeliveryTime = time;
-                                    });
-                                    _handleDeliveryUpdate();
-                                  },
-                                ),
-                              ],
-                              const SizedBox(height: 30),
-                              if (_lDeliveryMethod == "Car Delivery") ...[
-                                FocusTraversalOrder(
-                                  order: const NumericFocusOrder(60),
-                                  child: buildColumnWidgetForTextFields(
-                                    controller: _lCarNumberController,
-                                    focusNode: _deliveryCarNumberFocusNode,
-                                    size: size,
-                                    height: 50,
-                                    hintText: 'Car Number:',
-                                    width: double.infinity,
-                                    margin: EdgeInsets.zero,
-                                    onTap: () {
-                                      Provider.of<KeyboardProvider>(context,
-                                              listen: false)
-                                          .show('text', _lCarNumberController,
-                                              replaceOnFirstInput: true);
-                                    },
-                                    onchanged: (_) => _handleDeliveryUpdate(),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                              FocusTraversalOrder(
-                                order: const NumericFocusOrder(70),
-                                child: buildColumnWidgetForTextFields(
-                                  controller: _lCommentController,
-                                  focusNode: _deliveryCommentFocusNode,
-                                  size: size,
-                                  height: 50,
-                                  hintText: 'Comment:',
-                                  width: double.infinity,
-                                  margin: EdgeInsets.zero,
-                                  onTap: () {
-                                    Provider.of<KeyboardProvider>(context,
-                                            listen: false)
-                                        .show('text', _lCommentController,
-                                            replaceOnFirstInput: true);
-                                  },
-                                  onchanged: (_) => _handleDeliveryUpdate(),
-                                ),
-                              ),
-                              if (_lDeliveryMethod == "Door Delivery") ...[
-                                const SizedBox(height: 10),
-                                Consumer<CustomerSelectionProvider>(
-                                  builder: (context, customerProvider, child) {
-                                    if (!customerProvider.hasSelectedCustomer ||
-                                        customerProvider
-                                                .selectedCustomer!.addresses ==
-                                            null ||
-                                        customerProvider.selectedCustomer!
-                                            .addresses!.isEmpty) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Choose an address:',
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.12,
-                                            Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 8,
-                                          children: customerProvider
-                                              .selectedCustomer!.addresses!
-                                              .map((Address address) {
-                                            return Material(
-                                              color: Colors.transparent,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child: InkWell(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                onTap: () {
-                                                  setState(() {
-                                                    String fullAddress =
-                                                        "${address.address}, ${address.city}";
-                                                    _lAddressController.text =
-                                                        fullAddress;
-                                                  });
-                                                  _handleDeliveryUpdate();
-                                                },
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.all(8),
-                                                  decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                        color: Colors
-                                                            .grey.shade300),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8),
-                                                    color: Colors.grey.shade50,
-                                                  ),
-                                                  child: Text(
-                                                    "${address.address}, ${address.city}",
-                                                    maxLines: 2,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: buildCustomStyle(
-                                                      FontWeightManager.regular,
-                                                      FontSize.s12,
-                                                      0.12,
-                                                      Colors.black87,
-                                                    ),
-                                                  ),
+                                              child: Text(
+                                                "${address.address}, ${address.city}",
+                                                maxLines: 2,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  FontSize.s12,
+                                                  0.12,
+                                                  Colors.black87,
                                                 ),
                                               ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                                const SizedBox(height: 10),
-                                FocusTraversalOrder(
-                                  order: const NumericFocusOrder(90),
-                                  child: buildColumnWidgetForTextFields(
-                                    controller: _lAddressController,
-                                    focusNode: _deliveryAddressFocusNode,
-                                    size: size,
-                                    height: 50,
-                                    hintText: 'Address:',
-                                    width: double.infinity,
-                                    margin: EdgeInsets.zero,
-                                    onTap: () {
-                                      Provider.of<KeyboardProvider>(context,
-                                              listen: false)
-                                          .show('text', _lAddressController,
-                                              replaceOnFirstInput: true);
-                                    },
-                                    onchanged: (_) => _handleDeliveryUpdate(),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            FocusTraversalOrder(
+                              order: const NumericFocusOrder(90),
+                              child: buildColumnWidgetForTextFields(
+                                controller: _lAddressController,
+                                focusNode: _deliveryAddressFocusNode,
+                                size: size,
+                                height: 50,
+                                hintText: 'Address:',
+                                width: double.infinity,
+                                margin: EdgeInsets.zero,
+                                onTap: () {
+                                  Provider.of<KeyboardProvider>(context,
+                                          listen: false)
+                                      .show('text', _lAddressController,
+                                          replaceOnFirstInput: true);
+                                },
+                                onchanged: (_) => _handleDeliveryUpdate(),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                );
+
+                if (_isMobileCheckout) {
+                  return Column(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: deliveryOptionsContent,
+                      ),
+                      SizedBox(height: _checkoutGap),
+                      Expanded(
+                        flex: 2,
+                        child: _isSelectionOnly
+                            ? _buildSelectionOnlySidePanel(
+                                icon: Icons.local_shipping,
+                                title: 'Selected Delivery',
+                                value: _lDeliveryMethod.isNotEmpty
+                                    ? _lDeliveryMethod
+                                    : 'Not selected',
+                                supportingText: _lDeliveryMethodId.isNotEmpty
+                                    ? 'Method ID: $_lDeliveryMethodId'
+                                    : null,
+                                canDone: _lDeliveryMethodId.isNotEmpty ||
+                                    _lDeliveryMethod.isNotEmpty,
+                              )
+                            : Column(
+                                children: [
+                                  Expanded(child: _buildCompactSummary()),
+                                  _buildFooter(
+                                    onPrint: _handlePrint,
+                                    onConfirm: _handleConfirm,
                                   ),
+                                ],
+                              ),
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Left: Delivery Options
+                    Expanded(
+                      flex: 3,
+                      child: deliveryOptionsContent,
+                    ),
+                    SizedBox(width: _checkoutGap),
+                    const VerticalDivider(width: 1),
+                    SizedBox(width: _checkoutGap),
+                    // Right: Summary
+                    Expanded(
+                      flex: 2,
+                      child: _isSelectionOnly
+                          ? _buildSelectionOnlySidePanel(
+                              icon: Icons.local_shipping,
+                              title: 'Selected Delivery',
+                              value: _lDeliveryMethod.isNotEmpty
+                                  ? _lDeliveryMethod
+                                  : 'Not selected',
+                              supportingText: _lDeliveryMethodId.isNotEmpty
+                                  ? 'Method ID: $_lDeliveryMethodId'
+                                  : null,
+                              canDone: _lDeliveryMethodId.isNotEmpty ||
+                                  _lDeliveryMethod.isNotEmpty,
+                            )
+                          : Column(
+                              children: [
+                                Expanded(child: _buildCompactSummary()),
+                                _buildFooter(
+                                  onPrint: _handlePrint,
+                                  onConfirm: _handleConfirm,
                                 ),
                               ],
-                            ],
-                          );
-                        },
-                      ),
+                            ),
                     ),
-                  ),
-                  SizedBox(width: _checkoutGap),
-                  const VerticalDivider(width: 1),
-                  SizedBox(width: _checkoutGap),
-                  // Right: Summary
-                  Expanded(
-                    flex: 2,
-                    child: _isSelectionOnly
-                        ? _buildSelectionOnlySidePanel(
-                            icon: Icons.local_shipping,
-                            title: 'Selected Delivery',
-                            value: _lDeliveryMethod.isNotEmpty
-                                ? _lDeliveryMethod
-                                : 'Not selected',
-                            supportingText: _lDeliveryMethodId.isNotEmpty
-                                ? 'Method ID: $_lDeliveryMethodId'
-                                : null,
-                            canDone: _lDeliveryMethodId.isNotEmpty ||
-                                _lDeliveryMethod.isNotEmpty,
-                          )
-                        : Column(
-                            children: [
-                              Expanded(child: _buildCompactSummary()),
-                              _buildFooter(
-                                onPrint: _handlePrint,
-                                onConfirm: _handleConfirm,
-                              ),
-                            ],
-                          ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              }(),
             ),
           ),
         ],
@@ -2670,100 +2832,190 @@ class _CheckoutModalState extends State<CheckoutModal> {
           Expanded(
             child: Padding(
               padding: EdgeInsets.all(_checkoutPadding),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left: Discount Options
-                  Expanded(
-                    flex: 3,
-                    child: RestaurantCouponModalWrapper(
-                      orderSubTotal: widget.cartTotal,
-                      initialCouponCode: _localCouponCode,
-                      initialFlatDiscount: _localFlatDiscount,
-                      initialPercentageDiscount: _localPercentageDiscount,
-                      isCouponApplied: _localIsCouponApplied,
-                      showAsDialog: false,
-                      showSkipButton: !widget.isQuotationMode,
-                      onSkip: () => _goToStep(3),
-                      showShadow: false,
-                      fullWidth: true,
-                      onCouponAction: (code, applied,
-                          {flatDiscount, percentageDiscount}) {
-                        final newFlatDiscount = flatDiscount ?? 0.0;
-                        final newPercentageDiscount = percentageDiscount ?? 0.0;
-                        final oldDiscountAmount = _localFlatDiscount +
-                            (widget.cartTotal * _localPercentageDiscount / 100);
-                        final oldEffectiveTotal =
-                            widget.cartTotal - oldDiscountAmount;
-                        final newDiscountAmount = newFlatDiscount +
-                            (widget.cartTotal * newPercentageDiscount / 100);
-                        final newEffectiveTotal =
-                            widget.cartTotal - newDiscountAmount;
-
-                        final remapped =
-                            PaymentAutoFillHelper.remapAmountsAfterDiscount(
-                          isCashSelected: _lIsCashSelected,
-                          isCardSelected: _lIsCardSelected,
-                          isUpiSelected: _lIsUpiSelected,
-                          isCodSelected: _lIsCodSelected,
-                          cashAmount: _lCashAmount,
-                          cardAmount: _lCardAmount,
-                          upiAmount: _lUpiAmount,
-                          codAmount: _lCodAmount,
-                          oldEffectiveTotal: oldEffectiveTotal,
-                          newEffectiveTotal: newEffectiveTotal,
-                        );
-
-                        _handleDiscountUpdate(code, applied, newFlatDiscount,
-                            newPercentageDiscount);
-
-                        if (remapped.cash != _lCashAmount ||
-                            remapped.card != _lCardAmount ||
-                            remapped.upi != _lUpiAmount ||
-                            remapped.cod != _lCodAmount) {
-                          _handlePaymentUpdate(
-                              _lIsCashSelected,
-                              _lIsCardSelected,
-                              _lIsUpiSelected,
-                              _lIsCodSelected,
-                              _lIsDebitSelected,
-                              remapped.cash,
-                              remapped.card,
-                              remapped.upi,
-                              remapped.cod,
-                              _lDebitAmount,
-                              _lTransactionNumber,
-                              _lToCustomerCreditEnabled,
-                              cashMethodId: widget.cashMethodId,
-                              cardMethodId: widget.cardMethodId,
-                              upiMethodId: widget.upiMethodId,
-                              codMethodId: widget.codMethodId,
-                              extraMethodAmounts: _lExtraAmounts,
-                              extraMethodValues: _lExtraValues);
-                        }
-
-                        _nextStep();
-                      },
-                    ),
-                  ),
-                  SizedBox(width: _checkoutGap),
-                  const VerticalDivider(width: 1),
-                  SizedBox(width: _checkoutGap),
-                  // Right: Summary
-                  Expanded(
-                    flex: 2,
-                    child: Column(
+              child: _isMobileCheckout
+                  ? Column(
                       children: [
-                        Expanded(child: _buildCompactSummary()),
-                        _buildFooter(
-                          onPrint: _handlePrint,
-                          onConfirm: _handleConfirm,
+                        Expanded(
+                          flex: 3,
+                          child: RestaurantCouponModalWrapper(
+                            orderSubTotal: widget.cartTotal,
+                            initialCouponCode: _localCouponCode,
+                            initialFlatDiscount: _localFlatDiscount,
+                            initialPercentageDiscount: _localPercentageDiscount,
+                            isCouponApplied: _localIsCouponApplied,
+                            showAsDialog: false,
+                            showSkipButton: !widget.isQuotationMode,
+                            onSkip: () => _goToStep(3),
+                            showShadow: false,
+                            fullWidth: true,
+                            onCouponAction: (code, applied,
+                                {flatDiscount, percentageDiscount}) {
+                              final newFlatDiscount = flatDiscount ?? 0.0;
+                              final newPercentageDiscount = percentageDiscount ?? 0.0;
+                              final oldDiscountAmount = _localFlatDiscount +
+                                  (widget.cartTotal * _localPercentageDiscount / 100);
+                              final oldEffectiveTotal =
+                                  widget.cartTotal - oldDiscountAmount;
+                              final newDiscountAmount = newFlatDiscount +
+                                  (widget.cartTotal * newPercentageDiscount / 100);
+                              final newEffectiveTotal =
+                                  widget.cartTotal - newDiscountAmount;
+
+                              final remapped =
+                                  PaymentAutoFillHelper.remapAmountsAfterDiscount(
+                                isCashSelected: _lIsCashSelected,
+                                isCardSelected: _lIsCardSelected,
+                                isUpiSelected: _lIsUpiSelected,
+                                isCodSelected: _lIsCodSelected,
+                                cashAmount: _lCashAmount,
+                                cardAmount: _lCardAmount,
+                                upiAmount: _lUpiAmount,
+                                codAmount: _lCodAmount,
+                                oldEffectiveTotal: oldEffectiveTotal,
+                                newEffectiveTotal: newEffectiveTotal,
+                              );
+
+                              _handleDiscountUpdate(code, applied, newFlatDiscount,
+                                  newPercentageDiscount);
+
+                              if (remapped.cash != _lCashAmount ||
+                                  remapped.card != _lCardAmount ||
+                                  remapped.upi != _lUpiAmount ||
+                                  remapped.cod != _lCodAmount) {
+                                _handlePaymentUpdate(
+                                    _lIsCashSelected,
+                                    _lIsCardSelected,
+                                    _lIsUpiSelected,
+                                    _lIsCodSelected,
+                                    _lIsDebitSelected,
+                                    remapped.cash,
+                                    remapped.card,
+                                    remapped.upi,
+                                    remapped.cod,
+                                    _lDebitAmount,
+                                    _lTransactionNumber,
+                                    _lToCustomerCreditEnabled,
+                                    cashMethodId: widget.cashMethodId,
+                                    cardMethodId: widget.cardMethodId,
+                                    upiMethodId: widget.upiMethodId,
+                                    codMethodId: widget.codMethodId,
+                                    extraMethodAmounts: _lExtraAmounts,
+                                    extraMethodValues: _lExtraValues);
+                              }
+
+                              _nextStep();
+                            },
+                          ),
+                        ),
+                        SizedBox(height: _checkoutGap),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              Expanded(child: _buildCompactSummary()),
+                              _buildFooter(
+                                onPrint: _handlePrint,
+                                onConfirm: _handleConfirm,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left: Discount Options
+                        Expanded(
+                          flex: 3,
+                          child: RestaurantCouponModalWrapper(
+                            orderSubTotal: widget.cartTotal,
+                            initialCouponCode: _localCouponCode,
+                            initialFlatDiscount: _localFlatDiscount,
+                            initialPercentageDiscount: _localPercentageDiscount,
+                            isCouponApplied: _localIsCouponApplied,
+                            showAsDialog: false,
+                            showSkipButton: !widget.isQuotationMode,
+                            onSkip: () => _goToStep(3),
+                            showShadow: false,
+                            fullWidth: true,
+                            onCouponAction: (code, applied,
+                                {flatDiscount, percentageDiscount}) {
+                              final newFlatDiscount = flatDiscount ?? 0.0;
+                              final newPercentageDiscount = percentageDiscount ?? 0.0;
+                              final oldDiscountAmount = _localFlatDiscount +
+                                  (widget.cartTotal * _localPercentageDiscount / 100);
+                              final oldEffectiveTotal =
+                                  widget.cartTotal - oldDiscountAmount;
+                              final newDiscountAmount = newFlatDiscount +
+                                  (widget.cartTotal * newPercentageDiscount / 100);
+                              final newEffectiveTotal =
+                                  widget.cartTotal - newDiscountAmount;
+
+                              final remapped =
+                                  PaymentAutoFillHelper.remapAmountsAfterDiscount(
+                                isCashSelected: _lIsCashSelected,
+                                isCardSelected: _lIsCardSelected,
+                                isUpiSelected: _lIsUpiSelected,
+                                isCodSelected: _lIsCodSelected,
+                                cashAmount: _lCashAmount,
+                                cardAmount: _lCardAmount,
+                                upiAmount: _lUpiAmount,
+                                codAmount: _lCodAmount,
+                                oldEffectiveTotal: oldEffectiveTotal,
+                                newEffectiveTotal: newEffectiveTotal,
+                              );
+
+                              _handleDiscountUpdate(code, applied, newFlatDiscount,
+                                  newPercentageDiscount);
+
+                              if (remapped.cash != _lCashAmount ||
+                                  remapped.card != _lCardAmount ||
+                                  remapped.upi != _lUpiAmount ||
+                                  remapped.cod != _lCodAmount) {
+                                _handlePaymentUpdate(
+                                    _lIsCashSelected,
+                                    _lIsCardSelected,
+                                    _lIsUpiSelected,
+                                    _lIsCodSelected,
+                                    _lIsDebitSelected,
+                                    remapped.cash,
+                                    remapped.card,
+                                    remapped.upi,
+                                    remapped.cod,
+                                    _lDebitAmount,
+                                    _lTransactionNumber,
+                                    _lToCustomerCreditEnabled,
+                                    cashMethodId: widget.cashMethodId,
+                                    cardMethodId: widget.cardMethodId,
+                                    upiMethodId: widget.upiMethodId,
+                                    codMethodId: widget.codMethodId,
+                                    extraMethodAmounts: _lExtraAmounts,
+                                    extraMethodValues: _lExtraValues);
+                              }
+
+                              _nextStep();
+                            },
+                          ),
+                        ),
+                        SizedBox(width: _checkoutGap),
+                        const VerticalDivider(width: 1),
+                        SizedBox(width: _checkoutGap),
+                        // Right: Summary
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              Expanded(child: _buildCompactSummary()),
+                              _buildFooter(
+                                onPrint: _handlePrint,
+                                onConfirm: _handleConfirm,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],
@@ -2817,108 +3069,218 @@ class _CheckoutModalState extends State<CheckoutModal> {
           Expanded(
             child: Padding(
               padding: EdgeInsets.all(_checkoutPadding),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left: Payment Options
-                  Expanded(
-                    flex: 3,
-                    child: PaymentMethodModal(
-                      initialIsCashSelected:
-                          shouldAutoFillCash ? true : _lIsCashSelected,
-                      initialIsCardSelected:
-                          shouldAutoFillCard ? true : _lIsCardSelected,
-                      initialIsUpiSelected:
-                          shouldAutoFillUpi ? true : _lIsUpiSelected,
-                      initialIsCodSelected:
-                          shouldAutoFillCod ? true : _lIsCodSelected,
-                      initialIsDebitSelected: _lIsDebitSelected,
-                      initialCashAmount: shouldAutoFillCash
-                          ? effectiveTotal.toStringAsFixed(2)
-                          : _lCashAmount,
-                      initialCardAmount: shouldAutoFillCard
-                          ? effectiveTotal.toStringAsFixed(2)
-                          : _lCardAmount,
-                      initialUpiAmount: shouldAutoFillUpi
-                          ? effectiveTotal.toStringAsFixed(2)
-                          : _lUpiAmount,
-                      initialCodAmount: shouldAutoFillCod
-                          ? effectiveTotal.toStringAsFixed(2)
-                          : _lCodAmount,
-                      initialDebitAmount: _lDebitAmount,
-                      initialTransactionNumber: _lTransactionNumber,
-                      initialExtraAmounts: _lExtraAmounts,
-                      cartTotal: effectiveTotal,
-                      customerPrevBalance:
-                          _isDefaultCustomer(_localSelectedCustomer)
-                              ? 0.0
-                              : (_localSelectedCustomer?.balance ?? 0.0),
-                      isDefaultCustomer:
-                          _isDefaultCustomer(_localSelectedCustomer),
-                      customButtonTitle: "Confirm Payment Selection",
-                      closeOnApply: false,
-                      showConfirmButton: false,
-                      showAsDialog: false,
-                      showShadow: false,
-                      fullWidth: true,
-                      onPaymentMethodSelected: (isCash, isCard, isUpi, isCod,
-                          isDebit, cash, card, upi, cod, debit, trans, toCredit,
-                          {cashMethodId,
-                          cardMethodId,
-                          upiMethodId,
-                          codMethodId,
-                          extraMethodAmounts,
-                          extraMethodValues}) {
-                        _handlePaymentUpdate(
-                            isCash,
-                            isCard,
-                            isUpi,
-                            isCod,
-                            isDebit,
-                            cash,
-                            card,
-                            upi,
-                            cod,
-                            debit,
-                            trans,
-                            toCredit,
-                            cashMethodId: cashMethodId,
-                            cardMethodId: cardMethodId,
-                            upiMethodId: upiMethodId,
-                            codMethodId: codMethodId,
-                            extraMethodAmounts: extraMethodAmounts,
-                            extraMethodValues: extraMethodValues);
-                        if (!_isSelectionOnly) {
-                          _nextStep();
-                        }
-                      },
-                    ),
-                  ),
-                  SizedBox(width: _checkoutGap),
-                  const VerticalDivider(width: 1),
-                  SizedBox(width: _checkoutGap),
-                  // Right: Summary
-                  Expanded(
-                    flex: 2,
-                    child: _isSelectionOnly
-                        ? _buildSelectionOnlySidePanel(
-                            icon: Icons.payments_rounded,
-                            title: 'Selected Payment',
-                            value: _selectionOnlyPaymentLabel(),
-                            supportingText: _selectionOnlyPaymentSupportingText(),
-                            canDone: _hasAnyPaymentMethodSelected(),
-                          )
-                        : Column(
-                            children: [
-                              Expanded(child: _buildCompactSummary()),
-                              _buildFooter(
-                                onPrint: _handlePrint,
-                                onConfirm: _handleConfirm,
-                              ),
-                            ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMobileCheckout = MediaQuery.of(context).size.width < 600;
+                  if (isMobileCheckout) {
+                    return Column(
+                      children: [
+                        // Top: Payment Options
+                        Expanded(
+                          flex: 3,
+                          child: PaymentMethodModal(
+                            initialIsCashSelected:
+                                shouldAutoFillCash ? true : _lIsCashSelected,
+                            initialIsCardSelected:
+                                shouldAutoFillCard ? true : _lIsCardSelected,
+                            initialIsUpiSelected:
+                                shouldAutoFillUpi ? true : _lIsUpiSelected,
+                            initialIsCodSelected:
+                                shouldAutoFillCod ? true : _lIsCodSelected,
+                            initialIsDebitSelected: _lIsDebitSelected,
+                            initialCashAmount: shouldAutoFillCash
+                                ? effectiveTotal.toStringAsFixed(2)
+                                : _lCashAmount,
+                            initialCardAmount: shouldAutoFillCard
+                                ? effectiveTotal.toStringAsFixed(2)
+                                : _lCardAmount,
+                            initialUpiAmount: shouldAutoFillUpi
+                                ? effectiveTotal.toStringAsFixed(2)
+                                : _lUpiAmount,
+                            initialCodAmount: shouldAutoFillCod
+                                ? effectiveTotal.toStringAsFixed(2)
+                                : _lCodAmount,
+                            initialDebitAmount: _lDebitAmount,
+                            initialTransactionNumber: _lTransactionNumber,
+                            initialExtraAmounts: _lExtraAmounts,
+                            cartTotal: effectiveTotal,
+                            customerPrevBalance:
+                                _isDefaultCustomer(_localSelectedCustomer)
+                                    ? 0.0
+                                    : (_localSelectedCustomer?.balance ?? 0.0),
+                            isDefaultCustomer:
+                                _isDefaultCustomer(_localSelectedCustomer),
+                            customButtonTitle: "Confirm Payment Selection",
+                            closeOnApply: false,
+                            showConfirmButton: false,
+                            showAsDialog: false,
+                            showShadow: false,
+                            fullWidth: true,
+                            onPaymentMethodSelected: (isCash, isCard, isUpi, isCod,
+                                isDebit, cash, card, upi, cod, debit, trans, toCredit,
+                                {cashMethodId,
+                                cardMethodId,
+                                upiMethodId,
+                                codMethodId,
+                                extraMethodAmounts,
+                                extraMethodValues}) {
+                              _handlePaymentUpdate(
+                                  isCash,
+                                  isCard,
+                                  isUpi,
+                                  isCod,
+                                  isDebit,
+                                  cash,
+                                  card,
+                                  upi,
+                                  cod,
+                                  debit,
+                                  trans,
+                                  toCredit,
+                                  cashMethodId: cashMethodId,
+                                  cardMethodId: cardMethodId,
+                                  upiMethodId: upiMethodId,
+                                  codMethodId: codMethodId,
+                                  extraMethodAmounts: extraMethodAmounts,
+                                  extraMethodValues: extraMethodValues);
+                              if (!_isSelectionOnly) {
+                                _nextStep();
+                              }
+                            },
                           ),
-                  ),
-                ],
+                        ),
+                        SizedBox(height: _checkoutGap),
+                        // Bottom: Summary
+                        Expanded(
+                          flex: 2,
+                          child: _isSelectionOnly
+                              ? _buildSelectionOnlySidePanel(
+                                  icon: Icons.payments_rounded,
+                                  title: 'Selected Payment',
+                                  value: _selectionOnlyPaymentLabel(),
+                                  supportingText:
+                                      _selectionOnlyPaymentSupportingText(),
+                                  canDone: _hasAnyPaymentMethodSelected(),
+                                )
+                              : Column(
+                                  children: [
+                                    Expanded(child: _buildCompactSummary()),
+                                    _buildFooter(
+                                      onPrint: _handlePrint,
+                                      onConfirm: _handleConfirm,
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left: Payment Options
+                      Expanded(
+                        flex: 3,
+                        child: PaymentMethodModal(
+                          initialIsCashSelected:
+                              shouldAutoFillCash ? true : _lIsCashSelected,
+                          initialIsCardSelected:
+                              shouldAutoFillCard ? true : _lIsCardSelected,
+                          initialIsUpiSelected:
+                              shouldAutoFillUpi ? true : _lIsUpiSelected,
+                          initialIsCodSelected:
+                              shouldAutoFillCod ? true : _lIsCodSelected,
+                          initialIsDebitSelected: _lIsDebitSelected,
+                          initialCashAmount: shouldAutoFillCash
+                              ? effectiveTotal.toStringAsFixed(2)
+                              : _lCashAmount,
+                          initialCardAmount: shouldAutoFillCard
+                              ? effectiveTotal.toStringAsFixed(2)
+                              : _lCardAmount,
+                          initialUpiAmount: shouldAutoFillUpi
+                              ? effectiveTotal.toStringAsFixed(2)
+                              : _lUpiAmount,
+                          initialCodAmount: shouldAutoFillCod
+                              ? effectiveTotal.toStringAsFixed(2)
+                              : _lCodAmount,
+                          initialDebitAmount: _lDebitAmount,
+                          initialTransactionNumber: _lTransactionNumber,
+                          initialExtraAmounts: _lExtraAmounts,
+                          cartTotal: effectiveTotal,
+                          customerPrevBalance:
+                              _isDefaultCustomer(_localSelectedCustomer)
+                                  ? 0.0
+                                  : (_localSelectedCustomer?.balance ?? 0.0),
+                          isDefaultCustomer:
+                              _isDefaultCustomer(_localSelectedCustomer),
+                          customButtonTitle: "Confirm Payment Selection",
+                          closeOnApply: false,
+                          showConfirmButton: false,
+                          showAsDialog: false,
+                          showShadow: false,
+                          fullWidth: true,
+                          onPaymentMethodSelected: (isCash, isCard, isUpi, isCod,
+                              isDebit, cash, card, upi, cod, debit, trans, toCredit,
+                              {cashMethodId,
+                              cardMethodId,
+                              upiMethodId,
+                              codMethodId,
+                              extraMethodAmounts,
+                              extraMethodValues}) {
+                            _handlePaymentUpdate(
+                                isCash,
+                                isCard,
+                                isUpi,
+                                isCod,
+                                isDebit,
+                                cash,
+                                card,
+                                upi,
+                                cod,
+                                debit,
+                                trans,
+                                toCredit,
+                                cashMethodId: cashMethodId,
+                                cardMethodId: cardMethodId,
+                                upiMethodId: upiMethodId,
+                                codMethodId: codMethodId,
+                                extraMethodAmounts: extraMethodAmounts,
+                                extraMethodValues: extraMethodValues);
+                            if (!_isSelectionOnly) {
+                              _nextStep();
+                            }
+                          },
+                        ),
+                      ),
+                      SizedBox(width: _checkoutGap),
+                      const VerticalDivider(width: 1),
+                      SizedBox(width: _checkoutGap),
+                      // Right: Summary
+                      Expanded(
+                        flex: 2,
+                        child: _isSelectionOnly
+                            ? _buildSelectionOnlySidePanel(
+                                icon: Icons.payments_rounded,
+                                title: 'Selected Payment',
+                                value: _selectionOnlyPaymentLabel(),
+                                supportingText:
+                                    _selectionOnlyPaymentSupportingText(),
+                                canDone: _hasAnyPaymentMethodSelected(),
+                              )
+                            : Column(
+                                children: [
+                                  Expanded(child: _buildCompactSummary()),
+                                  _buildFooter(
+                                    onPrint: _handlePrint,
+                                    onConfirm: _handleConfirm,
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -3418,11 +3780,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onConfirm,
   }) {
     final compactFooter = widget.isQuotationMode || _isDenseCheckout;
+    final double horizontalPadding = _isMobileCheckout
+        ? 2.0
+        : (_isDenseCheckout ? 8.0 : 12.0);
     return Container(
       padding: EdgeInsets.fromLTRB(
-        _isDenseCheckout ? 8 : 12,
-        widget.isQuotationMode ? 0 : (_isDenseCheckout ? 8 : 12),
-        _isDenseCheckout ? 8 : 12,
+        horizontalPadding,
+        widget.isQuotationMode ? 0 : (_isDenseCheckout ? 8.0 : 12.0),
+        horizontalPadding,
         0,
       ),
       color: Colors.white,
@@ -3606,6 +3971,189 @@ class _CheckoutModalState extends State<CheckoutModal> {
             _localPercentageDiscount > 0;
         final bool hasDelivery = _lDeliveryMethod.isNotEmpty;
 
+        final orderSummaryCard = Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.isQuotationMode
+                ? 14
+                : (_isDenseCheckout ? 14 : 20),
+            vertical: widget.isQuotationMode
+                ? 12
+                : (_isDenseCheckout ? 14 : 20),
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: const Color(0xFFE2E8F0), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Order Summary',
+                style: TextStyle(
+                  fontSize: _isDenseCheckout ? 16 : 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              SizedBox(height: _isDenseCheckout ? 8 : 12),
+              _buildSummaryRow('Net Amount', subTotal, Colors.black),
+              SizedBox(
+                  height: widget.isQuotationMode
+                      ? 6
+                      : (_isDenseCheckout ? 7 : 10)),
+              _buildSummaryRow('Discount', -discountAmount,
+                  const Color(0xFFEF4444),
+                  labelColor: const Color(0xFFEF4444)),
+              SizedBox(
+                  height: widget.isQuotationMode
+                      ? 6
+                      : (_isDenseCheckout ? 7 : 10)),
+              _buildSummaryRow(
+                  'Tax', taxAmount, const Color(0xFF64748B),
+                  labelColor: const Color(0xFF64748B)),
+              if (hasDelivery &&
+                  _isfreeDeliveryMinimumAmount()) ...[
+                SizedBox(height: _isDenseCheckout ? 7 : 10),
+                _buildDeliveryChargeRow(),
+              ],
+              Padding(
+                padding: EdgeInsets.symmetric(
+                    vertical: widget.isQuotationMode
+                        ? 8
+                        : (_isDenseCheckout ? 10 : 16)),
+                child: Divider(
+                    height: 1,
+                    thickness: 1.5,
+                    color: Color(0xFFF1F5F9)),
+              ),
+              _buildSummaryRow('Total Payable', effectiveTotal,
+                  const Color(0xFF2563EB),
+                  isBold: true,
+                  large: true,
+                  labelColor: const Color(0xFF2563EB)),
+              if (_localSelectedCustomer != null &&
+                  !isDefaultCustomer) ...[
+                SizedBox(height: _isDenseCheckout ? 7 : 10),
+                _buildSummaryRow(
+                    'Cust. Prev. Balance',
+                    prevBalance,
+                    prevBalance >= 0
+                        ? const Color(0xFF059669)
+                        : const Color(0xFFDC2626),
+                    labelColor: prevBalance >= 0
+                        ? const Color(0xFF059669)
+                        : const Color(0xFFDC2626)),
+              ],
+              if (!widget.isQuotationMode) ...[
+                SizedBox(height: _isDenseCheckout ? 7 : 10),
+                _buildSummaryRow(
+                    'Total Paid', totalPaid, Colors.black),
+                SizedBox(height: _isDenseCheckout ? 7 : 10),
+                _buildSummaryRow('Balance', displayBalance,
+                    const Color(0xFF059669),
+                    labelColor: const Color(0xFF059669)),
+              ],
+            ],
+          ),
+        );
+
+        if (_isMobileCheckout) {
+          return ScrollConfiguration(
+            behavior:
+                ScrollConfiguration.of(context).copyWith(scrollbars: false),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LayoutBuilder(builder: (context, constraints) {
+                    final compactQuotation = widget.isQuotationMode;
+                    final tileSpacing =
+                        compactQuotation || _isDenseCheckout ? 8.0 : 10.0;
+                    final tileWidth = (constraints.maxWidth - tileSpacing) / 2;
+                    final tileHeight = compactQuotation
+                        ? 60.0
+                        : (_isMobileCheckout ? 56.0 : (_isDenseCheckout ? 72.0 : 92.0));
+                    final tiles = <Widget>[
+                      _buildClickableCheckItem(
+                        'Customer',
+                        _hasQuoteOnlyCustomerNeedingSave
+                            ? 'Create customer'
+                            : widget.isQuotationMode
+                                ? _quotationCustomerDisplayName
+                                : (_localSelectedCustomer?.name ?? 'Not Selected'),
+                        hasCustomer,
+                        Icons.person_outline,
+                        0,
+                        customer: _localSelectedCustomer,
+                      ),
+                      if (widget.enableDelivery)
+                        _buildClickableCheckItem(
+                          'Delivery',
+                          _lDeliveryMethod,
+                          hasDelivery,
+                          Icons.local_shipping_outlined,
+                          1,
+                        ),
+                      _buildClickableCheckItem(
+                        'Discount',
+                        hasDiscount
+                            ? (_localPercentageDiscount > 0
+                                ? '${_localPercentageDiscount.toStringAsFixed(0)}%'
+                                : _localFlatDiscount.toStringAsFixed(2))
+                            : 'Not Applied',
+                        hasDiscount,
+                        Icons.discount_outlined,
+                        2,
+                      ),
+                      if (!widget.isQuotationMode)
+                        _buildClickableCheckItem(
+                          'Payment',
+                          _paymentStatusLabel(),
+                          hasPayment,
+                          Icons.payment_outlined,
+                          3,
+                        ),
+                    ];
+
+                    return Wrap(
+                      spacing: tileSpacing,
+                      runSpacing: tileSpacing,
+                      children: tiles
+                          .map(
+                            (tile) => SizedBox(
+                              width: tileWidth,
+                              height: tileHeight,
+                              child: tile,
+                            ),
+                          )
+                          .toList(),
+                    );
+                  }),
+                  SizedBox(
+                      height:
+                          widget.isQuotationMode ? 8 : (_isDenseCheckout ? 10 : 16)),
+                  orderSummaryCard,
+                  if (widget.isQuotationMode) ...[
+                    const SizedBox(height: 6),
+                    _buildQuotationDatesPanel(),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }
+
         return Column(
           children: [
             // Status Checklist (clickable to navigate)
@@ -3614,8 +4162,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
               final tileSpacing =
                   compactQuotation || _isDenseCheckout ? 8.0 : 10.0;
               final tileWidth = (constraints.maxWidth - tileSpacing) / 2;
-              final tileHeight =
-                  compactQuotation ? 60.0 : (_isDenseCheckout ? 72.0 : 92.0);
+              final tileHeight = compactQuotation
+                  ? 60.0
+                  : (_isMobileCheckout ? 56.0 : (_isDenseCheckout ? 72.0 : 92.0));
               final tiles = <Widget>[
                 _buildClickableCheckItem(
                   'Customer',
@@ -3686,107 +4235,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: widget.isQuotationMode
-                              ? 14
-                              : (_isDenseCheckout ? 14 : 20),
-                          vertical: widget.isQuotationMode
-                              ? 12
-                              : (_isDenseCheckout ? 14 : 20),
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: const Color(0xFFE2E8F0), width: 1.5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Order Summary',
-                              style: TextStyle(
-                                fontSize: _isDenseCheckout ? 16 : 18,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF0F172A),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            SizedBox(height: _isDenseCheckout ? 8 : 12),
-                            _buildSummaryRow(
-                                'Net Amount', subTotal, Colors.black),
-                            SizedBox(
-                                height: widget.isQuotationMode
-                                    ? 6
-                                    : (_isDenseCheckout ? 7 : 10)),
-                            _buildSummaryRow('Discount', -discountAmount,
-                                const Color(0xFFEF4444),
-                                labelColor: const Color(0xFFEF4444)),
-                            SizedBox(
-                                height: widget.isQuotationMode
-                                    ? 6
-                                    : (_isDenseCheckout ? 7 : 10)),
-                            _buildSummaryRow(
-                                'Tax', taxAmount, const Color(0xFF64748B),
-                                labelColor: const Color(0xFF64748B)),
-                            if (hasDelivery &&
-                                _isfreeDeliveryMinimumAmount()) ...[
-                              SizedBox(height: _isDenseCheckout ? 7 : 10),
-                              _buildDeliveryChargeRow(),
-                            ],
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                  vertical: widget.isQuotationMode
-                                      ? 8
-                                      : (_isDenseCheckout ? 10 : 16)),
-                              child: Divider(
-                                  height: 1,
-                                  thickness: 1.5,
-                                  color: Color(0xFFF1F5F9)),
-                            ),
-                            _buildSummaryRow('Total Payable', effectiveTotal,
-                                const Color(0xFF2563EB),
-                                isBold: true,
-                                large: true,
-                                labelColor: const Color(0xFF2563EB)),
-                            if (_localSelectedCustomer != null &&
-                                !isDefaultCustomer) ...[
-                              SizedBox(height: _isDenseCheckout ? 7 : 10),
-                              _buildSummaryRow(
-                                  'Cust. Prev. Balance',
-                                  prevBalance,
-                                  prevBalance >= 0
-                                      ? const Color(0xFF059669)
-                                      : const Color(0xFFDC2626),
-                                  labelColor: prevBalance >= 0
-                                      ? const Color(0xFF059669)
-                                      : const Color(0xFFDC2626)),
-                            ],
-                            if (!widget.isQuotationMode) ...[
-                              SizedBox(height: _isDenseCheckout ? 7 : 10),
-                              _buildSummaryRow(
-                                  'Total Paid', totalPaid, Colors.black),
-                              SizedBox(height: _isDenseCheckout ? 7 : 10),
-                              _buildSummaryRow('Balance', displayBalance,
-                                  const Color(0xFF059669),
-                                  labelColor: const Color(0xFF059669)),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (widget.isQuotationMode) ...[
-                        const SizedBox(height: 6),
-                        _buildQuotationDatesPanel(),
-                      ],
+                      orderSummaryCard,
                     ],
                   ),
                 ),

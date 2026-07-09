@@ -1052,7 +1052,7 @@ class CategoryProvider extends ChangeNotifier {
       currentPage = 1;
       totalPages = 1;
       propValues = null;
-      _selectedCategoryIndex = 0;
+      _selectedCategoryIndex = -1;
 
       notifyListeners();
       debugPrint('✅ ALL CATEGORY DATA CLEARED SUCCESSFULLY');

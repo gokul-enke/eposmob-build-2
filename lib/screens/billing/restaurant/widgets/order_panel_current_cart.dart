@@ -327,7 +327,10 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildCurrentCartSummaryCard(cartItems),
+              _buildCurrentCartSummaryCard(
+                cartItems,
+                isCompact: widget.isCompact,
+              ),
               if (!widget.hideFooterActionButtons) ...[
                 const SizedBox(height: 12),
                 Row(
@@ -481,7 +484,10 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
     );
   }
 
-  Widget _buildCurrentCartSummaryCard(List<LocalCartItem> cartItems) {
+  Widget _buildCurrentCartSummaryCard(
+    List<LocalCartItem> cartItems, {
+    bool isCompact = false,
+  }) {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
     final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
@@ -492,6 +498,128 @@ extension OrderPanelCurrentCartExtension on OrderPanelState {
       netAmount += unitPrice * item.quantity;
     }
     final totalPayable = netAmount;
+
+    if (isCompact) {
+      bool isExpanded = false;
+      return StatefulBuilder(
+        builder: (context, setStateBuilder) {
+          if (!isExpanded) {
+            return GestureDetector(
+              onTap: () => setStateBuilder(() => isExpanded = true),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total Payable',
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.2,
+                        const Color(0xFF3B82F6),
+                      ),
+                    ),
+                    const Spacer(),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '$currency ${totalPayable.toStringAsFixed(2)}',
+                        style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          FontSize.s16,
+                          0.2,
+                          const Color(0xFF3B82F6),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return GestureDetector(
+            onTap: () => setStateBuilder(() => isExpanded = false),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildSummaryRow(
+                    'Net Amount',
+                    '$currency ${netAmount.toStringAsFixed(2)}',
+                    color: const Color(0xFF3F3F46),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(height: 1, color: const Color(0xFFE4E4ED)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Payable',
+                        style: buildCustomStyle(
+                          FontWeightManager.semiBold,
+                          FontSize.s16,
+                          0.21,
+                          const Color(0xFF3B82F6),
+                        ),
+                      ),
+                      const Spacer(),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '$currency ${totalPayable.toStringAsFixed(2)}',
+                          style: buildCustomStyle(
+                            FontWeightManager.bold,
+                            FontSize.s18,
+                            0.21,
+                            const Color(0xFF3B82F6),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.keyboard_arrow_up_rounded,
+                        color: Color(0xFF3B82F6),
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                  _buildSummaryRow(
+                    'Total Paid',
+                    '$currency 0.00',
+                    color: const Color(0xFF3F3F46),
+                  ),
+                  _buildSummaryRow(
+                    'Balance',
+                    '$currency ${totalPayable.toStringAsFixed(2)}',
+                    color: const Color(0xFF00C739),
+                    isBold: true,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),

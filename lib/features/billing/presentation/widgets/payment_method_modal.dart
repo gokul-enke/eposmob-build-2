@@ -1556,404 +1556,416 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             SizedBox(height: isDenseEmbedded ? 14 : 20),
 
             // Two-Column Layout
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- LEFT COLUMN: Inputs ---
-                Expanded(
-                  child: FocusTraversalGroup(
-                    policy: OrderedTraversalPolicy(),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_isLoadingPaymentMethods)
-                          const Center(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 20),
-                              child: CircularProgressIndicator(),
-                            ),
-                          )
-                        else if (_enabledMethods.isEmpty)
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              child: Text(
-                                'No payment methods available',
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s14,
-                                  0.20,
-                                  ColorManager.textColorRed,
-                                ),
-                              ),
-                            ),
-                          )
-                        else ...[
-                          Padding(
-                            padding: EdgeInsets.only(
-                                bottom: isDenseEmbedded ? 10 : 14),
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                OutlinedButton.icon(
-                                  icon: const Icon(Icons.payments_outlined,
-                                      size: 16),
-                                  label: Text('billing.exact_cash'.tr),
-                                  onPressed: _fillExactCash,
-                                ),
-                                OutlinedButton.icon(
-                                  icon:
-                                      const Icon(Icons.clear_all, size: 16),
-                                  label: Text('billing.clear_payments'.tr),
-                                  onPressed: _clearAllCollectedPayments,
-                                ),
-                              ],
+            () {
+              final isMobilePayment = MediaQuery.of(context).size.width < 600;
+
+              final leftColumnContent = FocusTraversalGroup(
+                policy: OrderedTraversalPolicy(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_isLoadingPaymentMethods)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    else if (_enabledMethods.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          child: Text(
+                            'No payment methods available',
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s14,
+                              0.20,
+                              ColorManager.textColorRed,
                             ),
                           ),
-                          for (var i = 0; i < _desktopRows.length; i++) ...[
-                            FocusTraversalOrder(
-                              order: NumericFocusOrder((i + 1) * 10.0),
-                              child: _buildRowFromDesktopItem(
-                                _desktopRows[i],
-                                size,
-                              ),
-                            ),
-                            SizedBox(height: isDenseEmbedded ? 10 : 15),
-                          ],
-                        ],
-
-                        // Transaction Reference Field
-                        if (_desktopController.shouldShowTransactionReference(
-                          rows: _desktopRows,
-                          isSelected: _isCodeSelected,
-                        )) ...[
-                          const SizedBox(height: 10),
-                          FocusTraversalOrder(
-                            order: const NumericFocusOrder(60),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'billing.transaction_reference'.tr,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s13,
-                                        0.16,
-                                        ColorManager.textColor,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _buildShortcutHint('C+6'),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                buildColumnWidgetForTextFields(
-                                  controller: transactionNumberController,
-                                  focusNode: transactionNumberFocusNode,
-                                  size: size,
-                                  width: double.infinity,
-                                  height: size.height * .06,
-                                  hintText:
-                                      'Enter transaction reference number',
-                                  onTap: () {
-                                    Provider.of<KeyboardProvider>(context,
-                                            listen: false)
-                                        .show(
-                                      'number',
-                                      transactionNumberController,
-                                      replaceOnFirstInput: true,
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-
-                SizedBox(width: isDenseEmbedded ? 18 : 30),
-
-                // --- RIGHT COLUMN: Summary & Actions ---
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Extended Summary
-                      BuildPaymentRow(
-                        amount:
-                            '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
-                        title: 'billing.total_paid'.tr,
-                        secondRowTextStyle: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s15,
-                          0.18,
-                          ColorManager.kPrimaryColor,
                         ),
-                        firstRowTextStyle: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s15,
-                          0.23,
-                          ColorManager.kPrimaryColor,
-                        ),
-                        color: ColorManager.kPrimaryColor,
-                      ),
-
-                      BuildPaymentRow(
-                        amount:
-                            '$currency ${widget.cartTotal.toStringAsFixed(2)}',
-                        title: 'billing.purchase_total'.tr,
-                        secondRowTextStyle: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s15,
-                          0.18,
-                          ColorManager.textColor,
-                        ),
-                        firstRowTextStyle: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s15,
-                          0.20,
-                          ColorManager.textColor,
-                        ),
-                        color: ColorManager.textColor,
-                      ),
-
-                      // Only show customer previous balance if NOT default customer
-                      if (!widget.isDefaultCustomer)
-                        BuildPaymentRow(
-                          amount: _formatSignedWithCurrency(
-                              widget.customerPrevBalance),
-                          title: 'billing.customer_prev_balance'.tr,
-                          secondRowTextStyle: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s15,
-                            0.18,
-                            widget.customerPrevBalance >= 0
-                                ? ColorManager.kButtonGreen
-                                : ColorManager.textColorRed,
-                          ),
-                          firstRowTextStyle: buildCustomStyle(
-                            FontWeightManager.bold,
-                            FontSize.s15,
-                            0.20,
-                            widget.customerPrevBalance >= 0
-                                ? ColorManager.kButtonGreen
-                                : ColorManager.textColorRed,
-                          ),
-                          color: widget.customerPrevBalance >= 0
-                              ? ColorManager.kButtonGreen
-                              : ColorManager.textColorRed,
-                        ),
-
-                      const SizedBox(height: 8),
-                      const Divider(thickness: 1),
-                      const SizedBox(height: 8),
-
-                      // To Customer Credit
-                      FocusTraversalOrder(
-                        order: const NumericFocusOrder(70),
-                        child: Row(
+                      )
+                    else ...[
+                      Padding(
+                        padding: EdgeInsets.only(
+                            bottom: isDenseEmbedded ? 10 : 14),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      'billing.to_customer_credit'.tr,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.bold,
-                                        isDenseEmbedded
-                                            ? FontSize.s12
-                                            : FontSize.s14,
-                                        0.20,
-                                        ColorManager.kPrimaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildShortcutHint('C+7'),
-                                ],
-                              ),
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.payments_outlined,
+                                  size: 16),
+                              label: Text('billing.exact_cash'.tr),
+                              onPressed: _fillExactCash,
                             ),
-                            Switch(
-                              value: toCustomerCreditEnabled,
-                              activeColor: ColorManager.kPrimaryColor,
-                              onChanged: (value) {
-                                setState(() {
-                                  debugPrint(
-                                      '=== TOGGLE TO CUSTOMER CREDIT ===');
-                                  debugPrint('Toggle value changed to: $value');
+                            OutlinedButton.icon(
+                              icon:
+                                  const Icon(Icons.clear_all, size: 16),
+                              label: Text('billing.clear_payments'.tr),
+                              onPressed: _clearAllCollectedPayments,
+                            ),
+                          ],
+                        ),
+                      ),
+                      for (var i = 0; i < _desktopRows.length; i++) ...[
+                        FocusTraversalOrder(
+                          order: NumericFocusOrder((i + 1) * 10.0),
+                          child: _buildRowFromDesktopItem(
+                            _desktopRows[i],
+                            size,
+                          ),
+                        ),
+                        SizedBox(height: isDenseEmbedded ? 10 : 15),
+                      ],
+                    ],
 
-                                  toCustomerCreditEnabled = value;
-                                  if (toCustomerCreditEnabled) {
-                                    debugPrint(
-                                        '📈 TOGGLE ON - Enabling customer credit functionality');
-
-                                    final currentBaseBalance =
-                                        _computeBaseBalance();
-                                    final totalCollected =
-                                        _getTotalCollectedAmount();
-                                    final transactionExcess =
-                                        totalCollected - widget.cartTotal;
-                                    final customerPrevBalance =
-                                        _effectiveCustomerPrevBalance();
-
-                                    if (transactionExcess > 0) {
-                                      double prefillAmount;
-
-                                      if (customerPrevBalance < 0) {
-                                        final customerDebt =
-                                            customerPrevBalance.abs();
-                                        if (customerDebt <= transactionExcess) {
-                                          prefillAmount = customerDebt;
-                                        } else {
-                                          prefillAmount = transactionExcess;
-                                        }
-                                      } else {
-                                        prefillAmount = currentBaseBalance;
-                                      }
-
-                                      toCustomerCreditController.text =
-                                          prefillAmount.toStringAsFixed(2);
-                                      toCustomerCredit = prefillAmount;
-                                    } else {
-                                      toCustomerCreditController.clear();
-                                      toCustomerCredit = 0.0;
-                                    }
-                                  } else {
-                                    debugPrint(
-                                        '📉 TOGGLE OFF - Disabling customer credit functionality');
-                                    toCustomerCreditController.clear();
-                                    toCustomerCredit = 0.0;
-                                  }
-
-                                  debugPrint('');
-                                  _calculateBalance();
-                                  _notifyChanges();
-                                  debugPrint('=== END TOGGLE OPERATION ===\n');
-                                });
+                    // Transaction Reference Field
+                    if (_desktopController.shouldShowTransactionReference(
+                      rows: _desktopRows,
+                      isSelected: _isCodeSelected,
+                    )) ...[
+                      const SizedBox(height: 10),
+                      FocusTraversalOrder(
+                        order: const NumericFocusOrder(60),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'billing.transaction_reference'.tr,
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s13,
+                                    0.16,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildShortcutHint('C+6'),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            buildColumnWidgetForTextFields(
+                              controller: transactionNumberController,
+                              focusNode: transactionNumberFocusNode,
+                              size: size,
+                              width: double.infinity,
+                              height: size.height * .06,
+                              hintText:
+                                  'Enter transaction reference number',
+                              onTap: () {
+                                Provider.of<KeyboardProvider>(context,
+                                        listen: false)
+                                    .show(
+                                  'number',
+                                  transactionNumberController,
+                                  replaceOnFirstInput: true,
+                                );
                               },
                             ),
                           ],
                         ),
                       ),
-                      if (toCustomerCreditEnabled) ...[
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: _buildShortcutHint('C+8'),
-                        ),
-                        const SizedBox(height: 6),
-                        FocusTraversalOrder(
-                          order: const NumericFocusOrder(80),
-                          child: buildColumnWidgetForTextFields(
-                            controller: toCustomerCreditController,
-                            size: size,
-                            width: double.infinity,
-                            height: size.height * .06,
-                            hintText: 'Enter amount to add as customer credit',
-                            focusNode: toCustomerCreditFocusNode,
-                            onTap: () {
-                              Provider.of<KeyboardProvider>(context,
-                                      listen: false)
-                                  .show(
-                                'number',
-                                toCustomerCreditController,
-                                replaceOnFirstInput: true,
-                              );
-                            },
-                            onchanged: (value) => _handleAmountControllerChange(
-                                'toCustomerCredit', toCustomerCreditController),
+                      const SizedBox(height: 15),
+                    ],
+                  ],
+                ),
+              );
+
+              final rightColumnContent = Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Extended Summary
+                  BuildPaymentRow(
+                    amount:
+                        '$currency ${_getTotalPaidAmount().toStringAsFixed(2)}',
+                    title: 'billing.total_paid'.tr,
+                    secondRowTextStyle: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s15,
+                      0.18,
+                      ColorManager.kPrimaryColor,
+                    ),
+                    firstRowTextStyle: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s15,
+                      0.23,
+                      ColorManager.kPrimaryColor,
+                    ),
+                    color: ColorManager.kPrimaryColor,
+                  ),
+
+                  BuildPaymentRow(
+                    amount:
+                        '$currency ${widget.cartTotal.toStringAsFixed(2)}',
+                    title: 'billing.purchase_total'.tr,
+                    secondRowTextStyle: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s15,
+                      0.18,
+                      ColorManager.textColor,
+                    ),
+                    firstRowTextStyle: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s15,
+                      0.20,
+                      ColorManager.textColor,
+                    ),
+                    color: ColorManager.textColor,
+                  ),
+
+                  // Only show customer previous balance if NOT default customer
+                  if (!widget.isDefaultCustomer)
+                    BuildPaymentRow(
+                      amount: _formatSignedWithCurrency(
+                          widget.customerPrevBalance),
+                      title: 'billing.customer_prev_balance'.tr,
+                      secondRowTextStyle: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s15,
+                        0.18,
+                        widget.customerPrevBalance >= 0
+                            ? ColorManager.kButtonGreen
+                            : ColorManager.textColorRed,
+                      ),
+                      firstRowTextStyle: buildCustomStyle(
+                        FontWeightManager.bold,
+                        FontSize.s15,
+                        0.20,
+                        widget.customerPrevBalance >= 0
+                            ? ColorManager.kButtonGreen
+                            : ColorManager.textColorRed,
+                      ),
+                      color: widget.customerPrevBalance >= 0
+                          ? ColorManager.kButtonGreen
+                          : ColorManager.textColorRed,
+                    ),
+
+                  const SizedBox(height: 8),
+                  const Divider(thickness: 1),
+                  const SizedBox(height: 8),
+
+                  // To Customer Credit
+                  FocusTraversalOrder(
+                    order: const NumericFocusOrder(70),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'billing.to_customer_credit'.tr,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    isDenseEmbedded
+                                        ? FontSize.s12
+                                        : FontSize.s14,
+                                    0.20,
+                                    ColorManager.kPrimaryColor,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildShortcutHint('C+7'),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      BuildPaymentRow(
-                        amount: '$currency ${balanceAmount.toStringAsFixed(2)}',
-                        title: 'billing.cash_balance'.tr,
-                        secondRowTextStyle: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s15,
-                          0.18,
-                          balanceAmount > 0
-                              ? ColorManager.kButtonGreen
-                              : ColorManager.textColor,
-                        ),
-                        firstRowTextStyle: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s15,
-                          0.23,
-                          balanceAmount > 0
-                              ? ColorManager.kButtonGreen
-                              : ColorManager.textColor,
-                        ),
-                        color: balanceAmount > 0
-                            ? ColorManager.kButtonGreen
-                            : ColorManager.textColor,
-                      ),
-
-                      const SizedBox(height: 20),
-                      if (widget.showConfirmButton)
-                        CustomRoundButtonAdvanced(
-                          title: widget.customButtonTitle ??
-                              'billing.apply_payment_methods'.tr,
-                          fct: () {
-                            if (_isApplying) return;
-
-                            final validation = _validateBeforeApply();
-                            if (!validation.isValid) {
-                              showScaffoldError(
-                                context: context,
-                                message: validation.message ??
-                                    'Please configure payment before confirm',
-                              );
-                              return;
-                            }
-
+                        Switch(
+                          value: toCustomerCreditEnabled,
+                          activeColor: ColorManager.kPrimaryColor,
+                          onChanged: (value) {
                             setState(() {
-                              _isApplying = true;
+                              debugPrint(
+                                  '=== TOGGLE TO CUSTOMER CREDIT ===');
+                              debugPrint('Toggle value changed to: $value');
+
+                              toCustomerCreditEnabled = value;
+                              if (toCustomerCreditEnabled) {
+                                debugPrint(
+                                    '📈 TOGGLE ON - Enabling customer credit functionality');
+
+                                final currentBaseBalance =
+                                    _computeBaseBalance();
+                                final totalCollected =
+                                    _getTotalCollectedAmount();
+                                final transactionExcess =
+                                    totalCollected - widget.cartTotal;
+                                final customerPrevBalance =
+                                    _effectiveCustomerPrevBalance();
+
+                                if (transactionExcess > 0) {
+                                  double prefillAmount;
+
+                                  if (customerPrevBalance < 0) {
+                                    final customerDebt =
+                                        customerPrevBalance.abs();
+                                    if (customerDebt <= transactionExcess) {
+                                      prefillAmount = customerDebt;
+                                    } else {
+                                      prefillAmount = transactionExcess;
+                                    }
+                                  } else {
+                                    prefillAmount = currentBaseBalance;
+                                  }
+
+                                  toCustomerCreditController.text =
+                                      prefillAmount.toStringAsFixed(2);
+                                  toCustomerCredit = prefillAmount;
+                                } else {
+                                  toCustomerCreditController.clear();
+                                  toCustomerCredit = 0.0;
+                                }
+                              } else {
+                                debugPrint(
+                                    '📉 TOGGLE OFF - Disabling customer credit functionality');
+                                toCustomerCreditController.clear();
+                                toCustomerCredit = 0.0;
+                              }
+
+                              debugPrint('');
+                              _calculateBalance();
+                              _notifyChanges();
+                              debugPrint('=== END TOGGLE OPERATION ===\n');
                             });
-                            _notifyChanges();
-                            if (widget.closeOnApply) {
-                              Navigator.of(context).pop();
-                            } else {
-                              if (widget.onAfterApply != null) {
-                                Future.delayed(
-                                    const Duration(milliseconds: 100), () {
-                                  widget.onAfterApply!();
-                                });
-                              }
-                              if (mounted) {
-                                setState(() {
-                                  _isApplying = false;
-                                });
-                              }
-                            }
                           },
-                          fontSize: FontSize.s14,
-                          height: 45,
-                          width: double.infinity,
-                          isLoading: _isApplying,
-                          boxColor: _isApplying ? Colors.grey.shade400 : null,
-                          borderColor:
-                              _isApplying ? Colors.grey.shade400 : null,
                         ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  if (toCustomerCreditEnabled) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildShortcutHint('C+8'),
+                    ),
+                    const SizedBox(height: 6),
+                    FocusTraversalOrder(
+                      order: const NumericFocusOrder(80),
+                      child: buildColumnWidgetForTextFields(
+                        controller: toCustomerCreditController,
+                        size: size,
+                        width: double.infinity,
+                        height: size.height * .06,
+                        hintText: 'Enter amount to add as customer credit',
+                        focusNode: toCustomerCreditFocusNode,
+                        onTap: () {
+                          Provider.of<KeyboardProvider>(context,
+                                  listen: false)
+                              .show(
+                            'number',
+                            toCustomerCreditController,
+                            replaceOnFirstInput: true,
+                          );
+                        },
+                        onchanged: (value) => _handleAmountControllerChange(
+                            'toCustomerCredit', toCustomerCreditController),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  BuildPaymentRow(
+                    amount: '$currency ${balanceAmount.toStringAsFixed(2)}',
+                    title: 'billing.cash_balance'.tr,
+                    secondRowTextStyle: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s15,
+                      0.18,
+                      balanceAmount > 0
+                          ? ColorManager.kButtonGreen
+                          : ColorManager.textColor,
+                    ),
+                    firstRowTextStyle: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s15,
+                      0.23,
+                      balanceAmount > 0
+                          ? ColorManager.kButtonGreen
+                          : ColorManager.textColor,
+                    ),
+                    color: balanceAmount > 0
+                        ? ColorManager.kButtonGreen
+                        : ColorManager.textColor,
+                  ),
+
+                  const SizedBox(height: 20),
+                  if (widget.showConfirmButton)
+                    CustomRoundButtonAdvanced(
+                      title: widget.customButtonTitle ??
+                          'billing.apply_payment_methods'.tr,
+                      fct: () {
+                        if (_isApplying) return;
+
+                        final validation = _validateBeforeApply();
+                        if (!validation.isValid) {
+                          showScaffoldError(
+                            context: context,
+                            message: validation.message ??
+                                'Please configure payment before confirm',
+                          );
+                          return;
+                        }
+
+                        setState(() {
+                          _isApplying = true;
+                        });
+                        _notifyChanges();
+                        if (widget.closeOnApply) {
+                          Navigator.of(context).pop();
+                        } else {
+                          if (widget.onAfterApply != null) {
+                            Future.delayed(
+                                const Duration(milliseconds: 100), () {
+                              widget.onAfterApply!();
+                            });
+                          }
+                          if (mounted) {
+                            setState(() {
+                              _isApplying = false;
+                            });
+                          }
+                        }
+                      },
+                      fontSize: FontSize.s14,
+                      height: 45,
+                      width: double.infinity,
+                      isLoading: _isApplying,
+                      boxColor: _isApplying ? Colors.grey.shade400 : null,
+                      borderColor:
+                          _isApplying ? Colors.grey.shade400 : null,
+                    ),
+                ],
+              );
+
+              if (isMobilePayment) {
+                return Column(
+                  children: [
+                    leftColumnContent,
+                    SizedBox(height: isDenseEmbedded ? 12 : 20),
+                    const Divider(thickness: 1),
+                    SizedBox(height: isDenseEmbedded ? 12 : 20),
+                    rightColumnContent,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: leftColumnContent),
+                  SizedBox(width: isDenseEmbedded ? 18 : 30),
+                  Expanded(child: rightColumnContent),
+                ],
+              );
+            }(),
           ],
         ),
       ),
@@ -2089,6 +2101,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     final bool isFocused = _focusedPaymentKey == type;
     final isDenseEmbedded =
         widget.fullWidth && (size.width <= 1100 || size.height <= 800);
+    final isMobilePayment = MediaQuery.of(context).size.width < 600;
+    final cardWidth = isMobilePayment ? 90.0 : (isDenseEmbedded ? 118.0 : 132.0);
+
     return Row(
       children: [
         // Payment method tile — clickable for selection/deselection.
@@ -2118,9 +2133,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
               blurRadius: isFocused ? 8 : 4,
               circleRadius: 5,
               height: size.height * .06, // Match text field height
-              width: isDenseEmbedded
-                  ? 118
-                  : 132, // Wider to avoid shortcut badge overflow
+              width: cardWidth,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -2134,15 +2147,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                     fit: BoxFit.none,
                   ),
                   SizedBox(width: isDenseEmbedded ? 4 : 6),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      isDenseEmbedded ? FontSize.s10 : FontSize.s11,
-                      0.12,
-                      isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        isDenseEmbedded ? FontSize.s10 : FontSize.s11,
+                        0.12,
+                        isSelected ? ColorManager.kPrimaryColor : Colors.grey,
+                      ),
                     ),
                   ),
                   if (shortcutLabel != null) ...[
@@ -2155,7 +2170,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           ),
         ),
 
-        SizedBox(width: isDenseEmbedded ? 10 : 15),
+        SizedBox(width: isMobilePayment ? 6.0 : (isDenseEmbedded ? 10.0 : 15.0)),
 
         // Amount input field - always visible
         Expanded(
@@ -2163,6 +2178,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
             controller: controller,
             size: size,
             height: size.height * .06,
+            width: double.infinity,
             hintText: readOnly || type == 'credit'
                 ? 'Auto-calculated'
                 : 'Enter $label amount',

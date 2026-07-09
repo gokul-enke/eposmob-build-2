@@ -21,6 +21,7 @@ import '../../models/category_list.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/category_providers.dart';
 import '../../providers/category_list_scope.dart';
+import '../../providers/language_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -73,14 +74,29 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   String? _selectedIconPath;
   bool _isSellable = true;
   bool _isPurchasable = true;
+  bool _languagesRequested = false;
+
   @override
   void initState() {
     super.initState();
     getData();
+    _fetchLanguages();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<CategoryProvider>(context, listen: false)
           .ensureCategories(CategoryListScope.all);
     });
+  }
+
+  Future<void> _fetchLanguages() async {
+    if (_languagesRequested) return;
+    _languagesRequested = true;
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+
+    await languageProvider.fetchLanguages(accessToken: accessToken);
   }
 
   void getData() {
@@ -399,102 +415,136 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                               return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              fieldPair(
-                                first: BuildErrorText(
-                                          errorText: _categoryNameError != null
-                                              ? _categoryNameError!
-                                              : "",
-                                          padding:
-                                              const EdgeInsetsDirectional.only(
-                                                  start: 10.0),
-                                          child:
-                                              buildColumnWidgetForTextFields(
-                                            onchanged: ((value) {
-                                              categoryNameEnglishController
-                                                  .text = value ?? '';
-                                              categorySlugController.text =
-                                                  categoryNameController.text
-                                                      .toLowerCase()
-                                                      .replaceAll(
-                                                          RegExp(r'\s+'), '-')
-                                                      .replaceAll(
-                                                          RegExp(
-                                                              r'[^a-z0-9-]'),
-                                                          '');
-                                            }),
-                                            isLeft: false,
-                                            isStarRed: true,
-                                            readOnly: false,
-                                            controller: categoryNameController,
-                                            size: size,
-                                            width: fieldWidth,
-                                            title: 'Category Name',
-                                            hintText: 'Category Name',
-                                          ),
-                                        ),
-                                second: buildColumnWidgetForTextFields(
-                                          onchanged: (value) {},
-                                          isLeft: false,
-                                          readOnly: true,
-                                          controller:
-                                              categoryNameEnglishController,
-                                          size: size,
-                                          width: fieldWidth,
-                                          title: "Category Name - English (US)*",
-                                          hintText: '',
-                                        ),
-                              ),
-                              SizedBox(height: fieldGap),
-                              fieldPair(
-                                first: _buildParentCategoryField(
-                                            categoryProvider,
-                                            categoryList,
-                                            fieldWidth),
-                                second: buildColumnWidgetForTextFields(
-                                          onchanged: (value) {},
-                                          isLeft: false,
-                                          readOnly: false,
-                                          controller:
-                                              categoryNameHindiController,
-                                          size: size,
-                                          width: fieldWidth,
-                                          title: "Category Name - Hindi(IND)",
-                                          hintText: 'Enter...',
-                                        ),
-                              ),
-                              SizedBox(height: fieldGap),
-                              fieldPair(
-                                first: BuildErrorText(
-                                          errorText: _categorySlugError != null
-                                              ? _categorySlugError!
-                                              : "",
-                                          padding:
-                                              const EdgeInsetsDirectional.only(
-                                                  start: 10.0),
-                                          child: buildColumnWidgetForTextFields(
-                                            onchanged: (value) {},
-                                            isLeft: false,
-                                            controller: categorySlugController,
-                                            size: size,
-                                            width: fieldWidth,
-                                            isStarRed: true,
-                                            title: "Category Slug",
-                                            hintText: 'Url Slug',
-                                            readOnly: true,
-                                          ),
-                                        ),
-                                second: buildColumnWidgetForTextFields(
-                                          onchanged: (value) {},
-                                          isLeft: false,
-                                          controller:
-                                              categoryNameArabicController,
-                                          size: size,
-                                          width: fieldWidth,
-                                          title: "Category Name - Arabic(AR)",
-                                          hintText: 'Enter...',
-                                          readOnly: false,
-                                        ),
-                              ),
+                              ...() {
+                                final languageProvider =
+                                    Provider.of<LanguageProvider>(context);
+                                final activeLanguages =
+                                    languageProvider.languages;
+
+                                final bool showEnglish =
+                                    activeLanguages.isEmpty ||
+                                        activeLanguages.any((lang) =>
+                                            lang.code.toLowerCase() == 'en' &&
+                                            lang.active);
+                                final bool showHindi =
+                                    activeLanguages.isNotEmpty &&
+                                        activeLanguages.any((lang) =>
+                                            lang.code.toLowerCase() == 'hi' &&
+                                            lang.active);
+                                final bool showArabic =
+                                    activeLanguages.isNotEmpty &&
+                                        activeLanguages.any((lang) =>
+                                            lang.code.toLowerCase() == 'ar' &&
+                                            lang.active);
+
+                                final List<Widget> leftWidgets = [
+                                  BuildErrorText(
+                                    errorText: _categoryNameError != null
+                                        ? _categoryNameError!
+                                        : "",
+                                    padding: const EdgeInsetsDirectional.only(
+                                        start: 10.0),
+                                    child: buildColumnWidgetForTextFields(
+                                      onchanged: ((value) {
+                                        categoryNameEnglishController.text =
+                                            value ?? '';
+                                        categorySlugController.text =
+                                            categoryNameController.text
+                                                .toLowerCase()
+                                                .replaceAll(
+                                                    RegExp(r'\s+'), '-')
+                                                .replaceAll(
+                                                    RegExp(r'[^a-z0-9-]'), '');
+                                      }),
+                                      isLeft: false,
+                                      isStarRed: true,
+                                      readOnly: false,
+                                      controller: categoryNameController,
+                                      size: size,
+                                      width: fieldWidth,
+                                      title: 'Category Name',
+                                      hintText: 'Category Name',
+                                    ),
+                                  ),
+                                  if (categoryProvider.allCategories.isNotEmpty)
+                                    _buildParentCategoryField(
+                                        categoryProvider,
+                                        categoryList,
+                                        fieldWidth),
+                                  BuildErrorText(
+                                    errorText: _categorySlugError != null
+                                        ? _categorySlugError!
+                                        : "",
+                                    padding: const EdgeInsetsDirectional.only(
+                                        start: 10.0),
+                                    child: buildColumnWidgetForTextFields(
+                                      onchanged: (value) {},
+                                      isLeft: false,
+                                      controller: categorySlugController,
+                                      size: size,
+                                      width: fieldWidth,
+                                      isStarRed: true,
+                                      title: "Category Slug",
+                                      hintText: 'Url Slug',
+                                      readOnly: true,
+                                    ),
+                                  ),
+                                ];
+
+                                final List<Widget> rightWidgets = [];
+                                
+                                if (showHindi) {
+                                  rightWidgets.add(
+                                    buildColumnWidgetForTextFields(
+                                      onchanged: (value) {},
+                                      isLeft: false,
+                                      readOnly: false,
+                                      controller: categoryNameHindiController,
+                                      size: size,
+                                      width: fieldWidth,
+                                      title: "Category Name - Hindi(IND)",
+                                      hintText: 'Enter...',
+                                    ),
+                                  );
+                                }
+                                if (showArabic) {
+                                  rightWidgets.add(
+                                    buildColumnWidgetForTextFields(
+                                      onchanged: (value) {},
+                                      isLeft: false,
+                                      controller: categoryNameArabicController,
+                                      size: size,
+                                      width: fieldWidth,
+                                      title: "Category Name - Arabic(AR)",
+                                      hintText: 'Enter...',
+                                      readOnly: false,
+                                    ),
+                                  );
+                                }
+
+                                final int pairCount =
+                                    leftWidgets.length > rightWidgets.length
+                                        ? leftWidgets.length
+                                        : rightWidgets.length;
+
+                                final List<Widget> pairedRows = [];
+                                for (int i = 0; i < pairCount; i++) {
+                                  final Widget left = i < leftWidgets.length
+                                      ? leftWidgets[i]
+                                      : const SizedBox.shrink();
+                                  final Widget right = i < rightWidgets.length
+                                      ? rightWidgets[i]
+                                      : const SizedBox.shrink();
+                                  pairedRows.add(
+                                    fieldPair(first: left, second: right),
+                                  );
+                                  if (i < pairCount - 1) {
+                                    pairedRows.add(SizedBox(height: fieldGap));
+                                  }
+                                }
+
+                                return pairedRows;
+                              }(),
                               /*
                               Row(
                                 children: [
@@ -738,36 +788,52 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                 ColorManager.textColor.withOpacity(.5),
               ),
             ),
-            items: categoryList!
-                .map((Category category) {
-                  return DropdownMenuItem<Category>(
-                      value: category,
-                      child: category.categoryName == "ALL"
-                          ? Text(
-                              ' New Category',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.27,
-                                ColorManager.textColor.withOpacity(.5),
-                              ),
-                            )
-                          : Text(
-                              category.categoryName ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: buildCustomStyle(
-                                FontWeightManager.medium,
-                                FontSize.s12,
-                                0.27,
-                                ColorManager.textColor.withOpacity(.5),
-                              ),
-                            ));
-                })
-                .toSet()
-                .toList(),
+             items: [
+              DropdownMenuItem<Category>(
+                value: null,
+                child: Text(
+                  'None',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.27,
+                    ColorManager.textColor.withOpacity(.5),
+                  ),
+                ),
+              ),
+              ...categoryList!
+                  .map((Category category) {
+                    return DropdownMenuItem<Category>(
+                        value: category,
+                        child: category.categoryName == "ALL"
+                            ? Text(
+                                ' New Category',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.27,
+                                  ColorManager.textColor.withOpacity(.5),
+                                ),
+                              )
+                            : Text(
+                                category.categoryName ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: buildCustomStyle(
+                                  FontWeightManager.medium,
+                                  FontSize.s12,
+                                  0.27,
+                                  ColorManager.textColor.withOpacity(.5),
+                                ),
+                              ));
+                  })
+                  .toSet()
+                  .toList(),
+            ],
             onChanged: (Category? selectedCategory) {
               if (selectedCategory != null) {
                 categoryProvider.selectCategory(
@@ -781,6 +847,10 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                     "categoryIdController ${categoryIDController.text}");
                 categoryProvider.setParentCategory(
                     "${selectedCategory.categoryId ?? 0}");
+              } else {
+                categoryProvider.selectCategory(-1, '', 0);
+                categoryIDController.text = "0";
+                categoryProvider.setParentCategory("0");
               }
             },
           ),
