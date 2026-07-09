@@ -470,7 +470,11 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                         Icons.edit_outlined,
                         Colors.blue.shade50,
                         Colors.blue,
-                        () {
+                        () async {
+                          await categoryProvider.setEditCategoryId(
+                              categoryId: category.categoryId ?? 1);
+                          await categoryProvider.viewCategoryApi(
+                              categoryId: category.categoryId ?? 1);
                           sideBarController.index.value = 34;
                         },
                       ),
@@ -566,7 +570,11 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                                       Icons.edit_outlined,
                                       Colors.blue.shade50,
                                       Colors.blue,
-                                      () {
+                                      () async {
+                                        await categoryProvider.setEditCategoryId(
+                                            categoryId: category.categoryId ?? 1);
+                                        await categoryProvider.viewCategoryApi(
+                                            categoryId: category.categoryId ?? 1);
                                         sideBarController.index.value = 34;
                                       },
                                     ),

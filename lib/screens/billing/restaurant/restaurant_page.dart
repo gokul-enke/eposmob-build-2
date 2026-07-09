@@ -2758,6 +2758,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         Expanded(
           child: OrderPanel(
             key: _orderPanelKey,
+            isCompact: true,
             tableId: _activeTableId,
             preselectedDeliveryMethodId: _selectedDeliveryMethodId,
             preselectedDeliveryMethodName: _selectedDeliveryMethodName,

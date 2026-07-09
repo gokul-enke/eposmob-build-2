@@ -20,6 +20,7 @@ import '../../models/category_list.dart';
 import '../../providers/auth_model.dart';
 import '../../providers/category_providers.dart';
 import '../../providers/category_list_scope.dart';
+import '../../providers/language_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -46,6 +47,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
   String? _selectedIconPath;
   bool _isSellable = true;
   bool _isPurchasable = true;
+  bool _languagesRequested = false;
 
   void getData() {
     String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
@@ -58,6 +60,18 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
         imageFiles = getProductListFileModel.data;
       } else {}
     });
+  }
+
+  Future<void> _fetchLanguages() async {
+    if (_languagesRequested) return;
+    _languagesRequested = true;
+
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    final languageProvider =
+        Provider.of<LanguageProvider>(context, listen: false);
+
+    await languageProvider.fetchLanguages(accessToken: accessToken);
   }
 
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -75,6 +89,7 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
     super.initState();
 
     getData();
+    _fetchLanguages();
 
     sideBarController = Get.put(SideBarController());
     idController = TextEditingController(text: "0");
@@ -223,12 +238,28 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                           Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                            ...() {
+                                final languageProvider =
+                                    Provider.of<LanguageProvider>(context);
+                                final activeLanguages =
+                                    languageProvider.languages;
+
+                                final bool showHindi =
+                                    activeLanguages.isNotEmpty &&
+                                        activeLanguages.any((lang) =>
+                                            lang.code.toLowerCase() == 'hi' &&
+                                            lang.active);
+                                final bool showArabic =
+                                    activeLanguages.isNotEmpty &&
+                                        activeLanguages.any((lang) =>
+                                            lang.code.toLowerCase() == 'ar' &&
+                                            lang.active);
+
+                                final List<Widget> leftWidgets = [
+                                  if (categoryProvider.allCategories.isNotEmpty)
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         BuildTextTile(
                                           isStarRed: false,
@@ -244,96 +275,126 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                         BuildBoxShadowContainer(
                                           circleRadius: 7,
                                           alignment: Alignment.centerLeft,
-                                          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                                          padding: const EdgeInsets.only(left: 15),
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 5, vertical: 0),
+                                          padding:
+                                              const EdgeInsets.only(left: 15),
                                           height: 50,
-                                          child: DropdownButtonFormField<Category>(
-                                            decoration: const InputDecoration(border: InputBorder.none),
+                                          child: DropdownButtonFormField<
+                                              Category>(
+                                            decoration: const InputDecoration(
+                                                border: InputBorder.none),
                                             isExpanded: true,
-                                            value: categoryProvider.selectedCategoryIndex >= 0
-                                                ? categoryList![categoryProvider.selectedCategoryIndex]
+                                            value: categoryProvider
+                                                        .selectedCategoryIndex >=
+                                                    0
+                                                ? categoryList![categoryProvider
+                                                    .selectedCategoryIndex]
                                                 : null,
                                             hint: Text('Select Category',
-                                                style: buildCustomStyle(FontWeightManager.medium,
-                                                    FontSize.s12, 0.27, ColorManager.textColor.withOpacity(.5))),
-                                            items: categoryList!.map((Category category) {
-                                              return DropdownMenuItem<Category>(
-                                                value: category,
+                                                style: buildCustomStyle(
+                                                    FontWeightManager.medium,
+                                                    FontSize.s12,
+                                                    0.27,
+                                                    ColorManager.textColor
+                                                        .withOpacity(.5))),
+                                            items: [
+                                              DropdownMenuItem<Category>(
+                                                value: null,
                                                 child: Text(
-                                                  category.categoryName == "ALL" ? 'New Category' : category.categoryName ?? '',
+                                                  'None',
                                                   maxLines: 1,
                                                   overflow: TextOverflow.ellipsis,
-                                                  style: buildCustomStyle(FontWeightManager.medium,
-                                                      FontSize.s12, 0.27, ColorManager.textColor.withOpacity(.5)),
+                                                  style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s12,
+                                                      0.27,
+                                                      ColorManager.textColor
+                                                          .withOpacity(.5)),
                                                 ),
-                                              );
-                                            }).toSet().toList(),
-                                            onChanged: (Category? selectedCategory) {
+                                              ),
+                                              ...categoryList
+                                                  .map((Category category) {
+                                                return DropdownMenuItem<Category>(
+                                                  value: category,
+                                                  child: Text(
+                                                    category.categoryName == "ALL"
+                                                        ? 'New Category'
+                                                        : category.categoryName ??
+                                                            '',
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: buildCustomStyle(
+                                                        FontWeightManager.medium,
+                                                        FontSize.s12,
+                                                        0.27,
+                                                        ColorManager.textColor
+                                                            .withOpacity(.5)),
+                                                  ),
+                                                );
+                                              }).toSet().toList(),
+                                            ],
+                                            onChanged: (Category?
+                                                selectedCategory) {
                                               if (selectedCategory != null) {
                                                 categoryProvider.selectCategory(
-                                                  categoryList.indexOf(selectedCategory),
-                                                  selectedCategory.categoryName ?? '',
-                                                  selectedCategory.productsCount ?? 0,
+                                                  categoryList
+                                                      .indexOf(selectedCategory),
+                                                  selectedCategory.categoryName ??
+                                                      '',
+                                                  selectedCategory
+                                                          .productsCount ??
+                                                      0,
                                                 );
-                                                categoryIDController.text = "${selectedCategory.categoryId}";
-                                                categoryProvider.setParentCategory("${selectedCategory.categoryId ?? 0}");
+                                                categoryIDController.text =
+                                                    "${selectedCategory.categoryId}";
+                                                categoryProvider
+                                                    .setParentCategory(
+                                                        "${selectedCategory.categoryId ?? 0}");
+                                              } else {
+                                                categoryProvider.selectCategory(-1, '', 0);
+                                                categoryIDController.text = "0";
+                                                categoryProvider.setParentCategory("0");
                                               }
                                             },
                                           ),
                                         ),
                                       ],
                                     ),
+                                  buildColumnWidgetForTextFields(
+                                    onchanged: (value) {
+                                      categoryNameEnglishController.text =
+                                          value ?? '';
+                                      categorySlugController.text =
+                                          categoryNameController.text
+                                              .toLowerCase()
+                                              .replaceAll(
+                                                  RegExp(r'\s+'), '-')
+                                              .replaceAll(
+                                                  RegExp(r'[^a-z0-9-]'), '');
+                                    },
+                                    isLeft: false,
+                                    readOnly: false,
+                                    controller: categoryNameController,
+                                    size: size,
+                                    title: 'Category Name',
+                                    hintText: 'Category Name',
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: buildColumnWidgetForTextFields(
-                                      onchanged: (value) {
-                                        categoryNameEnglishController.text = value ?? '';
-                                        categorySlugController.text = categoryNameController.text
-                                            .toLowerCase()
-                                            .replaceAll(RegExp(r'\s+'), '-')
-                                            .replaceAll(RegExp(r'[^a-z0-9-]'), '');
-                                      },
-                                      isLeft: false,
-                                      readOnly: false,
-                                      controller: categoryNameController,
-                                      size: size,
-                                      title: 'Category Name',
-                                      hintText: 'Category Name',
-                                    ),
+                                  buildColumnWidgetForTextFields(
+                                    onchanged: (value) {},
+                                    isLeft: false,
+                                    controller: categorySlugController,
+                                    size: size,
+                                    title: "Category Slug",
+                                    hintText: 'Url Slug',
+                                    readOnly: true,
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: buildColumnWidgetForTextFields(
-                                      onchanged: (value) {},
-                                      isLeft: false,
-                                      readOnly: true,
-                                      controller: categoryNameEnglishController,
-                                      size: size,
-                                      title: "Category Name - English (US)*",
-                                      hintText: '',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: buildColumnWidgetForTextFields(
-                                      onchanged: (value) {},
-                                      isLeft: false,
-                                      controller: categorySlugController,
-                                      size: size,
-                                      title: "Category Slug",
-                                      hintText: 'Url Slug',
-                                      readOnly: true,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: buildColumnWidgetForTextFields(
+                                ];
+
+                                final List<Widget> rightWidgets = [];
+                                if (showHindi) {
+                                  rightWidgets.add(
+                                    buildColumnWidgetForTextFields(
                                       onchanged: (value) {},
                                       isLeft: false,
                                       readOnly: false,
@@ -342,10 +403,11 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       title: "Category Name - Hindi(IND)",
                                       hintText: 'Enter...',
                                     ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: buildColumnWidgetForTextFields(
+                                  );
+                                }
+                                if (showArabic) {
+                                  rightWidgets.add(
+                                    buildColumnWidgetForTextFields(
                                       onchanged: (value) {},
                                       isLeft: false,
                                       controller: categoryNameArabicController,
@@ -354,9 +416,58 @@ class _EditCategoryPageScreenState extends State<EditCategoryPageScreen> {
                                       hintText: 'Enter...',
                                       readOnly: false,
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  );
+                                }
+
+                                final int pairCount =
+                                    leftWidgets.length > rightWidgets.length
+                                        ? leftWidgets.length
+                                        : rightWidgets.length;
+
+                                Widget fieldPair({
+                                  required Widget first,
+                                  required Widget second,
+                                }) {
+                                  if (isMobile) {
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        first,
+                                        const SizedBox(height: 16),
+                                        second,
+                                      ],
+                                    );
+                                  }
+                                  return Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(child: first),
+                                      const SizedBox(width: 16),
+                                      Expanded(child: second),
+                                    ],
+                                  );
+                                }
+
+                                final List<Widget> pairedRows = [];
+                                for (int i = 0; i < pairCount; i++) {
+                                  final Widget left = i < leftWidgets.length
+                                      ? leftWidgets[i]
+                                      : const SizedBox.shrink();
+                                  final Widget right = i < rightWidgets.length
+                                      ? rightWidgets[i]
+                                      : const SizedBox.shrink();
+                                  pairedRows.add(
+                                    fieldPair(first: left, second: right),
+                                  );
+                                  if (i < pairCount - 1) {
+                                    pairedRows.add(
+                                        const SizedBox(height: 16));
+                                  }
+                                }
+
+                                return pairedRows;
+                              }(),
                               const SizedBox(height: 16),
                               Row(
                                 children: [
