@@ -180,10 +180,7 @@ class OrderPanelState extends State<OrderPanel> {
   bool get isViewingCounterListTab =>
       _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
 
-  bool get _skipCheckoutOnCounterConfirmAndPrint {
-    if (!widget.allowCounterBilling || !widget.isCounterBillingMode) {
-      return false;
-    }
+  bool get _skipCheckoutOnConfirmAndPrint {
     return Provider.of<AppSettingsProvider>(context, listen: false)
             .appSettings
             ?.skipCheckoutOnConfirmAndPrint ??
@@ -8094,12 +8091,71 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
+  Future<void> _saveAndPrintWithoutCheckoutModal() async {
+    if (_isLoadingConfirm) return;
+
+    debugPrint(
+      '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct offline save & print',
+    );
+
+    _hydrateCustomerListFromProviderCache();
+    if (!mounted) return;
+
+    setState(() {
+      if (_deliveryMethodId.isEmpty) {
+        final defaultDeliveryMethod = _getDefaultDeliveryMethod();
+        _deliveryMethod = defaultDeliveryMethod.name;
+        _deliveryMethodId = defaultDeliveryMethod.id;
+      }
+      _applyDefaultPaymentForDirectConfirmAndPrint();
+      _hasOpenedPaymentModalOnce = true;
+      _balanceAmount = _calculateBalanceAmount();
+    });
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.updatePaymentFromModal(
+      isCash: _isCashSelected,
+      isCard: _isCardSelected,
+      isUpi: _isUpiSelected,
+      isCod: _isCodSelected,
+      isDebit: _isDebitSelected,
+      cashAmount: _cashAmount,
+      cardAmount: _cardAmount,
+      upiAmount: _upiAmount,
+      codAmount: _codAmount,
+      debitAmount: _debitAmount,
+      transactionNumber: _transactionNumber,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      cashMethodId: billingProvider.cashPaymentMethodId,
+      cardMethodId: billingProvider.cardPaymentMethodId,
+      upiMethodId: billingProvider.upiPaymentMethodId,
+      codMethodId: billingProvider.codPaymentMethodId,
+    );
+
+    widget.onCheckoutActionLoadingChanged?.call(
+      isLoading: true,
+      printBill: true,
+    );
+    try {
+      await _saveCurrentCartAsConfirmedAndPrint(printBill: true);
+    } finally {
+      widget.onCheckoutActionLoadingChanged?.call(
+        isLoading: false,
+        printBill: true,
+      );
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   void showCurrentCartConfirmAndPrintFromParent() {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     if (!(appSettings?.showConfirmOrderAndPrintButton ?? true)) return;
 
-    if (_skipCheckoutOnCounterConfirmAndPrint) {
+    if (_skipCheckoutOnConfirmAndPrint) {
       unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
       return;
     }
@@ -8113,7 +8169,19 @@ class OrderPanelState extends State<OrderPanel> {
     showCheckoutFromParent(forCurrentCart: true);
   }
 
-  void showOfflineSaveAndPrintCheckoutFromParent({int? initialStep}) {
+  /// Offline Save & Print entry point.
+  ///
+  /// When [allowSkipCheckout] is true and the app setting is enabled, skips the
+  /// checkout modal and saves+prints with defaults. Step shortcuts (F5/F10)
+  /// should pass [allowSkipCheckout]: false so the modal still opens.
+  void showOfflineSaveAndPrintCheckoutFromParent({
+    int? initialStep,
+    bool allowSkipCheckout = true,
+  }) {
+    if (allowSkipCheckout && _skipCheckoutOnConfirmAndPrint) {
+      unawaited(_saveAndPrintWithoutCheckoutModal());
+      return;
+    }
     _showCheckoutModal(
       forCurrentCart: true,
       offlineSaveAndPrint: true,

@@ -679,9 +679,10 @@ class BillingMobileController {
           .getSelectedPaymentMethodsExcludingEmpty()
           .isNotEmpty;
 
-  /// Prepares default customer, payment, and delivery for direct confirm & print
+  /// Prepares default customer, payment, and delivery for direct confirm/save & print
   /// when [AppSettings.skipCheckoutOnConfirmAndPrint] is enabled.
-  /// Mirrors desktop `_confirmAndPrintWithoutCheckoutModal` prep steps.
+  /// Mirrors desktop `_confirmAndPrintWithoutCheckoutModal` /
+  /// `_saveAndPrintWithoutCheckoutModal` prep steps.
   Future<void> prepareDirectConfirmAndPrint(BuildContext context) async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);

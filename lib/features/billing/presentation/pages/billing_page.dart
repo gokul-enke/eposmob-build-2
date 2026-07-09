@@ -1295,11 +1295,12 @@ class BillingPageState extends State<BillingPage>
                 : CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f9) {
         debugPrint(
-            "⌨️ [BillingPage] Handling F9 -> open checkout save & print");
-        _showCheckoutModal(
-            actionMode: _isQuotationPage
-                ? CheckoutActionMode.quotation
-                : CheckoutActionMode.save);
+            "⌨️ [BillingPage] Handling F9 -> save & print");
+        if (_isQuotationPage) {
+          _showCheckoutModal(actionMode: CheckoutActionMode.quotation);
+        } else {
+          _handleSaveAndPrint();
+        }
       } else if (event.logicalKey == LogicalKeyboardKey.f10) {
         debugPrint(
             "⌨️ [BillingPage] Handling F10 -> open checkout at Discount step");
@@ -5759,8 +5760,7 @@ class BillingPageState extends State<BillingPage>
                 child: _buildActionButton(
                   text: 'billing.save_and_print'.tr,
                   color: ColorManager.kButtonYellow,
-                  onPressed: () =>
-                      _showCheckoutModal(actionMode: CheckoutActionMode.save),
+                  onPressed: () => _handleSaveAndPrint(),
                   isLoading: isLoadingSaveOrderAndPrint,
                   isDisabled: disableActions && !isLoadingSaveOrderAndPrint,
                   shortcutLabel: 'F9',
@@ -7212,6 +7212,14 @@ class BillingPageState extends State<BillingPage>
     _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
   }
 
+  Future<void> _handleSaveAndPrint() async {
+    if (_skipCheckoutOnConfirmAndPrint) {
+      await _saveAndPrintWithoutCheckoutModal();
+      return;
+    }
+    _showCheckoutModal(actionMode: CheckoutActionMode.save);
+  }
+
   bool _hasExistingPaymentState() {
     return _isCashSelected ||
         _isCardSelected ||
@@ -7382,6 +7390,52 @@ class BillingPageState extends State<BillingPage>
     );
 
     await _createOrderAndPrint();
+  }
+
+  Future<void> _saveAndPrintWithoutCheckoutModal() async {
+    if (_isOrderActionBusy) {
+      debugPrint(
+          "⌨️ [BillingPage] Direct save & print ignored because order action is busy");
+      return;
+    }
+
+    debugPrint(
+        "⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct save & print");
+
+    await _prepareCheckoutDefaults(
+      applyDefaultCustomer: true,
+      applyDefaultPayment: true,
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _autoFillDefaultPaymentAmounts();
+      _hasOpenedPaymentModalOnce = true;
+    });
+    _updateBalanceAmount();
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.updatePaymentFromModal(
+      isCash: _isCashSelected,
+      isCard: _isCardSelected,
+      isUpi: _isUpiSelected,
+      isCod: _isCodSelected,
+      isDebit: _isDebitSelected,
+      cashAmount: _cashAmountController.text,
+      cardAmount: _cardAmountController.text,
+      upiAmount: _upiAmountController.text,
+      codAmount: _codAmountController.text,
+      debitAmount: _debitAmountController.text,
+      transactionNumber: _transactionNumberController.text,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      cashMethodId: billingProvider.cashPaymentMethodId,
+      cardMethodId: billingProvider.cardPaymentMethodId,
+      upiMethodId: billingProvider.upiPaymentMethodId,
+      codMethodId: billingProvider.codPaymentMethodId,
+    );
+
+    await _saveOrderAndPrint();
   }
 
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
