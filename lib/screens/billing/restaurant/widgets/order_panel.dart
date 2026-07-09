@@ -250,6 +250,23 @@ class OrderPanelState extends State<OrderPanel> {
   String? get paymentMethodForDraft =>
       _getLocalDraftPaymentData()['paymentMethod'];
   String? get paidAmountForDraft => _getLocalDraftPaymentData()['paidAmount'];
+  String? get selectedPaymentMethodLabelForDraft {
+    final labels = <String>[];
+    if (_isCashSelected) labels.add('CASH');
+    if (_isCardSelected) labels.add('CARD');
+    if (_isUpiSelected) labels.add('UPI');
+    if (_isCodSelected) labels.add('COD');
+    if (_isDebitSelected) labels.add('CREDIT');
+    if (labels.isEmpty) return null;
+    return labels.join(', ');
+  }
+
+  bool get hasPaymentMethodSelectedForDraft =>
+      _isCashSelected ||
+      _isCardSelected ||
+      _isUpiSelected ||
+      _isCodSelected ||
+      _isDebitSelected;
   String? get selectedCustomerAlternatePhoneForDraft =>
       _firstNonEmptyString([_selectedCustomer?.altPhone]);
   String? get selectedCustomerVatNumberForDraft =>
@@ -938,11 +955,59 @@ class OrderPanelState extends State<OrderPanel> {
     final customersFromProvider = customerProvider.allCustomers ?? [];
     setState(() {
       _customers = List<CustomerListModelData>.from(customersFromProvider);
+      // Seed default payment on first hydrate so the top-bar chip matches
+      // checkout's default selection (e.g. CASH) before any modal is opened.
+      _applyDefaultPaymentMethodSelection();
     });
 
     _applyDefaultCustomer();
     debugPrint(
         'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬Å¡ÃƒÂ¯Ã‚Â¸Ã‚Â Restaurant order panel hydrated customers from provider cache: ${_customers.length}');
+  }
+
+  /// Applies AppSettings.defaultPaymentMethod into order-panel state so the
+  /// top-bar Payment chip reflects the same default checkout uses.
+  /// When [force] is true (New Order / clear), existing selection is replaced.
+  void _applyDefaultPaymentMethodSelection({bool force = false}) {
+    final hasSelection = _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected;
+    if (!force && hasSelection) return;
+
+    _isCashSelected = false;
+    _isCardSelected = false;
+    _isUpiSelected = false;
+    _isCodSelected = false;
+    _isDebitSelected = false;
+
+    final defaultPayment =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.defaultPaymentMethod
+            .trim()
+            .toUpperCase();
+
+    switch (defaultPayment) {
+      case 'CARD':
+        _isCardSelected = true;
+        break;
+      case 'UPI':
+        _isUpiSelected = true;
+        break;
+      case 'COD':
+        _isCodSelected = true;
+        break;
+      case 'DEBIT':
+        _isDebitSelected = true;
+        break;
+      case 'CASH':
+      default:
+        // Match checkout / confirm-and-print: empty or unknown → CASH.
+        _isCashSelected = true;
+        break;
+    }
   }
 
   void _refreshCustomersInBackgroundAfterSale() {
@@ -2153,12 +2218,8 @@ class OrderPanelState extends State<OrderPanel> {
       _selectedCustomerID = null;
       _selectedCustomerPhone = null;
 
-      // Clear payment methods
-      _isCashSelected = false;
-      _isCardSelected = false;
-      _isUpiSelected = false;
-      _isCodSelected = false;
-      _isDebitSelected = false;
+      // Clear payment amounts, then restore AppSettings default method so the
+      // top-bar chip matches a fresh checkout (not a blank "Payment").
       _cashAmount = "";
       _cardAmount = "";
       _upiAmount = '';
@@ -2166,6 +2227,7 @@ class OrderPanelState extends State<OrderPanel> {
       _debitAmount = '';
       _orderComment = "";
       _transactionNumber = "";
+      _applyDefaultPaymentMethodSelection(force: true);
 
       // Clear discount state
       _isCouponApplied = false;
@@ -2203,12 +2265,7 @@ class OrderPanelState extends State<OrderPanel> {
     _selectedCustomerID = null;
     _selectedCustomerPhone = null;
 
-    // Clear payment methods
-    _isCashSelected = false;
-    _isCardSelected = false;
-    _isUpiSelected = false;
-    _isCodSelected = false;
-    _isDebitSelected = false;
+    // Clear payment amounts, then restore AppSettings default method.
     _cashAmount = "";
     _cardAmount = "";
     _upiAmount = '';
@@ -2216,6 +2273,7 @@ class OrderPanelState extends State<OrderPanel> {
     _debitAmount = '';
     _orderComment = "";
     _transactionNumber = "";
+    _applyDefaultPaymentMethodSelection(force: true);
 
     // Clear discount state
     _isCouponApplied = false;
@@ -7270,6 +7328,9 @@ class OrderPanelState extends State<OrderPanel> {
       _couponCode = '';
       _isCouponApplied = false;
       _loadedLocalDraftId = null;
+      // Previously only amounts were cleared, so a prior CASH/CARD selection
+      // stuck on the top-bar chip. Force AppSettings default again.
+      _applyDefaultPaymentMethodSelection(force: true);
     });
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
@@ -7932,6 +7993,14 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
+  Future<void> showPaymentSelectionModalFromParent() {
+    return _showCheckoutModal(
+      mode: CheckoutModalMode.selectionOnly,
+      initialStep: 3,
+      title: 'Select Payment Method',
+    );
+  }
+
   Future<void> clearCurrentCartFromParent() => _clearCurrentCart();
 
   Future<void> saveCurrentCartFromParent() => _saveCurrentCartAsPending();
@@ -7948,37 +8017,7 @@ class OrderPanelState extends State<OrderPanel> {
     final orderTotal = _getEffectiveOrderTotal();
     if (orderTotal <= 0) return;
 
-    final hasSelection = _isCashSelected ||
-        _isCardSelected ||
-        _isUpiSelected ||
-        _isCodSelected ||
-        _isDebitSelected;
-    if (!hasSelection) {
-      final defaultPayment =
-          Provider.of<AppSettingsProvider>(context, listen: false)
-              .appSettings
-              ?.defaultPaymentMethod
-              .trim()
-              .toUpperCase();
-      switch (defaultPayment) {
-        case 'CARD':
-          _isCardSelected = true;
-          break;
-        case 'UPI':
-          _isUpiSelected = true;
-          break;
-        case 'COD':
-          _isCodSelected = true;
-          break;
-        case 'DEBIT':
-          _isDebitSelected = true;
-          break;
-        case 'CASH':
-        default:
-          _isCashSelected = true;
-          break;
-      }
-    }
+    _applyDefaultPaymentMethodSelection();
 
     if (_hasAnySelectedPaymentAmount()) return;
 

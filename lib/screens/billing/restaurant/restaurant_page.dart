@@ -806,6 +806,26 @@ class _RestaurantPageState extends State<RestaurantPage> {
                       }
                     },
                   ),
+                  const SizedBox(height: 10),
+                  _buildCounterSelectorButton(
+                    icon: Icons.payments_rounded,
+                    title: 'Payment',
+                    value: _counterPaymentLabel(fallback: 'Select payment'),
+                    color: const Color(0xFFEA580C),
+                    isSelected: _hasCounterPaymentSelection,
+                    onTap: () async {
+                      final state = _orderPanelKey.currentState;
+                      if (state == null) {
+                        showScaffoldError(
+                          context: context,
+                          message: 'Payment selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showPaymentSelectionModalFromParent();
+                      if (mounted) setState(() {});
+                    },
+                  ),
                   const Spacer(),
                 ],
               ),
@@ -1626,6 +1646,26 @@ class _RestaurantPageState extends State<RestaurantPage> {
           }
         },
       ),
+      _buildTopBarContextChip(
+        icon: Icons.payments_rounded,
+        label: _counterPaymentLabel(fallback: 'Payment'),
+        color: const Color(0xFFEA580C),
+        isSelected: _hasCounterPaymentSelection,
+        isCompact: isCompact,
+        maxWidth: chipMaxWidth,
+        onTap: () async {
+          final state = _orderPanelKey.currentState;
+          if (state == null) {
+            showScaffoldError(
+              context: context,
+              message: 'Payment selector is not ready yet',
+            );
+            return;
+          }
+          await state.showPaymentSelectionModalFromParent();
+          if (mounted) setState(() {});
+        },
+      ),
     ];
   }
 
@@ -2025,6 +2065,16 @@ class _RestaurantPageState extends State<RestaurantPage> {
         (_selectedOrderFromOrderPanel != null &&
             ((_editingOrderDeliveryMethodId?.isNotEmpty ?? false) ||
                 (_editingOrderDeliveryMethodName?.isNotEmpty ?? false)));
+  }
+
+  String _counterPaymentLabel({required String fallback}) {
+    return _orderPanelKey.currentState?.selectedPaymentMethodLabelForDraft ??
+        fallback;
+  }
+
+  bool get _hasCounterPaymentSelection {
+    return _orderPanelKey.currentState?.hasPaymentMethodSelectedForDraft ??
+        false;
   }
 
   Widget _buildTopBarContextChip({
@@ -2989,6 +3039,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
     _applyDefaultCounterDeliveryMethodContext();
     _orderPanelKey.currentState?.resetActiveOrderContext();
     _orderPanelKey.currentState?.showCurrentOrderTab();
+    // Order panel applies default payment inside reset; rebuild parent so the
+    // top-bar Payment chip picks up the restored default label.
+    if (mounted) setState(() {});
   }
 
   Future<void> _handleItemAdd(GetProduct product, int quantity) async {
