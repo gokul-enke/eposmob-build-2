@@ -181,14 +181,16 @@ class PrintService {
                 ListTile(
                   leading: const Icon(Icons.receipt_long),
                   title: const Text('Print Sales'),
-                  subtitle: const Text('Receipt with returned quantities removed'),
+                  subtitle:
+                      const Text('Receipt with returned quantities removed'),
                   onTap: () => Navigator.pop(sheetContext, PrintMode.salesOnly),
                 ),
                 ListTile(
                   leading: const Icon(Icons.assignment_return),
                   title: const Text('Print Return'),
                   subtitle: const Text('Return receipt only'),
-                  onTap: () => Navigator.pop(sheetContext, PrintMode.returnOnly),
+                  onTap: () =>
+                      Navigator.pop(sheetContext, PrintMode.returnOnly),
                 ),
                 ListTile(
                   leading: const Icon(Icons.receipt),
@@ -443,10 +445,10 @@ class PrintService {
         ? _calculateTotalTaxFromCartItems(cartItems)
         : orderDetails.data?.priceSummary?.totalTax?.toDouble();
     final effectiveOrderReturns = isSalesOnly ? null : orderReturns;
-    final documentConfigType = mode == PrintMode.combined &&
-            _hasOrderReturns(orderReturns)
-        ? 'Sales and Return Bill'
-        : 'Bill';
+    final documentConfigType =
+        mode == PrintMode.combined && _hasOrderReturns(orderReturns)
+            ? 'Sales and Return Bill'
+            : 'Bill';
 
     if (!context.mounted) return false;
 
@@ -498,8 +500,7 @@ class PrintService {
             formattedTotal: formattedTotal,
             savedTotal: savedTotal,
             discountAmount:
-                orderDetails.data!.priceSummary?.discount?.toString() ??
-                    '0.00',
+                orderDetails.data!.priceSummary?.discount?.toString() ?? '0.00',
             orderDate: orderDate,
             orderNumber: orderDetails.data!.orderNumber ?? '',
             tokenNumber: orderDetails.data?.tokenNumber,
@@ -553,7 +554,10 @@ class PrintService {
           totalTax += itemTax;
 
           cartItems.add({
-            'productName': item.product.productName ?? 'Unknown',
+            'productName': item.displayName,
+            'product_name': item.displayName,
+            'product_variant_id': item.variantId,
+            'variant_attributes': item.variantAttributes,
             'mrp': itemMrp.toString(),
             'quantity': item.quantity.toString(),
             'product_unit': item.product.unit ?? '',
@@ -673,7 +677,10 @@ class PrintService {
         netTotal += itemTotalPrice;
 
         cartItems.add({
-          'productName': item.product.productName ?? 'Unknown',
+          'productName': item.displayName,
+          'product_name': item.displayName,
+          'product_variant_id': item.variantId,
+          'variant_attributes': item.variantAttributes,
           'mrp': itemMrp.toString(),
           'quantity': item.quantity.toString(),
           'product_unit': item.product.unit ?? '',

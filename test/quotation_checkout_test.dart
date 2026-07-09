@@ -2,6 +2,8 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_machine/features/billing/domain/quotation_checkout.dart';
+import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/local_product_provider.dart';
 
 void main() {
   group('QuotationCheckout.validate', () {
@@ -123,6 +125,47 @@ void main() {
       expect(payload.containsKey('shipping_cost'), isFalse);
       expect(payload.containsKey('discount'), isFalse);
     });
+
+    test('includes variant and sale-unit identity for quotation items', () {
+      final payload = QuotationCheckout.buildPayload(
+        hasExistingCustomer: true,
+        customerId: 42,
+        customerName: 'Acme',
+        customerPhone: '0500000000',
+        storeId: 7,
+        deliveryMethodId: 3,
+        deliveryCharge: 0,
+        quotationDate: DateTime(2026, 3, 15),
+        expiryDate: DateTime(2026, 4, 15),
+        discount: 0,
+        comment: '',
+        cartItems: [
+          LocalCartItem(
+            product: GetProduct(
+              productId: 77,
+              productName: 'T-Shirt',
+              unit: 'PCS',
+              price: ProductPrice(price: '100'),
+            ),
+            quantity: 24,
+            price: 10,
+            saleUnitId: 5,
+            saleUnitName: 'BOX',
+            saleUnitConversionRate: 12,
+            variantId: 201,
+            variantAttributes: const {'COLOR': 'Red'},
+          ),
+        ],
+      );
+
+      final items = payload['items'] as List<dynamic>;
+      final item = items.single as Map<String, dynamic>;
+      expect(item['product_id'], 77);
+      expect(item['quantity'], 2);
+      expect(item['price'], 120);
+      expect(item['product_sale_unit_id'], 5);
+      expect(item['product_variant_id'], 201);
+    });
   });
 
   group('QuotationCheckout.extractCreatedQuotationId', () {
@@ -130,7 +173,9 @@ void main() {
       expect(
         QuotationCheckout.extractCreatedQuotationId({
           'success': true,
-          'data': {'quotation': {'id': 99}},
+          'data': {
+            'quotation': {'id': 99}
+          },
         }),
         99,
       );

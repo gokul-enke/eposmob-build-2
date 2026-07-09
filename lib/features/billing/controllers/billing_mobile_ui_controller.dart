@@ -612,6 +612,7 @@ class BillingMobileCartController {
         item.selectedStock,
         stockGroupIds: item.stockGroupIds,
         currentSaleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
       if (!changed) {
         return const MobileSaleUnitChangeResult.failure(
@@ -648,6 +649,7 @@ class BillingMobileCartController {
       newSaleUnitId: selectedSaleUnit.id,
       newSaleUnitName: selectedSaleUnit.unitName,
       newSaleUnitConversionRate: selectedRate,
+      variantId: item.variantId,
     );
     if (!changed) {
       return MobileSaleUnitChangeResult.failure(
@@ -697,6 +699,7 @@ class BillingMobileCartController {
         minBase,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
       final minDisplay = item.toDisplayAmount(minBase) ?? minBase;
       return MobilePriceCommitResult(
@@ -711,6 +714,7 @@ class BillingMobileCartController {
       enteredBase,
       stockGroupIds: item.stockGroupIds,
       saleUnitId: item.saleUnitId,
+      variantId: item.variantId,
     );
     return const MobilePriceCommitResult(committed: true);
   }
@@ -732,6 +736,7 @@ class BillingMobileCartController {
         item.toBaseAmount(parsedPrice) ?? parsedPrice,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
     } else if (text.isEmpty) {
       provider.updateItemPrice(
@@ -740,6 +745,7 @@ class BillingMobileCartController {
         0.0,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
     }
   }
@@ -761,6 +767,7 @@ class BillingMobileCartController {
         item.toBaseAmount(parsedMrp) ?? parsedMrp,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
     } else if (text.isEmpty) {
       provider.updateItemMrp(
@@ -769,6 +776,7 @@ class BillingMobileCartController {
         0.0,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
     }
   }
@@ -811,6 +819,7 @@ class BillingMobileCartController {
       item.selectedStock,
       stockGroupIds: item.stockGroupIds,
       saleUnitId: item.saleUnitId,
+      variantId: item.variantId,
     );
   }
 
@@ -841,6 +850,7 @@ class BillingMobileCartController {
       historicalBasePrice,
       stockGroupIds: item.stockGroupIds,
       saleUnitId: item.saleUnitId,
+      variantId: item.variantId,
     );
     return const MobileHistoricalPriceResult(applied: true);
   }

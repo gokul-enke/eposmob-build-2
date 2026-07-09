@@ -1518,6 +1518,7 @@ class BillingPageState extends State<BillingPage>
           customerId: selectedCustomerID,
           customerName: selectedCustomer?.name,
           selectedSaleUnit: useSaleUnit ? matchedSaleUnit : null,
+          scannedBarcode: query,
         );
 
         debugPrint(
@@ -3058,6 +3059,7 @@ class BillingPageState extends State<BillingPage>
         item.selectedStock,
         stockGroupIds: item.stockGroupIds,
         currentSaleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
       if (!changed) {
         showScaffoldError(
@@ -3094,6 +3096,7 @@ class BillingPageState extends State<BillingPage>
       newSaleUnitId: selectedSaleUnit.id,
       newSaleUnitName: selectedSaleUnit.unitName,
       newSaleUnitConversionRate: selectedRate,
+      variantId: item.variantId,
     );
     if (!changed) {
       // The provider no longer refuses on stock shortage (oversell is
@@ -3468,23 +3471,56 @@ class BillingPageState extends State<BillingPage>
                                                       padding: const EdgeInsets
                                                           .symmetric(
                                                           vertical: 2),
-                                                      child: Text(
-                                                        item.product
-                                                                .productName ??
-                                                            'general.unknown'
-                                                                .tr,
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .regular,
-                                                          fontProvider
-                                                              .billingTableItemSize,
-                                                          0.21,
-                                                          ColorManager
-                                                              .textColor,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            item.product
+                                                                    .productName ??
+                                                                'general.unknown'
+                                                                    .tr,
+                                                            style:
+                                                                buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .regular,
+                                                              fontProvider
+                                                                  .billingTableItemSize,
+                                                              0.21,
+                                                              ColorManager
+                                                                  .textColor,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                          if (item.variantLabel
+                                                              .isNotEmpty)
+                                                            Text(
+                                                              item.variantLabel,
+                                                              style:
+                                                                  buildCustomStyle(
+                                                                FontWeightManager
+                                                                    .medium,
+                                                                (fontProvider
+                                                                            .billingTableItemSize -
+                                                                        2)
+                                                                    .clamp(9.0,
+                                                                        12.0),
+                                                                0.21,
+                                                                ColorManager
+                                                                    .kPrimaryColor,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                        ],
                                                       ),
                                                     ),
                                                   ),
@@ -3622,7 +3658,7 @@ class BillingPageState extends State<BillingPage>
                                                 child:
                                                     CompactQuantityControlLocal(
                                                   key: ValueKey(
-                                                    'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
+                                                    'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                                   ),
                                                   productId:
                                                       item.product.productId!,
@@ -3689,7 +3725,7 @@ class BillingPageState extends State<BillingPage>
                                                 width: 70,
                                                 child: MrpTextField(
                                                   key: ValueKey(
-                                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                                   ),
                                                   item: item,
                                                   localProductProvider:
@@ -3714,7 +3750,7 @@ class BillingPageState extends State<BillingPage>
                                                 width: 70,
                                                 child: PriceTextField(
                                                   key: ValueKey(
-                                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                                   ),
                                                   item: item,
                                                   localProductProvider:
@@ -3825,6 +3861,7 @@ class BillingPageState extends State<BillingPage>
                                                     stockGroupIds:
                                                         item.stockGroupIds,
                                                     saleUnitId: item.saleUnitId,
+                                                    variantId: item.variantId,
                                                   );
                                                 },
                                               ),
@@ -4131,6 +4168,7 @@ class BillingPageState extends State<BillingPage>
       item.selectedStock,
       stockGroupIds: item.stockGroupIds,
       saleUnitId: item.saleUnitId,
+      variantId: item.variantId,
     );
     setState(() {
       if (previousCartLength <= 1) {
@@ -4235,7 +4273,7 @@ class BillingPageState extends State<BillingPage>
 
   String _cartIdentityKey(LocalCartItem item) {
     final groupKey = item.stockGroupIds.join('_');
-    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}';
   }
 
   // Show product details dialog for the given cart item using reusable widget
@@ -4371,6 +4409,7 @@ class BillingPageState extends State<BillingPage>
         selectedPrice,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
     } catch (error, stackTrace) {
       debugPrint('Failed to load customer purchase history: $error');
@@ -5767,38 +5806,41 @@ class BillingPageState extends State<BillingPage>
                               AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            text,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                          if (shortcutLabel != null) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25),
-                                borderRadius: BorderRadius.circular(3),
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              text,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.white,
                               ),
-                              child: Text(
-                                shortcutLabel,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w600,
+                            ),
+                            if (shortcutLabel != null) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.25),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  shortcutLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
               ),
             ),
@@ -7866,6 +7908,9 @@ class BillingPageState extends State<BillingPage>
           }
           if (item.saleUnitId != null) {
             itemMap['product_sale_unit_id'] = item.saleUnitId;
+          }
+          if (item.variantId != null) {
+            itemMap['product_variant_id'] = item.variantId;
           }
           return itemMap;
         }).toList(),

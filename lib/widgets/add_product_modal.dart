@@ -1324,8 +1324,8 @@ class _AddProductWithBarcodeModalState
         backgroundColor: Colors.transparent,
         child: Container(
           constraints: BoxConstraints(
-              maxWidth: size.width * 0.45,
-              maxHeight: MediaQuery.of(context).size.height * 0.75),
+              maxWidth: size.width > 1100 ? 1050 : size.width * 0.92,
+              maxHeight: MediaQuery.of(context).size.height * 0.88),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),

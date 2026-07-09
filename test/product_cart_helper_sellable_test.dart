@@ -155,7 +155,37 @@ void main() {
         mrp: '25',
         stock: const <Stock>[],
       );
-      provider.initializeProducts([nonSellable, sellable]);
+      final zeroQuantityProduct = GetProduct(
+        productId: 7,
+        productName: 'Zero Quantity Retail Crate',
+        sellable: true,
+        unit: 'PCS',
+        price: ProductPrice(price: '30'),
+        mrp: '35',
+        stock: const <Stock>[],
+      );
+      final premiumVariant = ProductVariant(
+        id: 801,
+        price: 1000,
+        mrp: 1200,
+        attributes: const {'COLOR': 'Blue', 'SIZE': 'M'},
+      );
+      final variantProduct = GetProduct(
+        productId: 8,
+        productName: 'Variant Product',
+        sellable: true,
+        unit: 'PC',
+        price: ProductPrice(price: '150'),
+        mrp: '180',
+        stock: const <Stock>[],
+        variants: [premiumVariant],
+      );
+      provider.initializeProducts([
+        nonSellable,
+        sellable,
+        zeroQuantityProduct,
+        variantProduct,
+      ]);
 
       final context =
           await pumpHelperContext(tester, provider, stockEnabled: false);
@@ -183,8 +213,37 @@ void main() {
 
       expect(provider.cartItems, hasLength(1));
       expect(provider.cartItems.single.product.productId, 6);
-      expect(find.text('Retail Crate is marked as not sellable'),
-          findsNothing);
+      expect(find.text('Retail Crate is marked as not sellable'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 2));
+
+      await ProductCartHelper.handleProductSelection(
+        context: context,
+        product: zeroQuantityProduct,
+        quantity: 0,
+      );
+      await tester.pump();
+
+      final zeroQuantityLine =
+          provider.cartItems.firstWhere((item) => item.product.productId == 7);
+      expect(zeroQuantityLine.quantity, 1);
+
+      await tester.pump(const Duration(seconds: 2));
+
+      await ProductCartHelper.handleProductSelection(
+        context: context,
+        product: variantProduct,
+        selectedVariant: premiumVariant,
+        quantity: 1,
+      );
+      await tester.pump();
+
+      final variantLine =
+          provider.cartItems.firstWhere((item) => item.product.productId == 8);
+      expect(variantLine.variantId, premiumVariant.id);
+      expect(variantLine.price, 1000);
+      expect(variantLine.mrp, 1200);
+      expect((variantLine.price ?? 0) * variantLine.quantity, 1000);
 
       await tester.pump(const Duration(seconds: 2));
     });

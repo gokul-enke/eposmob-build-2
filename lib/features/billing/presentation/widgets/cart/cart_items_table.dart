@@ -159,18 +159,8 @@ class CartItemsTable extends StatelessWidget {
                             // Item Name
                             _buildFixedContentCell(
                               Tooltip(
-                                message: item.product.productName ?? 'Unknown',
-                                child: Text(
-                                  item.product.productName ?? 'Unknown',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    12,
-                                    0.21,
-                                    ColorManager.textColor,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                message: item.displayName,
+                                child: _buildItemNameCell(item),
                               ),
                               width: itemNameWidth,
                               alignment: Alignment.centerLeft,
@@ -196,7 +186,7 @@ class CartItemsTable extends StatelessWidget {
                             _buildFixedContentCell(
                               CompactQuantityControlLocal(
                                 key: ValueKey(
-                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
+                                  'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                 ),
                                 productId: item.product.productId!,
                                 quantity: item.quantity.toDouble(),
@@ -216,7 +206,7 @@ class CartItemsTable extends StatelessWidget {
                                 width: 70,
                                 child: MrpTextField(
                                   key: ValueKey(
-                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                   ),
                                   item: item,
                                   localProductProvider: localProductProvider,
@@ -232,7 +222,7 @@ class CartItemsTable extends StatelessWidget {
                                 width: 70,
                                 child: PriceTextField(
                                   key: ValueKey(
-                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                   ),
                                   item: item,
                                   localProductProvider: localProductProvider,
@@ -245,7 +235,8 @@ class CartItemsTable extends StatelessWidget {
                             // Total
                             _buildFixedContentCell(
                               Text(
-                                '${(item.price! * item.quantity).toStringAsFixed(2)}',
+                                (item.price! * item.quantity)
+                                    .toStringAsFixed(2),
                                 style: buildCustomStyle(
                                   FontWeightManager.semiBold,
                                   12,
@@ -287,6 +278,7 @@ class CartItemsTable extends StatelessWidget {
                                       item.selectedStock,
                                       stockGroupIds: item.stockGroupIds,
                                       saleUnitId: item.saleUnitId,
+                                      variantId: item.variantId,
                                     );
                                   } finally {
                                     billingProvider.setLoadingAddItem(false);
@@ -307,6 +299,52 @@ class CartItemsTable extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildItemNameCell(LocalCartItem item) {
+    final variantLabel = item.variantLabel;
+    if (variantLabel.isEmpty) {
+      return Text(
+        item.product.productName ?? 'Unknown',
+        style: buildCustomStyle(
+          FontWeightManager.regular,
+          12,
+          0.21,
+          ColorManager.textColor,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          item.product.productName ?? 'Unknown',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            12,
+            0.21,
+            ColorManager.textColor,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          variantLabel,
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            10,
+            0.21,
+            ColorManager.kPrimaryColor,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 

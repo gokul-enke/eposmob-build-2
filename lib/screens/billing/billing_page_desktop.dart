@@ -741,6 +741,7 @@ class BillingPageState extends State<BillingPage>
           customerId: billingProvider.selectedCustomerID,
           customerName: billingProvider.selectedCustomer?.name,
           selectedSaleUnit: matchedSaleUnit,
+          scannedBarcode: query,
         );
 
         // Clear input fields

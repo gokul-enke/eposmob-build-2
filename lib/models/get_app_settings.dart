@@ -92,7 +92,7 @@ class AppSettings {
     this.pineLabPayment = false,
     this.skipCheckoutOnConfirmAndPrint = false,
     this.compulsoryDayCloseRegister = false,
-    this.productVariantEnabled = false,
+    this.productVariantEnabled = true,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -201,7 +201,7 @@ class AppSettings {
       productVariantEnabled: _readSettingStatus(
         settingsMap,
         'PRODUCT_VARIANT_ENABLED',
-        defaultValue: false,
+        defaultValue: true,
       ),
     );
   }

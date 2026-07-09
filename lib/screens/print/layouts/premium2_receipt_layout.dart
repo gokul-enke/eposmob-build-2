@@ -36,6 +36,9 @@ import '../logo_loader.dart';
 /// - Streamlined totals section with clear hierarchy
 /// - Minimal, elegant footer
 class Premium2ReceiptLayout implements ReceiptLayout {
+  static final RegExp _arabicRegex = RegExp(r'[؀-ۿ]');
+  bool _hasArabic(String? s) => s != null && _arabicRegex.hasMatch(s);
+
   final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Premium theme spacing constants
@@ -1247,15 +1250,19 @@ class Premium2ReceiptLayout implements ReceiptLayout {
                 textDirection: TextDirection.ltr),
           ]));
         } else {
-          // Fallback to single name (English or Arabic)
+          // Fallback to single name (English or Arabic). Some clients only
+          // populate the English name field but store Arabic text in it, so
+          // detect the script instead of assuming the field content is English.
+          final bool nameIsArabic = _hasArabic(productName);
           String itemText = displayConfig?['showSLNumber']?.visible == true
               ? '$slNumber. $productName'
               : productName;
           rows.add(ReceiptTableRow([
             ReceiptTableColumn(itemText,
                 weight: 1.0,
-                align: TextAlign.left,
-                textDirection: TextDirection.ltr),
+                align: nameIsArabic ? TextAlign.right : TextAlign.left,
+                textDirection:
+                    nameIsArabic ? TextDirection.rtl : TextDirection.ltr),
           ]));
         }
       }

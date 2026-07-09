@@ -1023,6 +1023,26 @@ class Pagination {
       };
 }
 
+class VariantImage {
+  final String? url;
+  final String? alt;
+  final String? title;
+
+  VariantImage({this.url, this.alt, this.title});
+
+  factory VariantImage.fromJson(Map<String, dynamic> json) => VariantImage(
+        url: json['url']?.toString(),
+        alt: json['alt']?.toString(),
+        title: json['title']?.toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'alt': alt,
+        'title': title,
+      };
+}
+
 class ProductVariant {
   final int id;
   final String? sku;
@@ -1033,6 +1053,7 @@ class ProductVariant {
   final num? quantity;
   final bool active;
   final Map<String, dynamic> attributes;
+  final List<VariantImage> images;
 
   ProductVariant({
     required this.id,
@@ -1044,6 +1065,7 @@ class ProductVariant {
     this.quantity,
     this.active = true,
     this.attributes = const {},
+    this.images = const [],
   });
 
   factory ProductVariant.fromJson(Map<String, dynamic> json) => ProductVariant(
@@ -1090,6 +1112,14 @@ class ProductVariant {
         })(),
         active: _parseBool(json['active']) ?? true,
         attributes: _parseVariantAttributes(json['attributes']),
+        images: (() {
+          final raw = json['images'];
+          if (raw is! List) return const <VariantImage>[];
+          return raw
+              .whereType<Map>()
+              .map((e) => VariantImage.fromJson(e.cast<String, dynamic>()))
+              .toList();
+        })(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -1102,6 +1132,7 @@ class ProductVariant {
         'quantity': quantity,
         'active': active,
         'attributes': attributes,
+        'images': images.map((image) => image.toJson()).toList(),
       };
 
   ProductVariant copyWith({
@@ -1114,6 +1145,7 @@ class ProductVariant {
     num? quantity,
     bool? active,
     Map<String, dynamic>? attributes,
+    List<VariantImage>? images,
   }) {
     return ProductVariant(
       id: id ?? this.id,
@@ -1125,6 +1157,7 @@ class ProductVariant {
       quantity: quantity ?? this.quantity,
       active: active ?? this.active,
       attributes: attributes ?? this.attributes,
+      images: images ?? this.images,
     );
   }
 

@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pos_machine/models/barcode_layout_settings.dart';
 
 /// Renders a barcode sticker to a PNG using Flutter's text engine.
 ///
@@ -17,6 +18,9 @@ class BarcodeStickerImageRenderer {
 
   static const String _regularFamily = 'BarcodeStickerNoto';
   static const String _boldFamily = 'BarcodeStickerNotoBold';
+
+  /// PostScript points per millimetre, for converting pt-based settings to px.
+  static const double _pointsPerMm = 2.83465;
 
   static bool _fontsLoaded = false;
   static ui.Image? _sarSymbol;
@@ -192,6 +196,7 @@ class BarcodeStickerImageRenderer {
     required double dateFontSize,
     required double barcodeNumberFontSize,
     required double barcodeHeight,
+    double elementSpacing = BarcodeLayoutSettings.defaultElementSpacing,
     double pixelsPerMm = 12,
   }) async {
     await _ensureAssets();
@@ -258,6 +263,11 @@ class BarcodeStickerImageRenderer {
 
     if (entries.isEmpty) return null;
 
+    // All-zero weights (corrupt saved font sizes with no barcode line) would
+    // divide by zero when apportioning slot heights.
+    final double totalWeight = entries.fold(0, (sum, e) => sum + e.weight);
+    if (totalWeight <= 0) return null;
+
     final double w = widthMm * pixelsPerMm;
     final double h = heightMm * pixelsPerMm;
 
@@ -270,10 +280,9 @@ class BarcodeStickerImageRenderer {
 
     final double padX = w * 0.02;
     final double padY = h * 0.035;
-    final double gap = h * 0.02;
+    final double gap =
+        (elementSpacing / _pointsPerMm * pixelsPerMm).clamp(0.0, h * 0.1);
     final double usableH = h - padY * 2 - gap * (entries.length - 1);
-    final double totalWeight =
-        entries.fold(0, (sum, e) => sum + e.weight);
 
     double y = padY;
     for (final entry in entries) {

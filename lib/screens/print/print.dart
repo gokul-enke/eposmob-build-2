@@ -263,8 +263,8 @@ class PrintPage extends StatefulWidget {
         customerCrNumber: customerCrNumber,
         customerType: customerType,
         documentTitleOverride: documentTitleOverride,
-        paymentBreakdown: _resolvePaymentBreakdown(
-            context, paymentBreakdown, paymentMethod),
+        paymentBreakdown:
+            _resolvePaymentBreakdown(context, paymentBreakdown, paymentMethod),
         zatcaVatNumber: zatcaVatNumber,
         zatcaCompanyName: zatcaCompanyName,
         isDefaultCustomer: isDefaultCustomer,
@@ -354,8 +354,7 @@ class PrintPage extends StatefulWidget {
     if (paymentBreakdown != null && paymentBreakdown.isNotEmpty) {
       return paymentBreakdown;
     }
-    final parsed =
-        PaymentHelper.parseLocalMultiPayment(context, paymentMethod);
+    final parsed = PaymentHelper.parseLocalMultiPayment(context, paymentMethod);
     if (parsed != null && parsed.paymentBreakdown.isNotEmpty) {
       return parsed.paymentBreakdown;
     }
@@ -363,10 +362,54 @@ class PrintPage extends StatefulWidget {
   }
 
   static String _cartItemName(dynamic item) {
-    if (item is Map) {
-      return (item['productName'] ?? item['product_name'] ?? '').toString();
+    String withVariant(String name, dynamic rawAttributes) {
+      final attrs = _variantAttributeLabel(rawAttributes);
+      if (attrs.isEmpty || name.contains('($attrs)')) {
+        return name;
+      }
+      return name.trim().isEmpty ? attrs : '$name ($attrs)';
     }
-    return item.productName?.toString() ?? '';
+
+    if (item is Map) {
+      final name =
+          (item['productName'] ?? item['product_name'] ?? '').toString();
+      return withVariant(
+        name,
+        item['variant_attributes'] ?? item['variantAttributes'],
+      );
+    }
+    try {
+      final displayName = item.displayName?.toString();
+      if (displayName != null && displayName.trim().isNotEmpty) {
+        return displayName;
+      }
+    } catch (_) {}
+    final name = item.productName?.toString() ?? '';
+    try {
+      return withVariant(name, item.variantAttributes);
+    } catch (_) {
+      return name;
+    }
+  }
+
+  static String _variantAttributeLabel(dynamic rawAttributes) {
+    dynamic attrs = rawAttributes;
+    if (attrs is String) {
+      final trimmed = attrs.trim();
+      if (trimmed.isEmpty) return '';
+      try {
+        attrs = json.decode(trimmed);
+      } catch (_) {
+        return trimmed;
+      }
+    }
+    if (attrs is Map) {
+      return attrs.values
+          .map((value) => value?.toString() ?? '')
+          .where((value) => value.trim().isNotEmpty)
+          .join(' | ');
+    }
+    return '';
   }
 
   static String _cartItemQuantity(dynamic item) {
@@ -1136,286 +1179,286 @@ class _PrintPageState extends State<PrintPage> {
         child: Container(
           padding: const EdgeInsets.all(16.0),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Paper Size Selection Card
-            Card(
-              elevation: 2,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [accentColor.withOpacity(0.1), Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Paper Size Selection Card
+              Card(
+                elevation: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [accentColor.withOpacity(0.1), Colors.white],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Paper Size',
-                      style: TextStyle(
-                        color: textPrimaryColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      value: selectedPaperSize,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
-                      items: paperSizes.map((String size) {
-                        return DropdownMenuItem<String>(
-                          value: size,
-                          child: Text(size),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedPaperSize = newValue!;
-                          _saveDefaultPaperSize(selectedPaperSize);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              elevation: 2,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [primaryColor.withOpacity(0.1), Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Available Printers',
-                      style: TextStyle(
-                        color: textPrimaryColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _isScanning
-                          ? 'Scanning...'
-                          : '${devices.length} devices found',
-                      style: const TextStyle(
-                        color: textSecondaryColor,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: devices.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.print_disabled,
-                            size: 64,
-                            color: textSecondaryColor,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No printers found',
-                            style: TextStyle(
-                              color: textSecondaryColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tap the refresh button to scan for printers',
-                            style: TextStyle(
-                              color: textSecondaryColor.withOpacity(0.8),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: devices.length,
-                      itemBuilder: (context, index) {
-                        final printer = devices[index];
-                        final isSelected = selectedPrinter == printer;
-
-                        return Card(
-                          elevation: isSelected ? 2 : 1,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: isSelected
-                                  ? Border.all(color: primaryColor, width: 2)
-                                  : null,
-                            ),
-                            child: ListTile(
-                              leading: Icon(
-                                Icons.print,
-                                color: isSelected
-                                    ? primaryColor
-                                    : textSecondaryColor,
-                                size: 28,
-                              ),
-                              title: Text(
-                                printer.deviceName ?? 'Unknown device',
-                                style: TextStyle(
-                                  color: textPrimaryColor,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              subtitle: Text(
-                                printer.address ?? '',
-                                style: const TextStyle(
-                                  color: textSecondaryColor,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              trailing: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isSelected
-                                      ? accentColor
-                                      : Colors.grey[200],
-                                  foregroundColor: isSelected
-                                      ? Colors.white
-                                      : textSecondaryColor,
-                                  elevation: isSelected ? 2 : 0,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                onPressed: () => selectPrinter(printer),
-                                child: Text(
-                                  isSelected ? 'Selected' : 'Select',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            const SizedBox(height: 16),
-            if (_billDocumentConfig == null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.orange, size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Loading document configuration...',
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Paper Size',
                         style: TextStyle(
-                          color: Colors.orange[700],
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        String? accessToken =
-                            Provider.of<AuthModel>(context, listen: false)
-                                .token;
-                        if (accessToken != null) {
-                          await _loadDocumentConfigurations(accessToken);
-                        }
-                      },
-                      child: Text(
-                        'Retry',
-                        style: TextStyle(
-                          color: Colors.orange[700],
+                          color: textPrimaryColor,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: selectedPaperSize,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                        items: paperSizes.map((String size) {
+                          return DropdownMenuItem<String>(
+                            value: size,
+                            child: Text(size),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedPaperSize = newValue!;
+                            _saveDefaultPaperSize(selectedPaperSize);
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 2,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryColor.withOpacity(0.1), Colors.white],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Available Printers',
+                        style: TextStyle(
+                          color: textPrimaryColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _isScanning
+                            ? 'Scanning...'
+                            : '${devices.length} devices found',
+                        style: const TextStyle(
+                          color: textSecondaryColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ElevatedButton.icon(
-              onPressed: () {
-                debugPrint("[LOGO_DEBUG] Print Receipt button pressed");
-                if (selectedPrinter == null) {
-                  debugPrint("[LOGO_DEBUG] No printer selected");
-                  showScaffoldError(
-                    context: context,
-                    message: "Please select a printer first",
-                  );
-                  return;
-                }
-                if (_billDocumentConfig == null) {
-                  debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
-                  showScaffoldError(
-                    context: context,
-                    message:
-                        "Document configuration not loaded. Please wait or try again.",
-                  );
-                  return;
-                }
-                debugPrint("[LOGO_DEBUG] Calling _handlePrinting");
-                _handlePrinting(appSettings!.customerCarePhone,
-                    appSettings.customerCareEmail);
-              },
-              icon: const Icon(Icons.receipt_long),
-              label: const Text(
-                'Print Receipt',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 16),
+              Expanded(
+                child: devices.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.print_disabled,
+                              size: 64,
+                              color: textSecondaryColor,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'No printers found',
+                              style: TextStyle(
+                                color: textSecondaryColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap the refresh button to scan for printers',
+                              style: TextStyle(
+                                color: textSecondaryColor.withOpacity(0.8),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: devices.length,
+                        itemBuilder: (context, index) {
+                          final printer = devices[index];
+                          final isSelected = selectedPrinter == printer;
+
+                          return Card(
+                            elevation: isSelected ? 2 : 1,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: isSelected
+                                    ? Border.all(color: primaryColor, width: 2)
+                                    : null,
+                              ),
+                              child: ListTile(
+                                leading: Icon(
+                                  Icons.print,
+                                  color: isSelected
+                                      ? primaryColor
+                                      : textSecondaryColor,
+                                  size: 28,
+                                ),
+                                title: Text(
+                                  printer.deviceName ?? 'Unknown device',
+                                  style: TextStyle(
+                                    color: textPrimaryColor,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  printer.address ?? '',
+                                  style: const TextStyle(
+                                    color: textSecondaryColor,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                trailing: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isSelected
+                                        ? accentColor
+                                        : Colors.grey[200],
+                                    foregroundColor: isSelected
+                                        ? Colors.white
+                                        : textSecondaryColor,
+                                    elevation: isSelected ? 2 : 0,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                  onPressed: () => selectPrinter(printer),
+                                  child: Text(
+                                    isSelected ? 'Selected' : 'Select',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              const SizedBox(height: 16),
+              if (_billDocumentConfig == null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Loading document configuration...',
+                          style: TextStyle(
+                            color: Colors.orange[700],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          String? accessToken =
+                              Provider.of<AuthModel>(context, listen: false)
+                                  .token;
+                          if (accessToken != null) {
+                            await _loadDocumentConfigurations(accessToken);
+                          }
+                        },
+                        child: Text(
+                          'Retry',
+                          style: TextStyle(
+                            color: Colors.orange[700],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  debugPrint("[LOGO_DEBUG] Print Receipt button pressed");
+                  if (selectedPrinter == null) {
+                    debugPrint("[LOGO_DEBUG] No printer selected");
+                    showScaffoldError(
+                      context: context,
+                      message: "Please select a printer first",
+                    );
+                    return;
+                  }
+                  if (_billDocumentConfig == null) {
+                    debugPrint("[LOGO_DEBUG] _billDocumentConfig is null");
+                    showScaffoldError(
+                      context: context,
+                      message:
+                          "Document configuration not loaded. Please wait or try again.",
+                    );
+                    return;
+                  }
+                  debugPrint("[LOGO_DEBUG] Calling _handlePrinting");
+                  _handlePrinting(appSettings!.customerCarePhone,
+                      appSettings.customerCareEmail);
+                },
+                icon: const Icon(Icons.receipt_long),
+                label: const Text(
+                  'Print Receipt',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: accentColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(

@@ -366,7 +366,8 @@ class _BarcodeLayoutSettingsPanelState
 
     // Font scale: relate to pt sizes (rough approximation)
     double fs(double pt) => (pt * scaleFactor * 0.45).clamp(6, 40);
-    final spacing = _settings.elementSpacing * scaleFactor * 0.4;
+    // Element spacing is stored in points; scaleFactor is px-per-mm.
+    final spacing = _settings.elementSpacing / 2.83465 * scaleFactor;
 
     return Container(
       width: previewW,
@@ -422,6 +423,18 @@ class _BarcodeLayoutSettingsPanelState
               ),
               SizedBox(height: spacing),
 
+              // Product Name
+              Text(
+                'Sample Product',
+                style: TextStyle(
+                  fontSize: fs(_settings.productNameFontSize),
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: spacing),
+
               // Price
               Text(
                 'SAR 6.54',
@@ -433,22 +446,9 @@ class _BarcodeLayoutSettingsPanelState
               ),
               SizedBox(height: spacing),
 
-              // Product Name
-              Text(
-                'Sample Product',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: fs(_settings.productNameFontSize),
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              SizedBox(height: spacing),
-
               // Date line
               Text(
-                'PKG:04-04-26 EXD:03-04-27',
+                'P:04/04/2026 E:03/04/2027',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: fs(_settings.dateFontSize),

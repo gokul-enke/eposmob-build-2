@@ -95,7 +95,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
             0.0);
 
     final String productName = isLocal
-        ? (cartItem as LocalCartItem).product.productName ?? 'Item'
+        ? (cartItem as LocalCartItem).displayName
         : (cartItem['product']?['name'] ?? cartItem['product_name'] ?? 'Item');
 
     final TextEditingController priceController =
@@ -124,6 +124,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
             newPrice,
             stockGroupIds: localItem.stockGroupIds,
             saleUnitId: localItem.saleUnitId,
+            variantId: localItem.variantId,
           );
         } else {
           // Update Saved Item
@@ -270,7 +271,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
         : (double.tryParse((cartItem['quantity'] ?? 1).toString()) ?? 1.0);
 
     final String productName = isLocal
-        ? (cartItem as LocalCartItem).product.productName ?? 'Item'
+        ? (cartItem as LocalCartItem).displayName
         : (cartItem['product']?['name'] ?? cartItem['product_name'] ?? 'Item');
 
     final TextEditingController quantityController =
@@ -355,8 +356,8 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                   labelStyle: const TextStyle(color: Color(0xFF64748B)),
                   filled: true,
                   fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 16),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.grey.shade300),
@@ -367,8 +368,8 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: Color(0xFF059669), width: 2),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF059669), width: 2),
                   ),
                 ),
                 onTap: () {

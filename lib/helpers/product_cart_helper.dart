@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/mobile_variant_picker_sheet.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
@@ -41,6 +43,7 @@ class ProductCartHelper {
     String? customerName,
     SaleUnit? selectedSaleUnit,
     ProductVariant? selectedVariant,
+    String? scannedBarcode,
   }) async {
     try {
       await _handleProductSelectionImpl(
@@ -55,6 +58,7 @@ class ProductCartHelper {
         customerName: customerName,
         selectedSaleUnit: selectedSaleUnit,
         selectedVariant: selectedVariant,
+        scannedBarcode: scannedBarcode,
       );
     } catch (error) {
       debugPrint('ProductCartHelper error: $error');
@@ -79,8 +83,47 @@ class ProductCartHelper {
     String? customerName,
     SaleUnit? selectedSaleUnit,
     ProductVariant? selectedVariant,
+    String? scannedBarcode,
   }) async {
     debugPrint("=== PRODUCT CART HELPER DEBUG START ===");
+
+    // STEP 0: Resolve a variant if the caller didn't already pick one.
+    // Mirrors the stock-selection / zero-price flows below: auto-resolve when
+    // unambiguous, otherwise show a picker, all from this single entry point
+    // so every add-to-cart call site (mobile, desktop, restaurant) gets
+    // variant support without needing to know about it.
+    bool variantsOn = false;
+    try {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      variantsOn =
+          appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+    } on ProviderNotFoundException catch (_) {
+      // No AppSettingsProvider above this context (e.g. isolated widget
+      // tests, or a call site outside the app's provider tree) — treat as
+      // variants-off rather than aborting the add-to-cart entirely.
+      variantsOn = false;
+    }
+
+    if (selectedVariant == null && variantsOn && product.hasVariants) {
+      selectedVariant = ProductVariantSelection.tryResolveWithoutPicker(
+        product,
+        scannedBarcode: scannedBarcode,
+      );
+
+      if (selectedVariant == null &&
+          ProductVariantSelection.needsVariantPicker(product)) {
+        selectedVariant = await showMobileVariantPickerSheet(
+          context: context,
+          product: product,
+        );
+        if (selectedVariant == null || !context.mounted) {
+          debugPrint("❌ Variant picker cancelled - aborting add");
+          debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+          return;
+        }
+      }
+    }
     debugPrint("Product selected: ${product.productName}");
     debugPrint("Product ID: ${product.productId}");
     debugPrint("Product base price: ${product.price?.price ?? 'null'}");
@@ -147,8 +190,14 @@ class ProductCartHelper {
 
     // A variant reporting zero stock is a data signal, not a hard stop: the
     // cashier may be holding the physical item. Confirm instead of refusing,
-    // and only when stock management is actually enabled.
+    // and only when stock management AND the oversell-confirmation setting
+    // are both enabled. Defaults to false so businesses that don't track
+    // variant-level stock (restaurants, quick-service, etc.) aren't nagged.
+    final bool confirmOversellOnZeroStock =
+        generalSettingsProvider.generalSettings?.confirmOversellOnZeroStock ??
+            false;
     if (stockEnabled &&
+        confirmOversellOnZeroStock &&
         selectedVariant != null &&
         ProductVariantSelection.isOutOfStock(selectedVariant)) {
       final label = selectedVariant.formattedAttributes.isEmpty
@@ -168,8 +217,8 @@ class ProductCartHelper {
 
     // Mirror the configured grouping fields so cart merge decisions use the
     // same pricing signature as stock grouping.
-    localProductProvider
-        .setActiveStockGroupingFields(masterDataProvider.activeStockGroupingFields);
+    localProductProvider.setActiveStockGroupingFields(
+        masterDataProvider.activeStockGroupingFields);
 
     // Variables to track selected stock and final values
     Stock? selectedStock;
@@ -397,8 +446,7 @@ class ProductCartHelper {
         ),
       );
       if (!sellAnyway || !context.mounted) {
-        debugPrint(
-            "❌ Sale-unit stock shortfall — cashier declined oversell");
+        debugPrint("❌ Sale-unit stock shortfall — cashier declined oversell");
         debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
         return;
       }
@@ -416,7 +464,8 @@ class ProductCartHelper {
     // STEP 4: Add to cart if required
     if (addToCartDirectly) {
       // Set final values with defaults
-      num cartQuantity = finalQuantity ?? 1;
+      num cartQuantity =
+          finalQuantity != null && finalQuantity > 0 ? finalQuantity : 1;
       double? existingCartItemPrice;
       bool markPriceAsManualOverride = hasExplicitPriceOverride;
 
@@ -468,6 +517,11 @@ class ProductCartHelper {
               null; // Don't pass price, let addToCart preserve existing price
           mrpToUse =
               null; // Don't pass MRP, let addToCart preserve existing MRP
+        } else if (selectedVariant != null) {
+          debugPrint(
+              "💰 New variant product to cart - using selected variant price/MRP: $finalPrice, $finalMrp");
+          priceToUse = finalPrice;
+          mrpToUse = finalMrp;
         } else {
           debugPrint(
               "💰 New product to cart - deferring price/MRP to provider resolution (sale-unit chain)");

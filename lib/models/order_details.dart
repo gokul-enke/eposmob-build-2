@@ -500,6 +500,12 @@ class OrderDetailsModelDataCartItem {
         .join(' | ');
   }
 
+  String get displayName {
+    final base = productName ?? '';
+    final attrs = formattedVariantAttributes;
+    return attrs.isEmpty ? base : '$base ($attrs)';
+  }
+
   factory OrderDetailsModelDataCartItem.fromJson(Map<String, dynamic> json) =>
       OrderDetailsModelDataCartItem(
         id: json["id"],
@@ -957,15 +963,20 @@ class OrderReturnItem {
         .join(' | ');
   }
 
+  String get displayName {
+    final base = productName ?? '';
+    final attrs = formattedVariantAttributes;
+    return attrs.isEmpty ? base : '$base ($attrs)';
+  }
+
   factory OrderReturnItem.fromJson(Map<String, dynamic> json) =>
       OrderReturnItem(
         id: json["id"],
         productName: json["product_name"],
         quantity: json["quantity"],
         reason: json["reason"],
-        productVariantId:
-            OrderDetailsModelDataCartItem._parseNullableInt(
-                json["product_variant_id"]),
+        productVariantId: OrderDetailsModelDataCartItem._parseNullableInt(
+            json["product_variant_id"]),
         variantAttributes:
             OrderDetailsModelDataCartItem._parseVariantAttributes(
                 json["variant_attributes"]),

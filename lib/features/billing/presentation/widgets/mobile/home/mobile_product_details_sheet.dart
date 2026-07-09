@@ -6,12 +6,15 @@ import 'package:pos_machine/features/billing/domain/product_details_helpers.dart
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_row.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
+import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
+import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/language.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
@@ -126,6 +129,11 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
   bool _requestedUnitRackData = false;
   final Map<int, Stock> _editedStockRows = {};
 
+  final VariantEditorController _variantController = VariantEditorController();
+  bool _variantPropertiesRequested = false;
+  bool _isLoadingVariantProperties = false;
+  bool _variantsPrefilled = false;
+
   final Map<TextEditingController, FocusNode> _focusNodes = {};
 
   @override
@@ -172,7 +180,100 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchLanguages();
+      _fetchVariantPropertiesAndPrefill();
     });
+  }
+
+  Future<void> _fetchVariantPropertiesAndPrefill() async {
+    if (_variantPropertiesRequested) return;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (appSettings?.productVariantEnabled != true) return;
+    _variantPropertiesRequested = true;
+
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
+    if (!productProvider.hasProductProperties) {
+      final accessToken =
+          Provider.of<AuthModel>(context, listen: false).token ?? '';
+      if (accessToken.isNotEmpty) {
+        setState(() => _isLoadingVariantProperties = true);
+        try {
+          await productProvider.fetchProductProperties(
+              accessToken: accessToken);
+        } catch (e) {
+          debugPrint('⚠️ fetchProductProperties failed: $e');
+        } finally {
+          if (mounted) setState(() => _isLoadingVariantProperties = false);
+        }
+      }
+    }
+
+    if (!mounted) return;
+    _prefillVariants();
+  }
+
+  void _retryFetchVariantProperties() {
+    _variantPropertiesRequested = false;
+    _fetchVariantPropertiesAndPrefill();
+  }
+
+  void _prefillVariants() {
+    if (_variantsPrefilled) return;
+    final product = selectedProduct;
+    if (product == null) return;
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
+    _variantController.loadFromVariants(
+      product.variants ?? const [],
+      productProvider.productProperties,
+    );
+    _variantsPrefilled = true;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _generateVariantBarcode(
+    TextEditingController target,
+    void Function(bool loading) setLoading,
+  ) async {
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Authentication token not found. Please log in again.',
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      final gridSelectionProvider =
+          Provider.of<GridSelectionProvider>(context, listen: false);
+      final result =
+          await gridSelectionProvider.generateBarcodeAPI(accessToken: accessToken);
+      if (!mounted) return;
+      if (result != null &&
+          result['status'] == 'success' &&
+          result['data'] != null) {
+        target.text = result['data']['barcode'].toString();
+        showScaffold(context: context, message: 'Barcode generated');
+      } else {
+        showScaffoldError(
+          context: context,
+          message: result?['message']?.toString() ?? 'Failed to generate barcode',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error generating barcode: $e',
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   void _attachSelectAllOnFocus(TextEditingController controller) {
@@ -413,6 +514,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       _initializeControllersIfNeeded();
       _ensureCategoriesLoaded();
       _ensureUnitAndRackLoaded();
+      if (product != null) _prefillVariants();
 
       if (product == null && mounted) {
         showScaffoldError(
@@ -546,6 +648,25 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
     if (!_editFormKey.currentState!.validate()) return;
 
+    final variantEnabled = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.productVariantEnabled ??
+        true;
+    List<Map<String, dynamic>>? variantsPayload;
+    if (variantEnabled) {
+      final variantError =
+          validateVariantRows(_variantController.toEditInputs());
+      if (variantError != null) {
+        showScaffoldError(context: context, message: variantError);
+        return;
+      }
+      if (_variantController.hasRows ||
+          _variantController.deletedVariantIds.isNotEmpty) {
+        variantsPayload =
+            buildEditVariantsPayload(_variantController.toEditInputs());
+      }
+    }
+
     FocusScope.of(context).unfocus();
     setState(() => _isSaving = true);
 
@@ -638,6 +759,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         rackNumber: rackForApi,
         quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
+        variants: variantsPayload,
         minMarginPercentage: updatedMinMargin,
         minMarginPrice: updatedMinMarginPrice,
         accessToken: accessToken,
@@ -742,6 +864,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         saleUnits: (serverProduct?.saleUnits?.isNotEmpty ?? false)
             ? serverProduct!.saleUnits
             : product.saleUnits,
+        variants: (serverProduct?.variants?.isNotEmpty ?? false)
+            ? serverProduct!.variants
+            : product.variants,
       );
 
       localProductProvider.updateProduct(updatedProduct);
@@ -756,6 +881,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       );
 
       if (!mounted) return;
+      _variantController.deletedVariantIds.clear();
       setState(() {
         selectedProduct = updatedProduct;
         _controllersInitialized = false;
@@ -809,6 +935,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
   @override
   void dispose() {
+    _variantController.dispose();
     if (_tabControllerReady) _tabController.dispose();
     _nameController.dispose();
     _slugController.dispose();
@@ -1516,6 +1643,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               ),
             ],
           ),
+          _buildVariantsSection(),
           MobileDetailSection(
             title: 'Translations',
             icon: Icons.translate,
@@ -1583,6 +1711,28 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildVariantsSection() {
+    return Consumer2<AppSettingsProvider, ProductProvider>(
+      builder: (context, appSettingsProvider, productProvider, child) {
+        final variantEnabled =
+            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+        if (!variantEnabled) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: VariantEditorSection(
+            controller: _variantController,
+            properties: productProvider.productProperties,
+            isLoadingProperties: _isLoadingVariantProperties,
+            onRetryLoadProperties: _retryFetchVariantProperties,
+            onGenerateBarcode: _generateVariantBarcode,
+          ),
+        );
+      },
     );
   }
 
