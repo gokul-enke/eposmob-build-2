@@ -16,6 +16,11 @@ import 'package:pos_machine/models/barcode_layout_settings.dart';
 class BarcodeStickerImageRenderer {
   BarcodeStickerImageRenderer._();
 
+  static double reservedBarcodeHeight(double requestedHeight) => math.max(
+        requestedHeight,
+        BarcodeLayoutSettings.defaultBarcodeHeight,
+      );
+
   static const String _regularFamily = 'BarcodeStickerNoto';
   static const String _boldFamily = 'BarcodeStickerNotoBold';
 
@@ -200,21 +205,34 @@ class BarcodeStickerImageRenderer {
   }) async {
     await _ensureAssets();
 
-    // Slot weights mirror the previous PDF layout: font-size setting times a
-    // per-line boost, barcode share driven by the barcode-height setting.
-    final entries = <({double weight, void Function(Canvas, Rect) paint})>[];
+    // Each entry has an actual paint weight and a reserved layout weight.
+    // Barcode heights below the 15pt default keep the default reservation, so
+    // reducing the bars creates whitespace instead of enlarging other fields.
+    final entries = <({
+      double weight,
+      double reservedWeight,
+      void Function(Canvas, Rect) paint,
+    })>[];
 
     if (storeName.isNotEmpty) {
       final tp = _painter(storeName, bold: true);
       entries.add((
         weight: storeNameFontSize * 2.0,
+        reservedWeight: storeNameFontSize * 2.0,
         paint: (c, r) => _paintFitted(c, r, tp),
       ));
     }
 
     if (barcodeValue.isNotEmpty) {
+      const defaultBarcodeWeight = 35.0;
+      const barcodeWeightPerPoint =
+          defaultBarcodeWeight / BarcodeLayoutSettings.defaultBarcodeHeight;
+      final actualBarcodeWeight = barcodeHeight * barcodeWeightPerPoint;
+      final reservedBarcodeWeight =
+          reservedBarcodeHeight(barcodeHeight) * barcodeWeightPerPoint;
       entries.add((
-        weight: barcodeHeight + 20,
+        weight: actualBarcodeWeight,
+        reservedWeight: reservedBarcodeWeight,
         paint: (c, r) {
           final widthFraction = (barcodeWidthPercent / 100).clamp(0.30, 0.95);
           final inset = r.width * (1 - widthFraction) / 2;
@@ -231,6 +249,7 @@ class BarcodeStickerImageRenderer {
         final tp = _painter(barcodeValue, bold: false);
         entries.add((
           weight: barcodeNumberFontSize * 1.9,
+          reservedWeight: barcodeNumberFontSize * 1.9,
           paint: (c, r) => _paintFitted(c, r, tp),
         ));
       }
@@ -240,6 +259,7 @@ class BarcodeStickerImageRenderer {
       final tp = _painter(productName, bold: false);
       entries.add((
         weight: productNameFontSize * 1.8,
+        reservedWeight: productNameFontSize * 1.8,
         paint: (c, r) => _paintFitted(c, r, tp),
       ));
     }
@@ -247,6 +267,7 @@ class BarcodeStickerImageRenderer {
     if (priceText.isNotEmpty) {
       entries.add((
         weight: priceFontSize * 2.3,
+        reservedWeight: priceFontSize * 2.3,
         paint: (c, r) =>
             _paintPrice(c, r, priceText: priceText, currency: currency),
       ));
@@ -256,16 +277,16 @@ class BarcodeStickerImageRenderer {
       final tp = _painter(dateLine, bold: true);
       entries.add((
         weight: dateFontSize * 1.8,
+        reservedWeight: dateFontSize * 1.8,
         paint: (c, r) => _paintFitted(c, r, tp),
       ));
     }
 
     if (entries.isEmpty) return null;
 
-    // All-zero weights (corrupt saved font sizes with no barcode line) would
-    // divide by zero when apportioning slot heights.
-    final double totalWeight = entries.fold(0, (sum, e) => sum + e.weight);
-    if (totalWeight <= 0) return null;
+    final double totalReservedWeight =
+        entries.fold(0, (sum, e) => sum + e.reservedWeight);
+    if (totalReservedWeight <= 0) return null;
 
     final double w = widthMm * pixelsPerMm;
     final double h = heightMm * pixelsPerMm;
@@ -285,9 +306,16 @@ class BarcodeStickerImageRenderer {
 
     double y = padY;
     for (final entry in entries) {
-      final double slotH = usableH * (entry.weight / totalWeight);
-      entry.paint(canvas, Rect.fromLTWH(padX, y, w - padX * 2, slotH));
-      y += slotH + gap;
+      final double reservedSlotH =
+          usableH * (entry.reservedWeight / totalReservedWeight);
+      final double paintSlotH =
+          reservedSlotH * (entry.weight / entry.reservedWeight);
+      final double paintY = y + (reservedSlotH - paintSlotH) / 2;
+      entry.paint(
+        canvas,
+        Rect.fromLTWH(padX, paintY, w - padX * 2, paintSlotH),
+      );
+      y += reservedSlotH + gap;
     }
 
     final picture = recorder.endRecording();

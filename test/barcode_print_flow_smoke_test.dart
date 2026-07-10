@@ -4,6 +4,7 @@ import 'package:pos_machine/models/barcode_layout_settings.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 import 'package:pos_machine/screens/print/barcode_printer_service.dart';
+import 'package:pos_machine/screens/print/barcode_sticker_image_renderer.dart';
 import 'package:pos_machine/screens/print/printer_settings.dart';
 import 'package:pos_machine/screens/product/product_barcode.dart';
 import 'package:pos_machine/screens/product/widgets/confirm_barcode_print_modal.dart';
@@ -69,5 +70,12 @@ void main() {
 
     expect(find.text('Select Date'), findsNWidgets(2));
     expect(find.text('2026-01-01'), findsNothing);
+  });
+
+  test('reduced barcode height retains the default whitespace reservation', () {
+    expect(BarcodeStickerImageRenderer.reservedBarcodeHeight(5), 15);
+    expect(BarcodeStickerImageRenderer.reservedBarcodeHeight(10), 15);
+    expect(BarcodeStickerImageRenderer.reservedBarcodeHeight(15), 15);
+    expect(BarcodeStickerImageRenderer.reservedBarcodeHeight(20), 20);
   });
 }

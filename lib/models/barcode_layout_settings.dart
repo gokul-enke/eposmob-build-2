@@ -3,6 +3,7 @@ import 'dart:convert';
 /// Holds all user-configurable barcode sticker layout settings.
 class BarcodeLayoutSettings {
   static const int currentSchemaVersion = 2;
+  static const double defaultBarcodeHeight = 15;
 
   static const List<String> supportedStickerSizes = [
     '50x25mm',
@@ -62,7 +63,7 @@ class BarcodeLayoutSettings {
     this.priceFontSize = 13,
     this.dateFontSize = 9,
     this.barcodeNumberFontSize = 9,
-    this.barcodeHeight = 15,
+    this.barcodeHeight = defaultBarcodeHeight,
     this.barcodeWidthPercent = 70,
     this.elementSpacing = defaultElementSpacing,
     this.rasterDpi = 300,
@@ -117,9 +118,10 @@ class BarcodeLayoutSettings {
           ((json['barcodeNumberFontSize'] as num?)?.toDouble() ?? 9)
               .clamp(4, 24)
               .toDouble(),
-      barcodeHeight: ((json['barcodeHeight'] as num?)?.toDouble() ?? 15)
-          .clamp(5, 60)
-          .toDouble(),
+      barcodeHeight:
+          ((json['barcodeHeight'] as num?)?.toDouble() ?? defaultBarcodeHeight)
+              .clamp(5, 60)
+              .toDouble(),
       barcodeWidthPercent:
           ((json['barcodeWidthPercent'] as num?)?.toDouble() ?? 70)
               .clamp(30, 95)

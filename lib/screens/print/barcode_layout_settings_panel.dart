@@ -398,6 +398,13 @@ class _BarcodeLayoutSettingsPanelState
     const double scaleFactor = 200 / 50;
     final double previewW = _settings.stickerWidthMm * scaleFactor;
     final double previewH = _settings.stickerHeightMm * scaleFactor;
+    final double barcodePreviewH = _settings.barcodeHeight * scaleFactor * 0.4;
+    final double reservedBarcodePreviewH =
+        (_settings.barcodeHeight < BarcodeLayoutSettings.defaultBarcodeHeight
+                ? BarcodeLayoutSettings.defaultBarcodeHeight
+                : _settings.barcodeHeight) *
+            scaleFactor *
+            0.4;
 
     // Font scale: relate to pt sizes (rough approximation)
     double fs(double pt) => (pt * scaleFactor * 0.45).clamp(6, 40);
@@ -434,20 +441,20 @@ class _BarcodeLayoutSettingsPanelState
               SizedBox(height: spacing),
 
               // Barcode representation
-              Container(
-                height: _settings.barcodeHeight * scaleFactor * 0.4,
-                width: previewW *
-                    (_settings.barcodeWidthPercent / 100).clamp(0.30, 0.95),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black54, width: 0.5),
-                ),
-                child: CustomPaint(
-                  painter: _BarcodePlaceholderPainter(),
-                  size: Size(
-                      previewW *
-                          (_settings.barcodeWidthPercent / 100)
-                              .clamp(0.30, 0.95),
-                      _settings.barcodeHeight * scaleFactor * 0.4),
+              SizedBox(
+                height: reservedBarcodePreviewH,
+                child: Center(
+                  child: Container(
+                    height: barcodePreviewH,
+                    width: previewW *
+                        (_settings.barcodeWidthPercent / 100).clamp(0.30, 0.95),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black54, width: 0.5),
+                    ),
+                    child: CustomPaint(
+                      painter: _BarcodePlaceholderPainter(),
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: spacing),
