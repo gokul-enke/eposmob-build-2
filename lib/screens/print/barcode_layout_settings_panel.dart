@@ -25,19 +25,10 @@ class _BarcodeLayoutSettingsPanelState
     extends State<BarcodeLayoutSettingsPanel> {
   BarcodeLayoutSettings _settings = BarcodeLayoutSettings();
   bool _loaded = false;
+  Future<void> _saveQueue = Future<void>.value();
 
-  final List<String> _stickerSizes = [
-    '50x25mm',
-    '30x20mm',
-    '38x25mm',
-    '40x25mm',
-    '55x35mm',
-    '60x40mm',
-    '70x40mm',
-    '100x50mm',
-    '40x20mm',
-    '91x24mm'
-  ];
+  final List<String> _stickerSizes =
+      BarcodeLayoutSettings.supportedStickerSizes;
 
   @override
   void initState() {
@@ -53,26 +44,41 @@ class _BarcodeLayoutSettingsPanelState
         _settings = BarcodeLayoutSettings.decode(raw);
       } catch (_) {}
     }
-    setState(() => _loaded = true);
+    if (mounted) {
+      setState(() => _loaded = true);
+    }
   }
 
-  Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(kBarcodeLayoutSettingsKey, _settings.encode());
+  void _save(BarcodeLayoutSettings settings) {
+    final encoded = settings.encode();
+    _saveQueue = _saveQueue.then((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = await prefs.setString(kBarcodeLayoutSettingsKey, encoded);
+      if (!saved) {
+        throw StateError('Could not persist barcode layout settings');
+      }
+    }).catchError((Object error, StackTrace stackTrace) {
+      debugPrint('[BarcodeSettings] Save failed: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save barcode settings.')),
+        );
+      }
+    });
   }
 
   void _update(BarcodeLayoutSettings Function(BarcodeLayoutSettings) fn) {
-    setState(() {
-      _settings = fn(_settings);
-    });
-    _save();
+    final updated = fn(_settings);
+    setState(() => _settings = updated);
+    _save(updated);
   }
 
   Future<void> _resetDefaults() async {
     setState(() {
       _settings = BarcodeLayoutSettings();
     });
-    await _save();
+    _save(_settings);
+    await _saveQueue;
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -93,10 +99,24 @@ class _BarcodeLayoutSettingsPanelState
       builder: (context, constraints) {
         final isStacked = constraints.maxWidth < kPrinterPhoneBreakpoint;
 
-        final controls = SingleChildScrollView(
-          child: _buildControls(),
-        );
+        if (isStacked) {
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildControls(),
+                const SizedBox(height: 16),
+                _buildPreviewCard(),
+                if (widget.printerListWidget != null) ...[
+                  const SizedBox(height: 16),
+                  widget.printerListWidget!,
+                ],
+              ],
+            ),
+          );
+        }
 
+        final controls = SingleChildScrollView(child: _buildControls());
         final previewColumn = SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -109,17 +129,6 @@ class _BarcodeLayoutSettingsPanelState
             ],
           ),
         );
-
-        if (isStacked) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              controls,
-              const SizedBox(height: 16),
-              previewColumn,
-            ],
-          );
-        }
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,8 +202,8 @@ class _BarcodeLayoutSettingsPanelState
             max: 10,
             divisions: 20,
             label: '${_settings.pageMargin.toStringAsFixed(1)}mm',
-            onChanged: (v) => _update(
-                (s) => s.copyWith(pageMargin: double.parse(v.toStringAsFixed(1)))),
+            onChanged: (v) => _update((s) =>
+                s.copyWith(pageMargin: double.parse(v.toStringAsFixed(1)))),
           ),
           const SizedBox(height: 16),
 
@@ -207,8 +216,8 @@ class _BarcodeLayoutSettingsPanelState
             max: 10,
             divisions: 20,
             label: '${_settings.stickerGap.toStringAsFixed(1)}mm',
-            onChanged: (v) => _update(
-                (s) => s.copyWith(stickerGap: double.parse(v.toStringAsFixed(1)))),
+            onChanged: (v) => _update((s) =>
+                s.copyWith(stickerGap: double.parse(v.toStringAsFixed(1)))),
           ),
           const SizedBox(height: 16),
 
@@ -217,12 +226,39 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 8),
           _sliderRow(
             value: _settings.barcodeHeight,
-            min: 15,
+            min: 5,
             max: 60,
-            divisions: 45,
+            divisions: 55,
             label: '${_settings.barcodeHeight.round()}pt',
             onChanged: (v) =>
                 _update((s) => s.copyWith(barcodeHeight: v.roundToDouble())),
+          ),
+          const SizedBox(height: 16),
+
+          // ---- Barcode Width ----
+          _sectionLabel('Barcode Width (% of sticker)'),
+          const SizedBox(height: 8),
+          _sliderRow(
+            value: _settings.barcodeWidthPercent,
+            min: 30,
+            max: 95,
+            divisions: 65,
+            label: '${_settings.barcodeWidthPercent.round()}%',
+            onChanged: (v) => _update(
+              (s) => s.copyWith(barcodeWidthPercent: v.roundToDouble()),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // ---- Raster DPI ----
+          _sectionLabel('Printer Resolution'),
+          const SizedBox(height: 8),
+          _dropdownRow(
+            value: _settings.rasterDpi.toString(),
+            items: const ['203', '300'],
+            itemLabel: (value) => '$value DPI',
+            onChanged: (v) =>
+                _update((s) => s.copyWith(rasterDpi: int.parse(v))),
           ),
           const SizedBox(height: 16),
 
@@ -235,8 +271,8 @@ class _BarcodeLayoutSettingsPanelState
             max: 8,
             divisions: 16,
             label: '${_settings.elementSpacing.toStringAsFixed(1)}pt',
-            onChanged: (v) => _update(
-                (s) => s.copyWith(elementSpacing: double.parse(v.toStringAsFixed(1)))),
+            onChanged: (v) => _update((s) =>
+                s.copyWith(elementSpacing: double.parse(v.toStringAsFixed(1)))),
           ),
           const SizedBox(height: 20),
 
@@ -257,8 +293,7 @@ class _BarcodeLayoutSettingsPanelState
           _fontSizeRow(
             label: 'Store Name',
             value: _settings.storeNameFontSize,
-            onChanged: (v) =>
-                _update((s) => s.copyWith(storeNameFontSize: v)),
+            onChanged: (v) => _update((s) => s.copyWith(storeNameFontSize: v)),
           ),
           const SizedBox(height: 12),
           _fontSizeRow(
@@ -308,7 +343,7 @@ class _BarcodeLayoutSettingsPanelState
           const SizedBox(height: 10),
           PrinterInfoStrip(
             text:
-                'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Margin: ${_settings.pageMargin.toStringAsFixed(1)}mm  ·  Gap: ${_settings.stickerGap.toStringAsFixed(1)}mm',
+                'Size: ${_settings.stickerSize}  ·  ${_settings.stickersPerRow} per row  ·  Barcode: ${_settings.barcodeWidthPercent.round()}% × ${_settings.barcodeHeight.round()}pt  ·  ${_settings.rasterDpi} DPI',
             icon: Icons.straighten_rounded,
           ),
           const SizedBox(height: 20),
@@ -401,13 +436,17 @@ class _BarcodeLayoutSettingsPanelState
               // Barcode representation
               Container(
                 height: _settings.barcodeHeight * scaleFactor * 0.4,
-                width: previewW * 0.7,
+                width: previewW *
+                    (_settings.barcodeWidthPercent / 100).clamp(0.30, 0.95),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.black54, width: 0.5),
                 ),
                 child: CustomPaint(
                   painter: _BarcodePlaceholderPainter(),
-                  size: Size(previewW * 0.7,
+                  size: Size(
+                      previewW *
+                          (_settings.barcodeWidthPercent / 100)
+                              .clamp(0.30, 0.95),
                       _settings.barcodeHeight * scaleFactor * 0.4),
                 ),
               ),
@@ -480,6 +519,7 @@ class _BarcodeLayoutSettingsPanelState
     required String value,
     required List<String> items,
     required ValueChanged<String> onChanged,
+    String Function(String value)? itemLabel,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -493,7 +533,10 @@ class _BarcodeLayoutSettingsPanelState
         isExpanded: true,
         underline: const SizedBox(),
         items: items
-            .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+            .map((s) => DropdownMenuItem(
+                  value: s,
+                  child: Text(itemLabel?.call(s) ?? s),
+                ))
             .toList(),
         onChanged: (v) {
           if (v != null) onChanged(v);

@@ -20,12 +20,15 @@ void main() {
       expect(decoded.dateFontSize, fresh.dateFontSize);
       expect(decoded.barcodeNumberFontSize, fresh.barcodeNumberFontSize);
       expect(decoded.barcodeHeight, fresh.barcodeHeight);
+      expect(decoded.barcodeWidthPercent, fresh.barcodeWidthPercent);
       expect(decoded.elementSpacing, fresh.elementSpacing);
+      expect(decoded.rasterDpi, fresh.rasterDpi);
     });
 
     test('defaults are one sticker per row with the legacy element gap', () {
       final s = BarcodeLayoutSettings();
       expect(s.stickersPerRow, 1);
+      expect(s.barcodeHeight, 15);
       expect(s.elementSpacing, BarcodeLayoutSettings.defaultElementSpacing);
     });
 
@@ -41,7 +44,9 @@ void main() {
         dateFontSize: 8,
         barcodeNumberFontSize: 7,
         barcodeHeight: 25,
+        barcodeWidthPercent: 55,
         elementSpacing: 0.5,
+        rasterDpi: 203,
       );
 
       final decoded = BarcodeLayoutSettings.decode(original.encode());
@@ -74,6 +79,40 @@ void main() {
       final s = BarcodeLayoutSettings(stickerSize: 'bogus');
       expect(s.stickerWidthMm, 50);
       expect(s.stickerHeightMm, 25);
+    });
+
+    test('fromJson normalizes corrupt or out-of-range saved settings', () {
+      final decoded = BarcodeLayoutSettings.fromJson(const {
+        'stickerSize': 'bogus',
+        'stickersPerRow': 99,
+        'pageMargin': -5,
+        'stickerGap': 100,
+        'barcodeHeight': 200,
+        'barcodeWidthPercent': 5,
+        'rasterDpi': 1200,
+      });
+
+      expect(decoded.stickerSize, '50x25mm');
+      expect(decoded.stickersPerRow, 3);
+      expect(decoded.pageMargin, 0);
+      expect(decoded.stickerGap, 10);
+      expect(decoded.barcodeHeight, 60);
+      expect(decoded.barcodeWidthPercent, 30);
+      expect(decoded.rasterDpi, 300);
+    });
+
+    test('barcode height supports 5pt while retaining a 15pt default', () {
+      expect(BarcodeLayoutSettings().barcodeHeight, 15);
+      expect(
+        BarcodeLayoutSettings.fromJson(const {'barcodeHeight': 1})
+            .barcodeHeight,
+        5,
+      );
+      expect(
+        BarcodeLayoutSettings.fromJson(const {'barcodeHeight': 5})
+            .barcodeHeight,
+        5,
+      );
     });
   });
 }

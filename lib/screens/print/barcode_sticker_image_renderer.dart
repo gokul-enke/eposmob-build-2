@@ -49,8 +49,7 @@ class BarcodeStickerImageRenderer {
   }
 
   static bool _isRtl(String text) {
-    return RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]')
-        .hasMatch(text);
+    return RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]').hasMatch(text);
   }
 
   static bool _isDigitsLike(String text) {
@@ -115,8 +114,8 @@ class BarcodeStickerImageRenderer {
       for (final e in elements) {
         if (e is pw.BarcodeBar && e.black) {
           canvas.drawRect(
-            Rect.fromLTWH(slot.left + e.left, slot.top + e.top, e.width,
-                e.height),
+            Rect.fromLTWH(
+                slot.left + e.left, slot.top + e.top, e.width, e.height),
             paint,
           );
         }
@@ -168,8 +167,7 @@ class BarcodeStickerImageRenderer {
     canvas.scale(scale);
     canvas.drawImageRect(
       symbol,
-      Rect.fromLTWH(
-          0, 0, symbol.width.toDouble(), symbol.height.toDouble()),
+      Rect.fromLTWH(0, 0, symbol.width.toDouble(), symbol.height.toDouble()),
       Rect.fromLTWH(0, (totalH - symbolH) / 2, symbolW, symbolH),
       Paint()..filterQuality = FilterQuality.high,
     );
@@ -196,6 +194,7 @@ class BarcodeStickerImageRenderer {
     required double dateFontSize,
     required double barcodeNumberFontSize,
     required double barcodeHeight,
+    double barcodeWidthPercent = 70,
     double elementSpacing = BarcodeLayoutSettings.defaultElementSpacing,
     double pixelsPerMm = 12,
   }) async {
@@ -217,8 +216,8 @@ class BarcodeStickerImageRenderer {
       entries.add((
         weight: barcodeHeight + 20,
         paint: (c, r) {
-          // Side quiet zones: bars span ~70% of the sticker width.
-          final inset = r.width * 0.15;
+          final widthFraction = (barcodeWidthPercent / 100).clamp(0.30, 0.95);
+          final inset = r.width * (1 - widthFraction) / 2;
           _paintBarcode(
             c,
             Rect.fromLTRB(r.left + inset, r.top + r.height * 0.05,
