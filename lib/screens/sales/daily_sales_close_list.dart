@@ -25,8 +25,9 @@ import '../../components/build_round_button.dart';
 import '../../components/build_dialog_box.dart';
 import '../../models/daily_sales_close.dart';
 import 'package:pos_machine/screens/print/print_daily_close.dart';
-
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
+import 'package:pos_machine/models/day_close_pending_status.dart';
+import 'package:pos_machine/screens/sales/open_shift_modal.dart';
 
 class DailySalesCloseListScreen extends StatefulWidget {
   const DailySalesCloseListScreen({super.key});
@@ -41,6 +42,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
   DateTime? selectedDate;
   Key calendarPickerKey = UniqueKey();
   bool isLoading = false;
+  DayClosePendingStatus? pendingStatus;
 
   @override
   void initState() {
@@ -98,6 +100,23 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
         storeId: storeId,
       );
 
+      final pending = await salesProvider.fetchDayClosePendingStatus(
+        accessToken: authModel.token ?? '',
+        storeId: storeId,
+        userId: authModel.userId ?? 0,
+      );
+      if (mounted) {
+        setState(() {
+          pendingStatus = pending;
+        });
+      }
+
+      debugPrint('=== PENDING STATUS DEBUG ===');
+      debugPrint('canOpenShift: ${pendingStatus?.canOpenShift}');
+      debugPrint('pendingDayClose: ${pendingStatus?.pendingDayClose}');
+      debugPrint('message: ${pendingStatus?.message}');
+      debugPrint('openingTransactionId: ${pendingStatus?.openingTransactionId}');
+
       debugPrint('=== DEBUG: fetchData SUCCESS ===');
     } catch (e) {
       debugPrint('=== DEBUG: fetchData ERROR ===');
@@ -139,6 +158,21 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return DayCloseModal(
+          onSuccess: () {
+            fetchData(page: 1);
+          },
+          openDraft: pendingStatus?.openDraft,
+        );
+      },
+    );
+  }
+
+  void _showOpenShiftModal(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return OpenShiftModal(
           onSuccess: () {
             fetchData(page: 1);
           },
@@ -471,6 +505,32 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                     ),
                     Row(
                       children: [
+                        // Open Shift Button
+                        ElevatedButton.icon(
+                          onPressed: pendingStatus?.canOpenShift == true
+                              ? () => _showOpenShiftModal(context)
+                              : null,
+                          icon: const Icon(Icons.lock_open,
+                              size: 18, color: Colors.white),
+                          label: Text(
+                            "Open Shift",
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s12,
+                              0.18,
+                              Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2196F3),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
                         // Day Close Button
                         ElevatedButton.icon(
                           onPressed: () => _showDayCloseModal(context),
@@ -698,8 +758,13 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
 // Day Close Modal Widget
 class DayCloseModal extends StatefulWidget {
   final VoidCallback onSuccess;
+  final OpenDraftModel? openDraft;
 
-  const DayCloseModal({super.key, required this.onSuccess});
+  const DayCloseModal({
+    super.key,
+    required this.onSuccess,
+    this.openDraft,
+  });
 
   @override
   State<DayCloseModal> createState() => _DayCloseModalState();
@@ -728,9 +793,12 @@ class _DayCloseModalState extends State<DayCloseModal> {
   final List<TextEditingController> _openingCountControllers = [];
   final List<TextEditingController> _closingDenominationControllers = [];
   final List<TextEditingController> _closingCountControllers = [];
+  final ScrollController _scrollController = ScrollController();
 
   List<MasterDataValue> _cashDenominations = [];
   bool _isLoadingDenominations = true;
+  bool _openingPrefilled = false;
+  bool _openingTimeReadOnly = false;
 
   @override
   void initState() {
@@ -738,6 +806,9 @@ class _DayCloseModalState extends State<DayCloseModal> {
     _fetchSummary();
     _fetchDenominations();
     _ensureBreakdownRows();
+    if (widget.openDraft != null) {
+      _prefillFromOpenDraft(widget.openDraft!);
+    }
   }
 
   Future<void> _fetchDenominations() async {
@@ -769,6 +840,33 @@ class _DayCloseModalState extends State<DayCloseModal> {
     }
   }
 
+  void _prefillFromOpenDraft(OpenDraftModel draft) {
+    _shiftNameController.text = draft.shiftName ?? '';
+    if (draft.openingTime != null &&
+        draft.openingTime!.isNotEmpty) {
+      _openingTimeController.text = draft.openingTime!;
+    }
+    final cashSummary = draft.cashSummary;
+    if (cashSummary == null) return;
+
+    _openingCashInHandController.text = cashSummary.openingCashInHand ?? '';
+
+    if (cashSummary.openingCashBreakdown != null &&
+        cashSummary.openingCashBreakdown!.isNotEmpty) {
+      _openingDenominationControllers.clear();
+      _openingCountControllers.clear();
+      for (final item in cashSummary.openingCashBreakdown!) {
+        _addOpeningBreakdownRow(
+          denomination: item['denomination']?.toString() ?? '',
+          count: item['count']?.toString() ?? '',
+        );
+      }
+    }
+    setState(() {
+      _openingPrefilled = true;
+    });
+  }
+
   void _addOpeningBreakdownRow({String denomination = '', String count = ''}) {
     _openingDenominationControllers
         .add(TextEditingController(text: denomination));
@@ -779,6 +877,21 @@ class _DayCloseModalState extends State<DayCloseModal> {
     _closingDenominationControllers
         .add(TextEditingController(text: denomination));
     _closingCountControllers.add(TextEditingController(text: count));
+  }
+
+  void _recalculateClosingCash() {
+    double total = 0.0;
+    for (var i = 0; i < _closingDenominationControllers.length; i++) {
+      final denomText = _closingDenominationControllers[i].text.trim();
+      final countText = _closingCountControllers[i].text.trim();
+      final denomVal = double.tryParse(denomText) ?? 0.0;
+      final countVal = double.tryParse(countText) ?? 0.0;
+      total += denomVal * countVal;
+    }
+    final totalStr = total == 0.0 ? '' : total.toStringAsFixed(2).replaceAll(RegExp(r'\.00$'), '');
+    if (_closingCashInHandController.text != totalStr) {
+      _closingCashInHandController.text = totalStr;
+    }
   }
 
   List<Map<String, dynamic>> _buildBreakdownPayload(
@@ -812,6 +925,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
     _cashDropAmountController.dispose();
     _openingCashInHandController.dispose();
     _closingCashInHandController.dispose();
+    _scrollController.dispose();
     for (final controller in _openingDenominationControllers) {
       controller.dispose();
     }
@@ -849,15 +963,38 @@ class _DayCloseModalState extends State<DayCloseModal> {
       setState(() {
         summary = result;
         _businessDateController.text = result?.businessDate ?? '';
-        _shiftNameController.text = result?.shiftName ?? '';
-        _openingTimeController.text = result?.openingTime ?? '';
+        if (!_openingPrefilled) {
+          _shiftNameController.text = result?.shiftName ?? '';
+        }
+        
+        // Opening Time: always fill from summary if still empty
+        // (widget.openingTime from pending-status can be null)
+        if (_openingTimeController.text.isEmpty) {
+          _openingTimeController.text = result?.openingTime ?? '';
+          _openingTimeReadOnly = (result?.openingTime != null &&
+              result!.openingTime!.isNotEmpty);
+        }
         _closingTimeController.text = result?.closingTime ?? '';
         _notesController.text = result?.notes ?? '';
         _cashRefundsController.text = result?.cashRefunds?.toString() ?? '';
         _cashExpensesController.text = result?.cashExpenses?.toString() ?? '';
         _cashDropAmountController.text = result?.cashDropAmount?.toString() ?? '';
-        _openingCashInHandController.text =
-            result?.openingCashInHand?.toString() ?? '';
+        if (!_openingPrefilled) {
+          _openingCashInHandController.text =
+              result?.openingCashInHand?.toString() ?? '';
+          // Populate opening breakdown from summary if available
+          if (result?.openingCashBreakdown != null &&
+              result!.openingCashBreakdown!.isNotEmpty) {
+            _openingDenominationControllers.clear();
+            _openingCountControllers.clear();
+            for (final item in result.openingCashBreakdown!) {
+              _addOpeningBreakdownRow(
+                denomination: item['denomination']?.toString() ?? '',
+                count: item['count']?.toString() ?? '',
+              );
+            }
+          }
+        }
         _closingCashInHandController.text =
             result?.closingCashInHand?.toString() ?? '';
         isLoadingSummary = false;
@@ -1194,6 +1331,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
   Widget _buildAmountField({
     required String label,
     required TextEditingController controller,
+    bool enabled = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1216,6 +1354,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
           width: double.infinity,
           child: TextFormField(
             controller: controller,
+            enabled: enabled,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             cursorColor: ColorManager.kPrimaryColor,
             decoration: InputDecoration(
@@ -1232,7 +1371,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
               FontWeightManager.medium,
               FontSize.s12,
               0.27,
-              ColorManager.textColor.withOpacity(.5),
+              enabled ? ColorManager.textColor : ColorManager.textColor.withOpacity(.5),
             ),
           ),
         ),
@@ -1332,6 +1471,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
   Widget _buildTimePickerField({
     required String label,
     required TextEditingController controller,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1352,15 +1492,29 @@ class _DayCloseModalState extends State<DayCloseModal> {
           padding: const EdgeInsets.only(left: 12),
           height: 42,
           width: double.infinity,
-          child: TimePickerTableCell(
-            initialTime: _parseTimeOfDay(controller.text),
-            onTimeSelected: (picked) {
-              setState(() {
-                controller.text =
-                    '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}:00';
-              });
-            },
-          ),
+          child: readOnly
+              ? TextFormField(
+                  controller: controller,
+                  enabled: false,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                  ),
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.27,
+                    ColorManager.textColor.withOpacity(.5),
+                  ),
+                )
+              : TimePickerTableCell(
+                  initialTime: _parseTimeOfDay(controller.text),
+                  onTimeSelected: (picked) {
+                    setState(() {
+                      controller.text =
+                          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}:00';
+                    });
+                  },
+                ),
         ),
       ],
     );
@@ -1422,6 +1576,10 @@ class _DayCloseModalState extends State<DayCloseModal> {
     required List<TextEditingController> countControllers,
     required bool isNarrow,
     required VoidCallback onAddRow,
+    bool isReadOnly = false,
+    ValueChanged<String?>? onDenominationChanged,
+    ValueChanged<String>? onCountChanged,
+    VoidCallback? onRowRemoved,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1438,10 +1596,11 @@ class _DayCloseModalState extends State<DayCloseModal> {
                 Colors.grey.shade800,
               ),
             ),
-            TextButton(
-              onPressed: onAddRow,
-              child: const Text('Add Row'),
-            ),
+            if (!isReadOnly)
+              TextButton(
+                onPressed: onAddRow,
+                child: const Text('Add Row'),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -1458,32 +1617,41 @@ class _DayCloseModalState extends State<DayCloseModal> {
                         isNarrow: true,
                         allDenominationControllers: denominationControllers,
                         index: index,
+                        isReadOnly: isReadOnly,
+                        onDenominationChanged: onDenominationChanged,
+                        onCountChanged: onCountChanged,
                       ),
                       const SizedBox(height: 4),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: SizedBox(
-                          width: 28,
-                          height: 28,
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            tooltip: 'Remove row',
-                            onPressed: denominationControllers.length == 1
-                                ? null
-                                : () {
-                                    setState(() {
-                                      denominationControllers[index].dispose();
-                                      countControllers[index].dispose();
-                                      denominationControllers.removeAt(index);
-                                      countControllers.removeAt(index);
-                                    });
-                                  },
-                            icon: const Icon(Icons.remove_circle_outline,
-                                size: 18, color: Colors.red),
+                      if (!isReadOnly)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Remove row',
+                              onPressed: denominationControllers.length == 1
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        denominationControllers[index].dispose();
+                                        countControllers[index].dispose();
+                                        denominationControllers.removeAt(index);
+                                        countControllers.removeAt(index);
+                                      });
+                                      if (onRowRemoved != null) {
+                                        onRowRemoved();
+                                      }
+                                    },
+                              icon: const Icon(Icons.remove_circle_outline,
+                                  size: 18, color: Colors.red),
+                            ),
                           ),
-                        ),
-                      ),
+                        )
+                      else
+                        const SizedBox.shrink(),
                     ],
                   )
                 : Row(
@@ -1496,17 +1664,21 @@ class _DayCloseModalState extends State<DayCloseModal> {
                           isNarrow: false,
                           allDenominationControllers: denominationControllers,
                           index: index,
+                          isReadOnly: isReadOnly,
+                          onDenominationChanged: onDenominationChanged,
+                          onCountChanged: onCountChanged,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: 'Remove row',
-                          onPressed: denominationControllers.length == 1
+                      if (!isReadOnly)
+                        SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Remove row',
+                            onPressed: denominationControllers.length == 1
                               ? null
                               : () {
                                   setState(() {
@@ -1515,11 +1687,16 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     denominationControllers.removeAt(index);
                                     countControllers.removeAt(index);
                                   });
+                                  if (onRowRemoved != null) {
+                                    onRowRemoved();
+                                  }
                                 },
-                          icon: const Icon(Icons.remove_circle_outline,
-                              size: 18, color: Colors.red),
-                        ),
-                      ),
+                            icon: const Icon(Icons.remove_circle_outline,
+                                size: 18, color: Colors.red),
+                          ),
+                        )
+                      else
+                        const SizedBox.shrink(),
                     ],
                   ),
           );
@@ -1534,6 +1711,9 @@ class _DayCloseModalState extends State<DayCloseModal> {
     required bool isNarrow,
     required List<TextEditingController> allDenominationControllers,
     required int index,
+    bool isReadOnly = false,
+    ValueChanged<String?>? onDenominationChanged,
+    ValueChanged<String>? onCountChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1545,12 +1725,16 @@ class _DayCloseModalState extends State<DayCloseModal> {
                     controller: denominationController,
                     allDenominationControllers: allDenominationControllers,
                     index: index,
+                    isReadOnly: isReadOnly,
+                    onChanged: onDenominationChanged,
                   ),
                   const SizedBox(height: 6),
                   _buildCompactField(
                     label: 'Count',
                     controller: countController,
                     keyboardType: TextInputType.number,
+                    enabled: !isReadOnly,
+                    onChanged: onCountChanged,
                   ),
                 ],
               )
@@ -1561,6 +1745,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                       controller: denominationController,
                       allDenominationControllers: allDenominationControllers,
                       index: index,
+                      isReadOnly: isReadOnly,
+                      onChanged: onDenominationChanged,
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -1569,6 +1755,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
                       label: 'Count',
                       controller: countController,
                       keyboardType: TextInputType.number,
+                      enabled: !isReadOnly,
+                      onChanged: onCountChanged,
                     ),
                   ),
                 ],
@@ -1581,6 +1769,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
     required TextEditingController controller,
     required List<TextEditingController> allDenominationControllers,
     required int index,
+    bool isReadOnly = false,
+    ValueChanged<String?>? onChanged,
   }) {
     final currentValue = controller.text.trim().isEmpty
         ? null
@@ -1621,6 +1811,20 @@ class _DayCloseModalState extends State<DayCloseModal> {
                     isExpanded: true,
                     isDense: true,
                     value: selectedValue,
+                    disabledHint: selectedValue != null
+                        ? Text(
+                            _cashDenominations
+                                .firstWhere((d) => d.value == selectedValue,
+                                    orElse: () => MasterDataValue(id: 0, value: selectedValue, description: selectedValue))
+                                .description,
+                            style: buildCustomStyle(
+                              FontWeightManager.medium,
+                              FontSize.s10,
+                              0.20,
+                              ColorManager.textColor.withOpacity(.5),
+                            ),
+                          )
+                        : null,
                     hint: Text(
                       'Select',
                       style: buildCustomStyle(
@@ -1655,17 +1859,24 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                 FontWeightManager.medium,
                                 FontSize.s10,
                                 0.20,
-                                ColorManager.textColor,
+                                isReadOnly
+                                    ? ColorManager.textColor.withOpacity(.5)
+                                    : ColorManager.textColor,
                               ),
                             ),
                           ),
                         )
                         .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        controller.text = value ?? '';
-                      });
-                    },
+                    onChanged: isReadOnly
+                        ? null
+                        : (value) {
+                            setState(() {
+                              controller.text = value ?? '';
+                            });
+                            if (onChanged != null) {
+                              onChanged(value);
+                            }
+                          },
                   ),
                 ),
         ),
@@ -1677,6 +1888,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
     required String label,
     required TextEditingController controller,
     required TextInputType keyboardType,
+    bool enabled = true,
+    ValueChanged<String>? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1700,6 +1913,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
           child: TextFormField(
             controller: controller,
             keyboardType: keyboardType,
+            enabled: enabled,
+            onChanged: onChanged,
             cursorColor: ColorManager.kPrimaryColor,
             decoration: InputDecoration(
               border: OutlineInputBorder(
@@ -1735,7 +1950,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
               FontWeightManager.medium,
               FontSize.s10,
               0.20,
-              ColorManager.textColor.withOpacity(.5),
+              enabled ? ColorManager.textColor : ColorManager.textColor.withOpacity(.5),
             ),
           ),
         ),
@@ -1815,6 +2030,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                   // Scrollable content
                   Expanded(
                     child: SingleChildScrollView(
+                      controller: _scrollController,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1906,6 +2122,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       right: _buildAmountField(
                                         label: 'Shift Name',
                                         controller: _shiftNameController,
+                                        enabled: !_openingPrefilled,
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -1914,34 +2131,12 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       left: _buildTimePickerField(
                                         label: 'Opening Time',
                                         controller: _openingTimeController,
+                                        readOnly: _openingPrefilled || _openingTimeReadOnly,
                                       ),
                                       right: _buildTimePickerField(
                                         label: 'Closing Time',
                                         controller: _closingTimeController,
                                       ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildTwoColumnRow(
-                                      isNarrow: isNarrow,
-                                      left: _buildAmountField(
-                                        label: 'Cash Refunds',
-                                        controller: _cashRefundsController,
-                                      ),
-                                      right: _buildAmountField(
-                                        label: 'Cash Expenses',
-                                        controller: _cashExpensesController,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildAmountField(
-                                      label: 'Cash Drop Amount',
-                                      controller: _cashDropAmountController,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildTextAreaField(
-                                      label: 'Notes',
-                                      controller: _notesController,
-                                      maxLines: 3,
                                     ),
                                     const SizedBox(height: 20),
 
@@ -2046,6 +2241,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                     _buildAmountField(
                                       label: 'Opening Cash In Hand',
                                       controller: _openingCashInHandController,
+                                      enabled: !_openingPrefilled,
                                     ),
                                     const SizedBox(height: 12),
                                     _buildAmountField(
@@ -2081,15 +2277,28 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       countControllers:
                                           _openingCountControllers,
                                       isNarrow: isNarrow,
+                                      isReadOnly: _openingPrefilled,
                                       onAddRow: () {
                                         setState(() {
                                           _addOpeningBreakdownRow();
+                                        });
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          if (_scrollController.hasClients) {
+                                            _scrollController.animateTo(
+                                              _scrollController.position.maxScrollExtent,
+                                              duration: const Duration(milliseconds: 300),
+                                              curve: Curves.easeOut,
+                                            );
+                                          }
                                         });
                                       },
                                     ),
                                     const SizedBox(height: 20),
                                     _buildBreakdownSection(
                                       title: 'Closing Cash Breakdown',
+                                      onDenominationChanged: (_) => _recalculateClosingCash(),
+                                      onCountChanged: (_) => _recalculateClosingCash(),
+                                      onRowRemoved: () => _recalculateClosingCash(),
                                       denominationControllers:
                                           _closingDenominationControllers,
                                       countControllers:
@@ -2099,7 +2308,39 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                         setState(() {
                                           _addClosingBreakdownRow();
                                         });
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          if (_scrollController.hasClients) {
+                                            _scrollController.animateTo(
+                                              _scrollController.position.maxScrollExtent,
+                                              duration: const Duration(milliseconds: 300),
+                                              curve: Curves.easeOut,
+                                            );
+                                          }
+                                        });
                                       },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildTwoColumnRow(
+                                      isNarrow: isNarrow,
+                                      left: _buildAmountField(
+                                        label: 'Cash Refunds',
+                                        controller: _cashRefundsController,
+                                      ),
+                                      right: _buildAmountField(
+                                        label: 'Cash Expenses',
+                                        controller: _cashExpensesController,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildAmountField(
+                                      label: 'Cash Drop Amount',
+                                      controller: _cashDropAmountController,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildTextAreaField(
+                                      label: 'Notes',
+                                      controller: _notesController,
+                                      maxLines: 3,
                                     ),
                                   ],
                                 );

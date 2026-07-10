@@ -1128,9 +1128,62 @@ class SalesProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> openShiftApi({
+    required String accessToken,
+    required int storeId,
+    required String shiftName,
+    required String businessDate,
+    required String openingDate,
+    required String openingTime,
+    required double openingCashInHand,
+    required List<Map<String, dynamic>> openingCashBreakdown,
+    String notes = '',
+  }) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final url = Uri.parse(APPUrl.openShift);
+      final body = jsonEncode({
+        'store_id': storeId,
+        'shift_name': shiftName,
+        'business_date': businessDate,
+        'opening_date': openingDate,
+        'opening_time': openingTime,
+        'opening_cash_in_hand': openingCashInHand,
+        'opening_cash_breakdown': openingCashBreakdown,
+        'notes': notes,
+      });
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: body,
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        debugPrint('openShiftApi error: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('openShiftApi exception: $e');
+      return false;
+    }
+  }
+
   Future<DayClosePendingStatus?> fetchDayClosePendingStatus({
     required String accessToken,
     required int storeId,
+    required int userId,
   }) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1142,7 +1195,7 @@ class SalesProvider with ChangeNotifier {
 
       final uri = Uri.parse(
         '${APPUrl.dailySalesClosePendingStatus}'
-        '?store_id=$storeId'
+        '?store_id=$storeId&user_id=$userId'
       );
       final response = await http.get(
         uri,
@@ -1152,6 +1205,8 @@ class SalesProvider with ChangeNotifier {
           'X-Tenant': apiKey,
         },
       );
+      debugPrint('=== RAW PENDING STATUS RESPONSE BODY ===');
+      debugPrint(response.body);
       final data = jsonDecode(response.body);
       if (data['success'] == true && data['data'] != null) {
         return DayClosePendingStatus.fromJson(data['data']);
