@@ -66,8 +66,7 @@ class ProductProvider extends ChangeNotifier {
           '📦 fetchProductProperties ← ${response.statusCode}: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final properties =
-            ProductProperty.listFromJsonString(response.body);
+        final properties = ProductProperty.listFromJsonString(response.body);
         _productProperties = properties;
         notifyListeners();
         return properties;
@@ -97,6 +96,7 @@ class ProductProvider extends ChangeNotifier {
     num? quantity,
     List<Map<String, dynamic>>? productNames,
     List<Map<String, dynamic>>? variants,
+    List<Map<String, dynamic>>? saleUnits,
     String? minMarginPercentage,
     String? minMarginPrice,
     required String accessToken,
@@ -166,6 +166,11 @@ class ProductProvider extends ChangeNotifier {
     // non-null list when the variant section is active).
     if (variants != null) {
       body['variants'] = variants;
+    }
+
+    // An empty list is meaningful here: it removes all configured sale units.
+    if (saleUnits != null) {
+      body['sale_units'] = saleUnits;
     }
 
     _setUpdating(true);

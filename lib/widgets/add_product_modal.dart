@@ -760,7 +760,9 @@ class _AddProductWithBarcodeModalState
   void _syncSaleUnitsFromProduct(GetProduct product) {
     _clearSaleUnitRows();
 
-    final saleUnits = product.saleUnits ?? const <SaleUnit>[];
+    final saleUnits = (product.saleUnits ?? const <SaleUnit>[])
+        .where((saleUnit) => saleUnit.unitId?.toString() != selectedUnit)
+        .toList(growable: false);
     for (final saleUnit in saleUnits) {
       _saleUnitRows.add(
         _SaleUnitFormRow(
@@ -1498,9 +1500,9 @@ class _AddProductWithBarcodeModalState
                       Expanded(
                         child: Consumer<AppSettingsProvider>(
                           builder: (context, appSettingsProvider, child) {
-                            final itemCodeEnabled =
-                                appSettingsProvider.appSettings?.itemCodeEnabled ??
-                                    false;
+                            final itemCodeEnabled = appSettingsProvider
+                                    .appSettings?.itemCodeEnabled ??
+                                false;
                             if (!itemCodeEnabled) {
                               return const SizedBox.shrink();
                             }
@@ -2749,11 +2751,11 @@ class _AddProductWithBarcodeModalState
         }
       }
 
-      final variantEnabled = Provider.of<AppSettingsProvider>(context,
-                  listen: false)
-              .appSettings
-              ?.productVariantEnabled ??
-          true;
+      final variantEnabled =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+                  .appSettings
+                  ?.productVariantEnabled ??
+              true;
       if (variantEnabled && _variantController.hasRows) {
         final variantError =
             validateVariantRows(_variantController.toCreateInputs());
@@ -2791,11 +2793,11 @@ class _AddProductWithBarcodeModalState
             ? buildCreateVariantsPayload(_variantController.toCreateInputs())
             : const <Map<String, dynamic>>[];
 
-        final itemCodeEnabled = Provider.of<AppSettingsProvider>(context,
-                    listen: false)
-                .appSettings
-                ?.itemCodeEnabled ??
-            false;
+        final itemCodeEnabled =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings
+                    ?.itemCodeEnabled ??
+                false;
 
         final result = await gridSelectionProvider.createProductAPI(
           categoryId: selectedCategory!.categoryId.toString(),
@@ -2814,10 +2816,12 @@ class _AddProductWithBarcodeModalState
               _baseConversionRateController.text.trim().isNotEmpty
                   ? _baseConversionRateController.text.trim()
                   : '1',
-          itemCode: itemCodeEnabled ? _productItemCodeController.text.trim() : null,
-          minMarginPercentage: _productMinMarginController.text.trim().isNotEmpty
-              ? _productMinMarginController.text.trim()
-              : null,
+          itemCode:
+              itemCodeEnabled ? _productItemCodeController.text.trim() : null,
+          minMarginPercentage:
+              _productMinMarginController.text.trim().isNotEmpty
+                  ? _productMinMarginController.text.trim()
+                  : null,
           minMarginPrice:
               _productMinMarginPriceController.text.trim().isNotEmpty
                   ? _productMinMarginPriceController.text.trim()
