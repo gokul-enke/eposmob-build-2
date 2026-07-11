@@ -424,14 +424,9 @@ class _UserSwitcherState extends State<UserSwitcher> {
 
                 // Dropdown for switching users
                 if (_isDropdownOpen)
-                  Flexible(
-                    child: Container(
+                  Container(
                       margin: const EdgeInsets.only(top: 5),
-                      constraints: BoxConstraints(
-                        maxHeight: constraints.hasBoundedHeight
-                            ? double.infinity
-                            : 250,
-                      ),
+                      constraints: const BoxConstraints(maxHeight: 250),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
@@ -525,7 +520,6 @@ class _UserSwitcherState extends State<UserSwitcher> {
                         ],
                       ),
                     ),
-                  ),
               ],
             );
 

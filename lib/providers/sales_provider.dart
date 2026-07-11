@@ -1006,7 +1006,6 @@ class SalesProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 15));
 
       debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
-      debugPrint('Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -1077,23 +1076,7 @@ class SalesProvider with ChangeNotifier {
       requestBody['closing_transaction_id'] = closingTransactionId;
     }
     final requestBodyJson = jsonEncode(requestBody);
-    debugPrint('=== DEBUG: createDailySalesClose REQUEST BODY ===');
-    debugPrint(requestBodyJson);
-    debugPrint('shift_name: ${requestBody['shift_name']}');
-    debugPrint('business_date: ${requestBody['business_date']}');
-    debugPrint('opening_date: ${requestBody['opening_date']}');
-    debugPrint('opening_time: ${requestBody['opening_time']}');
-    debugPrint('closing_date: ${requestBody['closing_date']}');
-    debugPrint('closing_time: ${requestBody['closing_time']}');
-    debugPrint('cash_refunds: ${requestBody['cash_refunds']}');
-    debugPrint('cash_expenses: ${requestBody['cash_expenses']}');
-    debugPrint('cash_drop_amount: ${requestBody['cash_drop_amount']}');
-    debugPrint('opening_cash_in_hand: ${requestBody['opening_cash_in_hand']}');
-    debugPrint('opening_cash_breakdown: ${requestBody['opening_cash_breakdown']}');
-    debugPrint('closing_cash_in_hand: ${requestBody['closing_cash_in_hand']}');
-    debugPrint('closing_cash_breakdown: ${requestBody['closing_cash_breakdown']}');
-    debugPrint('notes: ${requestBody['notes']}');
-    debugPrint('=== END REQUEST BODY ===');
+    debugPrint('Submitting daily sales close for store $storeId.');
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1114,7 +1097,6 @@ class SalesProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 15));
 
       debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
-      debugPrint('Response Body: ${response.body}');
 
       final jsonData = json.decode(response.body);
 
@@ -1183,7 +1165,7 @@ class SalesProvider with ChangeNotifier {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
       } else {
-        debugPrint('openShiftApi error: ${response.body}');
+        debugPrint('openShiftApi failed with status ${response.statusCode}.');
         return false;
       }
     } catch (e) {
@@ -1217,8 +1199,9 @@ class SalesProvider with ChangeNotifier {
           'X-Tenant': apiKey,
         },
       );
-      debugPrint('=== RAW PENDING STATUS RESPONSE BODY ===');
-      debugPrint(response.body);
+      debugPrint(
+        'Day close pending-status response: ${response.statusCode}.',
+      );
       final data = jsonDecode(response.body);
       if (data['success'] == true && data['data'] != null) {
         return DayClosePendingStatus.fromJson(data['data']);

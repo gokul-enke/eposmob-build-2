@@ -1081,6 +1081,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
         businessDate: widget.pendingBusinessDate,
       );
 
+      if (!mounted) return;
+
       setState(() {
         summary = result;
         _businessDateController.text =
@@ -1122,6 +1124,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
         isLoadingSummary = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         errorMessage = e.toString();
         isLoadingSummary = false;
