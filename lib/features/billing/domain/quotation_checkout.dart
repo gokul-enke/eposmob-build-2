@@ -95,6 +95,9 @@ class QuotationCheckout {
     if (item.saleUnitId != null) {
       itemMap['product_sale_unit_id'] = item.saleUnitId;
     }
+    if (item.variantId != null) {
+      itemMap['product_variant_id'] = item.variantId;
+    }
     return itemMap;
   }
 

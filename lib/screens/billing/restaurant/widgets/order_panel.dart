@@ -180,10 +180,7 @@ class OrderPanelState extends State<OrderPanel> {
   bool get isViewingCounterListTab =>
       _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
 
-  bool get _skipCheckoutOnCounterConfirmAndPrint {
-    if (!widget.allowCounterBilling || !widget.isCounterBillingMode) {
-      return false;
-    }
+  bool get _skipCheckoutOnConfirmAndPrint {
     return Provider.of<AppSettingsProvider>(context, listen: false)
             .appSettings
             ?.skipCheckoutOnConfirmAndPrint ??
@@ -250,6 +247,23 @@ class OrderPanelState extends State<OrderPanel> {
   String? get paymentMethodForDraft =>
       _getLocalDraftPaymentData()['paymentMethod'];
   String? get paidAmountForDraft => _getLocalDraftPaymentData()['paidAmount'];
+  String? get selectedPaymentMethodLabelForDraft {
+    final labels = <String>[];
+    if (_isCashSelected) labels.add('CASH');
+    if (_isCardSelected) labels.add('CARD');
+    if (_isUpiSelected) labels.add('UPI');
+    if (_isCodSelected) labels.add('COD');
+    if (_isDebitSelected) labels.add('CREDIT');
+    if (labels.isEmpty) return null;
+    return labels.join(', ');
+  }
+
+  bool get hasPaymentMethodSelectedForDraft =>
+      _isCashSelected ||
+      _isCardSelected ||
+      _isUpiSelected ||
+      _isCodSelected ||
+      _isDebitSelected;
   String? get selectedCustomerAlternatePhoneForDraft =>
       _firstNonEmptyString([_selectedCustomer?.altPhone]);
   String? get selectedCustomerVatNumberForDraft =>
@@ -938,11 +952,59 @@ class OrderPanelState extends State<OrderPanel> {
     final customersFromProvider = customerProvider.allCustomers ?? [];
     setState(() {
       _customers = List<CustomerListModelData>.from(customersFromProvider);
+      // Seed default payment on first hydrate so the top-bar chip matches
+      // checkout's default selection (e.g. CASH) before any modal is opened.
+      _applyDefaultPaymentMethodSelection();
     });
 
     _applyDefaultCustomer();
     debugPrint(
         'ÃƒÂ°Ã…Â¸Ã¢â‚¬â€Ã¢â‚¬Å¡ÃƒÂ¯Ã‚Â¸Ã‚Â Restaurant order panel hydrated customers from provider cache: ${_customers.length}');
+  }
+
+  /// Applies AppSettings.defaultPaymentMethod into order-panel state so the
+  /// top-bar Payment chip reflects the same default checkout uses.
+  /// When [force] is true (New Order / clear), existing selection is replaced.
+  void _applyDefaultPaymentMethodSelection({bool force = false}) {
+    final hasSelection = _isCashSelected ||
+        _isCardSelected ||
+        _isUpiSelected ||
+        _isCodSelected ||
+        _isDebitSelected;
+    if (!force && hasSelection) return;
+
+    _isCashSelected = false;
+    _isCardSelected = false;
+    _isUpiSelected = false;
+    _isCodSelected = false;
+    _isDebitSelected = false;
+
+    final defaultPayment =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.defaultPaymentMethod
+            .trim()
+            .toUpperCase();
+
+    switch (defaultPayment) {
+      case 'CARD':
+        _isCardSelected = true;
+        break;
+      case 'UPI':
+        _isUpiSelected = true;
+        break;
+      case 'COD':
+        _isCodSelected = true;
+        break;
+      case 'DEBIT':
+        _isDebitSelected = true;
+        break;
+      case 'CASH':
+      default:
+        // Match checkout / confirm-and-print: empty or unknown → CASH.
+        _isCashSelected = true;
+        break;
+    }
   }
 
   void _refreshCustomersInBackgroundAfterSale() {
@@ -2153,12 +2215,8 @@ class OrderPanelState extends State<OrderPanel> {
       _selectedCustomerID = null;
       _selectedCustomerPhone = null;
 
-      // Clear payment methods
-      _isCashSelected = false;
-      _isCardSelected = false;
-      _isUpiSelected = false;
-      _isCodSelected = false;
-      _isDebitSelected = false;
+      // Clear payment amounts, then restore AppSettings default method so the
+      // top-bar chip matches a fresh checkout (not a blank "Payment").
       _cashAmount = "";
       _cardAmount = "";
       _upiAmount = '';
@@ -2166,6 +2224,7 @@ class OrderPanelState extends State<OrderPanel> {
       _debitAmount = '';
       _orderComment = "";
       _transactionNumber = "";
+      _applyDefaultPaymentMethodSelection(force: true);
 
       // Clear discount state
       _isCouponApplied = false;
@@ -2203,12 +2262,7 @@ class OrderPanelState extends State<OrderPanel> {
     _selectedCustomerID = null;
     _selectedCustomerPhone = null;
 
-    // Clear payment methods
-    _isCashSelected = false;
-    _isCardSelected = false;
-    _isUpiSelected = false;
-    _isCodSelected = false;
-    _isDebitSelected = false;
+    // Clear payment amounts, then restore AppSettings default method.
     _cashAmount = "";
     _cardAmount = "";
     _upiAmount = '';
@@ -2216,6 +2270,7 @@ class OrderPanelState extends State<OrderPanel> {
     _debitAmount = '';
     _orderComment = "";
     _transactionNumber = "";
+    _applyDefaultPaymentMethodSelection(force: true);
 
     // Clear discount state
     _isCouponApplied = false;
@@ -2692,6 +2747,7 @@ class OrderPanelState extends State<OrderPanel> {
           comment,
           stockGroupIds: cartItem.stockGroupIds,
           saleUnitId: cartItem.saleUnitId,
+          variantId: cartItem.variantId,
         );
       } else {
         // For saved order items, persist comment via addToCartAPI with same payload + comment
@@ -5202,97 +5258,40 @@ class OrderPanelState extends State<OrderPanel> {
             // New Compact Summary
             _buildCompactOneLineSummary(),
             if (!widget.hideFooterActionButtons) ...[
-            const SizedBox(height: 12),
-            // Row: Print KOT and Confirm buttons
-            Row(
-              children: [
-                // 1. Print KOT Button (Left Side)
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap:
-                          _isLoadingPrintKot ? null : _printNewKOTWithLoading,
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: _isLoadingPrintKot
-                              ? const Color(0xFFFFF7ED)
-                              : Colors.white,
-                          border: Border.all(
-                            color: const Color(0xFFD97706),
-                            width: 1.5,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: _isLoadingPrintKot
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 20,
-                                  height: widget.isCompact ? 16 : 20,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFFD97706),
-                                    ),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      useCompactActionLabels
-                                          ? 'KOT'
-                                          : 'Print KOT',
-                                      style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
-                                          const Color(0xFFD97706)),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                if (showPreBillButton) ...[
+              const SizedBox(height: 12),
+              // Row: Print KOT and Confirm buttons
+              Row(
+                children: [
+                  // 1. Print KOT Button (Left Side)
                   Expanded(
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: cartItems.isEmpty || _isLoadingPreBill
-                            ? null
-                            : _printSelectedOngoingOrderBillWithLoading,
+                        onTap:
+                            _isLoadingPrintKot ? null : _printNewKOTWithLoading,
                         borderRadius: BorderRadius.circular(12),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           height: widget.isCompact ? 44 : 48,
                           decoration: BoxDecoration(
-                            color: _isLoadingPreBill
-                                ? const Color(0xFFF5F1FF)
+                            color: _isLoadingPrintKot
+                                ? const Color(0xFFFFF7ED)
                                 : Colors.white,
                             border: Border.all(
-                              color: const Color(0xFF7C3AED),
+                              color: const Color(0xFFD97706),
                               width: 1.5,
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Center(
-                            child: _isLoadingPreBill
+                            child: _isLoadingPrintKot
                                 ? SizedBox(
                                     width: widget.isCompact ? 16 : 20,
                                     height: widget.isCompact ? 16 : 20,
                                     child: const CircularProgressIndicator(
                                       strokeWidth: 2,
                                       valueColor: AlwaysStoppedAnimation<Color>(
-                                        Color(0xFF7C3AED),
+                                        Color(0xFFD97706),
                                       ),
                                     ),
                                   )
@@ -5301,16 +5300,15 @@ class OrderPanelState extends State<OrderPanel> {
                                     children: [
                                       Text(
                                         useCompactActionLabels
-                                            ? 'BILL'
-                                            : 'Pre-Bill',
+                                            ? 'KOT'
+                                            : 'Print KOT',
                                         style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
-                                          const Color(0xFF7C3AED),
-                                        ),
+                                            FontWeightManager.semiBold,
+                                            widget.isCompact
+                                                ? FontSize.s13
+                                                : FontSize.s14,
+                                            0.21,
+                                            const Color(0xFFD97706)),
                                       ),
                                     ],
                                   ),
@@ -5320,114 +5318,174 @@ class OrderPanelState extends State<OrderPanel> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                ],
-                // 2. Confirm or Mark Served Button (Right Side)
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: cartItems.isEmpty
-                          ? null
-                          : allItemsServed
-                              ? (_isLoadingConfirm
-                                  ? null
-                                  : () => _showCheckoutModal())
-                              : (_isMarkingServed
-                                  ? null
-                                  : () => _markAllOrderItemsServed()),
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: widget.isCompact ? 44 : 48,
-                        decoration: BoxDecoration(
-                          color: cartItems.isEmpty
-                              ? const Color(0xFF94A3B8)
-                              : allItemsServed
-                                  ? (_isLoadingConfirm
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(0xFF2563EB))
-                                  : (_isMarkingServed
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(
-                                          0xFF059669)), // Green for Mark Served
+                  if (showPreBillButton) ...[
+                    Expanded(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: cartItems.isEmpty || _isLoadingPreBill
+                              ? null
+                              : _printSelectedOngoingOrderBillWithLoading,
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: cartItems.isNotEmpty &&
-                                  !_isLoadingConfirm &&
-                                  !_isMarkingServed
-                              ? [
-                                  BoxShadow(
-                                    color: (allItemsServed
-                                            ? const Color(0xFF2563EB)
-                                            : const Color(0xFF059669))
-                                        .withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
-                              : [],
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            height: widget.isCompact ? 44 : 48,
+                            decoration: BoxDecoration(
+                              color: _isLoadingPreBill
+                                  ? const Color(0xFFF5F1FF)
+                                  : Colors.white,
+                              border: Border.all(
+                                color: const Color(0xFF7C3AED),
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: _isLoadingPreBill
+                                  ? SizedBox(
+                                      width: widget.isCompact ? 16 : 20,
+                                      height: widget.isCompact ? 16 : 20,
+                                      child: const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Color(0xFF7C3AED),
+                                        ),
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          useCompactActionLabels
+                                              ? 'BILL'
+                                              : 'Pre-Bill',
+                                          style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            widget.isCompact
+                                                ? FontSize.s13
+                                                : FontSize.s14,
+                                            0.21,
+                                            const Color(0xFF7C3AED),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
                         ),
-                        child: Center(
-                          child: (_isLoadingConfirm || _isMarkingServed)
-                              ? SizedBox(
-                                  width: widget.isCompact ? 16 : 20,
-                                  height: widget.isCompact ? 16 : 20,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      allItemsServed
-                                          ? 'Confirm'
-                                          : (useCompactActionLabels
-                                              ? 'Serve'
-                                              : 'Mark Served'),
-                                      style: buildCustomStyle(
-                                          FontWeightManager.semiBold,
-                                          widget.isCompact
-                                              ? FontSize.s13
-                                              : FontSize.s14,
-                                          0.21,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  // 2. Confirm or Mark Served Button (Right Side)
+                  Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: cartItems.isEmpty
+                            ? null
+                            : allItemsServed
+                                ? (_isLoadingConfirm
+                                    ? null
+                                    : () => _showCheckoutModal())
+                                : (_isMarkingServed
+                                    ? null
+                                    : () => _markAllOrderItemsServed()),
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          height: widget.isCompact ? 44 : 48,
+                          decoration: BoxDecoration(
+                            color: cartItems.isEmpty
+                                ? const Color(0xFF94A3B8)
+                                : allItemsServed
+                                    ? (_isLoadingConfirm
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(0xFF2563EB))
+                                    : (_isMarkingServed
+                                        ? const Color(0xFF94A3B8)
+                                        : const Color(
+                                            0xFF059669)), // Green for Mark Served
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: cartItems.isNotEmpty &&
+                                    !_isLoadingConfirm &&
+                                    !_isMarkingServed
+                                ? [
+                                    BoxShadow(
+                                      color: (allItemsServed
+                                              ? const Color(0xFF2563EB)
+                                              : const Color(0xFF059669))
+                                          .withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Center(
+                            child: (_isLoadingConfirm || _isMarkingServed)
+                                ? SizedBox(
+                                    width: widget.isCompact ? 16 : 20,
+                                    height: widget.isCompact ? 16 : 20,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
                                           Colors.white),
                                     ),
-                                  ],
-                                ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        allItemsServed
+                                            ? 'Confirm'
+                                            : (useCompactActionLabels
+                                                ? 'Serve'
+                                                : 'Mark Served'),
+                                        style: buildCustomStyle(
+                                            FontWeightManager.semiBold,
+                                            widget.isCompact
+                                                ? FontSize.s13
+                                                : FontSize.s14,
+                                            0.21,
+                                            Colors.white),
+                                      ),
+                                    ],
+                                  ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _showCommentDialog,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: widget.isCompact ? 44 : 48,
-                      height: widget.isCompact ? 44 : 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 1.2,
+                  const SizedBox(width: 12),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _showCommentDialog,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: widget.isCompact ? 44 : 48,
+                        height: widget.isCompact ? 44 : 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 1.2,
+                          ),
                         ),
-                      ),
-                      child: Icon(
-                        Icons.chat_bubble_outline,
-                        size: widget.isCompact ? 18 : 20,
-                        color: const Color(0xFF64748B),
+                        child: Icon(
+                          Icons.chat_bubble_outline,
+                          size: widget.isCompact ? 18 : 20,
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
             ],
           ],
         ),
@@ -6012,11 +6070,41 @@ class OrderPanelState extends State<OrderPanel> {
                 item['product_price']?.toString() ??
                 '0') ??
             0.0;
+        final saleUnitId = int.tryParse(
+          (item['product_sale_unit_id'] ?? item['sale_unit_id'])?.toString() ??
+              '',
+        );
+        final parsedConversionRate = double.tryParse(
+          item['conversion_rate']?.toString() ?? '',
+        );
+        final conversionRate =
+            parsedConversionRate != null && parsedConversionRate > 0
+                ? parsedConversionRate
+                : 1.0;
+        final variantId = int.tryParse(
+          item['product_variant_id']?.toString() ?? '',
+        );
+        Map<String, dynamic>? variantAttributes;
+        final rawVariantAttributes = item['variant_attributes'];
+        if (rawVariantAttributes is Map) {
+          variantAttributes = Map<String, dynamic>.from(rawVariantAttributes);
+        } else if (rawVariantAttributes is String &&
+            rawVariantAttributes.trim().isNotEmpty) {
+          try {
+            final decoded = json.decode(rawVariantAttributes);
+            if (decoded is Map) {
+              variantAttributes = Map<String, dynamic>.from(decoded);
+            }
+          } catch (_) {
+            // Keep the historical line usable even if an old snapshot is bad.
+          }
+        }
 
         // Find the stock entry if available
         Stock? selectedStock;
-        if (item['stock_id'] != null) {
-          final stockId = int.tryParse(item['stock_id'].toString());
+        final rawStockId = item['stock_id'] ?? item['product_stock_id'];
+        if (rawStockId != null) {
+          final stockId = int.tryParse(rawStockId.toString());
           if (stockId != null && product.stock != null) {
             try {
               selectedStock = product.stock!.firstWhere((s) => s.id == stockId);
@@ -6029,9 +6117,16 @@ class OrderPanelState extends State<OrderPanel> {
         // Add to cart with the order's price and quantity
         localProductProvider.addToCart(
           product: product,
-          quantity: quantity.toInt(),
-          price: unitPrice > 0 ? unitPrice : null,
+          quantity: quantity * conversionRate,
+          price: unitPrice > 0 ? unitPrice / conversionRate : null,
           selectedStock: selectedStock,
+          stockGroupIds:
+              selectedStock?.id == null ? null : <int>[selectedStock!.id!],
+          saleUnitId: saleUnitId,
+          saleUnitName: item['sale_unit_name']?.toString(),
+          saleUnitConversionRate: saleUnitId == null ? null : conversionRate,
+          variantId: variantId,
+          variantAttributes: variantAttributes,
         );
 
         debugPrint(
@@ -6115,9 +6210,17 @@ class OrderPanelState extends State<OrderPanel> {
 
       dynamic response;
 
+      if (newQuantity == currentQuantity) {
+        debugPrint('Quantity is already $newQuantity. No API call needed.');
+        return;
+      }
+
       if (newQuantity > currentQuantity) {
         // Increment quantity - use addToCartAPI
-        final deltaQuantity = (newQuantity - currentQuantity).toInt();
+        // Preserve fractional quantities for decimal-capable units such as
+        // KG and LTR. Both cart APIs accept `num`, so converting this delta
+        // to int would turn a change such as 1.5 -> 2.0 into zero.
+        final double deltaQuantity = newQuantity - currentQuantity;
         final productId =
             cartItem['product_id']; // Assuming product_id is available
         final unitPrice = cartItem['unit_price']?.toString();
@@ -6144,14 +6247,15 @@ class OrderPanelState extends State<OrderPanel> {
           cartId: orderCartId,
         );
         debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ addToCartAPI Response: $response');
-      } else if (newQuantity <= currentQuantity) {
+      } else {
         // Decrement quantity or remove item (including 0) - use decrementCartItemQuantityAPI
         String actionType =
             newQuantity == 0 ? 'remove (set to 0)' : 'decrement';
+        final requestedQuantity = newQuantity;
         debugPrint(
             'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.decrementCartItemQuantityAPI for $actionType');
         debugPrint(
-            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: ${newQuantity.toInt()}, cartId: $orderCartId}');
+            'decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: $requestedQuantity, cartId: $orderCartId}');
         debugPrint(
             'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Customer ID source: _selectedOrder data structure');
 
@@ -6160,16 +6264,11 @@ class OrderPanelState extends State<OrderPanel> {
           productId:
               int.parse(cartItem['id'].toString()), // This is cart_item_id
           cartId: orderCartId,
-          quantity: newQuantity.toInt(), // Can be 0 for removal
+          quantity: requestedQuantity,
           accessToken: authModel.token ?? '',
         );
         debugPrint(
             'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ decrementCartItemQuantityAPI Response: $response');
-      } else {
-        // Quantity is the same, no action needed
-        debugPrint(
-            'Quantity is already ${newQuantity.toInt()}. No API call needed.');
-        return;
       }
 
       // Update the UI optimistically first
@@ -6982,7 +7081,9 @@ class OrderPanelState extends State<OrderPanel> {
   }) async {
     final printItems = cartItems.map((item) {
       return {
-        'productName': item.product.productName ?? '',
+        'productName': item.displayName,
+        'product_variant_id': item.variantId,
+        'variant_attributes': item.variantAttributes,
         'quantity': item.quantity.toString(),
         'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
         'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
@@ -7127,7 +7228,10 @@ class OrderPanelState extends State<OrderPanel> {
       totalTax += itemTax;
 
       cartItems.add({
-        'productName': item.product.productName ?? 'Unknown',
+        'productName': item.displayName,
+        'product_name': item.displayName,
+        'product_variant_id': item.variantId,
+        'variant_attributes': item.variantAttributes,
         'mrp': itemMrp.toString(),
         'quantity': item.quantity.toString(),
         'product_unit': item.product.unit ?? '',
@@ -7190,7 +7294,9 @@ class OrderPanelState extends State<OrderPanel> {
   Future<void> _printOfflineSavedOrderKot(SavedOrder savedOrder) async {
     final printItems = savedOrder.items.map((item) {
       return {
-        'productName': item.product.productName ?? '',
+        'productName': item.displayName,
+        'product_variant_id': item.variantId,
+        'variant_attributes': item.variantAttributes,
         'quantity': item.quantity.toString(),
         'unitPrice': item.price?.toStringAsFixed(2) ?? '0.00',
         'totalPrice': ((item.price ?? 0) * item.quantity).toStringAsFixed(2),
@@ -7260,6 +7366,9 @@ class OrderPanelState extends State<OrderPanel> {
       _couponCode = '';
       _isCouponApplied = false;
       _loadedLocalDraftId = null;
+      // Previously only amounts were cleared, so a prior CASH/CARD selection
+      // stuck on the top-bar chip. Force AppSettings default again.
+      _applyDefaultPaymentMethodSelection(force: true);
     });
     Provider.of<CustomerSelectionProvider>(context, listen: false)
         .clearSelectedCustomer();
@@ -7922,6 +8031,14 @@ class OrderPanelState extends State<OrderPanel> {
     );
   }
 
+  Future<void> showPaymentSelectionModalFromParent() {
+    return _showCheckoutModal(
+      mode: CheckoutModalMode.selectionOnly,
+      initialStep: 3,
+      title: 'Select Payment Method',
+    );
+  }
+
   Future<void> clearCurrentCartFromParent() => _clearCurrentCart();
 
   Future<void> saveCurrentCartFromParent() => _saveCurrentCartAsPending();
@@ -7938,37 +8055,7 @@ class OrderPanelState extends State<OrderPanel> {
     final orderTotal = _getEffectiveOrderTotal();
     if (orderTotal <= 0) return;
 
-    final hasSelection = _isCashSelected ||
-        _isCardSelected ||
-        _isUpiSelected ||
-        _isCodSelected ||
-        _isDebitSelected;
-    if (!hasSelection) {
-      final defaultPayment =
-          Provider.of<AppSettingsProvider>(context, listen: false)
-              .appSettings
-              ?.defaultPaymentMethod
-              .trim()
-              .toUpperCase();
-      switch (defaultPayment) {
-        case 'CARD':
-          _isCardSelected = true;
-          break;
-        case 'UPI':
-          _isUpiSelected = true;
-          break;
-        case 'COD':
-          _isCodSelected = true;
-          break;
-        case 'DEBIT':
-          _isDebitSelected = true;
-          break;
-        case 'CASH':
-        default:
-          _isCashSelected = true;
-          break;
-      }
-    }
+    _applyDefaultPaymentMethodSelection();
 
     if (_hasAnySelectedPaymentAmount()) return;
 
@@ -8045,12 +8132,71 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
+  Future<void> _saveAndPrintWithoutCheckoutModal() async {
+    if (_isLoadingConfirm) return;
+
+    debugPrint(
+      '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct offline save & print',
+    );
+
+    _hydrateCustomerListFromProviderCache();
+    if (!mounted) return;
+
+    setState(() {
+      if (_deliveryMethodId.isEmpty) {
+        final defaultDeliveryMethod = _getDefaultDeliveryMethod();
+        _deliveryMethod = defaultDeliveryMethod.name;
+        _deliveryMethodId = defaultDeliveryMethod.id;
+      }
+      _applyDefaultPaymentForDirectConfirmAndPrint();
+      _hasOpenedPaymentModalOnce = true;
+      _balanceAmount = _calculateBalanceAmount();
+    });
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.updatePaymentFromModal(
+      isCash: _isCashSelected,
+      isCard: _isCardSelected,
+      isUpi: _isUpiSelected,
+      isCod: _isCodSelected,
+      isDebit: _isDebitSelected,
+      cashAmount: _cashAmount,
+      cardAmount: _cardAmount,
+      upiAmount: _upiAmount,
+      codAmount: _codAmount,
+      debitAmount: _debitAmount,
+      transactionNumber: _transactionNumber,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      cashMethodId: billingProvider.cashPaymentMethodId,
+      cardMethodId: billingProvider.cardPaymentMethodId,
+      upiMethodId: billingProvider.upiPaymentMethodId,
+      codMethodId: billingProvider.codPaymentMethodId,
+    );
+
+    widget.onCheckoutActionLoadingChanged?.call(
+      isLoading: true,
+      printBill: true,
+    );
+    try {
+      await _saveCurrentCartAsConfirmedAndPrint(printBill: true);
+    } finally {
+      widget.onCheckoutActionLoadingChanged?.call(
+        isLoading: false,
+        printBill: true,
+      );
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   void showCurrentCartConfirmAndPrintFromParent() {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     if (!(appSettings?.showConfirmOrderAndPrintButton ?? true)) return;
 
-    if (_skipCheckoutOnCounterConfirmAndPrint) {
+    if (_skipCheckoutOnConfirmAndPrint) {
       unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
       return;
     }
@@ -8064,7 +8210,19 @@ class OrderPanelState extends State<OrderPanel> {
     showCheckoutFromParent(forCurrentCart: true);
   }
 
-  void showOfflineSaveAndPrintCheckoutFromParent({int? initialStep}) {
+  /// Offline Save & Print entry point.
+  ///
+  /// When [allowSkipCheckout] is true and the app setting is enabled, skips the
+  /// checkout modal and saves+prints with defaults. Step shortcuts (F5/F10)
+  /// should pass [allowSkipCheckout]: false so the modal still opens.
+  void showOfflineSaveAndPrintCheckoutFromParent({
+    int? initialStep,
+    bool allowSkipCheckout = true,
+  }) {
+    if (allowSkipCheckout && _skipCheckoutOnConfirmAndPrint) {
+      unawaited(_saveAndPrintWithoutCheckoutModal());
+      return;
+    }
     _showCheckoutModal(
       forCurrentCart: true,
       offlineSaveAndPrint: true,

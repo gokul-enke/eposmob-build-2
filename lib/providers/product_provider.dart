@@ -7,6 +7,25 @@ import 'package:pos_machine/models/product_property.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+void _debugPrintFullResponse(String label, String body) {
+  String output;
+  try {
+    output = const JsonEncoder.withIndent('  ').convert(jsonDecode(body));
+  } catch (_) {
+    output = body;
+  }
+
+  const chunkSize = 800;
+  debugPrint('$label BEGIN');
+  for (var offset = 0; offset < output.length; offset += chunkSize) {
+    final end = (offset + chunkSize < output.length)
+        ? offset + chunkSize
+        : output.length;
+    debugPrint(output.substring(offset, end));
+  }
+  debugPrint('$label END');
+}
+
 class ProductProvider extends ChangeNotifier {
   bool _isUpdating = false;
 
@@ -66,8 +85,7 @@ class ProductProvider extends ChangeNotifier {
           '📦 fetchProductProperties ← ${response.statusCode}: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final properties =
-            ProductProperty.listFromJsonString(response.body);
+        final properties = ProductProperty.listFromJsonString(response.body);
         _productProperties = properties;
         notifyListeners();
         return properties;
@@ -97,6 +115,7 @@ class ProductProvider extends ChangeNotifier {
     num? quantity,
     List<Map<String, dynamic>>? productNames,
     List<Map<String, dynamic>>? variants,
+    List<Map<String, dynamic>>? saleUnits,
     String? minMarginPercentage,
     String? minMarginPrice,
     required String accessToken,
@@ -168,6 +187,11 @@ class ProductProvider extends ChangeNotifier {
       body['variants'] = variants;
     }
 
+    // An empty list is meaningful here: it removes all configured sale units.
+    if (saleUnits != null) {
+      body['sale_units'] = saleUnits;
+    }
+
     _setUpdating(true);
     try {
       debugPrint(
@@ -182,8 +206,12 @@ class ProductProvider extends ChangeNotifier {
         body: json.encode(body),
       );
 
-      debugPrint(
-          '🛠️ editProduct ← Response ${response.statusCode}: ${response.body}');
+      debugPrint('🛠️ editProduct ← Response status=${response.statusCode} '
+          'bytes=${response.body.length}');
+      _debugPrintFullResponse(
+        '[EDIT_PRODUCT_API_RESPONSE status=${response.statusCode}]',
+        response.body,
+      );
 
       final decodedBody = _decodeBody(response.body);
 

@@ -34,6 +34,7 @@ import 'package:pos_machine/providers/app_font_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/barcode_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
+import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
@@ -323,6 +324,11 @@ class BillingPageState extends State<BillingPage>
     final stockEnabled =
         generalSettingsProvider.generalSettings?.stockEnabled ?? false;
     localProductProvider.setStockEnabled(stockEnabled);
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    localProductProvider.setAllowOverselling(
+      appSettingsProvider.appSettings?.allowOverselling ?? true,
+    );
   }
 
   @override
@@ -441,6 +447,7 @@ class BillingPageState extends State<BillingPage>
           debugPrint(
               '  - New discountAndCoupon: ${appSettingsProvider.appSettings!.discountAndCoupon}');
         }
+        _syncStockEnabledSetting();
       };
       appSettingsProvider.addListener(_appSettingsDebugListener!);
 
@@ -1296,12 +1303,12 @@ class BillingPageState extends State<BillingPage>
                 ? CheckoutActionMode.quotation
                 : CheckoutActionMode.save);
       } else if (event.logicalKey == LogicalKeyboardKey.f9) {
-        debugPrint(
-            "⌨️ [BillingPage] Handling F9 -> open checkout save & print");
-        _showCheckoutModal(
-            actionMode: _isQuotationPage
-                ? CheckoutActionMode.quotation
-                : CheckoutActionMode.save);
+        debugPrint("⌨️ [BillingPage] Handling F9 -> save & print");
+        if (_isQuotationPage) {
+          _showCheckoutModal(actionMode: CheckoutActionMode.quotation);
+        } else {
+          _handleSaveAndPrint();
+        }
       } else if (event.logicalKey == LogicalKeyboardKey.f10) {
         debugPrint(
             "⌨️ [BillingPage] Handling F10 -> open checkout at Discount step");
@@ -1459,6 +1466,14 @@ class BillingPageState extends State<BillingPage>
 
       debugPrint(
           "🔴 [BillingPage.processBarcode] Products found: ${filteredProducts.length}");
+      if (filteredProducts.length > 1) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Barcode $query matches ${filteredProducts.length} products. Fix the duplicate barcode before selling.',
+        );
+        return;
+      }
       if (filteredProducts.isNotEmpty) {
         debugPrint(
             "🔴 [BillingPage.processBarcode] First product: ${filteredProducts.first.productName}");
@@ -1520,6 +1535,7 @@ class BillingPageState extends State<BillingPage>
           customerId: selectedCustomerID,
           customerName: selectedCustomer?.name,
           selectedSaleUnit: useSaleUnit ? matchedSaleUnit : null,
+          scannedBarcode: query,
         );
 
         debugPrint(
@@ -2996,6 +3012,9 @@ class BillingPageState extends State<BillingPage>
 
   List<_CartUnitMenuOption> _cartUnitOptionsForItem(LocalCartItem item) {
     final saleUnits = _validSaleUnitsForCartItem(item);
+    final unitLabels =
+        Provider.of<PurchaseProvider>(context, listen: false).getUnitList ??
+            const <String, String>{};
     final baseUnit = item.product.unit?.trim();
     final baseLabel = baseUnit == null || baseUnit.isEmpty ? '-' : baseUnit;
     final options = <_CartUnitMenuOption>[
@@ -3007,7 +3026,10 @@ class BillingPageState extends State<BillingPage>
       final saleUnitId = saleUnit.id;
       final saleUnitLabel = saleUnit.unitName?.trim().isNotEmpty == true
           ? saleUnit.unitName!.trim()
-          : saleUnitId?.toString();
+          : unitLabels[saleUnit.unitId?.toString() ?? '']?.trim().isNotEmpty ==
+                  true
+              ? unitLabels[saleUnit.unitId!.toString()]!.trim()
+              : saleUnitId?.toString();
       if (saleUnitId == null || saleUnitLabel == null) {
         continue;
       }
@@ -3060,6 +3082,7 @@ class BillingPageState extends State<BillingPage>
         item.selectedStock,
         stockGroupIds: item.stockGroupIds,
         currentSaleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
       if (!changed) {
         showScaffoldError(
@@ -3087,6 +3110,18 @@ class BillingPageState extends State<BillingPage>
     if (selectedSaleUnit == null || selectedRate == null) {
       return;
     }
+    final unitLabels =
+        Provider.of<PurchaseProvider>(context, listen: false).getUnitList ??
+            const <String, String>{};
+    final selectedUnitName =
+        selectedSaleUnit.unitName?.trim().isNotEmpty == true
+            ? selectedSaleUnit.unitName!.trim()
+            : unitLabels[selectedSaleUnit.unitId?.toString() ?? '']
+                        ?.trim()
+                        .isNotEmpty ==
+                    true
+                ? unitLabels[selectedSaleUnit.unitId!.toString()]!.trim()
+                : selectedSaleUnit.unitId?.toString();
 
     final changed = localProductProvider.changeCartItemSaleUnit(
       item.product.productId!,
@@ -3094,12 +3129,11 @@ class BillingPageState extends State<BillingPage>
       stockGroupIds: item.stockGroupIds,
       currentSaleUnitId: item.saleUnitId,
       newSaleUnitId: selectedSaleUnit.id,
-      newSaleUnitName: selectedSaleUnit.unitName,
+      newSaleUnitName: selectedUnitName,
       newSaleUnitConversionRate: selectedRate,
+      variantId: item.variantId,
     );
     if (!changed) {
-      // The provider no longer refuses on stock shortage (oversell is
-      // allowed); a false result means the cart line could not be resolved.
       showScaffoldError(
         context: context,
         message: 'Unable to change unit for this cart item.',
@@ -3470,23 +3504,56 @@ class BillingPageState extends State<BillingPage>
                                                       padding: const EdgeInsets
                                                           .symmetric(
                                                           vertical: 2),
-                                                      child: Text(
-                                                        item.product
-                                                                .productName ??
-                                                            'general.unknown'
-                                                                .tr,
-                                                        style: buildCustomStyle(
-                                                          FontWeightManager
-                                                              .regular,
-                                                          fontProvider
-                                                              .billingTableItemSize,
-                                                          0.21,
-                                                          ColorManager
-                                                              .textColor,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            item.product
+                                                                    .productName ??
+                                                                'general.unknown'
+                                                                    .tr,
+                                                            style:
+                                                                buildCustomStyle(
+                                                              FontWeightManager
+                                                                  .regular,
+                                                              fontProvider
+                                                                  .billingTableItemSize,
+                                                              0.21,
+                                                              ColorManager
+                                                                  .textColor,
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                          if (item.variantLabel
+                                                              .isNotEmpty)
+                                                            Text(
+                                                              item.variantLabel,
+                                                              style:
+                                                                  buildCustomStyle(
+                                                                FontWeightManager
+                                                                    .medium,
+                                                                (fontProvider
+                                                                            .billingTableItemSize -
+                                                                        2)
+                                                                    .clamp(9.0,
+                                                                        12.0),
+                                                                0.21,
+                                                                ColorManager
+                                                                    .kPrimaryColor,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                        ],
                                                       ),
                                                     ),
                                                   ),
@@ -3624,7 +3691,7 @@ class BillingPageState extends State<BillingPage>
                                                 child:
                                                     CompactQuantityControlLocal(
                                                   key: ValueKey(
-                                                    'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}',
+                                                    'qty-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.stockGroupIds.join('_')}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                                   ),
                                                   productId:
                                                       item.product.productId!,
@@ -3691,7 +3758,7 @@ class BillingPageState extends State<BillingPage>
                                                 width: 70,
                                                 child: MrpTextField(
                                                   key: ValueKey(
-                                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                    'mrp-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                                   ),
                                                   item: item,
                                                   localProductProvider:
@@ -3716,7 +3783,7 @@ class BillingPageState extends State<BillingPage>
                                                 width: 70,
                                                 child: PriceTextField(
                                                   key: ValueKey(
-                                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}',
+                                                    'price-${item.product.productId}-${item.selectedStock?.id ?? 'base'}-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}',
                                                   ),
                                                   item: item,
                                                   localProductProvider:
@@ -3827,6 +3894,7 @@ class BillingPageState extends State<BillingPage>
                                                     stockGroupIds:
                                                         item.stockGroupIds,
                                                     saleUnitId: item.saleUnitId,
+                                                    variantId: item.variantId,
                                                   );
                                                 },
                                               ),
@@ -4133,6 +4201,7 @@ class BillingPageState extends State<BillingPage>
       item.selectedStock,
       stockGroupIds: item.stockGroupIds,
       saleUnitId: item.saleUnitId,
+      variantId: item.variantId,
     );
     setState(() {
       if (previousCartLength <= 1) {
@@ -4237,7 +4306,7 @@ class BillingPageState extends State<BillingPage>
 
   String _cartIdentityKey(LocalCartItem item) {
     final groupKey = item.stockGroupIds.join('_');
-    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}';
   }
 
   // Show product details dialog for the given cart item using reusable widget
@@ -4373,6 +4442,7 @@ class BillingPageState extends State<BillingPage>
         selectedPrice,
         stockGroupIds: item.stockGroupIds,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
     } catch (error, stackTrace) {
       debugPrint('Failed to load customer purchase history: $error');
@@ -5722,8 +5792,7 @@ class BillingPageState extends State<BillingPage>
                 child: _buildActionButton(
                   text: 'billing.save_and_print'.tr,
                   color: ColorManager.kButtonYellow,
-                  onPressed: () =>
-                      _showCheckoutModal(actionMode: CheckoutActionMode.save),
+                  onPressed: () => _handleSaveAndPrint(),
                   isLoading: isLoadingSaveOrderAndPrint,
                   isDisabled: disableActions && !isLoadingSaveOrderAndPrint,
                   shortcutLabel: 'F9',
@@ -5769,38 +5838,41 @@ class BillingPageState extends State<BillingPage>
                               AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            text,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                          if (shortcutLabel != null) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.25),
-                                borderRadius: BorderRadius.circular(3),
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              text,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.white,
                               ),
-                              child: Text(
-                                shortcutLabel,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w600,
+                            ),
+                            if (shortcutLabel != null) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.25),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  shortcutLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
               ),
             ),
@@ -7172,6 +7244,14 @@ class BillingPageState extends State<BillingPage>
     _showCheckoutModal(actionMode: CheckoutActionMode.confirm);
   }
 
+  Future<void> _handleSaveAndPrint() async {
+    if (_skipCheckoutOnConfirmAndPrint) {
+      await _saveAndPrintWithoutCheckoutModal();
+      return;
+    }
+    _showCheckoutModal(actionMode: CheckoutActionMode.save);
+  }
+
   bool _hasExistingPaymentState() {
     return _isCashSelected ||
         _isCardSelected ||
@@ -7342,6 +7422,52 @@ class BillingPageState extends State<BillingPage>
     );
 
     await _createOrderAndPrint();
+  }
+
+  Future<void> _saveAndPrintWithoutCheckoutModal() async {
+    if (_isOrderActionBusy) {
+      debugPrint(
+          "⌨️ [BillingPage] Direct save & print ignored because order action is busy");
+      return;
+    }
+
+    debugPrint(
+        "⌨️ [BillingPage] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct save & print");
+
+    await _prepareCheckoutDefaults(
+      applyDefaultCustomer: true,
+      applyDefaultPayment: true,
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _autoFillDefaultPaymentAmounts();
+      _hasOpenedPaymentModalOnce = true;
+    });
+    _updateBalanceAmount();
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.updatePaymentFromModal(
+      isCash: _isCashSelected,
+      isCard: _isCardSelected,
+      isUpi: _isUpiSelected,
+      isCod: _isCodSelected,
+      isDebit: _isDebitSelected,
+      cashAmount: _cashAmountController.text,
+      cardAmount: _cardAmountController.text,
+      upiAmount: _upiAmountController.text,
+      codAmount: _codAmountController.text,
+      debitAmount: _debitAmountController.text,
+      transactionNumber: _transactionNumberController.text,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      cashMethodId: billingProvider.cashPaymentMethodId,
+      cardMethodId: billingProvider.cardPaymentMethodId,
+      upiMethodId: billingProvider.upiPaymentMethodId,
+      codMethodId: billingProvider.codPaymentMethodId,
+    );
+
+    await _saveOrderAndPrint();
   }
 
   /// Shows the checkout modal for customer selection, delivery, discount, and payment
@@ -7868,6 +7994,9 @@ class BillingPageState extends State<BillingPage>
           }
           if (item.saleUnitId != null) {
             itemMap['product_sale_unit_id'] = item.saleUnitId;
+          }
+          if (item.variantId != null) {
+            itemMap['product_variant_id'] = item.variantId;
           }
           return itemMap;
         }).toList(),

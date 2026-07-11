@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:pos_machine/helpers/cart_quantity_stock_helper.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -133,6 +134,7 @@ void main() {
       expect(provider.cartItems, hasLength(1));
       expect(provider.cartItems.single.variantId, 10);
       expect(provider.cartItems.single.quantity, 3);
+      expect(provider.cartItems.single.price, 349);
     });
 
     test('order payload carries distinct product_variant_id per line', () {
@@ -161,6 +163,87 @@ void main() {
         payload.map((row) => row['product_variant_id']).toList(),
         containsAll([10, 20]),
       );
+    });
+
+    test('variant mutation APIs target the selected variant line', () {
+      final provider = LocalProductProvider()..setStockEnabled(false);
+      final product = _variantProduct();
+      provider.addProduct(product);
+
+      provider.addToCart(
+        product: product,
+        quantity: 2,
+        price: 349,
+        variantId: 10,
+        variantAttributes: const {'COLOR': 'Red'},
+      );
+      provider.addToCart(
+        product: product,
+        quantity: 3,
+        price: 359,
+        variantId: 20,
+        variantAttributes: const {'COLOR': 'Blue'},
+      );
+
+      provider.updateItemPrice(1, null, 300, variantId: 10);
+      provider.updateItemMrp(1, null, 450, variantId: 20);
+      provider.updateItemTax(1, null, 12, variantId: 10);
+
+      final red = provider.cartItems.firstWhere((item) => item.variantId == 10);
+      final blue =
+          provider.cartItems.firstWhere((item) => item.variantId == 20);
+      expect(red.price, 300);
+      expect(red.taxRate, 12);
+      expect(blue.price, 359);
+      expect(blue.mrp, 450);
+
+      provider.removeFromCart(1, null, variantId: 10);
+
+      expect(provider.cartItems, hasLength(1));
+      expect(provider.cartItems.single.variantId, 20);
+    });
+
+    test('quantity helper can reduce and remove variant cart lines', () async {
+      final provider = LocalProductProvider()..setStockEnabled(false);
+      final product = _variantProduct();
+      provider.addProduct(product);
+
+      provider.addToCart(
+        product: product,
+        quantity: 4,
+        price: 349,
+        variantId: 10,
+        variantAttributes: const {'COLOR': 'Red'},
+      );
+
+      await CartQuantityStockHelper.syncCartItemQuantity(
+        cartItem: provider.cartItems.single,
+        newQuantity: 2,
+        localProductProvider: provider,
+      );
+
+      expect(provider.cartItems.single.quantity, 2);
+      expect(provider.cartItems.single.variantId, 10);
+      expect(provider.cartItems.single.price, 349);
+
+      await CartQuantityStockHelper.syncCartItemQuantity(
+        cartItem: provider.cartItems.single,
+        newQuantity: 0,
+        localProductProvider: provider,
+      );
+
+      expect(provider.cartItems, isEmpty);
+    });
+
+    test('addToCart rejects non-positive quantities at provider boundary', () {
+      final provider = LocalProductProvider()..setStockEnabled(false);
+      final product = _variantProduct();
+      provider.addProduct(product);
+
+      provider.addToCart(product: product, quantity: 0, price: 349);
+      provider.addToCart(product: product, quantity: -2, price: 349);
+
+      expect(provider.cartItems, isEmpty);
     });
   });
 }

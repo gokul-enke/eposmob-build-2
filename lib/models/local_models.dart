@@ -73,6 +73,15 @@ class HiveLocalCartItem {
   @HiveField(17)
   final HiveStringValue? serializedVariantAttributes;
 
+  /// Stable identity for the cart line. Null is supported only while reading
+  /// rows written by app versions that predate keyed cart persistence.
+  @HiveField(18)
+  final String? lineId;
+
+  /// Whether the customer accepted warranty coverage for this cart line.
+  @HiveField(19)
+  final bool warrantyEnabled;
+
   HiveLocalCartItem({
     required this.productId,
     this.quantity = 1,
@@ -92,6 +101,8 @@ class HiveLocalCartItem {
     this.saleUnitConversionRate,
     this.variantId,
     this.serializedVariantAttributes,
+    this.lineId,
+    this.warrantyEnabled = false,
   });
 }
 

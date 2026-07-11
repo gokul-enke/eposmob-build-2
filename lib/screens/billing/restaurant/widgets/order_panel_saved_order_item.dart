@@ -95,7 +95,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
             0.0);
 
     final String productName = isLocal
-        ? (cartItem as LocalCartItem).product.productName ?? 'Item'
+        ? (cartItem as LocalCartItem).displayName
         : (cartItem['product']?['name'] ?? cartItem['product_name'] ?? 'Item');
 
     final TextEditingController priceController =
@@ -108,6 +108,8 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
     );
 
     void handleUpdate() {
+      Provider.of<KeyboardProvider>(context, listen: false).hide();
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
       final newPriceStr = priceController.text;
       final newPrice = double.tryParse(newPriceStr);
@@ -124,6 +126,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
             newPrice,
             stockGroupIds: localItem.stockGroupIds,
             saleUnitId: localItem.saleUnitId,
+            variantId: localItem.variantId,
           );
         } else {
           // Update Saved Item
@@ -212,8 +215,9 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                       color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
                 ),
                 onTap: () {
-                  Provider.of<KeyboardProvider>(context, listen: false)
-                      .show('numeric', priceController);
+                  Provider.of<KeyboardProvider>(context, listen: false).show(
+                      'number', priceController,
+                      replaceOnFirstInput: true);
                 },
               ),
             ],
@@ -224,7 +228,11 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .hide();
+                      Navigator.pop(context);
+                    },
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -270,7 +278,7 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
         : (double.tryParse((cartItem['quantity'] ?? 1).toString()) ?? 1.0);
 
     final String productName = isLocal
-        ? (cartItem as LocalCartItem).product.productName ?? 'Item'
+        ? (cartItem as LocalCartItem).displayName
         : (cartItem['product']?['name'] ?? cartItem['product_name'] ?? 'Item');
 
     final TextEditingController quantityController =
@@ -282,6 +290,8 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
     );
 
     void handleUpdate() {
+      Provider.of<KeyboardProvider>(context, listen: false).hide();
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
       final newQtyStr = quantityController.text;
       final newQty = double.tryParse(newQtyStr);
@@ -355,8 +365,8 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                   labelStyle: const TextStyle(color: Color(0xFF64748B)),
                   filled: true,
                   fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 16),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.grey.shade300),
@@ -367,13 +377,14 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: Color(0xFF059669), width: 2),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF059669), width: 2),
                   ),
                 ),
                 onTap: () {
-                  Provider.of<KeyboardProvider>(context, listen: false)
-                      .show('numeric', quantityController);
+                  Provider.of<KeyboardProvider>(context, listen: false).show(
+                      'number', quantityController,
+                      replaceOnFirstInput: true);
                 },
               ),
             ],
@@ -384,7 +395,11 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .hide();
+                      Navigator.pop(context);
+                    },
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(

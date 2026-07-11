@@ -115,6 +115,14 @@ class _HomeWidgetState extends State<HomeWidget> {
                   .filterProductByBarcode(barCode: productCode);
         }
 
+        if (filteredProducts.length > 1) {
+          showScaffoldError(
+            context: context,
+            message:
+                'Barcode $query matches ${filteredProducts.length} products. Fix the duplicate barcode before selling.',
+          );
+          return;
+        }
         if (filteredProducts.isNotEmpty) {
           GetProduct product = filteredProducts.first;
 
@@ -476,7 +484,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   title: Text(
-                    item.product.productName ?? 'Unknown',
+                    item.displayName,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Column(
@@ -512,7 +520,9 @@ class _HomeWidgetState extends State<HomeWidget> {
                             provider.removeFromCart(
                               item.product.productId!,
                               item.selectedStock,
+                              stockGroupIds: item.stockGroupIds,
                               saleUnitId: item.saleUnitId,
+                              variantId: item.variantId,
                             );
                           },
                         ),

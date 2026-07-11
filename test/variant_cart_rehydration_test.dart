@@ -1,6 +1,7 @@
 /// P-05 slice 2 — variant cart lines survive Hive persistence and saved-draft reload.
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -75,7 +76,8 @@ void main() {
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   group('variant cart rehydration', () {
-    test('active cart survives provider restart via Hive fields 16–17', () async {
+    test('active cart survives provider restart via Hive fields 16–17',
+        () async {
       final product = _variantProduct();
       final writer = LocalProductProvider();
       writer.setStockEnabled(false);
@@ -88,6 +90,7 @@ void main() {
         variantId: 45,
         variantAttributes: const {'COLOR': 'Red', 'SIZE': 'L'},
       );
+      await writer.flushPersistence();
 
       expect(Hive.box<HiveLocalCartItem>('cart_items').length, 1);
       final hiveRow = Hive.box<HiveLocalCartItem>('cart_items').values.first;
@@ -109,7 +112,8 @@ void main() {
       expect(item.price, 349);
     });
 
-    test('saved draft reload preserves variant identity and display name', () {
+    test('saved draft reload preserves variant identity and display name',
+        () async {
       final product = _variantProduct();
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
@@ -131,6 +135,7 @@ void main() {
       );
 
       provider.clearCart();
+      await provider.flushPersistence();
       expect(provider.cartItems, isEmpty);
 
       // Reload from Hive-backed saved orders list.
@@ -156,7 +161,8 @@ void main() {
       );
     });
 
-    test('two variant lines on same product stay separate after reload', () {
+    test('two variant lines on same product stay separate after reload',
+        () async {
       final product = _variantProduct();
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
@@ -179,6 +185,7 @@ void main() {
 
       final saved = provider.saveCurrentCartAsOrder(status: 'saved');
       provider.clearCart();
+      await provider.flushPersistence();
 
       final reloaded = LocalProductProvider();
       reloaded.loadOrderForEditing(saved.id);
@@ -188,6 +195,93 @@ void main() {
         reloaded.cartItems.map((item) => item.variantId).toSet(),
         {45, 46},
       );
+    });
+
+    test('rapid mutations persist one keyed line with exact quantity',
+        () async {
+      final product = _variantProduct();
+      final writer = LocalProductProvider();
+      writer.setStockEnabled(false);
+      writer.initializeProducts([product]);
+
+      for (var index = 0; index < 100; index++) {
+        expect(
+          writer.addToCart(
+            product: product,
+            quantity: 1,
+            variantId: 45,
+            variantAttributes: const {'COLOR': 'Red', 'SIZE': 'L'},
+          ),
+          isTrue,
+        );
+      }
+      final lineId = writer.cartItems.single.lineId;
+      await writer.flushPersistence();
+
+      final box = Hive.box<HiveLocalCartItem>('cart_items');
+      expect(box.length, 1);
+      expect(box.keys.single, lineId);
+      expect(box.values.single.lineId, lineId);
+
+      final reader = LocalProductProvider();
+      expect(reader.cartItems.single.quantity, 100);
+      expect(reader.cartItems.single.lineId, lineId);
+    });
+
+    test('legacy integer cart key migrates to stable line id', () async {
+      final product = _variantProduct();
+      final box = Hive.box<HiveLocalCartItem>('cart_items');
+      await box.put(
+        0,
+        HiveLocalCartItem(
+          productId: product.productId!,
+          quantity: 1,
+          // Integer key plus null lineId represents the legacy schema.
+          serializedProduct: HiveStringValue(jsonEncode(product.toJson())),
+        ),
+      );
+
+      final provider = LocalProductProvider();
+      expect(provider.cartItems, hasLength(1));
+      final generatedLineId = provider.cartItems.single.lineId;
+      provider.setStockEnabled(false);
+      provider.setCartItemQuantity(501, null, 2);
+      await provider.flushPersistence();
+
+      expect(box.length, 1);
+      expect(box.keys.single, generatedLineId);
+      expect(box.keys.single, isA<String>());
+      expect(box.values.single.lineId, generatedLineId);
+    });
+
+    test('one corrupt Hive row does not hide valid cart lines', () async {
+      final product = _variantProduct();
+      final validWriter = LocalProductProvider();
+      validWriter.setStockEnabled(false);
+      validWriter.initializeProducts([product]);
+      validWriter.addToCart(
+        product: product,
+        quantity: 2,
+        variantId: 45,
+        variantAttributes: const {'COLOR': 'Red', 'SIZE': 'L'},
+      );
+      await validWriter.flushPersistence();
+
+      final box = Hive.box<HiveLocalCartItem>('cart_items');
+      await box.put(
+        'corrupt-row',
+        HiveLocalCartItem(
+          lineId: 'corrupt-row',
+          productId: 999,
+          quantity: 1,
+          serializedProduct: HiveStringValue('{not-valid-json'),
+        ),
+      );
+
+      final reader = LocalProductProvider();
+      expect(reader.cartItems, hasLength(1));
+      expect(reader.cartItems.single.product.productId, 501);
+      expect(reader.cartItems.single.variantId, 45);
     });
   });
 }

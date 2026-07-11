@@ -145,6 +145,11 @@ class GetProduct {
   final List<Stock>? stock;
   final List<SaleUnit>? saleUnits;
   final List<ProductVariant>? variants;
+
+  /// Persistent backend signal that this product requires variant selection.
+  /// Null keeps compatibility with older API responses, where the presence of
+  /// variant rows is the only available signal.
+  final bool? variantMode;
   final String? sku;
   final dynamic offerPrice;
   final dynamic productLocation;
@@ -181,6 +186,7 @@ class GetProduct {
     this.stock,
     this.saleUnits,
     this.variants,
+    this.variantMode,
     this.sku,
     this.offerPrice,
     this.productLocation,
@@ -218,6 +224,7 @@ class GetProduct {
     List<Stock>? stock,
     List<SaleUnit>? saleUnits,
     List<ProductVariant>? variants,
+    bool? variantMode,
     String? sku,
     dynamic offerPrice,
     dynamic productLocation,
@@ -255,6 +262,7 @@ class GetProduct {
       stock: stock ?? this.stock,
       saleUnits: saleUnits ?? this.saleUnits,
       variants: variants ?? this.variants,
+      variantMode: variantMode ?? this.variantMode,
       sku: sku ?? this.sku,
       offerPrice: offerPrice ?? this.offerPrice,
       productLocation: productLocation ?? this.productLocation,
@@ -346,6 +354,7 @@ class GetProduct {
             : List<ProductVariant>.from((json["variants"] as List).map(
                 (x) => ProductVariant.fromJson(x as Map<String, dynamic>),
               )),
+        variantMode: _parseBool(json["variant_mode"] ?? json["has_variants"]),
         sku: json["sku"],
         offerPrice: json["offer_price"]?.toString(),
         productLocation: json["product_location"],
@@ -381,7 +390,8 @@ class GetProduct {
         0.0, (sum, tax) => sum + (double.tryParse(tax.rate ?? "0") ?? 0.0));
   }
 
-  bool get hasVariants => variants != null && variants!.isNotEmpty;
+  bool get hasVariants =>
+      variantMode ?? (variants != null && variants!.isNotEmpty);
 
   List<ProductVariant> get activeVariants =>
       variants?.where((variant) => variant.active).toList() ?? const [];
@@ -424,6 +434,7 @@ class GetProduct {
         "variants": variants == null
             ? []
             : List<dynamic>.from(variants!.map((x) => x.toJson())),
+        "variant_mode": variantMode,
         "sku": sku,
         "offer_price": offerPrice,
         "product_location": productLocation,
@@ -1023,6 +1034,26 @@ class Pagination {
       };
 }
 
+class VariantImage {
+  final String? url;
+  final String? alt;
+  final String? title;
+
+  VariantImage({this.url, this.alt, this.title});
+
+  factory VariantImage.fromJson(Map<String, dynamic> json) => VariantImage(
+        url: json['url']?.toString(),
+        alt: json['alt']?.toString(),
+        title: json['title']?.toString(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'alt': alt,
+        'title': title,
+      };
+}
+
 class ProductVariant {
   final int id;
   final String? sku;
@@ -1033,6 +1064,7 @@ class ProductVariant {
   final num? quantity;
   final bool active;
   final Map<String, dynamic> attributes;
+  final List<VariantImage> images;
 
   ProductVariant({
     required this.id,
@@ -1044,6 +1076,7 @@ class ProductVariant {
     this.quantity,
     this.active = true,
     this.attributes = const {},
+    this.images = const [],
   });
 
   factory ProductVariant.fromJson(Map<String, dynamic> json) => ProductVariant(
@@ -1077,7 +1110,9 @@ class ProductVariant {
           return null;
         })(),
         quantity: (() {
-          final q = json['quantity'];
+          // Prefer store-scoped availability from the new API contract. The
+          // legacy `quantity` field remains a compatibility fallback.
+          final q = json['available_quantity'] ?? json['quantity'];
           if (q == null) return null;
           if (q is num) return q;
           if (q is String) {
@@ -1090,6 +1125,14 @@ class ProductVariant {
         })(),
         active: _parseBool(json['active']) ?? true,
         attributes: _parseVariantAttributes(json['attributes']),
+        images: (() {
+          final raw = json['images'];
+          if (raw is! List) return const <VariantImage>[];
+          return raw
+              .whereType<Map>()
+              .map((e) => VariantImage.fromJson(e.cast<String, dynamic>()))
+              .toList();
+        })(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -1102,6 +1145,7 @@ class ProductVariant {
         'quantity': quantity,
         'active': active,
         'attributes': attributes,
+        'images': images.map((image) => image.toJson()).toList(),
       };
 
   ProductVariant copyWith({
@@ -1114,6 +1158,7 @@ class ProductVariant {
     num? quantity,
     bool? active,
     Map<String, dynamic>? attributes,
+    List<VariantImage>? images,
   }) {
     return ProductVariant(
       id: id ?? this.id,
@@ -1125,6 +1170,7 @@ class ProductVariant {
       quantity: quantity ?? this.quantity,
       active: active ?? this.active,
       attributes: attributes ?? this.attributes,
+      images: images ?? this.images,
     );
   }
 

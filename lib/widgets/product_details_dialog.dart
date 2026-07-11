@@ -27,6 +27,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
+import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
 
 class _DropdownOption {
   final String id;
@@ -99,6 +100,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   String? _selectedRackId;
   bool _requestedUnitRackData = false;
   final Map<int, Stock> _editedStockRows = {};
+  final List<AddProductSaleUnitRow> _saleUnitRows = [];
+  bool _showSaleUnitOptions = false;
+  bool _saleUnitsTouched = false;
 
   final VariantEditorController _variantController = VariantEditorController();
   bool _variantPropertiesRequested = false;
@@ -108,8 +112,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   bool _canEditProduct(BuildContext context) {
     final roleProvider = Provider.of<RoleProvider>(context, listen: false);
     if (widget.useBillingProductPermissions) {
-      return roleProvider
-          .currentUserHasPermissionSync('billing.product.edit');
+      return roleProvider.currentUserHasPermissionSync('billing.product.edit');
     }
     return roleProvider.currentUserHasPermissionSync('update_product') ||
         roleProvider
@@ -533,8 +536,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             ? product.stock!.first.purchasePrice
             : '') ??
         '';
-    _minMarginController.text = _formatNumericString(product.minMarginPercentage);
-    _minMarginPriceController.text = _formatNumericString(product.minMarginPrice);
+    _minMarginController.text =
+        _formatNumericString(product.minMarginPercentage);
+    _minMarginPriceController.text =
+        _formatNumericString(product.minMarginPrice);
 
     _editableStock = widget.selectedStock ??
         (product.stock != null && product.stock!.isNotEmpty
@@ -548,7 +553,52 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     _resolveUnitAndRackSelection();
     _syncLanguageNameControllersFromProduct();
+    _syncSaleUnitsFromProduct(product);
     _controllersInitialized = true;
+  }
+
+  void _syncSaleUnitsFromProduct(GetProduct product) {
+    for (final row in _saleUnitRows) {
+      row.dispose();
+    }
+    _saleUnitRows.clear();
+    final saleUnits = (product.saleUnits ?? const <SaleUnit>[])
+        .where((saleUnit) => saleUnit.unitId?.toString() != _selectedUnitId)
+        .toList(growable: false);
+    for (final saleUnit in saleUnits) {
+      _saleUnitRows.add(AddProductSaleUnitRow(
+        selectedUnitId: saleUnit.unitId?.toString(),
+        conversionRate: saleUnit.conversionRate ?? '',
+        barcode: saleUnit.barcode ?? '',
+        price: AddProductFormHelpers.formatDynamicNumber(saleUnit.price),
+      ));
+    }
+    _showSaleUnitOptions = saleUnits.isNotEmpty;
+  }
+
+  bool _validateSaleUnits() {
+    debugPrint('[EDIT_PRODUCT] sale-unit validation '
+        'enabled=$_showSaleUnitOptions baseUnitId=$_selectedUnitId '
+        'mainBarcode="${_barcodeController.text.trim()}" '
+        'rowCount=${_saleUnitRows.length}');
+    for (var index = 0; index < _saleUnitRows.length; index++) {
+      final row = _saleUnitRows[index];
+      debugPrint('[EDIT_PRODUCT] sale-unit row[$index] '
+          'unitId=${row.selectedUnitId} '
+          'conversionRate="${row.conversionRateController.text.trim()}" '
+          'barcode="${row.barcodeController.text.trim()}" '
+          'price="${row.priceController.text.trim()}"');
+    }
+    return AddProductFormHelpers.validateSaleUnits(
+      showAdvancedOptions: _showSaleUnitOptions,
+      selectedUnit: _selectedUnitId,
+      mainBarcode: _barcodeController.text,
+      saleUnitRows: _saleUnitRows,
+      onError: (message) {
+        debugPrint('[EDIT_PRODUCT] sale-unit validation error: $message');
+        showScaffoldError(context: context, message: message);
+      },
+    );
   }
 
   String _valueToString(dynamic value) {
@@ -585,11 +635,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       return;
     }
 
-    final bool variantEnabled = Provider.of<AppSettingsProvider>(context,
-                listen: false)
-            .appSettings
-            ?.productVariantEnabled ??
-        true;
+    final bool variantEnabled =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings
+                ?.productVariantEnabled ??
+            true;
     List<Map<String, dynamic>>? variantsPayload;
     if (variantEnabled) {
       final variantError =
@@ -609,11 +659,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     FocusScope.of(context).unfocus();
 
     debugPrint(
-        '🛠️ [ProductDetailsDialog] Save started for productId=${selectedProduct?.productId}');
-
-    setState(() {
-      _isSaving = true;
-    });
+        '[EDIT_PRODUCT] submit started productId=${selectedProduct?.productId}');
 
     final product = selectedProduct!;
     final localProductProvider =
@@ -671,6 +717,32 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         .toList(growable: false);
     final productNames = _buildProductNamesPayload(activeLanguages);
 
+    if (!_validateSaleUnits()) {
+      debugPrint('[EDIT_PRODUCT] validation failed; request not sent');
+      return;
+    }
+
+    final saleUnitsPayload = _saleUnitsTouched || _showSaleUnitOptions
+        ? (_showSaleUnitOptions
+            ? AddProductFormHelpers.buildSaleUnitsPayload(
+                showAdvancedOptions: true,
+                selectedUnit: _selectedUnitId,
+                saleUnitRows: _saleUnitRows,
+              )
+            : const <Map<String, dynamic>>[])
+        : null;
+
+    debugPrint('[EDIT_PRODUCT] form normalized '
+        'nameLength=${updatedName.length}, slug="$updatedSlug", '
+        'barcode="$updatedBarcode", unitId=$_selectedUnitId, '
+        'price=$priceForApi, mrp=$mrpForApi, quantity=$quantityForApi, '
+        'categoryId=$resolvedCategoryId, saleUnits=${saleUnitsPayload?.length ?? 0}, '
+        'variants=${variantsPayload?.length ?? 0}');
+
+    setState(() {
+      _isSaving = true;
+    });
+
     if (accessToken == null || accessToken.isEmpty) {
       if (mounted) {
         setState(() {
@@ -690,10 +762,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         throw const HttpException('Product ID missing.');
       }
 
-      debugPrint('🛠️ [ProductDetailsDialog] Edit payload summary: '
-          'id=$productId, name="$updatedName", barcode="$updatedBarcode", '
-          'price=$priceForApi, mrp=$mrpForApi, tax=${_taxController.text}, '
-          'categoryId=$resolvedCategoryId, unitId=$_selectedUnitId, rack=$_selectedRackId');
+      debugPrint('[EDIT_PRODUCT] sending request id=$productId '
+          'unitId=$_selectedUnitId rackId=$_selectedRackId '
+          'saleUnits=${saleUnitsPayload?.length ?? 0} '
+          'productNames=${productNames.length}');
 
       final int? rackForApi = int.tryParse(_selectedRackId ?? '') ?? rackNumber;
 
@@ -714,6 +786,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
         variants: variantsPayload,
+        saleUnits: saleUnitsPayload,
         // Pass the raw text (even when empty) so an erased field is sent to the
         // server as null to clear it, rather than being omitted from the body.
         minMarginPercentage: updatedMinMargin,
@@ -724,10 +797,33 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       final String successMessage = response['message']?.toString() ??
           'Product details updated successfully.';
 
-      debugPrint(
-          '✅ [ProductDetailsDialog] Server edit success for id=$productId: $successMessage');
+      debugPrint('[EDIT_PRODUCT] server success id=$productId '
+          'message="$successMessage" responseDataType=${response['data']?.runtimeType}');
 
       final responseData = response['data'];
+      if (responseData is Map) {
+        final responseSaleUnits = responseData['sale_units'];
+        debugPrint('[EDIT_PRODUCT] response summary '
+            'productId=${responseData['id'] ?? responseData['product_id']} '
+            'status=${response['status']} '
+            'unit=${responseData['unit']} '
+            'barcode=${responseData['barcode']} '
+            'saleUnitCount=${responseSaleUnits is List ? responseSaleUnits.length : 0}');
+        if (responseSaleUnits is List) {
+          for (var index = 0; index < responseSaleUnits.length; index++) {
+            final saleUnit = responseSaleUnits[index];
+            if (saleUnit is Map) {
+              debugPrint('[EDIT_PRODUCT] response saleUnit[$index] '
+                  'id=${saleUnit['id']} unitId=${saleUnit['unit_id']} '
+                  'conversionRate=${saleUnit['conversion_rate']} '
+                  'barcode=${saleUnit['barcode']} price=${saleUnit['price']}');
+            }
+          }
+        }
+      } else {
+        debugPrint('[EDIT_PRODUCT] response has no map data '
+            'type=${responseData.runtimeType}');
+      }
       GetProduct? serverProduct;
       dynamic responseNames;
       if (responseData is Map<String, dynamic>) {
@@ -763,6 +859,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         final mappedLabel = unitMap[resolvedUnitId];
         if (mappedLabel != null && mappedLabel.isNotEmpty) {
           resolvedUnitLabel = mappedLabel;
+        } else if (int.tryParse(resolvedUnitLabel) != null &&
+            product.unit != null &&
+            product.unit!.trim().isNotEmpty &&
+            int.tryParse(product.unit!.trim()) == null) {
+          // The edit endpoint may return the numeric unit id while the
+          // existing local product still has the human-readable label.
+          resolvedUnitLabel = product.unit!.trim();
         }
       } else if (resolvedUnitLabel.isNotEmpty) {
         final match = unitMap.entries.firstWhere(
@@ -785,6 +888,23 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           orElse: () => categoryProvider.category!.first,
         );
       }
+
+      final List<SaleUnit>? responseSaleUnits = serverProduct?.saleUnits == null
+          ? null
+          : serverProduct!.saleUnits!
+              .where(
+                  (saleUnit) => saleUnit.unitId?.toString() != resolvedUnitId)
+              .map((saleUnit) => SaleUnit(
+                    id: saleUnit.id,
+                    unitId: saleUnit.unitId,
+                    unitName: saleUnit.unitName ??
+                        unitMap[saleUnit.unitId?.toString() ?? ''],
+                    conversionRate: saleUnit.conversionRate,
+                    barcode: saleUnit.barcode,
+                    price: saleUnit.price,
+                    resolvedPrice: saleUnit.resolvedPrice,
+                  ))
+              .toList(growable: false);
 
       final GetProduct updatedProduct = product.copyWith(
         categoryId: serverProduct?.categoryId ?? resolvedCategoryId,
@@ -822,9 +942,20 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 : num.tryParse(updatedMinMarginPrice) ?? updatedMinMarginPrice),
         names: responseNames ??
             (productNames.isNotEmpty ? productNames : product.names),
-        saleUnits: (serverProduct?.saleUnits?.isNotEmpty ?? false)
-            ? serverProduct!.saleUnits
-            : product.saleUnits,
+        // Prefer the server value even when it is an empty list: an empty list
+        // is the expected result after the user removes every sale unit.
+        saleUnits: responseSaleUnits != null
+            ? responseSaleUnits
+            : (_showSaleUnitOptions
+                ? _saleUnitRows
+                    .map((row) => SaleUnit(
+                          unitId: int.tryParse(row.selectedUnitId ?? ''),
+                          conversionRate: row.conversionRateController.text,
+                          barcode: row.barcodeController.text,
+                          price: double.tryParse(row.priceController.text),
+                        ))
+                    .toList(growable: false)
+                : const <SaleUnit>[]),
       );
 
       final GetProduct resolvedUpdatedProduct = updatedProduct;
@@ -834,8 +965,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
       localProductProvider.updateProduct(resolvedUpdatedProduct);
 
-      debugPrint(
-          '💾 [ProductDetailsDialog] Product snapshot updated in provider/Hive for id=$productId');
+      debugPrint('[EDIT_PRODUCT] local product snapshot updated id=$productId '
+          'saleUnits=${resolvedUpdatedProduct.saleUnits?.length ?? 0}');
 
       final updatedTaxValue = double.tryParse(_taxController.text) ?? 0.0;
       localProductProvider.updateProductPricingInCart(
@@ -866,10 +997,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         context: context,
         message: successMessage,
       );
-      debugPrint(
-          '🏁 [ProductDetailsDialog] Save flow completed for id=$productId');
+      debugPrint('[EDIT_PRODUCT] save flow completed id=$productId');
     } catch (error) {
-      debugPrint('❌ [ProductDetailsDialog] Save flow failed: $error');
+      debugPrint('[EDIT_PRODUCT] save flow failed '
+          'type=${error.runtimeType} message=$error');
       if (mounted) {
         setState(() {
           _isSaving = false;
@@ -1361,8 +1492,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               ? '$currency ${product.price!.price}'
               : 'N/A'),
       _buildDetailRow(
-          'MRP',
-          product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
+          'MRP', product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
       _buildDetailRow(
         'Purchase Price',
         (product.purchasePrice != null && product.purchasePrice!.isNotEmpty
@@ -1400,13 +1530,11 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       ),
       _buildDetailRow(
           'Reorder Level', product.reorderLevel?.toString() ?? 'N/A'),
-      _buildDetailRow(
-          'Location', product.productLocation?.toString() ?? 'N/A'),
+      _buildDetailRow('Location', product.productLocation?.toString() ?? 'N/A'),
       if (product.weightInfo != null) ...[
         _buildDetailRow(
             'Weight', product.weightInfo!.weight?.toString() ?? 'N/A'),
-        _buildDetailRow(
-            'Is Weighted',
+        _buildDetailRow('Is Weighted',
             product.weightInfo!.isWeighted == true ? 'Yes' : 'No'),
       ] else ...[
         _buildDetailRow('Weight', 'N/A'),
@@ -1555,8 +1683,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   child: Table(
                     columnWidths: _stockTableColumnWidths,
                     border: null,
-                    defaultVerticalAlignment:
-                        TableCellVerticalAlignment.middle,
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [
                       TableRow(
                         decoration: const BoxDecoration(
@@ -1617,18 +1744,16 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                 stock.mrp != null && stock.mrp!.isNotEmpty
                                     ? '$currency ${stock.mrp}'
                                     : 'N/A'),
-                            _buildStockTableCell(
-                                stock.purchasePrice != null &&
-                                        stock.purchasePrice!.isNotEmpty
-                                    ? '$currency ${stock.purchasePrice}'
-                                    : 'N/A'),
+                            _buildStockTableCell(stock.purchasePrice != null &&
+                                    stock.purchasePrice!.isNotEmpty
+                                ? '$currency ${stock.purchasePrice}'
+                                : 'N/A'),
                             _buildStockTableCell(stock.supplier ?? 'N/A'),
                             _buildStockTableCell(stock.storeName ?? 'N/A'),
-                            _buildStockTableCell(
-                                stock.wholesalePrice != null &&
-                                        stock.wholesalePrice!.isNotEmpty
-                                    ? '$currency ${stock.wholesalePrice}'
-                                    : 'N/A'),
+                            _buildStockTableCell(stock.wholesalePrice != null &&
+                                    stock.wholesalePrice!.isNotEmpty
+                                ? '$currency ${stock.wholesalePrice}'
+                                : 'N/A'),
                             _buildStockTableCell(
                                 stock.wholesaleMinUnit?.toString() ?? 'N/A'),
                             _buildStockTableCell(stock.sku ?? 'N/A'),
@@ -1723,7 +1848,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       } else {
         showScaffoldError(
           context: context,
-          message: result?['message']?.toString() ?? 'Failed to generate barcode',
+          message:
+              result?['message']?.toString() ?? 'Failed to generate barcode',
         );
       }
     } catch (e) {
@@ -1736,6 +1862,463 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     } finally {
       setLoading(false);
     }
+  }
+
+  Widget _buildSaleUnitsEditor(List<_DropdownOption> unitOptions) {
+    final availableUnits = unitOptions
+        .where((option) => option.id != _selectedUnitId)
+        .toList(growable: false);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Multi Sale Unit',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
+                  0.27, ColorManager.textColor)),
+          const SizedBox(height: 4),
+          Text('Base unit is required before adding additional sale units.',
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s11,
+                  0.27, Colors.black54)),
+          const SizedBox(height: 12),
+          if (_showSaleUnitOptions) ...[
+            _buildEditBaseUnitCard(unitOptions),
+            const SizedBox(height: 10),
+            ...List.generate(_saleUnitRows.length, (index) {
+              final row = _saleUnitRows[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _buildSaleUnitRowExact(row, index, availableUnits),
+              );
+            }),
+            SizedBox(
+              height: 38,
+              child: OutlinedButton.icon(
+                onPressed: () => setState(() {
+                  _saleUnitsTouched = true;
+                  _saleUnitRows.add(AddProductSaleUnitRow(conversionRate: '1'));
+                }),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Sale Unit'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  side: BorderSide(color: ColorManager.kPrimaryColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ] else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.withOpacity(0.35)),
+              ),
+              child: const Text(
+                  'Enable this section to add additional sale units.'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditBaseUnitCard(List<_DropdownOption> unitOptions) {
+    final matchingUnits =
+        unitOptions.where((option) => option.id == _selectedUnitId);
+    final unitLabel = matchingUnits.isEmpty
+        ? _unitController.text
+        : matchingUnits.first.label;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$unitLabel (Base Unit)',
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
+                  0.27, ColorManager.textColor)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildEditInfoField('Sale Unit', unitLabel)),
+              const SizedBox(width: 8),
+              Expanded(child: _buildEditInfoField('Conversion Rate', '1')),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: _buildEditInfoField(
+                      'Barcode',
+                      _barcodeController.text.trim().isEmpty
+                          ? '-'
+                          : _barcodeController.text.trim())),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSaleUnitRowExact(
+    AddProductSaleUnitRow row,
+    int index,
+    List<_DropdownOption> availableUnits,
+  ) {
+    final selected =
+        availableUnits.where((option) => option.id == row.selectedUnitId);
+    final selectedOption = selected.isEmpty
+        ? (row.selectedUnitId == null
+            ? null
+            : _DropdownOption(
+                id: row.selectedUnitId!, label: row.selectedUnitId!))
+        : selected.first;
+    final dropdownItems = [
+      if (selectedOption != null &&
+          !availableUnits.any((option) => option.id == selectedOption.id))
+        selectedOption,
+      ...availableUnits,
+    ];
+    final size = MediaQuery.sizeOf(context);
+
+    Widget inputField(String title, TextEditingController controller,
+        {TextInputType keyboardType = TextInputType.text}) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
+                  0.27, Colors.black.withOpacity(0.6))),
+          const SizedBox(height: 4),
+          CustomBoxShadowContainer(
+            circleRadius: 7,
+            alignment: Alignment.centerLeft,
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.only(left: 12),
+            height: size.height * 0.048,
+            width: double.infinity,
+            child: TextFormField(
+              controller: controller,
+              keyboardType: keyboardType,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CustomDropDownWithSearch<String>(
+                  title: 'Sale Unit *',
+                  hintText: 'Select unit',
+                  value: row.selectedUnitId,
+                  height: size.height * 0.048,
+                  margin: EdgeInsets.zero,
+                  items: dropdownItems.map((option) => option.id).toList(),
+                  onChanged: (value) => setState(() {
+                    _saleUnitsTouched = true;
+                    row.selectedUnitId = value;
+                  }),
+                  displayText: (item) {
+                    final match =
+                        availableUnits.where((option) => option.id == item);
+                    return match.isEmpty ? item : match.first.label;
+                  },
+                  searchController: row.searchController,
+                ),
+              ),
+              IconButton(
+                onPressed: () => setState(() {
+                  _saleUnitsTouched = true;
+                  _saleUnitRows.removeAt(index).dispose();
+                }),
+                splashRadius: 18,
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: inputField(
+                  'Conversion rate *',
+                  row.conversionRateController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                        child: inputField('Barcode *', row.barcodeController)),
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: EdgeInsets.only(top: size.height * 0.021),
+                      child: SizedBox(
+                        height: size.height * 0.048,
+                        width: size.height * 0.048,
+                        child: ElevatedButton(
+                          onPressed: row.isGeneratingBarcode
+                              ? null
+                              : () async {
+                                  setState(
+                                      () => row.isGeneratingBarcode = true);
+                                  await _generateSaleUnitBarcode(
+                                      row.barcodeController);
+                                  if (mounted) {
+                                    setState(
+                                        () => row.isGeneratingBarcode = false);
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ColorManager.kPrimaryColor,
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: row.isGeneratingBarcode
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.auto_awesome,
+                                  size: 16, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: inputField(
+                  'Price *',
+                  row.priceController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _generateSaleUnitBarcode(TextEditingController target) async {
+    final token = Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (token.isEmpty) return;
+    try {
+      final result =
+          await Provider.of<GridSelectionProvider>(context, listen: false)
+              .generateBarcodeAPI(accessToken: token);
+      if (!mounted) return;
+      if (result?['status'] == 'success' &&
+          result?['data']?['barcode'] != null) {
+        target.text = result!['data']['barcode'].toString();
+      } else {
+        showScaffoldError(
+          context: context,
+          message:
+              result?['message']?.toString() ?? 'Failed to generate barcode',
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        showScaffoldError(
+            context: context, message: 'Failed to generate barcode: $error');
+      }
+    }
+  }
+
+  Widget _buildEditInfoField(String title, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
+                0.27, Colors.black.withOpacity(0.6))),
+        const SizedBox(height: 4),
+        CustomBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          height: MediaQuery.sizeOf(context).height * 0.048,
+          width: double.infinity,
+          child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+  }
+
+  // Kept for backwards compatibility with older layout experiments.
+  // ignore: unused_element
+  Widget _buildSaleUnitRow(
+    AddProductSaleUnitRow row,
+    int index,
+    List<_DropdownOption> availableUnits,
+  ) {
+    final selected =
+        availableUnits.where((option) => option.id == row.selectedUnitId);
+    final selectedOption = selected.isEmpty
+        ? (row.selectedUnitId == null
+            ? null
+            : _DropdownOption(
+                id: row.selectedUnitId!, label: row.selectedUnitId!))
+        : selected.first;
+    final dropdownItems = [
+      if (selectedOption != null &&
+          !availableUnits.any((option) => option.id == selectedOption.id))
+        selectedOption,
+      ...availableUnits,
+    ];
+
+    Widget field(String label, TextEditingController controller) {
+      return TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: ColorManager.kPrimaryColor),
+          ),
+        ),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: CustomDropDownWithSearch<String>(
+                  title: 'Sale Unit *',
+                  hintText: 'Select unit',
+                  value: row.selectedUnitId,
+                  height: MediaQuery.sizeOf(context).height * 0.048,
+                  margin: EdgeInsets.zero,
+                  items: dropdownItems.map((option) => option.id).toList(),
+                  onChanged: (value) => setState(() {
+                    _saleUnitsTouched = true;
+                    row.selectedUnitId = value;
+                  }),
+                  displayText: (item) {
+                    final matching =
+                        availableUnits.where((option) => option.id == item);
+                    return matching.isEmpty ? item : matching.first.label;
+                  },
+                  searchController: row.searchController,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Remove sale unit',
+                onPressed: () => setState(() {
+                  _saleUnitsTouched = true;
+                  final removed = _saleUnitRows.removeAt(index);
+                  removed.dispose();
+                }),
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final fields = [
+                field('Conversion rate', row.conversionRateController),
+                field('Barcode', row.barcodeController),
+                field('Price', row.priceController),
+              ];
+              if (constraints.maxWidth < 560) {
+                return Column(
+                  children: fields
+                      .map((child) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: child,
+                          ))
+                      .toList(),
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: fields[0]),
+                  const SizedBox(width: 8),
+                  Expanded(child: fields[1]),
+                  const SizedBox(width: 8),
+                  Expanded(child: fields[2]),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildEditTab(GetProduct product) {
@@ -1874,7 +2457,6 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         ),
                       ],
                     ),
-                    const SizedBox(height: verticalGap),
                     _buildLanguageFields(
                       size,
                       fieldHeight,
@@ -2064,6 +2646,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                         SizedBox(width: fieldWidth),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    _buildSaleUnitsEditor(unitOptions),
                     const SizedBox(height: verticalGap),
                     _buildVariantsSection(),
                     // if (product.stock != null && product.stock!.isNotEmpty)
@@ -2286,9 +2870,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     final screenSize = MediaQuery.sizeOf(context);
     final maxDialogWidth = screenSize.width * (widget.isCompact ? 0.96 : 0.9);
-    final minDialogWidth = widget.isCompact
-        ? 0.0
-        : math.min(600.0, maxDialogWidth);
+    final minDialogWidth =
+        widget.isCompact ? 0.0 : math.min(600.0, maxDialogWidth);
 
     final titleStyle = TextStyle(
       fontSize: widget.isCompact ? 20 : 24,

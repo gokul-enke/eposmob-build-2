@@ -520,6 +520,17 @@ class BillingMobileController {
               listen: false)
           .filterProductByBarcode(barCode: EmbeddedBarcode.searchCode(query));
 
+      if (filteredProducts.length > 1) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.ambiguousBarcode(
+            query,
+            filteredProducts.length,
+          ),
+        );
+        return;
+      }
+
       if (filteredProducts.isNotEmpty) {
         GetProduct product = filteredProducts.first;
         num? quantity;
@@ -679,9 +690,10 @@ class BillingMobileController {
           .getSelectedPaymentMethodsExcludingEmpty()
           .isNotEmpty;
 
-  /// Prepares default customer, payment, and delivery for direct confirm & print
+  /// Prepares default customer, payment, and delivery for direct confirm/save & print
   /// when [AppSettings.skipCheckoutOnConfirmAndPrint] is enabled.
-  /// Mirrors desktop `_confirmAndPrintWithoutCheckoutModal` prep steps.
+  /// Mirrors desktop `_confirmAndPrintWithoutCheckoutModal` /
+  /// `_saveAndPrintWithoutCheckoutModal` prep steps.
   Future<void> prepareDirectConfirmAndPrint(BuildContext context) async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);

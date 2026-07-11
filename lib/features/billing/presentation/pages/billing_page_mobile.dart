@@ -325,6 +325,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
     );
 
     final appSettings = appSettingsProvider.appSettings;
+    _settingsController.syncAllowOverselling(
+      appSettings: appSettings,
+      localProductProvider: localProductProvider,
+    );
     _settingsController.syncAppSettingsFlags(
       appSettings: appSettings,
       billingProvider: billingProvider,
@@ -364,6 +368,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
       final billingProvider =
           Provider.of<BillingProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
+      _settingsController.syncAllowOverselling(
+        appSettings: appSettings,
+        localProductProvider:
+            Provider.of<LocalProductProvider>(context, listen: false),
+      );
       _settingsController.syncAppSettingsFlags(
         appSettings: appSettings,
         billingProvider: billingProvider,
@@ -1018,6 +1027,15 @@ class BillingPageMobileState extends State<BillingPageMobile>
         _isConfirmingOrder ||
         _isConfirmingAndPrinting) {
       return;
+    }
+
+    if (_skipCheckoutOnConfirmAndPrint) {
+      billingDebugLog(
+        'SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct save & print',
+      );
+      await _controller.prepareDirectConfirmAndPrint(context);
+      if (!mounted) return;
+      setState(() {});
     }
 
     if (!_isCustomerSatisfiedForCheckout()) {

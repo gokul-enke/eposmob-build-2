@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 
 class BarcodePrintItem {
   final GetProduct product;
@@ -20,13 +22,25 @@ class BarcodePrintItem {
   });
 }
 
+class BarcodePrintRequest {
+  final List<BarcodePrintItem> items;
+  final String stickerSize;
+  final int stickersPerRow;
+
+  const BarcodePrintRequest({
+    required this.items,
+    required this.stickerSize,
+    required this.stickersPerRow,
+  });
+}
+
 class ConfirmBarcodePrintModal extends StatefulWidget {
   final List<GetProduct> selectedProducts;
 
   const ConfirmBarcodePrintModal({super.key, required this.selectedProducts});
 
   @override
-  _ConfirmBarcodePrintModalState createState() =>
+  State<ConfirmBarcodePrintModal> createState() =>
       _ConfirmBarcodePrintModalState();
 }
 
@@ -34,6 +48,20 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
   late List<BarcodePrintItem> printItems;
   String stickerSize = '50x25mm';
   int stickersPerRow = 1;
+
+  /// Hard cap for the free-text per-row field; the settings slider only goes
+  /// to 3, but typed input and saved JSON must not produce meter-wide pages.
+  static const int _maxStickersPerRow = 10;
+
+  /// Per-item quantity cap so a typo can't queue a multi-thousand-page PDF.
+  static const int _maxQuantityPerItem = 999;
+
+  // Once the user touches size or per-row, the async settings seed must not
+  // overwrite their input.
+  bool _userAdjustedLayout = false;
+
+  final TextEditingController _stickersPerRowController =
+      TextEditingController(text: '1');
 
   final List<String> stickerSizes = [
     '50x25mm',
@@ -48,45 +76,71 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
     '91x24mm'
   ];
 
+  DateTime? _tryParseProductDate(String? raw) {
+    final value = raw?.trim() ?? '';
+    if (value.isEmpty) return null;
+    final iso = DateTime.tryParse(value);
+    if (iso != null) return iso;
+    for (final pattern in const ['dd/MM/yyyy', 'dd-MM-yyyy', 'yyyy/MM/dd']) {
+      try {
+        return DateFormat(pattern).parseStrict(value);
+      } catch (_) {}
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    final nextMonth = DateTime(now.year, now.month + 1, now.day);
+    _applySavedLayoutDefaults();
 
     printItems = widget.selectedProducts.map((product) {
-      DateTime? expDateToUse = nextMonth;
-      // Get expiry date from product stocks if available, otherwise any identifiable expiry field
-      String? expiryDate;
-      if (product.stock != null && product.stock!.isNotEmpty) {
-        expiryDate = product.stock![0].expiryDate;
-      }
-      
-      if (expiryDate != null && expiryDate.trim().isNotEmpty) {
-        try {
-          expDateToUse = DateTime.parse(expiryDate);
-        } catch (e) {
-          // Ignore failure, falls back to next month
-        }
-      }
+      // Only prefill dates when there is exactly one unambiguous stock batch.
+      // Multiple batches require an explicit user choice; inventing or taking
+      // stock[0] can put legally incorrect dates on a product label.
+      final stock = product.stock?.length == 1 ? product.stock!.single : null;
 
       return BarcodePrintItem(
         product: product,
         quantity: 1,
-        mfgDate: now,
-        expDate: expDateToUse,
+        mfgDate: _tryParseProductDate(stock?.pkgMfg),
+        expDate: _tryParseProductDate(stock?.expiryDate),
       );
     }).toList();
   }
 
+  /// Seeds the sticker size and stickers-per-row from Printer Settings, so this
+  /// modal starts at the configured layout. Both stay editable as a per-print
+  /// override and are not written back.
+  Future<void> _applySavedLayoutDefaults() async {
+    final settings = await loadBarcodeLayoutSettings();
+    if (!mounted || _userAdjustedLayout) return;
+
+    setState(() {
+      if (stickerSizes.contains(settings.stickerSize)) {
+        stickerSize = settings.stickerSize;
+      }
+      stickersPerRow = settings.stickersPerRow.clamp(1, _maxStickersPerRow);
+      _stickersPerRowController.text = stickersPerRow.toString();
+    });
+  }
+
+  @override
+  void dispose() {
+    _stickersPerRowController.dispose();
+    super.dispose();
+  }
+
   Future<void> _selectDate(BuildContext context, int index, bool isMfg) async {
+    final current =
+        isMfg ? printItems[index].mfgDate : printItems[index].expDate;
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: current ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         if (isMfg) {
           printItems[index].mfgDate = picked;
@@ -95,6 +149,31 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
         }
       });
     }
+  }
+
+  bool _validateBeforeConfirm() {
+    if (!printItems.any((item) => item.quantity > 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Enter a quantity for at least one item.')),
+      );
+      return false;
+    }
+    for (final item in printItems) {
+      final mfg = item.mfgDate;
+      final exp = item.expDate;
+      if (mfg != null && exp != null && exp.isBefore(mfg)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Expiry date cannot be before manufacturing date for ${item.product.productName ?? 'a product'}.',
+            ),
+          ),
+        );
+        return false;
+      }
+    }
+    return true;
   }
 
   Widget _buildTableHeader(String text) {
@@ -113,16 +192,94 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
     );
   }
 
+  Widget _buildStickerSizeField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Sticker Size',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.2,
+            Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 45,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.blue.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: stickerSize,
+              isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down),
+              items: stickerSizes
+                  .map((value) =>
+                      DropdownMenuItem(value: value, child: Text(value)))
+                  .toList(),
+              onChanged: (newValue) {
+                if (newValue == null) return;
+                _userAdjustedLayout = true;
+                setState(() => stickerSize = newValue);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStickersPerRowField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Stickers Per Row',
+          style: buildCustomStyle(
+            FontWeightManager.medium,
+            FontSize.s12,
+            0.2,
+            Colors.grey.shade700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 45,
+          child: TextFormField(
+            controller: _stickersPerRowController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onChanged: (value) {
+              _userAdjustedLayout = true;
+              stickersPerRow = int.tryParse(value) ?? 1;
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final isCompact = size.width < 600;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 0,
       backgroundColor: Colors.white,
       child: Container(
-        width: size.width * 0.8,
+        width: isCompact ? size.width * 0.96 : size.width * 0.8,
         constraints:
             BoxConstraints(maxWidth: 900, maxHeight: size.height * 0.85),
         decoration: BoxDecoration(
@@ -135,7 +292,10 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact ? 16 : 24,
+                vertical: 16,
+              ),
               decoration: const BoxDecoration(
                 color: Color(0xFFD32F2F), // Red header like in screenshot
                 borderRadius: BorderRadius.only(
@@ -164,102 +324,21 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
             // Body
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: EdgeInsets.all(isCompact ? 12 : 24),
                 child: Column(
                   children: [
-                    // Controls Row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Sticker Size",
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.2,
-                                  Colors.grey.shade700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                height: 45,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                decoration: BoxDecoration(
-                                  border:
-                                      Border.all(color: Colors.blue.shade300),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: stickerSize,
-                                    isExpanded: true,
-                                    icon: const Icon(Icons.keyboard_arrow_down),
-                                    items: stickerSizes.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                    onChanged: (newValue) {
-                                      setState(() {
-                                        if (newValue != null)
-                                          stickerSize = newValue;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Stickers Per Row",
-                                style: buildCustomStyle(
-                                  FontWeightManager.medium,
-                                  FontSize.s12,
-                                  0.2,
-                                  Colors.grey.shade700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                height: 45,
-                                child: TextFormField(
-                                  initialValue: stickersPerRow.toString(),
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                          color: Colors.grey.shade300),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                          color: Colors.grey.shade300),
-                                    ),
-                                  ),
-                                  onChanged: (val) {
-                                    stickersPerRow = int.tryParse(val) ?? 1;
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                    if (isCompact) ...[
+                      _buildStickerSizeField(),
+                      const SizedBox(height: 12),
+                      _buildStickersPerRowField(),
+                    ] else
+                      Row(
+                        children: [
+                          Expanded(child: _buildStickerSizeField()),
+                          const SizedBox(width: 24),
+                          Expanded(child: _buildStickersPerRowField()),
+                        ],
+                      ),
 
                     const SizedBox(height: 24),
 
@@ -346,6 +425,10 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                                     item.quantity.toString(),
                                                 keyboardType:
                                                     TextInputType.number,
+                                                inputFormatters: [
+                                                  FilteringTextInputFormatter
+                                                      .digitsOnly,
+                                                ],
                                                 textAlign: TextAlign.center,
                                                 decoration:
                                                     const InputDecoration(
@@ -354,8 +437,15 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                                                   border: OutlineInputBorder(),
                                                 ),
                                                 onChanged: (val) {
-                                                  item.quantity =
-                                                      int.tryParse(val) ?? 1;
+                                                  // 0 skips this product at
+                                                  // print time; negatives are
+                                                  // treated the same.
+                                                  item.quantity = (int.tryParse(
+                                                              val) ??
+                                                          1)
+                                                      .clamp(0,
+                                                          _maxQuantityPerItem)
+                                                      .toInt();
                                                 },
                                               ),
                                             ),
@@ -416,7 +506,10 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
 
             // Footer
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(
+                horizontal: isCompact ? 12 : 24,
+                vertical: 16,
+              ),
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 border: Border(top: BorderSide(color: Colors.grey.shade200)),
@@ -445,12 +538,17 @@ class _ConfirmBarcodePrintModalState extends State<ConfirmBarcodePrintModal> {
                     textColor: Colors.white,
                     borderColor: const Color(0xFF2962FF),
                     fct: () {
-                      final safeStickersPerRow = stickersPerRow < 1 ? 1 : stickersPerRow;
-                      Navigator.pop(context, {
-                        'items': printItems,
-                        'size': stickerSize,
-                        'stickersPerRow': safeStickersPerRow,
-                      });
+                      if (!_validateBeforeConfirm()) return;
+                      final safeStickersPerRow =
+                          stickersPerRow.clamp(1, _maxStickersPerRow).toInt();
+                      Navigator.pop(
+                        context,
+                        BarcodePrintRequest(
+                          items: printItems,
+                          stickerSize: stickerSize,
+                          stickersPerRow: safeStickersPerRow,
+                        ),
+                      );
                     },
                     height: 40,
                     width: 100,

@@ -377,6 +377,51 @@ void main() {
       expect(item.displayPrice, closeTo(900, 0.0001));
     });
 
+    test('sale-unit master price wins over variant base price', () {
+      final product = GetProduct(
+        productId: 7,
+        productName: 'Variant Case',
+        unit: 'PC',
+        price: ProductPrice(price: '10'),
+        variants: [
+          ProductVariant(
+            id: 70,
+            price: 12,
+            attributes: const {'COLOR': 'Red'},
+          ),
+        ],
+        saleUnits: [
+          SaleUnit(
+            id: 700,
+            unitName: 'CASE',
+            conversionRate: '12',
+            price: 100,
+          ),
+        ],
+      );
+      final provider = newProvider(product);
+
+      provider.addToCart(
+        product: product,
+        quantity: 12,
+        saleUnitId: 700,
+        saleUnitName: 'CASE',
+        saleUnitConversionRate: 12,
+        variantId: 70,
+        variantAttributes: const {'COLOR': 'Red'},
+      );
+
+      final item = provider.cartItems.single;
+      expect(item.price, closeTo(100 / 12, 0.0001));
+      expect(item.displayPrice, closeTo(100, 0.0001));
+      expect(item.variantId, 70);
+      expect(provider.buildOrderItemsPayload().single['price'], 100);
+      expect(
+        provider.buildOrderItemsPayload().single['product_variant_id'],
+        70,
+      );
+    });
+
     test('payload multiplies resolved base price back to sale-unit price', () {
       final product = buildProduct(masterDozenPrice: 900);
       final stock = Stock(

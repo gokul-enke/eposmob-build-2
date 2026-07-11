@@ -291,7 +291,10 @@ class _RestaurantPageState extends State<RestaurantPage> {
         if (hasInternet) {
           orderPanelState?.showCheckoutFromParent();
         } else {
-          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
+          // Offline F2 opens checkout (Save), never skip-to-print.
+          orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent(
+            allowSkipCheckout: false,
+          );
         }
       } else if (key == LogicalKeyboardKey.f3) {
         unawaited(orderPanelState?.showCustomerSelectionModal() ??
@@ -310,6 +313,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         } else {
           orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent(
             initialStep: 3,
+            allowSkipCheckout: false,
           );
         }
       } else if (key == LogicalKeyboardKey.f6) {
@@ -318,6 +322,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         if (hasInternet) {
           orderPanelState?.showCurrentCartConfirmAndPrintFromParent();
         } else {
+          // Offline F6 = Save & Print (respects skip-checkout setting).
           orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
         }
       } else if (key == LogicalKeyboardKey.f7) {
@@ -331,6 +336,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
               Future<void>.value());
         } else {
           if (disableCounterConfirmActions) return;
+          // Offline F9 = Save & Print (respects skip-checkout setting).
           orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent();
         }
       } else if (key == LogicalKeyboardKey.f10) {
@@ -340,6 +346,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
         } else {
           orderPanelState?.showOfflineSaveAndPrintCheckoutFromParent(
             initialStep: 2,
+            allowSkipCheckout: false,
           );
         }
       }
@@ -760,8 +767,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
                     color: const Color(0xFF7C3AED),
                     isSelected: _hasCounterCustomer(customerSelectionProvider),
                     onTap: () async {
-                      final state = _orderPanelKey.currentState;
+                      final state = await _ensureOrderPanelState();
                       if (state == null) {
+                        if (!mounted) return;
                         showScaffoldError(
                           context: context,
                           message: 'Customer selector is not ready yet',
@@ -774,14 +782,36 @@ class _RestaurantPageState extends State<RestaurantPage> {
                   ),
                   const SizedBox(height: 10),
                   _buildCounterSelectorButton(
+                    icon: Icons.payments_rounded,
+                    title: 'Payment',
+                    value: _counterPaymentLabel(fallback: 'Select payment'),
+                    color: const Color(0xFFEA580C),
+                    isSelected: _hasCounterPaymentSelection,
+                    onTap: () async {
+                      final state = await _ensureOrderPanelState();
+                      if (state == null) {
+                        if (!mounted) return;
+                        showScaffoldError(
+                          context: context,
+                          message: 'Payment selector is not ready yet',
+                        );
+                        return;
+                      }
+                      await state.showPaymentSelectionModalFromParent();
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildCounterSelectorButton(
                     icon: Icons.local_shipping_rounded,
                     title: 'Delivery',
                     value: _counterDeliveryLabel(fallback: 'Select delivery'),
                     color: const Color(0xFF059669),
                     isSelected: _hasCounterDeliverySelection,
                     onTap: () async {
-                      final state = _orderPanelKey.currentState;
+                      final state = await _ensureOrderPanelState();
                       if (state == null) {
+                        if (!mounted) return;
                         showScaffoldError(
                           context: context,
                           message: 'Delivery selector is not ready yet',
@@ -1584,8 +1614,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
         isCompact: isCompact,
         maxWidth: chipMaxWidth,
         onTap: () async {
-          final state = _orderPanelKey.currentState;
+          final state = await _ensureOrderPanelState();
           if (state == null) {
+            if (!mounted) return;
             showScaffoldError(
               context: context,
               message: 'Customer selector is not ready yet',
@@ -1597,6 +1628,27 @@ class _RestaurantPageState extends State<RestaurantPage> {
         },
       ),
       _buildTopBarContextChip(
+        icon: Icons.payments_rounded,
+        label: _counterPaymentLabel(fallback: 'Payment'),
+        color: const Color(0xFFEA580C),
+        isSelected: _hasCounterPaymentSelection,
+        isCompact: isCompact,
+        maxWidth: chipMaxWidth,
+        onTap: () async {
+          final state = await _ensureOrderPanelState();
+          if (state == null) {
+            if (!mounted) return;
+            showScaffoldError(
+              context: context,
+              message: 'Payment selector is not ready yet',
+            );
+            return;
+          }
+          await state.showPaymentSelectionModalFromParent();
+          if (mounted) setState(() {});
+        },
+      ),
+      _buildTopBarContextChip(
         icon: Icons.local_shipping_rounded,
         label: _counterDeliveryLabel(fallback: 'Delivery'),
         color: const Color(0xFF059669),
@@ -1604,8 +1656,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
         isCompact: isCompact,
         maxWidth: chipMaxWidth,
         onTap: () async {
-          final state = _orderPanelKey.currentState;
+          final state = await _ensureOrderPanelState();
           if (state == null) {
+            if (!mounted) return;
             showScaffoldError(
               context: context,
               message: 'Delivery selector is not ready yet',
@@ -2027,6 +2080,44 @@ class _RestaurantPageState extends State<RestaurantPage> {
                 (_editingOrderDeliveryMethodName?.isNotEmpty ?? false)));
   }
 
+  String _appDefaultPaymentMethodLabel() {
+    final raw = Provider.of<AppSettingsProvider>(context, listen: false)
+        .appSettings
+        ?.defaultPaymentMethod
+        .trim()
+        .toUpperCase();
+    if (raw == null || raw.isEmpty) return 'CASH';
+    return raw;
+  }
+
+  String _counterPaymentLabel({required String fallback}) {
+    return _orderPanelKey.currentState?.selectedPaymentMethodLabelForDraft ??
+        _appDefaultPaymentMethodLabel();
+  }
+
+  bool get _hasCounterPaymentSelection {
+    // App default (usually CASH) is always treated as selected for the chip,
+    // matching checkout autofill — even before OrderPanel hydrates.
+    return _orderPanelKey.currentState?.hasPaymentMethodSelectedForDraft ??
+        true;
+  }
+
+  /// Ensures OrderPanel is mounted (mobile Products tab keeps it Offstage)
+  /// before opening selection modals from the top-bar chips.
+  Future<OrderPanelState?> _ensureOrderPanelState() async {
+    var state = _orderPanelKey.currentState;
+    if (state != null) return state;
+
+    // Fallback: switch to Orders so the panel mounts, then retry.
+    if (_currentMobileView != MobileView.orders) {
+      setState(() => _currentMobileView = MobileView.orders);
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return null;
+      state = _orderPanelKey.currentState;
+    }
+    return state;
+  }
+
   Widget _buildTopBarContextChip({
     required IconData icon,
     required String label,
@@ -2301,17 +2392,33 @@ class _RestaurantPageState extends State<RestaurantPage> {
   }
 
   Widget _buildMobileLayout(Size screenSize) {
+    // Keep OrderPanel mounted (Offstage) even on Products/Tables so top-bar
+    // customer/payment chips and New Order reset can use _orderPanelKey.
+    final showOrders = _currentMobileView == MobileView.orders;
     return Column(
       children: [
         _buildAttenderTopBar(isCompact: true, isMobile: true),
         Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: switch (_currentMobileView) {
-              MobileView.tables => _buildTablesView(screenSize),
-              MobileView.orders => _buildOrdersView(screenSize),
-              MobileView.products => _buildMobileProductsView(screenSize),
-            },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Offstage(
+                offstage: !showOrders,
+                child: TickerMode(
+                  enabled: showOrders,
+                  child: _buildOrdersView(screenSize),
+                ),
+              ),
+              if (!showOrders)
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: switch (_currentMobileView) {
+                    MobileView.tables => _buildTablesView(screenSize),
+                    MobileView.products => _buildMobileProductsView(screenSize),
+                    MobileView.orders => const SizedBox.shrink(),
+                  },
+                ),
+            ],
           ),
         ),
         _buildMobileBottomNav(),
@@ -2990,6 +3097,9 @@ class _RestaurantPageState extends State<RestaurantPage> {
     _applyDefaultCounterDeliveryMethodContext();
     _orderPanelKey.currentState?.resetActiveOrderContext();
     _orderPanelKey.currentState?.showCurrentOrderTab();
+    // Order panel applies default payment inside reset; rebuild parent so the
+    // top-bar Payment chip picks up the restored default label.
+    if (mounted) setState(() {});
   }
 
   Future<void> _handleItemAdd(GetProduct product, int quantity) async {

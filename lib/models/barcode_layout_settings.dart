@@ -2,30 +2,56 @@ import 'dart:convert';
 
 /// Holds all user-configurable barcode sticker layout settings.
 class BarcodeLayoutSettings {
+  static const int currentSchemaVersion = 2;
+  static const double defaultBarcodeHeight = 15;
+
+  static const List<String> supportedStickerSizes = [
+    '50x25mm',
+    '30x20mm',
+    '38x25mm',
+    '40x25mm',
+    '55x35mm',
+    '60x40mm',
+    '70x40mm',
+    '100x50mm',
+    '40x20mm',
+    '91x24mm',
+  ];
+
   // Sticker dimensions (mm)
-  String stickerSize;
+  final String stickerSize;
 
   // Stickers per row
-  int stickersPerRow;
+  final int stickersPerRow;
 
   // Page margin (mm)
-  double pageMargin;
+  final double pageMargin;
 
   // Gap between stickers (mm)
-  double stickerGap;
+  final double stickerGap;
 
   // Font sizes (pt)
-  double storeNameFontSize;
-  double productNameFontSize;
-  double priceFontSize;
-  double dateFontSize;
-  double barcodeNumberFontSize;
+  final double storeNameFontSize;
+  final double productNameFontSize;
+  final double priceFontSize;
+  final double dateFontSize;
+  final double barcodeNumberFontSize;
 
   // Barcode image height (pt)
-  double barcodeHeight;
+  final double barcodeHeight;
+
+  // Width occupied by barcode bars as a percentage of the sticker width.
+  final double barcodeWidthPercent;
 
   // Spacing between elements (pt)
-  double elementSpacing;
+  final double elementSpacing;
+
+  // Source raster density used before the printer/driver performs final output.
+  final int rasterDpi;
+
+  /// Default gap between sticker elements. 1.5pt reproduces the 2%-of-height
+  /// gap the renderer used before this became configurable.
+  static const double defaultElementSpacing = 1.5;
 
   BarcodeLayoutSettings({
     this.stickerSize = '50x25mm',
@@ -37,11 +63,14 @@ class BarcodeLayoutSettings {
     this.priceFontSize = 13,
     this.dateFontSize = 9,
     this.barcodeNumberFontSize = 9,
-    this.barcodeHeight = 20,
-    this.elementSpacing = 0.2,
+    this.barcodeHeight = defaultBarcodeHeight,
+    this.barcodeWidthPercent = 70,
+    this.elementSpacing = defaultElementSpacing,
+    this.rasterDpi = 300,
   });
 
   Map<String, dynamic> toJson() => {
+        'schemaVersion': currentSchemaVersion,
         'stickerSize': stickerSize,
         'stickersPerRow': stickersPerRow,
         'pageMargin': pageMargin,
@@ -52,25 +81,56 @@ class BarcodeLayoutSettings {
         'dateFontSize': dateFontSize,
         'barcodeNumberFontSize': barcodeNumberFontSize,
         'barcodeHeight': barcodeHeight,
+        'barcodeWidthPercent': barcodeWidthPercent,
         'elementSpacing': elementSpacing,
+        'rasterDpi': rasterDpi,
       };
 
   factory BarcodeLayoutSettings.fromJson(Map<String, dynamic> json) {
+    final rawStickerSize = json['stickerSize']?.toString() ?? '50x25mm';
+    final rawDpi = (json['rasterDpi'] as num?)?.round() ?? 300;
     return BarcodeLayoutSettings(
-      stickerSize: json['stickerSize'] as String? ?? '50x25mm',
-      stickersPerRow: json['stickersPerRow'] as int? ?? 1,
-      pageMargin: (json['pageMargin'] as num?)?.toDouble() ?? 0,
-      stickerGap: (json['stickerGap'] as num?)?.toDouble() ?? 5.0,
-      storeNameFontSize:
-          (json['storeNameFontSize'] as num?)?.toDouble() ?? 9,
+      stickerSize: supportedStickerSizes.contains(rawStickerSize)
+          ? rawStickerSize
+          : '50x25mm',
+      stickersPerRow:
+          ((json['stickersPerRow'] as num?)?.round() ?? 1).clamp(1, 3).toInt(),
+      pageMargin: ((json['pageMargin'] as num?)?.toDouble() ?? 0)
+          .clamp(0, 10)
+          .toDouble(),
+      stickerGap: ((json['stickerGap'] as num?)?.toDouble() ?? 5.0)
+          .clamp(0, 10)
+          .toDouble(),
+      storeNameFontSize: ((json['storeNameFontSize'] as num?)?.toDouble() ?? 11)
+          .clamp(4, 24)
+          .toDouble(),
       productNameFontSize:
-          (json['productNameFontSize'] as num?)?.toDouble() ?? 9,
-      priceFontSize: (json['priceFontSize'] as num?)?.toDouble() ?? 11,
-      dateFontSize: (json['dateFontSize'] as num?)?.toDouble() ?? 7,
+          ((json['productNameFontSize'] as num?)?.toDouble() ?? 11)
+              .clamp(4, 24)
+              .toDouble(),
+      priceFontSize: ((json['priceFontSize'] as num?)?.toDouble() ?? 13)
+          .clamp(4, 24)
+          .toDouble(),
+      dateFontSize: ((json['dateFontSize'] as num?)?.toDouble() ?? 9)
+          .clamp(4, 24)
+          .toDouble(),
       barcodeNumberFontSize:
-          (json['barcodeNumberFontSize'] as num?)?.toDouble() ?? 7,
-      barcodeHeight: (json['barcodeHeight'] as num?)?.toDouble() ?? 30,
-      elementSpacing: (json['elementSpacing'] as num?)?.toDouble() ?? 0,
+          ((json['barcodeNumberFontSize'] as num?)?.toDouble() ?? 9)
+              .clamp(4, 24)
+              .toDouble(),
+      barcodeHeight:
+          ((json['barcodeHeight'] as num?)?.toDouble() ?? defaultBarcodeHeight)
+              .clamp(5, 60)
+              .toDouble(),
+      barcodeWidthPercent:
+          ((json['barcodeWidthPercent'] as num?)?.toDouble() ?? 70)
+              .clamp(30, 95)
+              .toDouble(),
+      elementSpacing: ((json['elementSpacing'] as num?)?.toDouble() ??
+              defaultElementSpacing)
+          .clamp(0, 8)
+          .toDouble(),
+      rasterDpi: rawDpi == 203 ? 203 : 300,
     );
   }
 
@@ -92,7 +152,9 @@ class BarcodeLayoutSettings {
     double? dateFontSize,
     double? barcodeNumberFontSize,
     double? barcodeHeight,
+    double? barcodeWidthPercent,
     double? elementSpacing,
+    int? rasterDpi,
   }) {
     return BarcodeLayoutSettings(
       stickerSize: stickerSize ?? this.stickerSize,
@@ -106,7 +168,9 @@ class BarcodeLayoutSettings {
       barcodeNumberFontSize:
           barcodeNumberFontSize ?? this.barcodeNumberFontSize,
       barcodeHeight: barcodeHeight ?? this.barcodeHeight,
+      barcodeWidthPercent: barcodeWidthPercent ?? this.barcodeWidthPercent,
       elementSpacing: elementSpacing ?? this.elementSpacing,
+      rasterDpi: rasterDpi ?? this.rasterDpi,
     );
   }
 

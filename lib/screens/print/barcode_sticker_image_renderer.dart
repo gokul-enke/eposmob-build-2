@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pos_machine/models/barcode_layout_settings.dart';
 
 /// Renders a barcode sticker to a PNG using Flutter's text engine.
 ///
@@ -15,8 +16,16 @@ import 'package:pdf/widgets.dart' as pw;
 class BarcodeStickerImageRenderer {
   BarcodeStickerImageRenderer._();
 
+  static double reservedBarcodeHeight(double requestedHeight) => math.max(
+        requestedHeight,
+        BarcodeLayoutSettings.defaultBarcodeHeight,
+      );
+
   static const String _regularFamily = 'BarcodeStickerNoto';
   static const String _boldFamily = 'BarcodeStickerNotoBold';
+
+  /// PostScript points per millimetre, for converting pt-based settings to px.
+  static const double _pointsPerMm = 2.83465;
 
   static bool _fontsLoaded = false;
   static ui.Image? _sarSymbol;
@@ -45,8 +54,7 @@ class BarcodeStickerImageRenderer {
   }
 
   static bool _isRtl(String text) {
-    return RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]')
-        .hasMatch(text);
+    return RegExp(r'[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]').hasMatch(text);
   }
 
   static bool _isDigitsLike(String text) {
@@ -111,8 +119,8 @@ class BarcodeStickerImageRenderer {
       for (final e in elements) {
         if (e is pw.BarcodeBar && e.black) {
           canvas.drawRect(
-            Rect.fromLTWH(slot.left + e.left, slot.top + e.top, e.width,
-                e.height),
+            Rect.fromLTWH(
+                slot.left + e.left, slot.top + e.top, e.width, e.height),
             paint,
           );
         }
@@ -164,8 +172,7 @@ class BarcodeStickerImageRenderer {
     canvas.scale(scale);
     canvas.drawImageRect(
       symbol,
-      Rect.fromLTWH(
-          0, 0, symbol.width.toDouble(), symbol.height.toDouble()),
+      Rect.fromLTWH(0, 0, symbol.width.toDouble(), symbol.height.toDouble()),
       Rect.fromLTWH(0, (totalH - symbolH) / 2, symbolW, symbolH),
       Paint()..filterQuality = FilterQuality.high,
     );
@@ -192,28 +199,43 @@ class BarcodeStickerImageRenderer {
     required double dateFontSize,
     required double barcodeNumberFontSize,
     required double barcodeHeight,
+    double barcodeWidthPercent = 70,
+    double elementSpacing = BarcodeLayoutSettings.defaultElementSpacing,
     double pixelsPerMm = 12,
   }) async {
     await _ensureAssets();
 
-    // Slot weights mirror the previous PDF layout: font-size setting times a
-    // per-line boost, barcode share driven by the barcode-height setting.
-    final entries = <({double weight, void Function(Canvas, Rect) paint})>[];
+    // Each entry has an actual paint weight and a reserved layout weight.
+    // Barcode heights below the 15pt default keep the default reservation, so
+    // reducing the bars creates whitespace instead of enlarging other fields.
+    final entries = <({
+      double weight,
+      double reservedWeight,
+      void Function(Canvas, Rect) paint,
+    })>[];
 
     if (storeName.isNotEmpty) {
       final tp = _painter(storeName, bold: true);
       entries.add((
         weight: storeNameFontSize * 2.0,
+        reservedWeight: storeNameFontSize * 2.0,
         paint: (c, r) => _paintFitted(c, r, tp),
       ));
     }
 
     if (barcodeValue.isNotEmpty) {
+      const defaultBarcodeWeight = 35.0;
+      const barcodeWeightPerPoint =
+          defaultBarcodeWeight / BarcodeLayoutSettings.defaultBarcodeHeight;
+      final actualBarcodeWeight = barcodeHeight * barcodeWeightPerPoint;
+      final reservedBarcodeWeight =
+          reservedBarcodeHeight(barcodeHeight) * barcodeWeightPerPoint;
       entries.add((
-        weight: barcodeHeight + 20,
+        weight: actualBarcodeWeight,
+        reservedWeight: reservedBarcodeWeight,
         paint: (c, r) {
-          // Side quiet zones: bars span ~70% of the sticker width.
-          final inset = r.width * 0.15;
+          final widthFraction = (barcodeWidthPercent / 100).clamp(0.30, 0.95);
+          final inset = r.width * (1 - widthFraction) / 2;
           _paintBarcode(
             c,
             Rect.fromLTRB(r.left + inset, r.top + r.height * 0.05,
@@ -227,6 +249,7 @@ class BarcodeStickerImageRenderer {
         final tp = _painter(barcodeValue, bold: false);
         entries.add((
           weight: barcodeNumberFontSize * 1.9,
+          reservedWeight: barcodeNumberFontSize * 1.9,
           paint: (c, r) => _paintFitted(c, r, tp),
         ));
       }
@@ -236,6 +259,7 @@ class BarcodeStickerImageRenderer {
       final tp = _painter(productName, bold: false);
       entries.add((
         weight: productNameFontSize * 1.8,
+        reservedWeight: productNameFontSize * 1.8,
         paint: (c, r) => _paintFitted(c, r, tp),
       ));
     }
@@ -243,6 +267,7 @@ class BarcodeStickerImageRenderer {
     if (priceText.isNotEmpty) {
       entries.add((
         weight: priceFontSize * 2.3,
+        reservedWeight: priceFontSize * 2.3,
         paint: (c, r) =>
             _paintPrice(c, r, priceText: priceText, currency: currency),
       ));
@@ -252,11 +277,16 @@ class BarcodeStickerImageRenderer {
       final tp = _painter(dateLine, bold: true);
       entries.add((
         weight: dateFontSize * 1.8,
+        reservedWeight: dateFontSize * 1.8,
         paint: (c, r) => _paintFitted(c, r, tp),
       ));
     }
 
     if (entries.isEmpty) return null;
+
+    final double totalReservedWeight =
+        entries.fold(0, (sum, e) => sum + e.reservedWeight);
+    if (totalReservedWeight <= 0) return null;
 
     final double w = widthMm * pixelsPerMm;
     final double h = heightMm * pixelsPerMm;
@@ -270,16 +300,22 @@ class BarcodeStickerImageRenderer {
 
     final double padX = w * 0.02;
     final double padY = h * 0.035;
-    final double gap = h * 0.02;
+    final double gap =
+        (elementSpacing / _pointsPerMm * pixelsPerMm).clamp(0.0, h * 0.1);
     final double usableH = h - padY * 2 - gap * (entries.length - 1);
-    final double totalWeight =
-        entries.fold(0, (sum, e) => sum + e.weight);
 
     double y = padY;
     for (final entry in entries) {
-      final double slotH = usableH * (entry.weight / totalWeight);
-      entry.paint(canvas, Rect.fromLTWH(padX, y, w - padX * 2, slotH));
-      y += slotH + gap;
+      final double reservedSlotH =
+          usableH * (entry.reservedWeight / totalReservedWeight);
+      final double paintSlotH =
+          reservedSlotH * (entry.weight / entry.reservedWeight);
+      final double paintY = y + (reservedSlotH - paintSlotH) / 2;
+      entry.paint(
+        canvas,
+        Rect.fromLTWH(padX, paintY, w - padX * 2, paintSlotH),
+      );
+      y += reservedSlotH + gap;
     }
 
     final picture = recorder.endRecording();

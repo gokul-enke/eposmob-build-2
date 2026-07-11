@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/product_variant_selection.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/home/mobile_variant_picker_sheet.dart';
 import 'package:pos_machine/models/get_product.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
@@ -41,6 +43,9 @@ class ProductCartHelper {
     String? customerName,
     SaleUnit? selectedSaleUnit,
     ProductVariant? selectedVariant,
+    String? scannedBarcode,
+    bool? variantEnabled,
+    ZeroPriceQuickEntryPrompt? zeroPricePrompt,
   }) async {
     try {
       await _handleProductSelectionImpl(
@@ -55,6 +60,9 @@ class ProductCartHelper {
         customerName: customerName,
         selectedSaleUnit: selectedSaleUnit,
         selectedVariant: selectedVariant,
+        scannedBarcode: scannedBarcode,
+        variantEnabled: variantEnabled,
+        zeroPricePrompt: zeroPricePrompt,
       );
     } catch (error) {
       debugPrint('ProductCartHelper error: $error');
@@ -79,8 +87,88 @@ class ProductCartHelper {
     String? customerName,
     SaleUnit? selectedSaleUnit,
     ProductVariant? selectedVariant,
+    String? scannedBarcode,
+    bool? variantEnabled,
+    ZeroPriceQuickEntryPrompt? zeroPricePrompt,
   }) async {
     debugPrint("=== PRODUCT CART HELPER DEBUG START ===");
+
+    // STEP 0: Resolve a variant if the caller didn't already pick one.
+    // Mirrors the stock-selection / zero-price flows below: auto-resolve when
+    // unambiguous, otherwise show a picker, all from this single entry point
+    // so every add-to-cart call site (mobile, desktop, restaurant) gets
+    // variant support without needing to know about it.
+    bool variantsOn = variantEnabled ?? false;
+    bool variantSettingResolved = variantEnabled != null;
+    bool allowOverselling = true;
+    try {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      allowOverselling =
+          appSettingsProvider.appSettings?.allowOverselling ?? true;
+      if (variantEnabled == null) {
+        variantsOn =
+            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+        variantSettingResolved = true;
+      }
+    } on ProviderNotFoundException catch (_) {
+      if (variantEnabled == null) {
+        // Isolated tests and non-production trees may omit settings. Preserve
+        // the existing fail-closed behavior in that case.
+        variantsOn = false;
+      }
+    }
+
+    // Compatibility for isolated/manual callers that already resolved a
+    // concrete variant but do not have the app settings provider above them.
+    if (!variantSettingResolved && selectedVariant != null) {
+      variantsOn = true;
+    }
+
+    if (!variantsOn) {
+      selectedVariant = null;
+    }
+
+    if (variantsOn && product.hasVariants) {
+      if (product.activeVariants.isEmpty) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.noActiveVariants(
+            product.productName ?? 'This product',
+          ),
+        );
+        return;
+      }
+      if (selectedVariant != null && !selectedVariant.active) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.noActiveVariants(
+            product.productName ?? 'This product',
+          ),
+        );
+        return;
+      }
+    }
+
+    if (selectedVariant == null && variantsOn && product.hasVariants) {
+      selectedVariant = ProductVariantSelection.tryResolveWithoutPicker(
+        product,
+        scannedBarcode: scannedBarcode,
+      );
+
+      if (selectedVariant == null &&
+          ProductVariantSelection.needsVariantPicker(product)) {
+        selectedVariant = await showMobileVariantPickerSheet(
+          context: context,
+          product: product,
+        );
+        if (selectedVariant == null || !context.mounted) {
+          debugPrint("❌ Variant picker cancelled - aborting add");
+          debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+          return;
+        }
+      }
+    }
     debugPrint("Product selected: ${product.productName}");
     debugPrint("Product ID: ${product.productId}");
     debugPrint("Product base price: ${product.price?.price ?? 'null'}");
@@ -144,32 +232,12 @@ class ProductCartHelper {
 
     // Set the stock enabled status in LocalProductProvider
     localProductProvider.setStockEnabled(stockEnabled);
-
-    // A variant reporting zero stock is a data signal, not a hard stop: the
-    // cashier may be holding the physical item. Confirm instead of refusing,
-    // and only when stock management is actually enabled.
-    if (stockEnabled &&
-        selectedVariant != null &&
-        ProductVariantSelection.isOutOfStock(selectedVariant)) {
-      final label = selectedVariant.formattedAttributes.isEmpty
-          ? (selectedVariant.sku ?? 'Selected variant')
-          : selectedVariant.formattedAttributes;
-      final sellAnyway = await showSellAnywayConfirmDialog(
-        context: context,
-        message: BillingMobileErrorMessages.variantOutOfStockConfirm(label),
-      );
-      if (!sellAnyway || !context.mounted) {
-        debugPrint("❌ Variant out of stock — cashier declined oversell");
-        debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
-        return;
-      }
-      debugPrint("⚠️ Variant out of stock — cashier confirmed oversell");
-    }
+    localProductProvider.setAllowOverselling(allowOverselling);
 
     // Mirror the configured grouping fields so cart merge decisions use the
     // same pricing signature as stock grouping.
-    localProductProvider
-        .setActiveStockGroupingFields(masterDataProvider.activeStockGroupingFields);
+    localProductProvider.setActiveStockGroupingFields(
+        masterDataProvider.activeStockGroupingFields);
 
     // Variables to track selected stock and final values
     Stock? selectedStock;
@@ -194,15 +262,15 @@ class ProductCartHelper {
     if (stockEnabled && product.stock != null && product.stock!.isNotEmpty) {
       debugPrint("📦 STEP 1: Handling stock selection...");
 
-      // Variant-scoped stock (server rule §4): when a variant is chosen, draw
-      // only from its scoped stock rows; if it has none, fall back to general
-      // (non-variant) stock. Null variant → list unchanged (identical behavior).
+      // Variant-scoped stock is strict: variants can consume only their own
+      // rows and plain products can consume only general stock rows.
       final List<Stock> availableStocks =
           LocalProductProvider.filterStocksForVariant(
         localProductProvider.getStockOptionsForStore(
           product,
           activeStoreId: activeStore?.storeId,
           activeStoreName: activeStore?.storeName,
+          includeNonPositive: allowOverselling,
         ),
         selectedVariant?.id,
       );
@@ -211,9 +279,28 @@ class ProductCartHelper {
       debugPrint("  - Active Store ID: ${activeStore?.storeId}");
       debugPrint("  - Active Store Name: ${activeStore?.storeName}");
       debugPrint(
-          "  - Matching stock entries (qty>0): ${availableStocks.length}");
+          "  - Matching selectable stock entries: ${availableStocks.length}");
 
       if (availableStocks.isEmpty) {
+        if (selectedVariant != null) {
+          if (allowOverselling) {
+            // A missing variant stock row is still a valid sales-first
+            // oversell. Keep the exact variant identity, but leave stock
+            // unallocated rather than borrowing another variant's row.
+            debugPrint(
+                "⚠️ No stock row for variant ${selectedVariant.id}; allowing unallocated oversell");
+          } else {
+            final label = selectedVariant.formattedAttributes.isEmpty
+                ? (selectedVariant.sku ?? 'Selected variant')
+                : selectedVariant.formattedAttributes;
+            showScaffoldError(
+              context: context,
+              message:
+                  BillingMobileErrorMessages.variantStockUnavailable(label),
+            );
+            return;
+          }
+        }
         // All stock entries have qty=0 OR no store-matching entries → base price
         debugPrint(
             "⚠️ No available stock (qty>0) found - fallback to product base pricing");
@@ -368,6 +455,21 @@ class ProductCartHelper {
     } else {
       debugPrint(
           "📦 Product has no stock entries, using basic product info...");
+      if (selectedVariant != null) {
+        if (allowOverselling) {
+          debugPrint(
+              "⚠️ Product has no stock rows for variant ${selectedVariant.id}; allowing unallocated oversell");
+        } else {
+          final label = selectedVariant.formattedAttributes.isEmpty
+              ? (selectedVariant.sku ?? 'Selected variant')
+              : selectedVariant.formattedAttributes;
+          showScaffoldError(
+            context: context,
+            message: BillingMobileErrorMessages.variantStockUnavailable(label),
+          );
+          return;
+        }
+      }
       finalPrice =
           finalPrice ?? double.tryParse(product.price?.price ?? "0") ?? 0;
       finalMrp = finalMrp ?? double.tryParse(product.mrp ?? "0") ?? 0;
@@ -377,32 +479,22 @@ class ProductCartHelper {
       debugPrint("  - Final MRP: $finalMrp");
     }
 
-    // Sale-unit shortfall (e.g. CASE barcode scanned but the system tracks
-    // fewer base units): the physical case exists, so offer an oversell
-    // confirmation instead of refusing the sale. This matches the base-unit
-    // behavior where addToCart reserves what it can and sells the rest.
     if (stockEnabled &&
-        selectedSaleUnit != null &&
+        !allowOverselling &&
         selectedStock != null &&
         (selectedStock.quantity ?? 0) < requestedQuantity) {
       if (!context.mounted) {
         return;
       }
-      final sellAnyway = await showSellAnywayConfirmDialog(
+      showScaffoldError(
         context: context,
         message: BillingMobileErrorMessages.insufficientStockConfirm(
-          selectedSaleUnit.unitName ?? product.unit ?? 'selected unit',
+          selectedSaleUnit?.unitName ?? product.unit ?? 'selected unit',
           selectedStock.quantity ?? 0,
           requestedQuantity,
         ),
       );
-      if (!sellAnyway || !context.mounted) {
-        debugPrint(
-            "❌ Sale-unit stock shortfall — cashier declined oversell");
-        debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
-        return;
-      }
-      debugPrint("⚠️ Sale-unit stock shortfall — cashier confirmed oversell");
+      return;
     }
 
     // STEP 3: Handle onSelected callback if provided
@@ -416,7 +508,8 @@ class ProductCartHelper {
     // STEP 4: Add to cart if required
     if (addToCartDirectly) {
       // Set final values with defaults
-      num cartQuantity = finalQuantity ?? 1;
+      num cartQuantity =
+          finalQuantity != null && finalQuantity > 0 ? finalQuantity : 1;
       double? existingCartItemPrice;
       bool markPriceAsManualOverride = hasExplicitPriceOverride;
 
@@ -468,6 +561,11 @@ class ProductCartHelper {
               null; // Don't pass price, let addToCart preserve existing price
           mrpToUse =
               null; // Don't pass MRP, let addToCart preserve existing MRP
+        } else if (selectedVariant != null) {
+          debugPrint(
+              "💰 New variant product to cart - deferring to the unified provider price chain");
+          priceToUse = null;
+          mrpToUse = null;
         } else {
           debugPrint(
               "💰 New product to cart - deferring price/MRP to provider resolution (sale-unit chain)");
@@ -482,13 +580,22 @@ class ProductCartHelper {
       // Zero-priced products need a price before entering the cart: open the
       // quick price/quantity entry modal (pre-filled with the default
       // customer's last bought price). Cancelling aborts the add.
-      final double predictedUnitPrice =
-          priceToUse ?? existingCartItemPrice ?? finalPrice;
+      final double predictedUnitPrice = priceToUse ??
+          existingCartItemPrice ??
+          localProductProvider.previewCartUnitPrice(
+            product: product,
+            quantity: cartQuantity,
+            selectedStock: selectedStock,
+            fallbackPrice: finalPrice,
+            saleUnitId: selectedSaleUnit?.id,
+            variantId: selectedVariant?.id,
+          );
       if (ZeroPriceQuickEntryHelper.isZeroPrice(predictedUnitPrice)) {
         if (!context.mounted) {
           return;
         }
-        final entry = await ZeroPriceQuickEntryHelper.promptForProduct(
+        final entry = await (zeroPricePrompt ??
+            ZeroPriceQuickEntryHelper.promptForProduct)(
           context: context,
           product: product,
           initialQuantity: cartQuantity,
@@ -523,7 +630,17 @@ class ProductCartHelper {
       debugPrint("Selected Stock ID: ${selectedStock?.id}");
       debugPrint("Stock Management Enabled: $stockEnabled");
 
-      localProductProvider.addToCart(
+      if (!context.mounted) return;
+      final warrantyEnabled = await _requestWarrantyChoice(
+        context: context,
+        product: product,
+      );
+      if (warrantyEnabled == null || !context.mounted) {
+        debugPrint('Warranty choice dismissed - product not added to cart');
+        return;
+      }
+
+      final added = localProductProvider.addToCart(
         product: product,
         quantity: cartQuantity,
         price: priceToUse,
@@ -536,7 +653,26 @@ class ProductCartHelper {
         saleUnitConversionRate: _parseSaleUnitConversionRate(selectedSaleUnit),
         variantId: selectedVariant?.id,
         variantAttributes: selectedVariant?.attributes,
+        warrantyEnabled: warrantyEnabled,
       );
+
+      if (!added) {
+        if (context.mounted) {
+          showScaffoldError(
+            context: context,
+            message: selectedVariant == null
+                ? BillingMobileErrorMessages.insufficientStock(
+                    selectedSaleUnit?.unitName ?? product.unit ?? 'item',
+                  )
+                : BillingMobileErrorMessages.variantStockUnavailable(
+                    selectedVariant.formattedAttributes.isEmpty
+                        ? (selectedVariant.sku ?? 'Selected variant')
+                        : selectedVariant.formattedAttributes,
+                  ),
+          );
+        }
+        return;
+      }
 
       if (context.mounted) {
         showScaffold(
@@ -547,6 +683,86 @@ class ProductCartHelper {
     }
 
     debugPrint("=== PRODUCT CART HELPER DEBUG END ===");
+  }
+
+  static bool _hasWarranty(GetProduct product) {
+    return product.productProps?.any((prop) {
+          return prop.propsCode?.trim().toUpperCase() == 'WARRANTY_IN_MONTH' &&
+              (num.tryParse(prop.masterValue?.toString() ?? '') ?? 0) > 0;
+        }) ??
+        false;
+  }
+
+  /// Returns false when the item has no warranty option. A null result means
+  /// the cashier cancelled, so the product must not be added to the cart.
+  static Future<bool?> _requestWarrantyChoice({
+    required BuildContext context,
+    required GetProduct product,
+  }) async {
+    if (!_hasWarranty(product)) return false;
+
+    String? warrantyMonths;
+    String? warrantyCondition;
+    for (final prop in product.productProps ?? const <ProductProp>[]) {
+      if (prop.propsCode?.trim().toUpperCase() == 'WARRANTY_IN_MONTH') {
+        warrantyMonths = prop.masterValue?.toString();
+      } else if (prop.propsCode?.trim().toUpperCase() ==
+          'WARRANTY_CONDITIONS') {
+        warrantyCondition = prop.masterValue?.toString().trim();
+      }
+    }
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        var enabled = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Warranty coverage'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${product.productName ?? 'This product'} includes a $warrantyMonths-month warranty option.',
+                ),
+                if (warrantyCondition?.isNotEmpty == true) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Warranty condition: $warrantyCondition',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: enabled,
+                  onChanged: (value) =>
+                      setDialogState(() => enabled = value ?? false),
+                  title: const Text('Enable warranty for this item'),
+                  subtitle: const Text(
+                    'Select this only when the customer accepts warranty coverage.',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(enabled),
+                child: const Text('Add to cart'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   static double? _parseSaleUnitConversionRate(SaleUnit? saleUnit) {

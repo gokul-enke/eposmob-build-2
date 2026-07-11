@@ -41,8 +41,10 @@ class VariantRow {
   final TextEditingController priceController;
   final TextEditingController mrpController;
   final TextEditingController purchasePriceController;
+  final TextEditingController quantityController;
   final List<VariantAttributeRow> attributes;
   bool isGeneratingBarcode = false;
+  bool active;
 
   VariantRow({
     this.id,
@@ -51,12 +53,15 @@ class VariantRow {
     String price = '',
     String mrp = '',
     String purchasePrice = '',
+    String quantity = '',
+    this.active = true,
     List<VariantAttributeRow>? attributes,
   })  : skuController = TextEditingController(text: sku),
         barcodeController = TextEditingController(text: barcode),
         priceController = TextEditingController(text: price),
         mrpController = TextEditingController(text: mrp),
         purchasePriceController = TextEditingController(text: purchasePrice),
+        quantityController = TextEditingController(text: quantity),
         attributes = attributes ?? [VariantAttributeRow()];
 
   VariantFormInput toInput() {
@@ -67,6 +72,8 @@ class VariantRow {
       price: priceController.text,
       mrp: mrpController.text,
       purchasePrice: purchasePriceController.text,
+      quantity: quantityController.text,
+      active: active,
       attributes: attributes
           .where((attr) => attr.productPropId != null)
           .map((attr) => VariantAttributeInput(
@@ -83,9 +90,25 @@ class VariantRow {
     priceController.dispose();
     mrpController.dispose();
     purchasePriceController.dispose();
+    quantityController.dispose();
     for (final attr in attributes) {
       attr.dispose();
     }
+  }
+}
+
+/// One option type (e.g. "Colour") with the values chosen for it (e.g.
+/// "Red", "Blue"), used by [VariantEditorController.generateFromOptions] to
+/// build the cartesian product of variants, Shopify-style.
+class VariantOptionGroup {
+  int? productPropId;
+  final List<String> values = [];
+  final TextEditingController valueInputController = TextEditingController();
+  final TextEditingController propSearchController = TextEditingController();
+
+  void dispose() {
+    valueInputController.dispose();
+    propSearchController.dispose();
   }
 }
 
@@ -96,9 +119,90 @@ class VariantEditorController {
   /// Ids of existing variants the user removed (edit flow).
   final List<int> deletedVariantIds = [];
 
+  /// Option types (e.g. Colour, Size) used to auto-generate [rows].
+  final List<VariantOptionGroup> optionGroups = [];
+
   bool get hasRows => rows.isNotEmpty;
 
   void addRow() => rows.add(VariantRow());
+
+  void addOptionGroup() => optionGroups.add(VariantOptionGroup());
+
+  void removeOptionGroup(int index) {
+    optionGroups.removeAt(index).dispose();
+  }
+
+  String _signatureFor(VariantRow row) {
+    final parts = row.attributes
+        .where((attr) => attr.productPropId != null)
+        .map((attr) =>
+            '${attr.productPropId}:${attr.valueController.text.trim()}')
+        .toList()
+      ..sort();
+    return parts.join('|');
+  }
+
+  /// Builds the cartesian product of all configured [optionGroups] and
+  /// replaces [rows] with it. Existing rows whose attribute combination still
+  /// appears (matched by property id + value) are kept as-is so any
+  /// price/SKU/barcode already entered is preserved; combinations no longer
+  /// selected are removed (and queued for deletion if they were persisted).
+  void generateFromOptions() {
+    final groups = optionGroups
+        .where((g) => g.productPropId != null && g.values.isNotEmpty)
+        .toList(growable: false);
+    if (groups.isEmpty) return;
+
+    List<List<MapEntry<int, String>>> combos = [<MapEntry<int, String>>[]];
+    for (final group in groups) {
+      final next = <List<MapEntry<int, String>>>[];
+      for (final combo in combos) {
+        for (final value in group.values) {
+          next.add([...combo, MapEntry(group.productPropId!, value)]);
+        }
+      }
+      combos = next;
+    }
+
+    final existingBySignature = <String, VariantRow>{
+      for (final row in rows) _signatureFor(row): row,
+    };
+
+    final newRows = <VariantRow>[];
+    final usedSignatures = <String>{};
+    for (final combo in combos) {
+      final signature = (combo.map((e) => '${e.key}:${e.value}').toList()
+            ..sort())
+          .join('|');
+      usedSignatures.add(signature);
+      final existing = existingBySignature[signature];
+      if (existing != null) {
+        newRows.add(existing);
+      } else {
+        newRows.add(
+          VariantRow(
+            attributes: combo
+                .map((e) => VariantAttributeRow(
+                      productPropId: e.key,
+                      value: e.value,
+                    ))
+                .toList(),
+          ),
+        );
+      }
+    }
+
+    for (final row in rows) {
+      if (!usedSignatures.contains(_signatureFor(row))) {
+        if (row.id != null) deletedVariantIds.add(row.id!);
+        row.dispose();
+      }
+    }
+
+    rows
+      ..clear()
+      ..addAll(newRows);
+  }
 
   void removeRow(int index) {
     final row = rows.removeAt(index);
@@ -144,6 +248,8 @@ class VariantEditorController {
           price: _numToString(variant.price),
           mrp: _numToString(variant.mrp),
           purchasePrice: _numToString(variant.purchasePrice),
+          quantity: _numToString(variant.quantity?.toDouble()),
+          active: variant.active,
           attributes: attrRows,
         ),
       );
@@ -168,6 +274,10 @@ class VariantEditorController {
     }
     rows.clear();
     deletedVariantIds.clear();
+    for (final group in optionGroups) {
+      group.dispose();
+    }
+    optionGroups.clear();
   }
 
   void dispose() => clear();
@@ -206,6 +316,14 @@ class VariantEditorSection extends StatefulWidget {
 }
 
 class _VariantEditorSectionState extends State<VariantEditorSection> {
+  final ScrollController _tableScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _tableScrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
@@ -251,15 +369,15 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
           const SizedBox(height: 12),
           if (widget.properties.isEmpty && !widget.isLoadingProperties)
             _buildNoPropertiesNotice(),
-          ...List.generate(
-            controller.rows.length,
-            (index) => Padding(
-              padding: EdgeInsets.only(
-                bottom: index == controller.rows.length - 1 ? 0 : 10,
-              ),
-              child: _buildVariantCard(controller.rows[index], index),
+          if (widget.properties.isNotEmpty) _buildOptionGeneratorPanel(),
+          if (controller.rows.isNotEmpty) ...[
+            const Text(
+              'Variants',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
-          ),
+            const SizedBox(height: 8),
+            _buildVariantsTable(),
+          ],
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.center,
@@ -280,6 +398,205 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildOptionGeneratorPanel() {
+    final controller = widget.controller;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Options',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Define option types (e.g. Colour: Red, Blue) and generate every '
+            'combination as a variant automatically.',
+            style: TextStyle(fontSize: 11, color: Colors.black54),
+          ),
+          const SizedBox(height: 10),
+          ...List.generate(
+            controller.optionGroups.length,
+            (index) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildOptionGroupRow(controller.optionGroups[index], index),
+            ),
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: () => setState(() => controller.addOptionGroup()),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Option'),
+                style: TextButton.styleFrom(
+                  foregroundColor: ColorManager.kPrimaryColor,
+                ),
+              ),
+              if (controller.optionGroups.isNotEmpty)
+                ElevatedButton.icon(
+                  onPressed: () =>
+                      setState(() => controller.generateFromOptions()),
+                  icon: const Icon(Icons.auto_fix_high, size: 16),
+                  label: const Text('Generate Variants'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ColorManager.kPrimaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionGroupRow(VariantOptionGroup group, int index) {
+    final selectedProp = _propertyById(group.productPropId);
+    final propertyDropdown = CustomDropDownWithSearch<ProductProperty>(
+      title: '',
+      hintText: 'Select option',
+      value: selectedProp,
+      height: 42,
+      margin: EdgeInsets.zero,
+      items: widget.properties,
+      onChanged: (prop) {
+        setState(() {
+          group.productPropId = prop?.id;
+          group.values.clear();
+        });
+      },
+      displayText: (prop) => prop.label,
+      searchController: group.propSearchController,
+    );
+    final deleteButton = IconButton(
+      onPressed: () => setState(() => widget.controller.removeOptionGroup(index)),
+      splashRadius: 16,
+      icon: const Icon(Icons.close, size: 18, color: Colors.black45),
+    );
+    final valuesInput = _buildOptionValuesInput(group, selectedProp);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Below ~420px (mobile) the property dropdown and value picker don't
+        // both fit on one line; stack them instead of overflowing.
+        if (constraints.maxWidth < 420) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: propertyDropdown),
+                  deleteButton,
+                ],
+              ),
+              const SizedBox(height: 8),
+              valuesInput,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 160, child: propertyDropdown),
+            const SizedBox(width: 8),
+            Expanded(child: valuesInput),
+            deleteButton,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildOptionValuesInput(VariantOptionGroup group, ProductProperty? prop) {
+    final availableValues =
+        (prop != null && prop.isList) ? prop.values : const <String>[];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (group.values.isNotEmpty) ...[
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final value in group.values)
+                Chip(
+                  label: Text(value, style: const TextStyle(fontSize: 11)),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onDeleted: () => setState(() => group.values.remove(value)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+        ],
+        if (availableValues.isNotEmpty)
+          CustomDropDownWithSearch<String>(
+            title: '',
+            hintText: 'Add value',
+            value: null,
+            height: 42,
+            margin: EdgeInsets.zero,
+            items: availableValues
+                .where((v) => !group.values.contains(v))
+                .toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => group.values.add(value));
+            },
+            displayText: (value) => value,
+            searchController: group.valueInputController,
+          )
+        else
+          Container(
+            height: 42,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(7),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: TextField(
+              controller: group.valueInputController,
+              style: const TextStyle(fontSize: 12),
+              decoration: const InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Type value + Enter',
+                hintStyle: TextStyle(fontSize: 11, color: Colors.black38),
+              ),
+              onSubmitted: (value) {
+                final trimmed = value.trim();
+                if (trimmed.isEmpty) return;
+                setState(() {
+                  if (!group.values.contains(trimmed)) {
+                    group.values.add(trimmed);
+                  }
+                  group.valueInputController.clear();
+                });
+              },
+            ),
+          ),
+      ],
     );
   }
 
@@ -312,108 +629,306 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
     );
   }
 
-  Widget _buildVariantCard(VariantRow row, int index) {
+  static const double _colAttr = 230;
+  static const double _colSku = 100;
+  static const double _colBarcode = 150;
+  static const double _colPrice = 80;
+  static const double _colMrp = 80;
+  static const double _colPurchase = 90;
+  static const double _colQty = 70;
+  static const double _colActive = 52;
+  static const double _colDelete = 36;
+  static const double _colGap = 8;
+
+  // Row content has 7 inter-column gaps (no gap between the Active checkbox
+  // and the delete icon), plus each variant row's Container adds 8px padding
+  // and a 1px border on both sides.
+  static const double _tableContentWidth = _colAttr +
+      _colSku +
+      _colBarcode +
+      _colPrice +
+      _colMrp +
+      _colPurchase +
+      _colQty +
+      _colActive +
+      _colDelete +
+      _colGap * 7 +
+      (8 + 1) * 2;
+
+  static const _tableHeaderStyle = TextStyle(
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    color: Colors.black54,
+  );
+
+  Widget _buildVariantsTable() {
+    final controller = widget.controller;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final table = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTableHeaderRow(),
+            const SizedBox(height: 8),
+            ...List.generate(
+              controller.rows.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildVariantTableRow(controller.rows[index], index),
+              ),
+            ),
+          ],
+        );
+
+        // Only wrap in a horizontal scrollbar when the table is actually
+        // wider than the space available (small screens); otherwise let it
+        // size to the available width so it doesn't scroll needlessly.
+        if (constraints.maxWidth >= _tableContentWidth) {
+          return SizedBox(width: _tableContentWidth, child: table);
+        }
+
+        return Scrollbar(
+          controller: _tableScrollController,
+          thumbVisibility: true,
+          child: SingleChildScrollView(
+            controller: _tableScrollController,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(bottom: 10),
+            child: SizedBox(width: _tableContentWidth, child: table),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTableHeaderRow() {
+    return Row(
+      children: [
+        const SizedBox(width: _colAttr, child: Text('Attributes', style: _tableHeaderStyle)),
+        const SizedBox(width: _colGap),
+        const SizedBox(width: _colSku, child: Text('SKU', style: _tableHeaderStyle)),
+        const SizedBox(width: _colGap),
+        const SizedBox(width: _colBarcode, child: Text('Barcode', style: _tableHeaderStyle)),
+        const SizedBox(width: _colGap),
+        const SizedBox(width: _colPrice, child: Text('Price', style: _tableHeaderStyle)),
+        const SizedBox(width: _colGap),
+        const SizedBox(width: _colMrp, child: Text('MRP', style: _tableHeaderStyle)),
+        const SizedBox(width: _colGap),
+        const SizedBox(width: _colPurchase, child: Text('Purchase Price', style: _tableHeaderStyle)),
+        const SizedBox(width: _colGap),
+        const SizedBox(width: _colQty, child: Text('Qty', style: _tableHeaderStyle)),
+        const SizedBox(width: _colGap),
+        const SizedBox(width: _colActive, child: Text('Active', style: _tableHeaderStyle)),
+        const SizedBox(width: _colDelete),
+      ],
+    );
+  }
+
+  Widget _buildVariantTableRow(VariantRow row, int index) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                'Variant ${index + 1}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              IconButton(
-                onPressed: () => setState(() => widget.controller.removeRow(index)),
-                splashRadius: 18,
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-              ),
-            ],
-          ),
-          // Attributes.
-          ...List.generate(
-            row.attributes.length,
-            (attrIndex) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _buildAttributeRow(row, attrIndex),
+          SizedBox(width: _colAttr, child: _buildAttributeSummaryCell(row)),
+          const SizedBox(width: _colGap),
+          SizedBox(height: 42, width: _colSku, child: _plainField(row.skuController)),
+          const SizedBox(width: _colGap),
+          SizedBox(width: _colBarcode, child: _buildBarcodeTableCell(row)),
+          const SizedBox(width: _colGap),
+          SizedBox(height: 42, width: _colPrice, child: _plainField(row.priceController, numeric: true)),
+          const SizedBox(width: _colGap),
+          SizedBox(height: 42, width: _colMrp, child: _plainField(row.mrpController, numeric: true)),
+          const SizedBox(width: _colGap),
+          SizedBox(height: 42, width: _colPurchase, child: _plainField(row.purchasePriceController, numeric: true)),
+          const SizedBox(width: _colGap),
+          SizedBox(height: 42, width: _colQty, child: _plainField(row.quantityController, numeric: true)),
+          const SizedBox(width: _colGap),
+          SizedBox(
+            height: 42,
+            width: _colActive,
+            child: Checkbox(
+              value: row.active,
+              onChanged: (value) => setState(() => row.active = value ?? true),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => setState(() {
-                row.attributes.add(VariantAttributeRow());
-              }),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Attribute'),
-              style: TextButton.styleFrom(
-                foregroundColor: ColorManager.kPrimaryColor,
-              ),
+          SizedBox(
+            height: 42,
+            width: _colDelete,
+            child: IconButton(
+              onPressed: () => setState(() => widget.controller.removeRow(index)),
+              splashRadius: 16,
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
             ),
-          ),
-          const SizedBox(height: 4),
-          // SKU + Barcode.
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  'SKU (optional)',
-                  row.skuController,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildBarcodeField(row),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Prices.
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(
-                  'Price',
-                  row.priceController,
-                  numeric: true,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  'MRP',
-                  row.mrpController,
-                  numeric: true,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildTextField(
-                  'Purchase Price',
-                  row.purchasePriceController,
-                  numeric: true,
-                ),
-              ),
-            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAttributeRow(VariantRow row, int attrIndex) {
+  Widget _buildAttributeSummaryCell(VariantRow row) {
+    final filled = row.attributes
+        .where((attr) => attr.valueController.text.trim().isNotEmpty)
+        .toList();
+
+    return InkWell(
+      onTap: () => _openAttributeEditor(row),
+      borderRadius: BorderRadius.circular(7),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 42),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: filled.isEmpty
+                  ? const Text(
+                      'No attributes',
+                      style: TextStyle(fontSize: 11, color: Colors.black38),
+                    )
+                  : Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: filled.map((attr) {
+                        final prop = _propertyById(attr.productPropId);
+                        final label = prop?.label ?? attr.unmatchedCode ?? '?';
+                        return Chip(
+                          label: Text(
+                            '$label: ${attr.valueController.text.trim()}',
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                        );
+                      }).toList(),
+                    ),
+            ),
+            const Icon(Icons.edit, size: 14, color: Colors.black38),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openAttributeEditor(VariantRow row) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Attributes'),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...List.generate(
+                      row.attributes.length,
+                      (attrIndex) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildAttributeRow(
+                          row,
+                          attrIndex,
+                          extraRefresh: () => setDialogState(() {}),
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => setDialogState(() {
+                          row.attributes.add(VariantAttributeRow());
+                        }),
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Add Attribute'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: ColorManager.kPrimaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Done'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (mounted) setState(() {});
+  }
+
+  Widget _buildBarcodeTableCell(VariantRow row) {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(height: 42, child: _plainField(row.barcodeController)),
+        ),
+        if (widget.onGenerateBarcode != null) ...[
+          const SizedBox(width: 6),
+          SizedBox(
+            height: 36,
+            width: 36,
+            child: ElevatedButton(
+              onPressed: row.isGeneratingBarcode
+                  ? null
+                  : () async {
+                      await widget.onGenerateBarcode!(
+                        row.barcodeController,
+                        (loading) => row.isGeneratingBarcode = loading,
+                      );
+                      if (mounted) setState(() {});
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ColorManager.kPrimaryColor,
+                padding: EdgeInsets.zero,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(7),
+                ),
+              ),
+              child: row.isGeneratingBarcode
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.auto_awesome, size: 14, color: Colors.white),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAttributeRow(
+    VariantRow row,
+    int attrIndex, {
+    VoidCallback? extraRefresh,
+  }) {
     final attr = row.attributes[attrIndex];
     final selectedProp = _propertyById(attr.productPropId);
 
@@ -440,6 +955,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
                     // Reset value when the property changes.
                     attr.valueController.text = '';
                   });
+                  extraRefresh?.call();
                 },
                 displayText: (prop) => prop.label,
                 searchController: attr.propSearchController,
@@ -449,14 +965,17 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _buildAttributeValueField(attr, selectedProp),
+          child: _buildAttributeValueField(attr, selectedProp, extraRefresh: extraRefresh),
         ),
         IconButton(
           onPressed: row.attributes.length <= 1
               ? null
-              : () => setState(() {
+              : () {
+                  setState(() {
                     row.attributes.removeAt(attrIndex).dispose();
-                  }),
+                  });
+                  extraRefresh?.call();
+                },
           splashRadius: 16,
           icon: const Icon(Icons.close, size: 18, color: Colors.black45),
         ),
@@ -466,8 +985,9 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
 
   Widget _buildAttributeValueField(
     VariantAttributeRow attr,
-    ProductProperty? prop,
-  ) {
+    ProductProperty? prop, {
+    VoidCallback? extraRefresh,
+  }) {
     if (prop != null && prop.isList && prop.values.isNotEmpty) {
       final currentValue = attr.valueController.text.trim();
       final selected = prop.values.contains(currentValue) ? currentValue : null;
@@ -488,6 +1008,7 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
               setState(() {
                 attr.valueController.text = value ?? '';
               });
+              extraRefresh?.call();
             },
             displayText: (value) => value,
             searchController: attr.valueSearchController,
@@ -496,61 +1017,6 @@ class _VariantEditorSectionState extends State<VariantEditorSection> {
       );
     }
     return _buildTextField('Value', attr.valueController);
-  }
-
-  Widget _buildBarcodeField(VariantRow row) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Barcode (optional)',
-            style: TextStyle(fontSize: 12, color: Colors.black54)),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: _plainField(row.barcodeController),
-            ),
-            if (widget.onGenerateBarcode != null) ...[
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 42,
-                width: 42,
-                child: ElevatedButton(
-                  onPressed: row.isGeneratingBarcode
-                      ? null
-                      : () async {
-                          await widget.onGenerateBarcode!(
-                            row.barcodeController,
-                            (loading) => row.isGeneratingBarcode = loading,
-                          );
-                          if (mounted) setState(() {});
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ColorManager.kPrimaryColor,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                  ),
-                  child: row.isGeneratingBarcode
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.auto_awesome,
-                          size: 16, color: Colors.white),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
   }
 
   Widget _buildTextField(

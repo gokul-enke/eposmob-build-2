@@ -33,6 +33,8 @@ class VariantFormInput {
   final String? price;
   final String? mrp;
   final String? purchasePrice;
+  final String? quantity;
+  final bool active;
 
   /// When true (edit flow only), the row represents a variant to delete.
   final bool markedForDeletion;
@@ -46,6 +48,8 @@ class VariantFormInput {
     this.price,
     this.mrp,
     this.purchasePrice,
+    this.quantity,
+    this.active = true,
     this.markedForDeletion = false,
     this.attributes = const [],
   });
@@ -67,7 +71,8 @@ Map<String, dynamic> buildVariantJson(VariantFormInput row) {
   map['price'] = _parseNumOrNull(row.price);
   map['mrp'] = _parseNumOrNull(row.mrp);
   map['purchase_price'] = _parseNumOrNull(row.purchasePrice);
-  map['active'] = true;
+  map['quantity'] = _parseNumOrNull(row.quantity);
+  map['active'] = row.active;
   // The server replaces attributes wholesale on every update, so always send
   // the complete set for the row.
   map['attributes'] = row.filledAttributes
@@ -143,6 +148,7 @@ String? validateVariantRows(List<VariantFormInput> rows) {
       'price': row.price,
       'mrp': row.mrp,
       'purchase price': row.purchasePrice,
+      'quantity': row.quantity,
     }.entries) {
       final error = _validateOptionalPrice(entry.value, entry.key, label);
       if (error != null) return error;

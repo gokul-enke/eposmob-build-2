@@ -384,7 +384,7 @@ class _SideMenuState extends State<SideMenu> {
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
               final hasPermission = roleProvider
-                  .currentUserHasPermissionSync('menu.restaurant.main.access');
+                  .currentUserHasPermissionSync('billing.store.access');
 
               if (!hasPermission) {
                 return const SizedBox.shrink();
@@ -796,8 +796,8 @@ class _SideMenuState extends State<SideMenu> {
               final hasInvoicePermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.invoice.access');
-              final hasProformaPermission = roleProvider
-                  .currentUserHasPermissionSync(
+              final hasProformaPermission =
+                  roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.proforma.access');
 
               // final hasReceiptsPermission =

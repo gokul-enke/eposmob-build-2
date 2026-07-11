@@ -6,12 +6,15 @@ import 'package:pos_machine/features/billing/domain/product_details_helpers.dart
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_row.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
+import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
+import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/language.dart';
 import 'package:pos_machine/newcomponents/custom_dropdown_with_search.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/category_providers.dart';
+import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
@@ -126,6 +129,11 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
   bool _requestedUnitRackData = false;
   final Map<int, Stock> _editedStockRows = {};
 
+  final VariantEditorController _variantController = VariantEditorController();
+  bool _variantPropertiesRequested = false;
+  bool _isLoadingVariantProperties = false;
+  bool _variantsPrefilled = false;
+
   final Map<TextEditingController, FocusNode> _focusNodes = {};
 
   @override
@@ -172,7 +180,101 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchLanguages();
+      _fetchVariantPropertiesAndPrefill();
     });
+  }
+
+  Future<void> _fetchVariantPropertiesAndPrefill() async {
+    if (_variantPropertiesRequested) return;
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    if (appSettings?.productVariantEnabled != true) return;
+    _variantPropertiesRequested = true;
+
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
+    if (!productProvider.hasProductProperties) {
+      final accessToken =
+          Provider.of<AuthModel>(context, listen: false).token ?? '';
+      if (accessToken.isNotEmpty) {
+        setState(() => _isLoadingVariantProperties = true);
+        try {
+          await productProvider.fetchProductProperties(
+              accessToken: accessToken);
+        } catch (e) {
+          debugPrint('⚠️ fetchProductProperties failed: $e');
+        } finally {
+          if (mounted) setState(() => _isLoadingVariantProperties = false);
+        }
+      }
+    }
+
+    if (!mounted) return;
+    _prefillVariants();
+  }
+
+  void _retryFetchVariantProperties() {
+    _variantPropertiesRequested = false;
+    _fetchVariantPropertiesAndPrefill();
+  }
+
+  void _prefillVariants() {
+    if (_variantsPrefilled) return;
+    final product = selectedProduct;
+    if (product == null) return;
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
+    _variantController.loadFromVariants(
+      product.variants ?? const [],
+      productProvider.productProperties,
+    );
+    _variantsPrefilled = true;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _generateVariantBarcode(
+    TextEditingController target,
+    void Function(bool loading) setLoading,
+  ) async {
+    final accessToken =
+        Provider.of<AuthModel>(context, listen: false).token ?? '';
+    if (accessToken.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Authentication token not found. Please log in again.',
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      final gridSelectionProvider =
+          Provider.of<GridSelectionProvider>(context, listen: false);
+      final result = await gridSelectionProvider.generateBarcodeAPI(
+          accessToken: accessToken);
+      if (!mounted) return;
+      if (result != null &&
+          result['status'] == 'success' &&
+          result['data'] != null) {
+        target.text = result['data']['barcode'].toString();
+        showScaffold(context: context, message: 'Barcode generated');
+      } else {
+        showScaffoldError(
+          context: context,
+          message:
+              result?['message']?.toString() ?? 'Failed to generate barcode',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Error generating barcode: $e',
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   void _attachSelectAllOnFocus(TextEditingController controller) {
@@ -413,6 +515,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       _initializeControllersIfNeeded();
       _ensureCategoriesLoaded();
       _ensureUnitAndRackLoaded();
+      if (product != null) _prefillVariants();
 
       if (product == null && mounted) {
         showScaffoldError(
@@ -506,9 +609,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _quantityController.text = '';
     _taxController.text = productDetailsValueToString(product.totalTaxRate);
     _purchasePriceController.text = product.purchasePrice ??
-            (product.stock != null && product.stock!.isNotEmpty
-                ? product.stock!.first.purchasePrice
-                : '') ??
+        (product.stock != null && product.stock!.isNotEmpty
+            ? product.stock!.first.purchasePrice
+            : '') ??
         '';
     _minMarginController.text =
         formatProductDetailsNumeric(product.minMarginPercentage);
@@ -545,6 +648,26 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     }
 
     if (!_editFormKey.currentState!.validate()) return;
+
+    final variantEnabled =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings
+                ?.productVariantEnabled ??
+            true;
+    List<Map<String, dynamic>>? variantsPayload;
+    if (variantEnabled) {
+      final variantError =
+          validateVariantRows(_variantController.toEditInputs());
+      if (variantError != null) {
+        showScaffoldError(context: context, message: variantError);
+        return;
+      }
+      if (_variantController.hasRows ||
+          _variantController.deletedVariantIds.isNotEmpty) {
+        variantsPayload =
+            buildEditVariantsPayload(_variantController.toEditInputs());
+      }
+    }
 
     FocusScope.of(context).unfocus();
     setState(() => _isSaving = true);
@@ -638,6 +761,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         rackNumber: rackForApi,
         quantity: quantityForApi,
         productNames: productNames.isNotEmpty ? productNames : null,
+        variants: variantsPayload,
         minMarginPercentage: updatedMinMargin,
         minMarginPrice: updatedMinMarginPrice,
         accessToken: accessToken,
@@ -680,6 +804,11 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         final mappedLabel = unitMap[resolvedUnitId];
         if (mappedLabel != null && mappedLabel.isNotEmpty) {
           resolvedUnitLabel = mappedLabel;
+        } else if (int.tryParse(resolvedUnitLabel) != null &&
+            product.unit != null &&
+            product.unit!.trim().isNotEmpty &&
+            int.tryParse(product.unit!.trim()) == null) {
+          resolvedUnitLabel = product.unit!.trim();
         }
       } else if (resolvedUnitLabel.isNotEmpty) {
         final match = unitMap.entries.firstWhere(
@@ -702,6 +831,23 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           orElse: () => categoryProvider.category!.first,
         );
       }
+
+      final List<SaleUnit>? responseSaleUnits = serverProduct?.saleUnits == null
+          ? null
+          : serverProduct!.saleUnits!
+              .where(
+                  (saleUnit) => saleUnit.unitId?.toString() != resolvedUnitId)
+              .map((saleUnit) => SaleUnit(
+                    id: saleUnit.id,
+                    unitId: saleUnit.unitId,
+                    unitName: saleUnit.unitName ??
+                        unitMap[saleUnit.unitId?.toString() ?? ''],
+                    conversionRate: saleUnit.conversionRate,
+                    barcode: saleUnit.barcode,
+                    price: saleUnit.price,
+                    resolvedPrice: saleUnit.resolvedPrice,
+                  ))
+              .toList(growable: false);
 
       final updatedProduct = product.copyWith(
         categoryId: serverProduct?.categoryId ?? resolvedCategoryId,
@@ -739,9 +885,10 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 : num.tryParse(updatedMinMarginPrice) ?? updatedMinMarginPrice),
         names: responseNames ??
             (productNames.isNotEmpty ? productNames : product.names),
-        saleUnits: (serverProduct?.saleUnits?.isNotEmpty ?? false)
-            ? serverProduct!.saleUnits
-            : product.saleUnits,
+        saleUnits: responseSaleUnits ?? product.saleUnits,
+        variants: (serverProduct?.variants?.isNotEmpty ?? false)
+            ? serverProduct!.variants
+            : product.variants,
       );
 
       localProductProvider.updateProduct(updatedProduct);
@@ -756,6 +903,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       );
 
       if (!mounted) return;
+      _variantController.deletedVariantIds.clear();
       setState(() {
         selectedProduct = updatedProduct;
         _controllersInitialized = false;
@@ -809,6 +957,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
   @override
   void dispose() {
+    _variantController.dispose();
     if (_tabControllerReady) _tabController.dispose();
     _nameController.dispose();
     _slugController.dispose();
@@ -1018,17 +1167,18 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           ),
           MobileDetailRow(
             label: 'Purchase Price',
-            value: stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty
-                ? '$currency ${stock.purchasePrice}'
-                : 'N/A',
+            value:
+                stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty
+                    ? '$currency ${stock.purchasePrice}'
+                    : 'N/A',
             dense: true,
           ),
           MobileDetailRow(
             label: 'Wholesale Price',
-            value: stock.wholesalePrice != null &&
-                    stock.wholesalePrice!.isNotEmpty
-                ? '$currency ${stock.wholesalePrice}'
-                : 'N/A',
+            value:
+                stock.wholesalePrice != null && stock.wholesalePrice!.isNotEmpty
+                    ? '$currency ${stock.wholesalePrice}'
+                    : 'N/A',
             dense: true,
           ),
           MobileDetailRow(
@@ -1077,15 +1227,14 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
   Widget _buildViewTab(GetProduct product, {required bool canEditProduct}) {
     final appSettings = context.watch<AppSettingsProvider>().appSettings;
-    final stockEnabled =
-        context.watch<LocalProductProvider>().isStockEnabled;
+    final stockEnabled = context.watch<LocalProductProvider>().isStockEnabled;
     final currency = appSettings?.currency ?? widget.currency;
     final itemCodeEnabled = appSettings?.itemCodeEnabled ?? false;
 
     final availableQuantity = productAvailableQuantity(product);
     final reorderLevel = product.reorderLevel;
-    final isLowStock = stockEnabled &&
-        isProductLowStock(availableQuantity, reorderLevel);
+    final isLowStock =
+        stockEnabled && isProductLowStock(availableQuantity, reorderLevel);
 
     final stockRows = product.stock ?? const <Stock>[];
 
@@ -1172,11 +1321,10 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             ),
             MobileDetailRow(
               label: 'Max Discount Percentage',
-              value:
-                  formatProductDetailsNumeric(product.minMarginPercentage)
-                          .isNotEmpty
-                      ? '${formatProductDetailsNumeric(product.minMarginPercentage)}%'
-                      : 'N/A',
+              value: formatProductDetailsNumeric(product.minMarginPercentage)
+                      .isNotEmpty
+                  ? '${formatProductDetailsNumeric(product.minMarginPercentage)}%'
+                  : 'N/A',
             ),
             MobileDetailRow(
               label: 'Max Discount Amount',
@@ -1204,7 +1352,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           title: 'Stock',
           icon: Icons.inventory_2_outlined,
           initiallyExpanded: true,
-          badge: stockRows.isNotEmpty ? _buildStockCountBadge(stockRows.length) : null,
+          badge: stockRows.isNotEmpty
+              ? _buildStockCountBadge(stockRows.length)
+              : null,
           children: [
             MobileDetailRow(
               label: 'Available Qty',
@@ -1338,8 +1488,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     if (_selectedCategoryId != null) {
       try {
         selectedCategory = categories.firstWhere(
-          (category) =>
-              category.categoryId?.toString() == _selectedCategoryId,
+          (category) => category.categoryId?.toString() == _selectedCategoryId,
         );
       } catch (_) {
         selectedCategory = null;
@@ -1516,6 +1665,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               ),
             ],
           ),
+          _buildVariantsSection(),
           MobileDetailSection(
             title: 'Translations',
             icon: Icons.translate,
@@ -1583,6 +1733,28 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildVariantsSection() {
+    return Consumer2<AppSettingsProvider, ProductProvider>(
+      builder: (context, appSettingsProvider, productProvider, child) {
+        final variantEnabled =
+            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+        if (!variantEnabled) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: VariantEditorSection(
+            controller: _variantController,
+            properties: productProvider.productProperties,
+            isLoadingProperties: _isLoadingVariantProperties,
+            onRetryLoadProperties: _retryFetchVariantProperties,
+            onGenerateBarcode: _generateVariantBarcode,
+          ),
+        );
+      },
     );
   }
 
@@ -1707,18 +1879,18 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       return ColoredBox(
         color: Colors.white,
         child: SizedBox(
-        height: sheetHeight,
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading product details...'),
-            ],
+          height: sheetHeight,
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading product details...'),
+              ],
+            ),
           ),
         ),
-      ),
       );
     }
 
@@ -1726,26 +1898,26 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       return ColoredBox(
         color: Colors.white,
         child: SizedBox(
-        height: sheetHeight,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text('Product not found'),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(200, 44),
+          height: sheetHeight,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text('Product not found'),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(200, 44),
+                  ),
+                  child: const Text('Close'),
                 ),
-                child: const Text('Close'),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       );
     }
 
@@ -1762,42 +1934,42 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     return ColoredBox(
       color: Colors.white,
       child: Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: SizedBox(
-        height: sheetHeight,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            MobileSheetHeader(
-              title: product.productName ?? 'Product Details',
-              subtitle: product.category?.name,
-              thumbnail: buildProductThumbnail(
-                productName: product.productName,
-                attachments: product.attachment,
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: SizedBox(
+          height: sheetHeight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              MobileSheetHeader(
+                title: product.productName ?? 'Product Details',
+                subtitle: product.category?.name,
+                thumbnail: buildProductThumbnail(
+                  productName: product.productName,
+                  attachments: product.attachment,
+                ),
+                onClose: () => Navigator.pop(context),
               ),
-              onClose: () => Navigator.pop(context),
-            ),
-            if (_isSaving) const LinearProgressIndicator(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: _buildPillTabBar(canEditProduct: canEditProduct),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildViewTab(product, canEditProduct: canEditProduct),
-                    if (canEditProduct) _buildEditTab(product),
-                  ],
+              if (_isSaving) const LinearProgressIndicator(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: _buildPillTabBar(canEditProduct: canEditProduct),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildViewTab(product, canEditProduct: canEditProduct),
+                      if (canEditProduct) _buildEditTab(product),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            if (showFooter) _buildStickyFooter(),
-          ],
+              if (showFooter) _buildStickyFooter(),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

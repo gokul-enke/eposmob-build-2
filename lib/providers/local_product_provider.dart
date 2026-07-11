@@ -56,6 +56,16 @@ class StockReservation {
 
 class LocalCartItem {
   static const double _saleUnitEpsilon = 0.0001;
+  static int _lineSequence = 0;
+
+  static String _newLineId() {
+    _lineSequence = (_lineSequence + 1) & 0x7fffffff;
+    return '${DateTime.now().microsecondsSinceEpoch}-$_lineSequence';
+  }
+
+  /// Immutable local identity. Unlike product/variant/unit/stock matching,
+  /// this cannot be accidentally changed or omitted by a mutation call.
+  final String lineId;
 
   final GetProduct product;
   double? price;
@@ -84,6 +94,9 @@ class LocalCartItem {
   /// When true, quantity-based wholesale recalculation must not overwrite [price].
   bool isManualPriceOverride;
 
+  /// Customer's warranty choice for this product line.
+  bool warrantyEnabled;
+
   /// Optional sale-unit metadata used when a cart line originates from an
   /// alternate sale unit barcode such as CASE / PACK / BOX.
   final int? saleUnitId;
@@ -95,6 +108,7 @@ class LocalCartItem {
   final Map<String, dynamic>? variantAttributes;
 
   LocalCartItem({
+    String? lineId,
     required this.product,
     this.price,
     this.mrp,
@@ -107,12 +121,15 @@ class LocalCartItem {
     List<StockReservation>? stockReservations,
     this.comment,
     this.isManualPriceOverride = false,
+    this.warrantyEnabled = false,
     this.saleUnitId,
     this.saleUnitName,
     this.saleUnitConversionRate,
     this.variantId,
     this.variantAttributes,
-  })  : stockGroupIds = stockGroupIds ?? <int>[],
+  })  : lineId =
+            lineId == null || lineId.trim().isEmpty ? _newLineId() : lineId,
+        stockGroupIds = stockGroupIds ?? <int>[],
         stockReservations = stockReservations ?? <StockReservation>[];
 
   bool get hasGroupedStockSelection => stockGroupIds.length > 1;
@@ -134,6 +151,15 @@ class LocalCartItem {
         productName: product.productName,
         variantAttributes: variantAttributes,
       );
+
+  String get variantLabel {
+    final attrs = variantAttributes;
+    if (attrs == null || attrs.isEmpty) return '';
+    return attrs.values
+        .map((value) => value?.toString() ?? '')
+        .where((value) => value.trim().isNotEmpty)
+        .join(' | ');
+  }
 
   num get displayQuantity => toDisplayQuantity(quantity);
 
@@ -311,6 +337,40 @@ class LocalProductProvider extends ChangeNotifier {
   late Box<HiveSavedOrder> _confirmedOrdersBox;
   bool _isConfirmedBoxInitialized = false;
 
+  // Hive mutation methods return Futures. Keep every local rewrite in one
+  // ordered queue so a later clear/add cycle cannot overtake an earlier one.
+  static Future<void> _persistenceTail = Future<void>.value();
+  static Object? _persistenceError;
+  static StackTrace? _persistenceStackTrace;
+
+  void _enqueuePersistence(
+    String operation,
+    Future<void> Function() task,
+  ) {
+    final next = _persistenceTail.then((_) => task());
+    _persistenceTail = next.catchError((Object error, StackTrace stackTrace) {
+      _persistenceError = error;
+      _persistenceStackTrace = stackTrace;
+      debugPrint('Hive persistence failed during $operation: $error');
+      debugPrint('$stackTrace');
+    });
+  }
+
+  /// Waits until every queued local write is durable. Tests, logout, tenant
+  /// switching and app lifecycle handlers should call this before closing boxes.
+  static Future<void> flushPendingPersistence() async {
+    await _persistenceTail;
+    final error = _persistenceError;
+    final stackTrace = _persistenceStackTrace;
+    _persistenceError = null;
+    _persistenceStackTrace = null;
+    if (error != null) {
+      Error.throwWithStackTrace(error, stackTrace ?? StackTrace.current);
+    }
+  }
+
+  Future<void> flushPersistence() => flushPendingPersistence();
+
   // The complete list of products loaded locally.
   List<GetProduct> _products = [];
   final Map<String, List<GetProduct>> _productsByBarcode =
@@ -439,6 +499,7 @@ class LocalProductProvider extends ChangeNotifier {
   // Stock management settings - need to be injected from outside since this provider
   // doesn't have access to GeneralSettingsProvider directly
   bool? _stockEnabled;
+  bool _allowOverselling = true;
 
   // Discount management
   double _flatDiscount = 0.0;
@@ -453,6 +514,16 @@ class LocalProductProvider extends ChangeNotifier {
     });
     debugPrint("📦 Stock management setting updated: $_stockEnabled");
   }
+
+  /// Controls whether cart quantities may exceed the currently available
+  /// frontend stock. This defaults to true for backward compatibility and is
+  /// synchronized from the ALLOW_OVERSELL app setting by billing entry points.
+  void setAllowOverselling(bool allowed) {
+    _allowOverselling = allowed;
+    debugPrint('Stock overselling allowed: $_allowOverselling');
+  }
+
+  bool get allowOverselling => _allowOverselling;
 
   /// Active stock grouping fields, mirrored from [MasterDataProvider] so cart
   /// merge decisions use the same pricing signature as stock grouping. Defaults
@@ -476,6 +547,50 @@ class LocalProductProvider extends ChangeNotifier {
       return null;
     }
     return buildStockGroupingKey(stock, _activeStockGroupingFields);
+  }
+
+  bool stocksAreAllocationCompatible(Stock? first, Stock? second) {
+    if (first == null || second == null) {
+      return false;
+    }
+
+    final sameStore = first.storeId != null && second.storeId != null
+        ? first.storeId == second.storeId
+        : (first.storeName ?? '').trim().toLowerCase() ==
+            (second.storeName ?? '').trim().toLowerCase();
+    if (!sameStore) {
+      return false;
+    }
+
+    return _stockGroupingKeyForStock(first) ==
+        _stockGroupingKeyForStock(second);
+  }
+
+  List<int> _expandCompatibleStockGroupIds({
+    required GetProduct product,
+    required Stock selectedStock,
+    required int? variantId,
+    List<int>? stockGroupIds,
+  }) {
+    final ids = <int>{..._normalizeStockGroupIds(stockGroupIds)};
+    if (selectedStock.id != null) {
+      ids.add(selectedStock.id!);
+    }
+
+    final currentProduct = getProductById(product.productId ?? -1) ?? product;
+    final scopedStocks = filterStocksForVariant(
+      currentProduct.stock ?? const <Stock>[],
+      variantId,
+    );
+    for (final candidate in scopedStocks) {
+      if (candidate.id != null &&
+          (candidate.quantity ?? 0) > 0 &&
+          stocksAreAllocationCompatible(selectedStock, candidate)) {
+        ids.add(candidate.id!);
+      }
+    }
+
+    return _normalizeStockGroupIds(ids.toList());
   }
 
   /// Gets the current stock enabled status
@@ -533,12 +648,49 @@ class LocalProductProvider extends ChangeNotifier {
     return double.tryParse(value.trim());
   }
 
+  ProductVariant? _findVariantById(GetProduct product, int? variantId) {
+    if (variantId == null || !product.hasVariants) {
+      return null;
+    }
+    for (final variant in product.activeVariants) {
+      if (variant.id == variantId) {
+        return variant;
+      }
+    }
+    return null;
+  }
+
+  double? _resolveVariantPrice(GetProduct product, int? variantId) {
+    final variant = _findVariantById(product, variantId);
+    if (variant == null) {
+      return null;
+    }
+    final productPrice = ProductVariantSelection.productBasePrice(product);
+    return variant.effectivePrice(productPrice);
+  }
+
+  double? _resolveVariantMrp(GetProduct product, int? variantId) {
+    final variant = _findVariantById(product, variantId);
+    if (variant == null) {
+      return null;
+    }
+    final effectivePrice = _resolveVariantPrice(product, variantId) ??
+        ProductVariantSelection.productBasePrice(product);
+    return ProductVariantSelection.resolveVariantMrp(
+      variant: variant,
+      product: product,
+      effectivePrice: effectivePrice,
+    );
+  }
+
   double _resolveMrp({
     required GetProduct product,
     Stock? selectedStock,
     double? fallbackMrp,
+    int? variantId,
   }) {
     return _parseAmount(selectedStock?.mrp) ??
+        _resolveVariantMrp(product, variantId) ??
         _parseAmount(product.mrp?.toString()) ??
         fallbackMrp ??
         0.0;
@@ -629,6 +781,7 @@ class LocalProductProvider extends ChangeNotifier {
     Stock? selectedStock,
     double? fallbackPrice,
     int? saleUnitId,
+    int? variantId,
   }) {
     final saleUnitBasePrice = _resolveSaleUnitBasePrice(
       product: product,
@@ -637,6 +790,11 @@ class LocalProductProvider extends ChangeNotifier {
     );
     if (saleUnitBasePrice != null) {
       return saleUnitBasePrice;
+    }
+
+    final variantPrice = _resolveVariantPrice(product, variantId);
+    if (variantPrice != null) {
+      return variantPrice;
     }
 
     final wholesalePrice = _resolveWholesalePrice(selectedStock);
@@ -663,6 +821,25 @@ class LocalProductProvider extends ChangeNotifier {
     return fallbackPrice ?? 0.0;
   }
 
+  /// Read-only preview using the same pricing chain as [addToCart].
+  double previewCartUnitPrice({
+    required GetProduct product,
+    required num quantity,
+    Stock? selectedStock,
+    double? fallbackPrice,
+    int? saleUnitId,
+    int? variantId,
+  }) {
+    return _resolveUnitPrice(
+      product: product,
+      quantity: quantity,
+      selectedStock: selectedStock,
+      fallbackPrice: fallbackPrice,
+      saleUnitId: saleUnitId,
+      variantId: variantId,
+    );
+  }
+
   void _refreshCartItemPricing(
     LocalCartItem item, {
     Stock? selectedStock,
@@ -676,6 +853,7 @@ class LocalProductProvider extends ChangeNotifier {
         selectedStock: effectiveStock,
         fallbackPrice: item.price,
         saleUnitId: item.saleUnitId,
+        variantId: item.variantId,
       );
     }
 
@@ -683,6 +861,7 @@ class LocalProductProvider extends ChangeNotifier {
       product: item.product,
       selectedStock: effectiveStock,
       fallbackMrp: item.mrp,
+      variantId: item.variantId,
     );
 
     final effectiveTaxRate = _resolveCartTaxRate(
@@ -847,6 +1026,7 @@ class LocalProductProvider extends ChangeNotifier {
         : hiveCartItem.stockDeducted;
 
     return LocalCartItem(
+      lineId: hiveCartItem.lineId,
       product: product,
       quantity: hiveCartItem.quantity,
       price: hiveCartItem.price,
@@ -866,6 +1046,7 @@ class LocalProductProvider extends ChangeNotifier {
       variantAttributes: _deserializeVariantAttributes(
         hiveCartItem.serializedVariantAttributes?.value,
       ),
+      warrantyEnabled: hiveCartItem.warrantyEnabled,
     );
   }
 
@@ -881,6 +1062,7 @@ class LocalProductProvider extends ChangeNotifier {
         _serializeStockReservations(item.stockReservations);
 
     return HiveLocalCartItem(
+      lineId: item.lineId,
       productId: item.product.productId!,
       quantity: item.quantity,
       price: item.price,
@@ -905,11 +1087,13 @@ class LocalProductProvider extends ChangeNotifier {
       serializedVariantAttributes: _serializeVariantAttributes(
         item.variantAttributes,
       ),
+      warrantyEnabled: item.warrantyEnabled,
     );
   }
 
   LocalCartItem _cloneLocalCartItem(LocalCartItem item) {
     return LocalCartItem(
+      lineId: item.lineId,
       product: item.product,
       quantity: item.quantity,
       price: item.price,
@@ -922,6 +1106,7 @@ class LocalProductProvider extends ChangeNotifier {
       stockReservations: _cloneStockReservations(item.stockReservations),
       comment: item.comment,
       isManualPriceOverride: item.isManualPriceOverride,
+      warrantyEnabled: item.warrantyEnabled,
       saleUnitId: item.saleUnitId,
       saleUnitName: item.saleUnitName,
       saleUnitConversionRate: item.saleUnitConversionRate,
@@ -1108,7 +1293,7 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (remaining > 0) {
       debugPrint(
-          '📦 Remaining quantity $remaining could not be reserved. Sale continues without further stock deduction.');
+          '📦 Incomplete stock reservation: $remaining requested units remain.');
     }
 
     // Mirror the reserved amount onto the cached variant quantity so the picker
@@ -1286,13 +1471,12 @@ class LocalProductProvider extends ChangeNotifier {
           continue;
         }
 
-        final payloadQuantity =
-            item.canUseSaleUnitPayloadFor(reservation.quantity)
-                ? item.toDisplayQuantity(reservation.quantity)
-                // Base-unit line: guard against fractional reservations on
-                // non-decimal units (e.g. legacy persisted 1.3 splits).
-                : normalizeQuantityForUnit(
-                    reservation.quantity, item.product.unit);
+        final payloadQuantity = item
+                .canUseSaleUnitPayloadFor(reservation.quantity)
+            ? item.toDisplayQuantity(reservation.quantity)
+            // Base-unit line: guard against fractional reservations on
+            // non-decimal units (e.g. legacy persisted 1.3 splits).
+            : normalizeQuantityForUnit(reservation.quantity, item.product.unit);
         final payloadPrice = item.canUseSaleUnitPayloadFor(reservation.quantity)
             ? item.toDisplayAmount(item.price)
             : item.price;
@@ -1311,6 +1495,7 @@ class LocalProductProvider extends ChangeNotifier {
             'product_sale_unit_id': item.saleUnitId,
           },
           if (item.variantId != null) 'product_variant_id': item.variantId,
+          'warranty_enabled': item.warrantyEnabled,
         });
         reservedQuantity += reservation.quantity;
       }
@@ -1339,6 +1524,7 @@ class LocalProductProvider extends ChangeNotifier {
             'product_sale_unit_id': item.saleUnitId,
           },
           if (item.variantId != null) 'product_variant_id': item.variantId,
+          'warranty_enabled': item.warrantyEnabled,
         });
       }
     }
@@ -1529,8 +1715,17 @@ class LocalProductProvider extends ChangeNotifier {
   // Load cart items from Hive
   void _loadCartFromHive() {
     _cartItems.clear();
-    for (var hiveCartItem in _cartItemsBox.values) {
-      _cartItems.add(_buildLocalCartItemFromHive(hiveCartItem));
+    for (final entry in _cartItemsBox.toMap().entries) {
+      try {
+        _cartItems.add(_buildLocalCartItemFromHive(entry.value));
+      } catch (error, stackTrace) {
+        // One damaged offline row must not prevent every other cart line from
+        // loading. Keep the row for diagnostics/recovery; a later successful
+        // cart mutation will remove it as a stale key.
+        debugPrint(
+            'Skipping unreadable Hive cart row at key ${entry.key}: $error');
+        debugPrint('$stackTrace');
+      }
     }
     notifyListeners();
   }
@@ -1589,31 +1784,22 @@ class LocalProductProvider extends ChangeNotifier {
 
   // Save products to Hive
   void _saveProductsToHive() {
-    final sw = Stopwatch()..start();
-    final beforeLen = _productsBox.length;
-    debugPrint(
-        "📝 [Hive] Saving products to box 'products' (beforeLen=$beforeLen)...");
-    _productsBox.clear();
-    int saved = 0;
+    final snapshots = <HiveProduct>[];
     for (var product in _products) {
       try {
-        final hiveProduct = HiveProduct(
-          productId: product.productId,
-          categoryId: product.categoryId,
-          productName: product.productName,
-          barcode: product.barcode,
-          serializedData: HiveStringValue(json.encode(product.toJson())),
-        );
-        _productsBox.add(hiveProduct);
-        saved++;
+        snapshots.add(_buildHiveProduct(product));
       } catch (e) {
         debugPrint(
-            "❌ [Hive] Failed to serialize/save productId=${product.productId}: $e");
+            "Failed to serialize productId=${product.productId} for Hive: $e");
       }
     }
-    sw.stop();
-    debugPrint(
-        "✅ [Hive] Saved $saved/${_products.length} products (afterLen=${_productsBox.length}) in ${sw.elapsedMilliseconds}ms");
+
+    _enqueuePersistence('save products', () async {
+      await _productsBox.clear();
+      if (snapshots.isNotEmpty) {
+        await _productsBox.addAll(snapshots);
+      }
+    });
   }
 
   HiveProduct _buildHiveProduct(GetProduct product) {
@@ -1633,57 +1819,54 @@ class LocalProductProvider extends ChangeNotifier {
       return;
     }
 
+    late final HiveProduct hiveProduct;
     try {
-      final hiveProduct = _buildHiveProduct(product);
+      hiveProduct = _buildHiveProduct(product);
+    } catch (e) {
+      debugPrint(
+          "Failed to serialize single productId=$productId for Hive: $e");
+      _saveProductsToHive();
+      return;
+    }
+
+    _enqueuePersistence('save product $productId', () async {
       final dynamic existingKey = _productsBox.keys.firstWhere(
         (key) => _productsBox.get(key)?.productId == productId,
         orElse: () => null,
       );
-
       if (existingKey == null) {
-        _productsBox.add(hiveProduct);
+        await _productsBox.add(hiveProduct);
       } else {
-        _productsBox.put(existingKey, hiveProduct);
+        await _productsBox.put(existingKey, hiveProduct);
       }
-      debugPrint("✅ [Hive] Saved single productId=$productId to Hive");
-    } catch (e) {
-      debugPrint(
-          "❌ [Hive] Failed single-product save for productId=$productId: $e");
-      _saveProductsToHive();
-    }
+    });
   }
 
   // Save cart items to Hive
   void _saveCartToHive() {
-    debugPrint(
-        "💾 [Hive] Persisting ${_cartItems.length} cart items to 'cart_items' box...");
-    _cartItemsBox.clear();
-    int idx = 0;
-    for (var cartItem in _cartItems) {
-      idx++;
-      final hiveCartItem = _buildHiveCartItem(cartItem);
-      _cartItemsBox.add(hiveCartItem);
-      debugPrint(
-          "  #$idx ✅ Cart item productId=${cartItem.product.productId}, qty=${cartItem.quantity}, price=${cartItem.price}, mrp=${cartItem.mrp}, taxRate=${cartItem.taxRate}, stockId=${cartItem.selectedStock?.id}");
-    }
-    debugPrint(
-        "✅ [Hive] Cart persistence complete. Box 'cart_items' now has ${_cartItemsBox.length} entries");
+    final snapshots = <String, HiveLocalCartItem>{
+      for (final item in _cartItems) item.lineId: _buildHiveCartItem(item),
+    };
+    _enqueuePersistence('save cart', () async {
+      if (snapshots.isNotEmpty) {
+        await _cartItemsBox.putAll(snapshots);
+      }
+      final staleKeys = _cartItemsBox.keys
+          .where((key) => !snapshots.containsKey(key))
+          .toList(growable: false);
+      if (staleKeys.isNotEmpty) {
+        await _cartItemsBox.deleteAll(staleKeys);
+      }
+    });
   }
 
   // Save orders to Hive
   void _saveSavedOrdersToHive() {
-    debugPrint(
-        "💾 [Hive] Persisting ${_savedOrders.length} saved orders to 'saved_orders' box...");
-    _savedOrdersBox.clear();
-    int idx = 0;
-    for (var order in _savedOrders) {
-      idx++;
-      final hiveItems = order.items.map(_buildHiveCartItem).toList();
-
-      final hiveSavedOrder = HiveSavedOrder(
+    final snapshots = _savedOrders.map((order) {
+      return HiveSavedOrder(
         id: order.id,
         orderNumber: order.orderNumber,
-        items: hiveItems,
+        items: order.items.map(_buildHiveCartItem).toList(),
         customerName: order.customerName,
         customerPhone: order.customerPhone,
         comment: order.comment,
@@ -1713,11 +1896,14 @@ class LocalProductProvider extends ChangeNotifier {
         customerCrNumber: order.customerCrNumber,
         customerType: order.customerType,
       );
+    }).toList();
 
-      _savedOrdersBox.add(hiveSavedOrder);
-      debugPrint(
-          "  #$idx ✅ Saved order id=${order.id}, num=${order.orderNumber}, status=${order.status}, tableId=${order.tableId}, items=${order.items.length}");
-    }
+    _enqueuePersistence('save orders', () async {
+      await _savedOrdersBox.clear();
+      if (snapshots.isNotEmpty) {
+        await _savedOrdersBox.addAll(snapshots);
+      }
+    });
   }
 
   double get subTotalBeforeDiscount {
@@ -2010,8 +2196,7 @@ class LocalProductProvider extends ChangeNotifier {
         final beforeCount = _products.length;
         _products = _products
             .where((p) =>
-                p.productId == null ||
-                !deletedProductIds.contains(p.productId))
+                p.productId == null || !deletedProductIds.contains(p.productId))
             .toList();
         debugPrint(
             "🗑️ [Sync] Removed ${beforeCount - _products.length} product(s) via deleted_product_ids (${deletedProductIds.length} id(s) reported)");
@@ -2492,7 +2677,7 @@ class LocalProductProvider extends ChangeNotifier {
   /// If the product already exists in the cart, its quantity is incremented.
   /// Optionally updates the price of the cart item if provided.
   /// Also handles stock deduction when stock management is enabled.
-  void addToCart({
+  bool addToCart({
     GetProduct? product,
     num? quantity = 1,
     double? price,
@@ -2507,6 +2692,7 @@ class LocalProductProvider extends ChangeNotifier {
     double? saleUnitConversionRate,
     int? variantId,
     Map<String, dynamic>? variantAttributes,
+    bool? warrantyEnabled,
   }) {
     debugPrint("🛒 ADD TO CART STARTED");
     debugPrint("Product: ${product?.productName}");
@@ -2523,11 +2709,45 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (product == null) {
       debugPrint("❌ Cannot add to cart: product is null");
-      return;
+      return false;
     }
 
     final cartQuantity = quantity ?? 1;
-    final normalizedStockGroupIds = _normalizeStockGroupIds(stockGroupIds);
+    if (cartQuantity <= 0) {
+      debugPrint("❌ Cannot add to cart: quantity must be greater than zero");
+      return false;
+    }
+    final normalizedStockGroupIds = selectedStock == null
+        ? _normalizeStockGroupIds(stockGroupIds)
+        : _expandCompatibleStockGroupIds(
+            product: product,
+            selectedStock: selectedStock,
+            variantId: variantId,
+            stockGroupIds: stockGroupIds,
+          );
+
+    if (isStockEnabled &&
+        !allowOverselling &&
+        variantId != null &&
+        selectedStock == null) {
+      debugPrint(
+          'Cannot add variant $variantId: no variant-scoped stock was selected');
+      return false;
+    }
+
+    if (isStockEnabled && !allowOverselling && selectedStock != null) {
+      final availableQuantity = getAvailableQuantityForSelection(
+        product: product,
+        selectedStock: selectedStock,
+        stockGroupIds: normalizedStockGroupIds,
+        variantId: variantId,
+      );
+      if (availableQuantity < cartQuantity) {
+        debugPrint(
+            'Cannot add to cart: requested $cartQuantity but only $availableQuantity is available');
+        return false;
+      }
+    }
 
     int index = _findCartItemIndex(
       product.productId!,
@@ -2584,6 +2804,10 @@ class LocalProductProvider extends ChangeNotifier {
         debugPrint("💰 Using explicit MRP: $mrp");
       }
 
+      if (warrantyEnabled != null) {
+        existingItem.warrantyEnabled = warrantyEnabled;
+      }
+
       if (isIncreamentUsingCompactQuantityControl != true) {
         // Move this item to the beginning of the array
         final cartItem = _cartItems.removeAt(index);
@@ -2620,11 +2844,13 @@ class LocalProductProvider extends ChangeNotifier {
             quantity: cartQuantity,
             selectedStock: selectedStock,
             saleUnitId: saleUnitId,
+            variantId: variantId,
           );
       final double productMrp = mrp ??
           _resolveMrp(
             product: product,
             selectedStock: selectedStock,
+            variantId: variantId,
           );
 
       final double taxRate = _resolveCartTaxRate(
@@ -2649,6 +2875,7 @@ class LocalProductProvider extends ChangeNotifier {
             stockReservations:
                 _cloneStockReservations(initialStockReservations),
             isManualPriceOverride: markPriceAsManualOverride,
+            warrantyEnabled: warrantyEnabled ?? false,
             saleUnitId: saleUnitId,
             saleUnitName: saleUnitName,
             saleUnitConversionRate: saleUnitConversionRate,
@@ -2667,6 +2894,7 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
 
     debugPrint("✅ ADD TO CART COMPLETED");
+    return true;
   }
 
   /// Changes the display sale unit for an existing cart line while preserving
@@ -2679,12 +2907,14 @@ class LocalProductProvider extends ChangeNotifier {
     int? newSaleUnitId,
     String? newSaleUnitName,
     double? newSaleUnitConversionRate,
+    int? variantId,
   }) {
     final currentIndex = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: currentSaleUnitId,
+      variantId: variantId,
     );
 
     if (currentIndex == -1) {
@@ -2702,6 +2932,14 @@ class LocalProductProvider extends ChangeNotifier {
         targetHasSaleUnit ? newSaleUnitConversionRate : null;
 
     final sourceItem = _cartItems[currentIndex];
+    if (isStockEnabled && sourceItem.selectedStock != null) {
+      sourceItem.stockGroupIds = _expandCompatibleStockGroupIds(
+        product: sourceItem.product,
+        selectedStock: sourceItem.selectedStock!,
+        variantId: sourceItem.variantId,
+        stockGroupIds: sourceItem.stockGroupIds,
+      );
+    }
     if (sourceItem.saleUnitId == targetSaleUnitId &&
         sourceItem.saleUnitName == targetSaleUnitName &&
         sourceItem.saleUnitConversionRate == targetSaleUnitRate) {
@@ -2713,15 +2951,31 @@ class LocalProductProvider extends ChangeNotifier {
         ? _normalizeCartQuantity(sourceDisplayQuantity)
         : _normalizeCartQuantity(sourceDisplayQuantity * targetSaleUnitRate);
     final quantityDifference = targetBaseQuantity - sourceItem.quantity;
+    debugPrint('[UNIT_SWITCH] productId=$productId '
+        'from=${sourceItem.saleUnitName ?? sourceItem.product.unit ?? 'base'} '
+        'to=${targetSaleUnitName ?? sourceItem.product.unit ?? 'base'} '
+        'displayQty=$sourceDisplayQuantity '
+        'baseQty=${sourceItem.quantity}->$targetBaseQuantity '
+        'rate=${sourceItem.saleUnitConversionRate ?? 1}->$targetSaleUnitRate');
     var didMutateStock = false;
 
-    // Insufficient stock never blocks the unit change: the physical goods are
-    // in front of the cashier. _reserveStockForSelection deducts whatever is
-    // available and the sale continues (same oversell rule as addToCart).
+    // A unit change can increase the base quantity, so validate the additional
+    // requirement before mutating reservations.
     if (isStockEnabled &&
         sourceItem.selectedStock != null &&
         quantityDifference != 0) {
       if (quantityDifference > 0) {
+        final availableQuantity = getAvailableQuantityForSelection(
+          product: sourceItem.product,
+          selectedStock: sourceItem.selectedStock,
+          stockGroupIds: sourceItem.stockGroupIds,
+          variantId: sourceItem.variantId,
+        );
+        if (!allowOverselling && availableQuantity < quantityDifference) {
+          debugPrint(
+              'Cannot change sale unit: requires $quantityDifference additional base units but only $availableQuantity is available');
+          return false;
+        }
         final reservationDeltas = _reserveStockForSelection(
           product: sourceItem.product,
           quantity: quantityDifference,
@@ -2748,6 +3002,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: selectedStock,
       stockGroupIds: sourceItem.stockGroupIds,
       saleUnitId: targetSaleUnitId,
+      variantId: sourceItem.variantId,
     );
 
     if (targetIndex != -1 && targetIndex != currentIndex) {
@@ -2760,6 +3015,7 @@ class LocalProductProvider extends ChangeNotifier {
       _cartItems.removeAt(currentIndex);
     } else {
       _cartItems[currentIndex] = LocalCartItem(
+        lineId: sourceItem.lineId,
         product: sourceItem.product,
         quantity: sourceItem.quantity,
         price: sourceItem.price,
@@ -2773,6 +3029,7 @@ class LocalProductProvider extends ChangeNotifier {
             _cloneStockReservations(sourceItem.stockReservations),
         comment: sourceItem.comment,
         isManualPriceOverride: sourceItem.isManualPriceOverride,
+        warrantyEnabled: sourceItem.warrantyEnabled,
         saleUnitId: targetSaleUnitId,
         saleUnitName: targetSaleUnitName,
         saleUnitConversionRate: targetSaleUnitRate,
@@ -2782,6 +3039,10 @@ class LocalProductProvider extends ChangeNotifier {
             : Map<String, dynamic>.from(sourceItem.variantAttributes!),
       );
       _refreshCartItemPricing(_cartItems[currentIndex]);
+      debugPrint('[UNIT_SWITCH] applied productId=$productId '
+          'unit=${_cartItems[currentIndex].displayUnitName} '
+          'baseQty=${_cartItems[currentIndex].quantity} '
+          'basePrice=${_cartItems[currentIndex].price}');
     }
 
     if (didMutateStock) {
@@ -2801,12 +3062,13 @@ class LocalProductProvider extends ChangeNotifier {
   /// Updates the comment on a specific cart item by product ID and stock.
   void updateCartItemComment(
       int productId, Stock? selectedStock, String? comment,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
     if (index != -1) {
       _cartItems[index].comment = comment;
@@ -2816,7 +3078,7 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void removeFromCart(int productId, Stock? selectedStock,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     debugPrint("🗑️ REMOVE FROM CART STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -2827,6 +3089,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -2885,7 +3148,9 @@ class LocalProductProvider extends ChangeNotifier {
     if (maxReduction != null && maxReduction > 0) {
       final priceFloor = sellingPrice - maxReduction;
       // Most restrictive floor wins.
-      floor = (floor == null) ? priceFloor : (priceFloor > floor ? priceFloor : floor);
+      floor = (floor == null)
+          ? priceFloor
+          : (priceFloor > floor ? priceFloor : floor);
     }
 
     if (floor == null) {
@@ -2896,12 +3161,13 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemPrice(int productId, Stock? selectedStock, double newPrice,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -2917,12 +3183,13 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemMrp(int productId, Stock? selectedStock, double newMrp,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -2933,12 +3200,13 @@ class LocalProductProvider extends ChangeNotifier {
   }
 
   void updateItemTax(int productId, Stock? selectedStock, double newTaxRate,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     final index = _findCartItemIndex(
       productId,
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -2977,9 +3245,11 @@ class LocalProductProvider extends ChangeNotifier {
                 selectedStock: item.selectedStock,
                 fallbackPrice: newPrice,
                 saleUnitId: item.saleUnitId,
+                variantId: item.variantId,
               );
         if (updatedProduct != null) {
           _cartItems[i] = LocalCartItem(
+            lineId: item.lineId,
             product: updatedProduct,
             price: resolvedPrice,
             mrp: newMrp,
@@ -2992,6 +3262,7 @@ class LocalProductProvider extends ChangeNotifier {
             stockReservations: _cloneStockReservations(item.stockReservations),
             comment: item.comment,
             isManualPriceOverride: item.isManualPriceOverride,
+            warrantyEnabled: item.warrantyEnabled,
             saleUnitId: item.saleUnitId,
             saleUnitName: item.saleUnitName,
             saleUnitConversionRate: item.saleUnitConversionRate,
@@ -3036,6 +3307,7 @@ class LocalProductProvider extends ChangeNotifier {
                 );
           if (updatedProduct != null) {
             order.items[i] = LocalCartItem(
+              lineId: orderItem.lineId,
               product: updatedProduct,
               price: resolvedPrice,
               mrp: newMrp,
@@ -3049,6 +3321,7 @@ class LocalProductProvider extends ChangeNotifier {
                   _cloneStockReservations(orderItem.stockReservations),
               comment: orderItem.comment,
               isManualPriceOverride: orderItem.isManualPriceOverride,
+              warrantyEnabled: orderItem.warrantyEnabled,
               saleUnitId: orderItem.saleUnitId,
               saleUnitName: orderItem.saleUnitName,
               saleUnitConversionRate: orderItem.saleUnitConversionRate,
@@ -3124,8 +3397,10 @@ class LocalProductProvider extends ChangeNotifier {
                 selectedStock: resolvedStock,
                 fallbackPrice: newPrice,
                 saleUnitId: item.saleUnitId,
+                variantId: item.variantId,
               );
         _cartItems[i] = LocalCartItem(
+          lineId: item.lineId,
           product: updatedProduct ?? item.product,
           price: resolvedPrice,
           mrp: newMrp,
@@ -3138,6 +3413,7 @@ class LocalProductProvider extends ChangeNotifier {
           stockReservations: _cloneStockReservations(item.stockReservations),
           comment: item.comment,
           isManualPriceOverride: item.isManualPriceOverride,
+          warrantyEnabled: item.warrantyEnabled,
           saleUnitId: item.saleUnitId,
           saleUnitName: item.saleUnitName,
           saleUnitConversionRate: item.saleUnitConversionRate,
@@ -3171,8 +3447,10 @@ class LocalProductProvider extends ChangeNotifier {
                   selectedStock: resolvedStock,
                   fallbackPrice: newPrice,
                   saleUnitId: orderItem.saleUnitId,
+                  variantId: orderItem.variantId,
                 );
           order.items[i] = LocalCartItem(
+            lineId: orderItem.lineId,
             product: updatedProduct ?? orderItem.product,
             price: resolvedPrice,
             mrp: newMrp,
@@ -3186,6 +3464,7 @@ class LocalProductProvider extends ChangeNotifier {
                 _cloneStockReservations(orderItem.stockReservations),
             comment: orderItem.comment,
             isManualPriceOverride: orderItem.isManualPriceOverride,
+            warrantyEnabled: orderItem.warrantyEnabled,
             saleUnitId: orderItem.saleUnitId,
             saleUnitName: orderItem.saleUnitName,
             saleUnitConversionRate: orderItem.saleUnitConversionRate,
@@ -3227,7 +3506,7 @@ class LocalProductProvider extends ChangeNotifier {
   /// If the quantity becomes less than 1, the product is removed from the cart.
   /// Also handles stock restoration when stock management is enabled.
   void decrementCartItem(int productId, Stock? selectedStock,
-      {List<int>? stockGroupIds, int? saleUnitId}) {
+      {List<int>? stockGroupIds, int? saleUnitId, int? variantId}) {
     debugPrint("➖ DECREMENT CART ITEM STARTED");
     debugPrint("Product ID: $productId");
     debugPrint("Selected Stock: ${selectedStock?.id}");
@@ -3238,6 +3517,7 @@ class LocalProductProvider extends ChangeNotifier {
       selectedStock: selectedStock,
       stockGroupIds: stockGroupIds,
       saleUnitId: saleUnitId,
+      variantId: variantId,
     );
 
     if (index != -1) {
@@ -3304,7 +3584,7 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     _cartItems.clear();
-    _cartItemsBox.clear();
+    _saveCartToHive();
     clearDiscount(); // Also clear discounts when cart is cleared
     notifyListeners();
 
@@ -3321,7 +3601,7 @@ class LocalProductProvider extends ChangeNotifier {
 
     // Do NOT restore stock - the items are sold
     _cartItems.clear();
-    _cartItemsBox.clear();
+    _saveCartToHive();
     clearDiscount(); // Also clear discounts when cart is cleared
     notifyListeners();
 
@@ -3340,14 +3620,15 @@ class LocalProductProvider extends ChangeNotifier {
     _products = [];
     _filteredProducts = [];
     _productsByBarcode.clear();
-    _productsBox.clear();
+    _saveProductsToHive();
     notifyListeners();
   }
 
   /// Clears saved draft orders from memory and Hive.
   Future<void> clearSavedOrdersCache() async {
     _savedOrders.clear();
-    await _savedOrdersBox.clear();
+    _saveSavedOrdersToHive();
+    await flushPersistence();
     notifyListeners();
     debugPrint('Cleared saved orders cache');
   }
@@ -4163,39 +4444,35 @@ class LocalProductProvider extends ChangeNotifier {
     return product.stock!.fold(0, (sum, stock) => sum + (stock.quantity ?? 0));
   }
 
-  /// Filters [stocks] to the rows relevant for [variantId], mirroring the
-  /// server rule (§4 of PRODUCT_VARIANTS_API.md): when a variant is chosen its
-  /// own scoped stock rows are used; if it has none, fall back to general
-  /// (non-variant) stock rows. When [variantId] is null the list is returned
-  /// unchanged so non-variant behavior stays byte-for-byte identical.
+  /// Filters [stocks] to the rows relevant for [variantId]. Variant sales are
+  /// strict: they may only consume stock assigned to that variant. Plain
+  /// product sales may only consume general (non-variant) stock.
   static List<Stock> filterStocksForVariant(
     List<Stock> stocks,
     int? variantId,
   ) {
     if (variantId == null) {
-      return stocks;
-    }
-    final scoped = stocks
-        .where((stock) => stock.productVariantId == variantId)
-        .toList();
-    if (scoped.isNotEmpty) {
-      return scoped;
+      return stocks.where((stock) => stock.productVariantId == null).toList();
     }
     return stocks
-        .where((stock) => stock.productVariantId == null)
+        .where((stock) => stock.productVariantId == variantId)
         .toList();
   }
 
-  /// Gets a list of stock options for a product with qty > 0.
-  /// When stock management is enabled only positive-quantity entries are
-  /// relevant for selection.  If every entry has qty <= 0 the caller
-  /// should fall back to the product's base price (no stock selected).
-  List<Stock> getStockOptions(GetProduct product) {
+  /// Gets selectable stock rows. Normal flows expose only positive quantity;
+  /// oversell flows can retain zero/negative rows so the cart still carries
+  /// the correct stock and variant identity.
+  List<Stock> getStockOptions(
+    GetProduct product, {
+    bool includeNonPositive = false,
+  }) {
     if (product.stock == null) {
       return [];
     }
     return product.stock!
-        .where((stock) => stock.quantity != null && stock.quantity! > 0)
+        .where((stock) =>
+            stock.quantity != null &&
+            (includeNonPositive || stock.quantity! > 0))
         .toList();
   }
 
@@ -4203,8 +4480,12 @@ class LocalProductProvider extends ChangeNotifier {
     GetProduct product, {
     int? activeStoreId,
     String? activeStoreName,
+    bool includeNonPositive = false,
   }) {
-    final availableStocks = getStockOptions(product);
+    final availableStocks = getStockOptions(
+      product,
+      includeNonPositive: includeNonPositive,
+    );
     if (availableStocks.isEmpty) {
       // No stock entries with quantity data at all — return empty so caller
       // falls back to base product pricing (non-stock mode).
@@ -4402,9 +4683,36 @@ class LocalProductProvider extends ChangeNotifier {
       return;
     }
 
-    final currentQuantity = _cartItems[index].quantity;
+    final cartItem = _cartItems[index];
+    if (isStockEnabled && cartItem.selectedStock != null) {
+      cartItem.stockGroupIds = _expandCompatibleStockGroupIds(
+        product: cartItem.product,
+        selectedStock: cartItem.selectedStock!,
+        variantId: cartItem.variantId,
+        stockGroupIds: cartItem.stockGroupIds,
+      );
+    }
+
+    final currentQuantity = cartItem.quantity;
     final num difference =
         newQuantity - currentQuantity; // positive if increasing
+
+    if (isStockEnabled &&
+        !allowOverselling &&
+        selectedStock != null &&
+        difference > 0) {
+      final availableQuantity = getAvailableQuantityForSelection(
+        product: _cartItems[index].product,
+        selectedStock: selectedStock,
+        stockGroupIds: _cartItems[index].stockGroupIds,
+        variantId: _cartItems[index].variantId,
+      );
+      if (availableQuantity < difference) {
+        debugPrint(
+            'Cannot set cart quantity: requires $difference additional units but only $availableQuantity is available');
+        return;
+      }
+    }
 
     // Handle stock adjustment if enabled
     if (isStockEnabled && selectedStock != null && difference != 0) {
@@ -4542,6 +4850,9 @@ class LocalProductProvider extends ChangeNotifier {
     debugPrint("🧹 CLEARING ALL LOCAL DATA FOR TENANT ISOLATION");
 
     try {
+      // Prevent an older tenant's queued rewrite from running after the boxes
+      // have been cleared for the new tenant.
+      await flushPersistence();
       // Clear Hive boxes
       await _productsBox.clear();
       debugPrint("  ✅ Cleared products box");

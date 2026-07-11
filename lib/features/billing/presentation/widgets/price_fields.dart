@@ -76,6 +76,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
         basePrice,
         stockGroupIds: widget.item.stockGroupIds,
         saleUnitId: widget.item.saleUnitId,
+        variantId: widget.item.variantId,
       );
     }
   }
@@ -120,9 +121,11 @@ class _PriceTextFieldState extends State<PriceTextField> {
       minBase,
       stockGroupIds: widget.item.stockGroupIds,
       saleUnitId: widget.item.saleUnitId,
+      variantId: widget.item.variantId,
     );
 
-    final minDisplay = (widget.item.toDisplayAmount(minBase) ?? minBase) as double;
+    final minDisplay =
+        (widget.item.toDisplayAmount(minBase) ?? minBase) as double;
     final text = _formatPrice(minDisplay);
     _setControllerValue(TextEditingValue(
       text: text,
@@ -180,6 +183,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
           _toBasePrice(parsedPrice),
           stockGroupIds: widget.item.stockGroupIds,
           saleUnitId: widget.item.saleUnitId,
+          variantId: widget.item.variantId,
         );
       }
     } else {
@@ -216,7 +220,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
 
   String _cartIdentityKey(dynamic item) {
     final groupKey = item.stockGroupIds.join('_');
-    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}';
   }
 
   bool _shouldHandleEditRequest(PriceTextField oldWidget) {
@@ -307,6 +311,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
                 _toBasePrice(parsedPrice),
                 stockGroupIds: widget.item.stockGroupIds,
                 saleUnitId: widget.item.saleUnitId,
+                variantId: widget.item.variantId,
               );
             } else if (newPrice.isEmpty) {
               // Allow empty field for editing
@@ -316,6 +321,7 @@ class _PriceTextFieldState extends State<PriceTextField> {
                 0.0,
                 stockGroupIds: widget.item.stockGroupIds,
                 saleUnitId: widget.item.saleUnitId,
+                variantId: widget.item.variantId,
               );
             }
           },
@@ -365,6 +371,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
         _toBaseMrp(parsedMrp),
         stockGroupIds: widget.item.stockGroupIds,
         saleUnitId: widget.item.saleUnitId,
+        variantId: widget.item.variantId,
       );
     }
   }
@@ -465,6 +472,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
                 _toBaseMrp(parsedMrp),
                 stockGroupIds: widget.item.stockGroupIds,
                 saleUnitId: widget.item.saleUnitId,
+                variantId: widget.item.variantId,
               );
             } else if (newMrp.isEmpty) {
               // Allow empty field for editing
@@ -474,6 +482,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
                 0.0,
                 stockGroupIds: widget.item.stockGroupIds,
                 saleUnitId: widget.item.saleUnitId,
+                variantId: widget.item.variantId,
               );
             }
           },
@@ -487,6 +496,7 @@ class _MrpTextFieldState extends State<MrpTextField> {
                 _toBaseMrp(parsedMrp),
                 stockGroupIds: widget.item.stockGroupIds,
                 saleUnitId: widget.item.saleUnitId,
+                variantId: widget.item.variantId,
               );
             } else {
               // Revert to original MRP if invalid

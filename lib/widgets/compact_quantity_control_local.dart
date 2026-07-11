@@ -322,7 +322,7 @@ class _CompactQuantityControlLocalState
 
   String _cartIdentityKey(LocalCartItem item) {
     final groupKey = item.stockGroupIds.join('_');
-    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}';
+    return '${item.product.productId}-${item.selectedStock?.id ?? 'base'}-$groupKey-${item.saleUnitId ?? 'base'}-${item.variantId ?? 'variant-base'}';
   }
 
   num _displayQuantityForBase(num baseQuantity) {
