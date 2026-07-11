@@ -2369,8 +2369,9 @@ class BillingMobileCustomerController {
     }
 
     CustomerListModelData? matched;
+    final normalizedDefaultPhone = defaultPhone.trim();
     for (final customer in customers) {
-      if (customer.phone == defaultPhone) {
+      if (customer.phone?.trim() == normalizedDefaultPhone) {
         matched = customer;
         break;
       }
