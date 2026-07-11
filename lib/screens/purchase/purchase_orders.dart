@@ -595,6 +595,50 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
     );
   }
 
+  Widget _buildCompactFieldBox({
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.15,
+              Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.bold,
+              FontSize.s12,
+              0.18,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMobilePurchaseCard({
     required PurchaseOrderData item,
     required int serialNumber,
@@ -615,6 +659,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Column(
@@ -633,12 +678,12 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.supplier?.name ?? '—',
+                      '${item.supplier?.name ?? '—'} · #$serialNumber',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: buildCustomStyle(
                         FontWeightManager.regular,
-                        FontSize.s12,
+                        FontSize.s11,
                         0.15,
                         Colors.grey.shade600,
                       ),
@@ -646,55 +691,75 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                   ],
                 ),
               ),
-              Text(
-                '#$serialNumber',
-                style: buildCustomStyle(
-                  FontWeightManager.medium,
-                  FontSize.s11,
-                  0.15,
-                  Colors.grey.shade500,
-                ),
+              const SizedBox(width: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Tooltip(
+                    message: 'View order',
+                    child: SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: BuildBoxShadowContainer(
+                        color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                        circleRadius: 6,
+                        child: IconButton(
+                          icon: const Icon(Icons.visibility,
+                              size: 14, color: Colors.white),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => _handleOrderAction(item, 36),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (canReceive) ...[
+                    const SizedBox(width: 6),
+                    Tooltip(
+                      message: 'Receive items',
+                      child: SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: BuildBoxShadowContainer(
+                          color: const Color(0xFFE7F8EC),
+                          circleRadius: 6,
+                          child: IconButton(
+                            icon: const Icon(Icons.add,
+                                size: 14, color: Colors.green),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _handleOrderAction(item, 82),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          PurchaseOrdersTwoColumnLayout(
-            start: PurchaseOrdersInfoChip(
-              label: 'Store',
-              value: item.store?.name ?? '—',
-            ),
-            end: PurchaseOrdersInfoChip(
-              label: 'Total Price',
-              value: '$currency ${item.amountTotal ?? '0'}',
-            ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCompactFieldBox(
+                  label: 'Store',
+                  value: item.store?.name ?? '—',
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _buildCompactFieldBox(
+                  label: 'Total Price',
+                  value: '$currency ${item.amountTotal ?? '0'}',
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: _buildReceivedBadgeWidget(itemsReceived),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              PurchaseOrdersIconAction(
-                icon: Icons.visibility,
-                backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.9),
-                iconColor: Colors.white,
-                tooltip: 'View order',
-                onPressed: () => _handleOrderAction(item, 36),
-              ),
-              if (canReceive) ...[
-                const SizedBox(width: 8),
-                PurchaseOrdersIconAction(
-                  icon: Icons.add,
-                  backgroundColor: const Color(0xFFE7F8EC),
-                  iconColor: Colors.green,
-                  tooltip: 'Receive items',
-                  onPressed: () => _handleOrderAction(item, 82),
-                ),
-              ],
-            ],
           ),
         ],
       ),

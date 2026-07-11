@@ -298,6 +298,8 @@ class APPUrl {
       '$baseURL/api/v1/daily-sales-close/summary';
   static String get dailySalesCloseCreate =>
       '$baseURL/api/v1/daily-sales-close/create';
+  static String get openShift =>
+      '$baseURL/api/v1/daily-sales-close/open';
   static String get adjustStock => '$baseURL/api/v1/stocks/adjust';
   static String get moveStock => '$baseURL/api/v1/stocks/move';
   static String get withdrawStock => '$baseURL/api/v1/stocks/withdraw';

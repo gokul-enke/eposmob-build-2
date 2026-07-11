@@ -206,13 +206,15 @@ class _StockSelectionModalState extends State<StockSelectionModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Multiple Stock Options Available',
-                  style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s16,
-                    0.21,
-                    ColorManager.kPrimaryColor,
+                Flexible(
+                  child: Text(
+                    'Multiple Stock Options Available',
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s16,
+                      0.21,
+                      ColorManager.kPrimaryColor,
+                    ),
                   ),
                 ),
                 IconButton(

@@ -445,24 +445,16 @@ class _AddStockScreenState extends State<AddStockScreen> {
             vertical: isMobile ? 12.0 : 5.0,
             horizontal: horizontalPadding,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (isMobile)
-                _buildMobileHeader(sideBarController)
-              else
-                _buildDesktopHeader(sideBarController),
-              const SizedBox(height: 10),
-              if (isMobile)
-                _buildMobileFiltersSection(size)
-              else
-                _buildDesktopFilters(size),
-              const SizedBox(height: 10),
-              Expanded(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: initLoading ||
+          child: isMobile
+              ? SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMobileHeader(sideBarController),
+                      const SizedBox(height: 10),
+                      _buildMobileFiltersSection(size),
+                      const SizedBox(height: 10),
+                      initLoading ||
                               Provider.of<StockProvider>(context, listen: true)
                                   .stockIsLoading
                           ? _buildLoadingState()
@@ -476,18 +468,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                   return _buildEmptyState();
                                 }
 
-                                if (isMobile) {
-                                  return _buildMobileStockList(
-                                      listStockModelDataList);
-                                }
-
-                                return _buildDesktopStockTable(
+                                return _buildMobileStockList(
                                     listStockModelDataList);
                               },
                             ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (isMobile)
+                      const SizedBox(height: 10),
                       StockPaginationBar(
                         currentPage: Provider.of<StockProvider>(context,
                                 listen: true)
@@ -499,25 +484,60 @@ class _AddStockScreenState extends State<AddStockScreen> {
                           Provider.of<StockProvider>(context, listen: false)
                               .goToStockPage(page);
                         },
-                      )
-                    else
-                      PaginationControl(
-                        currentPage: Provider.of<StockProvider>(context,
-                                listen: true)
-                            .stockCurrentPage,
-                        totalPages: Provider.of<StockProvider>(context,
-                                listen: true)
-                            .stockTotalPages,
-                        onPageChanged: (int page) {
-                          Provider.of<StockProvider>(context, listen: false)
-                              .goToStockPage(page);
-                        },
                       ),
+                    ],
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDesktopHeader(sideBarController),
+                    const SizedBox(height: 10),
+                    _buildDesktopFilters(size),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: initLoading ||
+                                    Provider.of<StockProvider>(context,
+                                            listen: true)
+                                        .stockIsLoading
+                                ? _buildLoadingState()
+                                : Consumer<StockProvider>(
+                                    builder: (context, stockProvider, child) {
+                                      final listStockModelDataList =
+                                          stockProvider
+                                              .listStockModelDataList;
+
+                                      if (listStockModelDataList == null ||
+                                          listStockModelDataList.isEmpty) {
+                                        return _buildEmptyState();
+                                      }
+
+                                      return _buildDesktopStockTable(
+                                          listStockModelDataList);
+                                    },
+                                  ),
+                          ),
+                          const SizedBox(height: 10),
+                          PaginationControl(
+                            currentPage: Provider.of<StockProvider>(context,
+                                    listen: true)
+                                .stockCurrentPage,
+                            totalPages: Provider.of<StockProvider>(context,
+                                    listen: true)
+                                .stockTotalPages,
+                            onPageChanged: (int page) {
+                              Provider.of<StockProvider>(context, listen: false)
+                                  .goToStockPage(page);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -621,59 +641,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
   Widget _buildMobileFiltersSection(Size size) {
     if (!_showFilters) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => setState(() => _showFilters = true),
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.withOpacity(0.15)),
-              color: Colors.grey.withOpacity(0.03),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.filter_list,
-                  size: 20,
-                  color: ColorManager.kPrimaryColor.withOpacity(0.9),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _hasActiveFilters() ? 'Filters (active)' : 'Filters',
-                    style: buildCustomStyle(
-                      FontWeightManager.medium,
-                      FontSize.s13,
-                      0.20,
-                      ColorManager.textColor,
-                    ),
-                  ),
-                ),
-                if (_hasActiveFilters())
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsetsDirectional.only(end: 8),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                Icon(
-                  Icons.expand_more,
-                  color: Colors.grey.shade600,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     return StockContentCard(
@@ -1031,6 +999,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
   Widget _buildMobileStockList(List<ListStockModelData> stocks) {
     return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsetsDirectional.symmetric(vertical: 4),
       itemCount: stocks.length,
       separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -1040,187 +1010,59 @@ class _AddStockScreenState extends State<AddStockScreen> {
     );
   }
 
-  Widget _buildMobileStockCard(ListStockModelData stock) {
-    final barcode = stock.barCode ?? 'N/A';
-    final qtyColors = _quantityColors(stock);
-    final orderDate =
-        DateHelper.formatISODate(stock.orderDate ?? '');
-
-    return StockContentCard(
-      padding: const EdgeInsetsDirectional.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            stock.productName ?? 'Unnamed',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s14,
-              0.20,
-              ColorManager.kPrimaryColor,
-            ),
-          ),
-          if ((stock.categoryName ?? '').isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              stock.categoryName!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s11,
-                0.15,
-                Colors.grey.shade600,
-              ),
-            ),
-          ],
-          if ((stock.storeName ?? '').isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              stock.storeName!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: buildCustomStyle(
-                FontWeightManager.regular,
-                FontSize.s11,
-                0.15,
-                Colors.grey.shade600,
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: StockInfoChip(
-                  label: 'Retail',
-                  value: '${stock.retailPrice ?? 'N/A'}',
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: StockInfoChip(
-                  label: 'MRP',
-                  value: stock.mrp ?? 'N/A',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: StockInfoChip(
-                  label: 'Purchase',
-                  value: stock.purchaseRate ?? 'N/A',
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: StockInfoChip(
-                  label: 'Qty',
-                  value: '${stock.qty}',
-                  valueColor: qtyColors.$1,
-                  valueBgColor: qtyColors.$2,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: StockInfoChip(
-                  label: 'Unit',
-                  value: '${stock.unit ?? 'N/A'}',
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: StockInfoChip(
-                  label: 'Rack',
-                  value: stock.rack ?? 'N/A',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: StockInfoChip(
-                  label: 'Barcode',
-                  value: barcode,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: StockInfoChip(
-                  label: 'Order Date',
-                  value: orderDate,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: _buildStockActionButtons(stock),
-          ),
-        ],
-      ),
-    );
-  }
-
-  (Color?, Color?) _quantityColors(ListStockModelData stock) {
-    if (stock.stockStatus == 'Out of Stock') {
-      return (Colors.white, ColorManager.kRed);
-    }
-    if (stock.stockStatus == 'Low Stock') {
-      return (Colors.white, ColorManager.kOrange);
-    }
-    if (stock.stockStatus == 'At Reorder Level') {
-      return (Colors.white, ColorManager.kButtonYellow);
-    }
-    return (null, null);
-  }
-
-  List<Widget> _buildStockActionButtons(ListStockModelData stock) {
+  List<Widget> _buildMobileStockActionButtons(ListStockModelData stock) {
     return [
-      StockIconAction(
-        icon: Icons.edit,
-        backgroundColor: ColorManager.kPrimaryColor.withOpacity(0.9),
-        iconColor: Colors.white,
-        tooltip: 'Edit stock',
-        onPressed: () => _showEditStockModal(stock),
+      Tooltip(
+        message: 'Edit stock',
+        child: SizedBox(
+          width: 30,
+          height: 30,
+          child: BuildBoxShadowContainer(
+            color: ColorManager.kPrimaryColor.withOpacity(0.9),
+            circleRadius: 6,
+            child: IconButton(
+              icon: const Icon(Icons.edit, size: 14, color: Colors.white),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () => _showEditStockModal(stock),
+            ),
+          ),
+        ),
       ),
-      const SizedBox(width: 8),
-      StockIconAction(
-        icon: Icons.visibility,
-        backgroundColor: Colors.white,
-        iconColor: ColorManager.kPrimaryColor.withOpacity(0.9),
-        tooltip: 'View details',
-        onPressed: () => _showStockDetails(stock),
+      const SizedBox(width: 6),
+      Tooltip(
+        message: 'View details',
+        child: SizedBox(
+          width: 30,
+          height: 30,
+          child: BuildBoxShadowContainer(
+            color: Colors.white,
+            circleRadius: 6,
+            child: IconButton(
+              icon: Icon(Icons.visibility,
+                  size: 14,
+                  color: ColorManager.kPrimaryColor.withOpacity(0.9)),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () => _showStockDetails(stock),
+            ),
+          ),
+        ),
       ),
-      const SizedBox(width: 8),
+      const SizedBox(width: 6),
       SizedBox(
-        width: 44,
-        height: 44,
+        width: 30,
+        height: 30,
         child: BuildBoxShadowContainer(
-          circleRadius: 10,
+          circleRadius: 6,
           child: PopupMenuButton<String>(
             color: Colors.white,
             surfaceTintColor: Colors.white,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(
-              minWidth: 44,
-              minHeight: 44,
-            ),
+            constraints: const BoxConstraints(),
             icon: const Icon(
               Icons.more_vert,
-              size: 18,
+              size: 14,
               color: ColorManager.kPrimaryColor,
             ),
             onSelected: (value) {
@@ -1272,6 +1114,178 @@ class _AddStockScreenState extends State<AddStockScreen> {
       ),
     ];
   }
+
+  Widget _buildCompactFieldBox({
+    required String label,
+    required String value,
+    Color? valueColor,
+    Color? valueBgColor,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.15,
+              Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          valueBgColor != null
+              ? Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: valueBgColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    value,
+                    style: buildCustomStyle(
+                      FontWeightManager.bold,
+                      FontSize.s12,
+                      0.18,
+                      valueColor ?? Colors.white,
+                    ),
+                  ),
+                )
+              : Text(
+                  value,
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s12,
+                    0.18,
+                    valueColor ?? ColorManager.textColor,
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileStockCard(ListStockModelData stock) {
+    final barcode = stock.barCode ?? 'N/A';
+    final qtyColors = _quantityColors(stock);
+    final orderDate =
+        DateHelper.formatISODate(stock.orderDate ?? '');
+
+    return StockContentCard(
+      padding: const EdgeInsetsDirectional.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stock.productName ?? 'Unnamed',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        FontSize.s14,
+                        0.20,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${stock.categoryName ?? ''}${(stock.categoryName ?? '').isNotEmpty && (stock.storeName ?? '').isNotEmpty ? ' · ' : ''}${stock.storeName ?? ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s11,
+                        0.15,
+                        Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: _buildMobileStockActionButtons(stock),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCompactFieldBox(
+                  label: 'Retail',
+                  value: '${stock.retailPrice ?? 'N/A'}',
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _buildCompactFieldBox(
+                  label: 'Qty',
+                  value: '${stock.qty}',
+                  valueColor: qtyColors.$1,
+                  valueBgColor: qtyColors.$2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCompactFieldBox(
+                  label: 'Barcode',
+                  value: barcode,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _buildCompactFieldBox(
+                  label: 'Order Date',
+                  value: orderDate,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  (Color?, Color?) _quantityColors(ListStockModelData stock) {
+    if (stock.stockStatus == 'Out of Stock') {
+      return (Colors.white, ColorManager.kRed);
+    }
+    if (stock.stockStatus == 'Low Stock') {
+      return (Colors.white, ColorManager.kOrange);
+    }
+    if (stock.stockStatus == 'At Reorder Level') {
+      return (Colors.white, ColorManager.kButtonYellow);
+    }
+    return (null, null);
+  }
+
+
 
   List<Widget> _buildDesktopStockActionButtons(ListStockModelData stock) {
     return [

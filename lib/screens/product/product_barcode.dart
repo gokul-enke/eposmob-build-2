@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 
+import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
@@ -657,6 +658,49 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
   }
 
+  Widget _buildCompactFieldBox({
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.15,
+              Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.bold,
+              FontSize.s12,
+              0.18,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMobileProductCard({
     required GetProduct product,
     required int serialNumber,
@@ -676,107 +720,132 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Checkbox(
-                    value: isSelected,
-                    onChanged: (val) {
-                      setState(() {
-                        _setProductSelected(product, val == true);
-                      });
-                    },
-                    activeColor: ColorManager.kPrimaryColor,
-                  ),
-                ),
-                const SizedBox(width: 4),
                 Expanded(
-                  child: Column(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        product.productName ?? 'Unnamed',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: buildCustomStyle(
-                          FontWeightManager.semiBold,
-                          FontSize.s14,
-                          0.18,
-                          ColorManager.kPrimaryColor,
+                      SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Checkbox(
+                          value: isSelected,
+                          onChanged: (val) {
+                            setState(() {
+                              _setProductSelected(product, val == true);
+                            });
+                          },
+                          activeColor: ColorManager.kPrimaryColor,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        categoryName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: buildCustomStyle(
-                          FontWeightManager.regular,
-                          FontSize.s11,
-                          0.13,
-                          Colors.black54,
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              product.productName ?? 'Unnamed',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s14,
+                                0.18,
+                                ColorManager.kPrimaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$categoryName · #$serialNumber',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s11,
+                                0.13,
+                                Colors.black54,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  '#$serialNumber',
-                  style: buildCustomStyle(
-                    FontWeightManager.medium,
-                    FontSize.s11,
-                    0.13,
-                    ColorManager.kGreyColor,
-                  ),
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message: 'View Details',
+                      child: SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: BuildBoxShadowContainer(
+                          color: Colors.white,
+                          circleRadius: 6,
+                          child: IconButton(
+                            icon: Icon(Icons.visibility,
+                                size: 14,
+                                color: ColorManager.kPrimaryColor.withOpacity(0.9)),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _showProductDetails(product),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Tooltip(
+                      message: 'Print Barcode',
+                      child: SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: BuildBoxShadowContainer(
+                          color: ColorManager.kPrimaryColor,
+                          circleRadius: 6,
+                          child: IconButton(
+                            icon: const Icon(Icons.print,
+                                size: 14, color: Colors.white),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _handlePrintSingle(product),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            ProductBarcodeTwoColumnLayout(
-              start: ProductBarcodeInfoChip(
-                label: 'Barcode',
-                value: product.barcode ?? 'N/A',
-              ),
-              end: ProductBarcodeInfoChip(
-                label: 'Qty',
-                value: product.numberOfProductsAvailable ?? 'N/A',
-              ),
-            ),
-            const SizedBox(height: 10),
-            ProductBarcodeTwoColumnLayout(
-              start: ProductBarcodeInfoChip(
-                label: 'Price',
-                value: product.price?.price?.toString() ?? 'N/A',
-              ),
-              end: ProductBarcodeInfoChip(
-                label: 'MRP',
-                value: product.mrp?.toString() ?? 'N/A',
-              ),
-            ),
-            if (product.sku != null && product.sku!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              ProductBarcodeInfoChip(
-                label: 'SKU',
-                value: product.sku!,
-              ),
-            ],
-            const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                Expanded(
+                  child: _buildCompactFieldBox(
+                    label: 'Barcode',
+                    value: product.barcode ?? 'N/A',
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildCompactFieldBox(
+                    label: 'Qty',
+                    value: product.numberOfProductsAvailable ?? 'N/A',
+                  ),
                 ProductBarcodeIconAction(
                   icon: Icons.visibility,
                   iconColor: ColorManager.kPrimaryColor.withValues(alpha: 0.9),
                   tooltip: 'View Details',
                   onPressed: () => _showProductDetails(product),
                 ),
-                const SizedBox(width: 5),
-                ProductBarcodeIconAction(
-                  icon: Icons.print,
-                  iconColor: ColorManager.kPrimaryColor,
-                  tooltip: 'Print Barcode',
-                  onPressed: () => _handlePrintSingle(product),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _buildCompactFieldBox(
+                    label: 'Price',
+                    value: product.price?.price?.toString() ?? 'N/A',
+                  ),
                 ),
               ],
             ),

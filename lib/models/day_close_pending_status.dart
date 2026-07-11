@@ -1,3 +1,45 @@
+class OpenDraftCashSummary {
+  final String? openingCashInHand;
+  final List<dynamic>? openingCashBreakdown;
+
+  OpenDraftCashSummary({
+    this.openingCashInHand,
+    this.openingCashBreakdown,
+  });
+
+  factory OpenDraftCashSummary.fromJson(Map<String, dynamic> json) {
+    return OpenDraftCashSummary(
+      openingCashInHand: json['opening_cash_in_hand']?.toString(),
+      openingCashBreakdown: json['opening_cash_breakdown'],
+    );
+  }
+}
+
+class OpenDraftModel {
+  final int? id;
+  final String? shiftName;
+  final OpenDraftCashSummary? cashSummary;
+  final String? openingTime;
+
+  OpenDraftModel({
+    this.id,
+    this.shiftName,
+    this.cashSummary,
+    this.openingTime,
+  });
+
+  factory OpenDraftModel.fromJson(Map<String, dynamic> json) {
+    return OpenDraftModel(
+      id: json['id'],
+      shiftName: json['shift_name'],
+      cashSummary: json['cash_summary'] != null
+          ? OpenDraftCashSummary.fromJson(json['cash_summary'])
+          : null,
+      openingTime: json['opening_time'],
+    );
+  }
+}
+
 class DayClosePendingStatus {
   final bool pendingDayClose;
   final bool canOpenShift;
@@ -11,6 +53,7 @@ class DayClosePendingStatus {
   final String? openingTime;
   final String? closingDate;
   final String? closingTime;
+  final OpenDraftModel? openDraft;
 
   DayClosePendingStatus({
     required this.pendingDayClose,
@@ -25,6 +68,7 @@ class DayClosePendingStatus {
     this.openingTime,
     this.closingDate,
     this.closingTime,
+    this.openDraft,
   });
 
   factory DayClosePendingStatus.fromJson(Map<String, dynamic> json) {
@@ -41,6 +85,9 @@ class DayClosePendingStatus {
       openingTime: json['opening_time'],
       closingDate: json['closing_date'],
       closingTime: json['closing_time'],
+      openDraft: json['open_draft'] != null
+          ? OpenDraftModel.fromJson(json['open_draft'])
+          : null,
     );
   }
 }

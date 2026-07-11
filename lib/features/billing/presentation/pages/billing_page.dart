@@ -56,6 +56,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print.dart';
+import 'package:pos_machine/screens/sales/open_shift_modal.dart';
 import 'package:pos_machine/features/billing/presentation/utils/billing_focus_orders.dart';
 import 'package:pos_machine/features/billing/presentation/utils/billing_sidebar_metrics.dart';
 import 'package:pos_machine/services/cash_drawer_service.dart';
@@ -360,6 +361,7 @@ class BillingPageState extends State<BillingPage>
         debugPrint(
             '  - All settings: ${appSettingsProvider.appSettings.toString()}');
       }
+      _checkOpenShiftRequired();
     });
 
     // Initialize with dynamic default delivery method
@@ -9761,5 +9763,71 @@ class BillingPageState extends State<BillingPage>
     } catch (e) {
       return "11"; // Fallback to Store Takeaway ID from API
     }
+  }
+
+  Future<void> _checkOpenShiftRequired() async {
+    if (!mounted) return;
+    try {
+      final authModel = 
+          Provider.of<AuthModel>(context, listen: false);
+      final storeSession = 
+          Provider.of<StoreSessionProvider>(context, 
+              listen: false);
+      final salesProvider = SalesProvider();
+      
+      final pendingStatus = await salesProvider
+          .fetchDayClosePendingStatus(
+            accessToken: authModel.token ?? '',
+            storeId: storeSession.activeStore?.storeId ?? 0,
+            userId: authModel.userId ?? 0,
+          );
+      
+      if (!mounted) return;
+      
+      // canOpenShift true = no open shift exists
+      if (pendingStatus?.canOpenShift == true) {
+        _showOpenShiftRequiredAlert();
+      }
+    } catch (e) {
+      debugPrint('_checkOpenShiftRequired error: $e');
+    }
+  }
+
+  void _showOpenShiftRequiredAlert() {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Shift Not Opened'),
+        content: const Text(
+          'You must open a shift before starting sales.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => OpenShiftModal(
+                  onSuccess: () {},
+                ),
+              );
+            },
+            child: const Text('Open Shift'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Go Back'),
+          ),
+        ],
+      ),
+    );
   }
 }

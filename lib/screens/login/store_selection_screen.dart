@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/sales_provider.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_list.dart';
+import 'package:pos_machine/models/day_close_pending_status.dart';
 
 class StoreSelectionScreen extends StatefulWidget {
   final List<Store> stores;
@@ -390,23 +391,35 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
       // Check compulsory day close
       bool shouldNavigateToMainScreen = true;
       bool dayCloseSubmitted = false;
+      DayClosePendingStatus? pendingStatus;
 
-      final appSettings = Provider.of<AppSettingsProvider>(
-        context, listen: false).appSettings;
-      final bool compulsoryDayClose = 
-        appSettings?.compulsoryDayCloseRegister ?? false;
+      final appSettingsProvider = Provider.of<AppSettingsProvider>(
+        context, listen: false);
+      final compulsoryDayClose = appSettingsProvider
+        .appSettings?.compulsoryDayCloseRegister ?? false;
 
       if (compulsoryDayClose) {
-        final accessToken = Provider.of<AuthModel>(
-          context, listen: false).token ?? '';
+        final authModel = Provider.of<AuthModel>(
+          context, listen: false);
+        final accessToken = authModel.token ?? '';
         final salesProvider = Provider.of<SalesProvider>(
           context, listen: false);
 
-        final pendingStatus = await salesProvider
+        pendingStatus = await salesProvider
           .fetchDayClosePendingStatus(
             accessToken: accessToken,
             storeId: selectedStore.storeId ?? 0,
+            userId: authModel.userId ?? 0,
           );
+
+        debugPrint('=== DIAGNOSTICS: fetchDayClosePendingStatus ===');
+        debugPrint('Sent storeId: ${selectedStore.storeId ?? 0}');
+        debugPrint('Sent userId: ${authModel.userId ?? 0}');
+        debugPrint('pendingStatus null? ${pendingStatus == null}');
+        debugPrint('pendingDayClose: ${pendingStatus?.pendingDayClose}');
+        debugPrint('openDraft: ${pendingStatus?.openDraft}');
+        debugPrint('requiresConfirmation: ${pendingStatus?.requiresConfirmation}');
+        debugPrint('==================================================');
 
         if (!mounted) return;
 
@@ -418,9 +431,24 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
             barrierDismissible: false,
             builder: (ctx) => AlertDialog(
               title: const Text('Day Close Pending'),
-              content: Text(
-                '${pendingStatus.message}\n'
-                '${pendingStatus.confirmationMessage}'
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (pendingStatus?.message.isNotEmpty ?? false)
+                        ? pendingStatus!.message
+                        : 'You did not close your last day sales for '
+                          '${pendingStatus?.businessDate ?? ''}.',
+                  ),
+                  if (pendingStatus?.confirmationMessage.isNotEmpty ?? false) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      pendingStatus!.confirmationMessage,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ],
               ),
               actions: [
                 TextButton(
@@ -430,6 +458,10 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                       context: context,
                       barrierDismissible: false,
                       builder: (_) => DayCloseModal(
+                        openDraft: pendingStatus?.openDraft,
+                        pendingBusinessDate: pendingStatus?.businessDate,
+                        pendingOpeningTransactionId: pendingStatus?.openingTransactionId,
+                        pendingClosingTransactionId: pendingStatus?.closingTransactionId,
                         onSuccess: () {
                           dayCloseSubmitted = true;
                           Navigator.of(context).pushReplacement(

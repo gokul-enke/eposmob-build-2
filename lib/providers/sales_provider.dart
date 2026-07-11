@@ -973,10 +973,14 @@ class SalesProvider with ChangeNotifier {
   Future<DailySalesCloseSummary?> fetchDailySalesCloseSummary({
     required String accessToken,
     required int storeId,
+    String? businessDate,
   }) async {
     final queryParameters = <String, String>{
       'store_id': storeId.toString(),
     };
+    if (businessDate != null && businessDate.isNotEmpty) {
+      queryParameters['business_date'] = businessDate;
+    }
 
     final uri = Uri.parse(APPUrl.dailySalesCloseSummary)
         .replace(queryParameters: queryParameters);
@@ -1002,7 +1006,6 @@ class SalesProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 15));
 
       debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
-      debugPrint('Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
@@ -1036,6 +1039,8 @@ class SalesProvider with ChangeNotifier {
     num? closingCashInHand,
     List<dynamic>? closingCashBreakdown,
     String? notes,
+    int? openingTransactionId,
+    int? closingTransactionId,
   }) async {
     final queryParameters = <String, String>{
       'store_id': storeId.toString(),
@@ -1064,24 +1069,14 @@ class SalesProvider with ChangeNotifier {
       'closing_cash_breakdown': closingCashBreakdown,
       'notes': notes,
     };
+    if (openingTransactionId != null) {
+      requestBody['opening_transaction_id'] = openingTransactionId;
+    }
+    if (closingTransactionId != null) {
+      requestBody['closing_transaction_id'] = closingTransactionId;
+    }
     final requestBodyJson = jsonEncode(requestBody);
-    debugPrint('=== DEBUG: createDailySalesClose REQUEST BODY ===');
-    debugPrint(requestBodyJson);
-    debugPrint('shift_name: ${requestBody['shift_name']}');
-    debugPrint('business_date: ${requestBody['business_date']}');
-    debugPrint('opening_date: ${requestBody['opening_date']}');
-    debugPrint('opening_time: ${requestBody['opening_time']}');
-    debugPrint('closing_date: ${requestBody['closing_date']}');
-    debugPrint('closing_time: ${requestBody['closing_time']}');
-    debugPrint('cash_refunds: ${requestBody['cash_refunds']}');
-    debugPrint('cash_expenses: ${requestBody['cash_expenses']}');
-    debugPrint('cash_drop_amount: ${requestBody['cash_drop_amount']}');
-    debugPrint('opening_cash_in_hand: ${requestBody['opening_cash_in_hand']}');
-    debugPrint('opening_cash_breakdown: ${requestBody['opening_cash_breakdown']}');
-    debugPrint('closing_cash_in_hand: ${requestBody['closing_cash_in_hand']}');
-    debugPrint('closing_cash_breakdown: ${requestBody['closing_cash_breakdown']}');
-    debugPrint('notes: ${requestBody['notes']}');
-    debugPrint('=== END REQUEST BODY ===');
+    debugPrint('Submitting daily sales close for store $storeId.');
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1102,7 +1097,6 @@ class SalesProvider with ChangeNotifier {
       ).timeout(const Duration(seconds: 15));
 
       debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
-      debugPrint('Response Body: ${response.body}');
 
       final jsonData = json.decode(response.body);
 
@@ -1128,9 +1122,62 @@ class SalesProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> openShiftApi({
+    required String accessToken,
+    required int storeId,
+    required String shiftName,
+    required String businessDate,
+    required String openingDate,
+    required String openingTime,
+    required double openingCashInHand,
+    required List<Map<String, dynamic>> openingCashBreakdown,
+    String notes = '',
+  }) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+      if (apiKey == null || apiKey.isEmpty) {
+        throw const HttpException("API key not found.");
+      }
+
+      final url = Uri.parse(APPUrl.openShift);
+      final body = jsonEncode({
+        'store_id': storeId,
+        'shift_name': shiftName,
+        'business_date': businessDate,
+        'opening_date': openingDate,
+        'opening_time': openingTime,
+        'opening_cash_in_hand': openingCashInHand,
+        'opening_cash_breakdown': openingCashBreakdown,
+        'notes': notes,
+      });
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+          'X-Tenant': apiKey,
+        },
+        body: body,
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      } else {
+        debugPrint('openShiftApi failed with status ${response.statusCode}.');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('openShiftApi exception: $e');
+      return false;
+    }
+  }
+
   Future<DayClosePendingStatus?> fetchDayClosePendingStatus({
     required String accessToken,
     required int storeId,
+    required int userId,
   }) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1142,7 +1189,7 @@ class SalesProvider with ChangeNotifier {
 
       final uri = Uri.parse(
         '${APPUrl.dailySalesClosePendingStatus}'
-        '?store_id=$storeId'
+        '?store_id=$storeId&user_id=$userId'
       );
       final response = await http.get(
         uri,
@@ -1151,6 +1198,9 @@ class SalesProvider with ChangeNotifier {
           'Content-Type': 'application/json',
           'X-Tenant': apiKey,
         },
+      );
+      debugPrint(
+        'Day close pending-status response: ${response.statusCode}.',
       );
       final data = jsonDecode(response.body);
       if (data['success'] == true && data['data'] != null) {
