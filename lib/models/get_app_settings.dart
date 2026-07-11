@@ -54,6 +54,7 @@ class AppSettings {
   final bool skipCheckoutOnConfirmAndPrint;
   final bool compulsoryDayCloseRegister;
   final bool productVariantEnabled;
+  final bool allowOverselling;
 
   AppSettings({
     required this.barcodeSales,
@@ -92,7 +93,8 @@ class AppSettings {
     this.pineLabPayment = false,
     this.skipCheckoutOnConfirmAndPrint = false,
     this.compulsoryDayCloseRegister = false,
-    this.productVariantEnabled = true,
+    this.productVariantEnabled = false,
+    this.allowOverselling = true,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -197,10 +199,19 @@ class AppSettings {
       compulsoryDayCloseRegister: _readSettingStatus(
         settingsMap,
         'COMPULSORY_DAY_CLOSE_REGISTER',
+        defaultValue: false,
       ),
       productVariantEnabled: _readSettingStatus(
         settingsMap,
         'PRODUCT_VARIANT_ENABLED',
+        defaultValue: false,
+      ),
+      // Preserve the existing cashier-first behavior for tenants that have
+      // not received this setting yet. Setting the status to false enables
+      // strict frontend stock enforcement.
+      allowOverselling: _readSettingStatus(
+        settingsMap,
+        'ALLOW_OVERSELL',
         defaultValue: true,
       ),
     );
@@ -418,6 +429,12 @@ class AppSettings {
           "code": "PRODUCT_VARIANT_ENABLED",
           "value": "",
           "status": productVariantEnabled.toString(),
+        },
+        {
+          "name": "Allow Overselling",
+          "code": "ALLOW_OVERSELL",
+          "value": "",
+          "status": allowOverselling.toString(),
         },
       ],
     };

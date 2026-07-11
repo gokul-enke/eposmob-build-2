@@ -35,9 +35,8 @@ class ProductVariantSelection {
   /// Returns `null` when the product has no variants, when multiple variants
   /// require user choice, or when no barcode match was found among many variants.
   ///
-  /// Out-of-stock variants ARE resolved here: a zero quantity is a data
-  /// signal, not a sales block. The add-to-cart flow asks the cashier to
-  /// confirm an oversell instead of refusing the sale.
+  /// Out-of-stock variants are still resolved here because this pure function
+  /// identifies a barcode/choice; the stock-aware add flow performs the block.
   static ProductVariant? tryResolveWithoutPicker(
     GetProduct product, {
     String? scannedBarcode,

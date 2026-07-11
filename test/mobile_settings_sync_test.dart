@@ -66,6 +66,7 @@ AppSettings _appSettings({
   bool askDeliveryDate = false,
   String defaultDeliveryMethod = 'Store Takeaway',
   String defaultPaymentMethod = 'CASH',
+  bool allowOverselling = true,
 }) {
   return AppSettings(
     barcodeSales: barcodeSales,
@@ -101,6 +102,7 @@ AppSettings _appSettings({
     kotBillAutoMarkServed: false,
     kotBillAllowedForDineIn: false,
     pineLabPayment: false,
+    allowOverselling: allowOverselling,
   );
 }
 
@@ -246,6 +248,28 @@ void main() {
       expect(localProductProvider.isStockEnabled, isFalse);
     });
 
+    test('syncAllowOverselling writes app policy to LocalProductProvider', () {
+      final localProductProvider = LocalProductProvider();
+
+      expect(
+        controller.syncAllowOverselling(
+          appSettings: _appSettings(allowOverselling: false),
+          localProductProvider: localProductProvider,
+        ),
+        isFalse,
+      );
+      expect(localProductProvider.allowOverselling, isFalse);
+
+      expect(
+        controller.syncAllowOverselling(
+          appSettings: null,
+          localProductProvider: localProductProvider,
+        ),
+        isTrue,
+      );
+      expect(localProductProvider.allowOverselling, isTrue);
+    });
+
     test('syncAppSettingsFlags updates billing provider toggles', () {
       final billingProvider = BillingProvider();
 
@@ -274,7 +298,8 @@ void main() {
       expect(billingProvider.isCashSelected, isFalse);
     });
 
-    test('applyDefaultPaymentMethodIfNeeded skips when payment already selected',
+    test(
+        'applyDefaultPaymentMethodIfNeeded skips when payment already selected',
         () {
       final billingProvider = BillingProvider()..setPaymentMethod('CASH', true);
 

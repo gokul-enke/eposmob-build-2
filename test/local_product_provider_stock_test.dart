@@ -49,6 +49,7 @@ void main() {
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
   });
 
+  tearDown(awaitPendingHiveBoxWrites);
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   GetProduct buildProduct({
@@ -101,7 +102,8 @@ void main() {
     );
   }
 
-  test('grouped stock reservations merge same pricing group and expand payload', () {
+  test('grouped stock reservations merge same pricing group and expand payload',
+      () {
     final provider = LocalProductProvider();
     provider.setStockEnabled(true);
 
@@ -136,14 +138,17 @@ void main() {
     expect(provider.cartItems.first.stockDeducted, 5);
     expect(
       provider.cartItems.first.stockReservations
-          .map((reservation) => '${reservation.stockId}:${reservation.quantity}')
+          .map(
+              (reservation) => '${reservation.stockId}:${reservation.quantity}')
           .toList(),
       <String>['1:2', '2:3'],
     );
 
     final updatedProduct = provider.getProductById(1)!;
-    expect(updatedProduct.stock!.firstWhere((stock) => stock.id == 1).quantity, 0);
-    expect(updatedProduct.stock!.firstWhere((stock) => stock.id == 2).quantity, 0);
+    expect(
+        updatedProduct.stock!.firstWhere((stock) => stock.id == 1).quantity, 0);
+    expect(
+        updatedProduct.stock!.firstWhere((stock) => stock.id == 2).quantity, 0);
 
     expect(
       provider.buildOrderItemsPayload(),
@@ -166,7 +171,8 @@ void main() {
     );
   });
 
-  test('same pricing group collapses into one line as FEFO shrinks stockGroupIds',
+  test(
+      'same pricing group collapses into one line as FEFO shrinks stockGroupIds',
       () {
     // Reproduces the reported bug: one product, three same-price/unit batches.
     // Each successive add depletes a batch, so the available (qty>0) id set
@@ -217,7 +223,8 @@ void main() {
     expect(provider.cartItems.first.stockDeducted, 8);
     expect(
       provider.cartItems.first.stockReservations
-          .map((reservation) => '${reservation.stockId}:${reservation.quantity}')
+          .map(
+              (reservation) => '${reservation.stockId}:${reservation.quantity}')
           .toList(),
       <String>['1:2', '2:5', '3:1'],
     );
@@ -232,9 +239,27 @@ void main() {
     expect(
       provider.buildOrderItemsPayload(),
       <Map<String, dynamic>>[
-        {'product_id': 1, 'quantity': 2, 'price': 2.0, 'mrp': 12.0, 'stock_id': 1},
-        {'product_id': 1, 'quantity': 5, 'price': 2.0, 'mrp': 12.0, 'stock_id': 2},
-        {'product_id': 1, 'quantity': 1, 'price': 2.0, 'mrp': 12.0, 'stock_id': 3},
+        {
+          'product_id': 1,
+          'quantity': 2,
+          'price': 2.0,
+          'mrp': 12.0,
+          'stock_id': 1
+        },
+        {
+          'product_id': 1,
+          'quantity': 5,
+          'price': 2.0,
+          'mrp': 12.0,
+          'stock_id': 2
+        },
+        {
+          'product_id': 1,
+          'quantity': 1,
+          'price': 2.0,
+          'mrp': 12.0,
+          'stock_id': 3
+        },
       ],
     );
   });
@@ -274,6 +299,121 @@ void main() {
     expect(provider.cartItems, hasLength(2));
   });
 
+  test('oversell mode consumes compatible stock before overselling', () {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    final stockOne = buildStock(id: 1, quantity: 10, price: '10', mrp: '12');
+    final stockTwo = buildStock(id: 2, quantity: 5, price: '10', mrp: '12');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: <Stock>[stockOne, stockTwo],
+    );
+    provider.initializeProducts(<GetProduct>[product]);
+
+    final added = provider.addToCart(
+      product: product,
+      quantity: 12,
+      selectedStock: stockOne,
+    );
+
+    expect(added, isTrue);
+    expect(provider.cartItems, hasLength(1));
+    expect(provider.cartItems.single.quantity, 12);
+    expect(provider.cartItems.single.stockDeducted, 12);
+    expect(
+      provider.cartItems.single.stockReservations
+          .map(
+              (reservation) => '${reservation.stockId}:${reservation.quantity}')
+          .toList(),
+      <String>['1:10', '2:2'],
+    );
+    expect(provider.getProductById(1)!.stock![0].quantity, 0);
+    expect(provider.getProductById(1)!.stock![1].quantity, 3);
+  });
+
+  test('oversell mode does not silently consume differently priced stock', () {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    final stockOne = buildStock(id: 1, quantity: 10, price: '10', mrp: '12');
+    final otherPrice = buildStock(id: 2, quantity: 5, price: '11', mrp: '13');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: <Stock>[stockOne, otherPrice],
+    );
+    provider.initializeProducts(<GetProduct>[product]);
+
+    final added = provider.addToCart(
+      product: product,
+      quantity: 12,
+      selectedStock: stockOne,
+    );
+
+    expect(added, isTrue);
+    expect(provider.cartItems.single.quantity, 12);
+    expect(provider.cartItems.single.stockDeducted, 10);
+    expect(provider.cartItems.single.stockReservations, hasLength(1));
+    expect(provider.cartItems.single.stockReservations.single.stockId, 1);
+    expect(provider.getProductById(1)!.stock![0].quantity, 0);
+    expect(provider.getProductById(1)!.stock![1].quantity, 5);
+  });
+
+  test(
+      'quantity increase uses differently priced stock as a separate line before overselling',
+      () async {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+
+    final stockOne = buildStock(id: 1, quantity: 10, price: '10', mrp: '12');
+    final otherPrice = buildStock(id: 2, quantity: 5, price: '11', mrp: '13');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: <Stock>[stockOne, otherPrice],
+    );
+    provider.initializeProducts(<GetProduct>[product]);
+    provider.addToCart(
+      product: product,
+      quantity: 10,
+      selectedStock: stockOne,
+    );
+
+    final originalLine = provider.cartItems.single;
+    final result = await CartQuantityStockHelper.syncCartItemQuantity(
+      cartItem: originalLine,
+      newQuantity: 20,
+      localProductProvider: provider,
+      activeStoreId: 1,
+      selectionResolver: (_, options) async {
+        expect(options.map((stock) => stock.id), <int?>[2]);
+        return CartQuantityStockSelection(
+          selectedStock: options.single,
+          stockGroupIds: const <int>[2],
+        );
+      },
+    );
+
+    expect(result.changed, isTrue);
+    expect(result.appliedQuantity, 20);
+    expect(provider.cartItems, hasLength(2));
+    final firstPriceLine =
+        provider.cartItems.firstWhere((item) => item.selectedStock?.id == 1);
+    final secondPriceLine =
+        provider.cartItems.firstWhere((item) => item.selectedStock?.id == 2);
+    expect(firstPriceLine.quantity, 15); // 10 reserved + 5 oversold.
+    expect(firstPriceLine.stockDeducted, 10);
+    expect(firstPriceLine.price, 10);
+    expect(secondPriceLine.quantity, 5);
+    expect(secondPriceLine.stockDeducted, 5);
+    expect(secondPriceLine.price, 11);
+  });
+
   test('base-price fallback keeps stock null and increments same row', () {
     final provider = LocalProductProvider();
     provider.setStockEnabled(true);
@@ -310,7 +450,8 @@ void main() {
     );
   });
 
-  test('loadOrderForEditing restores and reapplies saved grouped reservations', () {
+  test('loadOrderForEditing restores and reapplies saved grouped reservations',
+      () {
     final provider = LocalProductProvider();
     provider.setStockEnabled(true);
 
@@ -340,20 +481,25 @@ void main() {
     expect(provider.cartItems.first.stockGroupIds, <int>[1, 2]);
     expect(
       provider.cartItems.first.stockReservations
-          .map((reservation) => '${reservation.stockId}:${reservation.quantity}')
+          .map(
+              (reservation) => '${reservation.stockId}:${reservation.quantity}')
           .toList(),
       <String>['1:2', '2:2'],
     );
 
     final updatedProduct = provider.getProductById(1)!;
-    expect(updatedProduct.stock!.firstWhere((stock) => stock.id == 1).quantity, 0);
-    expect(updatedProduct.stock!.firstWhere((stock) => stock.id == 2).quantity, 1);
+    expect(
+        updatedProduct.stock!.firstWhere((stock) => stock.id == 1).quantity, 0);
+    expect(
+        updatedProduct.stock!.firstWhere((stock) => stock.id == 2).quantity, 1);
   });
 
-  test('increment beyond exhausted single stock uses another stock row instead of null overflow',
+  test(
+      'increment beyond exhausted single stock uses another stock row instead of null overflow',
       () async {
     final provider = LocalProductProvider();
     provider.setStockEnabled(true);
+    provider.setAllowOverselling(false);
 
     final stockOne = buildStock(id: 1, quantity: 5, price: '10', mrp: '12');
     final stockTwo = buildStock(id: 2, quantity: 4, price: '11', mrp: '13');
@@ -372,7 +518,8 @@ void main() {
     );
 
     final result = await CartQuantityStockHelper.syncCartItemQuantity(
-      cartItem: provider.cartItems.firstWhere((item) => item.selectedStock?.id == 1),
+      cartItem:
+          provider.cartItems.firstWhere((item) => item.selectedStock?.id == 1),
       newQuantity: 6,
       localProductProvider: provider,
       selectionResolver: (currentProduct, stockOptions) async {
@@ -380,7 +527,8 @@ void main() {
         final selectedStock = stockOptions.first;
         return CartQuantityStockSelection(
           selectedStock: selectedStock,
-          stockGroupIds: provider.getSelectionStockIds(selectedStock: selectedStock),
+          stockGroupIds:
+              provider.getSelectionStockIds(selectedStock: selectedStock),
         );
       },
     );
@@ -408,10 +556,12 @@ void main() {
     );
   });
 
-  test('increment beyond exhausted grouped stock adds a new stock row instead of null overflow',
+  test(
+      'increment beyond exhausted grouped stock adds a new stock row instead of null overflow',
       () async {
     final provider = LocalProductProvider();
     provider.setStockEnabled(true);
+    provider.setAllowOverselling(false);
 
     final stockOne = buildStock(id: 1, quantity: 2, price: '10', mrp: '12');
     final stockTwo = buildStock(id: 2, quantity: 3, price: '10', mrp: '12');
@@ -432,7 +582,8 @@ void main() {
     );
 
     final result = await CartQuantityStockHelper.syncCartItemQuantity(
-      cartItem: provider.cartItems.firstWhere((item) => item.stockGroupIds.length == 2),
+      cartItem: provider.cartItems
+          .firstWhere((item) => item.stockGroupIds.length == 2),
       newQuantity: 6,
       localProductProvider: provider,
       selectionResolver: (currentProduct, stockOptions) async {
@@ -440,7 +591,8 @@ void main() {
         final selectedStock = stockOptions.first;
         return CartQuantityStockSelection(
           selectedStock: selectedStock,
-          stockGroupIds: provider.getSelectionStockIds(selectedStock: selectedStock),
+          stockGroupIds:
+              provider.getSelectionStockIds(selectedStock: selectedStock),
         );
       },
     );
@@ -560,6 +712,7 @@ void main() {
   test('increment is blocked when no alternative stock remains', () async {
     final provider = LocalProductProvider();
     provider.setStockEnabled(true);
+    provider.setAllowOverselling(false);
 
     final stockOne = buildStock(id: 1, quantity: 5, price: '10', mrp: '12');
     final product = buildProduct(
@@ -578,11 +731,13 @@ void main() {
 
     String? blockedMessage;
     final result = await CartQuantityStockHelper.syncCartItemQuantity(
-      cartItem: provider.cartItems.firstWhere((item) => item.selectedStock?.id == 1),
+      cartItem:
+          provider.cartItems.firstWhere((item) => item.selectedStock?.id == 1),
       newQuantity: 6,
       localProductProvider: provider,
       selectionResolver: (_, __) async {
-        fail('Selection should not be requested when no alternative stock exists.');
+        fail(
+            'Selection should not be requested when no alternative stock exists.');
       },
       onBlocked: (message) {
         blockedMessage = message;
@@ -591,9 +746,75 @@ void main() {
 
     expect(result.changed, isFalse);
     expect(result.appliedQuantity, 5);
-    expect(blockedMessage, 'Selected stock is exhausted. No other stock is available.');
+    expect(blockedMessage,
+        'Selected stock is exhausted. No other stock is available.');
     expect(provider.cartItems, hasLength(1));
     expect(provider.cartItems.first.quantity, 5);
     expect(provider.cartItems.first.stockDeducted, 5);
+  });
+
+  test(
+      'oversell allows a variant with no stock row without borrowing another variant',
+      () {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+    provider.setAllowOverselling(true);
+
+    final redVariant = ProductVariant(
+      id: 101,
+      price: 100,
+      attributes: const {'COLOR': 'Red', 'SIZE': 'M'},
+    );
+    final blueVariant = ProductVariant(
+      id: 102,
+      price: 100,
+      attributes: const {'COLOR': 'Blue', 'SIZE': 'M'},
+    );
+    final blueStock = Stock(
+      id: 22,
+      productId: 1,
+      productVariantId: 102,
+      storeId: 1,
+      storeName: 'Main Store',
+      quantity: 10,
+      price: '100',
+      mrp: '120',
+      unit: 'PCS',
+    );
+    final product = GetProduct(
+      productId: 1,
+      productName: 'Variant Shirt',
+      price: ProductPrice(price: '100'),
+      mrp: '120',
+      unit: 'PCS',
+      variants: <ProductVariant>[redVariant, blueVariant],
+      stock: <Stock>[blueStock],
+    );
+    provider.initializeProducts(<GetProduct>[product]);
+
+    final added = provider.addToCart(
+      product: product,
+      quantity: 1,
+      variantId: redVariant.id,
+      variantAttributes: redVariant.attributes,
+    );
+
+    expect(added, isTrue);
+    expect(provider.cartItems.single.variantId, redVariant.id);
+    expect(provider.cartItems.single.stockReservations, isEmpty);
+    expect(provider.buildOrderItemsPayload(), <Map<String, dynamic>>[
+      {
+        'product_id': 1,
+        'quantity': 1,
+        'price': 100.0,
+        'mrp': 120.0,
+        'stock_id': null,
+        'product_variant_id': 101,
+      },
+    ]);
+    expect(
+      provider.getProductById(1)!.stock!.single.quantity,
+      10,
+    );
   });
 }

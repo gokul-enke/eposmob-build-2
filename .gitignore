@@ -57,3 +57,4 @@ Todo.md
 .gradle-user-home/
 
 .env*
+/local-release

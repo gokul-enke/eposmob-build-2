@@ -1,12 +1,9 @@
 import 'dart:ui';
 
-import 'package:get/get.dart';
-
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
-import 'package:pos_machine/controllers/sidebar_controller.dart';
 
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -40,6 +37,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   bool initLoading = false;
   bool isInitialized = false;
   bool _showFilters = false;
+  bool _isPrinting = false;
   List<String> categories = ["All Categories"];
 
   // Track selected products by stable key so selection survives pagination.
@@ -76,6 +74,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Authentication token is missing")),
         );
+        if (mounted) setState(() => initLoading = false);
         return;
       }
 
@@ -84,6 +83,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       if (!categoryProvider.isCategoriesLoaded) {
         debugPrint("📥 Loading categories from API...");
         await categoryProvider.ensureCategoriesLoaded();
+        if (!mounted) return;
         debugPrint("✅ Categories loaded and cached");
       } else {
         debugPrint(
@@ -95,18 +95,19 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
       _extractCategories();
 
+      if (!mounted) return;
       setState(() {
         isInitialized = true;
         initLoading = false;
       });
     } catch (error) {
       debugPrint("Error loading products: $error");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading products: $error")),
-      );
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading products: $error")),
+        );
+        setState(() => initLoading = false);
+      }
     }
   }
 
@@ -137,9 +138,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
     int? catId;
     if (categoryController.text != "All Categories") {
-      catId = categoryProvider.category
-          ?.firstWhereOrNull((c) => c.categoryName == categoryController.text)
-          ?.categoryId;
+      for (final category in categoryProvider.category ?? const []) {
+        if (category.categoryName == categoryController.text) {
+          catId = category.categoryId;
+          break;
+        }
+      }
     }
 
     provider.listAllProducts(
@@ -255,7 +259,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow('Product Name', product.productName ?? 'N/A'),
+                    _buildDetailRow(
+                        'Product Name', product.productName ?? 'N/A'),
                     _buildDetailRow(
                         'Category', product.category?.name ?? 'N/A'),
                     _buildDetailRow('Store Name', 'N/A'),
@@ -295,109 +300,122 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
   }
 
-  void _handlePrintSelected(List<GetProduct> selectedProducts) async {
-    debugPrint('🖨️ PRINT triggered for ${selectedProducts.length} items');
+  Future<void> _handlePrintSelected(List<GetProduct> selectedProducts) async {
+    if (_isPrinting) return;
+    setState(() => _isPrinting = true);
+    try {
+      debugPrint('🖨️ PRINT triggered for ${selectedProducts.length} items');
 
-    final validProducts = selectedProducts
-        .where((product) =>
-            product.barcode != null && product.barcode!.trim().isNotEmpty)
-        .toList();
+      final validProducts = selectedProducts
+          .where((product) =>
+              product.barcode != null && product.barcode!.trim().isNotEmpty)
+          .toList();
 
-    if (validProducts.length < selectedProducts.length) {
-      final bool shouldContinue = await showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Missing Barcode'),
-              content: Text(validProducts.isEmpty
-                  ? 'These products don\'t have a barcode. Please add a barcode first.'
-                  : 'Some products don\'t have a barcode. Do you want to skip them and continue?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context,
-                      false), // Returning false to indicate cancel/close
-                  child: Text(validProducts.isEmpty ? 'Close' : 'Cancel'),
-                ),
-                if (validProducts.isNotEmpty)
+      if (validProducts.length < selectedProducts.length) {
+        final bool shouldContinue = await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Missing Barcode'),
+                content: Text(validProducts.isEmpty
+                    ? 'These products don\'t have a barcode. Please add a barcode first.'
+                    : 'Some products don\'t have a barcode. Do you want to skip them and continue?'),
+                actions: [
                   TextButton(
-                    onPressed: () => Navigator.pop(
-                        context, true), // Returning true to indicate continue
-                    child: const Text('Continue'),
+                    onPressed: () => Navigator.pop(context,
+                        false), // Returning false to indicate cancel/close
+                    child: Text(validProducts.isEmpty ? 'Close' : 'Cancel'),
                   ),
-              ],
-            ),
-          ) ??
-          false;
+                  if (validProducts.isNotEmpty)
+                    TextButton(
+                      onPressed: () => Navigator.pop(
+                          context, true), // Returning true to indicate continue
+                      child: const Text('Continue'),
+                    ),
+                ],
+              ),
+            ) ??
+            false;
 
-      if (!shouldContinue || validProducts.isEmpty) {
-        return;
+        if (!shouldContinue || validProducts.isEmpty) {
+          return;
+        }
       }
-    }
 
-    final Map<String, dynamic>? result = await showDialog(
-      context: context,
-      builder: (context) =>
-          ConfirmBarcodePrintModal(selectedProducts: validProducts),
-    );
-
-    if (result != null &&
-        result['items'] != null &&
-        (result['items'] as List).isNotEmpty) {
-      final barcodePrinterService = BarcodePrinterService(context);
-      await barcodePrinterService.printBarcodes(
-        printItems: result['items'],
-        stickerSize: result['size'] ?? '50x25mm',
-        stickersPerRow: result['stickersPerRow'] ?? 1,
+      if (!mounted) return;
+      final BarcodePrintRequest? result = await showDialog<BarcodePrintRequest>(
+        context: context,
+        builder: (context) =>
+            ConfirmBarcodePrintModal(selectedProducts: validProducts),
       );
 
-      // Clear selection after printing
-      setState(() {
-        _selectedProductKeys.clear();
-        _selectedProductsByKey.clear();
-      });
+      if (mounted && result != null && result.items.isNotEmpty) {
+        final barcodePrinterService = BarcodePrinterService(context);
+        final printResult = await barcodePrinterService.printBarcodes(
+          printItems: result.items,
+          stickerSize: result.stickerSize,
+          stickersPerRow: result.stickersPerRow,
+        );
+
+        if (mounted && printResult.isSuccess) {
+          setState(() {
+            _selectedProductKeys.clear();
+            _selectedProductsByKey.clear();
+          });
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
     }
   }
 
-  void _handlePrintSingle(GetProduct product) async {
-    debugPrint('🖨️ PRINT single: ${product.productName}');
+  Future<void> _handlePrintSingle(GetProduct product) async {
+    if (_isPrinting) return;
+    setState(() => _isPrinting = true);
+    try {
+      debugPrint('🖨️ PRINT single: ${product.productName}');
 
-    if (product.barcode == null || product.barcode!.trim().isEmpty) {
-      await showDialog(
+      if (product.barcode == null || product.barcode!.trim().isEmpty) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Missing Barcode'),
+            content: const Text(
+                'This product don\'t have a barcode. Please add a barcode first.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      final BarcodePrintRequest? result = await showDialog<BarcodePrintRequest>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Missing Barcode'),
-          content: const Text(
-              'This product don\'t have a barcode. Please add a barcode first.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    final Map<String, dynamic>? result = await showDialog(
-      context: context,
-      builder: (context) => ConfirmBarcodePrintModal(selectedProducts: [product]),
-    );
-
-    if (result != null &&
-        result['items'] != null &&
-        (result['items'] as List).isNotEmpty) {
-      final barcodePrinterService = BarcodePrinterService(context);
-      await barcodePrinterService.printBarcodes(
-        printItems: result['items'],
-        stickerSize: result['size'] ?? '50x25mm',
-        stickersPerRow: result['stickersPerRow'] ?? 1,
+        builder: (context) =>
+            ConfirmBarcodePrintModal(selectedProducts: [product]),
       );
 
-      // Clear selection after printing
-      setState(() {
-        _selectedProductKeys.clear();
-        _selectedProductsByKey.clear();
-      });
+      if (mounted && result != null && result.items.isNotEmpty) {
+        final barcodePrinterService = BarcodePrinterService(context);
+        final printResult = await barcodePrinterService.printBarcodes(
+          printItems: result.items,
+          stickerSize: result.stickerSize,
+          stickersPerRow: result.stickersPerRow,
+        );
+
+        if (mounted && printResult.isSuccess) {
+          setState(() {
+            _selectedProductKeys.clear();
+            _selectedProductsByKey.clear();
+          });
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isPrinting = false);
     }
   }
 
@@ -420,9 +438,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       value: categoryController.text == "All Categories"
           ? null
           : categoryController.text,
-      items: categories
-          .where((category) => category != "All Categories")
-          .toList(),
+      items:
+          categories.where((category) => category != "All Categories").toList(),
       onChanged: (String? newValue) {
         setState(() {
           categoryController.text = newValue ?? "All Categories";
@@ -532,8 +549,11 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     }
 
     final printButton = CustomRoundButton(
-      title: "Print Selected (${_selectedProductKeys.length})",
+      title: _isPrinting
+          ? 'Printing...'
+          : "Print Selected (${_selectedProductKeys.length})",
       fct: () {
+        if (_isPrinting) return;
         final selected = _selectedProductsByKey.values.toList();
         _handlePrintSelected(selected);
       },
@@ -649,7 +669,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       child: ProductBarcodeContentCard(
         padding: const EdgeInsetsDirectional.all(14),
         color: isSelected
-            ? ColorManager.kPrimaryColor.withOpacity(0.04)
+            ? ColorManager.kPrimaryColor.withValues(alpha: 0.04)
             : Colors.white,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -747,7 +767,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
               children: [
                 ProductBarcodeIconAction(
                   icon: Icons.visibility,
-                  iconColor: ColorManager.kPrimaryColor.withOpacity(0.9),
+                  iconColor: ColorManager.kPrimaryColor.withValues(alpha: 0.9),
                   tooltip: 'View Details',
                   onPressed: () => _showProductDetails(product),
                 ),
@@ -784,7 +804,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     };
 
     final allSelected = listProductModelDataList.isNotEmpty &&
-        listProductModelDataList.every((product) => _isProductSelected(product));
+        listProductModelDataList
+            .every((product) => _isProductSelected(product));
 
     return ProductBarcodeResponsiveTable(
       minWidth: 960,
@@ -792,9 +813,9 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: ColorManager.tableBGColor.withOpacity(0.5),
+              color: ColorManager.tableBGColor.withValues(alpha: 0.5),
               border: Border(
-                bottom: BorderSide(color: Colors.grey.withOpacity(0.15)),
+                bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
               ),
             ),
             child: Table(
@@ -855,8 +876,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   child: Table(
                     columnWidths: colWidths,
                     border: null,
-                    defaultVerticalAlignment:
-                        TableCellVerticalAlignment.middle,
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                     children: [
                       ...listProductModelDataList.asMap().entries.map((entry) {
                         final int index = entry.key;
@@ -868,10 +888,11 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                         return TableRow(
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? ColorManager.kPrimaryColor.withOpacity(0.07)
+                                ? ColorManager.kPrimaryColor
+                                    .withValues(alpha: 0.07)
                                 : index % 2 == 0
                                     ? Colors.white
-                                    : Colors.grey.withOpacity(0.06),
+                                    : Colors.grey.withValues(alpha: 0.06),
                           ),
                           children: [
                             _buildTableCell(serialNumber.toString()),
@@ -893,8 +914,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                 product.numberOfProductsAvailable ?? 'N/A'),
                             _buildTableCell(
                                 product.price?.price?.toString() ?? 'N/A'),
-                            _buildTableCell(
-                                product.mrp?.toString() ?? 'N/A'),
+                            _buildTableCell(product.mrp?.toString() ?? 'N/A'),
                             _buildTableCell(product.sku ?? 'N/A'),
                             Center(
                               child: Row(
@@ -903,7 +923,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                   ProductBarcodeIconAction(
                                     icon: Icons.visibility,
                                     iconColor: ColorManager.kPrimaryColor
-                                        .withOpacity(0.9),
+                                        .withValues(alpha: 0.9),
                                     tooltip: 'View Details',
                                     onPressed: () =>
                                         _showProductDetails(product),
@@ -938,7 +958,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     List<GetProduct> listProductModelDataList,
   ) {
     final allSelected = listProductModelDataList.isNotEmpty &&
-        listProductModelDataList.every((product) => _isProductSelected(product));
+        listProductModelDataList
+            .every((product) => _isProductSelected(product));
 
     return Column(
       children: [
@@ -1002,7 +1023,6 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    final SideBarController sideBarController = Get.put(SideBarController());
     final bool isMobile = _isMobile(context);
     final double horizontalMargin = isMobile ? 8 : 12;
 
@@ -1017,7 +1037,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         padding: EdgeInsets.all(isMobile ? 4 : 8),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
-          border: Border.all(color: Colors.grey.withOpacity(0.12)),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.12)),
           boxShadow: const [
             BoxShadow(
               color: ColorManager.boxShadowColor,
@@ -1038,7 +1058,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
               if (isMobile)
                 Row(
                   children: [
-                    Expanded(
+                    const Expanded(
                       child: ProductBarcodePageHeader(
                         title: 'Print Barcodes',
                         subtitle: 'Select products to print barcode labels',

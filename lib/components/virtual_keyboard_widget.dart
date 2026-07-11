@@ -333,16 +333,20 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
         if (isPhone) {
           final keyboardHeight =
               keyboardType == VirtualKeyboardType.Numeric ? 260.0 : 300.0;
-          return VirtualKeyboardWidget(
-            controller: keyboardProvider.controller!,
-            keyboardType: keyboardType,
-            height: keyboardHeight,
-            width: screenSize.width,
-            textColor: Colors.black87,
-            shouldReplaceOnFirstInput:
-                keyboardProvider.shouldReplaceOnFirstInput,
-            onClose: () => keyboardProvider.hide(),
-            onConfirm: () => keyboardProvider.hide(),
+          return Focus(
+            canRequestFocus: false,
+            descendantsAreFocusable: false,
+            child: VirtualKeyboardWidget(
+              controller: keyboardProvider.controller!,
+              keyboardType: keyboardType,
+              height: keyboardHeight,
+              width: screenSize.width,
+              textColor: Colors.black87,
+              shouldReplaceOnFirstInput:
+                  keyboardProvider.shouldReplaceOnFirstInput,
+              onClose: () => keyboardProvider.hide(),
+              onConfirm: () => keyboardProvider.hide(),
+            ),
           );
         }
 
@@ -367,151 +371,160 @@ class _GlobalVirtualKeyboardState extends State<GlobalVirtualKeyboard> {
         return Positioned(
           left: _position.dx,
           top: _position.dy,
-          child: Stack(
-            children: [
-              // Main keyboard widget
-              GestureDetector(
-                onPanStart: (details) {
-                  setState(() {
-                    _isDragging = true;
-                  });
-                },
-                onPanUpdate: (details) {
-                  if (!_isResizing) {
-                    setState(() {
-                      _position = Offset(
-                        _position.dx + details.delta.dx,
-                        _position.dy + details.delta.dy,
-                      );
-                    });
-                    // Persist position
-                    keyboardProvider.setKeyboardPosition(_position);
-                  }
-                },
-                onPanEnd: (details) {
-                  setState(() {
-                    _isDragging = false;
-
-                    // Keep keyboard within screen bounds
-                    double newX = _position.dx;
-                    double newY = _position.dy;
-
-                    // Clamp to screen boundaries
-                    newX = newX.clamp(0, screenSize.width - currentSize.width);
-                    newY =
-                        newY.clamp(0, screenSize.height - currentSize.height);
-
-                    _position = Offset(newX, newY);
-                    // Persist clamped position
-                    keyboardProvider.setKeyboardPosition(_position);
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  transform: Matrix4.identity()
-                    ..scale(_isDragging ? 1.02 : 1.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: _isDragging || _isResizing
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 30,
-                                offset: const Offset(0, 15),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Opacity(
-                      opacity: _isDragging ? 0.9 : 1.0,
-                      child: VirtualKeyboardWidget(
-                        controller: keyboardProvider.controller!,
-                        keyboardType: keyboardType,
-                        height: currentSize.height,
-                        width: currentSize.width,
-                        textColor: Colors.black87,
-                        shouldReplaceOnFirstInput:
-                            keyboardProvider.shouldReplaceOnFirstInput,
-                        onClose: () {
-                          keyboardProvider.hide();
-                        },
-                        onConfirm: () {
-                          keyboardProvider.hide();
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // Resize handle (bottom-right corner)
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: GestureDetector(
+          child: Focus(
+            canRequestFocus: false,
+            descendantsAreFocusable: false,
+            child: Stack(
+              children: [
+                // Main keyboard widget
+                GestureDetector(
                   onPanStart: (details) {
                     setState(() {
-                      _isResizing = true;
+                      _isDragging = true;
                     });
                   },
                   onPanUpdate: (details) {
-                    setState(() {
-                      double newWidth = currentSize.width + details.delta.dx;
-                      double newHeight = currentSize.height + details.delta.dy;
-
-                      // Clamp only to the upper bound so the keyboard can shrink freely
-                      newWidth = newWidth.clamp(0, maxWidth);
-                      newHeight = newHeight.clamp(0, maxHeight);
-
-                      Size newSize = Size(newWidth, newHeight);
-
-                      // Update size in provider
-                      keyboardProvider.setKeyboardSize(keyboardType, newSize);
-                    });
+                    if (!_isResizing) {
+                      setState(() {
+                        _position = Offset(
+                          _position.dx + details.delta.dx,
+                          _position.dy + details.delta.dy,
+                        );
+                      });
+                      // Persist position
+                      keyboardProvider.setKeyboardPosition(_position);
+                    }
                   },
                   onPanEnd: (details) {
                     setState(() {
-                      _isResizing = false;
+                      _isDragging = false;
 
-                      // Ensure keyboard stays within screen bounds after resize
+                      // Keep keyboard within screen bounds
                       double newX = _position.dx;
                       double newY = _position.dy;
 
-                      Size finalSize =
-                          keyboardProvider.getKeyboardSize(keyboardType);
-
-                      if (_position.dx + finalSize.width > screenSize.width) {
-                        newX = screenSize.width - finalSize.width;
-                      }
-                      if (_position.dy + finalSize.height > screenSize.height) {
-                        newY = screenSize.height - finalSize.height;
-                      }
+                      // Clamp to screen boundaries
+                      newX =
+                          newX.clamp(0, screenSize.width - currentSize.width);
+                      newY = newY.clamp(
+                          0, screenSize.height - currentSize.height);
 
                       _position = Offset(newX, newY);
-                      // Persist updated position
+                      // Persist clamped position
                       keyboardProvider.setKeyboardPosition(_position);
                     });
                   },
-                  child: Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.8),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        bottomRight: Radius.circular(16),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    transform: Matrix4.identity()
+                      ..scale(_isDragging ? 1.02 : 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: _isDragging || _isResizing
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 30,
+                                  offset: const Offset(0, 15),
+                                ),
+                              ]
+                            : null,
                       ),
-                    ),
-                    child: const Icon(
-                      Icons.open_in_full_rounded,
-                      color: Colors.white,
-                      size: 12,
+                      child: Opacity(
+                        opacity: _isDragging ? 0.9 : 1.0,
+                        child: VirtualKeyboardWidget(
+                          controller: keyboardProvider.controller!,
+                          keyboardType: keyboardType,
+                          height: currentSize.height,
+                          width: currentSize.width,
+                          textColor: Colors.black87,
+                          shouldReplaceOnFirstInput:
+                              keyboardProvider.shouldReplaceOnFirstInput,
+                          onClose: () {
+                            keyboardProvider.hide();
+                          },
+                          onConfirm: () {
+                            keyboardProvider.hide();
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+
+                // Resize handle (bottom-right corner)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    onPanStart: (details) {
+                      setState(() {
+                        _isResizing = true;
+                      });
+                    },
+                    onPanUpdate: (details) {
+                      setState(() {
+                        double newWidth =
+                            currentSize.width + details.delta.dx;
+                        double newHeight =
+                            currentSize.height + details.delta.dy;
+
+                        // Clamp only to the upper bound so the keyboard can shrink freely
+                        newWidth = newWidth.clamp(0, maxWidth);
+                        newHeight = newHeight.clamp(0, maxHeight);
+
+                        Size newSize = Size(newWidth, newHeight);
+
+                        // Update size in provider
+                        keyboardProvider.setKeyboardSize(keyboardType, newSize);
+                      });
+                    },
+                    onPanEnd: (details) {
+                      setState(() {
+                        _isResizing = false;
+
+                        // Ensure keyboard stays within screen bounds after resize
+                        double newX = _position.dx;
+                        double newY = _position.dy;
+
+                        Size finalSize =
+                            keyboardProvider.getKeyboardSize(keyboardType);
+
+                        if (_position.dx + finalSize.width >
+                            screenSize.width) {
+                          newX = screenSize.width - finalSize.width;
+                        }
+                        if (_position.dy + finalSize.height >
+                            screenSize.height) {
+                          newY = screenSize.height - finalSize.height;
+                        }
+
+                        _position = Offset(newX, newY);
+                        // Persist updated position
+                        keyboardProvider.setKeyboardPosition(_position);
+                      });
+                    },
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.8),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          bottomRight: Radius.circular(16),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.open_in_full_rounded,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

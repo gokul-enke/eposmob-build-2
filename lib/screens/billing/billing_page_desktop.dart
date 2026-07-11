@@ -690,6 +690,14 @@ class BillingPageState extends State<BillingPage>
         );
       }
 
+      if (filteredProducts.length > 1) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Barcode $query matches ${filteredProducts.length} products. Fix the duplicate barcode before selling.',
+        );
+        return;
+      }
       if (filteredProducts.isNotEmpty) {
         // Get the first product
         GetProduct product = filteredProducts.first;
@@ -1120,7 +1128,8 @@ class BillingPageState extends State<BillingPage>
         await CheckoutService(context).createOrderAndPrint();
     if (createdOrderNumber != null && createdOrderNumber.isNotEmpty) {
       try {
-        await const PrintService().printOrderByIdWithOptions(context, createdOrderNumber);
+        await const PrintService()
+            .printOrderByIdWithOptions(context, createdOrderNumber);
       } catch (error) {
         debugPrint("❌ Error fetching order details for print: $error");
       }

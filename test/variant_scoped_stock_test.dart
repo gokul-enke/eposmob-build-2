@@ -49,6 +49,7 @@ void main() {
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
   });
 
+  tearDown(awaitPendingHiveBoxWrites);
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   Stock buildStock({
@@ -136,7 +137,7 @@ void main() {
     expect(result.map((s) => s.id).toList(), <int>[1]);
   });
 
-  test('falls back to general stock when variant has no scoped rows', () {
+  test('variant stock never falls back to general stock', () {
     final scopedA = buildStock(id: 1, quantity: 5, productVariantId: 41);
     final general = buildStock(id: 3, quantity: 5);
 
@@ -145,17 +146,35 @@ void main() {
       99, // no scoped rows for this variant
     );
 
-    expect(result.map((s) => s.id).toList(), <int>[3]);
+    expect(result, isEmpty);
   });
 
-  test('null variant returns the stock list unchanged', () {
+  test('null variant returns only general stock', () {
     final scopedA = buildStock(id: 1, quantity: 5, productVariantId: 41);
     final general = buildStock(id: 3, quantity: 5);
     final input = <Stock>[scopedA, general];
 
     final result = LocalProductProvider.filterStocksForVariant(input, null);
 
-    expect(identical(result, input), isTrue);
+    expect(result.map((s) => s.id).toList(), <int>[3]);
+  });
+
+  test('oversell stock lookup retains a zero-quantity variant row', () {
+    final provider = LocalProductProvider();
+    final scoped = buildStock(id: 1, quantity: 0, productVariantId: 41);
+    final product = buildProduct(stocks: <Stock>[scoped]);
+
+    expect(provider.getStockOptionsForStore(product), isEmpty);
+    expect(
+      LocalProductProvider.filterStocksForVariant(
+        provider.getStockOptionsForStore(
+          product,
+          includeNonPositive: true,
+        ),
+        41,
+      ).map((stock) => stock.id),
+      <int?>[1],
+    );
   });
 
   test('reservation for a variant draws only from that variant stock', () {
@@ -164,8 +183,10 @@ void main() {
 
     final scoped41 = buildStock(id: 1, quantity: 5, productVariantId: 41);
     final scoped42 = buildStock(id: 2, quantity: 5, productVariantId: 42);
-    final variant41 = ProductVariant(id: 41, quantity: 5, attributes: {'COLOR': 'Red'});
-    final variant42 = ProductVariant(id: 42, quantity: 5, attributes: {'COLOR': 'Blue'});
+    final variant41 =
+        ProductVariant(id: 41, quantity: 5, attributes: {'COLOR': 'Red'});
+    final variant42 =
+        ProductVariant(id: 42, quantity: 5, attributes: {'COLOR': 'Blue'});
     final product = buildProduct(
       stocks: <Stock>[scoped41, scoped42],
       variants: <ProductVariant>[variant41, variant42],
@@ -233,7 +254,8 @@ void main() {
     provider.setStockEnabled(true);
 
     final scoped41 = buildStock(id: 1, quantity: 5, productVariantId: 41);
-    final variant41 = ProductVariant(id: 41, quantity: 5, attributes: {'COLOR': 'Red'});
+    final variant41 =
+        ProductVariant(id: 41, quantity: 5, attributes: {'COLOR': 'Red'});
     final product = buildProduct(
       stocks: <Stock>[scoped41],
       variants: <ProductVariant>[variant41],
@@ -256,5 +278,83 @@ void main() {
     // Restored 2 units back to the variant (5 - 1 sold = 4).
     expect(updated.variants!.first.quantity, 4);
     expect(updated.stock!.first.quantity, 4);
+  });
+
+  test('provider rejects an initial quantity above scoped availability',
+      () async {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+    provider.setAllowOverselling(false);
+    final scoped = buildStock(id: 1, quantity: 2, productVariantId: 41);
+    final product = buildProduct(
+      stocks: [scoped],
+      variants: [ProductVariant(id: 41, quantity: 2)],
+    );
+    provider.initializeProducts([product]);
+
+    final added = provider.addToCart(
+      product: product,
+      quantity: 3,
+      selectedStock: scoped,
+      variantId: 41,
+    );
+    await provider.flushPersistence();
+
+    expect(added, isFalse);
+    expect(provider.cartItems, isEmpty);
+    expect(provider.getProductById(1)!.stock!.single.quantity, 2);
+  });
+
+  test('default oversell policy accepts quantity above scoped availability',
+      () async {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+    final scoped = buildStock(id: 1, quantity: 0, productVariantId: 41);
+    final product = buildProduct(
+      stocks: <Stock>[scoped],
+      variants: <ProductVariant>[ProductVariant(id: 41, quantity: 0)],
+    );
+    provider.initializeProducts(<GetProduct>[product]);
+
+    final added = provider.addToCart(
+      product: product,
+      quantity: 3,
+      selectedStock: scoped,
+      variantId: 41,
+      variantAttributes: const <String, dynamic>{'SIZE': 'M'},
+    );
+
+    expect(added, isTrue);
+    expect(provider.cartItems.single.quantity, 3);
+    expect(provider.cartItems.single.stockDeducted, 0);
+    expect(provider.cartItems.single.variantId, 41);
+  });
+
+  test('provider refuses a direct quantity increase that would oversell',
+      () async {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+    provider.setAllowOverselling(false);
+    final scoped = buildStock(id: 1, quantity: 2, productVariantId: 41);
+    final product = buildProduct(
+      stocks: [scoped],
+      variants: [ProductVariant(id: 41, quantity: 2)],
+    );
+    provider.initializeProducts([product]);
+    expect(
+      provider.addToCart(
+        product: product,
+        quantity: 1,
+        selectedStock: scoped,
+        variantId: 41,
+      ),
+      isTrue,
+    );
+
+    provider.setCartItemQuantity(1, scoped, 3, variantId: 41);
+    await provider.flushPersistence();
+
+    expect(provider.cartItems.single.quantity, 1);
+    expect(provider.getProductById(1)!.stock!.single.quantity, 1);
   });
 }

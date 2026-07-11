@@ -250,8 +250,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     try {
       final gridSelectionProvider =
           Provider.of<GridSelectionProvider>(context, listen: false);
-      final result =
-          await gridSelectionProvider.generateBarcodeAPI(accessToken: accessToken);
+      final result = await gridSelectionProvider.generateBarcodeAPI(
+          accessToken: accessToken);
       if (!mounted) return;
       if (result != null &&
           result['status'] == 'success' &&
@@ -261,7 +261,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       } else {
         showScaffoldError(
           context: context,
-          message: result?['message']?.toString() ?? 'Failed to generate barcode',
+          message:
+              result?['message']?.toString() ?? 'Failed to generate barcode',
         );
       }
     } catch (e) {
@@ -608,9 +609,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     _quantityController.text = '';
     _taxController.text = productDetailsValueToString(product.totalTaxRate);
     _purchasePriceController.text = product.purchasePrice ??
-            (product.stock != null && product.stock!.isNotEmpty
-                ? product.stock!.first.purchasePrice
-                : '') ??
+        (product.stock != null && product.stock!.isNotEmpty
+            ? product.stock!.first.purchasePrice
+            : '') ??
         '';
     _minMarginController.text =
         formatProductDetailsNumeric(product.minMarginPercentage);
@@ -648,10 +649,11 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
     if (!_editFormKey.currentState!.validate()) return;
 
-    final variantEnabled = Provider.of<AppSettingsProvider>(context, listen: false)
-            .appSettings
-            ?.productVariantEnabled ??
-        true;
+    final variantEnabled =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings
+                ?.productVariantEnabled ??
+            true;
     List<Map<String, dynamic>>? variantsPayload;
     if (variantEnabled) {
       final variantError =
@@ -802,6 +804,11 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         final mappedLabel = unitMap[resolvedUnitId];
         if (mappedLabel != null && mappedLabel.isNotEmpty) {
           resolvedUnitLabel = mappedLabel;
+        } else if (int.tryParse(resolvedUnitLabel) != null &&
+            product.unit != null &&
+            product.unit!.trim().isNotEmpty &&
+            int.tryParse(product.unit!.trim()) == null) {
+          resolvedUnitLabel = product.unit!.trim();
         }
       } else if (resolvedUnitLabel.isNotEmpty) {
         final match = unitMap.entries.firstWhere(
@@ -824,6 +831,23 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           orElse: () => categoryProvider.category!.first,
         );
       }
+
+      final List<SaleUnit>? responseSaleUnits = serverProduct?.saleUnits == null
+          ? null
+          : serverProduct!.saleUnits!
+              .where(
+                  (saleUnit) => saleUnit.unitId?.toString() != resolvedUnitId)
+              .map((saleUnit) => SaleUnit(
+                    id: saleUnit.id,
+                    unitId: saleUnit.unitId,
+                    unitName: saleUnit.unitName ??
+                        unitMap[saleUnit.unitId?.toString() ?? ''],
+                    conversionRate: saleUnit.conversionRate,
+                    barcode: saleUnit.barcode,
+                    price: saleUnit.price,
+                    resolvedPrice: saleUnit.resolvedPrice,
+                  ))
+              .toList(growable: false);
 
       final updatedProduct = product.copyWith(
         categoryId: serverProduct?.categoryId ?? resolvedCategoryId,
@@ -861,9 +885,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 : num.tryParse(updatedMinMarginPrice) ?? updatedMinMarginPrice),
         names: responseNames ??
             (productNames.isNotEmpty ? productNames : product.names),
-        saleUnits: (serverProduct?.saleUnits?.isNotEmpty ?? false)
-            ? serverProduct!.saleUnits
-            : product.saleUnits,
+        saleUnits: responseSaleUnits ?? product.saleUnits,
         variants: (serverProduct?.variants?.isNotEmpty ?? false)
             ? serverProduct!.variants
             : product.variants,
@@ -1145,17 +1167,18 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           ),
           MobileDetailRow(
             label: 'Purchase Price',
-            value: stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty
-                ? '$currency ${stock.purchasePrice}'
-                : 'N/A',
+            value:
+                stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty
+                    ? '$currency ${stock.purchasePrice}'
+                    : 'N/A',
             dense: true,
           ),
           MobileDetailRow(
             label: 'Wholesale Price',
-            value: stock.wholesalePrice != null &&
-                    stock.wholesalePrice!.isNotEmpty
-                ? '$currency ${stock.wholesalePrice}'
-                : 'N/A',
+            value:
+                stock.wholesalePrice != null && stock.wholesalePrice!.isNotEmpty
+                    ? '$currency ${stock.wholesalePrice}'
+                    : 'N/A',
             dense: true,
           ),
           MobileDetailRow(
@@ -1204,15 +1227,14 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
 
   Widget _buildViewTab(GetProduct product, {required bool canEditProduct}) {
     final appSettings = context.watch<AppSettingsProvider>().appSettings;
-    final stockEnabled =
-        context.watch<LocalProductProvider>().isStockEnabled;
+    final stockEnabled = context.watch<LocalProductProvider>().isStockEnabled;
     final currency = appSettings?.currency ?? widget.currency;
     final itemCodeEnabled = appSettings?.itemCodeEnabled ?? false;
 
     final availableQuantity = productAvailableQuantity(product);
     final reorderLevel = product.reorderLevel;
-    final isLowStock = stockEnabled &&
-        isProductLowStock(availableQuantity, reorderLevel);
+    final isLowStock =
+        stockEnabled && isProductLowStock(availableQuantity, reorderLevel);
 
     final stockRows = product.stock ?? const <Stock>[];
 
@@ -1299,11 +1321,10 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             ),
             MobileDetailRow(
               label: 'Max Discount Percentage',
-              value:
-                  formatProductDetailsNumeric(product.minMarginPercentage)
-                          .isNotEmpty
-                      ? '${formatProductDetailsNumeric(product.minMarginPercentage)}%'
-                      : 'N/A',
+              value: formatProductDetailsNumeric(product.minMarginPercentage)
+                      .isNotEmpty
+                  ? '${formatProductDetailsNumeric(product.minMarginPercentage)}%'
+                  : 'N/A',
             ),
             MobileDetailRow(
               label: 'Max Discount Amount',
@@ -1331,7 +1352,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
           title: 'Stock',
           icon: Icons.inventory_2_outlined,
           initiallyExpanded: true,
-          badge: stockRows.isNotEmpty ? _buildStockCountBadge(stockRows.length) : null,
+          badge: stockRows.isNotEmpty
+              ? _buildStockCountBadge(stockRows.length)
+              : null,
           children: [
             MobileDetailRow(
               label: 'Available Qty',
@@ -1465,8 +1488,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     if (_selectedCategoryId != null) {
       try {
         selectedCategory = categories.firstWhere(
-          (category) =>
-              category.categoryId?.toString() == _selectedCategoryId,
+          (category) => category.categoryId?.toString() == _selectedCategoryId,
         );
       } catch (_) {
         selectedCategory = null;
@@ -1857,18 +1879,18 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       return ColoredBox(
         color: Colors.white,
         child: SizedBox(
-        height: sheetHeight,
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading product details...'),
-            ],
+          height: sheetHeight,
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading product details...'),
+              ],
+            ),
           ),
         ),
-      ),
       );
     }
 
@@ -1876,26 +1898,26 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       return ColoredBox(
         color: Colors.white,
         child: SizedBox(
-        height: sheetHeight,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text('Product not found'),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(200, 44),
+          height: sheetHeight,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text('Product not found'),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(200, 44),
+                  ),
+                  child: const Text('Close'),
                 ),
-                child: const Text('Close'),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       );
     }
 
@@ -1912,42 +1934,42 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     return ColoredBox(
       color: Colors.white,
       child: Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: SizedBox(
-        height: sheetHeight,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            MobileSheetHeader(
-              title: product.productName ?? 'Product Details',
-              subtitle: product.category?.name,
-              thumbnail: buildProductThumbnail(
-                productName: product.productName,
-                attachments: product.attachment,
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: SizedBox(
+          height: sheetHeight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              MobileSheetHeader(
+                title: product.productName ?? 'Product Details',
+                subtitle: product.category?.name,
+                thumbnail: buildProductThumbnail(
+                  productName: product.productName,
+                  attachments: product.attachment,
+                ),
+                onClose: () => Navigator.pop(context),
               ),
-              onClose: () => Navigator.pop(context),
-            ),
-            if (_isSaving) const LinearProgressIndicator(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: _buildPillTabBar(canEditProduct: canEditProduct),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildViewTab(product, canEditProduct: canEditProduct),
-                    if (canEditProduct) _buildEditTab(product),
-                  ],
+              if (_isSaving) const LinearProgressIndicator(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: _buildPillTabBar(canEditProduct: canEditProduct),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildViewTab(product, canEditProduct: canEditProduct),
+                      if (canEditProduct) _buildEditTab(product),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            if (showFooter) _buildStickyFooter(),
-          ],
+              if (showFooter) _buildStickyFooter(),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

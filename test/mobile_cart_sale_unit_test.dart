@@ -71,6 +71,7 @@ void main() {
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
   });
 
+  tearDown(awaitPendingHiveBoxWrites);
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));
 
   GetProduct buildProduct({
@@ -221,7 +222,8 @@ void main() {
       expect(provider.cartItems.single.price, 90);
     });
 
-    test('commitDisplayPrice converts sale-unit display price to base price', () {
+    test('commitDisplayPrice converts sale-unit display price to base price',
+        () {
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
       final product = buildProduct(saleUnits: [
@@ -254,7 +256,8 @@ void main() {
       expect(provider.cartItems.single.isManualPriceOverride, isTrue);
     });
 
-    test('updateDisplayPriceWhileEditing persists manual override while typing', () {
+    test('updateDisplayPriceWhileEditing persists manual override while typing',
+        () {
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
       final product = buildProduct(saleUnits: const [], taxes: const []);
@@ -353,7 +356,8 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('shows sale unit selector and current unit label', (tester) async {
+    testWidgets('shows sale unit selector and current unit label',
+        (tester) async {
       final provider = LocalProductProvider();
 
       // testWidgets runs inside Flutter's FakeAsync zone, which never fires
@@ -383,6 +387,5 @@ void main() {
       expect(find.text('CASE'), findsOneWidget);
       expect(find.byType(PopupMenuButton<String>), findsOneWidget);
     });
-
   });
 }

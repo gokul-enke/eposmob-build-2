@@ -180,10 +180,7 @@ class OrderPanelState extends State<OrderPanel> {
   bool get isViewingCounterListTab =>
       _usesCounterOrderTabs && _activeOrderPanelTab != OrderPanelTab.cart;
 
-  bool get _skipCheckoutOnCounterConfirmAndPrint {
-    if (!widget.allowCounterBilling || !widget.isCounterBillingMode) {
-      return false;
-    }
+  bool get _skipCheckoutOnConfirmAndPrint {
     return Provider.of<AppSettingsProvider>(context, listen: false)
             .appSettings
             ?.skipCheckoutOnConfirmAndPrint ??
@@ -6073,11 +6070,41 @@ class OrderPanelState extends State<OrderPanel> {
                 item['product_price']?.toString() ??
                 '0') ??
             0.0;
+        final saleUnitId = int.tryParse(
+          (item['product_sale_unit_id'] ?? item['sale_unit_id'])?.toString() ??
+              '',
+        );
+        final parsedConversionRate = double.tryParse(
+          item['conversion_rate']?.toString() ?? '',
+        );
+        final conversionRate =
+            parsedConversionRate != null && parsedConversionRate > 0
+                ? parsedConversionRate
+                : 1.0;
+        final variantId = int.tryParse(
+          item['product_variant_id']?.toString() ?? '',
+        );
+        Map<String, dynamic>? variantAttributes;
+        final rawVariantAttributes = item['variant_attributes'];
+        if (rawVariantAttributes is Map) {
+          variantAttributes = Map<String, dynamic>.from(rawVariantAttributes);
+        } else if (rawVariantAttributes is String &&
+            rawVariantAttributes.trim().isNotEmpty) {
+          try {
+            final decoded = json.decode(rawVariantAttributes);
+            if (decoded is Map) {
+              variantAttributes = Map<String, dynamic>.from(decoded);
+            }
+          } catch (_) {
+            // Keep the historical line usable even if an old snapshot is bad.
+          }
+        }
 
         // Find the stock entry if available
         Stock? selectedStock;
-        if (item['stock_id'] != null) {
-          final stockId = int.tryParse(item['stock_id'].toString());
+        final rawStockId = item['stock_id'] ?? item['product_stock_id'];
+        if (rawStockId != null) {
+          final stockId = int.tryParse(rawStockId.toString());
           if (stockId != null && product.stock != null) {
             try {
               selectedStock = product.stock!.firstWhere((s) => s.id == stockId);
@@ -6090,9 +6117,16 @@ class OrderPanelState extends State<OrderPanel> {
         // Add to cart with the order's price and quantity
         localProductProvider.addToCart(
           product: product,
-          quantity: quantity.toInt(),
-          price: unitPrice > 0 ? unitPrice : null,
+          quantity: quantity * conversionRate,
+          price: unitPrice > 0 ? unitPrice / conversionRate : null,
           selectedStock: selectedStock,
+          stockGroupIds:
+              selectedStock?.id == null ? null : <int>[selectedStock!.id!],
+          saleUnitId: saleUnitId,
+          saleUnitName: item['sale_unit_name']?.toString(),
+          saleUnitConversionRate: saleUnitId == null ? null : conversionRate,
+          variantId: variantId,
+          variantAttributes: variantAttributes,
         );
 
         debugPrint(
@@ -6176,9 +6210,17 @@ class OrderPanelState extends State<OrderPanel> {
 
       dynamic response;
 
+      if (newQuantity == currentQuantity) {
+        debugPrint('Quantity is already $newQuantity. No API call needed.');
+        return;
+      }
+
       if (newQuantity > currentQuantity) {
         // Increment quantity - use addToCartAPI
-        final deltaQuantity = (newQuantity - currentQuantity).toInt();
+        // Preserve fractional quantities for decimal-capable units such as
+        // KG and LTR. Both cart APIs accept `num`, so converting this delta
+        // to int would turn a change such as 1.5 -> 2.0 into zero.
+        final double deltaQuantity = newQuantity - currentQuantity;
         final productId =
             cartItem['product_id']; // Assuming product_id is available
         final unitPrice = cartItem['unit_price']?.toString();
@@ -6205,14 +6247,15 @@ class OrderPanelState extends State<OrderPanel> {
           cartId: orderCartId,
         );
         debugPrint('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ addToCartAPI Response: $response');
-      } else if (newQuantity <= currentQuantity) {
+      } else {
         // Decrement quantity or remove item (including 0) - use decrementCartItemQuantityAPI
         String actionType =
             newQuantity == 0 ? 'remove (set to 0)' : 'decrement';
+        final requestedQuantity = newQuantity;
         debugPrint(
             'ÃƒÂ¢Ã…Â¾Ã‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Calling CartProvider.decrementCartItemQuantityAPI for $actionType');
         debugPrint(
-            'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¦ decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: ${newQuantity.toInt()}, cartId: $orderCartId}');
+            'decrementCartItemQuantityAPI Request Body: {customerId: $customerId, cartItemId: ${cartItem['id']}, quantity: $requestedQuantity, cartId: $orderCartId}');
         debugPrint(
             'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â Customer ID source: _selectedOrder data structure');
 
@@ -6221,16 +6264,11 @@ class OrderPanelState extends State<OrderPanel> {
           productId:
               int.parse(cartItem['id'].toString()), // This is cart_item_id
           cartId: orderCartId,
-          quantity: newQuantity.toInt(), // Can be 0 for removal
+          quantity: requestedQuantity,
           accessToken: authModel.token ?? '',
         );
         debugPrint(
             'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ decrementCartItemQuantityAPI Response: $response');
-      } else {
-        // Quantity is the same, no action needed
-        debugPrint(
-            'Quantity is already ${newQuantity.toInt()}. No API call needed.');
-        return;
       }
 
       // Update the UI optimistically first
@@ -8094,12 +8132,71 @@ class OrderPanelState extends State<OrderPanel> {
     }
   }
 
+  Future<void> _saveAndPrintWithoutCheckoutModal() async {
+    if (_isLoadingConfirm) return;
+
+    debugPrint(
+      '[Restaurant] SKIP_CHECKOUT_ON_CONFIRM_AND_PRINT enabled -> direct offline save & print',
+    );
+
+    _hydrateCustomerListFromProviderCache();
+    if (!mounted) return;
+
+    setState(() {
+      if (_deliveryMethodId.isEmpty) {
+        final defaultDeliveryMethod = _getDefaultDeliveryMethod();
+        _deliveryMethod = defaultDeliveryMethod.name;
+        _deliveryMethodId = defaultDeliveryMethod.id;
+      }
+      _applyDefaultPaymentForDirectConfirmAndPrint();
+      _hasOpenedPaymentModalOnce = true;
+      _balanceAmount = _calculateBalanceAmount();
+    });
+
+    final billingProvider =
+        Provider.of<BillingProvider>(context, listen: false);
+    billingProvider.updatePaymentFromModal(
+      isCash: _isCashSelected,
+      isCard: _isCardSelected,
+      isUpi: _isUpiSelected,
+      isCod: _isCodSelected,
+      isDebit: _isDebitSelected,
+      cashAmount: _cashAmount,
+      cardAmount: _cardAmount,
+      upiAmount: _upiAmount,
+      codAmount: _codAmount,
+      debitAmount: _debitAmount,
+      transactionNumber: _transactionNumber,
+      toCustomerCredit: _toCustomerCreditEnabled,
+      cashMethodId: billingProvider.cashPaymentMethodId,
+      cardMethodId: billingProvider.cardPaymentMethodId,
+      upiMethodId: billingProvider.upiPaymentMethodId,
+      codMethodId: billingProvider.codPaymentMethodId,
+    );
+
+    widget.onCheckoutActionLoadingChanged?.call(
+      isLoading: true,
+      printBill: true,
+    );
+    try {
+      await _saveCurrentCartAsConfirmedAndPrint(printBill: true);
+    } finally {
+      widget.onCheckoutActionLoadingChanged?.call(
+        isLoading: false,
+        printBill: true,
+      );
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
   void showCurrentCartConfirmAndPrintFromParent() {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     if (!(appSettings?.showConfirmOrderAndPrintButton ?? true)) return;
 
-    if (_skipCheckoutOnCounterConfirmAndPrint) {
+    if (_skipCheckoutOnConfirmAndPrint) {
       unawaited(_confirmCurrentCartAndPrintWithoutCheckoutModal());
       return;
     }
@@ -8113,7 +8210,19 @@ class OrderPanelState extends State<OrderPanel> {
     showCheckoutFromParent(forCurrentCart: true);
   }
 
-  void showOfflineSaveAndPrintCheckoutFromParent({int? initialStep}) {
+  /// Offline Save & Print entry point.
+  ///
+  /// When [allowSkipCheckout] is true and the app setting is enabled, skips the
+  /// checkout modal and saves+prints with defaults. Step shortcuts (F5/F10)
+  /// should pass [allowSkipCheckout]: false so the modal still opens.
+  void showOfflineSaveAndPrintCheckoutFromParent({
+    int? initialStep,
+    bool allowSkipCheckout = true,
+  }) {
+    if (allowSkipCheckout && _skipCheckoutOnConfirmAndPrint) {
+      unawaited(_saveAndPrintWithoutCheckoutModal());
+      return;
+    }
     _showCheckoutModal(
       forCurrentCart: true,
       offlineSaveAndPrint: true,

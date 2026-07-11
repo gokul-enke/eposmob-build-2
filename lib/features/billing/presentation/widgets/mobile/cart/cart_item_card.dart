@@ -14,6 +14,7 @@ import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/widgets/customer_purchase_history_modal.dart';
@@ -72,13 +73,24 @@ class CartItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unitOptions = controller.cartUnitOptionsForItem(item);
+    Map<String, String>? unitLabels;
+    try {
+      unitLabels =
+          Provider.of<PurchaseProvider>(context, listen: false).getUnitList;
+    } on ProviderNotFoundException {
+      // Lightweight cart/test hosts can omit this optional master-data source.
+    }
+    final unitOptions = controller.cartUnitOptionsForItem(
+      item,
+      unitLabels: unitLabels,
+    );
     final selectedUnit = controller.selectedCartUnitValue(item);
-    final canChangeUnit = controller.canChangeSaleUnit(item);
-    final appSettings =
-        context.watch<AppSettingsProvider>().appSettings;
-    final customerSelection =
-        context.watch<CustomerSelectionProvider>();
+    final canChangeUnit = controller.canChangeSaleUnit(
+      item,
+      unitLabels: unitLabels,
+    );
+    final appSettings = context.watch<AppSettingsProvider>().appSettings;
+    final customerSelection = context.watch<CustomerSelectionProvider>();
     final canViewBillingProductDetails = context
         .watch<RoleProvider>()
         .currentUserHasPermissionSync('billing.product.view');
@@ -188,6 +200,7 @@ class CartItemCard extends StatelessWidget {
                             provider: context.read<LocalProductProvider>(),
                             item: item,
                             value: value,
+                            unitLabels: unitLabels,
                           );
                           onSaleUnitChanged(result);
                           if (!result.success && result.errorMessage != null) {
@@ -417,9 +430,8 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
     return;
   }
 
-  final String? token =
-      BillingCrashGuards.accessTokenOrNull(
-          Provider.of<AuthModel>(context, listen: false).token);
+  final String? token = BillingCrashGuards.accessTokenOrNull(
+      Provider.of<AuthModel>(context, listen: false).token);
   if (token == null) {
     showScaffoldError(
       context: context,
@@ -457,7 +469,9 @@ Future<void> _showCustomerPurchaseHistoryForCartItem(
       ),
     );
 
-    if (!context.mounted || result == null || result['useCurrentPrice'] == true) {
+    if (!context.mounted ||
+        result == null ||
+        result['useCurrentPrice'] == true) {
       return;
     }
 

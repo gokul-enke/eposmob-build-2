@@ -14,6 +14,7 @@ class AppSettingsProvider extends ChangeNotifier {
 
   AppSettings? get appSettings => _appSettings;
   bool get loading => _loading;
+  bool get allowOverselling => _appSettings?.allowOverselling ?? true;
 
   AppSettingsProvider() {
     fetchAppSettings();
@@ -40,8 +41,7 @@ class AppSettingsProvider extends ChangeNotifier {
       final url = Uri.parse(APPUrl.getAppSettings)
           .replace(queryParameters: queryParameters);
 
-      final response =
-          await http.get(url, headers: {
+      final response = await http.get(url, headers: {
         'X-Tenant': apiKey,
       });
 

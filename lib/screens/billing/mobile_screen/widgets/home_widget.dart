@@ -115,6 +115,14 @@ class _HomeWidgetState extends State<HomeWidget> {
                   .filterProductByBarcode(barCode: productCode);
         }
 
+        if (filteredProducts.length > 1) {
+          showScaffoldError(
+            context: context,
+            message:
+                'Barcode $query matches ${filteredProducts.length} products. Fix the duplicate barcode before selling.',
+          );
+          return;
+        }
         if (filteredProducts.isNotEmpty) {
           GetProduct product = filteredProducts.first;
 

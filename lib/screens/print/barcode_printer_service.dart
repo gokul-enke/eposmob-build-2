@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:io';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
@@ -17,11 +17,42 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:open_file/open_file.dart';
 import 'package:intl/intl.dart';
+import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 import 'package:pos_machine/screens/print/barcode_sticker_image_renderer.dart';
+import 'package:pos_machine/models/barcode_layout_settings.dart';
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+enum BarcodePrintStatus {
+  sentToPrinter,
+  pdfOpened,
+  pdfShared,
+  pdfSaved,
+  failed,
+}
+
+class BarcodePrintResult {
+  final BarcodePrintStatus status;
+  final String message;
+
+  const BarcodePrintResult(this.status, this.message);
+
+  bool get isSuccess =>
+      status == BarcodePrintStatus.sentToPrinter ||
+      status == BarcodePrintStatus.pdfOpened ||
+      status == BarcodePrintStatus.pdfShared;
+}
+
+enum _DirectPrintStatus { notConfigured, unsupported, success, failed }
+
+class _DirectPrintResult {
+  final _DirectPrintStatus status;
+  final String message;
+
+  const _DirectPrintResult(this.status, this.message);
+}
 
 /// Barcode Printer Service
 /// Generates a PDF of barcode stickers and opens/shares it (same pattern as DailyCloseStandardPrinter).
@@ -68,34 +99,6 @@ class BarcodePrinterService {
     }
     debugPrint('[BarcodePrint] No Barcode config found; using defaults.');
     return null;
-  }
-
-  /// INR uses text ₹; other currencies (e.g. SAR) use the riyal PNG when available.
-  ({String? textSymbol, pw.MemoryImage? image, String? textPrefix})
-      _resolveCurrencyDisplay(String currency, pw.MemoryImage? sarImage) {
-    final code = currency.trim().toUpperCase();
-    if (code == 'INR') {
-      return (textSymbol: '\u20B9', image: null, textPrefix: null);
-    }
-    if (sarImage != null) {
-      return (textSymbol: null, image: sarImage, textPrefix: null);
-    }
-    return (textSymbol: null, image: null, textPrefix: code.isEmpty ? null : code);
-  }
-
-  String _formatPriceForThermal({
-    required String currency,
-    required String priceToShow,
-    required bool useSarImage,
-  }) {
-    final code = currency.trim().toUpperCase();
-    if (code == 'INR') {
-      return '\u20B9 $priceToShow';
-    }
-    if (useSarImage) {
-      return priceToShow;
-    }
-    return code.isEmpty ? priceToShow : '$code $priceToShow';
   }
 
   Future<Directory> _getEposDirectory() async {
@@ -180,31 +183,6 @@ class BarcodePrinterService {
     }
   }
 
-  String _sanitizeForThermal(String input) {
-    return input
-        .replaceAll('–', '-')
-        .replaceAll('—', '-')
-        .replaceAll('“', '"')
-        .replaceAll('”', '"')
-        .replaceAll('‘', "'")
-        .replaceAll('’', "'")
-        .replaceAll('…', '...');
-  }
-
-
-  /// Returns a Latin1-safe product name for ESC/POS thermal printing.
-  /// If the resolved name contains any non-Latin1 character (codeUnit > 255),
-  /// falls back to the English name, then productName field, then empty string.
-  String _toThermalSafe(String resolved, GetProduct product) {
-    final hasNonLatin1 = resolved.codeUnits.any((c) => c > 255);
-    if (!hasNonLatin1) return resolved;
-    // Fallback chain: English translation -> productName field -> empty
-    final englishName = _extractTranslatedName(product.names, 'en');
-    if (englishName.isNotEmpty) return englishName;
-    final fallback = (product.productName ?? '').trim();
-    return fallback;
-  }
-
   String _normalizeProductNameMode(String rawValue) {
     final normalized = rawValue.trim().toLowerCase();
     switch (normalized) {
@@ -216,6 +194,36 @@ class BarcodePrinterService {
       default:
         return 'en/ar';
     }
+  }
+
+  String? _barcodeDensityError(
+    String value,
+    BarcodeLayoutSettings settings,
+    String stickerSize,
+  ) {
+    final dimensions = settings.copyWith(stickerSize: stickerSize);
+    final pixelWidth = dimensions.stickerWidthMm *
+        settings.rasterDpi /
+        25.4 *
+        settings.barcodeWidthPercent /
+        100;
+    final elements = pw.Barcode.code128().make(
+      value,
+      width: pixelWidth,
+      height: 60,
+      drawText: false,
+    );
+    final widths = elements
+        .whereType<pw.BarcodeBar>()
+        .map((bar) => bar.width)
+        .where((width) => width > 0);
+    if (widths.isEmpty) return 'Barcode produced no printable bars';
+    final narrowest = widths.reduce((a, b) => a < b ? a : b);
+    if (narrowest < 1.5) {
+      return 'Barcode width is too small for this value at '
+          '${settings.rasterDpi} DPI. Increase Barcode Width or sticker size.';
+    }
+    return null;
   }
 
   String _extractTranslatedName(dynamic names, String languageCode) {
@@ -290,9 +298,11 @@ class BarcodePrinterService {
     }
   }
 
-  Future<bool> _tryDirectPrintToSelectedPrinter({
+  Future<_DirectPrintResult> _tryDirectPrintToSelectedPrinter({
     required List<BarcodePrintItem> printItems,
     required String stickerSize,
+    required int stickersPerRow,
+    required BarcodeLayoutSettings layoutSettings,
     required String storeName,
     required String currency,
     required bool showStoreName,
@@ -302,155 +312,128 @@ class BarcodePrinterService {
     required bool showBarcodeNumber,
     required bool showMfgDate,
     required bool showExpiryDate,
-    pw.MemoryImage? sarCurrencyImage,
   }) async {
     final selectedPrinter = await _loadSelectedBarcodePrinter();
     if (selectedPrinter == null) {
-      debugPrint('[BarcodePrint] No saved barcode printer found.');
-      return false;
+      return const _DirectPrintResult(
+        _DirectPrintStatus.notConfigured,
+        'No barcode printer configured',
+      );
+    }
+
+    final dimensions = layoutSettings.copyWith(stickerSize: stickerSize);
+    final totalLabels = printItems.fold<int>(
+      0,
+      (total, item) => total + item.quantity.clamp(0, 999).toInt(),
+    );
+    if (stickersPerRow != 1 ||
+        dimensions.stickerWidthMm > 80 ||
+        totalLabels > 200) {
+      return const _DirectPrintResult(
+        _DirectPrintStatus.unsupported,
+        'This layout requires the PDF print path',
+      );
     }
 
     final printerManager = PrinterManager.instance;
     try {
-      await _connectToPrinter(printerManager, selectedPrinter);
-
       final profile = await CapabilityProfile.load();
       final paperSize =
-          stickerSize == '91x24mm' ? PaperSize.mm80 : PaperSize.mm58;
+          dimensions.stickerWidthMm <= 58 ? PaperSize.mm58 : PaperSize.mm80;
+      final maxRasterWidth = paperSize == PaperSize.mm58 ? 384 : 576;
       final generator = Generator(paperSize, profile);
       final bytes = <int>[];
-      final currencyDisplay = _resolveCurrencyDisplay(currency, sarCurrencyImage);
 
       for (final item in printItems) {
         if (item.quantity < 1) continue;
-
         final product = item.product;
         final barcodeValue = (product.barcode ?? '').trim();
-        final productName =
-            _sanitizeForThermal(_toThermalSafe(_resolveProductName(product, productNameMode), product));
         final rawPriceText =
             (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
         final parsedPrice = double.tryParse(rawPriceText);
         final priceToShow =
             parsedPrice != null ? parsedPrice.toStringAsFixed(2) : rawPriceText;
-
-        String dateLine = '';
+        var dateLine = '';
         if (showMfgDate && item.mfgDate != null) {
-          dateLine +=
-              'PKG:${DateFormat('"' "'dd-MM-yy'" '"').format(item.mfgDate!)}';
+          dateLine += 'P:${DateFormat('dd/MM/yyyy').format(item.mfgDate!)}';
         }
         if (showExpiryDate && item.expDate != null) {
-          if (dateLine.isNotEmpty) {
-            dateLine += ' ';
-          }
-          dateLine +=
-              'EXD:${DateFormat('"' "'dd-MM-yy'" '"').format(item.expDate!)}';
+          if (dateLine.isNotEmpty) dateLine += ' ';
+          dateLine += 'E:${DateFormat('dd/MM/yyyy').format(item.expDate!)}';
         }
 
-        for (int i = 0; i < item.quantity; i++) {
-          if (showStoreName && storeName.isNotEmpty) {
-            bytes.addAll(generator.text(
-              _sanitizeForThermal(storeName),
-              styles: const PosStyles(
-                align: PosAlign.center,
-                bold: true,
-                height: PosTextSize.size1,
-              ),
-            ));
-          }
-
-          if (showProductName && productName.isNotEmpty) {
-            bytes.addAll(generator.text(
-              productName,
-              styles: const PosStyles(
-                align: PosAlign.center,
-                bold: true,
-                height: PosTextSize.size1,
-              ),
-            ));
-          }
-
-          if (showPrice) {
-            bytes.addAll(generator.text(
-              _sanitizeForThermal(_formatPriceForThermal(
-                currency: currency,
-                priceToShow: priceToShow,
-                useSarImage: currencyDisplay.image != null,
-              )),
-              styles: const PosStyles(
-                align: PosAlign.center,
-                bold: true,
-                height: PosTextSize.size1,
-              ),
-            ));
-          }
-
-          if (barcodeValue.isNotEmpty) {
-            try {
-              final code39Data = barcodeValue
-                  .toUpperCase()
-                  .replaceAll(RegExp(r'[^A-Z0-9\-\. \$\/+%]'), '')
-                  .split('');
-              if (code39Data.isNotEmpty) {
-                bytes.addAll(generator.barcode(
-                  Barcode.code39(code39Data),
-                  height: 35,
-                  width: 1,
-                  textPos: BarcodeText.none,
-                  align: PosAlign.center,
-                ));
-              }
-            } catch (e) {
-              debugPrint(
-                  '[BarcodePrint] Barcode render failed for ESC/POS: $e');
-            }
-
-            if (showBarcodeNumber) {
-              bytes.addAll(generator.text(
-                _sanitizeForThermal(barcodeValue),
-                styles: const PosStyles(align: PosAlign.center),
-              ));
-            }
-          }
-
-          if (dateLine.isNotEmpty) {
-            bytes.addAll(generator.text(
-              _sanitizeForThermal(dateLine),
-              styles: const PosStyles(
-                align: PosAlign.center,
-                bold: true,
-                height: PosTextSize.size1,
-              ),
-            ));
-          }
-
-          bytes.addAll(generator.hr(ch: '-'));
+        final pngBytes = await BarcodeStickerImageRenderer.render(
+          widthMm: dimensions.stickerWidthMm,
+          heightMm: dimensions.stickerHeightMm,
+          storeName: showStoreName ? storeName : '',
+          barcodeValue: barcodeValue,
+          showBarcodeNumber: showBarcodeNumber,
+          productName: showProductName
+              ? _resolveProductName(product, productNameMode)
+              : '',
+          priceText: showPrice ? priceToShow : '',
+          currency: currency,
+          dateLine: dateLine,
+          storeNameFontSize: layoutSettings.storeNameFontSize,
+          productNameFontSize: layoutSettings.productNameFontSize,
+          priceFontSize: layoutSettings.priceFontSize,
+          dateFontSize: layoutSettings.dateFontSize,
+          barcodeNumberFontSize: layoutSettings.barcodeNumberFontSize,
+          barcodeHeight: layoutSettings.barcodeHeight,
+          barcodeWidthPercent: layoutSettings.barcodeWidthPercent,
+          elementSpacing: layoutSettings.elementSpacing,
+          pixelsPerMm: layoutSettings.rasterDpi / 25.4,
+        );
+        final decoded = pngBytes == null ? null : img.decodeImage(pngBytes);
+        if (decoded == null) {
+          return _DirectPrintResult(
+            _DirectPrintStatus.failed,
+            'Could not render ${product.productName ?? 'a barcode label'}',
+          );
+        }
+        final raster = decoded.width > maxRasterWidth
+            ? img.copyResize(decoded, width: maxRasterWidth)
+            : decoded;
+        final labelBytes = generator.image(raster, align: PosAlign.center);
+        for (var i = 0; i < item.quantity; i++) {
+          bytes.addAll(labelBytes);
+          bytes.addAll(generator.feed(1));
         }
       }
 
-      bytes.addAll(generator.feed(2));
+      if (bytes.isEmpty) {
+        return const _DirectPrintResult(
+          _DirectPrintStatus.failed,
+          'Nothing to print',
+        );
+      }
       bytes.addAll(generator.cut());
 
+      // Build the complete job before connecting so rendering failures cannot
+      // create a partially printed batch.
+      await _connectToPrinter(printerManager, selectedPrinter);
       await printerManager.send(
         type: selectedPrinter.typePrinter,
         bytes: bytes,
       );
-
-      debugPrint(
-        '[BarcodePrint] Direct print sent to ${selectedPrinter.deviceName ?? '"' "'Unknown printer'" '"'}',
+      return _DirectPrintResult(
+        _DirectPrintStatus.success,
+        'Sent to printer: ${selectedPrinter.deviceName ?? 'Barcode printer'}',
       );
-      return true;
-    } catch (e, stackTrace) {
-      debugPrint('[BarcodePrint] Direct print failed: $e');
+    } catch (error, stackTrace) {
+      debugPrint('[BarcodePrint] Direct print failed: $error');
       debugPrint('[BarcodePrint] Direct print stack: $stackTrace');
-      return false;
+      return _DirectPrintResult(
+        _DirectPrintStatus.failed,
+        'Direct printing failed: $error',
+      );
     } finally {
       await _disconnectPrinter(printerManager, selectedPrinter);
     }
   }
 
   /// Generate a barcode sticker PDF and open/share it.
-  Future<void> printBarcodes({
+  Future<BarcodePrintResult> printBarcodes({
     required List<BarcodePrintItem> printItems,
     String stickerSize = '50x25mm',
     int stickersPerRow = 1,
@@ -462,7 +445,44 @@ class BarcodePrinterService {
           message: 'No stocks selected to print.',
         );
       }
-      return;
+      return const BarcodePrintResult(
+        BarcodePrintStatus.failed,
+        'No stocks selected to print.',
+      );
+    }
+
+    final totalLabels = printItems.fold<int>(
+      0,
+      (total, item) => total + item.quantity.clamp(0, 999).toInt(),
+    );
+    if (totalLabels < 1 || totalLabels > 2000) {
+      final message = totalLabels < 1
+          ? 'Nothing to print. Enter a quantity for at least one item.'
+          : 'This job contains $totalLabels labels. Reduce it to 2000 or fewer.';
+      if (context.mounted) {
+        showScaffoldError(context: context, message: message);
+      }
+      return BarcodePrintResult(BarcodePrintStatus.failed, message);
+    }
+
+    for (final item in printItems.where((item) => item.quantity > 0)) {
+      final value = (item.product.barcode ?? '').trim();
+      try {
+        if (value.isEmpty) throw const FormatException('Barcode is empty');
+        pw.Barcode.code128().make(
+          value,
+          width: 300,
+          height: 100,
+          drawText: false,
+        );
+      } catch (error) {
+        final message =
+            'Invalid barcode for ${item.product.productName ?? 'a product'}: $error';
+        if (context.mounted) {
+          showScaffoldError(context: context, message: message);
+        }
+        return BarcodePrintResult(BarcodePrintStatus.failed, message);
+      }
     }
 
     try {
@@ -535,6 +555,59 @@ class BarcodePrinterService {
 
       // Load user-configured barcode layout settings
       final layoutSettings = await loadBarcodeLayoutSettings();
+
+      for (final item in printItems.where((item) => item.quantity > 0)) {
+        final barcodeValue = item.product.barcode!.trim();
+        final densityError =
+            _barcodeDensityError(barcodeValue, layoutSettings, stickerSize);
+        if (densityError != null) {
+          hideLoadingOverlay();
+          final message =
+              '${item.product.productName ?? 'Product'}: $densityError';
+          if (context.mounted) {
+            showScaffoldError(context: context, message: message);
+          }
+          return BarcodePrintResult(BarcodePrintStatus.failed, message);
+        }
+      }
+
+      if (!Platform.isWindows) {
+        final directResult = await _tryDirectPrintToSelectedPrinter(
+          printItems: printItems,
+          stickerSize: stickerSize,
+          stickersPerRow: stickersPerRow,
+          layoutSettings: layoutSettings,
+          storeName: storeName,
+          currency: currency,
+          showStoreName: showStoreName,
+          showProductName: showProductName,
+          productNameMode: productNameMode,
+          showPrice: showPrice,
+          showBarcodeNumber: showBarcodeNumber,
+          showMfgDate: showMfgDate,
+          showExpiryDate: showExpiryDate,
+        );
+        if (directResult.status == _DirectPrintStatus.success) {
+          hideLoadingOverlay();
+          if (context.mounted) {
+            showScaffold(context: context, message: directResult.message);
+          }
+          return BarcodePrintResult(
+            BarcodePrintStatus.sentToPrinter,
+            directResult.message,
+          );
+        }
+        if (directResult.status == _DirectPrintStatus.failed) {
+          hideLoadingOverlay();
+          if (context.mounted) {
+            showScaffoldError(context: context, message: directResult.message);
+          }
+          return BarcodePrintResult(
+            BarcodePrintStatus.failed,
+            directResult.message,
+          );
+        }
+      }
 
       // Use stickerSize from parameter (per-print override) but use layout
       // settings for font sizes, spacing, barcode height, margin, gap etc.
@@ -618,9 +691,8 @@ class BarcodePrinterService {
         final rawPriceText =
             (product.price?.price ?? product.mrp ?? 'N/A').toString().trim();
         final parsedPrice = double.tryParse(rawPriceText);
-        final priceToShow = parsedPrice != null
-            ? parsedPrice.toStringAsFixed(2)
-            : rawPriceText;
+        final priceToShow =
+            parsedPrice != null ? parsedPrice.toStringAsFixed(2) : rawPriceText;
 
         String dateLine = '';
         if (showMfgDate && item.mfgDate != null) {
@@ -647,7 +719,9 @@ class BarcodePrinterService {
           dateFontSize: layoutSettings.dateFontSize,
           barcodeNumberFontSize: layoutSettings.barcodeNumberFontSize,
           barcodeHeight: layoutSettings.barcodeHeight,
+          barcodeWidthPercent: layoutSettings.barcodeWidthPercent,
           elementSpacing: layoutSettings.elementSpacing,
+          pixelsPerMm: layoutSettings.rasterDpi / 25.4,
         );
 
         if (pngBytes == null) {
@@ -676,7 +750,10 @@ class BarcodePrinterService {
                 'Nothing to print. Check item quantities and barcode display settings.',
           );
         }
-        return;
+        return const BarcodePrintResult(
+          BarcodePrintStatus.failed,
+          'Nothing to print.',
+        );
       }
 
       final totalPages = (stickers.length / safeStickersPerRow).ceil();
@@ -728,29 +805,37 @@ class BarcodePrinterService {
       final file = File('${output.path}/barcodes_$timestamp.pdf');
       await file.writeAsBytes(await pdf.save());
 
-      debugPrint('[BarcodePrint] PDF saved to: ${file.path} (${(await file.length())} bytes)');
+      debugPrint(
+          '[BarcodePrint] PDF saved to: ${file.path} (${(await file.length())} bytes)');
 
       hideLoadingOverlay();
 
       if (Platform.isWindows) {
-        await _handleWindowsPdf(file, pageFormat: pageFormat, stickerSize: stickerSize, stickersPerRow: safeStickersPerRow, totalPages: totalPages);
-      } else {
-        try {
-          final result = await OpenFile.open(file.path);
-          if (result.type != 'done') {
-            await _sharePdfFallback(file);
-          } else {
-            if (context.mounted) {
-              showScaffold(context: context, message: 'Barcode PDF opened');
-            }
-          }
-        } catch (e) {
-          await _sharePdfFallback(file);
-        }
+        return _handleWindowsPdf(
+          file,
+          pageFormat: pageFormat,
+          stickerSize: stickerSize,
+          stickersPerRow: safeStickersPerRow,
+          totalPages: totalPages,
+        );
       }
 
-      debugPrint('Barcode PDF generation complete!');
-      debugPrint('========== BARCODE PRINT DEBUG END ==========');
+      try {
+        final result = await OpenFile.open(file.path);
+        if (result.type == ResultType.done) {
+          if (context.mounted) {
+            showScaffold(context: context, message: 'Barcode PDF opened');
+          }
+          return const BarcodePrintResult(
+            BarcodePrintStatus.pdfOpened,
+            'Barcode PDF opened',
+          );
+        }
+        return _sharePdfFallback(file);
+      } catch (error) {
+        debugPrint('[BarcodePrint] Opening PDF failed: $error');
+        return _sharePdfFallback(file);
+      }
     } catch (e, stackTrace) {
       hideLoadingOverlay();
       debugPrint("ERROR generating Barcode PDF: $e");
@@ -762,11 +847,15 @@ class BarcodePrinterService {
           message: "Error generating PDF: $e",
         );
       }
+      return BarcodePrintResult(
+        BarcodePrintStatus.failed,
+        'Error generating PDF: $e',
+      );
     }
   }
 
   // Handle Windows PDF printing — tries silent direct print first, then falls back to dialog
-  Future<void> _handleWindowsPdf(
+  Future<BarcodePrintResult> _handleWindowsPdf(
     File file, {
     required PdfPageFormat pageFormat,
     required String stickerSize,
@@ -780,35 +869,53 @@ class BarcodePrinterService {
     debugPrint('[BarcodePrint:Windows] PDF path (normalized): $winPath');
     debugPrint('[BarcodePrint:Windows] PDF exists: ${await file.exists()}');
     debugPrint('[BarcodePrint:Windows] PDF size: ${await file.length()} bytes');
-    debugPrint('[BarcodePrint:Windows] Sticker size: $stickerSize, stickers/row: $stickersPerRow, total pages: $totalPages');
-    debugPrint('[BarcodePrint:Windows] Page format: ${(pageFormat.width / PdfPageFormat.mm).toStringAsFixed(2)}mm x ${(pageFormat.height / PdfPageFormat.mm).toStringAsFixed(2)}mm');
+    debugPrint(
+        '[BarcodePrint:Windows] Sticker size: $stickerSize, stickers/row: $stickersPerRow, total pages: $totalPages');
+    debugPrint(
+        '[BarcodePrint:Windows] Page format: ${(pageFormat.width / PdfPageFormat.mm).toStringAsFixed(2)}mm x ${(pageFormat.height / PdfPageFormat.mm).toStringAsFixed(2)}mm');
 
     final savedPrinter = await _loadSelectedBarcodePrinter();
     final printerName = savedPrinter?.deviceName?.trim() ?? '';
-    debugPrint('[BarcodePrint:Windows] Saved printer name: "${printerName.isEmpty ? "(none saved)" : printerName}"');
-    debugPrint('[BarcodePrint:Windows] Saved printer type: ${savedPrinter?.typePrinter}');
-    debugPrint('[BarcodePrint:Windows] Saved printer address: ${savedPrinter?.address ?? "(none)"}');
+    debugPrint(
+        '[BarcodePrint:Windows] Saved printer name: "${printerName.isEmpty ? "(none saved)" : printerName}"');
+    debugPrint(
+        '[BarcodePrint:Windows] Saved printer type: ${savedPrinter?.typePrinter}');
+    debugPrint(
+        '[BarcodePrint:Windows] Saved printer address: ${savedPrinter?.address ?? "(none)"}');
 
     if (printerName.isNotEmpty) {
       // Strategy 0: printing package — native Windows print spooler, no external viewer needed
-      debugPrint('[BarcodePrint:Windows] Strategy 0: Trying Printing.directPrintPdf...');
+      debugPrint(
+          '[BarcodePrint:Windows] Strategy 0: Trying Printing.directPrintPdf...');
       try {
         final pdfBytes = await file.readAsBytes();
         final printers = await Printing.listPrinters();
-        debugPrint('[BarcodePrint:Windows]   System printers (${printers.length}):');
+        debugPrint(
+            '[BarcodePrint:Windows]   System printers (${printers.length}):');
         for (final p in printers) {
-          debugPrint('[BarcodePrint:Windows]     - "${p.name}" | default=${p.isDefault} | available=${p.isAvailable} | url=${p.url}');
+          debugPrint(
+              '[BarcodePrint:Windows]     - "${p.name}" | default=${p.isDefault} | available=${p.isAvailable} | url=${p.url}');
         }
-        final targetPrinter = printers.firstWhere(
-          (p) => p.name.toLowerCase() == printerName.toLowerCase(),
-          orElse: () => printers.firstWhere(
-            (p) => p.name.toLowerCase().contains(printerName.toLowerCase()),
-            orElse: () => printers.isEmpty ? throw Exception('No printers') : printers.first,
-          ),
-        );
-        debugPrint('[BarcodePrint:Windows]   Selected printer: "${targetPrinter.name}" | default=${targetPrinter.isDefault} | available=${targetPrinter.isAvailable}');
-        debugPrint('[BarcodePrint:Windows]   Sending ${pdfBytes.length} bytes to spooler...');
-        debugPrint('[BarcodePrint:Windows]   Page format hint: ${(pageFormat.width / PdfPageFormat.mm).toStringAsFixed(2)}mm x ${(pageFormat.height / PdfPageFormat.mm).toStringAsFixed(2)}mm');
+        final savedUrl = savedPrinter?.address?.trim() ?? '';
+        final matches = printers.where((printer) {
+          final urlMatches = savedUrl.isNotEmpty && printer.url == savedUrl;
+          final nameMatches =
+              printer.name.toLowerCase() == printerName.toLowerCase();
+          return urlMatches || nameMatches;
+        }).toList();
+        if (matches.isEmpty) {
+          throw StateError('Configured printer is not available');
+        }
+        final targetPrinter = matches.first;
+        if (!targetPrinter.isAvailable) {
+          throw StateError('Configured printer is offline');
+        }
+        debugPrint(
+            '[BarcodePrint:Windows]   Selected printer: "${targetPrinter.name}" | default=${targetPrinter.isDefault} | available=${targetPrinter.isAvailable}');
+        debugPrint(
+            '[BarcodePrint:Windows]   Sending ${pdfBytes.length} bytes to spooler...');
+        debugPrint(
+            '[BarcodePrint:Windows]   Page format hint: ${(pageFormat.width / PdfPageFormat.mm).toStringAsFixed(2)}mm x ${(pageFormat.height / PdfPageFormat.mm).toStringAsFixed(2)}mm');
         final success = await Printing.directPrintPdf(
           printer: targetPrinter,
           onLayout: (_) async => pdfBytes,
@@ -817,13 +924,23 @@ class BarcodePrinterService {
         );
         debugPrint('[BarcodePrint:Windows]   directPrintPdf result: $success');
         if (success) {
-          if (context.mounted) showScaffold(context: context, message: 'Sent to printer: ${targetPrinter.name}');
-          debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (printing pkg) ──');
-          return;
+          if (context.mounted) {
+            showScaffold(
+                context: context,
+                message: 'Sent to printer: ${targetPrinter.name}');
+          }
+          debugPrint(
+              '[BarcodePrint:Windows] ── _handleWindowsPdf END (printing pkg) ──');
+          return BarcodePrintResult(
+            BarcodePrintStatus.sentToPrinter,
+            'Sent to printer: ${targetPrinter.name}',
+          );
         }
-        debugPrint('[BarcodePrint:Windows]   printing pkg returned false, trying next strategy...');
+        debugPrint(
+            '[BarcodePrint:Windows]   printing pkg returned false, trying next strategy...');
       } catch (e) {
-        debugPrint('[BarcodePrint:Windows]   printing pkg failed: $e, trying next strategy...');
+        debugPrint(
+            '[BarcodePrint:Windows]   printing pkg failed: $e, trying next strategy...');
       }
 
       // Strategy 1: SumatraPDF — free PDF viewer with excellent CLI, common in business setups
@@ -839,16 +956,30 @@ class BarcodePrinterService {
         final normalized = path.replaceAll('/', '\\');
         debugPrint('[BarcodePrint:Windows]   Checking: $normalized');
         if (await File(normalized).exists()) {
-          debugPrint('[BarcodePrint:Windows]   ✅ Found SumatraPDF at: $normalized');
-          final result = await Process.run(normalized, ['-print-to', printerName, '-silent', winPath]);
-          debugPrint('[BarcodePrint:Windows]   SumatraPDF exit code: ${result.exitCode}');
-          if ((result.stderr as String).isNotEmpty) debugPrint('[BarcodePrint:Windows]   SumatraPDF stderr: ${result.stderr}');
-          if (result.exitCode == 0) {
-            if (context.mounted) showScaffold(context: context, message: 'Sent to printer: $printerName');
-            debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (SumatraPDF) ──');
-            return;
+          debugPrint(
+              '[BarcodePrint:Windows]   ✅ Found SumatraPDF at: $normalized');
+          final result = await Process.run(
+              normalized, ['-print-to', printerName, '-silent', winPath]);
+          debugPrint(
+              '[BarcodePrint:Windows]   SumatraPDF exit code: ${result.exitCode}');
+          if ((result.stderr as String).isNotEmpty) {
+            debugPrint(
+                '[BarcodePrint:Windows]   SumatraPDF stderr: ${result.stderr}');
           }
-          debugPrint('[BarcodePrint:Windows]   SumatraPDF failed, trying next strategy...');
+          if (result.exitCode == 0) {
+            if (context.mounted) {
+              showScaffold(
+                  context: context, message: 'Sent to printer: $printerName');
+            }
+            debugPrint(
+                '[BarcodePrint:Windows] ── _handleWindowsPdf END (SumatraPDF) ──');
+            return BarcodePrintResult(
+              BarcodePrintStatus.sentToPrinter,
+              'Sent to printer: $printerName',
+            );
+          }
+          debugPrint(
+              '[BarcodePrint:Windows]   SumatraPDF failed, trying next strategy...');
           break;
         }
       }
@@ -863,20 +994,33 @@ class BarcodePrinterService {
         r'C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe',
         r'C:\Program Files (x86)\Adobe\Reader 11.0\Reader\AcroRd32.exe',
       ];
-      debugPrint('[BarcodePrint:Windows] Strategy 2: Trying Adobe Reader/Acrobat...');
+      debugPrint(
+          '[BarcodePrint:Windows] Strategy 2: Trying Adobe Reader/Acrobat...');
       for (final path in adobePaths) {
         debugPrint('[BarcodePrint:Windows]   Checking: $path');
         if (await File(path).exists()) {
           debugPrint('[BarcodePrint:Windows]   ✅ Found Adobe at: $path');
           final result = await Process.run(path, ['/t', winPath, printerName]);
-          debugPrint('[BarcodePrint:Windows]   Adobe exit code: ${result.exitCode}');
-          if ((result.stderr as String).isNotEmpty) debugPrint('[BarcodePrint:Windows]   Adobe stderr: ${result.stderr}');
-          if (result.exitCode == 0) {
-            if (context.mounted) showScaffold(context: context, message: 'Sent to printer: $printerName');
-            debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (Adobe) ──');
-            return;
+          debugPrint(
+              '[BarcodePrint:Windows]   Adobe exit code: ${result.exitCode}');
+          if ((result.stderr as String).isNotEmpty) {
+            debugPrint(
+                '[BarcodePrint:Windows]   Adobe stderr: ${result.stderr}');
           }
-          debugPrint('[BarcodePrint:Windows]   Adobe failed, trying next strategy...');
+          if (result.exitCode == 0) {
+            if (context.mounted) {
+              showScaffold(
+                  context: context, message: 'Sent to printer: $printerName');
+            }
+            debugPrint(
+                '[BarcodePrint:Windows] ── _handleWindowsPdf END (Adobe) ──');
+            return BarcodePrintResult(
+              BarcodePrintStatus.sentToPrinter,
+              'Sent to printer: $printerName',
+            );
+          }
+          debugPrint(
+              '[BarcodePrint:Windows]   Adobe failed, trying next strategy...');
           break;
         }
       }
@@ -885,50 +1029,91 @@ class BarcodePrinterService {
 
     // Strategy 3: Print dialog via Windows shell Print verb
     // Edge (always on Windows 10/11) handles this and shows a print dialog
-    debugPrint('[BarcodePrint:Windows] Strategy 3: Opening print dialog via shell Print verb...');
-    final psCmd = "Start-Process -FilePath '$winPath' -Verb Print";
+    debugPrint(
+        '[BarcodePrint:Windows] Strategy 3: Opening print dialog via shell Print verb...');
+    final escapedWinPath = winPath.replaceAll("'", "''");
+    final psCmd = "Start-Process -FilePath '$escapedWinPath' -Verb Print";
     debugPrint('[BarcodePrint:Windows]   PowerShell: $psCmd');
     final dialogResult = await Process.run('powershell', ['-command', psCmd]);
-    debugPrint('[BarcodePrint:Windows]   Print dialog exit code: ${dialogResult.exitCode}');
-    if ((dialogResult.stderr as String).isNotEmpty) debugPrint('[BarcodePrint:Windows]   Print dialog stderr: ${dialogResult.stderr}');
+    debugPrint(
+        '[BarcodePrint:Windows]   Print dialog exit code: ${dialogResult.exitCode}');
+    if ((dialogResult.stderr as String).isNotEmpty) {
+      debugPrint(
+          '[BarcodePrint:Windows]   Print dialog stderr: ${dialogResult.stderr}');
+    }
 
     if (dialogResult.exitCode == 0) {
-      if (context.mounted) showScaffold(context: context, message: 'Print dialog opened');
+      if (context.mounted) {
+        showScaffold(context: context, message: 'Print dialog opened');
+      }
       debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (dialog) ──');
-      return;
+      return const BarcodePrintResult(
+        BarcodePrintStatus.pdfOpened,
+        'Print dialog opened',
+      );
     }
 
     // Strategy 4: Last resort — just open the file in the default PDF viewer
-    debugPrint('[BarcodePrint:Windows] ⚠️ All print strategies failed. Falling back to open.');
-    await Process.run('cmd', ['/c', 'start', '', winPath]);
-    if (context.mounted) showScaffold(context: context, message: 'Barcode PDF opened');
-    debugPrint('[BarcodePrint:Windows] ── _handleWindowsPdf END (open fallback) ──');
+    debugPrint(
+        '[BarcodePrint:Windows] ⚠️ All print strategies failed. Falling back to open.');
+    final openResult = await OpenFile.open(winPath);
+    if (openResult.type == ResultType.done) {
+      if (context.mounted) {
+        showScaffold(context: context, message: 'Barcode PDF opened');
+      }
+      return const BarcodePrintResult(
+        BarcodePrintStatus.pdfOpened,
+        'Barcode PDF opened',
+      );
+    }
+    final message = 'PDF saved but could not be opened: ${file.path}';
+    if (context.mounted) {
+      showScaffoldError(context: context, message: message);
+    }
+    debugPrint(
+        '[BarcodePrint:Windows] ── _handleWindowsPdf END (open fallback) ──');
+    return BarcodePrintResult(BarcodePrintStatus.failed, message);
   }
 
   // Fallback to sharing PDF
-  Future<void> _sharePdfFallback(File file) async {
+  Future<BarcodePrintResult> _sharePdfFallback(File file) async {
     try {
       debugPrint("Attempting to share PDF as fallback...");
       if (!Platform.isWindows) {
         // ignore: deprecated_member_use
-        await Share.shareXFiles(
+        final result = await Share.shareXFiles(
           [XFile(file.path)],
           subject: 'Barcode Stickers',
           text: 'Barcode Stickers PDF',
         );
-        if (context.mounted) {
-          showScaffold(context: context, message: "PDF shared");
+        if (result.status == ShareResultStatus.success) {
+          if (context.mounted) {
+            showScaffold(context: context, message: "PDF shared");
+          }
+          return const BarcodePrintResult(
+            BarcodePrintStatus.pdfShared,
+            'Barcode PDF shared',
+          );
         }
+        final message = 'PDF saved: ${file.path}';
+        if (context.mounted) {
+          showScaffold(context: context, message: message);
+        }
+        return BarcodePrintResult(BarcodePrintStatus.pdfSaved, message);
       } else {
+        final message = 'PDF saved: ${file.path}';
         if (context.mounted) {
-          showScaffold(context: context, message: "PDF saved: ${file.path}");
+          showScaffold(context: context, message: message);
         }
+        return BarcodePrintResult(BarcodePrintStatus.pdfSaved, message);
       }
     } catch (e) {
       debugPrint("Error sharing PDF: $e");
+      final message = 'PDF saved but could not be shared: ${file.path}';
       if (context.mounted) {
-        showScaffold(context: context, message: "PDF saved: ${file.path}");
+        showScaffoldError(context: context, message: message);
       }
+      return BarcodePrintResult(BarcodePrintStatus.failed, message);
     }
   }
 }

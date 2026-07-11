@@ -14,6 +14,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:printing/printing.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
@@ -45,6 +46,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   StreamSubscription<PrinterDevice>? _subscription;
   bool _isScanning = false;
   bool _isResyncingDocConfig = false;
+  int _settingsLoadVersion = 0;
 
   // List of available paper sizes
   final List<String> paperSizes = ['112mm', '80mm', '58mm', 'A5', 'A4'];
@@ -204,12 +206,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   void initState() {
     super.initState();
     _loadSettings();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _checkPermissions();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkPermissions();
+    });
   }
 
   @override
@@ -222,24 +221,25 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> _checkPermissions() async {
     debugPrint('[PrinterSettings] _checkPermissions() called');
+    if (!mounted) return;
     if (await _requestPermissions()) {
+      if (!mounted) return;
       debugPrint('[PrinterSettings] Permissions granted. Proceeding to scan.');
       _scan();
     } else {
       debugPrint('[PrinterSettings] Permissions NOT granted. Showing dialog.');
-      _showPermissionDeniedDialog();
+      if (mounted) _showPermissionDeniedDialog();
     }
   }
 
   Future<bool> _requestPermissions() async {
     debugPrint(
-        '[PrinterSettings] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
-    if (Theme.of(context).platform == TargetPlatform.android) {
+        '[PrinterSettings] _requestPermissions() platform(os)=${Platform.operatingSystem}');
+    if (Platform.isAndroid) {
       Map<Permission, PermissionStatus> statuses = await [
-        Permission.bluetooth,
         Permission.bluetoothScan,
         Permission.bluetoothConnect,
-        Permission.location,
+        Permission.locationWhenInUse,
       ].request();
 
       statuses.forEach((perm, status) {
@@ -247,7 +247,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             '[PrinterSettings] Permission ${perm.toString()} => ${status.toString()}');
       });
 
-      final granted = statuses.values.every((status) => status.isGranted);
+      // Android 12+ uses scan/connect. Older Android uses location for classic
+      // Bluetooth discovery. Accept either platform-specific permission set.
+      final modernBluetoothGranted =
+          statuses[Permission.bluetoothScan]?.isGranted == true &&
+              statuses[Permission.bluetoothConnect]?.isGranted == true;
+      final legacyBluetoothGranted =
+          statuses[Permission.locationWhenInUse]?.isGranted == true;
+      final granted = modernBluetoothGranted || legacyBluetoothGranted;
       debugPrint('[PrinterSettings] All permissions granted: $granted');
       return granted;
     }
@@ -276,7 +283,22 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     );
   }
 
-  void _scan() async {
+  String _printerIdentity(BluetoothPrinter printer) => [
+        printer.typePrinter.name,
+        printer.address ?? '',
+        printer.vendorId ?? '',
+        printer.productId ?? '',
+        printer.deviceName ?? '',
+      ].join('|').toLowerCase();
+
+  void _addDiscoveredPrinter(BluetoothPrinter printer) {
+    if (!mounted) return;
+    final identity = _printerIdentity(printer);
+    if (devices.any((item) => _printerIdentity(item) == identity)) return;
+    setState(() => devices.add(printer));
+  }
+
+  Future<void> _scan() async {
     if (_isScanning) {
       debugPrint(
           '[PrinterSettings] _scan() requested but a scan is already in progress. Ignoring.');
@@ -286,16 +308,27 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         '[PrinterSettings] Starting scan... platform=${Platform.operatingSystem}');
     // Cancel any prior discovery subscription
     await _subscription?.cancel();
+    if (!mounted) return;
     setState(() {
       _isScanning = true;
       devices.clear();
     });
 
     try {
-      // Bluetooth discovery only on mobile platforms
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (Platform.isWindows) {
+        debugPrint('[PrinterSettings] Discovering Windows spooler printers');
+        final printers = await Printing.listPrinters();
+        for (final printer in printers) {
+          _addDiscoveredPrinter(BluetoothPrinter(
+            deviceName: printer.name,
+            address: printer.url,
+            typePrinter: PrinterType.usb,
+          ));
+        }
+      } else if (Platform.isAndroid || Platform.isIOS) {
         debugPrint(
             '[PrinterSettings] Beginning Bluetooth discovery (isBle=false)');
+        final discoveryDone = Completer<void>();
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
             .listen((device) {
@@ -306,59 +339,74 @@ class _PrinterSettingsState extends State<PrinterSettings> {
             address: device.address,
             typePrinter: PrinterType.bluetooth,
           );
-          setState(() {
-            devices.add(printer);
-          });
+          _addDiscoveredPrinter(printer);
         }, onError: (err) {
           debugPrint('[PrinterSettings] Bluetooth discovery error: $err');
+          if (!discoveryDone.isCompleted) discoveryDone.complete();
         }, onDone: () {
           debugPrint(
               '[PrinterSettings] Bluetooth discovery done. Total BT devices: ${devices.where((p) => p.typePrinter == PrinterType.bluetooth).length}');
+          if (!discoveryDone.isCompleted) discoveryDone.complete();
         }, cancelOnError: false);
+
+        final timeout = Timer(const Duration(seconds: 12), () async {
+          await _subscription?.cancel();
+          if (!discoveryDone.isCompleted) discoveryDone.complete();
+        });
+        await discoveryDone.future;
+        timeout.cancel();
       } else {
         debugPrint(
             '[PrinterSettings] Skipping Bluetooth discovery on desktop platform (${Platform.operatingSystem}).');
       }
 
-      debugPrint('[PrinterSettings] Beginning USB discovery');
-      await printerManager.discovery(type: PrinterType.usb).forEach((device) {
-        debugPrint(
-            '[PrinterSettings] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
-        final printer = BluetoothPrinter(
-          deviceName: device.name,
-          vendorId: device.vendorId,
-          productId: device.productId,
-          typePrinter: PrinterType.usb,
-        );
-        setState(() {
-          devices.add(printer);
+      if (!Platform.isWindows) {
+        debugPrint('[PrinterSettings] Beginning USB discovery');
+        await printerManager.discovery(type: PrinterType.usb).forEach((device) {
+          debugPrint(
+              '[PrinterSettings] USB device found: name=${device.name}, vendorId=${device.vendorId}, productId=${device.productId}');
+          _addDiscoveredPrinter(BluetoothPrinter(
+            deviceName: device.name,
+            vendorId: device.vendorId,
+            productId: device.productId,
+            typePrinter: PrinterType.usb,
+          ));
         });
-      });
+      }
       debugPrint(
           '[PrinterSettings] USB discovery completed. Total devices now: ${devices.length}');
     } catch (e, st) {
       debugPrint('[PrinterSettings] Error during scanning: $e');
       debugPrint('[PrinterSettings] Stacktrace: $st');
+      if (mounted) {
+        showScaffoldError(
+          context: context,
+          message: 'Could not scan for printers: $e',
+        );
+      }
     } finally {
-      setState(() {
-        _isScanning = false;
-      });
+      if (mounted) {
+        setState(() => _isScanning = false);
+      }
       debugPrint(
           '[PrinterSettings] Scan finished. devices.length=${devices.length}');
     }
   }
 
-  void selectPrinter(BluetoothPrinter printer) {
-    setState(() {
-      selectedPrinter = printer;
-    });
-
-    _saveDefaultPrinter(printer);
-
-    if (mounted) {
+  Future<void> selectPrinter(BluetoothPrinter printer) async {
+    try {
+      await _saveDefaultPrinter(printer);
+      if (!mounted) return;
+      setState(() => selectedPrinter = printer);
       showScaffold(
         context: context,
         message: "${printer.deviceName.toString()} Printer Selected",
+      );
+    } catch (error) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Could not save printer selection: $error',
       );
     }
   }
@@ -373,108 +421,85 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       'typePrinter': printer.typePrinter.toString(),
     };
 
-    await prefs.setString(_printerPrefsKey, json.encode(printerData));
+    final saved =
+        await prefs.setString(_printerPrefsKey, json.encode(printerData));
+    if (!saved) throw StateError('Shared preferences write failed');
   }
 
   Future<void> _loadSettings() async {
-    setState(() {
-      isLoading = true;
-    });
+    final requestVersion = ++_settingsLoadVersion;
+    final settingsType = selectedSettingsType;
+    final printerKey = _printerPrefsKey;
+    final paperSizeKey = _paperSizePrefsKey;
+    final fontStyleKey = _fontStylePrefsKey;
+    final themeKey = _receiptThemePrefsKey;
 
-    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => isLoading = true);
 
-    final defaultPrinterJson = prefs.getString(_printerPrefsKey);
-    final defaultPaperSize = selectedSettingsType == 'Barcode'
-        ? null
-        : prefs.getString(_paperSizePrefsKey);
-    final defaultFontStyle = selectedSettingsType == 'Barcode'
-        ? null
-        : prefs.getString(_fontStylePrefsKey);
-    final savedTheme = selectedSettingsType == 'Barcode'
-        ? null
-        : prefs.getString(_receiptThemePrefsKey);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final defaultPrinterJson = prefs.getString(printerKey);
+      final defaultPaperSize =
+          settingsType == 'Barcode' ? null : prefs.getString(paperSizeKey);
+      final defaultFontStyle =
+          settingsType == 'Barcode' ? null : prefs.getString(fontStyleKey);
+      final savedTheme =
+          settingsType == 'Barcode' ? null : prefs.getString(themeKey);
 
-    // Load paper size
-    if (defaultPaperSize != null) {
-      setState(() {
-        // Migrate from legacy paper size labels.
-        if (defaultPaperSize == 'Thermal') {
-          selectedPaperSize = '80mm';
-          // Update the stored preference
-          _saveDefaultPaperSize('80mm');
-        } else {
-          selectedPaperSize = defaultPaperSize;
+      var paperSize = defaultPaperSize ?? '80mm';
+      if (paperSize == 'Thermal') {
+        paperSize = '80mm';
+        await prefs.setString(paperSizeKey, paperSize);
+      }
+      if (!paperSizes.contains(paperSize)) paperSize = '80mm';
+
+      final fontStyle = fontStyles.contains(defaultFontStyle)
+          ? defaultFontStyle!
+          : 'Font A (Small & Sharp)';
+      final themes = paperSize == 'A4' || paperSize == 'A5'
+          ? standardPdfThemes
+          : thermalReceiptThemes;
+      final receiptTheme = themes.any((theme) => theme['id'] == savedTheme)
+          ? savedTheme!
+          : 'classic';
+
+      BluetoothPrinter? printer;
+      if (defaultPrinterJson != null) {
+        try {
+          final printerData =
+              json.decode(defaultPrinterJson) as Map<String, dynamic>;
+          printer = BluetoothPrinter(
+            deviceName: printerData['deviceName']?.toString(),
+            address: printerData['address']?.toString(),
+            vendorId: printerData['vendorId']?.toString(),
+            productId: printerData['productId']?.toString(),
+            typePrinter: PrinterType.values.firstWhere(
+              (value) => value.toString() == printerData['typePrinter'],
+              orElse: () => PrinterType.bluetooth,
+            ),
+          );
+        } catch (error) {
+          debugPrint('[PrinterSettings] Invalid saved printer: $error');
+          await prefs.remove(printerKey);
         }
-      });
-    } else {
-      // Defaults when no preference is set
+      }
+
+      if (!mounted || requestVersion != _settingsLoadVersion) return;
       setState(() {
-        selectedPaperSize = '80mm';
+        selectedPaperSize = paperSize;
+        selectedFontStyle = fontStyle;
+        selectedReceiptTheme = receiptTheme;
+        selectedPrinter = printer;
+        isLoading = false;
       });
-      // Don't auto-save default here to avoid overwriting if just switching tabs
+    } catch (error) {
+      if (!mounted || requestVersion != _settingsLoadVersion) return;
+      setState(() => isLoading = false);
+      showScaffoldError(
+        context: context,
+        message: 'Could not load printer settings: $error',
+      );
     }
-
-    // Load font style
-    if (defaultFontStyle != null) {
-      setState(() {
-        selectedFontStyle = defaultFontStyle;
-      });
-    } else {
-      // Default to Font A if no preference is set
-      setState(() {
-        selectedFontStyle = 'Font A (Small & Sharp)';
-      });
-    }
-
-    // Load receipt theme
-    if (savedTheme != null) {
-      setState(() {
-        // Validate saved theme against current paper size's available themes
-        bool isValidTheme = false;
-        if (selectedPaperSize == 'A4' || selectedPaperSize == 'A5') {
-          isValidTheme = standardPdfThemes.any((t) => t['id'] == savedTheme);
-        } else {
-          isValidTheme = thermalReceiptThemes.any((t) => t['id'] == savedTheme);
-        }
-
-        if (isValidTheme) {
-          selectedReceiptTheme = savedTheme;
-        } else {
-          selectedReceiptTheme = 'classic';
-          _saveReceiptTheme('classic');
-        }
-      });
-    } else {
-      // Default to classic if no preference is set
-      setState(() {
-        selectedReceiptTheme = 'classic';
-      });
-    }
-
-    // Load default printer
-    if (defaultPrinterJson != null) {
-      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
-      setState(() {
-        selectedPrinter = BluetoothPrinter(
-          deviceName: printerData['deviceName'],
-          address: printerData['address'],
-          vendorId: printerData['vendorId'],
-          productId: printerData['productId'],
-          typePrinter: PrinterType.values.firstWhere(
-            (e) => e.toString() == printerData['typePrinter'],
-            orElse: () => PrinterType.bluetooth,
-          ),
-        );
-      });
-    } else {
-      setState(() {
-        selectedPrinter = null;
-      });
-    }
-
-    setState(() {
-      isLoading = false;
-    });
   }
 
   Future<void> clearDefaultPrinter() async {
@@ -521,18 +546,6 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       showScaffold(
         context: context,
         message: "Default paper size saved",
-      );
-    }
-  }
-
-  Future<void> _saveDefaultFontStyle(String fontStyle) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_fontStylePrefsKey, fontStyle);
-
-    if (mounted) {
-      showScaffold(
-        context: context,
-        message: "Default font style saved",
       );
     }
   }
@@ -1494,6 +1507,17 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
     final actionRow = SettingsActionRow(
       children: [
+        if (selectedSettingsType != 'Barcode' && !_isStandardPdf)
+          CustomRoundButton(
+            fct: _printSample,
+            title: 'Test Print',
+            height: 44,
+            width: isCompact ? double.infinity : 120,
+            fontSize: 14,
+            borderColor: ColorManager.kPrimaryColor,
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+          ),
         CustomRoundButton(
           fct: _isResyncingDocConfig ? () {} : _resyncDocumentConfigurations,
           title: _isResyncingDocConfig
@@ -1567,8 +1591,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         });
         _loadSettings();
       },
-      helperText:
-          'Configure a separate printer, paper size and theme for '
+      helperText: 'Configure a separate printer, paper size and theme for '
           '${selectedSegment == 'B2B' ? 'business (B2B)' : 'retail (B2C)'} '
           'bills. B2B uses the B2C settings when left unconfigured.',
     );
@@ -1636,9 +1659,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
                       const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final printer = devices[index];
-                    final isSelected =
-                        selectedPrinter?.deviceName == printer.deviceName &&
-                            selectedPrinter?.address == printer.address;
+                    final isSelected = selectedPrinter != null &&
+                        _printerIdentity(selectedPrinter!) ==
+                            _printerIdentity(printer);
 
                     return _buildPrinterDeviceTile(
                       printer: printer,
@@ -1742,10 +1765,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               borderColor: isSelected
                   ? ColorManager.kPrimaryColor
                   : ColorManager.kGreyColor,
-              boxColor:
-                  isSelected ? ColorManager.kPrimaryColor : Colors.white,
-              textColor:
-                  isSelected ? Colors.white : ColorManager.kGreyColor,
+              boxColor: isSelected ? ColorManager.kPrimaryColor : Colors.white,
+              textColor: isSelected ? Colors.white : ColorManager.kGreyColor,
             ),
           ],
         ),
@@ -1765,8 +1786,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         ),
       ),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         minVerticalPadding: 0,
         leading: Container(
           height: 44,
@@ -1812,9 +1832,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           height: 44,
           width: 108,
           fontSize: 14,
-          borderColor: isSelected
-              ? ColorManager.kPrimaryColor
-              : ColorManager.kGreyColor,
+          borderColor:
+              isSelected ? ColorManager.kPrimaryColor : ColorManager.kGreyColor,
           boxColor: isSelected ? ColorManager.kPrimaryColor : Colors.white,
           textColor: isSelected ? Colors.white : ColorManager.kGreyColor,
         ),

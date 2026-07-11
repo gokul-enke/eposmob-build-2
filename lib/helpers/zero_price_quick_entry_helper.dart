@@ -5,6 +5,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_purchase_provider.dart';
+import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/widgets/zero_price_quick_entry_modal.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +20,15 @@ class ZeroPriceQuickEntryResult {
     required this.quantity,
   });
 }
+
+typedef ZeroPriceQuickEntryPrompt = Future<ZeroPriceQuickEntryResult?>
+    Function({
+  required BuildContext context,
+  required GetProduct product,
+  required num initialQuantity,
+  double? mrp,
+  Stock? selectedStock,
+});
 
 /// Prompts for price/quantity before a zero-priced product is added to the
 /// cart. The price field is pre-filled with the default customer's last
@@ -63,8 +73,7 @@ class ZeroPriceQuickEntryHelper {
           lastPurchase = purchaseHistory.data.first;
         }
       } catch (error) {
-        debugPrint(
-            'Failed to load last purchase for zero-price entry: $error');
+        debugPrint('Failed to load last purchase for zero-price entry: $error');
       }
     }
 
@@ -90,6 +99,21 @@ class ZeroPriceQuickEntryHelper {
         minimumPrice: minPrice,
       ),
     );
+
+    // Dialog pop restores focus to the previous field (often product search),
+    // which would auto-open the alphanumeric virtual keyboard in the
+    // background. Clear that before returning.
+    if (context.mounted) {
+      final keyboardProvider =
+          Provider.of<KeyboardProvider>(context, listen: false);
+      keyboardProvider.hide();
+      FocusManager.instance.primaryFocus?.unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        Provider.of<KeyboardProvider>(context, listen: false).hide();
+        FocusManager.instance.primaryFocus?.unfocus();
+      });
+    }
 
     if (result == null) return null;
 

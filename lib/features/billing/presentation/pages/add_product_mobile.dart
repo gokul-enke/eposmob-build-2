@@ -158,7 +158,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
     if (appSettings?.productVariantEnabled != true) return;
     _variantPropertiesRequested = true;
 
-    final productProvider = Provider.of<ProductProvider>(context, listen: false);
+    final productProvider =
+        Provider.of<ProductProvider>(context, listen: false);
     if (productProvider.hasProductProperties) return;
 
     final accessToken =
@@ -348,7 +349,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        product.productName?.trim().isNotEmpty ==
+                                        product.productName
+                                                    ?.trim()
+                                                    .isNotEmpty ==
                                                 true
                                             ? product.productName!.trim()
                                             : 'Unnamed Product',
@@ -487,7 +490,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
 
   void _syncSaleUnitsFromProduct(GetProduct product) {
     _clearSaleUnitRows();
-    final saleUnits = product.saleUnits ?? const <SaleUnit>[];
+    final saleUnits = (product.saleUnits ?? const <SaleUnit>[])
+        .where((saleUnit) => saleUnit.unitId?.toString() != _selectedUnit)
+        .toList(growable: false);
     for (final saleUnit in saleUnits) {
       _saleUnitRows.add(
         AddProductSaleUnitRow(
@@ -722,15 +727,17 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       selectedUnit: _selectedUnit,
       mainBarcode: _barcodeController.text,
       saleUnitRows: _saleUnitRows,
-      onError: (message) => showScaffoldError(context: context, message: message),
+      onError: (message) =>
+          showScaffoldError(context: context, message: message),
     )) {
       return;
     }
 
-    final variantEnabled = Provider.of<AppSettingsProvider>(context, listen: false)
-            .appSettings
-            ?.productVariantEnabled ??
-        true;
+    final variantEnabled =
+        Provider.of<AppSettingsProvider>(context, listen: false)
+                .appSettings
+                ?.productVariantEnabled ??
+            true;
     if (variantEnabled && _variantController.hasRows) {
       final variantError =
           validateVariantRows(_variantController.toCreateInputs());
@@ -776,11 +783,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           Provider.of<GridSelectionProvider>(context, listen: false);
       final languageProvider =
           Provider.of<LanguageProvider>(context, listen: false);
-      final itemCodeEnabled = Provider.of<AppSettingsProvider>(context,
-                  listen: false)
-              .appSettings
-              ?.itemCodeEnabled ??
-          false;
+      final itemCodeEnabled =
+          Provider.of<AppSettingsProvider>(context, listen: false)
+                  .appSettings
+                  ?.itemCodeEnabled ??
+              false;
 
       final activeLanguages = languageProvider.languages
           .where((lang) => lang.active)
@@ -1193,7 +1200,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                    border:
+                        Border(top: BorderSide(color: Colors.grey.shade200)),
                   ),
                   child: _buildBottomActions(),
                 ),
@@ -1261,7 +1269,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                 : _buildSquareActionButton(
                     isLoading: _isGeneratingBarcode,
                     onPressed: _generateBarcode,
-                    icon: const Icon(Icons.refresh, color: Colors.white, size: 22),
+                    icon: const Icon(Icons.refresh,
+                        color: Colors.white, size: 22),
                   ),
           ),
           const SizedBox(height: 18),
@@ -1361,8 +1370,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         _syncLanguageControllers(languages, baseLanguage);
 
         final otherLanguages = languages
-            .where((lang) =>
-                baseLanguage == null || lang.id != baseLanguage.id)
+            .where((lang) => baseLanguage == null || lang.id != baseLanguage.id)
             .toList();
 
         if (otherLanguages.isEmpty) {
@@ -1402,7 +1410,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                     onPressed: isTranslating
                         ? null
                         : () => _translateLanguage(language),
-                    icon: const Icon(Icons.translate, color: Colors.white, size: 20),
+                    icon: const Icon(Icons.translate,
+                        color: Colors.white, size: 20),
                   ),
                 ),
               );
@@ -1595,7 +1604,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           isLoadingProperties: _isLoadingVariantProperties,
           onRetryLoadProperties: _retryFetchVariantProperties,
           onGenerateBarcode: (target, setLoading) =>
-              _generateBarcodeIntoController(target, onLoadingChanged: setLoading),
+              _generateBarcodeIntoController(target,
+                  onLoadingChanged: setLoading),
         );
       },
     );
@@ -1750,7 +1760,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade200, width: 1.5),
+                      border:
+                          Border.all(color: Colors.grey.shade200, width: 1.5),
                     ),
                     child: Text(
                       barcodeText,
@@ -1792,9 +1803,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: hasValidationError
-              ? Colors.red.shade200
-              : Colors.grey.shade200,
+          color:
+              hasValidationError ? Colors.red.shade200 : Colors.grey.shade200,
         ),
       ),
       child: Column(
@@ -1877,7 +1887,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                           row.isGeneratingBarcode = value;
                         },
                       ),
-              icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+              icon:
+                  const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
             ),
           ),
           const SizedBox(height: 12),

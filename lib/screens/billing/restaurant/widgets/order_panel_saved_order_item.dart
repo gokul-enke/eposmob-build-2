@@ -108,6 +108,8 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
     );
 
     void handleUpdate() {
+      Provider.of<KeyboardProvider>(context, listen: false).hide();
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
       final newPriceStr = priceController.text;
       final newPrice = double.tryParse(newPriceStr);
@@ -213,8 +215,9 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                       color: Color(0xFF1E293B), fontWeight: FontWeight.bold),
                 ),
                 onTap: () {
-                  Provider.of<KeyboardProvider>(context, listen: false)
-                      .show('numeric', priceController);
+                  Provider.of<KeyboardProvider>(context, listen: false).show(
+                      'number', priceController,
+                      replaceOnFirstInput: true);
                 },
               ),
             ],
@@ -225,7 +228,11 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .hide();
+                      Navigator.pop(context);
+                    },
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -283,6 +290,8 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
     );
 
     void handleUpdate() {
+      Provider.of<KeyboardProvider>(context, listen: false).hide();
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
       final newQtyStr = quantityController.text;
       final newQty = double.tryParse(newQtyStr);
@@ -373,8 +382,9 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
                   ),
                 ),
                 onTap: () {
-                  Provider.of<KeyboardProvider>(context, listen: false)
-                      .show('numeric', quantityController);
+                  Provider.of<KeyboardProvider>(context, listen: false).show(
+                      'number', quantityController,
+                      replaceOnFirstInput: true);
                 },
               ),
             ],
@@ -385,7 +395,11 @@ extension OrderPanelSavedOrderItemExtension on OrderPanelState {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      Provider.of<KeyboardProvider>(context, listen: false)
+                          .hide();
+                      Navigator.pop(context);
+                    },
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(

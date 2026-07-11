@@ -223,6 +223,7 @@ void main() {
         () async {
       final provider = LocalProductProvider();
       provider.setStockEnabled(true);
+      provider.setAllowOverselling(false);
 
       // Stock only has 2, cart already holds 2.
       final stock = buildStock(id: 1, quantity: 2);
@@ -262,11 +263,12 @@ void main() {
         () async {
       final provider = LocalProductProvider();
       provider.setStockEnabled(true);
+      provider.setAllowOverselling(false);
 
       // Two stocks at same price (same pricing group).
       final stockA = buildStock(id: 1, quantity: 2);
-      final stockB = buildStock(id: 2, quantity: 5, storeId: 2,
-          storeName: 'Branch Store');
+      final stockB =
+          buildStock(id: 2, quantity: 5, storeId: 2, storeName: 'Branch Store');
       final prod = plainProduct(id: 1, stocks: [stockA, stockB]);
       provider.initializeProducts([prod]);
 
@@ -324,8 +326,7 @@ void main() {
   group('P0.4 BillingMobileCartController.changeQuantity', () {
     const controller = BillingMobileCartController();
 
-    testWidgets(
-        'forwards correct base quantity to helper for a plain product',
+    testWidgets('forwards correct base quantity to helper for a plain product',
         (tester) async {
       SharedPreferences.setMockInitialValues({});
 
