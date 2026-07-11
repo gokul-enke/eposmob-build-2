@@ -711,7 +711,9 @@ class BillingMobileController {
       context,
       clearCart: true,
       syncDefaultDelivery: true,
-      syncSalesExecutive: true,
+      // Clear the current customer and then reapply the configured automatic
+      // default customer for the new order.
+      syncSalesExecutive: false,
     );
   }
 
