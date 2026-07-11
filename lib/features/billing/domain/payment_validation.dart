@@ -96,6 +96,8 @@ class PaymentValidation {
     required String upiAmount,
     required String codAmount,
     Map<String, String>? extraAmounts,
+    bool isCreditSelected = false,
+    String creditAmount = '',
   }) {
     if (orderTotal <= _epsilon) return true;
 
@@ -118,7 +120,15 @@ class PaymentValidation {
       customerPrevBalance: customerPrevBalance,
     );
 
-    return collected + _epsilon >= netDue;
+    // A DEBIT/CREDIT payment is a credit sale: the unpaid remainder is posted
+    // to the customer's account. It is distinct from
+    // `toCustomerCreditEnabled`, where excess collected money is added to the
+    // customer's credit balance.
+    final creditSaleAmount = isCreditSelected && !toCustomerCreditEnabled
+        ? parseAmount(creditAmount)
+        : 0.0;
+
+    return collected + creditSaleAmount + _epsilon >= netDue;
   }
 
   static PaymentValidationResult validateForOrder({
@@ -135,12 +145,14 @@ class PaymentValidation {
     required String upiAmount,
     required String codAmount,
     Map<String, String>? extraAmounts,
+    bool isCreditSelected = false,
+    String creditAmount = '',
   }) {
     if (orderTotal <= _epsilon) {
       return const PaymentValidationResult.valid();
     }
 
-    if (!hasCollectedPayment(
+    final hasCollected = hasCollectedPayment(
       isCashSelected: isCashSelected,
       isCardSelected: isCardSelected,
       isUpiSelected: isUpiSelected,
@@ -150,7 +162,16 @@ class PaymentValidation {
       upiAmount: upiAmount,
       codAmount: codAmount,
       extraAmounts: extraAmounts,
-    )) {
+    );
+    final hasCreditSale = isCreditSelected && parseAmount(creditAmount) > 0;
+
+    if (hasCreditSale && toCustomerCreditEnabled) {
+      return const PaymentValidationResult.invalid(
+        'Credit sale and customer credit cannot be used together',
+      );
+    }
+
+    if (!hasCollected && !hasCreditSale) {
       return const PaymentValidationResult.invalid(
         'Please enter at least one payment amount',
       );
@@ -170,6 +191,8 @@ class PaymentValidation {
       upiAmount: upiAmount,
       codAmount: codAmount,
       extraAmounts: extraAmounts,
+      isCreditSelected: isCreditSelected,
+      creditAmount: creditAmount,
     )) {
       return const PaymentValidationResult.invalid(
         'Payment amount is less than the amount due',
@@ -196,6 +219,8 @@ class PaymentValidation {
     required String upiAmount,
     required String codAmount,
     Map<String, String>? extraAmounts,
+    bool isCreditSelected = false,
+    String creditAmount = '',
   }) {
     final validation = validateForOrder(
       orderTotal: orderTotal,
@@ -211,6 +236,8 @@ class PaymentValidation {
       upiAmount: upiAmount,
       codAmount: codAmount,
       extraAmounts: extraAmounts,
+      isCreditSelected: isCreditSelected,
+      creditAmount: creditAmount,
     );
     if (!validation.isValid) return false;
     return paymentStepVisited || onPaymentStep;

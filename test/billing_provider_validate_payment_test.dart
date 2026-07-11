@@ -3,6 +3,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 
 void main() {
@@ -33,5 +34,27 @@ void main() {
 
     expect(bp.validatePayment(), isFalse);
     expect(bp.paymentValidationError, isNotNull);
+  });
+
+  test('validatePayment accepts cash plus customer credit sale', () {
+    final bp = BillingProvider();
+    bp.setPaymentValidationCustomerContext(
+      isDefaultCustomer: false,
+      configuredDefaultCustomerPhone: '',
+    );
+    bp.setSelectedCustomer(
+      CustomerListModelData(
+        id: 42,
+        name: 'Credit Customer',
+        phone: '9876543210',
+      ),
+    );
+    bp.setTotalOrderAmount(100);
+    bp.setPaymentMethod('CASH', true);
+    bp.cashAmountController.text = '40';
+    bp.setPaymentMethod('DEBIT', true);
+    bp.debitAmountController.text = '60';
+
+    expect(bp.validatePayment(), isTrue);
   });
 }

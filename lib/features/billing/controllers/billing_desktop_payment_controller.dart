@@ -52,7 +52,6 @@ class BillingDesktopPaymentController {
   List<DesktopPaymentRow> modalRows({
     required List<PaymentMethod> methods,
     required bool toCustomerCreditEnabled,
-    required bool hasSelectedCustomer,
     required bool Function(String code, {String? methodId}) isSelected,
     required TextEditingController Function(String code, {String? methodId})
         controllerFor,
@@ -70,7 +69,6 @@ class BillingDesktopPaymentController {
 
       if (method.behavior == PaymentBehavior.credit) {
         if (toCustomerCreditEnabled) continue;
-        if (!hasSelectedCustomer) continue;
       }
 
       rows.add(

@@ -1016,8 +1016,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
     return size.width <= 1100 || size.height <= 800;
   }
 
-  bool get _isMobileCheckout =>
-      MediaQuery.of(context).size.width < 600;
+  bool get _isMobileCheckout => MediaQuery.of(context).size.width < 600;
 
   double get _checkoutPadding => _isDenseCheckout ? 16.0 : 24.0;
   double get _checkoutGap => _isDenseCheckout ? 14.0 : 24.0;
@@ -1404,9 +1403,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               ? _buildSelectionOnlySidePanel(
                                   icon: Icons.person,
                                   title: 'Selected Customer',
-                                  value:
-                                      _localSelectedCustomer?.name ?? 'Not selected',
-                                  supportingText: _selectedCustomerSupportingText(),
+                                  value: _localSelectedCustomer?.name ??
+                                      'Not selected',
+                                  supportingText:
+                                      _selectedCustomerSupportingText(),
                                   canDone: _localSelectedCustomer != null,
                                 )
                               : Column(
@@ -1436,33 +1436,38 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   decoration: BoxDecoration(
                                     color: Colors.grey.shade50,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey.shade200),
+                                    border:
+                                        Border.all(color: Colors.grey.shade200),
                                   ),
                                   child: TextField(
                                     controller: _customerSearchController,
                                     focusNode: _customerSearchFocusNode,
                                     onChanged: _filterCustomers,
                                     decoration: InputDecoration(
-                                      hintText: 'Search by name or phone number...',
-                                      hintStyle:
-                                          TextStyle(color: Colors.grey.shade500),
+                                      hintText:
+                                          'Search by name or phone number...',
+                                      hintStyle: TextStyle(
+                                          color: Colors.grey.shade500),
                                       prefixIcon: Icon(Icons.search,
                                           color: Colors.grey.shade500),
-                                      suffixIcon: _customerSearchQuery.isNotEmpty
+                                      suffixIcon: _customerSearchQuery
+                                              .isNotEmpty
                                           ? IconButton(
                                               focusNode:
                                                   _customerSearchClearFocusNode,
                                               icon: Icon(Icons.clear,
                                                   color: Colors.grey.shade500),
                                               onPressed: () {
-                                                _customerSearchController.clear();
+                                                _customerSearchController
+                                                    .clear();
                                                 _filterCustomers('');
                                               },
                                             )
                                           : null,
                                       border: InputBorder.none,
-                                      contentPadding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 14),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 14),
                                     ),
                                   ),
                                 ),
@@ -1493,8 +1498,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               height: 18,
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                valueColor: AlwaysStoppedAnimation(
-                                                    Colors.grey),
+                                                valueColor:
+                                                    AlwaysStoppedAnimation(
+                                                        Colors.grey),
                                               ),
                                             )
                                           : const Icon(Icons.person_add),
@@ -1502,10 +1508,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                           ? 'Adding...'
                                           : 'Add New Customer'),
                                       style: ElevatedButton.styleFrom(
-                                        padding:
-                                            const EdgeInsets.symmetric(vertical: 16),
-                                        backgroundColor: const Color(0xFFECFDF3),
-                                        foregroundColor: const Color(0xFF047857),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        backgroundColor:
+                                            const Color(0xFFECFDF3),
+                                        foregroundColor:
+                                            const Color(0xFF047857),
                                         side: const BorderSide(
                                             color: Color(0xFF34D399)),
                                       ),
@@ -1529,9 +1537,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
                               ? _buildSelectionOnlySidePanel(
                                   icon: Icons.person,
                                   title: 'Selected Customer',
-                                  value:
-                                      _localSelectedCustomer?.name ?? 'Not selected',
-                                  supportingText: _selectedCustomerSupportingText(),
+                                  value: _localSelectedCustomer?.name ??
+                                      'Not selected',
+                                  supportingText:
+                                      _selectedCustomerSupportingText(),
                                   canDone: _localSelectedCustomer != null,
                                 )
                               : Column(
@@ -1919,7 +1928,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
           crossAxisCount: _isMobileCheckout ? 2 : _customerGridColumns,
           mainAxisSpacing: _isDenseCheckout ? 5 : 6,
           crossAxisSpacing: _isDenseCheckout ? 5 : 6,
-          childAspectRatio: _isMobileCheckout ? 2.8 : (_isDenseCheckout ? 3.95 : 3.6),
+          childAspectRatio:
+              _isMobileCheckout ? 2.8 : (_isDenseCheckout ? 3.95 : 3.6),
         ),
         itemCount: displayCustomers.length,
         itemBuilder: (context, index) {
@@ -2171,10 +2181,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                       final isDeliveryChargeDataEnabled =
                           appSettings?.freeDeliveryEnabled ?? false;
                       final currency = appSettings?.currency ?? 'SAR';
-                      final minimumAmount = double.tryParse(appSettings
-                                  ?.freeDeliveryMinimumAmount
-                                  .trim() ??
-                              '') ??
+                      final minimumAmount = double.tryParse(
+                              appSettings?.freeDeliveryMinimumAmount.trim() ??
+                                  '') ??
                           0.0;
                       final localProductProvider =
                           Provider.of<LocalProductProvider>(context,
@@ -2209,8 +2218,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             shortcuts: const <ShortcutActivator, Intent>{
                               SingleActivator(LogicalKeyboardKey.arrowLeft):
                                   PreviousFocusIntent(),
-                              SingleActivator(
-                                      LogicalKeyboardKey.arrowRight):
+                              SingleActivator(LogicalKeyboardKey.arrowRight):
                                   NextFocusIntent(),
                               SingleActivator(LogicalKeyboardKey.arrowUp):
                                   PreviousFocusIntent(),
@@ -2220,15 +2228,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             child: Wrap(
                               spacing: 12,
                               runSpacing: 12,
-                              children:
-                                  provider.deliveryMethods.map((method) {
-                                final methodIndex = provider.deliveryMethods
-                                    .indexOf(method);
+                              children: provider.deliveryMethods.map((method) {
+                                final methodIndex =
+                                    provider.deliveryMethods.indexOf(method);
                                 final isSelected =
                                     _lDeliveryMethod == method.name;
                                 final isFocused =
-                                    _focusedDeliveryMethodName ==
-                                        method.name;
+                                    _focusedDeliveryMethodName == method.name;
                                 return FocusTraversalOrder(
                                   order: NumericFocusOrder(
                                       10 + methodIndex.toDouble()),
@@ -2237,18 +2243,15 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     borderRadius: BorderRadius.circular(10),
                                     child: InkWell(
                                       focusNode:
-                                          _deliveryMethodFocusNodeFor(
-                                              method),
-                                      borderRadius:
-                                          BorderRadius.circular(10),
+                                          _deliveryMethodFocusNodeFor(method),
+                                      borderRadius: BorderRadius.circular(10),
                                       onFocusChange: (focused) {
                                         setState(() {
                                           _focusedDeliveryMethodName =
                                               focused ? method.name : null;
                                         });
                                         if (focused &&
-                                            _lDeliveryMethod !=
-                                                method.name) {
+                                            _lDeliveryMethod != method.name) {
                                           _selectDeliveryMethod(
                                             method,
                                             shouldApplyDeliveryCharge:
@@ -2264,8 +2267,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                         );
                                       },
                                       child: AnimatedContainer(
-                                        duration: const Duration(
-                                            milliseconds: 200),
+                                        duration:
+                                            const Duration(milliseconds: 200),
                                         width: _isMobileCheckout ? 100 : 118,
                                         height: _isMobileCheckout ? 104 : 104,
                                         padding: const EdgeInsets.symmetric(
@@ -2281,8 +2284,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                             color: isFocused
                                                 ? Colors.orange
                                                 : isSelected
-                                                    ? ColorManager
-                                                        .kPrimaryColor
+                                                    ? ColorManager.kPrimaryColor
                                                     : Colors.grey.shade200,
                                             width: isFocused
                                                 ? 3
@@ -2304,8 +2306,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               MainAxisAlignment.center,
                                           children: [
                                             Icon(
-                                              method.name ==
-                                                      "Store Takeaway"
+                                              method.name == "Store Takeaway"
                                                   ? Icons.store
                                                   : method.name ==
                                                           "Car Delivery"
@@ -2318,8 +2319,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                                               .local_shipping,
                                               size: 22,
                                               color: isSelected
-                                                  ? ColorManager
-                                                      .kPrimaryColor
+                                                  ? ColorManager.kPrimaryColor
                                                   : Colors.grey.shade700,
                                             ),
                                             const SizedBox(height: 5),
@@ -2327,52 +2327,45 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               method.name.tr,
                                               textAlign: TextAlign.center,
                                               maxLines: 2,
-                                              overflow:
-                                                  TextOverflow.ellipsis,
+                                              overflow: TextOverflow.ellipsis,
                                               style: buildCustomStyle(
                                                 isSelected
-                                                    ? FontWeightManager
-                                                        .semiBold
-                                                    : FontWeightManager
-                                                        .medium,
+                                                    ? FontWeightManager.semiBold
+                                                    : FontWeightManager.medium,
                                                 FontSize.s11,
                                                 0.0,
                                                 isSelected
-                                                    ? ColorManager
-                                                        .kPrimaryColor
+                                                    ? ColorManager.kPrimaryColor
                                                     : Colors.black87,
                                               ),
                                             ),
                                             if (isDeliveryChargeDataEnabled) ...[
                                               const SizedBox(height: 5),
                                               Container(
-                                                padding: const EdgeInsets
-                                                    .symmetric(
-                                                  horizontal: 6,
-                                                  vertical: 2),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: const Color(
-                                                          0xFF059669)
+                                                  color: const Color(0xFF059669)
                                                       .withOpacity(0.1),
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                          10),
+                                                      BorderRadius.circular(10),
                                                 ),
                                                 child: Text(
-                                                  method.prices
-                                                              .isNotEmpty &&
+                                                  method.prices.isNotEmpty &&
                                                           shouldApplyDeliveryCharge
                                                       ? (() {
                                                           if (!isSelected) {
                                                             return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
                                                           }
 
-                                                          final selectedById = method
-                                                              .prices
-                                                              .where((p) =>
-                                                                  p.id ==
-                                                                  _selectedDeliveryPriceId)
-                                                              .toList();
+                                                          final selectedById =
+                                                              method.prices
+                                                                  .where((p) =>
+                                                                      p.id ==
+                                                                      _selectedDeliveryPriceId)
+                                                                  .toList();
                                                           if (selectedById
                                                               .isNotEmpty) {
                                                             return '$currency ${selectedById.first.price.toStringAsFixed(2)}';
@@ -2386,14 +2379,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                                           return '$currency ${method.basePrice?.toStringAsFixed(2) ?? '0.00'}';
                                                         })()
                                                       : 'free'.tr,
-                                                  textAlign:
-                                                      TextAlign.center,
+                                                  textAlign: TextAlign.center,
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: buildCustomStyle(
-                                                    FontWeightManager
-                                                        .semiBold,
+                                                    FontWeightManager.semiBold,
                                                     FontSize.s9,
                                                     0.0,
                                                     const Color(0xFF059669),
@@ -2415,8 +2406,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             const SizedBox(height: 12),
                             Builder(builder: (context) {
                               DeliveryMethod? selectedMethod;
-                              for (final method
-                                  in provider.deliveryMethods) {
+                              for (final method in provider.deliveryMethods) {
                                 if (method.name == _lDeliveryMethod) {
                                   selectedMethod = method;
                                   break;
@@ -2427,7 +2417,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
                               if (selectedDeliveryMethod == null ||
                                   selectedDeliveryMethod.prices.isEmpty) {
-                                  return const SizedBox.shrink();
+                                return const SizedBox.shrink();
                               }
 
                               if (!shouldApplyDeliveryCharge) {
@@ -2446,19 +2436,16 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
                               final effectiveSelectedPriceId = (() {
                                 if (_selectedDeliveryPriceId != null) {
-                                  final exists = selectedDeliveryMethod
-                                      .prices
+                                  final exists = selectedDeliveryMethod.prices
                                       .any((p) =>
                                           p.id == _selectedDeliveryPriceId);
-                                  if (exists)
-                                    return _selectedDeliveryPriceId!;
+                                  if (exists) return _selectedDeliveryPriceId!;
                                 }
 
                                 if (_selectedDeliveryCharge != null) {
                                   for (final price
                                       in selectedDeliveryMethod.prices) {
-                                    if ((price.price -
-                                                _selectedDeliveryCharge!)
+                                    if ((price.price - _selectedDeliveryCharge!)
                                             .abs() <
                                         0.001) {
                                       return price.id;
@@ -2466,13 +2453,11 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                   }
                                 }
 
-                                return selectedDeliveryMethod
-                                    .prices.first.id;
+                                return selectedDeliveryMethod.prices.first.id;
                               })();
 
                               return Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     'Delivery charges',
@@ -2489,14 +2474,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     runSpacing: 8,
                                     children: selectedDeliveryMethod.prices
                                         .map((price) {
-                                      final isPriceSelected = price.id ==
-                                          effectiveSelectedPriceId;
+                                      final isPriceSelected =
+                                          price.id == effectiveSelectedPriceId;
 
                                       return OutlinedButton(
                                         onPressed: () {
                                           setState(() {
-                                            _selectedDeliveryPriceId =
-                                                price.id;
+                                            _selectedDeliveryPriceId = price.id;
                                             _selectedDeliveryCharge =
                                                 price.price;
                                           });
@@ -2507,8 +2491,7 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                             color: isPriceSelected
                                                 ? const Color(0xFF059669)
                                                 : const Color(0xFF059669),
-                                            width:
-                                                isPriceSelected ? 2 : 1.5,
+                                            width: isPriceSelected ? 2 : 1.5,
                                           ),
                                           backgroundColor: isPriceSelected
                                               ? const Color(0xFF059669)
@@ -2516,18 +2499,13 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                           foregroundColor: isPriceSelected
                                               ? Colors.white
                                               : const Color(0xFF059669),
-                                          padding:
-                                              const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 10),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 10),
                                           minimumSize: const Size(0, 44),
                                           tapTargetSize:
-                                              MaterialTapTargetSize
-                                                  .shrinkWrap,
-                                          visualDensity:
-                                              const VisualDensity(
-                                                  horizontal: 0,
-                                                  vertical: 0),
+                                              MaterialTapTargetSize.shrinkWrap,
+                                          visualDensity: const VisualDensity(
+                                              horizontal: 0, vertical: 0),
                                           shape: RoundedRectangleBorder(
                                             borderRadius:
                                                 BorderRadius.circular(20),
@@ -2639,13 +2617,12 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                     customerProvider
                                             .selectedCustomer!.addresses ==
                                         null ||
-                                    customerProvider.selectedCustomer!
-                                        .addresses!.isEmpty) {
+                                    customerProvider
+                                        .selectedCustomer!.addresses!.isEmpty) {
                                   return const SizedBox.shrink();
                                 }
                                 return Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       'Choose an address:',
@@ -2680,22 +2657,19 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                               _handleDeliveryUpdate();
                                             },
                                             child: Container(
-                                              padding:
-                                                  const EdgeInsets.all(8),
+                                              padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
                                                 border: Border.all(
-                                                    color: Colors
-                                                        .grey.shade300),
+                                                    color:
+                                                        Colors.grey.shade300),
                                                 borderRadius:
-                                                    BorderRadius.circular(
-                                                        8),
+                                                    BorderRadius.circular(8),
                                                 color: Colors.grey.shade50,
                                               ),
                                               child: Text(
                                                 "${address.address}, ${address.city}",
                                                 maxLines: 2,
-                                                overflow:
-                                                    TextOverflow.ellipsis,
+                                                overflow: TextOverflow.ellipsis,
                                                 style: buildCustomStyle(
                                                   FontWeightManager.regular,
                                                   FontSize.s12,
@@ -2851,18 +2825,23 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             onCouponAction: (code, applied,
                                 {flatDiscount, percentageDiscount}) {
                               final newFlatDiscount = flatDiscount ?? 0.0;
-                              final newPercentageDiscount = percentageDiscount ?? 0.0;
+                              final newPercentageDiscount =
+                                  percentageDiscount ?? 0.0;
                               final oldDiscountAmount = _localFlatDiscount +
-                                  (widget.cartTotal * _localPercentageDiscount / 100);
+                                  (widget.cartTotal *
+                                      _localPercentageDiscount /
+                                      100);
                               final oldEffectiveTotal =
                                   widget.cartTotal - oldDiscountAmount;
                               final newDiscountAmount = newFlatDiscount +
-                                  (widget.cartTotal * newPercentageDiscount / 100);
+                                  (widget.cartTotal *
+                                      newPercentageDiscount /
+                                      100);
                               final newEffectiveTotal =
                                   widget.cartTotal - newDiscountAmount;
 
-                              final remapped =
-                                  PaymentAutoFillHelper.remapAmountsAfterDiscount(
+                              final remapped = PaymentAutoFillHelper
+                                  .remapAmountsAfterDiscount(
                                 isCashSelected: _lIsCashSelected,
                                 isCardSelected: _lIsCardSelected,
                                 isUpiSelected: _lIsUpiSelected,
@@ -2875,8 +2854,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 newEffectiveTotal: newEffectiveTotal,
                               );
 
-                              _handleDiscountUpdate(code, applied, newFlatDiscount,
-                                  newPercentageDiscount);
+                              _handleDiscountUpdate(code, applied,
+                                  newFlatDiscount, newPercentageDiscount);
 
                               if (remapped.cash != _lCashAmount ||
                                   remapped.card != _lCardAmount ||
@@ -2942,18 +2921,23 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             onCouponAction: (code, applied,
                                 {flatDiscount, percentageDiscount}) {
                               final newFlatDiscount = flatDiscount ?? 0.0;
-                              final newPercentageDiscount = percentageDiscount ?? 0.0;
+                              final newPercentageDiscount =
+                                  percentageDiscount ?? 0.0;
                               final oldDiscountAmount = _localFlatDiscount +
-                                  (widget.cartTotal * _localPercentageDiscount / 100);
+                                  (widget.cartTotal *
+                                      _localPercentageDiscount /
+                                      100);
                               final oldEffectiveTotal =
                                   widget.cartTotal - oldDiscountAmount;
                               final newDiscountAmount = newFlatDiscount +
-                                  (widget.cartTotal * newPercentageDiscount / 100);
+                                  (widget.cartTotal *
+                                      newPercentageDiscount /
+                                      100);
                               final newEffectiveTotal =
                                   widget.cartTotal - newDiscountAmount;
 
-                              final remapped =
-                                  PaymentAutoFillHelper.remapAmountsAfterDiscount(
+                              final remapped = PaymentAutoFillHelper
+                                  .remapAmountsAfterDiscount(
                                 isCashSelected: _lIsCashSelected,
                                 isCardSelected: _lIsCardSelected,
                                 isUpiSelected: _lIsUpiSelected,
@@ -2966,8 +2950,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                                 newEffectiveTotal: newEffectiveTotal,
                               );
 
-                              _handleDiscountUpdate(code, applied, newFlatDiscount,
-                                  newPercentageDiscount);
+                              _handleDiscountUpdate(code, applied,
+                                  newFlatDiscount, newPercentageDiscount);
 
                               if (remapped.cash != _lCashAmount ||
                                   remapped.card != _lCardAmount ||
@@ -3071,7 +3055,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
               padding: EdgeInsets.all(_checkoutPadding),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final isMobileCheckout = MediaQuery.of(context).size.width < 600;
+                  final isMobileCheckout =
+                      MediaQuery.of(context).size.width < 600;
                   if (isMobileCheckout) {
                     return Column(
                       children: [
@@ -3088,6 +3073,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             initialIsCodSelected:
                                 shouldAutoFillCod ? true : _lIsCodSelected,
                             initialIsDebitSelected: _lIsDebitSelected,
+                            initialToCustomerCreditEnabled:
+                                _lToCustomerCreditEnabled,
                             initialCashAmount: shouldAutoFillCash
                                 ? effectiveTotal.toStringAsFixed(2)
                                 : _lCashAmount,
@@ -3116,8 +3103,18 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             showAsDialog: false,
                             showShadow: false,
                             fullWidth: true,
-                            onPaymentMethodSelected: (isCash, isCard, isUpi, isCod,
-                                isDebit, cash, card, upi, cod, debit, trans, toCredit,
+                            onPaymentMethodSelected: (isCash,
+                                isCard,
+                                isUpi,
+                                isCod,
+                                isDebit,
+                                cash,
+                                card,
+                                upi,
+                                cod,
+                                debit,
+                                trans,
+                                toCredit,
                                 {cashMethodId,
                                 cardMethodId,
                                 upiMethodId,
@@ -3192,6 +3189,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           initialIsCodSelected:
                               shouldAutoFillCod ? true : _lIsCodSelected,
                           initialIsDebitSelected: _lIsDebitSelected,
+                          initialToCustomerCreditEnabled:
+                              _lToCustomerCreditEnabled,
                           initialCashAmount: shouldAutoFillCash
                               ? effectiveTotal.toStringAsFixed(2)
                               : _lCashAmount,
@@ -3220,8 +3219,18 @@ class _CheckoutModalState extends State<CheckoutModal> {
                           showAsDialog: false,
                           showShadow: false,
                           fullWidth: true,
-                          onPaymentMethodSelected: (isCash, isCard, isUpi, isCod,
-                              isDebit, cash, card, upi, cod, debit, trans, toCredit,
+                          onPaymentMethodSelected: (isCash,
+                              isCard,
+                              isUpi,
+                              isCod,
+                              isDebit,
+                              cash,
+                              card,
+                              upi,
+                              cod,
+                              debit,
+                              trans,
+                              toCredit,
                               {cashMethodId,
                               cardMethodId,
                               upiMethodId,
@@ -3457,6 +3466,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
       upiAmount: _lUpiAmount,
       codAmount: _lCodAmount,
       extraAmounts: _lExtraAmounts,
+      isCreditSelected: _lIsDebitSelected && !_lToCustomerCreditEnabled,
+      creditAmount: _lDebitAmount,
     );
   }
 
@@ -3484,6 +3495,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
       upiAmount: _lUpiAmount,
       codAmount: _lCodAmount,
       extraAmounts: _lExtraAmounts,
+      isCreditSelected: _lIsDebitSelected && !_lToCustomerCreditEnabled,
+      creditAmount: _lDebitAmount,
     );
   }
 
@@ -3518,10 +3531,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      final cash = shouldAutoFillCash ? effectiveTotal.toStringAsFixed(2) : _lCashAmount;
-      final card = shouldAutoFillCard ? effectiveTotal.toStringAsFixed(2) : _lCardAmount;
-      final upi = shouldAutoFillUpi ? effectiveTotal.toStringAsFixed(2) : _lUpiAmount;
-      final cod = shouldAutoFillCod ? effectiveTotal.toStringAsFixed(2) : _lCodAmount;
+      final cash =
+          shouldAutoFillCash ? effectiveTotal.toStringAsFixed(2) : _lCashAmount;
+      final card =
+          shouldAutoFillCard ? effectiveTotal.toStringAsFixed(2) : _lCardAmount;
+      final upi =
+          shouldAutoFillUpi ? effectiveTotal.toStringAsFixed(2) : _lUpiAmount;
+      final cod =
+          shouldAutoFillCod ? effectiveTotal.toStringAsFixed(2) : _lCodAmount;
 
       _handlePaymentUpdate(
         shouldAutoFillCash || _lIsCashSelected,
@@ -3780,9 +3797,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
     VoidCallback? onConfirm,
   }) {
     final compactFooter = widget.isQuotationMode || _isDenseCheckout;
-    final double horizontalPadding = _isMobileCheckout
-        ? 2.0
-        : (_isDenseCheckout ? 8.0 : 12.0);
+    final double horizontalPadding =
+        _isMobileCheckout ? 2.0 : (_isDenseCheckout ? 8.0 : 12.0);
     return Container(
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,
@@ -3973,18 +3989,15 @@ class _CheckoutModalState extends State<CheckoutModal> {
 
         final orderSummaryCard = Container(
           padding: EdgeInsets.symmetric(
-            horizontal: widget.isQuotationMode
-                ? 14
-                : (_isDenseCheckout ? 14 : 20),
-            vertical: widget.isQuotationMode
-                ? 12
-                : (_isDenseCheckout ? 14 : 20),
+            horizontal:
+                widget.isQuotationMode ? 14 : (_isDenseCheckout ? 14 : 20),
+            vertical:
+                widget.isQuotationMode ? 12 : (_isDenseCheckout ? 14 : 20),
           ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: const Color(0xFFE2E8F0), width: 1.5),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.03),
@@ -4009,21 +4022,17 @@ class _CheckoutModalState extends State<CheckoutModal> {
               SizedBox(height: _isDenseCheckout ? 8 : 12),
               _buildSummaryRow('Net Amount', subTotal, Colors.black),
               SizedBox(
-                  height: widget.isQuotationMode
-                      ? 6
-                      : (_isDenseCheckout ? 7 : 10)),
-              _buildSummaryRow('Discount', -discountAmount,
-                  const Color(0xFFEF4444),
+                  height:
+                      widget.isQuotationMode ? 6 : (_isDenseCheckout ? 7 : 10)),
+              _buildSummaryRow(
+                  'Discount', -discountAmount, const Color(0xFFEF4444),
                   labelColor: const Color(0xFFEF4444)),
               SizedBox(
-                  height: widget.isQuotationMode
-                      ? 6
-                      : (_isDenseCheckout ? 7 : 10)),
-              _buildSummaryRow(
-                  'Tax', taxAmount, const Color(0xFF64748B),
+                  height:
+                      widget.isQuotationMode ? 6 : (_isDenseCheckout ? 7 : 10)),
+              _buildSummaryRow('Tax', taxAmount, const Color(0xFF64748B),
                   labelColor: const Color(0xFF64748B)),
-              if (hasDelivery &&
-                  _isfreeDeliveryMinimumAmount()) ...[
+              if (hasDelivery && _isfreeDeliveryMinimumAmount()) ...[
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
                 _buildDeliveryChargeRow(),
               ],
@@ -4033,17 +4042,14 @@ class _CheckoutModalState extends State<CheckoutModal> {
                         ? 8
                         : (_isDenseCheckout ? 10 : 16)),
                 child: Divider(
-                    height: 1,
-                    thickness: 1.5,
-                    color: Color(0xFFF1F5F9)),
+                    height: 1, thickness: 1.5, color: Color(0xFFF1F5F9)),
               ),
-              _buildSummaryRow('Total Payable', effectiveTotal,
-                  const Color(0xFF2563EB),
+              _buildSummaryRow(
+                  'Total Payable', effectiveTotal, const Color(0xFF2563EB),
                   isBold: true,
                   large: true,
                   labelColor: const Color(0xFF2563EB)),
-              if (_localSelectedCustomer != null &&
-                  !isDefaultCustomer) ...[
+              if (_localSelectedCustomer != null && !isDefaultCustomer) ...[
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
                 _buildSummaryRow(
                     'Cust. Prev. Balance',
@@ -4057,11 +4063,10 @@ class _CheckoutModalState extends State<CheckoutModal> {
               ],
               if (!widget.isQuotationMode) ...[
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
-                _buildSummaryRow(
-                    'Total Paid', totalPaid, Colors.black),
+                _buildSummaryRow('Total Paid', totalPaid, Colors.black),
                 SizedBox(height: _isDenseCheckout ? 7 : 10),
-                _buildSummaryRow('Balance', displayBalance,
-                    const Color(0xFF059669),
+                _buildSummaryRow(
+                    'Balance', displayBalance, const Color(0xFF059669),
                     labelColor: const Color(0xFF059669)),
               ],
             ],
@@ -4083,7 +4088,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     final tileWidth = (constraints.maxWidth - tileSpacing) / 2;
                     final tileHeight = compactQuotation
                         ? 60.0
-                        : (_isMobileCheckout ? 56.0 : (_isDenseCheckout ? 72.0 : 92.0));
+                        : (_isMobileCheckout
+                            ? 56.0
+                            : (_isDenseCheckout ? 72.0 : 92.0));
                     final tiles = <Widget>[
                       _buildClickableCheckItem(
                         'Customer',
@@ -4091,7 +4098,8 @@ class _CheckoutModalState extends State<CheckoutModal> {
                             ? 'Create customer'
                             : widget.isQuotationMode
                                 ? _quotationCustomerDisplayName
-                                : (_localSelectedCustomer?.name ?? 'Not Selected'),
+                                : (_localSelectedCustomer?.name ??
+                                    'Not Selected'),
                         hasCustomer,
                         Icons.person_outline,
                         0,
@@ -4141,8 +4149,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
                     );
                   }),
                   SizedBox(
-                      height:
-                          widget.isQuotationMode ? 8 : (_isDenseCheckout ? 10 : 16)),
+                      height: widget.isQuotationMode
+                          ? 8
+                          : (_isDenseCheckout ? 10 : 16)),
                   orderSummaryCard,
                   if (widget.isQuotationMode) ...[
                     const SizedBox(height: 6),
@@ -4164,7 +4173,9 @@ class _CheckoutModalState extends State<CheckoutModal> {
               final tileWidth = (constraints.maxWidth - tileSpacing) / 2;
               final tileHeight = compactQuotation
                   ? 60.0
-                  : (_isMobileCheckout ? 56.0 : (_isDenseCheckout ? 72.0 : 92.0));
+                  : (_isMobileCheckout
+                      ? 56.0
+                      : (_isDenseCheckout ? 72.0 : 92.0));
               final tiles = <Widget>[
                 _buildClickableCheckItem(
                   'Customer',

@@ -615,6 +615,8 @@ class BillingPageState extends State<BillingPage>
       upiAmount: _upiAmountController.text,
       codAmount: _codAmountController.text,
       extraAmounts: _extraPaymentAmounts,
+      isCreditSelected: _isDebitSelected && !_toCustomerCreditEnabled,
+      creditAmount: _debitAmountController.text,
     );
   }
 
@@ -8824,6 +8826,7 @@ class BillingPageState extends State<BillingPage>
         initialIsUpiSelected: _isUpiSelected,
         initialIsCodSelected: _isCodSelected,
         initialIsDebitSelected: _isDebitSelected,
+        initialToCustomerCreditEnabled: _toCustomerCreditEnabled,
         initialCashAmount: initialCash,
         initialCardAmount: initialCard,
         initialUpiAmount: initialUpi,
@@ -9768,22 +9771,19 @@ class BillingPageState extends State<BillingPage>
   Future<void> _checkOpenShiftRequired() async {
     if (!mounted) return;
     try {
-      final authModel = 
-          Provider.of<AuthModel>(context, listen: false);
-      final storeSession = 
-          Provider.of<StoreSessionProvider>(context, 
-              listen: false);
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
       final salesProvider = SalesProvider();
-      
-      final pendingStatus = await salesProvider
-          .fetchDayClosePendingStatus(
-            accessToken: authModel.token ?? '',
-            storeId: storeSession.activeStore?.storeId ?? 0,
-            userId: authModel.userId ?? 0,
-          );
-      
+
+      final pendingStatus = await salesProvider.fetchDayClosePendingStatus(
+        accessToken: authModel.token ?? '',
+        storeId: storeSession.activeStore?.storeId ?? 0,
+        userId: authModel.userId ?? 0,
+      );
+
       if (!mounted) return;
-      
+
       // canOpenShift true = no open shift exists
       if (pendingStatus?.canOpenShift == true) {
         _showOpenShiftRequiredAlert();

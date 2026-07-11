@@ -67,17 +67,27 @@ class MasterDataProvider with ChangeNotifier {
   /// Backend/config-driven payment methods (all optional fields honored).
   List<PaymentMethod>? get paymentMethodModels => _paymentMethodModels;
 
-  /// Enabled payment methods sorted by (sortOrder, label). Falls back to the
-  /// minimal default list (single CASH) so billing is never blocked when both
-  /// the API and cache are empty.
+  /// Enabled payment methods sorted by (sortOrder, label). Credit is always
+  /// available even when the backend/store payment-method list omits it.
   List<PaymentMethod> get enabledSortedPaymentMethods {
     final models = _paymentMethodModels;
-    if (models == null || models.isEmpty) {
-      return PaymentMethod.minimalDefaults;
-    }
-    final enabled = models.where((m) => m.enabled).toList();
+    final enabled = models == null || models.isEmpty
+        ? List<PaymentMethod>.from(PaymentMethod.minimalDefaults)
+        : models.where((m) => m.enabled).toList();
     if (enabled.isEmpty) {
-      return PaymentMethod.minimalDefaults;
+      enabled.addAll(PaymentMethod.minimalDefaults);
+    }
+    if (!enabled.any((method) => method.behavior == PaymentBehavior.credit)) {
+      enabled.add(
+        const PaymentMethod(
+          id: '',
+          code: 'DEBIT',
+          label: 'Credit',
+          sortOrder: 999,
+          iconKey: 'credit',
+          behavior: PaymentBehavior.credit,
+        ),
+      );
     }
     enabled.sort((a, b) {
       final byOrder = a.sortOrder.compareTo(b.sortOrder);

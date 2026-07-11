@@ -1412,7 +1412,7 @@ class BillingMobilePaymentController {
     if (item.behavior == PaymentBehavior.credit || item.type == 'DEBIT') {
       // Pay-from-credit row conflicts with to-customer-credit amount field.
       if (bp.toCustomerCreditEnabled) return false;
-      return bp.selectedCustomer != null;
+      return true;
     }
     return true;
   }
