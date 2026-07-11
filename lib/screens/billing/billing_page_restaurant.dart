@@ -1609,6 +1609,14 @@ class BillingPageState extends State<BillingPageRestaurant>
 
       debugPrint(
           "🔴 [BillingPageRestaurant.processBarcode] Products found: ${filteredProducts.length}");
+      if (filteredProducts.length > 1) {
+        showScaffoldError(
+          context: context,
+          message:
+              'Barcode $query matches ${filteredProducts.length} products. Fix the duplicate barcode before selling.',
+        );
+        return;
+      }
       if (filteredProducts.isNotEmpty) {
         debugPrint(
             "🔴 [BillingPageRestaurant.processBarcode] First product: ${filteredProducts.first.productName}");
@@ -8323,6 +8331,10 @@ class BillingPageState extends State<BillingPageRestaurant>
                                                                   .saleUnitName,
                                                               saleUnitConversionRate:
                                                                   item.saleUnitConversionRate,
+                                                              variantId: item
+                                                                  .variantId,
+                                                              variantAttributes:
+                                                                  item.variantAttributes,
                                                             );
                                                           },
                                                           child: const Icon(

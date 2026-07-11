@@ -21,6 +21,15 @@ class ZeroPriceQuickEntryResult {
   });
 }
 
+typedef ZeroPriceQuickEntryPrompt = Future<ZeroPriceQuickEntryResult?>
+    Function({
+  required BuildContext context,
+  required GetProduct product,
+  required num initialQuantity,
+  double? mrp,
+  Stock? selectedStock,
+});
+
 /// Prompts for price/quantity before a zero-priced product is added to the
 /// cart. The price field is pre-filled with the default customer's last
 /// bought price for the product (fetched from the existing customer
@@ -64,8 +73,7 @@ class ZeroPriceQuickEntryHelper {
           lastPurchase = purchaseHistory.data.first;
         }
       } catch (error) {
-        debugPrint(
-            'Failed to load last purchase for zero-price entry: $error');
+        debugPrint('Failed to load last purchase for zero-price entry: $error');
       }
     }
 

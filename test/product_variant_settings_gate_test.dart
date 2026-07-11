@@ -81,4 +81,27 @@ void main() {
       expect(settings.productVariantEnabled, isTrue);
     });
   });
+
+  group('ALLOW_OVERSELL settings gate', () {
+    test('defaults to TRUE when the setting is absent', () {
+      final settings = AppSettings.fromJson(_settingsJson(const []));
+      expect(settings.allowOverselling, isTrue);
+    });
+
+    test('parses explicit false as strict stock enforcement', () {
+      final settings = AppSettings.fromJson(_settingsJson(const [
+        {'code': 'ALLOW_OVERSELL', 'value': '', 'status': 'false'},
+      ]));
+      expect(settings.allowOverselling, isFalse);
+    });
+
+    test('serializes the setting for cached/debug representations', () {
+      final settings = AppSettings.fromJson(_settingsJson(const []));
+      final entries = settings.toJson()['data'] as List<dynamic>;
+      final entry = entries.cast<Map<String, dynamic>>().firstWhere(
+            (item) => item['code'] == 'ALLOW_OVERSELL',
+          );
+      expect(entry['status'], 'true');
+    });
+  });
 }

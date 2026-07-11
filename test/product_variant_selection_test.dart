@@ -77,7 +77,9 @@ void main() {
       expect(variant.attributes, isEmpty);
     });
 
-    test('effectivePrice falls back to product price when variant price is zero', () {
+    test(
+        'effectivePrice falls back to product price when variant price is zero',
+        () {
       final variant = _variant(id: 1, price: 0);
       expect(variant.effectivePrice(299), 299);
     });
@@ -90,6 +92,30 @@ void main() {
 
       expect(product.hasVariants, isTrue);
       expect(product.activeVariants.map((v) => v.id), [2]);
+    });
+
+    test('variant_mode remains true when backend returns no active rows', () {
+      final product = GetProduct.fromJson({
+        'product_id': 9,
+        'product_name': 'Configured Shirt',
+        'variant_mode': true,
+        'variants': <Map<String, dynamic>>[],
+      });
+
+      expect(product.variantMode, isTrue);
+      expect(product.hasVariants, isTrue);
+      expect(product.activeVariants, isEmpty);
+      expect(product.toJson()['variant_mode'], isTrue);
+    });
+
+    test('available_quantity takes precedence over legacy quantity', () {
+      final variant = ProductVariant.fromJson({
+        'id': 10,
+        'quantity': 99,
+        'available_quantity': '4.5',
+      });
+
+      expect(variant.quantity, 4.5);
     });
   });
 
@@ -128,7 +154,8 @@ void main() {
       );
     });
 
-    test('tryResolveWithoutPicker returns null when multiple variants need UI', () {
+    test('tryResolveWithoutPicker returns null when multiple variants need UI',
+        () {
       final product = _variantProduct(variants: [
         _variant(id: 1, attributes: {'COLOR': 'Red'}),
         _variant(id: 2, attributes: {'COLOR': 'Blue'}),
@@ -138,7 +165,9 @@ void main() {
       expect(ProductVariantSelection.needsVariantPicker(product), isTrue);
     });
 
-    test('tryResolveWithoutPicker prefers barcode match over multi-variant picker', () {
+    test(
+        'tryResolveWithoutPicker prefers barcode match over multi-variant picker',
+        () {
       final product = _variantProduct(variants: [
         _variant(id: 1, barcode: 'AAA', attributes: {'COLOR': 'Red'}),
         _variant(id: 2, barcode: 'BBB', attributes: {'COLOR': 'Blue'}),
@@ -168,7 +197,9 @@ void main() {
     // sales block — the cashier may be holding the physical item. Resolution
     // still auto-selects it; ProductCartHelper is responsible for asking the
     // cashier to confirm an oversell before it reaches the cart.
-    test('tryResolveWithoutPicker still auto-selects out-of-stock single variant', () {
+    test(
+        'tryResolveWithoutPicker still auto-selects out-of-stock single variant',
+        () {
       final product = _variantProduct(variants: [
         _variant(id: 5, attributes: {'SIZE': 'M'}, quantity: 0),
       ]);
@@ -180,7 +211,8 @@ void main() {
       expect(ProductVariantSelection.needsVariantPicker(product), isFalse);
     });
 
-    test('tryResolveWithoutPicker still resolves out-of-stock barcode match', () {
+    test('tryResolveWithoutPicker still resolves out-of-stock barcode match',
+        () {
       final product = _variantProduct(variants: [
         _variant(id: 1, barcode: 'AAA', quantity: 0),
         _variant(id: 2, barcode: 'BBB', quantity: 5),

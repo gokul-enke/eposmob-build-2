@@ -33,5 +33,6 @@ Future<void> addProductWithVariantResolution({
     customerId: customerId,
     customerName: customerName,
     selectedSaleUnit: selectedSaleUnit,
+    variantEnabled: variantEnabled,
   );
 }

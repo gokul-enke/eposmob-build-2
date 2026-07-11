@@ -180,11 +180,21 @@ void main() {
         stock: const <Stock>[],
         variants: [premiumVariant],
       );
+      final variantProductWithoutActiveRows = GetProduct(
+        productId: 9,
+        productName: 'Unavailable Variant Product',
+        sellable: true,
+        variantMode: true,
+        unit: 'PC',
+        price: ProductPrice(price: '150'),
+        variants: const <ProductVariant>[],
+      );
       provider.initializeProducts([
         nonSellable,
         sellable,
         zeroQuantityProduct,
         variantProduct,
+        variantProductWithoutActiveRows,
       ]);
 
       final context =
@@ -244,6 +254,25 @@ void main() {
       expect(variantLine.price, 1000);
       expect(variantLine.mrp, 1200);
       expect((variantLine.price ?? 0) * variantLine.quantity, 1000);
+
+      await tester.pump(const Duration(seconds: 2));
+
+      await ProductCartHelper.handleProductSelection(
+        context: context,
+        product: variantProductWithoutActiveRows,
+        variantEnabled: true,
+      );
+      await tester.pump();
+
+      expect(
+        provider.cartItems.where((item) => item.product.productId == 9),
+        isEmpty,
+      );
+      expect(
+        find.text(
+            'Unavailable Variant Product has no active variants available for sale'),
+        findsOneWidget,
+      );
 
       await tester.pump(const Duration(seconds: 2));
     });

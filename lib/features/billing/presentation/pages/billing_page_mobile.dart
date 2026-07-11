@@ -325,6 +325,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
     );
 
     final appSettings = appSettingsProvider.appSettings;
+    _settingsController.syncAllowOverselling(
+      appSettings: appSettings,
+      localProductProvider: localProductProvider,
+    );
     _settingsController.syncAppSettingsFlags(
       appSettings: appSettings,
       billingProvider: billingProvider,
@@ -364,6 +368,11 @@ class BillingPageMobileState extends State<BillingPageMobile>
       final billingProvider =
           Provider.of<BillingProvider>(context, listen: false);
       final appSettings = appSettingsProvider.appSettings;
+      _settingsController.syncAllowOverselling(
+        appSettings: appSettings,
+        localProductProvider:
+            Provider.of<LocalProductProvider>(context, listen: false),
+      );
       _settingsController.syncAppSettingsFlags(
         appSettings: appSettings,
         billingProvider: billingProvider,

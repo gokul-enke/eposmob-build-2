@@ -1033,7 +1033,27 @@ class CartProvider with ChangeNotifier {
         return jsonData;
       } else {
         debugPrint('❌ Failed to create order (status ${response.statusCode})');
-        return {"status": "failure", "message": "Failed to add order"};
+        // Preserve structured backend conflict/validation details so checkout
+        // can show the cashier the real stock or concurrency error. The old
+        // generic response discarded useful 409/422 messages.
+        try {
+          final decoded = json.decode(response.body);
+          if (decoded is Map) {
+            return <String, dynamic>{
+              ...decoded.map(
+                (key, value) => MapEntry(key.toString(), value),
+              ),
+              'http_status': response.statusCode,
+            };
+          }
+        } catch (_) {
+          // Fall through to a stable generic shape for non-JSON responses.
+        }
+        return {
+          "status": "failure",
+          "message": "Failed to add order",
+          "http_status": response.statusCode,
+        };
       }
     } catch (e) {
       debugPrint('❌ Exception during API call: $e');

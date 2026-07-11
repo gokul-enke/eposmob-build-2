@@ -520,6 +520,17 @@ class BillingMobileController {
               listen: false)
           .filterProductByBarcode(barCode: EmbeddedBarcode.searchCode(query));
 
+      if (filteredProducts.length > 1) {
+        showScaffoldError(
+          context: context,
+          message: BillingMobileErrorMessages.ambiguousBarcode(
+            query,
+            filteredProducts.length,
+          ),
+        );
+        return;
+      }
+
       if (filteredProducts.isNotEmpty) {
         GetProduct product = filteredProducts.first;
         num? quantity;

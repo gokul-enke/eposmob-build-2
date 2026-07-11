@@ -1,7 +1,6 @@
-/// Regression coverage for the cart/add-to-cart oversell-confirmation fixes:
-/// - LocalProductProvider.changeCartItemSaleUnit no longer blocks (returns
-///   false) when the target sale unit has insufficient stock; it now
-///   reserves whatever is available and succeeds.
+/// Regression coverage for provider-level cart safety:
+/// - LocalProductProvider.changeCartItemSaleUnit blocks when the target sale
+///   unit would create an unreserved oversell quantity.
 /// - LocalProductProvider.addToCart with a non-existent productId (and no
 ///   product param) no longer throws a StateError; it safely no-ops.
 library;
@@ -107,16 +106,17 @@ void main() {
     );
   }
 
-  group('changeCartItemSaleUnit oversell (no longer blocks)', () {
+  group('changeCartItemSaleUnit strict stock', () {
     test(
-        'switching to a sale unit that needs more stock than available still succeeds',
+        'switching to a sale unit that needs more stock is rejected atomically',
         () {
       // Only 5 base units in stock. Cart currently holds a base-unit row of
       // quantity 5 (fully reserved). Switching the displayed number "1" to a
-      // CASE of conversion rate 12 asks for 12 base units total -> only 5 are
-      // physically reservable, but the change must succeed rather than block.
+      // CASE of conversion rate 12 reinterprets display quantity 5 as 60 base
+      // units. No additional stock is available, so the change must fail.
       final provider = LocalProductProvider();
       provider.setStockEnabled(true);
+      provider.setAllowOverselling(false);
 
       final stockOne = buildStock(id: 1, quantity: 5, price: '10', mrp: '12');
       final product = buildProduct(
@@ -152,18 +152,14 @@ void main() {
         newSaleUnitConversionRate: 12,
       );
 
-      // Previously this returned false (blocked); now it must succeed.
-      expect(changed, isTrue);
+      expect(changed, isFalse);
       expect(provider.cartItems, hasLength(1));
       final item = provider.cartItems.first;
-      // Displayed number (5) is reinterpreted in the new unit: base quantity
-      // becomes 5 * 12 = 60, even though only 5 base units were physically
-      // reservable. The sale still proceeds (oversell allowed).
-      expect(item.saleUnitId, 10);
-      expect(item.quantity, 60);
+      // The original line and reservation remain unchanged.
+      expect(item.saleUnitId, isNull);
+      expect(item.quantity, 5);
       expect(item.displayQuantity, 5);
-      // Stock reservation cannot exceed what was actually available (5).
-      expect(item.stockDeducted, lessThanOrEqualTo(5));
+      expect(item.stockDeducted, 5);
 
       final updatedProduct = provider.getProductById(1)!;
       expect(
@@ -171,10 +167,86 @@ void main() {
         0,
       );
     });
+
+    test('default policy allows the sale-unit oversell', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(true);
+
+      final stockOne = buildStock(id: 1, quantity: 5, price: '10', mrp: '12');
+      final product = buildProduct(
+        productId: 1,
+        basePrice: '10',
+        mrp: '12',
+        stocks: <Stock>[stockOne],
+      );
+      provider.initializeProducts(<GetProduct>[product]);
+      expect(
+        provider.addToCart(
+          product: product,
+          quantity: 5,
+          selectedStock: stockOne,
+        ),
+        isTrue,
+      );
+
+      final changed = provider.changeCartItemSaleUnit(
+        product.productId!,
+        stockOne,
+        newSaleUnitId: 10,
+        newSaleUnitName: 'CASE',
+        newSaleUnitConversionRate: 12,
+      );
+
+      expect(changed, isTrue);
+      expect(provider.cartItems.single.saleUnitId, 10);
+      expect(provider.cartItems.single.quantity, 60);
+      // Only real frontend stock is reserved; the remaining quantity is sent
+      // as an oversell quantity for the backend to accept.
+      expect(provider.cartItems.single.stockDeducted, 5);
+    });
+
+    test('sale-unit change consumes compatible stock before overselling', () {
+      final provider = LocalProductProvider();
+      provider.setStockEnabled(true);
+
+      final stockOne = buildStock(id: 1, quantity: 5, price: '10', mrp: '12');
+      final stockTwo = buildStock(id: 2, quantity: 60, price: '10', mrp: '12');
+      final product = buildProduct(
+        productId: 1,
+        basePrice: '10',
+        mrp: '12',
+        stocks: <Stock>[stockOne, stockTwo],
+      );
+      provider.initializeProducts(<GetProduct>[product]);
+      provider.addToCart(
+        product: product,
+        quantity: 5,
+        selectedStock: stockOne,
+      );
+
+      final changed = provider.changeCartItemSaleUnit(
+        product.productId!,
+        stockOne,
+        newSaleUnitId: 10,
+        newSaleUnitName: 'CASE',
+        newSaleUnitConversionRate: 12,
+      );
+
+      expect(changed, isTrue);
+      expect(provider.cartItems.single.quantity, 60);
+      expect(provider.cartItems.single.stockDeducted, 60);
+      expect(
+        provider.cartItems.single.stockReservations
+            .map((reservation) => reservation.stockId),
+        <int>[1, 2],
+      );
+      expect(provider.getProductById(1)!.stock![1].quantity, 5);
+    });
   });
 
   group('addToCart with unresolved productId', () {
-    test('non-existent productId and no product param does not throw and no-ops',
+    test(
+        'non-existent productId and no product param does not throw and no-ops',
         () {
       final provider = LocalProductProvider();
       provider.setStockEnabled(true);

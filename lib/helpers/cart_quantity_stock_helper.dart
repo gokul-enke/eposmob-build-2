@@ -81,13 +81,15 @@ class CartQuantityStockHelper {
       activeStoreName = storeSessionProvider.activeStore?.storeName;
     }
 
-    selectionResolver ??= (product, stockOptions) {
-      return _selectAdditionalStock(
-        context: context!,
-        product: product,
-        stockOptions: stockOptions,
-      );
-    };
+    if (selectionResolver == null && context != null) {
+      selectionResolver = (product, stockOptions) {
+        return _selectAdditionalStock(
+          context: context,
+          product: product,
+          stockOptions: stockOptions,
+        );
+      };
+    }
 
     onBlocked ??= (message) {
       if (context != null && context.mounted) {
@@ -156,41 +158,75 @@ class CartQuantityStockHelper {
       );
 
       if (alternativeStocks.isEmpty) {
-        // No other batch to draw from, but the cashier may still be counting
-        // out physical units in hand. Offer an oversell confirmation when we
-        // have a context to show it in; otherwise (headless callers) keep the
-        // hard block so existing explicit-resolver integrations are unaffected.
-        if (context != null && context.mounted) {
-          final sellAnyway = await showSellAnywayConfirmDialog(
-            context: context,
-            message:
-                'No more stock recorded for this item (requested $remainingIncrease more). Sell anyway?',
+        if (provider.allowOverselling) {
+          final added = provider.addToCart(
+            product: refreshedProduct,
+            quantity: remainingIncrease,
+            price: cartItem.price,
+            mrp: cartItem.mrp,
+            markPriceAsManualOverride: cartItem.isManualPriceOverride,
+            isIncreamentUsingCompactQuantityControl: true,
+            selectedStock: cartItem.selectedStock,
+            stockGroupIds: cartItem.stockGroupIds,
+            saleUnitId: cartItem.saleUnitId,
+            saleUnitName: cartItem.saleUnitName,
+            saleUnitConversionRate: cartItem.saleUnitConversionRate,
+            variantId: cartItem.variantId,
+            variantAttributes: cartItem.variantAttributes,
           );
-          if (sellAnyway && context.mounted) {
-            provider.setCartItemQuantity(
-              productId,
-              cartItem.selectedStock,
-              newQuantity,
-              stockGroupIds: cartItem.stockGroupIds,
-              saleUnitId: cartItem.saleUnitId,
-              variantId: cartItem.variantId,
-            );
-            appliedQuantity = newQuantity;
+          if (added) {
+            appliedQuantity += remainingIncrease;
             remainingIncrease = 0;
             changed = true;
-            break;
           }
+        } else {
+          onBlocked(
+              'Selected stock is exhausted. No other stock is available.');
         }
-        onBlocked('Selected stock is exhausted. No other stock is available.');
         break;
       }
 
-      final selection = await selectionResolver(
-        refreshedProduct,
-        alternativeStocks,
-      );
+      final compatibleStocks = alternativeStocks
+          .where((stock) => provider.stocksAreAllocationCompatible(
+                cartItem.selectedStock,
+                stock,
+              ))
+          .toList();
+      final CartQuantityStockSelection? selection;
+      if (compatibleStocks.isNotEmpty) {
+        selection = _combineCompatibleStocks(compatibleStocks);
+      } else if (selectionResolver != null) {
+        selection = await selectionResolver(
+          refreshedProduct,
+          alternativeStocks,
+        );
+      } else {
+        selection = null;
+      }
 
       if (selection == null) {
+        if (provider.allowOverselling) {
+          final added = provider.addToCart(
+            product: refreshedProduct,
+            quantity: remainingIncrease,
+            price: cartItem.price,
+            mrp: cartItem.mrp,
+            markPriceAsManualOverride: cartItem.isManualPriceOverride,
+            isIncreamentUsingCompactQuantityControl: true,
+            selectedStock: cartItem.selectedStock,
+            stockGroupIds: cartItem.stockGroupIds,
+            saleUnitId: cartItem.saleUnitId,
+            saleUnitName: cartItem.saleUnitName,
+            saleUnitConversionRate: cartItem.saleUnitConversionRate,
+            variantId: cartItem.variantId,
+            variantAttributes: cartItem.variantAttributes,
+          );
+          if (added) {
+            appliedQuantity += remainingIncrease;
+            remainingIncrease = 0;
+            changed = true;
+          }
+        }
         break;
       }
 
@@ -225,8 +261,10 @@ class CartQuantityStockHelper {
       provider.addToCart(
         product: refreshedProduct,
         quantity: quantityForSelection,
-        price: cartItem.price,
-        mrp: cartItem.mrp,
+        // A different pricing group must become its own correctly-priced
+        // line. Only an explicit cashier override carries across groups.
+        price: cartItem.isManualPriceOverride ? cartItem.price : null,
+        mrp: cartItem.isManualPriceOverride ? cartItem.mrp : null,
         markPriceAsManualOverride: cartItem.isManualPriceOverride,
         isIncreamentUsingCompactQuantityControl: true,
         selectedStock: selection.selectedStock,
@@ -251,6 +289,22 @@ class CartQuantityStockHelper {
 
   static num _minQuantity(num first, num second) {
     return first < second ? first : second;
+  }
+
+  static CartQuantityStockSelection _combineCompatibleStocks(
+    List<Stock> stocks,
+  ) {
+    final first = stocks.first;
+    final totalQuantity = stocks.fold<num>(
+      0,
+      (sum, stock) => sum + (stock.quantity ?? 0),
+    );
+    return CartQuantityStockSelection(
+      selectedStock: first.copyWith(quantity: totalQuantity),
+      stockGroupIds:
+          stocks.map((stock) => stock.id).whereType<int>().toSet().toList()
+            ..sort(),
+    );
   }
 
   static num _snapQuantityToStep(num quantity, num step) {

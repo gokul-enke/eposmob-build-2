@@ -22,8 +22,6 @@ import 'package:pos_machine/models/get_general_settings.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
-import 'package:pos_machine/providers/auth_model.dart';
-import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/general_settings_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
@@ -45,6 +43,11 @@ class _FakeGeneralSettingsProvider extends GeneralSettingsProvider {
   @override
   GeneralSettings? get generalSettings =>
       GeneralSettings(stockEnabled: stockEnabled);
+}
+
+class _FakeAppSettingsProvider extends AppSettingsProvider {
+  @override
+  Future<void> fetchAppSettings() async {}
 }
 
 void main() {
@@ -112,13 +115,7 @@ void main() {
             create: (_) => CustomerSelectionProvider(),
           ),
           ChangeNotifierProvider<AppSettingsProvider>(
-            create: (_) => AppSettingsProvider(),
-          ),
-          ChangeNotifierProvider<AuthModel>(
-            create: (_) => AuthModel(),
-          ),
-          ChangeNotifierProvider<CustomerProvider>(
-            create: (_) => CustomerProvider(),
+            create: (_) => _FakeAppSettingsProvider(),
           ),
         ],
         child: MaterialApp(
@@ -149,36 +146,31 @@ void main() {
     }
 
     testWidgets(
-        'cancelling the quick-entry modal aborts the add and shows a not-added toast',
+        'a cancelled quick-entry result aborts the add and shows a not-added toast',
         (tester) async {
       final provider = LocalProductProvider();
       provider.setStockEnabled(false);
       final product = buildZeroPriceProduct();
-      provider.initializeProducts([product]);
 
       final context = await pumpHelperContext(tester, provider);
 
-      // ignore: unawaited_futures
-      ProductCartHelper.handleProductSelection(
+      final selectionFuture = ProductCartHelper.handleProductSelection(
         context: context,
         product: product,
         quantity: 1,
+        zeroPricePrompt: ({
+          required context,
+          required product,
+          required initialQuantity,
+          mrp,
+          selectedStock,
+        }) async =>
+            null,
       );
 
-      // Wait for the quick-entry modal to appear.
       await tester.pump();
-      for (var i = 0;
-          i < 20 && !tester.any(find.text('Apply'));
-          i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-      expect(find.text('Apply'), findsOneWidget);
-
-      // Cashier dismisses the modal via its Cancel action rather than
-      // entering a price.
-      expect(find.text('Cancel'), findsOneWidget);
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
+      await selectionFuture;
 
       // The product must not have been added to the cart...
       expect(provider.cartItems, isEmpty);

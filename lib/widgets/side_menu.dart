@@ -383,9 +383,8 @@ class _SideMenuState extends State<SideMenu> {
           // 3.5. STORE (Index: 97) - Restaurant billing with summary-only order panel
           Consumer<RoleProvider>(
             builder: (context, roleProvider, child) {
-              final hasPermission = true;
-              // roleProvider
-              //     .currentUserHasPermissionSync('billing.store.access');
+              final hasPermission = roleProvider
+                  .currentUserHasPermissionSync('billing.store.access');
 
               if (!hasPermission) {
                 return const SizedBox.shrink();
@@ -797,8 +796,8 @@ class _SideMenuState extends State<SideMenu> {
               final hasInvoicePermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.invoice.access');
-              final hasProformaPermission = roleProvider
-                  .currentUserHasPermissionSync(
+              final hasProformaPermission =
+                  roleProvider.currentUserHasPermissionSync(
                       'menu.transactions.proforma.access');
 
               // final hasReceiptsPermission =
