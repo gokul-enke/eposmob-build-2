@@ -834,11 +834,6 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                     label: 'Qty',
                     value: product.numberOfProductsAvailable ?? 'N/A',
                   ),
-                ProductBarcodeIconAction(
-                  icon: Icons.visibility,
-                  iconColor: ColorManager.kPrimaryColor.withValues(alpha: 0.9),
-                  tooltip: 'View Details',
-                  onPressed: () => _showProductDetails(product),
                 ),
                 const SizedBox(width: 6),
                 Expanded(

@@ -2192,7 +2192,7 @@ class _AddProductWithBarcodeModalState
     return Consumer2<AppSettingsProvider, ProductProvider>(
       builder: (context, appSettingsProvider, productProvider, child) {
         final variantEnabled =
-            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+            appSettingsProvider.appSettings?.productVariantEnabled ?? false;
         if (!variantEnabled) {
           return const SizedBox.shrink();
         }
@@ -2755,7 +2755,7 @@ class _AddProductWithBarcodeModalState
           Provider.of<AppSettingsProvider>(context, listen: false)
                   .appSettings
                   ?.productVariantEnabled ??
-              true;
+              false;
       if (variantEnabled && _variantController.hasRows) {
         final variantError =
             validateVariantRows(_variantController.toCreateInputs());

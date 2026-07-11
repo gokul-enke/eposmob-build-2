@@ -45,6 +45,10 @@ void main() {
   });
 
   setUp(() async {
+    // Provider mutations persist through an asynchronous queue. Drain writes
+    // from the preceding test before clearing the shared Hive boxes, otherwise
+    // a delayed cart save can repopulate them during this test.
+    await awaitPendingHiveBoxWrites();
     SharedPreferences.setMockInitialValues({
       'general_stock_enabled': true,
       'api_key': 'test-api-key',
@@ -54,6 +58,10 @@ void main() {
     await Hive.box<HiveLocalCartItem>('cart_items').clear();
     await Hive.box<HiveSavedOrder>('saved_orders').clear();
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
+  });
+
+  tearDown(() async {
+    await awaitPendingHiveBoxWrites();
   });
 
   tearDownAll(() => closeHiveAndDeleteTestDir(hiveDir));

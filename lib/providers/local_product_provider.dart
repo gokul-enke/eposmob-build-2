@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -347,12 +348,18 @@ class LocalProductProvider extends ChangeNotifier {
     String operation,
     Future<void> Function() task,
   ) {
-    final next = _persistenceTail.then((_) => task());
-    _persistenceTail = next.catchError((Object error, StackTrace stackTrace) {
-      _persistenceError = error;
-      _persistenceStackTrace = stackTrace;
-      debugPrint('Hive persistence failed during $operation: $error');
-      debugPrint('$stackTrace');
+    // Chain in the root zone: callers may sit in a guarded zone (fake-async
+    // widget tests, runZonedGuarded) that stops pumping before these writes
+    // finish, which would strand the tail and deadlock flushPendingPersistence.
+    Zone.root.run(() {
+      final next = _persistenceTail.then((_) => task());
+      _persistenceTail =
+          next.catchError((Object error, StackTrace stackTrace) {
+        _persistenceError = error;
+        _persistenceStackTrace = stackTrace;
+        debugPrint('Hive persistence failed during $operation: $error');
+        debugPrint('$stackTrace');
+      });
     });
   }
 

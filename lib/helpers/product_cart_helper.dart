@@ -108,7 +108,7 @@ class ProductCartHelper {
           appSettingsProvider.appSettings?.allowOverselling ?? true;
       if (variantEnabled == null) {
         variantsOn =
-            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+            appSettingsProvider.appSettings?.productVariantEnabled ?? false;
         variantSettingResolved = true;
       }
     } on ProviderNotFoundException catch (_) {

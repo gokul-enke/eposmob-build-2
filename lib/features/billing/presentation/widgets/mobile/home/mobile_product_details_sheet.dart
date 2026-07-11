@@ -653,7 +653,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         Provider.of<AppSettingsProvider>(context, listen: false)
                 .appSettings
                 ?.productVariantEnabled ??
-            true;
+            false;
     List<Map<String, dynamic>>? variantsPayload;
     if (variantEnabled) {
       final variantError =
@@ -1740,7 +1740,7 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     return Consumer2<AppSettingsProvider, ProductProvider>(
       builder: (context, appSettingsProvider, productProvider, child) {
         final variantEnabled =
-            appSettingsProvider.appSettings?.productVariantEnabled ?? true;
+            appSettingsProvider.appSettings?.productVariantEnabled ?? false;
         if (!variantEnabled) {
           return const SizedBox.shrink();
         }

@@ -201,6 +201,8 @@ class AppSettings {
         'COMPULSORY_DAY_CLOSE_REGISTER',
         defaultValue: false,
       ),
+      // Fail closed: variants stay off unless the tenant explicitly enables
+      // the PRODUCT_VARIANT_ENABLED setting.
       productVariantEnabled: _readSettingStatus(
         settingsMap,
         'PRODUCT_VARIANT_ENABLED',
