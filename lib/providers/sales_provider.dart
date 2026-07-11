@@ -973,10 +973,14 @@ class SalesProvider with ChangeNotifier {
   Future<DailySalesCloseSummary?> fetchDailySalesCloseSummary({
     required String accessToken,
     required int storeId,
+    String? businessDate,
   }) async {
     final queryParameters = <String, String>{
       'store_id': storeId.toString(),
     };
+    if (businessDate != null && businessDate.isNotEmpty) {
+      queryParameters['business_date'] = businessDate;
+    }
 
     final uri = Uri.parse(APPUrl.dailySalesCloseSummary)
         .replace(queryParameters: queryParameters);
@@ -1036,6 +1040,8 @@ class SalesProvider with ChangeNotifier {
     num? closingCashInHand,
     List<dynamic>? closingCashBreakdown,
     String? notes,
+    int? openingTransactionId,
+    int? closingTransactionId,
   }) async {
     final queryParameters = <String, String>{
       'store_id': storeId.toString(),
@@ -1064,6 +1070,12 @@ class SalesProvider with ChangeNotifier {
       'closing_cash_breakdown': closingCashBreakdown,
       'notes': notes,
     };
+    if (openingTransactionId != null) {
+      requestBody['opening_transaction_id'] = openingTransactionId;
+    }
+    if (closingTransactionId != null) {
+      requestBody['closing_transaction_id'] = closingTransactionId;
+    }
     final requestBodyJson = jsonEncode(requestBody);
     debugPrint('=== DEBUG: createDailySalesClose REQUEST BODY ===');
     debugPrint(requestBodyJson);

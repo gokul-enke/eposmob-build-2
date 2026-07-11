@@ -431,14 +431,24 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
             barrierDismissible: false,
             builder: (ctx) => AlertDialog(
               title: const Text('Day Close Pending'),
-              content: Text(
-                (pendingStatus?.confirmationMessage.isNotEmpty ?? false)
-                    ? pendingStatus!.confirmationMessage
-                    : (pendingStatus?.message.isNotEmpty ?? false)
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (pendingStatus?.message.isNotEmpty ?? false)
                         ? pendingStatus!.message
                         : 'You did not close your last day sales for '
-                          '${pendingStatus?.businessDate ?? ''}. '
-                          'Do you want to close it now?',
+                          '${pendingStatus?.businessDate ?? ''}.',
+                  ),
+                  if (pendingStatus?.confirmationMessage.isNotEmpty ?? false) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      pendingStatus!.confirmationMessage,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ],
               ),
               actions: [
                 TextButton(
@@ -449,6 +459,9 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
                       barrierDismissible: false,
                       builder: (_) => DayCloseModal(
                         openDraft: pendingStatus?.openDraft,
+                        pendingBusinessDate: pendingStatus?.businessDate,
+                        pendingOpeningTransactionId: pendingStatus?.openingTransactionId,
+                        pendingClosingTransactionId: pendingStatus?.closingTransactionId,
                         onSuccess: () {
                           dayCloseSubmitted = true;
                           Navigator.of(context).pushReplacement(

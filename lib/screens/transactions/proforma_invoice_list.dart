@@ -27,6 +27,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
       TextEditingController();
   String _selectedStatus = 'All';
   bool _isLoading = false;
+  bool _showFilters = false;
   String? _errorMessage;
   int _currentPage = 1;
   int _lastPage = 1;
@@ -207,24 +208,6 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
     );
   }
 
-  Widget _detailTile(String label, String value) {
-    return SizedBox(
-      width: 160,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
-    );
-  }
 
   TableRow _detailsHeaderRow() {
     return const TableRow(
@@ -245,53 +228,376 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: RefreshIndicator(
-        onRefresh: () => _fetchInvoices(page: _currentPage),
-        child: BuildBoxShadowContainer(
-          circleRadius: 7,
-          margin:
-              const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
-          padding: const EdgeInsets.all(8),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 16),
-                _buildFilters(),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: BuildBoxShadowContainer(
-                    circleRadius: 7,
-                    offsetValue: const Offset(1, 1),
-                    child: _isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                ColorManager.kPrimaryColor,
-                              ),
-                            ),
-                          )
-                        : _buildBody(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildPagination(),
-              ],
-            ),
+  Widget _buildMobileFilters() {
+    if (!_showFilters) return const SizedBox.shrink();
+    final size = MediaQuery.of(context).size;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          buildColumnWidgetForTextFields(
+            title: 'Invoice #',
+            height: 45,
+            width: double.infinity,
+            controller: _invoiceNumberController,
+            size: size,
+            hintText: 'Search invoice number',
+            margin: const EdgeInsets.symmetric(horizontal: 0),
+            onchanged: (_) => _fetchInvoices(),
           ),
-        ),
+          const SizedBox(height: 10),
+          buildColumnWidgetForTextFields(
+            title: 'Customer',
+            height: 45,
+            width: double.infinity,
+            controller: _customerSearchController,
+            size: size,
+            hintText: 'Name or phone',
+            margin: const EdgeInsets.symmetric(horizontal: 0),
+            onchanged: (_) => _fetchInvoices(),
+          ),
+          const SizedBox(height: 10),
+          BuildDropDownStatic(
+            title: 'Status',
+            size: size,
+            items: _statusOptions,
+            selectedItem: _selectedStatus,
+            hintText: 'All',
+            height: 45,
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 0),
+            onChanged: (value) {
+              setState(() => _selectedStatus = value ?? 'All');
+              _fetchInvoices();
+            },
+          ),
+          const SizedBox(height: 12),
+          CustomRoundButton(
+            title: 'Reset Filters',
+            boxColor: Colors.white,
+            textColor: ColorManager.kPrimaryColor,
+            borderColor: ColorManager.kPrimaryColor,
+            fct: _resetFilters,
+            height: 44,
+            width: double.infinity,
+            fontSize: FontSize.s12,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildMobileList() {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      itemCount: _invoices.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        return _buildMobileCard(_invoices[index]);
+      },
+    );
+  }
+
+  Widget _buildCompactFieldBox({
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s10,
+              0.15,
+              Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(
+              FontWeightManager.bold,
+              FontSize.s12,
+              0.18,
+              ColorManager.textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileCard(Map<String, dynamic> invoice) {
+    final customer = _mapValue(invoice['customer']);
+    final quotation = _mapValue(invoice['quotation']);
+    final status = _text(invoice['status']);
+    final statusColor = _statusColor(status);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _text(invoice['invoice_number']),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.bold,
+                        FontSize.s14,
+                        0.20,
+                        ColorManager.kPrimaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_text(customer['name'])} · ${_text(quotation['quotation_number'])}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        FontSize.s11,
+                        0.15,
+                        Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'View Details',
+                child: SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: BuildBoxShadowContainer(
+                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
+                    circleRadius: 6,
+                    child: IconButton(
+                      icon: const Icon(Icons.visibility,
+                          size: 14, color: Colors.white),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => _showDetails(invoice),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCompactFieldBox(
+                  label: 'Amount',
+                  value: _text(invoice['amount']),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _buildCompactFieldBox(
+                  label: 'Due Date',
+                  value: _text(invoice['due_date']),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                status == '-' ? status : status.toUpperCase(),
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final bool isMobile = size.width < 700;
+
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () => _fetchInvoices(page: _currentPage),
+        child: isMobile
+            ? SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: BuildBoxShadowContainer(
+                  circleRadius: 7,
+                  margin: const EdgeInsets.only(left: 8, top: 10, bottom: 8, right: 8),
+                  padding: const EdgeInsets.all(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(true),
+                        const SizedBox(height: 16),
+                        _buildMobileFilters(),
+                        const SizedBox(height: 10),
+                        _isLoading
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(40),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      ColorManager.kPrimaryColor,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : _errorMessage != null
+                                ? Center(
+                                    child: Text(
+                                      'Failed to load proforma invoices',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s14,
+                                        0,
+                                        ColorManager.kButtonRed,
+                                      ),
+                                    ),
+                                  )
+                                : _invoices.isEmpty
+                                    ? const Center(
+                                        child: Padding(
+                                          padding: EdgeInsets.all(24),
+                                          child: Text('No proforma invoices found'),
+                                        ),
+                                      )
+                                    : _buildMobileList(),
+                        const SizedBox(height: 12),
+                        _buildPagination(),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            : BuildBoxShadowContainer(
+                circleRadius: 7,
+                margin:
+                    const EdgeInsets.only(left: 10, top: 20, bottom: 0, right: 10),
+                padding: const EdgeInsets.all(8),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(false),
+                      const SizedBox(height: 16),
+                      _buildFilters(),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: BuildBoxShadowContainer(
+                          circleRadius: 7,
+                          offsetValue: const Offset(1, 1),
+                          child: _isLoading
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      ColorManager.kPrimaryColor,
+                                    ),
+                                  ),
+                                )
+                              : _buildBody(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPagination(),
+                    ],
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isMobile) {
+    if (isMobile) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Proforma Invoices',
+            style: buildCustomStyle(
+              FontWeightManager.semiBold,
+              FontSize.s18,
+              0.30,
+              ColorManager.textColor,
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+              color: ColorManager.kPrimaryColor,
+            ),
+            onPressed: () {
+              setState(() {
+                _showFilters = !_showFilters;
+              });
+            },
+            tooltip: _showFilters ? 'Hide Filters' : 'Show Filters',
+          ),
+        ],
+      );
+    }
     return Text(
       'Proforma Invoices',
       style: buildCustomStyle(

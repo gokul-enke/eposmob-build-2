@@ -411,13 +411,337 @@ class _CustomerTransactionListScreenState
     );
   }
 
+  InputDecoration _mobileInputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: buildCustomStyle(
+          FontWeightManager.medium, FontSize.s12, 0.18, Colors.grey),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide: BorderSide(color: Colors.grey.shade300)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide: BorderSide(color: Colors.grey.shade300)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(7),
+          borderSide:
+              const BorderSide(color: ColorManager.kPrimaryColor, width: 1.2)),
+      isDense: true,
+    );
+  }
+
+  Widget _mobileDropdown({
+    required String value,
+    required String hint,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items: items
+          .map((s) => DropdownMenuItem(
+              value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
+          .toList(),
+      onChanged: onChanged,
+      decoration: _mobileInputDecoration(hint),
+      isExpanded: true,
+    );
+  }
+
+  Widget _buildMobileFilters(Size size) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: ExpansionTile(
+        leading: const Icon(Icons.filter_list, size: 18),
+        title: Text('Filters',
+            style: buildCustomStyle(FontWeightManager.medium,
+                FontSize.s12, 0.18, ColorManager.textColor)),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: amountRefController,
+                  onChanged: (value) {
+                    setState(() {
+                      searchAmount = value;
+                      currentPage = 1;
+                    });
+                    applyFilters();
+                  },
+                  decoration: _mobileInputDecoration('Amount'),
+                ),
+                const SizedBox(height: 8),
+                CustomerAutocomplete(
+                  size: size,
+                  customerList: getCustomerSuggestions(),
+                  controller: customerSearchController,
+                  onSelected: (String selectedCustomer) {
+                    setState(() {
+                      searchCustomer = selectedCustomer;
+                      final match = allTransactions?.firstWhere(
+                        (t) => (t.customerName ?? '').toLowerCase() ==
+                            selectedCustomer.toLowerCase(),
+                        orElse: () => ListTransaction(),
+                      );
+                      if (match != null && match.customerId != null) {
+                        selectedCustomerId = match.customerId.toString();
+                      }
+                      currentPage = 1;
+                    });
+                    _fetchServer(page: 1);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _mobileDropdown(
+                  value: searchType.isEmpty ? 'All' : searchType,
+                  hint: 'Select Type',
+                  items: const ['All', 'Credit', 'Debit'],
+                  onChanged: (String? value) {
+                    setState(() {
+                      searchType = value == 'All' ? '' : (value ?? '');
+                      currentPage = 1;
+                    });
+                    _fetchServer(page: 1);
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: referenceSearchController,
+                  onChanged: (value) {
+                    setState(() {
+                      searchReference = value;
+                      currentPage = 1;
+                    });
+                    applyFilters();
+                  },
+                  decoration: _mobileInputDecoration('Reference ID'),
+                ),
+                const SizedBox(height: 8),
+                BuildBoxShadowContainer(
+                  circleRadius: 7,
+                  height: 45,
+                  width: double.infinity,
+                  child: Center(
+                    child: CalendarPickerTableCell(
+                      key: ValueKey(_calendarKey),
+                      onDateSelected: (DateTime date) {
+                        setState(() {
+                          selectedDate = date;
+                          currentPage = 1;
+                        });
+                        _fetchServer(page: 1);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: resetSearch,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ColorManager.kPrimaryColor,
+                      side: const BorderSide(color: ColorManager.kPrimaryColor),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6)),
+                    ),
+                    child: const Text('Reset Filters'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      height: 300,
+      width: double.infinity,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.receipt_long,
+            size: 60,
+            color: ColorManager.kPrimaryColor.withOpacity(0.7),
+          ),
+          const SizedBox(height: 15),
+          Text(
+            'No transactions found',
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s18,
+              0.27,
+              ColorManager.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try adjusting your search criteria',
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.20,
+              Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileList() {
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.separated(
+            itemCount: listTransaction!.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final tx = listTransaction![index];
+              return InkWell(
+                onTap: () => _showTransactionDetails(tx),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  tx.customerName ?? 'No Name',
+                                  style: buildCustomStyle(FontWeightManager.semiBold,
+                                      FontSize.s13, 0.19, ColorManager.textColor),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (tx.referenceId != null && tx.referenceId!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Ref: ${tx.referenceId}',
+                                    style: buildCustomStyle(FontWeightManager.regular,
+                                        FontSize.s10, 0.15, Colors.grey),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          _buildStatusChip(tx.status ?? ''),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${tx.currency ?? ''} ${tx.amount ?? ''}',
+                            style: buildCustomStyle(FontWeightManager.semiBold,
+                                FontSize.s13, 0.19, ColorManager.kPrimaryColor),
+                          ),
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today_outlined,
+                                  size: 12, color: Colors.grey.shade400),
+                              const SizedBox(width: 4),
+                              Text(
+                                tx.date ?? 'N/A',
+                                style: buildCustomStyle(FontWeightManager.regular,
+                                    FontSize.s11, 0.16, Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        PaginationControl(
+          currentPage: currentPage,
+          totalPages: totalPages,
+          onPageChanged: (page) {
+            setState(() {
+              currentPage = page;
+            });
+            _fetchServer(page: page);
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    String? token = Provider.of<AuthModel>(context, listen: false).token;
-    InvoiceProvider invoiceProvider =
-        Provider.of<InvoiceProvider>(context, listen: false);
-    final bool isSmallScreen = size.width < 600;
+    final bool isMobile = size.width < 700;
+
+    if (isMobile) {
+      return SafeArea(
+        child: RefreshIndicator(
+          onRefresh: refreshData,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Customer Transaction',
+                  style: buildCustomStyle(FontWeightManager.semiBold,
+                      FontSize.s18, 0.25, ColorManager.textColor),
+                ),
+                const SizedBox(height: 10),
+                _buildMobileFilters(size),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: initLoading
+                      ? const Center(child: CircularProgressIndicator.adaptive())
+                      : listTransaction == null || listTransaction!.isEmpty
+                          ? _buildEmptyState()
+                          : _buildMobileList(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       child: RefreshIndicator(

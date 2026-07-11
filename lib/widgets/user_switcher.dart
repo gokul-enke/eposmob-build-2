@@ -12,7 +12,7 @@ import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
-import 'package:pos_machine/screens/login/store_selection_screen.dart';
+// import 'package:pos_machine/screens/login/store_selection_screen.dart';
 import 'dart:convert';
 
 class UserSwitcher extends StatefulWidget {
@@ -45,7 +45,7 @@ class _UserSwitcherState extends State<UserSwitcher> {
       debugPrint(
           "🔧 UserSwitcher: Post frame callback - fetching sales executives");
       debugPrint(
-          "🔧 UserSwitcher: Context is: ${context != null ? 'valid' : 'null'}");
+          "🔧 UserSwitcher: Context is valid");
       debugPrint("🔧 UserSwitcher: Mounted is: $mounted");
 
       try {
@@ -87,212 +87,218 @@ class _UserSwitcherState extends State<UserSwitcher> {
                   maxHeight: MediaQuery.of(context).size.height * 0.4,
                 ),
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Switch User",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Switch User",
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.black),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Enter password for ${executive.name}",
-                      style:
-                          const TextStyle(fontSize: 16, color: Colors.black54),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      executive.email ?? 'No email',
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s14,
-                        0.21,
-                        ColorManager.textColor,
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.black),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: _obscureText,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureText
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: ColorManager.kPrimaryColor.withOpacity(0.5),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureText = !_obscureText;
-                            });
-                          },
+                      const SizedBox(height: 16),
+                      Text(
+                        "Enter password for ${executive.name}",
+                        style:
+                            const TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        executive.email ?? 'No email',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s14,
+                          0.21,
+                          ColorManager.textColor,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        CustomRoundButton(
-                          title: "Cancel",
-                          isLoading: false,
-                          fontSize: FontSize.s12,
-                          height: MediaQuery.of(context).size.height * .05,
-                          width: 120,
-                          textColor: Colors.blue,
-                          borderColor: Colors.blue,
-                          boxColor: Colors.white,
-                          fct: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                        const SizedBox(width: 10),
-                        CustomRoundButton(
-                          title: "Switch",
-                          isLoading: _isLoading,
-                          fontSize: FontSize.s12,
-                          height: MediaQuery.of(context).size.height * .05,
-                          width: 120,
-                          fct: () async {
-                            if (_passwordController.text.isEmpty) {
-                              showScaffoldError(
-                                context: context,
-                                message: 'Please enter password',
-                              );
-                              return;
-                            }
-
-                            setState(() {
-                              _isLoading = true;
-                            });
-
-                            try {
-                              final result =
-                                  await AuthenticationProvider().login(
-                                executive.email ?? '',
-                                _passwordController.text,
-                                context,
-                              );
-
-                              if (result["status"] == "success") {
-                                ExecutiveModel executiveModel =
-                                    ExecutiveModel.fromJson(result);
-                                ExecutiveModelData? executiveModelData =
-                                    executiveModel.data;
-
-                                if (executiveModelData != null) {
-                                  // Get current active store
-                                  final storeSession = Provider.of<StoreSessionProvider>(
-                                      context, listen: false);
-                                  final currentActiveStore = storeSession.activeStore;
-                                  final newUserStores = executiveModelData.stores ?? [];
-
-                                  // Check if new user has access to current store
-                                  bool hasAccessToCurrentStore = currentActiveStore == null || 
-                                      newUserStores.any((store) => store.storeId == currentActiveStore.storeId);
-
-                                  if (!hasAccessToCurrentStore && newUserStores.isNotEmpty) {
-                                    // User doesn't have access to current store - DO NOT SWITCH USER
-                                    showScaffoldError(
-                                      context: context,
-                                      message: '${executive.name} doesn\'t have access to current store. Please logout and try.',
-                                    );
-                                    return;
-                                  } else if (!hasAccessToCurrentStore && newUserStores.isEmpty) {
-                                    // User has no store access at all
-                                    showScaffoldError(
-                                      context: context,
-                                      message: '${executive.name} has no permission to any store. Please contact your administrator.',
-                                    );
-                                    return;
-                                  }
-
-                                  // User has access to current store, proceed with normal switch
-                                  // Update auth state
-                                  Provider.of<AuthModel>(context, listen: false).login(
-                                    executiveModelData.accessToken ?? "",
-                                    executiveModelData.userId ?? 0,
-                                  );
-
-                                  // Convert stores list to JSON string for shared preferences
-                                  String? storesJson;
-                                  if (newUserStores.isNotEmpty) {
-                                    storesJson = json.encode(
-                                        newUserStores.map((store) => store.toJson()).toList());
-                                  }
-
-                                  // Save to shared preferences
-                                  SharedPreferenceProvider().saveAccessTokenandCustomerId(
-                                    executiveModelData.accessToken ?? "",
-                                    executiveModelData.userId ?? 0,
-                                    executiveModelData.userName ?? "",
-                                    executiveModelData.userRole ?? "",
-                                    tokenType: executiveModelData.tokenType,
-                                    companyId: executiveModelData.companyId,
-                                    companyName: executiveModelData.companyName,
-                                    storesJson: storesJson,
-                                  );
-
-                                  // Switch to the selected executive
-                                  final success =
-                                      await Provider.of<SalesExecutiveProvider>(
-                                              context,
-                                              listen: false)
-                                          .switchToExecutive(
-                                              context, executive.id);
-
-                                  if (success) {
-                                    Navigator.of(context).pop(); // Close dialog
-                                    this.setState(() {
-                                      _isDropdownOpen = false;
-                                    });
-                                    showScaffold(
-                                      context: context,
-                                      message:
-                                          'Successfully switched to ${executive.name}',
-                                    );
-                                  }
-                                }
-                              } else {
-                                showScaffoldError(
-                                  context: context,
-                                  message: result["message"] ??
-                                      'Authentication failed',
-                                );
-                              }
-                            } catch (e) {
-                              showScaffoldError(
-                                context: context,
-                                message: 'Error: ${e.toString()}',
-                              );
-                            } finally {
+                      const SizedBox(height: 24),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: _obscureText,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureText
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: ColorManager.kPrimaryColor.withOpacity(0.5),
+                            ),
+                            onPressed: () {
                               setState(() {
-                                _isLoading = false;
+                                _obscureText = !_obscureText;
                               });
-                            }
-                          },
+                            },
+                          ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: CustomRoundButton(
+                              title: "Cancel",
+                              isLoading: false,
+                              fontSize: FontSize.s12,
+                              height: MediaQuery.of(context).size.height * .05,
+                              width: 120,
+                              textColor: Colors.blue,
+                              borderColor: Colors.blue,
+                              boxColor: Colors.white,
+                              fct: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: CustomRoundButton(
+                              title: "Switch",
+                              isLoading: _isLoading,
+                              fontSize: FontSize.s12,
+                              height: MediaQuery.of(context).size.height * .05,
+                              width: 120,
+                              fct: () async {
+                                if (_passwordController.text.isEmpty) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message: 'Please enter password',
+                                  );
+                                  return;
+                                }
+    
+                                setState(() {
+                                  _isLoading = true;
+                                });
+    
+                                try {
+                                  final result =
+                                      await AuthenticationProvider().login(
+                                    executive.email ?? '',
+                                    _passwordController.text,
+                                    context,
+                                  );
+    
+                                  if (result["status"] == "success") {
+                                    ExecutiveModel executiveModel =
+                                        ExecutiveModel.fromJson(result);
+                                    ExecutiveModelData? executiveModelData =
+                                        executiveModel.data;
+    
+                                    if (executiveModelData != null) {
+                                      // Get current active store
+                                      final storeSession = Provider.of<StoreSessionProvider>(
+                                          context, listen: false);
+                                      final currentActiveStore = storeSession.activeStore;
+                                      final newUserStores = executiveModelData.stores ?? [];
+    
+                                      // Check if new user has access to current store
+                                      bool hasAccessToCurrentStore = currentActiveStore == null || 
+                                          newUserStores.any((store) => store.storeId == currentActiveStore.storeId);
+    
+                                      if (!hasAccessToCurrentStore && newUserStores.isNotEmpty) {
+                                        // User doesn't have access to current store - DO NOT SWITCH USER
+                                        showScaffoldError(
+                                          context: context,
+                                          message: '${executive.name} doesn\'t have access to current store. Please logout and try.',
+                                        );
+                                        return;
+                                      } else if (!hasAccessToCurrentStore && newUserStores.isEmpty) {
+                                        // User has no store access at all
+                                        showScaffoldError(
+                                          context: context,
+                                          message: '${executive.name} has no permission to any store. Please contact your administrator.',
+                                        );
+                                        return;
+                                      }
+    
+                                      // User has access to current store, proceed with normal switch
+                                      // Update auth state
+                                      Provider.of<AuthModel>(context, listen: false).login(
+                                        executiveModelData.accessToken ?? "",
+                                        executiveModelData.userId ?? 0,
+                                      );
+    
+                                      // Convert stores list to JSON string for shared preferences
+                                      String? storesJson;
+                                      if (newUserStores.isNotEmpty) {
+                                        storesJson = json.encode(
+                                            newUserStores.map((store) => store.toJson()).toList());
+                                      }
+    
+                                      // Save to shared preferences
+                                      SharedPreferenceProvider().saveAccessTokenandCustomerId(
+                                        executiveModelData.accessToken ?? "",
+                                        executiveModelData.userId ?? 0,
+                                        executiveModelData.userName ?? "",
+                                        executiveModelData.userRole ?? "",
+                                        tokenType: executiveModelData.tokenType,
+                                        companyId: executiveModelData.companyId,
+                                        companyName: executiveModelData.companyName,
+                                        storesJson: storesJson,
+                                      );
+    
+                                      // Switch to the selected executive
+                                      final success =
+                                          await Provider.of<SalesExecutiveProvider>(
+                                                  context,
+                                                  listen: false)
+                                              .switchToExecutive(
+                                                  context, executive.id);
+    
+                                      if (success) {
+                                        Navigator.of(context).pop(); // Close dialog
+                                        this.setState(() {
+                                          _isDropdownOpen = false;
+                                        });
+                                        showScaffold(
+                                          context: context,
+                                          message:
+                                              'Successfully switched to ${executive.name}',
+                                        );
+                                      }
+                                    }
+                                  } else {
+                                    showScaffoldError(
+                                      context: context,
+                                      message: result["message"] ??
+                                          'Authentication failed',
+                                    );
+                                  }
+                                } catch (e) {
+                                  showScaffoldError(
+                                    context: context,
+                                    message: 'Error: ${e.toString()}',
+                                  );
+                                } finally {
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -334,184 +340,201 @@ class _UserSwitcherState extends State<UserSwitcher> {
             ? const EdgeInsets.symmetric(vertical: 6, horizontal: 12)
             : const EdgeInsets.symmetric(vertical: 8, horizontal: 15);
 
-        final switcherBody = Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Current user display
-            InkWell(
-              onTap: () {
-                debugPrint("🔧 UserSwitcher: Dropdown toggle tapped");
-                setState(() {
-                  _isDropdownOpen = !_isDropdownOpen;
-                });
-              },
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: cardPadding,
-                decoration: BoxDecoration(
-                  color: ColorManager.kPrimaryColor.withOpacity(0.1),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final switcherBody = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Current user display
+                InkWell(
+                  onTap: () {
+                    debugPrint("🔧 UserSwitcher: Dropdown toggle tapped");
+                    setState(() {
+                      _isDropdownOpen = !_isDropdownOpen;
+                    });
+                  },
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: ColorManager.kPrimaryColor.withOpacity(0.15),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: ColorManager.kPrimaryColor,
-                      radius: avatarRadius,
-                      child: Text(
-                        currentUser.name.substring(0, 1).toUpperCase(),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: widget.compact ? 13 : 14,
-                        ),
+                  child: Container(
+                    padding: cardPadding,
+                    decoration: BoxDecoration(
+                      color: ColorManager.kPrimaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: ColorManager.kPrimaryColor.withOpacity(0.15),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: ColorManager.kPrimaryColor,
+                          radius: avatarRadius,
+                          child: Text(
+                            currentUser.name.substring(0, 1).toUpperCase(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: widget.compact ? 13 : 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                currentUser.name,
+                                style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  nameFontSize,
+                                  0.21,
+                                  ColorManager.kTitleTextColor,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              Text(
+                                currentUser.email ?? 'No email',
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  emailFontSize,
+                                  0.18,
+                                  ColorManager.kGreyColor,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          _isDropdownOpen
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          color: ColorManager.kPrimaryColor,
+                          size: widget.compact ? 20 : 24,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Dropdown for switching users
+                if (_isDropdownOpen)
+                  Flexible(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 5),
+                      constraints: BoxConstraints(
+                        maxHeight: constraints.hasBoundedHeight
+                            ? double.infinity
+                            : 250,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 1,
+                            blurRadius: 5,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            currentUser.name,
-                            style: buildCustomStyle(
-                              FontWeightManager.semiBold,
-                              nameFontSize,
-                              0.21,
-                              ColorManager.kTitleTextColor,
+                          Padding(
+                            padding: const EdgeInsets.all(10.0),
+                            child: Text(
+                              'Switch User',
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s14,
+                                0.21,
+                                ColorManager.textColor,
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
                           ),
-                          Text(
-                            currentUser.email ?? 'No email',
-                            style: buildCustomStyle(
-                              FontWeightManager.regular,
-                              emailFontSize,
-                              0.18,
-                              ColorManager.kGreyColor,
+                          const Divider(),
+                          Flexible(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: salesExecutiveProvider.salesExecutives.map((executive) {
+                                  final isCurrentUser = executive.id == currentUser.id;
+                                  return ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: isCurrentUser
+                                          ? ColorManager.kPrimaryColor
+                                          : Colors.grey.shade300,
+                                      radius: 16,
+                                      child: Text(
+                                        executive.name.substring(0, 1).toUpperCase(),
+                                        style: TextStyle(
+                                          color: isCurrentUser
+                                              ? Colors.white
+                                              : Colors.grey.shade700,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      executive.name,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s14,
+                                        0.21,
+                                        ColorManager.textColor,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    subtitle: Text(
+                                      executive.email ?? 'No email',
+                                      style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s12,
+                                        0.18,
+                                        Colors.grey,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    trailing: isCurrentUser
+                                        ? const Icon(
+                                            Icons.check_circle,
+                                            color: ColorManager.kPrimaryColor,
+                                          )
+                                        : null,
+                                    onTap: isCurrentUser
+                                        ? null
+                                        : () async {
+                                            debugPrint(
+                                                "🔧 UserSwitcher: Switching to user: ${executive.name}");
+                                            // Show password confirmation dialog
+                                            await _showPasswordConfirmationDialog(
+                                                executive);
+                                          },
+                                  );
+                                }).toList(),
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      _isDropdownOpen
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      color: ColorManager.kPrimaryColor,
-                      size: widget.compact ? 20 : 24,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+              ],
+            );
 
-            // Dropdown for switching users
-            if (_isDropdownOpen)
-              Container(
-                margin: const EdgeInsets.only(top: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      spreadRadius: 1,
-                      blurRadius: 5,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Text(
-                        'Switch User',
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s14,
-                          0.21,
-                          ColorManager.textColor,
-                        ),
-                      ),
-                    ),
-                    const Divider(),
-                    ...salesExecutiveProvider.salesExecutives.map((executive) {
-                      final isCurrentUser = executive.id == currentUser.id;
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isCurrentUser
-                              ? ColorManager.kPrimaryColor
-                              : Colors.grey.shade300,
-                          radius: 16,
-                          child: Text(
-                            executive.name.substring(0, 1).toUpperCase(),
-                            style: TextStyle(
-                              color: isCurrentUser
-                                  ? Colors.white
-                                  : Colors.grey.shade700,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          executive.name,
-                          style: buildCustomStyle(
-                            FontWeightManager.medium,
-                            FontSize.s14,
-                            0.21,
-                            ColorManager.textColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          executive.email ?? 'No email',
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            FontSize.s12,
-                            0.18,
-                            Colors.grey,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: isCurrentUser
-                            ? const Icon(
-                                Icons.check_circle,
-                                color: ColorManager.kPrimaryColor,
-                              )
-                            : null,
-                        onTap: isCurrentUser
-                            ? null
-                            : () async {
-                                debugPrint(
-                                    "🔧 UserSwitcher: Switching to user: ${executive.name}");
-                                // Show password confirmation dialog
-                                await _showPasswordConfirmationDialog(
-                                    executive);
-                              },
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ),
-          ],
-        );
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
             if (constraints.hasBoundedHeight &&
                 constraints.maxHeight < double.infinity) {
-              return SingleChildScrollView(child: switcherBody);
+              return SizedBox(
+                height: constraints.maxHeight,
+                child: switcherBody,
+              );
             }
             return switcherBody;
           },

@@ -491,111 +491,225 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
 // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Daily Sales Closes",
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s20,
-                        0.30,
-                        ColorManager.textColor,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        // Open Shift Button
-                        ElevatedButton.icon(
-                          onPressed: pendingStatus?.canOpenShift == true
-                              ? () => _showOpenShiftModal(context)
-                              : null,
-                          icon: const Icon(Icons.lock_open,
-                              size: 18, color: Colors.white),
-                          label: Text(
-                            "Open Shift",
+                _isMobile(context)
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Daily Sales Closes",
                             style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.18,
-                              Colors.white,
+                              FontWeightManager.semiBold,
+                              FontSize.s20,
+                              0.30,
+                              ColorManager.textColor,
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2196F3),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        // Day Close Button
-                        ElevatedButton.icon(
-                          onPressed: () => _showDayCloseModal(context),
-                          icon: const Icon(Icons.access_time,
-                              size: 18, color: Colors.white),
-                          label: Text(
-                            "Day Close",
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.18,
-                              Colors.white,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: ColorManager.kSuccessColor,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Consumer<SalesProvider>(
-                          builder: (context, salesProvider, child) {
-                            final hasFilters = selectedDate != null;
-
-                            return Stack(
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    salesProvider.showFilters
-                                        ? Icons.filter_alt
-                                        : Icons.filter_alt_outlined,
-                                    color: ColorManager.kPrimaryColor,
-                                  ),
-                                  onPressed: () {
-                                    salesProvider.toggleFilters();
-                                  },
-                                  tooltip: salesProvider.showFilters
-                                      ? 'Hide Filters'
-                                      : 'Show Filters',
-                                ),
-                                if (hasFilters)
-                                  Positioned(
-                                    right: 8,
-                                    top: 8,
-                                    child: Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: [
+                                    // Open Shift Button
+                                    ElevatedButton.icon(
+                                      onPressed: pendingStatus?.canOpenShift == true
+                                          ? () => _showOpenShiftModal(context)
+                                          : null,
+                                      icon: const Icon(Icons.lock_open,
+                                          size: 18, color: Colors.white),
+                                      label: Text(
+                                        "Open Shift",
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.18,
+                                          Colors.white,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF2196F3),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
                                       ),
                                     ),
+                                    // Day Close Button
+                                    ElevatedButton.icon(
+                                      onPressed: () => _showDayCloseModal(context),
+                                      icon: const Icon(Icons.access_time,
+                                          size: 18, color: Colors.white),
+                                      label: Text(
+                                        "Day Close",
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.18,
+                                          Colors.white,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: ColorManager.kSuccessColor,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Consumer<SalesProvider>(
+                                builder: (context, salesProvider, child) {
+                                  final hasFilters = selectedDate != null;
+
+                                  return Stack(
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          salesProvider.showFilters
+                                              ? Icons.filter_alt
+                                              : Icons.filter_alt_outlined,
+                                          color: ColorManager.kPrimaryColor,
+                                        ),
+                                        onPressed: () {
+                                          salesProvider.toggleFilters();
+                                        },
+                                        tooltip: salesProvider.showFilters
+                                            ? 'Hide Filters'
+                                            : 'Show Filters',
+                                      ),
+                                      if (hasFilters)
+                                        Positioned(
+                                          right: 8,
+                                          top: 8,
+                                          child: Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Daily Sales Closes",
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s20,
+                              0.30,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              // Open Shift Button
+                              ElevatedButton.icon(
+                                onPressed: pendingStatus?.canOpenShift == true
+                                    ? () => _showOpenShiftModal(context)
+                                    : null,
+                                icon: const Icon(Icons.lock_open,
+                                    size: 18, color: Colors.white),
+                                label: Text(
+                                  "Open Shift",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.18,
+                                    Colors.white,
                                   ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2196F3),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // Day Close Button
+                              ElevatedButton.icon(
+                                onPressed: () => _showDayCloseModal(context),
+                                icon: const Icon(Icons.access_time,
+                                    size: 18, color: Colors.white),
+                                label: Text(
+                                  "Day Close",
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.18,
+                                    Colors.white,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: ColorManager.kSuccessColor,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Consumer<SalesProvider>(
+                                builder: (context, salesProvider, child) {
+                                  final hasFilters = selectedDate != null;
+
+                                  return Stack(
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(
+                                          salesProvider.showFilters
+                                              ? Icons.filter_alt
+                                              : Icons.filter_alt_outlined,
+                                          color: ColorManager.kPrimaryColor,
+                                        ),
+                                        onPressed: () {
+                                          salesProvider.toggleFilters();
+                                        },
+                                        tooltip: salesProvider.showFilters
+                                            ? 'Hide Filters'
+                                            : 'Show Filters',
+                                      ),
+                                      if (hasFilters)
+                                        Positioned(
+                                          right: 8,
+                                          top: 8,
+                                          child: Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                 const SizedBox(height: 15),
 
                 // Filter Section
@@ -759,11 +873,17 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
 class DayCloseModal extends StatefulWidget {
   final VoidCallback onSuccess;
   final OpenDraftModel? openDraft;
+  final String? pendingBusinessDate;
+  final int? pendingOpeningTransactionId;
+  final int? pendingClosingTransactionId;
 
   const DayCloseModal({
     super.key,
     required this.onSuccess,
     this.openDraft,
+    this.pendingBusinessDate,
+    this.pendingOpeningTransactionId,
+    this.pendingClosingTransactionId,
   });
 
   @override
@@ -958,11 +1078,13 @@ class _DayCloseModalState extends State<DayCloseModal> {
       final result = await salesProvider.fetchDailySalesCloseSummary(
         accessToken: authModel.token ?? '',
         storeId: storeId,
+        businessDate: widget.pendingBusinessDate,
       );
 
       setState(() {
         summary = result;
-        _businessDateController.text = result?.businessDate ?? '';
+        _businessDateController.text =
+            widget.pendingBusinessDate ?? result?.businessDate ?? '';
         if (!_openingPrefilled) {
           _shiftNameController.text = result?.shiftName ?? '';
         }
@@ -1138,6 +1260,8 @@ class _DayCloseModalState extends State<DayCloseModal> {
         notes: _notesController.text.trim().isEmpty
             ? summary?.notes
             : _notesController.text.trim(),
+        openingTransactionId: widget.pendingOpeningTransactionId,
+        closingTransactionId: widget.pendingClosingTransactionId,
       );
 
       if (result['success'] == true) {
