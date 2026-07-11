@@ -323,6 +323,9 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(_syncCreditAmountWithRemaining);
+      _notifyChanges();
       _focusInitialSelectedPaymentAmount();
     });
     HardwareKeyboard.instance.addHandler(_onPaymentHardwareKey);
@@ -1362,15 +1365,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   void _syncCreditAmountWithRemaining() {
-    if (!isCreditSelected) {
+    if (toCustomerCreditEnabled) {
       return;
     }
 
     final remainingAmount = widget.cartTotal - _getTotalCollectedAmount();
 
     if (remainingAmount > 0) {
+      isCreditSelected = true;
       creditAmountController.text = remainingAmount.toStringAsFixed(2);
     } else {
+      isCreditSelected = false;
       creditAmountController.clear();
     }
   }

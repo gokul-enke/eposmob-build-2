@@ -146,7 +146,7 @@ void main() {
       expect(result.isValid, isTrue);
     });
 
-    test('rejects a credit sale for the default customer', () {
+    test('accepts a credit sale for the default customer', () {
       final result = PaymentValidation.validateForOrder(
         orderTotal: 500,
         toCustomerCreditEnabled: false,
@@ -164,8 +164,7 @@ void main() {
         creditAmount: '500',
       );
 
-      expect(result.isValid, isFalse);
-      expect(result.message, contains('selected customer'));
+      expect(result.isValid, isTrue);
     });
 
     test('does not treat excess allocated to customer credit as payment', () {

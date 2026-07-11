@@ -1662,7 +1662,17 @@ class BillingMobilePaymentController {
 
   void _finalizePaymentMutation(BillingProvider bp) {
     bp.calculateBalance();
-    syncCreditAmountWithRemaining(bp);
+    if (bp.toCustomerCreditEnabled) {
+      syncCreditAmountWithRemaining(bp);
+    } else {
+      final remaining = remainingPayable(bp);
+      if (remaining > 0) {
+        bp.setPaymentMethod('DEBIT', true);
+        bp.debitAmountController.text = remaining.toStringAsFixed(2);
+      } else if (bp.isDebitSelected) {
+        bp.setPaymentMethod('DEBIT', false);
+      }
+    }
     bp.validatePayment();
   }
 
