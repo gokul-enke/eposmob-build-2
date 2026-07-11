@@ -33,12 +33,6 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   void initState() {
     super.initState();
     _loadPaymentMethods();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Provider.of<BillingProvider>(context, listen: false)
-            .markPaymentStepVisited();
-      }
-    });
   }
 
   Future<void> _loadPaymentMethods() async {

@@ -9,6 +9,7 @@ import 'package:pos_machine/components/build_confirmation_dialog.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/add_product_with_variant.dart';
 import 'package:pos_machine/features/billing/domain/quotation_checkout.dart';
+import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -102,7 +103,7 @@ class BillingMobileController {
     );
     restoreOrderDetails(context, currentOrder, billingProvider);
 
-    _refreshOrderTotals(localProductProvider, billingProvider);
+    _refreshOrderTotals(context, localProductProvider, billingProvider);
   }
 
   void _restoreCustomer(BuildContext context, SavedOrder currentOrder,
@@ -240,21 +241,25 @@ class BillingMobileController {
           billingDebugLog('Error parsing payment JSON on rehydration: $e');
         }
       } else {
-        billingProvider.setPaymentMethod(pm.toUpperCase(), true);
         restoredPaymentData = pm.trim().isNotEmpty;
         final paid = currentOrder.paidAmount ?? '0.0';
+        final normalizedMethod = pm.trim().toUpperCase();
 
-        switch (pm.toUpperCase()) {
+        switch (normalizedMethod) {
           case 'CASH':
+            billingProvider.setPaymentMethod('CASH', true);
             billingProvider.cashAmountController.text = paid;
             break;
           case 'CARD':
+            billingProvider.setPaymentMethod('CARD', true);
             billingProvider.cardAmountController.text = paid;
             break;
           case 'UPI':
+            billingProvider.setPaymentMethod('UPI', true);
             billingProvider.upiAmountController.text = paid;
             break;
           case 'DEBIT':
+            billingProvider.setPaymentMethod('DEBIT', true);
             billingProvider.debitAmountController.text = paid;
             break;
         }
@@ -272,9 +277,18 @@ class BillingMobileController {
             pm.toUpperCase() == 'COD') {
           billingProvider.setPaymentMethod('COD', true);
           billingProvider.codAmountController.text = paid;
-        } else if (pm.toUpperCase() == 'ONLINE') {
+        } else if (normalizedMethod == 'ONLINE') {
           billingProvider.setPaymentMethod('ONLINE', true);
           billingProvider.setPineLabsPaymentSuccess(true);
+        } else if (pm == billingProvider.codPaymentMethodId) {
+          billingProvider.setPaymentMethod('COD', true);
+          billingProvider.codAmountController.text = paid;
+        } else {
+          billingProvider.setExtraPaymentAmount(
+            pm,
+            paid,
+            displayValue: resolvePaymentMethodValue?.call(pm) ?? pm,
+          );
         }
       }
     }
@@ -348,14 +362,30 @@ class BillingMobileController {
   }
 
   void _refreshOrderTotals(
+    BuildContext context,
     LocalProductProvider localProductProvider,
     BillingProvider billingProvider,
   ) {
     // loadOrderForEditing restores discount fields but may not recalculate
     // priceSummary until cartTotal is read.
     localProductProvider.cartTotal;
-    billingProvider.setTotalOrderAmount(
-      localProductProvider.priceSummary?.netTotal ?? 0.0,
+    final baseTotal = localProductProvider.priceSummary?.netTotal ??
+        localProductProvider.cartTotal;
+    final deliveryCharge = resolveDeliveryCharge(
+      // This controller method is only called with a context-owned provider;
+      // delivery override was restored before reaching this helper.
+      context,
+    );
+    final appSettings =
+        Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
+    final effectiveTotal = BillingTotals.effectiveOrderTotal(
+      baseTotal: baseTotal,
+      deliveryCharge: deliveryCharge,
+      priceRoundOff: appSettings?.priceRoundOff == true,
+    );
+    billingProvider.setOrderTotals(
+      totalOrderAmount: baseTotal + deliveryCharge,
+      effectiveOrderTotal: effectiveTotal,
     );
   }
 
@@ -1089,11 +1119,20 @@ class BillingMobileController {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
 
-    if (!billingProvider.hasCollectedPaymentAmounts()) {
+    final hadPaymentState = billingProvider.hasCollectedPaymentAmounts() ||
+        billingProvider.isDebitSelected ||
+        billingProvider.toCustomerCreditEnabled;
+    final localProductProvider =
+        Provider.of<LocalProductProvider>(context, listen: false);
+    _refreshOrderTotals(context, localProductProvider, billingProvider);
+
+    if (!hadPaymentState) {
       return;
     }
 
     billingProvider.clearCollectedPaymentAmountsOnly();
+    billingProvider.setPaymentMethod('DEBIT', false);
+    billingProvider.setToCustomerCreditEnabled(false);
     billingProvider.resetPaymentStepVisited();
     billingProvider.clearPristinePaymentState();
   }

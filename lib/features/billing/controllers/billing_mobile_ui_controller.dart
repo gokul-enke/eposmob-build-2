@@ -1661,6 +1661,7 @@ class BillingMobilePaymentController {
   }
 
   void _finalizePaymentMutation(BillingProvider bp) {
+    bp.markPaymentStepVisited();
     bp.calculateBalance();
     if (bp.toCustomerCreditEnabled) {
       syncCreditAmountWithRemaining(bp);
@@ -1845,6 +1846,7 @@ class BillingMobilePaymentController {
       bp.cashAmountController.text = bp.effectiveOrderTotal.toStringAsFixed(2);
       bp.setPristinePaymentState('CASH', bp.cashAmountController.text);
     }
+    bp.markPaymentStepVisited();
     bp.calculateBalance();
   }
 
