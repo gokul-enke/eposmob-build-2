@@ -16,6 +16,17 @@ const Set<String> decimalQuantityUnits = {
   'CTN',
   'CARTON',
   'CARTOON',
+  // Pack and set units configured with fractional quantities.
+  'DOZEN',
+  'DZN',
+  'BOX 10 DZ',
+  'BX 10 D',
+  'BOX 20 DZ',
+  'SET4',
+  'SET5',
+  'SET6',
+  'SET10',
+  'BUNDLE',
 };
 
 bool allowsDecimalQuantityUnit(String? unit) {
