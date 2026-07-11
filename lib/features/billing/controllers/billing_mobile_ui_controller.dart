@@ -75,6 +75,15 @@ class BillingMobileErrorMessages {
   static String variantOutOfStock(String variantLabel) =>
       '$variantLabel is out of stock';
 
+  static String noActiveVariants(String productLabel) =>
+      '$productLabel has no active variants available for sale';
+
+  static String variantStockUnavailable(String variantLabel) =>
+      'No stock is available for $variantLabel in the active store';
+
+  static String ambiguousBarcode(String barcode, int matchCount) =>
+      'Barcode $barcode matches $matchCount products. Fix the duplicate barcode before selling.';
+
   static String variantOutOfStockConfirm(String variantLabel) =>
       '$variantLabel shows 0 stock in the system. Sell it anyway?';
 
@@ -205,6 +214,15 @@ class BillingMobileSettingsController {
     final enabled = stockEnabled ?? false;
     localProductProvider.setStockEnabled(enabled);
     return enabled;
+  }
+
+  bool syncAllowOverselling({
+    required AppSettings? appSettings,
+    required LocalProductProvider localProductProvider,
+  }) {
+    final allowed = appSettings?.allowOverselling ?? true;
+    localProductProvider.setAllowOverselling(allowed);
+    return allowed;
   }
 
   bool isBarcodeSalesEnabled(AppSettings? appSettings) {
@@ -358,7 +376,10 @@ class BillingMobileMarketController {
   String formatAddFieldPrice(double value) =>
       _cartController.formatPrice(value);
 
-  List<MobileCartUnitOption> saleUnitOptionsForProduct(GetProduct product) {
+  List<MobileCartUnitOption> saleUnitOptionsForProduct(
+    GetProduct product, {
+    Map<String, String>? unitLabels,
+  }) {
     final uniqueSaleUnits = <int, SaleUnit>{};
     for (final saleUnit in product.saleUnits ?? const <SaleUnit>[]) {
       final id = saleUnit.id;
@@ -379,7 +400,10 @@ class BillingMobileMarketController {
       final saleUnitId = saleUnit.id;
       final saleUnitLabel = saleUnit.unitName?.trim().isNotEmpty == true
           ? saleUnit.unitName!.trim()
-          : saleUnitId?.toString();
+          : unitLabels?[saleUnit.unitId?.toString() ?? '']?.trim().isNotEmpty ==
+                  true
+              ? unitLabels![saleUnit.unitId!.toString()]!.trim()
+              : saleUnitId?.toString();
       if (saleUnitId == null || saleUnitLabel == null) {
         continue;
       }
@@ -398,8 +422,12 @@ class BillingMobileMarketController {
     return options;
   }
 
-  bool canChangeSaleUnit(GetProduct product) {
-    return saleUnitOptionsForProduct(product).length > 1;
+  bool canChangeSaleUnit(
+    GetProduct product, {
+    Map<String, String>? unitLabels,
+  }) {
+    return saleUnitOptionsForProduct(product, unitLabels: unitLabels).length >
+        1;
   }
 
   SaleUnit? resolveSaleUnit(GetProduct product, String value) {
@@ -551,7 +579,10 @@ class BillingMobileCartController {
     return uniqueSaleUnits.values.toList();
   }
 
-  List<MobileCartUnitOption> cartUnitOptionsForItem(LocalCartItem item) {
+  List<MobileCartUnitOption> cartUnitOptionsForItem(
+    LocalCartItem item, {
+    Map<String, String>? unitLabels,
+  }) {
     final saleUnits = validSaleUnitsForCartItem(item);
     final baseUnit = item.product.unit?.trim();
     final baseLabel = baseUnit == null || baseUnit.isEmpty ? '-' : baseUnit;
@@ -564,7 +595,10 @@ class BillingMobileCartController {
       final saleUnitId = saleUnit.id;
       final saleUnitLabel = saleUnit.unitName?.trim().isNotEmpty == true
           ? saleUnit.unitName!.trim()
-          : saleUnitId?.toString();
+          : unitLabels?[saleUnit.unitId?.toString() ?? '']?.trim().isNotEmpty ==
+                  true
+              ? unitLabels![saleUnit.unitId!.toString()]!.trim()
+              : saleUnitId?.toString();
       if (saleUnitId == null || saleUnitLabel == null) {
         continue;
       }
@@ -587,8 +621,11 @@ class BillingMobileCartController {
     return item.saleUnitId == null ? 'base' : item.saleUnitId.toString();
   }
 
-  bool canChangeSaleUnit(LocalCartItem item) {
-    final options = cartUnitOptionsForItem(item);
+  bool canChangeSaleUnit(
+    LocalCartItem item, {
+    Map<String, String>? unitLabels,
+  }) {
+    final options = cartUnitOptionsForItem(item, unitLabels: unitLabels);
     return options.length > 1 || item.saleUnitId != null;
   }
 
@@ -596,6 +633,7 @@ class BillingMobileCartController {
     required LocalProductProvider provider,
     required LocalCartItem item,
     required String value,
+    Map<String, String>? unitLabels,
   }) {
     if (item.product.productId == null) {
       return const MobileSaleUnitChangeResult.failure(
@@ -641,13 +679,23 @@ class BillingMobileCartController {
       );
     }
 
+    final selectedUnitName =
+        selectedSaleUnit.unitName?.trim().isNotEmpty == true
+            ? selectedSaleUnit.unitName!.trim()
+            : unitLabels?[selectedSaleUnit.unitId?.toString() ?? '']
+                        ?.trim()
+                        .isNotEmpty ==
+                    true
+                ? unitLabels![selectedSaleUnit.unitId!.toString()]!.trim()
+                : selectedSaleUnit.unitId?.toString();
+
     final changed = provider.changeCartItemSaleUnit(
       item.product.productId!,
       item.selectedStock,
       stockGroupIds: item.stockGroupIds,
       currentSaleUnitId: item.saleUnitId,
       newSaleUnitId: selectedSaleUnit.id,
-      newSaleUnitName: selectedSaleUnit.unitName,
+      newSaleUnitName: selectedUnitName,
       newSaleUnitConversionRate: selectedRate,
       variantId: item.variantId,
     );

@@ -7,6 +7,25 @@ import 'package:pos_machine/models/product_property.dart';
 import 'package:pos_machine/resources/app_url.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+void _debugPrintFullResponse(String label, String body) {
+  String output;
+  try {
+    output = const JsonEncoder.withIndent('  ').convert(jsonDecode(body));
+  } catch (_) {
+    output = body;
+  }
+
+  const chunkSize = 800;
+  debugPrint('$label BEGIN');
+  for (var offset = 0; offset < output.length; offset += chunkSize) {
+    final end = (offset + chunkSize < output.length)
+        ? offset + chunkSize
+        : output.length;
+    debugPrint(output.substring(offset, end));
+  }
+  debugPrint('$label END');
+}
+
 class ProductProvider extends ChangeNotifier {
   bool _isUpdating = false;
 
@@ -187,8 +206,12 @@ class ProductProvider extends ChangeNotifier {
         body: json.encode(body),
       );
 
-      debugPrint(
-          '🛠️ editProduct ← Response ${response.statusCode}: ${response.body}');
+      debugPrint('🛠️ editProduct ← Response status=${response.statusCode} '
+          'bytes=${response.body.length}');
+      _debugPrintFullResponse(
+        '[EDIT_PRODUCT_API_RESPONSE status=${response.statusCode}]',
+        response.body,
+      );
 
       final decodedBody = _decodeBody(response.body);
 

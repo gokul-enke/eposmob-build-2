@@ -801,6 +801,29 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           'message="$successMessage" responseDataType=${response['data']?.runtimeType}');
 
       final responseData = response['data'];
+      if (responseData is Map) {
+        final responseSaleUnits = responseData['sale_units'];
+        debugPrint('[EDIT_PRODUCT] response summary '
+            'productId=${responseData['id'] ?? responseData['product_id']} '
+            'status=${response['status']} '
+            'unit=${responseData['unit']} '
+            'barcode=${responseData['barcode']} '
+            'saleUnitCount=${responseSaleUnits is List ? responseSaleUnits.length : 0}');
+        if (responseSaleUnits is List) {
+          for (var index = 0; index < responseSaleUnits.length; index++) {
+            final saleUnit = responseSaleUnits[index];
+            if (saleUnit is Map) {
+              debugPrint('[EDIT_PRODUCT] response saleUnit[$index] '
+                  'id=${saleUnit['id']} unitId=${saleUnit['unit_id']} '
+                  'conversionRate=${saleUnit['conversion_rate']} '
+                  'barcode=${saleUnit['barcode']} price=${saleUnit['price']}');
+            }
+          }
+        }
+      } else {
+        debugPrint('[EDIT_PRODUCT] response has no map data '
+            'type=${responseData.runtimeType}');
+      }
       GetProduct? serverProduct;
       dynamic responseNames;
       if (responseData is Map<String, dynamic>) {
@@ -836,6 +859,13 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         final mappedLabel = unitMap[resolvedUnitId];
         if (mappedLabel != null && mappedLabel.isNotEmpty) {
           resolvedUnitLabel = mappedLabel;
+        } else if (int.tryParse(resolvedUnitLabel) != null &&
+            product.unit != null &&
+            product.unit!.trim().isNotEmpty &&
+            int.tryParse(product.unit!.trim()) == null) {
+          // The edit endpoint may return the numeric unit id while the
+          // existing local product still has the human-readable label.
+          resolvedUnitLabel = product.unit!.trim();
         }
       } else if (resolvedUnitLabel.isNotEmpty) {
         final match = unitMap.entries.firstWhere(
@@ -858,6 +888,23 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           orElse: () => categoryProvider.category!.first,
         );
       }
+
+      final List<SaleUnit>? responseSaleUnits = serverProduct?.saleUnits == null
+          ? null
+          : serverProduct!.saleUnits!
+              .where(
+                  (saleUnit) => saleUnit.unitId?.toString() != resolvedUnitId)
+              .map((saleUnit) => SaleUnit(
+                    id: saleUnit.id,
+                    unitId: saleUnit.unitId,
+                    unitName: saleUnit.unitName ??
+                        unitMap[saleUnit.unitId?.toString() ?? ''],
+                    conversionRate: saleUnit.conversionRate,
+                    barcode: saleUnit.barcode,
+                    price: saleUnit.price,
+                    resolvedPrice: saleUnit.resolvedPrice,
+                  ))
+              .toList(growable: false);
 
       final GetProduct updatedProduct = product.copyWith(
         categoryId: serverProduct?.categoryId ?? resolvedCategoryId,
@@ -897,11 +944,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             (productNames.isNotEmpty ? productNames : product.names),
         // Prefer the server value even when it is an empty list: an empty list
         // is the expected result after the user removes every sale unit.
-        saleUnits: serverProduct?.saleUnits != null
-            ? serverProduct!.saleUnits!
-                .where(
-                    (saleUnit) => saleUnit.unitId?.toString() != resolvedUnitId)
-                .toList(growable: false)
+        saleUnits: responseSaleUnits != null
+            ? responseSaleUnits
             : (_showSaleUnitOptions
                 ? _saleUnitRows
                     .map((row) => SaleUnit(

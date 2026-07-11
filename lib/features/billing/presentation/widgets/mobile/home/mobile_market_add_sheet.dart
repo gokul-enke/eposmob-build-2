@@ -4,6 +4,7 @@ import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:provider/provider.dart';
 
@@ -81,7 +82,8 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
     });
   }
 
-  void _attachSelectAllOnFocus(FocusNode node, TextEditingController controller) {
+  void _attachSelectAllOnFocus(
+      FocusNode node, TextEditingController controller) {
     node.addListener(() {
       if (node.hasFocus && controller.text.isNotEmpty) {
         controller.selection = TextSelection(
@@ -138,8 +140,21 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
     final productName = widget.product.productName ?? 'Product';
     final showMrp =
         context.watch<AppSettingsProvider>().appSettings?.showMrpPos ?? false;
-    final unitOptions = _controller.saleUnitOptionsForProduct(widget.product);
-    final canChangeUnit = _controller.canChangeSaleUnit(widget.product);
+    Map<String, String>? unitLabels;
+    try {
+      unitLabels =
+          Provider.of<PurchaseProvider>(context, listen: false).getUnitList;
+    } on ProviderNotFoundException {
+      // API unit_name is sufficient when the optional master-data source is absent.
+    }
+    final unitOptions = _controller.saleUnitOptionsForProduct(
+      widget.product,
+      unitLabels: unitLabels,
+    );
+    final canChangeUnit = _controller.canChangeSaleUnit(
+      widget.product,
+      unitLabels: unitLabels,
+    );
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(
@@ -244,13 +259,13 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
                 ),
               ),
               child: const Text(
-                      'Add to cart',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                'Add to cart',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
@@ -314,7 +329,8 @@ class _SelectAllNumberField extends StatelessWidget {
           fontSize: 12,
           color: Colors.grey.shade600,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.grey.shade300),
