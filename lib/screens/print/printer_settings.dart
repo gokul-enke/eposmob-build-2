@@ -23,6 +23,7 @@ import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.da
 import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/services/printer_permission_service.dart';
 
 class PrinterSettings extends StatefulWidget {
   const PrinterSettings({super.key});
@@ -236,25 +237,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     debugPrint(
         '[PrinterSettings] _requestPermissions() platform(os)=${Platform.operatingSystem}');
     if (Platform.isAndroid) {
-      Map<Permission, PermissionStatus> statuses = await [
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        Permission.locationWhenInUse,
-      ].request();
-
-      statuses.forEach((perm, status) {
-        debugPrint(
-            '[PrinterSettings] Permission ${perm.toString()} => ${status.toString()}');
-      });
-
-      // Android 12+ uses scan/connect. Older Android uses location for classic
-      // Bluetooth discovery. Accept either platform-specific permission set.
-      final modernBluetoothGranted =
-          statuses[Permission.bluetoothScan]?.isGranted == true &&
-              statuses[Permission.bluetoothConnect]?.isGranted == true;
-      final legacyBluetoothGranted =
-          statuses[Permission.locationWhenInUse]?.isGranted == true;
-      final granted = modernBluetoothGranted || legacyBluetoothGranted;
+      final granted =
+          await PrinterPermissionService.requestRequiredPermissions();
       debugPrint('[PrinterSettings] All permissions granted: $granted');
       return granted;
     }

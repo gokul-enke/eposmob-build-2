@@ -68,7 +68,6 @@ import 'screens/login/api_key_screen.dart';
 import 'helpers/keyboard_dispatcher.dart';
 import 'helpers/date_helper.dart';
 import 'helpers/orientation_helper.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'resources/localization_service.dart';
 import 'resources/app_translations.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -79,10 +78,6 @@ void main() async {
 
   await _initializeBaseUrlFromPreferences();
   await _initializeNotificationPosition();
-
-  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-    await _requestPermissions();
-  }
 
   // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
   // Safer than Documents (less likely to be deleted by user)
@@ -133,7 +128,8 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    debugPrint("main: .env not found or failed to load, continuing without it: $e");
+    debugPrint(
+        "main: .env not found or failed to load, continuing without it: $e");
   }
   runApp(const MyApp());
 }
@@ -153,25 +149,6 @@ Future<void> _initializeBaseUrlFromPreferences() async {
       APPUrl.updateBaseURL(savedAppUrl);
     }
   } catch (_) {}
-}
-
-Future<void> _requestPermissions() async {
-  final statuses = await [
-    Permission.bluetooth,
-    Permission.bluetoothConnect,
-    Permission.bluetoothScan,
-  ].request();
-
-  statuses.forEach((permission, status) {
-    if (status.isGranted) {
-      debugPrint('$permission permission granted.');
-    } else if (status.isDenied) {
-      debugPrint('$permission permission denied.');
-    } else if (status.isPermanentlyDenied) {
-      debugPrint('$permission permission permanently denied.');
-      openAppSettings();
-    }
-  });
 }
 
 Future<void> _initializeHiveBoxes() async {
@@ -387,49 +364,49 @@ class MyApp extends StatelessWidget {
       child: OrientationLock(
         child: KeyboardDispatcher(
           child: Consumer<KeyboardFocusHighlightProvider>(
-          builder: (context, focusHighlightProvider, child) {
-            return GetMaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'CLOUDPOS',
-          theme: _buildAppTheme(focusHighlightProvider.enabled),
-          translations: AppTranslations(LocalizationService.translations),
-          locale: LocalizationService.locale,
-          fallbackLocale: LocalizationService.fallbackLocale,
-          builder: (context, child) {
-            final screenSize = MediaQuery.of(context).size;
-            final platform = Theme.of(context).platform;
+            builder: (context, focusHighlightProvider, child) {
+              return GetMaterialApp(
+                debugShowCheckedModeBanner: false,
+                title: 'CLOUDPOS',
+                theme: _buildAppTheme(focusHighlightProvider.enabled),
+                translations: AppTranslations(LocalizationService.translations),
+                locale: LocalizationService.locale,
+                fallbackLocale: LocalizationService.fallbackLocale,
+                builder: (context, child) {
+                  final screenSize = MediaQuery.of(context).size;
+                  final platform = Theme.of(context).platform;
 
-            // Phone only: Column layout so keyboard pushes content up.
-            // Tablets + Desktop: Stack overlay for floating draggable keyboard.
-            final isPhone = (platform == TargetPlatform.android ||
-                    platform == TargetPlatform.iOS) &&
-                screenSize.width < 600; // Phone threshold
+                  // Phone only: Column layout so keyboard pushes content up.
+                  // Tablets + Desktop: Stack overlay for floating draggable keyboard.
+                  final isPhone = (platform == TargetPlatform.android ||
+                          platform == TargetPlatform.iOS) &&
+                      screenSize.width < 600; // Phone threshold
 
-            if (isPhone) {
-              return Column(
-                children: [
-                  Expanded(child: child ?? const SizedBox.shrink()),
-                  const GlobalVirtualKeyboard(),
-                ],
+                  if (isPhone) {
+                    return Column(
+                      children: [
+                        Expanded(child: child ?? const SizedBox.shrink()),
+                        const GlobalVirtualKeyboard(),
+                      ],
+                    );
+                  }
+
+                  return Stack(
+                    children: [
+                      child ?? const SizedBox.shrink(),
+                      const GlobalVirtualKeyboard(),
+                    ],
+                  );
+                },
+                home: const BaseUrlWrapper(),
+                routes: {
+                  '/login': (context) => const SignInScreen(),
+                  '/api-key': (context) => const ApiKeyScreen(),
+                },
               );
-            }
-
-            return Stack(
-              children: [
-                child ?? const SizedBox.shrink(),
-                const GlobalVirtualKeyboard(),
-              ],
-            );
-          },
-          home: const BaseUrlWrapper(),
-          routes: {
-            '/login': (context) => const SignInScreen(),
-            '/api-key': (context) => const ApiKeyScreen(),
-          },
-        );
-          },
+            },
+          ),
         ),
-      ),
       ),
     );
   }
@@ -494,14 +471,14 @@ ThemeData _buildAppTheme(bool focusHighlightEnabled) {
     // Bold the focused border so the active TextField is unmistakable.
     inputDecorationTheme: focusHighlightEnabled
         ? InputDecorationTheme(
-      focusedBorder: OutlineInputBorder(
-        borderSide: const BorderSide(
-          color: ColorManager.kPrimaryColor,
-          width: 2,
-        ),
-        borderRadius: BorderRadius.circular(8),
-      ),
-    )
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(
+                color: ColorManager.kPrimaryColor,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          )
         : null,
   );
 }
