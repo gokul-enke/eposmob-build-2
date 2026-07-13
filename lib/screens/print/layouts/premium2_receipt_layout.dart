@@ -159,8 +159,8 @@ class Premium2ReceiptLayout implements ReceiptLayout {
 
       // ========== TOTALS SECTION (Bilingual Style) ==========
       if (!params.isReturnOnly) {
-        _buildTotalsSection(
-            part1Rows, params, displayConfig, isEnglish, sarSymbol, appSettings);
+        _buildTotalsSection(part1Rows, params, displayConfig, isEnglish,
+            sarSymbol, appSettings);
       }
 
       // ========== RETURN ITEMS SECTION ==========
@@ -1098,9 +1098,7 @@ class Premium2ReceiptLayout implements ReceiptLayout {
           quantityValue > 0 ? (taxValue / quantityValue) : 0.0;
       unitPrice = unitPriceValue.toStringAsFixed(2);
       unitPriceExTax = (unitPriceValue - taxPerUnit).toStringAsFixed(2);
-      unitName =
-          (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
-              .toString();
+      unitName = getPrintUnit(item);
       totalPrice = (double.tryParse(
                   (item['totalPrice'] ?? item['total_price'])?.toString() ??
                       '0') ??
@@ -1135,7 +1133,7 @@ class Premium2ReceiptLayout implements ReceiptLayout {
           quantityValue > 0 ? (taxValue / quantityValue) : 0.0;
       unitPrice = unitPriceValue.toStringAsFixed(2);
       unitPriceExTax = (unitPriceValue - taxPerUnit).toStringAsFixed(2);
-      unitName = (item.productUnit ?? '').toString();
+      unitName = getPrintUnit(item);
       totalPrice = (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
           .toStringAsFixed(2);
       itemTaxAmount = taxValue.toStringAsFixed(2);

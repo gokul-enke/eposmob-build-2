@@ -109,8 +109,7 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   // Text carrying Arabic must therefore be flagged RTL, otherwise its letters
   // render isolated/unshaped and overlap adjacent Latin text. Detection is
   // conditional because forcing RTL on pure-Latin text reverses its word order.
-  static final RegExp _arabicRegex = RegExp(
-      '[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
+  static final RegExp _arabicRegex = RegExp('[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]');
 
   bool _hasArabic(String? s) => s != null && _arabicRegex.hasMatch(s);
 
@@ -316,24 +315,24 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     if (qrData.isEmpty) {
       try {
-        final manualGateway = paymentGateways
-            .firstWhere((g) => g.code == 'MANUAL_PAYMENT_GATEWAY',
-                orElse: () => PaymentGateway(
-                      id: 0,
-                      name: '',
-                      code: '',
-                      label: '',
-                      link: '',
-                      image: '',
-                      status: '',
-                      isWebActive: 0,
-                      isAndroidActive: 0,
-                      isIosActive: 0,
-                      contactEmail: '',
-                      contactPhone: '',
-                      createdAt: '',
-                      updatedAt: '',
-                    ));
+        final manualGateway = paymentGateways.firstWhere(
+            (g) => g.code == 'MANUAL_PAYMENT_GATEWAY',
+            orElse: () => PaymentGateway(
+                  id: 0,
+                  name: '',
+                  code: '',
+                  label: '',
+                  link: '',
+                  image: '',
+                  status: '',
+                  isWebActive: 0,
+                  isAndroidActive: 0,
+                  isIosActive: 0,
+                  contactEmail: '',
+                  contactPhone: '',
+                  createdAt: '',
+                  updatedAt: '',
+                ));
         qrData = manualGateway.link;
         if (qrData.isNotEmpty) {
           if (qrData.contains('{formattedTotal}') ||
@@ -417,7 +416,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // ── Buyer (customer) info ───────────────────────────────────────
     final bool isDefault = params.isDefaultCustomer;
     final bool hideDefaultPhone = params.hideDefaultCustomerPhone;
-    final custName = params.customerName ?? (isRtl ? 'عميل' : 'Walk-in Customer');
+    final custName =
+        params.customerName ?? (isRtl ? 'عميل' : 'Walk-in Customer');
     final bool maskPhone = dc?['showCustomerPhoneMasked']?.visible ??
         dc?['maskCustomerPhone']?.visible ??
         false;
@@ -435,14 +435,12 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     final custAddress = params.customerAddress;
 
-    final String paymentConfigKey =
-        dc?.containsKey('showPaymentMethod') == true
-            ? 'showPaymentMethod'
-            : 'showPayment';
-    final String commentConfigKey =
-        dc?.containsKey('showOrderComment') == true
-            ? 'showOrderComment'
-            : 'showComment';
+    final String paymentConfigKey = dc?.containsKey('showPaymentMethod') == true
+        ? 'showPaymentMethod'
+        : 'showPayment';
+    final String commentConfigKey = dc?.containsKey('showOrderComment') == true
+        ? 'showOrderComment'
+        : 'showComment';
     final bool showCustomerSection =
         dc?['showCustomerNameAndPhone']?.visible ?? true;
     final bool showCustomerName = cfgVisibleDefault('showCustomerName');
@@ -453,10 +451,10 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final bool showComment = cfgVisibleDefault(commentConfigKey);
     final bool showDeliveryMethod = cfgVisibleDefault('showDeliveryMethod');
 
-    final paymentMethodText = (params.paymentMethod == null ||
-            params.paymentMethod!.isEmpty)
-        ? 'Cash'
-        : (params.paymentMethod == 'CASH' ? 'Cash' : params.paymentMethod!);
+    final paymentMethodText =
+        (params.paymentMethod == null || params.paymentMethod!.isEmpty)
+            ? 'Cash'
+            : (params.paymentMethod == 'CASH' ? 'Cash' : params.paymentMethod!);
 
     // ── Totals visibility ───────────────────────────────────────────
     final bool showTaxableFlag =
@@ -469,11 +467,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final buyerRows = <pw.Widget>[];
     if (showCustomerSection) {
       if (showCustomerName) {
-        buyerRows.add(_kvRow(
-            _getLabel(dc, 'showCustomerName', null, 'Name:'),
-            custName,
-            infoLabel,
-            infoValue));
+        buyerRows.add(_kvRow(_getLabel(dc, 'showCustomerName', null, 'Name:'),
+            custName, infoLabel, infoValue));
       }
       if (showCustomerVat) {
         buyerRows.add(_kvRow(
@@ -497,11 +492,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             infoValue));
       }
       if (custPhone != null) {
-        buyerRows.add(_kvRow(
-            _getLabel(dc, 'showCustomerPhone', null, 'Phone:'),
-            custPhone,
-            infoLabel,
-            infoValue));
+        buyerRows.add(_kvRow(_getLabel(dc, 'showCustomerPhone', null, 'Phone:'),
+            custPhone, infoLabel, infoValue));
       }
     }
 
@@ -548,7 +540,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                _autoText(documentHeader.isNotEmpty ? documentHeader : storeName,
+                _autoText(
+                    documentHeader.isNotEmpty ? documentHeader : storeName,
                     sellerNameStyle),
                 if (documentSubheader.isNotEmpty)
                   pw.Text(documentSubheader,
@@ -575,8 +568,7 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
               child: pw.Column(
                 children: [
                   pw.Text(invoiceTitleArabic,
-                      style: titleArStyle,
-                      textDirection: pw.TextDirection.rtl),
+                      style: titleArStyle, textDirection: pw.TextDirection.rtl),
                   _autoText(invoiceTitleText.toUpperCase(), titleStyle),
                   if (params.zatcaVatNumber?.isNotEmpty == true)
                     pw.Text('VAT NO: ${params.zatcaVatNumber}',
@@ -687,133 +679,145 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // SECTION 7: ITEMS TABLE
             // ═══════════════════════════════════════════════════════
             if (!params.isReturnOnly) ...[
-            _buildItemsTable(params, dc, resolvedLabels, itemsHeaderEn,
-                itemsHeaderAr, itemsBodyStyle, itemsBodyAr),
-            pw.SizedBox(height: 8),
+              _buildItemsTable(params, dc, resolvedLabels, itemsHeaderEn,
+                  itemsHeaderAr, itemsBodyStyle, itemsBodyAr),
+              pw.SizedBox(height: 8),
 
-            // ═══════════════════════════════════════════════════════
-            // SECTION 8: TOTALS (right-aligned, bilingual)
-            // ═══════════════════════════════════════════════════════
-            pw.Row(
-              children: [
-                pw.Expanded(flex: 2, child: pw.SizedBox()),
-                pw.Expanded(
-                  flex: 6,
-                  child: pw.Column(
-                    children: [
-                      pw.Divider(height: 0, thickness: 0.5),
-                      pw.SizedBox(height: 3),
-                      if (showTaxableFlag)
-                        _totalsRow(
-                            'Total Taxable Amount Excluding VAT',
-                            'المبلغ الإجمالي الخاضع للضريبة بإستثناء',
-                            _formatMoney(currency, netExcTaxValue),
-                            totalsLabelEn, totalsLabelAr, totalsValueStyle),
-                      if (showDiscountFlag && discountAmountValue != 0)
-                        _totalsRow(
-                            _labelEn(dc, 'showDiscount', null, 'Discount',
-                                isDualLanguage),
-                            'الخصم',
-                            _formatMoney(currency, discountAmountValue),
-                            totalsLabelEn, totalsLabelAr, totalsValueStyle),
-                      if (showTaxTotalFlag)
-                        _totalsRow(
-                            _labelEn(dc, 'showTax', resolvedLabels?.taxDefault,
-                                'Total VAT 15%', isDualLanguage),
-                            'مجموع ضريبة القيمة المضافة ال 15%',
-                            _formatMoney(currency, totalTax),
-                            totalsLabelEn, totalsLabelAr, totalsValueStyle),
-                      if (showNetFlag) ...[
-                        pw.SizedBox(height: 2),
+              // ═══════════════════════════════════════════════════════
+              // SECTION 8: TOTALS (right-aligned, bilingual)
+              // ═══════════════════════════════════════════════════════
+              pw.Row(
+                children: [
+                  pw.Expanded(flex: 2, child: pw.SizedBox()),
+                  pw.Expanded(
+                    flex: 6,
+                    child: pw.Column(
+                      children: [
                         pw.Divider(height: 0, thickness: 0.5),
-                        _totalsRow(
-                            _labelEn(dc, 'showNetAmount', null,
-                                'Total Amount Due', isDualLanguage),
-                            'إجمالي المبلغ المستحق',
-                            _formatMoney(currency, totalAmount),
-                            totalsDueEn, totalsLabelAr, totalsDueValue),
-                        pw.Divider(height: 0, thickness: 0.5),
+                        pw.SizedBox(height: 3),
+                        if (showTaxableFlag)
+                          _totalsRow(
+                              'Total Taxable Amount Excluding VAT',
+                              'المبلغ الإجمالي الخاضع للضريبة بإستثناء',
+                              _formatMoney(currency, netExcTaxValue),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueStyle),
+                        if (showDiscountFlag && discountAmountValue != 0)
+                          _totalsRow(
+                              _labelEn(dc, 'showDiscount', null, 'Discount',
+                                  isDualLanguage),
+                              'الخصم',
+                              _formatMoney(currency, discountAmountValue),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueStyle),
+                        if (showTaxTotalFlag)
+                          _totalsRow(
+                              _labelEn(
+                                  dc,
+                                  'showTax',
+                                  resolvedLabels?.taxDefault,
+                                  'Total VAT 15%',
+                                  isDualLanguage),
+                              'مجموع ضريبة القيمة المضافة ال 15%',
+                              _formatMoney(currency, totalTax),
+                              totalsLabelEn,
+                              totalsLabelAr,
+                              totalsValueStyle),
+                        if (showNetFlag) ...[
+                          pw.SizedBox(height: 2),
+                          pw.Divider(height: 0, thickness: 0.5),
+                          _totalsRow(
+                              _labelEn(dc, 'showNetAmount', null,
+                                  'Total Amount Due', isDualLanguage),
+                              'إجمالي المبلغ المستحق',
+                              _formatMoney(currency, totalAmount),
+                              totalsDueEn,
+                              totalsLabelAr,
+                              totalsDueValue),
+                          pw.Divider(height: 0, thickness: 0.5),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 8),
+                ],
+              ),
+              pw.SizedBox(height: 8),
 
-            // ═══════════════════════════════════════════════════════
-            // SECTION 9: BANK DETAILS (left) + AMOUNT IN WORDS (right)
-            // ═══════════════════════════════════════════════════════
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Expanded(
-                  flex: 5,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('OUR BANK DETAILS | لتفاصيل المصرفية',
-                          style: bankHeading),
-                      pw.SizedBox(height: 2),
-                      if (bankAccount?.accountHolderName?.isNotEmpty == true)
-                        _autoText(
-                            'Beneficiary Name: ${bankAccount!.accountHolderName}',
-                            bankStyle),
-                      if (bank?.bankName?.isNotEmpty == true)
-                        _autoText('Bank Name: ${bank!.bankName}', bankStyle),
-                      if (bankAccount?.accountNumber?.isNotEmpty == true)
-                        pw.Text('Bank Account: ${bankAccount!.accountNumber}',
-                            style: bankStyle),
-                      if (bankAccount?.iban?.isNotEmpty == true)
-                        pw.Text('IBAN : ${bankAccount!.iban}',
-                            style: bankStyle),
-                    ],
+              // ═══════════════════════════════════════════════════════
+              // SECTION 9: BANK DETAILS (left) + AMOUNT IN WORDS (right)
+              // ═══════════════════════════════════════════════════════
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    flex: 5,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('OUR BANK DETAILS | لتفاصيل المصرفية',
+                            style: bankHeading),
+                        pw.SizedBox(height: 2),
+                        if (bankAccount?.accountHolderName?.isNotEmpty == true)
+                          _autoText(
+                              'Beneficiary Name: ${bankAccount!.accountHolderName}',
+                              bankStyle),
+                        if (bank?.bankName?.isNotEmpty == true)
+                          _autoText('Bank Name: ${bank!.bankName}', bankStyle),
+                        if (bankAccount?.accountNumber?.isNotEmpty == true)
+                          pw.Text('Bank Account: ${bankAccount!.accountNumber}',
+                              style: bankStyle),
+                        if (bankAccount?.iban?.isNotEmpty == true)
+                          pw.Text('IBAN : ${bankAccount!.iban}',
+                              style: bankStyle),
+                      ],
+                    ),
                   ),
-                ),
-                pw.SizedBox(width: 10),
-                pw.Expanded(
-                  flex: 5,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.end,
-                    children: [
-                      if (cfgVisible('showAmountInWords'))
-                        ..._amountInWords(totalAmount, currency, wordsBold),
-                      ...paymentLines,
-                      ...balanceLines,
-                      if (showComment &&
-                          params.orderComment != null &&
-                          params.orderComment!.isNotEmpty)
-                        _autoText(
-                            '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
-                            wordsStyle),
-                      if (showDeliveryMethod &&
-                          params.deliveryMethod != null &&
-                          params.deliveryMethod!.isNotEmpty)
-                        _autoText(
-                            '${_getLabel(dc, 'showDeliveryMethod', null, 'Delivery')}: ${params.deliveryMethod}',
-                            wordsStyle),
-                      if (cfgVisible('showItemsCount'))
-                        pw.Text(
-                            '${_getLabel(dc, 'showItemsCount', null, 'Items')}: ${params.cartItems.length}',
-                            style: wordsStyle),
-                      if (cfgVisible('showQuantityCount'))
-                        pw.Text(
-                            '${_getLabel(dc, 'showQuantityCount', null, 'Total Qty')}: ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
-                            style: wordsStyle),
-                      if (cfgVisible('showSaved') && saved > 0)
-                        pw.Text(
-                            '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
-                            style: wordsBold),
-                      if (cfgVisibleDefault('showDate'))
-                        pw.Text(
-                            'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
-                            style: smallStyle),
-                    ],
+                  pw.SizedBox(width: 10),
+                  pw.Expanded(
+                    flex: 5,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        if (cfgVisible('showAmountInWords'))
+                          ..._amountInWords(totalAmount, currency, wordsBold),
+                        ...paymentLines,
+                        ...balanceLines,
+                        if (showComment &&
+                            params.orderComment != null &&
+                            params.orderComment!.isNotEmpty)
+                          _autoText(
+                              '${_getLabel(dc, commentConfigKey, null, 'Comment')}: ${params.orderComment}',
+                              wordsStyle),
+                        if (showDeliveryMethod &&
+                            params.deliveryMethod != null &&
+                            params.deliveryMethod!.isNotEmpty)
+                          _autoText(
+                              '${_getLabel(dc, 'showDeliveryMethod', null, 'Delivery')}: ${params.deliveryMethod}',
+                              wordsStyle),
+                        if (cfgVisible('showItemsCount'))
+                          pw.Text(
+                              '${_getLabel(dc, 'showItemsCount', null, 'Items')}: ${params.cartItems.length}',
+                              style: wordsStyle),
+                        if (cfgVisible('showQuantityCount'))
+                          pw.Text(
+                              '${_getLabel(dc, 'showQuantityCount', null, 'Total Qty')}: ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
+                              style: wordsStyle),
+                        if (cfgVisible('showSaved') && saved > 0)
+                          pw.Text(
+                              '${_getLabel(dc, 'showSaved', null, 'You Saved:')} ${_formatMoney(currency, saved)}',
+                              style: wordsBold),
+                        if (cfgVisibleDefault('showDate'))
+                          pw.Text(
+                              'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
+                              style: smallStyle),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 8),
+                ],
+              ),
+              pw.SizedBox(height: 8),
             ],
 
             if (params.orderReturns != null &&
@@ -836,8 +840,9 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             ],
             if (cfgVisible('showThankYouMessage'))
               pw.Center(
-                child: _autoText(_thankYouText(dc, config, isEnglish),
-                    wordsBold, textAlign: pw.TextAlign.center),
+                child: _autoText(
+                    _thankYouText(dc, config, isEnglish), wordsBold,
+                    textAlign: pw.TextAlign.center),
               ),
             pw.SizedBox(height: 8),
 
@@ -1032,8 +1037,7 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           !params.paymentMethod!.startsWith('{')) {
         label = params.paymentMethod!;
       }
-      lines.add(pw.Text(
-          '$label: ${_formatMoney(currency, params.paidAmount!)}',
+      lines.add(pw.Text('$label: ${_formatMoney(currency, params.paidAmount!)}',
           style: style));
     }
     return lines;
@@ -1059,8 +1063,7 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
     final bool showPrev = dc?['showCustomerPrevBalance']?.visible ?? true;
     final bool showPaid = dc?['showCustomerPaidAmount']?.visible ?? true;
-    final bool showCurrent =
-        dc?['showCustomerCurrentBalance']?.visible ?? true;
+    final bool showCurrent = dc?['showCustomerCurrentBalance']?.visible ?? true;
 
     final lines = <pw.Widget>[];
     if (showPrev && params.customerOldBalance != null) {
@@ -1130,8 +1133,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   }
 
   /// Totals row: EN label (left) | AR label (right) | value (right).
-  pw.Widget _totalsRow(String en, String ar, String value,
-      pw.TextStyle enStyle, pw.TextStyle arStyle, pw.TextStyle valueStyle) {
+  pw.Widget _totalsRow(String en, String ar, String value, pw.TextStyle enStyle,
+      pw.TextStyle arStyle, pw.TextStyle valueStyle) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
@@ -1245,17 +1248,16 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final hdrs = <pw.Widget>[];
     if (showSL) {
       hdrs.add(hdr(
-          _labelEn(dc, 'showSLNumber', resolvedLabels?.slNumberDefault, 'S/N',
-              isAr),
-          _labelAr(dc, 'showSLNumber', resolvedLabels?.slNumber, 'التسلسل',
-              isAr)));
+          _labelEn(
+              dc, 'showSLNumber', resolvedLabels?.slNumberDefault, 'S/N', isAr),
+          _labelAr(
+              dc, 'showSLNumber', resolvedLabels?.slNumber, 'التسلسل', isAr)));
     }
     if (showItems) {
       hdrs.add(hdr(
           _labelEn(dc, 'showParticulars', resolvedLabels?.particularsDefault,
               'Description', isAr),
-          _labelAr(
-              dc, 'showParticulars', resolvedLabels?.particulars, 'البيان',
+          _labelAr(dc, 'showParticulars', resolvedLabels?.particulars, 'البيان',
               isAr),
           align: pw.Alignment.centerLeft));
     }
@@ -1270,8 +1272,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     }
     if (showRate) {
       hdrs.add(hdr(
-          _labelEn(dc, 'showRate', resolvedLabels?.rateDefault, 'Unit Price',
-              isAr),
+          _labelEn(
+              dc, 'showRate', resolvedLabels?.rateDefault, 'Unit Price', isAr),
           _labelAr(dc, 'showRate', resolvedLabels?.rate, 'سعر الوحدة', isAr)));
     }
     if (showRateExcTax) {
@@ -1291,14 +1293,14 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     hdrs.add(hdr('Total Amount', 'مبلغ الإجمالي'));
     if (showTax) {
       hdrs.add(hdr(
-          _labelEn(dc, 'showTaxHeader', resolvedLabels?.taxDefault, 'VAT 15%',
-              isAr),
+          _labelEn(
+              dc, 'showTaxHeader', resolvedLabels?.taxDefault, 'VAT 15%', isAr),
           _labelAr(dc, 'showTaxHeader', resolvedLabels?.tax, 'الضريبة', isAr)));
     }
     if (showTotal) {
       hdrs.add(hdr(
-          _labelEn(dc, 'showTotal', resolvedLabels?.totalDefault, 'Net Total',
-              isAr),
+          _labelEn(
+              dc, 'showTotal', resolvedLabels?.totalDefault, 'Net Total', isAr),
           _labelAr(dc, 'showTotal', resolvedLabels?.total, 'الإجمالي', isAr)));
     }
 
@@ -1316,47 +1318,39 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       if (params.isFromLocalStorage) {
         mrp = double.tryParse(item['mrp']?.toString() ?? '0') ?? 0;
         qty = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
-        unitPrice = double.tryParse((item['unitPrice'] ?? item['unit_price'])
-                    ?.toString() ??
-                '0') ??
+        unitPrice = double.tryParse(
+                (item['unitPrice'] ?? item['unit_price'])?.toString() ?? '0') ??
             0;
-        unitName =
-            (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
-                .toString();
+        unitName = getPrintUnit(item);
         iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
-        iTax = double.tryParse((item['tax_amount'] ?? item['taxAmount'])
-                    ?.toString() ??
-                '0') ??
+        iTax = double.tryParse(
+                (item['tax_amount'] ?? item['taxAmount'])?.toString() ?? '0') ??
             0;
-        iTotal = double.tryParse((item['totalPrice'] ?? item['total_price'])
-                    ?.toString() ??
-                '0') ??
+        iTotal = double.tryParse(
+                (item['totalPrice'] ?? item['total_price'])?.toString() ??
+                    '0') ??
             0;
       } else if (item is Map) {
         mrp = double.tryParse(item['mrp']?.toString() ?? '0') ?? 0;
         qty = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
-        unitPrice = double.tryParse((item['unit_price'] ?? item['unitPrice'])
-                    ?.toString() ??
-                '0') ??
+        unitPrice = double.tryParse(
+                (item['unit_price'] ?? item['unitPrice'])?.toString() ?? '0') ??
             0;
-        unitName =
-            (item['product_unit'] ?? item['productUnit'] ?? item['unit'] ?? '')
-                .toString();
+        unitName = getPrintUnit(item);
         iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
-        iTax = double.tryParse((item['tax_amount'] ?? item['taxAmount'])
-                    ?.toString() ??
-                '0') ??
+        iTax = double.tryParse(
+                (item['tax_amount'] ?? item['taxAmount'])?.toString() ?? '0') ??
             0;
-        iTotal = double.tryParse((item['total_price'] ?? item['totalPrice'])
-                    ?.toString() ??
-                '0') ??
+        iTotal = double.tryParse(
+                (item['total_price'] ?? item['totalPrice'])?.toString() ??
+                    '0') ??
             0;
       } else {
         try {
           mrp = double.tryParse(item.mrp?.toString() ?? '0') ?? 0;
           qty = double.tryParse(item.quantity?.toString() ?? '0') ?? 0;
           unitPrice = double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0;
-          unitName = (item.productUnit ?? '').toString();
+          unitName = getPrintUnit(item);
           iTax = double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0;
           iTotal = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0;
         } catch (_) {}
@@ -1376,7 +1370,8 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
 
       final cells = <pw.Widget>[];
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
-      if (showItems) cells.add(_itemNameCell(enName, arName, bodyStyle, bodyAr));
+      if (showItems)
+        cells.add(_itemNameCell(enName, arName, bodyStyle, bodyAr));
       if (showMRP) {
         cells.add(_dataCell(mrp.toStringAsFixed(2), bodyStyle,
             align: pw.Alignment.centerRight));

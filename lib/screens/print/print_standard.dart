@@ -26,6 +26,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
 import 'package:pos_machine/screens/print/standard_layouts/standard_pdf_layout_factory.dart';
+import 'package:pos_machine/screens/print/print_unit_helper.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'logo_loader.dart';
 
@@ -640,11 +641,11 @@ class StandardPrinter {
             // Items table - minimal design without borders
             if (!isReturnOnly &&
                 ((updatedSettings?['showSLNumber']?.visible == true) ||
-                (updatedSettings?['showParticulars']?.visible == true) ||
-                (updatedSettings?['showMRP']?.visible == true) ||
-                (updatedSettings?['showQty']?.visible == true) ||
-                (updatedSettings?['showRate']?.visible == true) ||
-                (updatedSettings?['showTotal']?.visible == true)))
+                    (updatedSettings?['showParticulars']?.visible == true) ||
+                    (updatedSettings?['showMRP']?.visible == true) ||
+                    (updatedSettings?['showQty']?.visible == true) ||
+                    (updatedSettings?['showRate']?.visible == true) ||
+                    (updatedSettings?['showTotal']?.visible == true)))
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(
                     vertical: 5, horizontal: 8), // Reduced padding
@@ -661,23 +662,23 @@ class StandardPrinter {
 
             // Cart Total Row - added after items table
             if (!isReturnOnly)
-            _buildCartTotalRow(
-                selectedPaperSize, cartItems, isFromLocalStorage, summaryStyle,
-                isRtl: isRtl,
-                arabicFont: arabicFont,
-                arabicFontBold: arabicFontBold,
-                displayConfig: updatedSettings,
-                currency: currency),
+              _buildCartTotalRow(selectedPaperSize, cartItems,
+                  isFromLocalStorage, summaryStyle,
+                  isRtl: isRtl,
+                  arabicFont: arabicFont,
+                  arabicFontBold: arabicFontBold,
+                  displayConfig: updatedSettings,
+                  currency: currency),
 
             pw.SizedBox(height: 5), // Reduced from 8
 
             // Summary - minimal design without borders
             if (!isReturnOnly &&
                 ((updatedSettings?['showItemsCount']?.visible == true) ||
-                (updatedSettings?['showMRPTotal']?.visible == true) ||
-                (updatedSettings?['showSaved']?.visible == true) ||
-                (updatedSettings?['showDiscount']?.visible == true) ||
-                (updatedSettings?['showNetAmount']?.visible == true)))
+                    (updatedSettings?['showMRPTotal']?.visible == true) ||
+                    (updatedSettings?['showSaved']?.visible == true) ||
+                    (updatedSettings?['showDiscount']?.visible == true) ||
+                    (updatedSettings?['showNetAmount']?.visible == true)))
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(
                     vertical: 5, horizontal: 8), // Reduced padding
@@ -1171,9 +1172,7 @@ class StandardPrinter {
         unitPriceExTax = (unitPriceValue -
                 (quantityValue > 0 ? taxValue / quantityValue : 0))
             .toStringAsFixed(2);
-        unitName =
-            (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
-                .toString();
+        unitName = getPrintUnit(item);
         totalPrice =
             (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0)
                 .toStringAsFixed(2);
@@ -1205,11 +1204,7 @@ class StandardPrinter {
           unitPriceExTax = (unitPriceValue -
                   (quantityValue > 0 ? taxValue / quantityValue : 0))
               .toStringAsFixed(2);
-          unitName = (item['product_unit'] ??
-                  item['productUnit'] ??
-                  item['unit'] ??
-                  '')
-              .toString();
+          unitName = getPrintUnit(item);
           totalPrice = (double.tryParse(item['total_price']?.toString() ??
                       item['totalPrice']?.toString() ??
                       '0') ??
@@ -1237,7 +1232,7 @@ class StandardPrinter {
             unitPriceExTax = (unitPriceValue -
                     (quantityValue > 0 ? taxValue / quantityValue : 0))
                 .toStringAsFixed(2);
-            unitName = (item.productUnit ?? '').toString();
+            unitName = getPrintUnit(item);
             totalPrice =
                 (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
                     .toStringAsFixed(2);
@@ -1276,9 +1271,7 @@ class StandardPrinter {
       } catch (_) {}
 
       String displayProductName;
-      if (isRtl &&
-          arabicItemName != null &&
-          arabicItemName.trim().isNotEmpty) {
+      if (isRtl && arabicItemName != null && arabicItemName.trim().isNotEmpty) {
         displayProductName = productName.trim().isNotEmpty
             ? '$arabicItemName\n\u200E$productName'
             : arabicItemName;
@@ -2352,7 +2345,8 @@ class StandardPrinter {
     String currency, {
     bool isRtl = false,
   }) {
-    double orderTotal = double.tryParse(formattedTotal.replaceAll(',', '')) ?? 0.0;
+    double orderTotal =
+        double.tryParse(formattedTotal.replaceAll(',', '')) ?? 0.0;
     double returnTotal = 0.0;
 
     // Calculate return total (same logic as before)
@@ -2822,25 +2816,30 @@ class StandardPrinter {
         final hasKycDetails = (customerVatNumber?.trim().isNotEmpty ?? false) ||
             (customerCrNumber?.trim().isNotEmpty ?? false);
         final isB2B = normalizedType == 'B2B' ||
-            ((normalizedType == null || normalizedType.isEmpty) && hasKycDetails);
+            ((normalizedType == null || normalizedType.isEmpty) &&
+                hasKycDetails);
         final titleOverride = documentTitleOverride?.trim();
 
         final b2bInvoiceTitle = displayConfig['showInvoiceTitleB2B'] ??
             displayConfig['showInvoiceTitleB2b'];
 
-        if (isB2B && b2bInvoiceTitle != null &&
+        if (isB2B &&
+            b2bInvoiceTitle != null &&
             (b2bInvoiceTitle.visible == true ||
-                (b2bInvoiceTitle.value?.toString().trim().isNotEmpty ?? false))) {
+                (b2bInvoiceTitle.value?.toString().trim().isNotEmpty ??
+                    false))) {
           final merged = Map<String, DisplayOption>.from(displayConfig);
-          merged['showInvoiceTitle'] = titleOverride != null && titleOverride.isNotEmpty
-              ? DisplayOption(
-                  visible: true,
-                  value: titleOverride,
-                  defaultValue: b2bInvoiceTitle.defaultValue,
-                )
-              : b2bInvoiceTitle;
+          merged['showInvoiceTitle'] =
+              titleOverride != null && titleOverride.isNotEmpty
+                  ? DisplayOption(
+                      visible: true,
+                      value: titleOverride,
+                      defaultValue: b2bInvoiceTitle.defaultValue,
+                    )
+                  : b2bInvoiceTitle;
           updatedSettings = merged;
-          debugPrint('[PDF Share] B2B customer — using showInvoiceTitleB2B: visible=${b2bInvoiceTitle.visible}, value=${b2bInvoiceTitle.value}');
+          debugPrint(
+              '[PDF Share] B2B customer — using showInvoiceTitleB2B: visible=${b2bInvoiceTitle.visible}, value=${b2bInvoiceTitle.value}');
         } else if (titleOverride != null && titleOverride.isNotEmpty) {
           final merged = Map<String, DisplayOption>.from(displayConfig);
           merged['showInvoiceTitle'] = DisplayOption(
@@ -3080,7 +3079,8 @@ class StandardPrinter {
                         pw.Text(
                           storePhone?.isNotEmpty == true
                               ? storePhone!
-                              : (updatedSettings?['showTel']?.value as String? ??
+                              : (updatedSettings?['showTel']?.value
+                                      as String? ??
                                   customerCareNumber),
                           style: bodyStyle,
                         ),
@@ -3203,11 +3203,12 @@ class StandardPrinter {
                 // Items table - minimal design without borders
                 if (!isReturnOnly &&
                     ((updatedSettings?['showSLNumber']?.visible == true) ||
-                    (updatedSettings?['showParticulars']?.visible == true) ||
-                    (updatedSettings?['showMRP']?.visible == true) ||
-                    (updatedSettings?['showQty']?.visible == true) ||
-                    (updatedSettings?['showRate']?.visible == true) ||
-                    (updatedSettings?['showTotal']?.visible == true)))
+                        (updatedSettings?['showParticulars']?.visible ==
+                            true) ||
+                        (updatedSettings?['showMRP']?.visible == true) ||
+                        (updatedSettings?['showQty']?.visible == true) ||
+                        (updatedSettings?['showRate']?.visible == true) ||
+                        (updatedSettings?['showTotal']?.visible == true)))
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(
                         vertical: 5, horizontal: 8), // Reduced padding
@@ -3228,23 +3229,23 @@ class StandardPrinter {
 
                 // Cart Total Row - added after items table
                 if (!isReturnOnly)
-                _buildCartTotalRow(selectedPaperSize, cartItems,
-                    isFromLocalStorage, summaryStyle,
-                    isRtl: isRtl,
-                    arabicFont: arabicFont,
-                    arabicFontBold: arabicFontBold,
-                    displayConfig: updatedSettings,
-                    currency: currency),
+                  _buildCartTotalRow(selectedPaperSize, cartItems,
+                      isFromLocalStorage, summaryStyle,
+                      isRtl: isRtl,
+                      arabicFont: arabicFont,
+                      arabicFontBold: arabicFontBold,
+                      displayConfig: updatedSettings,
+                      currency: currency),
 
                 pw.SizedBox(height: 5), // Reduced from 8
 
                 // Summary - minimal design without borders
                 if (!isReturnOnly &&
                     ((updatedSettings?['showItemsCount']?.visible == true) ||
-                    (updatedSettings?['showMRPTotal']?.visible == true) ||
-                    (updatedSettings?['showSaved']?.visible == true) ||
-                    (updatedSettings?['showDiscount']?.visible == true) ||
-                    (updatedSettings?['showNetAmount']?.visible == true)))
+                        (updatedSettings?['showMRPTotal']?.visible == true) ||
+                        (updatedSettings?['showSaved']?.visible == true) ||
+                        (updatedSettings?['showDiscount']?.visible == true) ||
+                        (updatedSettings?['showNetAmount']?.visible == true)))
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(
                         vertical: 5, horizontal: 8), // Reduced padding

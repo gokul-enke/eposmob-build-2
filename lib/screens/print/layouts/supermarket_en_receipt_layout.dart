@@ -160,8 +160,8 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
 
       // ========== TOTALS SECTION (Bilingual Style) ==========
       if (!params.isReturnOnly) {
-        _buildTotalsSection(
-            part1Rows, params, displayConfig, isEnglish, sarSymbol, appSettings);
+        _buildTotalsSection(part1Rows, params, displayConfig, isEnglish,
+            sarSymbol, appSettings);
       }
 
       // ========== RETURN ITEMS SECTION ==========
@@ -1097,9 +1097,7 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
           quantityValue > 0 ? (taxValue / quantityValue) : 0.0;
       unitPrice = unitPriceValue.toStringAsFixed(2);
       unitPriceExTax = (unitPriceValue - taxPerUnit).toStringAsFixed(2);
-      unitName =
-          (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
-              .toString();
+      unitName = getPrintUnit(item);
       totalPrice = (double.tryParse(
                   (item['totalPrice'] ?? item['total_price'])?.toString() ??
                       '0') ??
@@ -1134,7 +1132,7 @@ class SupermarketEnReceiptLayout implements ReceiptLayout {
           quantityValue > 0 ? (taxValue / quantityValue) : 0.0;
       unitPrice = unitPriceValue.toStringAsFixed(2);
       unitPriceExTax = (unitPriceValue - taxPerUnit).toStringAsFixed(2);
-      unitName = (item.productUnit ?? '').toString();
+      unitName = getPrintUnit(item);
       totalPrice = (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
           .toStringAsFixed(2);
       itemTaxAmount = taxValue.toStringAsFixed(2);
@@ -2632,15 +2630,16 @@ class BoxedTotalsRow extends ReceiptRow {
 
           // Draw icon to the left of value
           final double iconX = valueX - iconSize - 4;
-          final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
+          final src = Rect.fromLTWH(
+              0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
           final dst = Rect.fromLTWH(
               iconX,
               currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08),
               iconSize,
               iconSize);
           canvas.drawImageRect(item.icon!, src, dst, Paint());
-
-        } else if (item.currencySymbol != null && item.currencySymbol!.isNotEmpty) {
+        } else if (item.currencySymbol != null &&
+            item.currencySymbol!.isNotEmpty) {
           final valuePainter = TextPainter(
             text: TextSpan(
               text: item.value,
@@ -2670,7 +2669,6 @@ class BoxedTotalsRow extends ReceiptRow {
           final double valueX = symbolX - valuePainter.width - 2;
           valuePainter.paint(canvas, Offset(valueX, currentY));
           symbolPainter.paint(canvas, Offset(symbolX, currentY));
-
         } else {
           _drawScaledText(
             canvas,

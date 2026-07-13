@@ -1467,9 +1467,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         unitPrice = double.tryParse(
                 (item['unitPrice'] ?? item['unit_price'])?.toString() ?? '0') ??
             0;
-        unitName =
-            (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
-                .toString();
+        unitName = getPrintUnit(item);
         iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
         iTax = double.tryParse(
                 (item['tax_amount'] ?? item['taxAmount'])?.toString() ?? '0') ??
@@ -1487,9 +1485,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         unitPrice = double.tryParse(
                 (item['unit_price'] ?? item['unitPrice'])?.toString() ?? '0') ??
             0;
-        unitName =
-            (item['product_unit'] ?? item['productUnit'] ?? item['unit'] ?? '')
-                .toString();
+        unitName = getPrintUnit(item);
         iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
         iTax = double.tryParse(
                 (item['tax_amount'] ?? item['taxAmount'])?.toString() ?? '0') ??
@@ -1504,7 +1500,7 @@ class SimplifiedTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           mrp = double.tryParse(item.mrp?.toString() ?? '0') ?? 0;
           qty = double.tryParse(item.quantity?.toString() ?? '0') ?? 0;
           unitPrice = double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0;
-          unitName = (item.productUnit ?? '').toString();
+          unitName = getPrintUnit(item);
           iTax = double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0;
           iTotal = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0;
         } catch (_) {}

@@ -280,11 +280,11 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           // Items Table
           if (!params.isReturnOnly &&
               (displayConfig?['showSLNumber']?.visible == true ||
-              displayConfig?['showParticulars']?.visible == true ||
-              displayConfig?['showMRP']?.visible == true ||
-              displayConfig?['showQty']?.visible == true ||
-              displayConfig?['showRate']?.visible == true ||
-              displayConfig?['showTotal']?.visible == true))
+                  displayConfig?['showParticulars']?.visible == true ||
+                  displayConfig?['showMRP']?.visible == true ||
+                  displayConfig?['showQty']?.visible == true ||
+                  displayConfig?['showRate']?.visible == true ||
+                  displayConfig?['showTotal']?.visible == true))
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(vertical: 4),
               child: _buildPdfItemsTable(
@@ -293,18 +293,20 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
 
           // Cart Total Row
           if (!params.isReturnOnly)
-          _buildCartTotalRow(params, summaryStyle, isRtl, arabicFont,
-              arabicFontBold, currency),
+            _buildCartTotalRow(params, summaryStyle, isRtl, arabicFont,
+                arabicFontBold, currency),
 
           pw.SizedBox(height: 3),
 
           // Summary Section
           if (!params.isReturnOnly &&
               (displayConfig?['showItemsCount']?.visible == true ||
-              (displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible) == true ||
-              displayConfig?['showSaved']?.visible == true ||
-              displayConfig?['showDiscount']?.visible == true ||
-              displayConfig?['showNetAmount']?.visible == true))
+                  (displayConfig?['showSubTotal']?.visible ??
+                          displayConfig?['showMRPTotal']?.visible) ==
+                      true ||
+                  displayConfig?['showSaved']?.visible == true ||
+                  displayConfig?['showDiscount']?.visible == true ||
+                  displayConfig?['showNetAmount']?.visible == true))
             pw.Container(
               padding:
                   const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 8),
@@ -383,7 +385,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           // message are rendered in the last-page footer (see `footer:` above)
           // so they never spill onto a second page on their own.
           pw.Container(
-            child: pw.Column(
+              child: pw.Column(
             children: [
               if (displayConfig?['showQRCode']?.visible == true) ...[
                 _buildQrCodeSection(
@@ -427,7 +429,9 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           ],
           if (displayConfig?['showStoreName']?.visible == true)
             pw.Text(
-              ((displayConfig?['showStoreName']?.value as String?)?.isNotEmpty == true
+              ((displayConfig?['showStoreName']?.value as String?)
+                          ?.isNotEmpty ==
+                      true
                   ? displayConfig!['showStoreName']!.value as String
                   : (params.storeName?.isNotEmpty == true
                       ? params.storeName!
@@ -447,13 +451,14 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
                     fontSize: params.selectedPaperSize == 'A5' ? 8.0 : 10.0)),
           if (displayConfig?['showStoreAddress']?.visible == true &&
               (params.storeLocation?.isNotEmpty == true))
-            pw.Text(
-                () {
-                  final addressLabel = (displayConfig?['showStoreAddress']?.value as String?) ?? '';
-                  final addressVal = params.storeLocation!;
-                  return addressLabel.isNotEmpty ? '$addressLabel: $addressVal' : addressVal;
-                }(),
-                style: bodyStyle),
+            pw.Text(() {
+              final addressLabel =
+                  (displayConfig?['showStoreAddress']?.value as String?) ?? '';
+              final addressVal = params.storeLocation!;
+              return addressLabel.isNotEmpty
+                  ? '$addressLabel: $addressVal'
+                  : addressVal;
+            }(), style: bodyStyle),
           if (displayConfig?['showFssaiInfo']?.visible == true &&
               (displayConfig?['showFssaiInfo']?.value as String?)?.isNotEmpty ==
                   true)
@@ -461,17 +466,23 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
                 style: bodyStyle),
           if (displayConfig?['showTel']?.visible == true)
             () {
-              final phoneVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : params.customerCareNumber;
+              final phoneVal = params.storePhone?.isNotEmpty == true
+                  ? params.storePhone!
+                  : params.customerCareNumber;
               if (phoneVal.isEmpty) return pw.SizedBox();
               final label = displayConfig?['showTel']?.value as String? ?? '';
-              return pw.Text(label.isNotEmpty ? '$label: $phoneVal' : phoneVal, style: bodyStyle);
+              return pw.Text(label.isNotEmpty ? '$label: $phoneVal' : phoneVal,
+                  style: bodyStyle);
             }(),
           if (displayConfig?['showEmail']?.visible == true)
             () {
-              final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : params.customerCareEmail;
+              final emailVal = params.storeEmail?.isNotEmpty == true
+                  ? params.storeEmail!
+                  : params.customerCareEmail;
               if (emailVal.isEmpty) return pw.SizedBox();
               final label = displayConfig?['showEmail']?.value as String? ?? '';
-              return pw.Text(label.isNotEmpty ? '$label: $emailVal' : emailVal, style: bodyStyle);
+              return pw.Text(label.isNotEmpty ? '$label: $emailVal' : emailVal,
+                  style: bodyStyle);
             }(),
         ],
       ),
@@ -546,7 +557,8 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
     String? ar;
     try {
       if (item is Map) {
-        final n = item['product_names'] ?? item['productNames'] ?? item['names'];
+        final n =
+            item['product_names'] ?? item['productNames'] ?? item['names'];
         if (n is Map) ar = (n['ar'] ?? n['arabic'])?.toString();
       } else {
         ar = item.names?.ar?.toString();
@@ -641,9 +653,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         double q = double.tryParse(qty) ?? 0.0;
         rate = up.toStringAsFixed(2);
         rateEx = (up - (q > 0 ? tx / q : 0)).toStringAsFixed(2);
-        unit =
-            (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
-                .toString();
+        unit = getPrintUnit(item);
         total = (double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0.0)
             .toStringAsFixed(2);
         tax = tx.toStringAsFixed(2);
@@ -678,10 +688,7 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         double q = double.tryParse(qty) ?? 0.0;
         rate = up.toStringAsFixed(2);
         rateEx = (up - (q > 0 ? tx / q : 0)).toStringAsFixed(2);
-        unit = (m['product_unit'] ??
-                m['unit'] ??
-                (item is OrderDetailsModelDataCartItem ? item.productUnit : ""))
-            .toString();
+        unit = getPrintUnit(item);
         total = (double.tryParse((m['total_price'] ??
                         m['totalPrice'] ??
                         (item is OrderDetailsModelDataCartItem
@@ -761,7 +768,8 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
       ReceiptLayoutParams params,
       bool isRtl) {
     double saved = double.tryParse(params.savedTotal ?? '0') ?? 0;
-    double net = double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0;
+    double net =
+        double.tryParse(params.formattedTotal.replaceAll(',', '')) ?? 0;
     double mrp = saved + net;
     double disc = double.tryParse(params.discountAmount ?? '0') ?? 0;
     double tax = params.totalTax;
@@ -782,12 +790,13 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         (displayConfig?['showTax']?.value as String?)?.isNotEmpty == true
             ? displayConfig!['showTax']!.value as String
             : (isRtl ? 'مبلغ الضريبة:' : 'Tax Amount:');
-    final labelMrp =
-        (displayConfig?['showSubTotal']?.value as String?)?.isNotEmpty == true
-            ? displayConfig!['showSubTotal']!.value as String
-            : (displayConfig?['showMRPTotal']?.value as String?)?.isNotEmpty == true
-                ? displayConfig!['showMRPTotal']!.value as String
-                : (isRtl ? 'إجمالي السعر:' : 'Total MRP:');
+    final labelMrp = (displayConfig?['showSubTotal']?.value as String?)
+                ?.isNotEmpty ==
+            true
+        ? displayConfig!['showSubTotal']!.value as String
+        : (displayConfig?['showMRPTotal']?.value as String?)?.isNotEmpty == true
+            ? displayConfig!['showMRPTotal']!.value as String
+            : (isRtl ? 'إجمالي السعر:' : 'Total MRP:');
     final labelNet =
         (displayConfig?['showNetAmount']?.value as String?)?.isNotEmpty == true
             ? displayConfig!['showNetAmount']!.value as String
@@ -826,7 +835,9 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
         pw.Expanded(
           child: pw.Column(
             children: [
-              if ((displayConfig?['showSubTotal']?.visible ?? displayConfig?['showMRPTotal']?.visible) == true)
+              if ((displayConfig?['showSubTotal']?.visible ??
+                      displayConfig?['showMRPTotal']?.visible) ==
+                  true)
                 _buildLabelValueRow(labelMrp, mrp.toStringAsFixed(2), style,
                     isRtl: isRtl,
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween),
