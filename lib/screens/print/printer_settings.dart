@@ -64,6 +64,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'premium', 'name': 'Premium'},
     {'id': 'premium1', 'name': 'Premium 1'},
     {'id': 'premium2', 'name': 'Premium 2'},
+    {'id': 'premium2_bilingual', 'name': 'Premium 2 Bilingual'},
     {'id': 'supermarket_en', 'name': 'Supermarket En'},
     {'id': 'standard', 'name': 'Standard'},
     {'id': 'arabic_and_english', 'name': 'Arabic&English'},
@@ -188,6 +189,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return 'Premium design with enhanced visual styling';
       case 'premium2':
         return 'Premium design with enhanced visual styling and invoice number in box';
+      case 'premium2_bilingual':
+        return 'Pilot clone of Premium 2 for language-driven bilingual and direction testing';
       case 'standard':
         return 'Clean and minimal receipt layout';
       case 'supermarket':
