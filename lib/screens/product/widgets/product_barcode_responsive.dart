@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_container_box.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
@@ -328,11 +330,13 @@ class ProductBarcodeTwoColumnLayout extends StatelessWidget {
 class ProductBarcodeInfoChip extends StatelessWidget {
   final String label;
   final String value;
+  final bool copyable;
 
   const ProductBarcodeInfoChip({
     super.key,
     required this.label,
     required this.value,
+    this.copyable = false,
   });
 
   @override
@@ -361,16 +365,39 @@ class ProductBarcodeInfoChip extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: buildCustomStyle(
-              FontWeightManager.semiBold,
-              FontSize.s12,
-              0.15,
-              ColorManager.textColor,
-            ),
+          Row(
+            children: [
+              Flexible(
+                child: SelectableText(
+                  value,
+                  style: buildCustomStyle(
+                    FontWeightManager.semiBold,
+                    FontSize.s12,
+                    0.15,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ),
+              if (copyable && value.isNotEmpty && value != 'N/A') ...[
+                const SizedBox(width: 6),
+                Builder(
+                  builder: (context) => GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: value));
+                      showScaffold(
+                        context: context,
+                        message: '$label copied to clipboard',
+                      );
+                    },
+                    child: const Icon(
+                      Icons.copy,
+                      size: 14,
+                      color: Colors.black38,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),

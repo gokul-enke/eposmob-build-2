@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/models/list_receipt.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
@@ -300,9 +302,29 @@ class _ReceiptCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  receipt.receiptNumber,
-                  style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s13, 0.19, ColorManager.textColor),
+                Row(
+                  children: [
+                    Text(
+                      receipt.receiptNumber,
+                      style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s13, 0.19, ColorManager.textColor),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(
+                            ClipboardData(text: receipt.receiptNumber));
+                        showScaffold(
+                          context: context,
+                          message: 'Copied to clipboard',
+                        );
+                      },
+                      child: const Icon(
+                        Icons.copy,
+                        size: 14,
+                        color: Colors.black38,
+                      ),
+                    ),
+                  ],
                 ),
                 _statusChip(receipt.receiptStatus),
               ],
@@ -331,9 +353,29 @@ class _ReceiptCard extends StatelessWidget {
 
             // Payment reference
             if (receipt.paymentReference.isNotEmpty)
-              Text(
-                'Ref: ${receipt.paymentReference}',
-                style: buildCustomStyle(FontWeightManager.regular, FontSize.s11, 0.16, Colors.grey),
+              Row(
+                children: [
+                  Text(
+                    'Ref: ${receipt.paymentReference}',
+                    style: buildCustomStyle(FontWeightManager.regular, FontSize.s11, 0.16, Colors.grey),
+                  ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(
+                          ClipboardData(text: receipt.paymentReference));
+                      showScaffold(
+                        context: context,
+                        message: 'Copied to clipboard',
+                      );
+                    },
+                    child: const Icon(
+                      Icons.copy,
+                      size: 14,
+                      color: Colors.black38,
+                    ),
+                  ),
+                ],
               ),
 
             const SizedBox(height: 8),

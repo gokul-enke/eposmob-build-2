@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/screens/transactions/widgets/supplier_auto_complete_search.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
@@ -275,7 +277,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           [
             CommonDetailsDialog.buildKeyValueRow('Amount', '${transaction.currency} ${transaction.amount}'),
             CommonDetailsDialog.buildKeyValueRow('Tax Amount', transaction.taxAmount ?? 'N/A'),
-            CommonDetailsDialog.buildKeyValueRow('Reference', transaction.reference),
+            CommonDetailsDialog.buildKeyValueRow('Reference', transaction.reference, copyable: true),
             CommonDetailsDialog.buildKeyValueRow('Status', transaction.status),
             CommonDetailsDialog.buildKeyValueRow('Comment', transaction.transactionComment ?? 'N/A'),
           ],
@@ -771,13 +773,73 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ),
       children: [
         _buildTableCell(transaction.siNo.toString()),
-        _buildTableCell(transaction.supplier.user.name),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Center(
+              child: SelectableText(
+                transaction.supplier.user.name,
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s9,
+                  0.13,
+                  Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
         _buildTableCell(DateHelper.formatISODate(transaction.date)),
         Center(child: _buildTypeCell(transaction.type)),
         _buildTableCell(transaction.transactionType),
         _buildTableCell(transaction.paymentMode),
         _buildTableCell('${transaction.currency} ${transaction.amount}'),
-        _buildTableCell(transaction.reference),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                vertical: 12.0, horizontal: 10.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    transaction.reference,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s9,
+                      0.13,
+                      Colors.black,
+                    ),
+                  ),
+                ),
+                if (transaction.reference.isNotEmpty && transaction.reference != 'N/A') ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(
+                          text: transaction.reference));
+                      showScaffold(
+                        context: context,
+                        message: 'Reference copied to clipboard',
+                      );
+                    },
+                    child: const Icon(
+                      Icons.copy,
+                      size: 14,
+                      color: Colors.black38,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
         Center(child: _buildStatusChip(transaction.status)),
         Center(
           child: Padding(
@@ -959,11 +1021,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Text(
+                          child: SelectableText(
                             tx.supplier.user.name,
                             style: buildCustomStyle(FontWeightManager.semiBold,
                                 FontSize.s13, 0.19, ColorManager.textColor),
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         _buildStatusChip(tx.status),
@@ -995,9 +1056,34 @@ class _TransactionScreenState extends State<TransactionScreen> {
                             style: buildCustomStyle(FontWeightManager.regular,
                                 FontSize.s11, 0.16, Colors.grey)),
                         const Spacer(),
-                        Text('Ref: ${tx.reference}',
-                            style: buildCustomStyle(FontWeightManager.regular,
-                                FontSize.s11, 0.16, Colors.grey)),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Ref: ${tx.reference}',
+                              style: buildCustomStyle(FontWeightManager.regular,
+                                  FontSize.s11, 0.16, Colors.grey),
+                            ),
+                            if (tx.reference.isNotEmpty && tx.reference != 'N/A') ...[
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(
+                                      text: tx.reference));
+                                  showScaffold(
+                                    context: context,
+                                    message: 'Reference copied to clipboard',
+                                  );
+                                },
+                                child: const Icon(
+                                  Icons.copy,
+                                  size: 14,
+                                  color: Colors.black38,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),

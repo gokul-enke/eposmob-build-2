@@ -1,6 +1,7 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -482,10 +483,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
             ),
           ),
           Expanded(
-            child: Text(
+            child: SelectableText(
               value,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s14,
@@ -661,6 +660,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   Widget _buildCompactFieldBox({
     required String label,
     required String value,
+    bool copyable = false,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -685,16 +685,41 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: buildCustomStyle(
-              FontWeightManager.bold,
-              FontSize.s12,
-              0.18,
-              ColorManager.textColor,
-            ),
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: buildCustomStyle(
+                    FontWeightManager.bold,
+                    FontSize.s12,
+                    0.18,
+                    ColorManager.textColor,
+                  ),
+                ),
+              ),
+              if (copyable && value.isNotEmpty && value != 'N/A') ...[
+                const SizedBox(width: 6),
+                Builder(
+                  builder: (context) => GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: value));
+                      showScaffold(
+                        context: context,
+                        message: '$label copied to clipboard',
+                      );
+                    },
+                    child: const Icon(
+                      Icons.copy,
+                      size: 14,
+                      color: Colors.black38,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -744,10 +769,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            SelectableText(
                               product.productName ?? 'Unnamed',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
                               style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 FontSize.s14,
@@ -756,16 +779,29 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              '$categoryName · #$serialNumber',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: buildCustomStyle(
-                                FontWeightManager.regular,
-                                FontSize.s11,
-                                0.13,
-                                Colors.black54,
-                              ),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: SelectableText(
+                                    categoryName,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.regular,
+                                      FontSize.s11,
+                                      0.13,
+                                      Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  ' · #$serialNumber',
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s11,
+                                    0.13,
+                                    Colors.black54,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -826,6 +862,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   child: _buildCompactFieldBox(
                     label: 'Barcode',
                     value: product.barcode ?? 'N/A',
+                    copyable: true,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -971,9 +1008,103 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                                 activeColor: ColorManager.kPrimaryColor,
                               ),
                             ),
-                            _buildTableCell(product.productName ?? ''),
-                            _buildTableCell(product.barcode ?? 'N/A'),
-                            _buildTableCell(product.category?.name ?? 'N/A'),
+                            TableCell(
+                              verticalAlignment: TableCellVerticalAlignment.middle,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: SelectableText(
+                                      product.productName ?? '',
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.13,
+                                        Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              verticalAlignment:
+                                  TableCellVerticalAlignment.middle,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          product.barcode ?? 'N/A',
+                                          textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.13,
+                                            Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                      if (product.barcode != null && product.barcode!.isNotEmpty && product.barcode != 'N/A') ...[
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Clipboard.setData(ClipboardData(
+                                                text: product.barcode!));
+                                            showScaffold(
+                                              context: context,
+                                              message: 'Barcode copied to clipboard',
+                                            );
+                                          },
+                                          child: const Icon(
+                                            Icons.copy,
+                                            size: 14,
+                                            color: Colors.black38,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              verticalAlignment: TableCellVerticalAlignment.middle,
+                              child: Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: SelectableText(
+                                      product.category?.name ?? 'N/A',
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.13,
+                                        Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                             _buildTableCell(
                                 product.numberOfProductsAvailable ?? 'N/A'),
                             _buildTableCell(

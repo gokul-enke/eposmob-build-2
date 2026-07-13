@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/models/list_invoice.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dropdown_with_search.dart';
@@ -540,10 +542,33 @@ class _InvoiceCard extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: Text(
-                    invoice.invoiceNumber,
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s14, 0.18, ColorManager.textColor),
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          invoice.invoiceNumber,
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s14, 0.18, ColorManager.textColor),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () {
+                          Clipboard.setData(
+                              ClipboardData(text: invoice.invoiceNumber));
+                          showScaffold(
+                            context: context,
+                            message: 'Invoice number copied to clipboard',
+                          );
+                        },
+                        child: Icon(
+                          Icons.copy,
+                          size: 14,
+                          color: ColorManager.textColor.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 _statusChip(invoice.status),

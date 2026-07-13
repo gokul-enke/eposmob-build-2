@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/components/build_container_box.dart';
@@ -407,10 +409,21 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
-                    '#${(_currentPage - 1) * 10 + index + 1}  ${item.name}',
-                    style: buildCustomStyle(FontWeightManager.semiBold,
-                        FontSize.s13, 0.20, ColorManager.textColor),
+                  child: Row(
+                    children: [
+                      Text(
+                        '#${(_currentPage - 1) * 10 + index + 1}  ',
+                        style: buildCustomStyle(FontWeightManager.semiBold,
+                            FontSize.s13, 0.20, ColorManager.textColor),
+                      ),
+                      Expanded(
+                        child: SelectableText(
+                          item.name,
+                          style: buildCustomStyle(FontWeightManager.semiBold,
+                              FontSize.s13, 0.20, ColorManager.textColor),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 _buildStatusTag(item.status ?? ""),
@@ -420,14 +433,14 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             Row(
               children: [
                 _buildMobileCardStat(
-                    'Category', item.categoryName ?? '-'),
+                    'Category', item.categoryName ?? '-', selectable: true),
                 _buildMobileCardStat('Store', item.store ?? '-'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('Barcode', item.barcode ?? '-'),
+                _buildMobileCardStat('Barcode', item.barcode ?? '-', copyable: true),
                 _buildMobileCardStat('Unit', item.unit ?? '-'),
               ],
             ),
@@ -446,7 +459,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
     );
   }
 
-  Widget _buildMobileCardStat(String label, String value) {
+  Widget _buildMobileCardStat(String label, String value,
+      {bool copyable = false, bool selectable = false}) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,11 +468,40 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
           Text(label,
               style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
                   0.15, Colors.grey)),
-          Text(value,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                  0.18, Colors.black87),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
+          Row(
+            children: [
+              Flexible(
+                child: selectable
+                    ? SelectableText(
+                        value,
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s12, 0.18, Colors.black87),
+                      )
+                    : Text(value,
+                        style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
+                            0.18, Colors.black87),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+              ),
+              if (copyable && value.isNotEmpty && value != '-') ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    showScaffold(
+                      context: context,
+                      message: '$label copied to clipboard',
+                    );
+                  },
+                  child: const Icon(
+                    Icons.copy,
+                    size: 14,
+                    color: Colors.black38,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
@@ -605,10 +648,89 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
       ),
       children: [
         _buildTableCell(((_currentPage - 1) * 10 + index + 1).toString()),
-        _buildTableCell(item.name, textAlign: TextAlign.left),
-        _buildTableCell(item.categoryName ?? "-"),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SelectableText(
+                item.name,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s9,
+                  0.13,
+                  Colors.black87,
+                ),
+              ),
+            ),
+          ),
+        ),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Center(
+              child: SelectableText(
+                item.categoryName ?? "-",
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s9,
+                  0.13,
+                  Colors.black87,
+                ),
+              ),
+            ),
+          ),
+        ),
         _buildTableCell(item.store ?? "-"),
-        _buildTableCell(item.barcode ?? "-"),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      item.barcode ?? "-",
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s9,
+                        0.13,
+                        Colors.black87,
+                      ),
+                    ),
+                  ),
+                  if (item.barcode != null && item.barcode!.isNotEmpty && item.barcode != '-') ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(
+                            text: item.barcode!));
+                        showScaffold(
+                          context: context,
+                          message: 'Barcode copied to clipboard',
+                        );
+                      },
+                      child: const Icon(
+                        Icons.copy,
+                        size: 14,
+                        color: Colors.black38,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
         _buildTableCell(item.totalQuantity?.toString() ?? "0"),
         _buildTableCell(item.reorderLevel?.toString() ?? "0"),
         _buildTableCell(item.unit ?? "-"),

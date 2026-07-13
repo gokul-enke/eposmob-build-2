@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/components/build_title.dart';
@@ -889,22 +891,44 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      q.quotationNumber ?? '—',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s14,
-                        0.20,
-                        ColorManager.textColor,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            q.quotationNumber ?? '—',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.20,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                        ),
+                        if (q.quotationNumber != null && q.quotationNumber!.isNotEmpty && q.quotationNumber != '—') ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(
+                                  text: q.quotationNumber!));
+                              showScaffold(
+                                context: context,
+                                message: 'Quotation number copied to clipboard',
+                              );
+                            },
+                            child: const Icon(
+                              Icons.copy,
+                              size: 14,
+                              color: Colors.black38,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    SelectableText(
                       q.customer ?? '—',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: buildCustomStyle(
                         FontWeightManager.regular,
                         FontSize.s12,
@@ -996,13 +1020,13 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
               border: null,
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               columnWidths: const {
-                0: FlexColumnWidth(1.8),
-                1: FlexColumnWidth(2.0),
-                2: FlexColumnWidth(1.5),
-                3: FlexColumnWidth(1.2),
-                4: FlexColumnWidth(1.2),
-                5: FlexColumnWidth(1.4),
-                6: FlexColumnWidth(1.2),
+                0: FlexColumnWidth(2.0),
+                1: FlexColumnWidth(1.6),
+                2: FlexColumnWidth(1.2),
+                3: FlexColumnWidth(1.0),
+                4: FlexColumnWidth(1.0),
+                5: FlexColumnWidth(1.2),
+                6: FlexColumnWidth(2.0),
               },
               children: [_buildTableHeader()],
             ),
@@ -1015,13 +1039,13 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
                 border: null,
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 columnWidths: const {
-                  0: FlexColumnWidth(1.8),
-                  1: FlexColumnWidth(2.0),
-                  2: FlexColumnWidth(1.5),
-                  3: FlexColumnWidth(1.2),
-                  4: FlexColumnWidth(1.2),
-                  5: FlexColumnWidth(1.4),
-                  6: FlexColumnWidth(1.2),
+                  0: FlexColumnWidth(2.0),
+                  1: FlexColumnWidth(1.6),
+                  2: FlexColumnWidth(1.2),
+                  3: FlexColumnWidth(1.0),
+                  4: FlexColumnWidth(1.0),
+                  5: FlexColumnWidth(1.2),
+                  6: FlexColumnWidth(2.0),
                 },
                 children: provider.quotations.asMap().entries.map((entry) {
                   int idx = entry.key;
@@ -1075,8 +1099,68 @@ class _QuotationsListScreenState extends State<QuotationsListScreen> {
         color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
       ),
       children: [
-        _textCell(q.quotationNumber ?? '—'),
-        _textCell(q.customer ?? '—'),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                vertical: 16.0, horizontal: 12.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    q.quotationNumber ?? '—',
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s10,
+                      0.18,
+                      Colors.black,
+                    ),
+                  ),
+                ),
+                if (q.quotationNumber != null && q.quotationNumber!.isNotEmpty && q.quotationNumber != '—') ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(
+                          text: q.quotationNumber!));
+                      showScaffold(
+                        context: context,
+                        message: 'Quotation number copied to clipboard',
+                      );
+                    },
+                    child: const Icon(
+                      Icons.copy,
+                      size: 14,
+                      color: Colors.black38,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+            child: Center(
+              child: SelectableText(
+                q.customer ?? '—',
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s10,
+                  0.18,
+                  Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
         _textCell(q.store ?? '—'),
         _textCell(
             q.quotationDate != null ? q.quotationDate!.split(' ').first : '—'),

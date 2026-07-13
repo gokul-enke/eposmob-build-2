@@ -329,17 +329,28 @@ class _ConsumedStocksReportScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '#${(currentPage - 1) * 10 + index + 1}  ${item.product ?? "-"}',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s13,
-                  0.20, ColorManager.textColor),
+            Row(
+              children: [
+                Text(
+                  '#${(currentPage - 1) * 10 + index + 1}  ',
+                  style: buildCustomStyle(FontWeightManager.semiBold,
+                      FontSize.s13, 0.20, ColorManager.textColor),
+                ),
+                Expanded(
+                  child: SelectableText(
+                    item.product ?? "-",
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s13, 0.20, ColorManager.textColor),
+                  ),
+                ),
+              ],
             ),
             const Divider(height: 12),
             Row(
               children: [
-                _buildMobileCardStat('Store', item.store ?? '-'),
+                 _buildMobileCardStat('Store', item.store ?? '-', selectable: true),
                 _buildMobileCardStat(
-                    'Withdrawn By', item.withdrawnBy ?? '-'),
+                    'Withdrawn By', item.withdrawnBy ?? '-', selectable: true),
               ],
             ),
             const SizedBox(height: 8),
@@ -363,7 +374,7 @@ class _ConsumedStocksReportScreenState
     );
   }
 
-  Widget _buildMobileCardStat(String label, String value) {
+   Widget _buildMobileCardStat(String label, String value, {bool selectable = false}) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,11 +382,19 @@ class _ConsumedStocksReportScreenState
           Text(label,
               style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
                   0.15, Colors.grey)),
-          Text(value,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                  0.18, Colors.black87),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
+          selectable
+              ? SelectableText(
+                  value,
+                  style: buildCustomStyle(FontWeightManager.medium,
+                      FontSize.s12, 0.18, Colors.black87),
+                )
+              : Text(
+                  value,
+                  style: buildCustomStyle(FontWeightManager.medium,
+                      FontSize.s12, 0.18, Colors.black87),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
         ],
       ),
     );
@@ -549,11 +568,62 @@ class _ConsumedStocksReportScreenState
       ),
       children: [
         _buildTableCell("${index + 1}"),
-        _buildTableCell(item.product ?? ""),
-        _buildTableCell(item.store ?? ""),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
+            child: Center(
+              child: SelectableText(
+                item.product ?? "",
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s9,
+                  0.13,
+                  Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
+            child: Center(
+              child: SelectableText(
+                item.store ?? "",
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s9,
+                  0.13,
+                  Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
         _buildTableCell(item.quantityWithdrawn ?? ""),
         _buildTableCell("${item.newQuantity}"),
-        _buildTableCell(item.withdrawnBy ?? ""),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
+            child: Center(
+              child: SelectableText(
+                item.withdrawnBy ?? "",
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s9,
+                  0.13,
+                  Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
         _buildTableCell(item.createdAt ?? ""),
       ],
     );

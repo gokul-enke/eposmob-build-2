@@ -493,10 +493,8 @@ class QuotationsInfoChip extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
+          SelectableText(
             value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
             style: buildCustomStyle(
               FontWeightManager.semiBold,
               FontSize.s12,
