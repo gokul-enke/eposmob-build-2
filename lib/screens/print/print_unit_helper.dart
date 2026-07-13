@@ -15,6 +15,11 @@ String getPrintUnit(dynamic item) {
         item['product_sale_unit_name'] ??
         item['productSaleUnitName'];
 
+    if (!_hasText(saleUnit)) {
+      saleUnit = _nestedUnitName(item['product_sale_unit']) ??
+          _nestedUnitName(item['sale_unit']);
+    }
+
     if (_hasText(saleUnit)) {
       return saleUnit.toString().trim();
     }
@@ -46,3 +51,8 @@ String getPrintUnit(dynamic item) {
 
 bool _hasText(dynamic value) =>
     value != null && value.toString().trim().isNotEmpty;
+
+dynamic _nestedUnitName(dynamic value) {
+  if (value is! Map) return null;
+  return value['unit_name'] ?? value['unitName'] ?? value['name'];
+}
