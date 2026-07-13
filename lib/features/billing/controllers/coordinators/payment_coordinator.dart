@@ -22,8 +22,7 @@ class PaymentCoordinator {
     final localProductProvider =
         Provider.of<LocalProductProvider>(context, listen: false);
     final bp = Provider.of<BillingProvider>(context, listen: false);
-    final masterData =
-        Provider.of<MasterDataProvider>(context, listen: false);
+    final masterData = Provider.of<MasterDataProvider>(context, listen: false);
 
     _desktopPaymentController.syncPaymentMethodIdsFromModels(
       bp,
@@ -46,6 +45,7 @@ class PaymentCoordinator {
         initialIsUpiSelected: bp.isUpiSelected,
         initialIsCodSelected: bp.isCodSelected,
         initialIsDebitSelected: bp.isDebitSelected,
+        initialToCustomerCreditEnabled: bp.toCustomerCreditEnabled,
         initialCashAmount: autoFillCashAmount,
         initialCardAmount: bp.cardAmountController.text,
         initialUpiAmount: bp.upiAmountController.text,

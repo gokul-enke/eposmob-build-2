@@ -279,7 +279,10 @@ class BillingPageMobileState extends State<BillingPageMobile>
       _setupSettingsSyncListeners();
       if (_isQuotationPage) {
         _controller.clearAutomaticDefaultCustomerForQuotation(context);
-      } else {
+      } else if (accessToken == null || accessToken.isEmpty) {
+        // With a valid token, the fetch completion above applies the default.
+        // Applying it here as well causes duplicate initialization work when
+        // the fetch completes before this first-frame callback.
         _applyDefaultCustomerFromCacheIfNeeded();
       }
       _rehydrateFromProvider();

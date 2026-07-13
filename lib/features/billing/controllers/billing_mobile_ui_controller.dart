@@ -1412,7 +1412,7 @@ class BillingMobilePaymentController {
     if (item.behavior == PaymentBehavior.credit || item.type == 'DEBIT') {
       // Pay-from-credit row conflicts with to-customer-credit amount field.
       if (bp.toCustomerCreditEnabled) return false;
-      return bp.selectedCustomer != null;
+      return true;
     }
     return true;
   }
@@ -1661,8 +1661,19 @@ class BillingMobilePaymentController {
   }
 
   void _finalizePaymentMutation(BillingProvider bp) {
+    bp.markPaymentStepVisited();
     bp.calculateBalance();
-    syncCreditAmountWithRemaining(bp);
+    if (bp.toCustomerCreditEnabled) {
+      syncCreditAmountWithRemaining(bp);
+    } else {
+      final remaining = remainingPayable(bp);
+      if (remaining > 0) {
+        bp.setPaymentMethod('DEBIT', true);
+        bp.debitAmountController.text = remaining.toStringAsFixed(2);
+      } else if (bp.isDebitSelected) {
+        bp.setPaymentMethod('DEBIT', false);
+      }
+    }
     bp.validatePayment();
   }
 
@@ -1835,6 +1846,7 @@ class BillingMobilePaymentController {
       bp.cashAmountController.text = bp.effectiveOrderTotal.toStringAsFixed(2);
       bp.setPristinePaymentState('CASH', bp.cashAmountController.text);
     }
+    bp.markPaymentStepVisited();
     bp.calculateBalance();
   }
 
@@ -2357,8 +2369,9 @@ class BillingMobileCustomerController {
     }
 
     CustomerListModelData? matched;
+    final normalizedDefaultPhone = defaultPhone.trim();
     for (final customer in customers) {
-      if (customer.phone == defaultPhone) {
+      if (customer.phone?.trim() == normalizedDefaultPhone) {
         matched = customer;
         break;
       }

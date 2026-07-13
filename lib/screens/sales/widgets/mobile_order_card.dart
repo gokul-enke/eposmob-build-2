@@ -553,7 +553,9 @@ class MobileOrderCard extends StatelessWidget {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            "$currency ${AmountHelper.formatAmount(priceSummary.grandTotal ?? 0.0)}",
+                            // Keep the mobile amount consistent with the desktop
+                            // table, which displays the order-level grand_total.
+                            "$currency ${AmountHelper.formatAmount(order.grantTotal ?? priceSummary.grandTotal ?? 0.0)}",
                             maxLines: 1,
                             style: buildCustomStyle(
                               FontWeightManager.semiBold,

@@ -17,6 +17,7 @@ import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/print/kot_thermal_printer.dart';
 import 'package:pos_machine/screens/print/kot_standard_printer.dart';
+import 'package:pos_machine/services/printer_permission_service.dart';
 
 /// Kitchen Order Ticket Print Page
 /// Supports both thermal (58mm/80mm) and standard (A4/A5) printing
@@ -238,20 +239,9 @@ class _KotPrintPageState extends State<KotPrintPage> {
   Future<bool> _requestPermissions() async {
     debugPrint(
         '[KotPrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
-    if (Theme.of(context).platform == TargetPlatform.android) {
-      Map<Permission, PermissionStatus> statuses = await [
-        Permission.bluetooth,
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        Permission.location,
-      ].request();
-
-      statuses.forEach((perm, status) {
-        debugPrint(
-            '[KotPrintPage] Permission ${perm.toString()} => ${status.toString()}');
-      });
-
-      final granted = statuses.values.every((status) => status.isGranted);
+    if (Platform.isAndroid) {
+      final granted =
+          await PrinterPermissionService.requestRequiredPermissions();
       debugPrint('[KotPrintPage] All permissions granted: $granted');
       return granted;
     }

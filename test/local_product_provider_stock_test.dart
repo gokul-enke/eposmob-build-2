@@ -159,6 +159,7 @@ void main() {
           'price': 10.0,
           'mrp': 12.0,
           'stock_id': 1,
+          'warranty_enabled': false,
         },
         {
           'product_id': 1,
@@ -166,6 +167,7 @@ void main() {
           'price': 10.0,
           'mrp': 12.0,
           'stock_id': 2,
+          'warranty_enabled': false,
         },
       ],
     );
@@ -244,21 +246,24 @@ void main() {
           'quantity': 2,
           'price': 2.0,
           'mrp': 12.0,
-          'stock_id': 1
+          'stock_id': 1,
+          'warranty_enabled': false,
         },
         {
           'product_id': 1,
           'quantity': 5,
           'price': 2.0,
           'mrp': 12.0,
-          'stock_id': 2
+          'stock_id': 2,
+          'warranty_enabled': false,
         },
         {
           'product_id': 1,
           'quantity': 1,
           'price': 2.0,
           'mrp': 12.0,
-          'stock_id': 3
+          'stock_id': 3,
+          'warranty_enabled': false,
         },
       ],
     );
@@ -445,6 +450,7 @@ void main() {
           'price': 20.0,
           'mrp': 22.0,
           'stock_id': null,
+          'warranty_enabled': false,
         },
       ],
     );
@@ -658,6 +664,7 @@ void main() {
           'price': 10.0,
           'mrp': 12.0,
           'stock_id': 1,
+          'warranty_enabled': false,
         },
         {
           'product_id': 1,
@@ -665,6 +672,7 @@ void main() {
           'price': 10.0,
           'mrp': 12.0,
           'stock_id': 2,
+          'warranty_enabled': false,
         },
       ],
     );
@@ -810,6 +818,7 @@ void main() {
         'mrp': 120.0,
         'stock_id': null,
         'product_variant_id': 101,
+        'warranty_enabled': false,
       },
     ]);
     expect(

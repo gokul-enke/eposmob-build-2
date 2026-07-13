@@ -310,6 +310,7 @@ void main() {
           'stock_id': 1,
           'sale_unit_id': 10,
           'product_sale_unit_id': 10,
+          'warranty_enabled': false,
         },
         {
           'product_id': 1,
@@ -319,6 +320,7 @@ void main() {
           'stock_id': null,
           'sale_unit_id': 10,
           'product_sale_unit_id': 10,
+          'warranty_enabled': false,
         },
       ]);
     });
@@ -349,6 +351,7 @@ void main() {
           'stock_id': 1,
           'sale_unit_id': 10,
           'product_sale_unit_id': 10,
+          'warranty_enabled': false,
         },
       ]);
     });
@@ -380,6 +383,7 @@ void main() {
           'stock_id': 1,
           'sale_unit_id': 10,
           'product_sale_unit_id': 10,
+          'warranty_enabled': false,
         },
         {
           'product_id': 1,
@@ -389,6 +393,7 @@ void main() {
           'stock_id': null,
           'sale_unit_id': 10,
           'product_sale_unit_id': 10,
+          'warranty_enabled': false,
         },
       ]);
     });
@@ -425,6 +430,7 @@ void main() {
           'price': 10.0,
           'mrp': 12.0,
           'stock_id': 1,
+          'warranty_enabled': false,
         },
       ]);
     });
@@ -450,6 +456,7 @@ void main() {
           'price': 10.0,
           'mrp': 12.0,
           'stock_id': null,
+          'warranty_enabled': false,
         },
       ]);
     });
@@ -504,6 +511,7 @@ void main() {
           'stock_id': 1,
           'sale_unit_id': 10,
           'product_sale_unit_id': 10,
+          'warranty_enabled': false,
         },
         {
           'product_id': 1,
@@ -513,6 +521,7 @@ void main() {
           'stock_id': 2,
           'sale_unit_id': 10,
           'product_sale_unit_id': 10,
+          'warranty_enabled': false,
         },
       ]);
     });

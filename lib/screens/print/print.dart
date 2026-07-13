@@ -23,6 +23,7 @@ import 'package:pos_machine/screens/print/standard_layouts/standard_layouts.dart
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/services/printer_permission_service.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
 class PrintPage extends StatefulWidget {
@@ -584,20 +585,9 @@ class _PrintPageState extends State<PrintPage> {
   Future<bool> _requestPermissions() async {
     debugPrint(
         '[PrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
-    if (Theme.of(context).platform == TargetPlatform.android) {
-      Map<Permission, PermissionStatus> statuses = await [
-        Permission.bluetooth,
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        Permission.location,
-      ].request();
-
-      statuses.forEach((perm, status) {
-        debugPrint(
-            '[PrintPage] Permission ${perm.toString()} => ${status.toString()}');
-      });
-
-      final granted = statuses.values.every((status) => status.isGranted);
+    if (Platform.isAndroid) {
+      final granted =
+          await PrinterPermissionService.requestRequiredPermissions();
       debugPrint('[PrintPage] All permissions granted: $granted');
       return granted;
     }
@@ -612,7 +602,7 @@ class _PrintPageState extends State<PrintPage> {
       builder: (context) => AlertDialog(
         title: const Text('Permissions Required'),
         content: const Text(
-            'This app needs Bluetooth and Location permissions to scan for printers.'),
+            'Allow Nearby devices and Location access to scan for printers. On Android 11 and older, Bluetooth scanning appears under Location.'),
         actions: [
           TextButton(
             child: const Text('OK'),

@@ -12,6 +12,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/screens/print/daily_close_thermal_printer.dart';
 import 'package:pos_machine/screens/print/daily_close_standard_printer.dart';
+import 'package:pos_machine/services/printer_permission_service.dart';
 
 /// Daily Close Print Page
 /// Supports thermal (58mm/80mm) and standard (A4/A5) printing for Daily Sales Close Report
@@ -35,7 +36,8 @@ class DailyClosePrintPage extends StatefulWidget {
       final defaultPrinterJson = prefs.getString('default_printer');
 
       if (defaultPrinterJson == null) {
-        debugPrint('[DailyClosePrintPage] No default printer found for auto print');
+        debugPrint(
+            '[DailyClosePrintPage] No default printer found for auto print');
         return false;
       }
 
@@ -128,10 +130,12 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
   Future<void> _checkPermissions() async {
     debugPrint('[DailyClosePrintPage] _checkPermissions() called');
     if (await _requestPermissions()) {
-      debugPrint('[DailyClosePrintPage] Permissions granted. Proceeding to scan.');
+      debugPrint(
+          '[DailyClosePrintPage] Permissions granted. Proceeding to scan.');
       _scan();
     } else {
-      debugPrint('[DailyClosePrintPage] Permissions NOT granted. Showing dialog.');
+      debugPrint(
+          '[DailyClosePrintPage] Permissions NOT granted. Showing dialog.');
       _showPermissionDeniedDialog();
     }
   }
@@ -139,20 +143,9 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
   Future<bool> _requestPermissions() async {
     debugPrint(
         '[DailyClosePrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
-    if (Theme.of(context).platform == TargetPlatform.android) {
-      Map<Permission, PermissionStatus> statuses = await [
-        Permission.bluetooth,
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        Permission.location,
-      ].request();
-
-      statuses.forEach((perm, status) {
-        debugPrint(
-            '[DailyClosePrintPage] Permission ${perm.toString()} => ${status.toString()}');
-      });
-
-      final granted = statuses.values.every((status) => status.isGranted);
+    if (Platform.isAndroid) {
+      final granted =
+          await PrinterPermissionService.requestRequiredPermissions();
       debugPrint('[DailyClosePrintPage] All permissions granted: $granted');
       return granted;
     }
@@ -259,7 +252,7 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     debugPrint(
         '[DailyClosePrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
-    
+
     // Use default_printer (Billing Printer)
     String? printerJson = prefs.getString('default_printer');
 
@@ -289,7 +282,8 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
       setState(() {
         _isLoading = false;
       });
-      debugPrint('[DailyClosePrintPage] No default printer found in SharedPreferences');
+      debugPrint(
+          '[DailyClosePrintPage] No default printer found in SharedPreferences');
     }
   }
 
@@ -380,7 +374,8 @@ class _DailyClosePrintPageState extends State<DailyClosePrintPage> {
     );
   }
 
-  Future<void> _printThermalDailyClose({required bool includeTransactions}) async {
+  Future<void> _printThermalDailyClose(
+      {required bool includeTransactions}) async {
     try {
       final printer = DailyCloseThermalPrinter(context);
 

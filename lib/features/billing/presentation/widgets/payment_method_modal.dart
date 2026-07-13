@@ -26,6 +26,7 @@ class PaymentMethodModal extends StatefulWidget {
   final bool initialIsUpiSelected;
   final bool initialIsCodSelected;
   final bool initialIsDebitSelected;
+  final bool initialToCustomerCreditEnabled;
   final String initialCashAmount;
   final String initialCardAmount;
   final String initialUpiAmount;
@@ -80,6 +81,7 @@ class PaymentMethodModal extends StatefulWidget {
     required this.initialIsUpiSelected,
     this.initialIsCodSelected = false,
     required this.initialIsDebitSelected,
+    this.initialToCustomerCreditEnabled = false,
     required this.initialCashAmount,
     required this.initialCardAmount,
     required this.initialUpiAmount,
@@ -306,16 +308,24 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
 
     transactionNumberController.addListener(_debounceNotifyChanges);
 
-    // If there is an initial debit value (>0), reflect it as To Customer Credit
+    // Restore DEBIT either as a credit sale or as excess allocated to the
+    // customer's credit account. These are separate accounting operations.
     final initDebit = double.tryParse(widget.initialDebitAmount) ?? 0.0;
-    if (initDebit > 0) {
+    if (widget.initialToCustomerCreditEnabled) {
       toCustomerCreditEnabled = true;
-      toCustomerCreditController.text = initDebit.toStringAsFixed(2);
-      // Keep debit selection as provided by parent but ensure consistency in display
+      if (initDebit > 0) {
+        toCustomerCreditController.text = initDebit.toStringAsFixed(2);
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) => _calculateBalance());
+    } else if (widget.initialIsDebitSelected && initDebit > 0) {
+      isCreditSelected = true;
+      creditAmountController.text = initDebit.toStringAsFixed(2);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(_syncCreditAmountWithRemaining);
+      _notifyChanges();
       _focusInitialSelectedPaymentAmount();
     });
     HardwareKeyboard.instance.addHandler(_onPaymentHardwareKey);
@@ -379,7 +389,6 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   List<DesktopPaymentRow> get _desktopRows => _desktopController.modalRows(
         methods: _enabledMethods,
         toCustomerCreditEnabled: toCustomerCreditEnabled,
-        hasSelectedCustomer: !widget.isDefaultCustomer,
         isSelected: _isCodeSelected,
         controllerFor: _controllerForCode,
         focusNodeFor: _focusNodeForCode,
@@ -539,6 +548,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
       upiAmount: isUpiSelected ? upiAmountController.text : '',
       codAmount: isCodSelected ? codAmountController.text : '',
       extraAmounts: _buildExtraAmountsMap(),
+      isCreditSelected: isCreditSelected,
+      creditAmount: isCreditSelected ? creditAmountController.text : '',
     );
   }
 
@@ -827,7 +838,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     return true;
   }
 
-  void _recordPristineIfFullTotal(String methodKey, TextEditingController controller) {
+  void _recordPristineIfFullTotal(
+      String methodKey, TextEditingController controller) {
     if (_isFullCartTotal(controller.text)) {
       _pristineMethod = methodKey;
       _pristineAmount = controller.text;
@@ -837,8 +849,11 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   /// All collected-payment slots that are currently selected (typed + extra).
   List<({String key, TextEditingController controller, FocusNode? focusNode})>
       _listActiveCollectedMethodEntries() {
-    final entries =
-        <({String key, TextEditingController controller, FocusNode? focusNode})>[];
+    final entries = <({
+      String key,
+      TextEditingController controller,
+      FocusNode? focusNode
+    })>[];
 
     if (isCashSelected) {
       entries.add((
@@ -1295,6 +1310,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     _syncCreditAmountWithRemaining();
     _debounceNotifyChanges();
   }
+
   /// CASH/CARD/UPI/COD so switching methods moves the full total cleanly.
   void _toggleExtraMethod(String methodId) {
     final controller = _extraControllers[methodId];
@@ -1349,15 +1365,17 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
   }
 
   void _syncCreditAmountWithRemaining() {
-    if (!isCreditSelected) {
+    if (toCustomerCreditEnabled) {
       return;
     }
 
     final remainingAmount = widget.cartTotal - _getTotalCollectedAmount();
 
     if (remainingAmount > 0) {
+      isCreditSelected = true;
       creditAmountController.text = remainingAmount.toStringAsFixed(2);
     } else {
+      isCreditSelected = false;
       creditAmountController.clear();
     }
   }
@@ -1589,21 +1607,20 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       )
                     else ...[
                       Padding(
-                        padding: EdgeInsets.only(
-                            bottom: isDenseEmbedded ? 10 : 14),
+                        padding:
+                            EdgeInsets.only(bottom: isDenseEmbedded ? 10 : 14),
                         child: Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
                             OutlinedButton.icon(
-                              icon: const Icon(Icons.payments_outlined,
-                                  size: 16),
+                              icon:
+                                  const Icon(Icons.payments_outlined, size: 16),
                               label: Text('billing.exact_cash'.tr),
                               onPressed: _fillExactCash,
                             ),
                             OutlinedButton.icon(
-                              icon:
-                                  const Icon(Icons.clear_all, size: 16),
+                              icon: const Icon(Icons.clear_all, size: 16),
                               label: Text('billing.clear_payments'.tr),
                               onPressed: _clearAllCollectedPayments,
                             ),
@@ -1655,8 +1672,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                               size: size,
                               width: double.infinity,
                               height: size.height * .06,
-                              hintText:
-                                  'Enter transaction reference number',
+                              hintText: 'Enter transaction reference number',
                               onTap: () {
                                 Provider.of<KeyboardProvider>(context,
                                         listen: false)
@@ -1701,8 +1717,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   ),
 
                   BuildPaymentRow(
-                    amount:
-                        '$currency ${widget.cartTotal.toStringAsFixed(2)}',
+                    amount: '$currency ${widget.cartTotal.toStringAsFixed(2)}',
                     title: 'billing.purchase_total'.tr,
                     secondRowTextStyle: buildCustomStyle(
                       FontWeightManager.medium,
@@ -1722,8 +1737,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                   // Only show customer previous balance if NOT default customer
                   if (!widget.isDefaultCustomer)
                     BuildPaymentRow(
-                      amount: _formatSignedWithCurrency(
-                          widget.customerPrevBalance),
+                      amount:
+                          _formatSignedWithCurrency(widget.customerPrevBalance),
                       title: 'billing.customer_prev_balance'.tr,
                       secondRowTextStyle: buildCustomStyle(
                         FontWeightManager.medium,
@@ -1783,8 +1798,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           activeColor: ColorManager.kPrimaryColor,
                           onChanged: (value) {
                             setState(() {
-                              debugPrint(
-                                  '=== TOGGLE TO CUSTOMER CREDIT ===');
+                              debugPrint('=== TOGGLE TO CUSTOMER CREDIT ===');
                               debugPrint('Toggle value changed to: $value');
 
                               toCustomerCreditEnabled = value;
@@ -1857,8 +1871,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         hintText: 'Enter amount to add as customer credit',
                         focusNode: toCustomerCreditFocusNode,
                         onTap: () {
-                          Provider.of<KeyboardProvider>(context,
-                                  listen: false)
+                          Provider.of<KeyboardProvider>(context, listen: false)
                               .show(
                             'number',
                             toCustomerCreditController,
@@ -1922,8 +1935,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                           Navigator.of(context).pop();
                         } else {
                           if (widget.onAfterApply != null) {
-                            Future.delayed(
-                                const Duration(milliseconds: 100), () {
+                            Future.delayed(const Duration(milliseconds: 100),
+                                () {
                               widget.onAfterApply!();
                             });
                           }
@@ -1939,8 +1952,7 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                       width: double.infinity,
                       isLoading: _isApplying,
                       boxColor: _isApplying ? Colors.grey.shade400 : null,
-                      borderColor:
-                          _isApplying ? Colors.grey.shade400 : null,
+                      borderColor: _isApplying ? Colors.grey.shade400 : null,
                     ),
                 ],
               );
@@ -2102,7 +2114,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
     final isDenseEmbedded =
         widget.fullWidth && (size.width <= 1100 || size.height <= 800);
     final isMobilePayment = MediaQuery.of(context).size.width < 600;
-    final cardWidth = isMobilePayment ? 90.0 : (isDenseEmbedded ? 118.0 : 132.0);
+    final cardWidth =
+        isMobilePayment ? 90.0 : (isDenseEmbedded ? 118.0 : 132.0);
 
     return Row(
       children: [
@@ -2170,7 +2183,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
           ),
         ),
 
-        SizedBox(width: isMobilePayment ? 6.0 : (isDenseEmbedded ? 10.0 : 15.0)),
+        SizedBox(
+            width: isMobilePayment ? 6.0 : (isDenseEmbedded ? 10.0 : 15.0)),
 
         // Amount input field - always visible
         Expanded(
@@ -2193,7 +2207,8 @@ class _PaymentMethodModalState extends State<PaymentMethodModal> {
                         setState(() {
                           final extraId = _extraMethodIdFromKey(type);
                           if (extraId != null) {
-                            final wasSelected = _extraSelected[extraId] ?? false;
+                            final wasSelected =
+                                _extraSelected[extraId] ?? false;
                             _extraSelected[extraId] = true;
                             final didSwitch = !wasSelected &&
                                 _applyPristineSwitch(type, controller);

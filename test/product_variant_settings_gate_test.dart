@@ -35,15 +35,16 @@ void main() {
       expect(settings.productVariantEnabled, isFalse);
     });
 
-    test('defaults to TRUE when the setting is absent', () {
+    test('defaults to FALSE when the setting is absent', () {
       final settings = AppSettings.fromJson(_settingsJson([
         {'code': 'BARCODE_SALES', 'value': '', 'status': 'true'},
       ]));
-      // Absent setting must NOT silently disable existing variant behavior.
-      expect(settings.productVariantEnabled, isTrue);
+      // Fail closed: variants stay off unless the tenant explicitly enables
+      // the PRODUCT_VARIANT_ENABLED setting.
+      expect(settings.productVariantEnabled, isFalse);
     });
 
-    test('default constructor value is TRUE', () {
+    test('default constructor value is FALSE', () {
       final settings = AppSettings(
         barcodeSales: false,
         customerCarePhone: '',
@@ -78,7 +79,7 @@ void main() {
         kotBillAutoMarkServed: false,
         kotBillAllowedForDineIn: false,
       );
-      expect(settings.productVariantEnabled, isTrue);
+      expect(settings.productVariantEnabled, isFalse);
     });
   });
 

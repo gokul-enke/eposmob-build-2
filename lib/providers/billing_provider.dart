@@ -1515,6 +1515,8 @@ class BillingProvider extends ChangeNotifier {
       upiAmount: upiAmountController.text,
       codAmount: codAmountController.text,
       extraAmounts: _extraPaymentAmounts,
+      isCreditSelected: _isDebitSelected && !_toCustomerCreditEnabled,
+      creditAmount: debitAmountController.text,
     );
 
     _paymentValidationError = result.message;

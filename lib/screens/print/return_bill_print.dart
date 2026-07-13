@@ -16,6 +16,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/screens/print/return_bill_print_thermal.dart';
 import 'package:pos_machine/screens/print/return_bill_print_standard.dart';
 import 'package:pos_machine/models/order_details.dart';
+import 'package:pos_machine/services/printer_permission_service.dart';
 
 class ReturnBillPrintPage extends StatefulWidget {
   final List<OrderReturnItem> returnItems;
@@ -100,10 +101,12 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
   Future<void> _checkPermissions() async {
     debugPrint('[ReturnBillPrintPage] _checkPermissions() called');
     if (await _requestPermissions()) {
-      debugPrint('[ReturnBillPrintPage] Permissions granted. Proceeding to scan.');
+      debugPrint(
+          '[ReturnBillPrintPage] Permissions granted. Proceeding to scan.');
       _scan();
     } else {
-      debugPrint('[ReturnBillPrintPage] Permissions NOT granted. Showing dialog.');
+      debugPrint(
+          '[ReturnBillPrintPage] Permissions NOT granted. Showing dialog.');
       _showPermissionDeniedDialog();
     }
   }
@@ -111,20 +114,9 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
   Future<bool> _requestPermissions() async {
     debugPrint(
         '[ReturnBillPrintPage] _requestPermissions() platform(os)=${Platform.operatingSystem} theme=${Theme.of(context).platform}');
-    if (Theme.of(context).platform == TargetPlatform.android) {
-      Map<Permission, PermissionStatus> statuses = await [
-        Permission.bluetooth,
-        Permission.bluetoothScan,
-        Permission.bluetoothConnect,
-        Permission.location,
-      ].request();
-
-      statuses.forEach((perm, status) {
-        debugPrint(
-            '[ReturnBillPrintPage] Permission ${perm.toString()} => ${status.toString()}');
-      });
-
-      final granted = statuses.values.every((status) => status.isGranted);
+    if (Platform.isAndroid) {
+      final granted =
+          await PrinterPermissionService.requestRequiredPermissions();
       debugPrint('[ReturnBillPrintPage] All permissions granted: $granted');
       return granted;
     }
@@ -170,7 +162,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
     try {
       // Bluetooth discovery only on mobile platforms
       if (Platform.isAndroid || Platform.isIOS) {
-        debugPrint('[ReturnBillPrintPage] Beginning Bluetooth discovery (isBle=false)');
+        debugPrint(
+            '[ReturnBillPrintPage] Beginning Bluetooth discovery (isBle=false)');
         _subscription = printerManager
             .discovery(type: PrinterType.bluetooth, isBle: false)
             .listen((device) {
@@ -221,7 +214,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       setState(() {
         _isScanning = false;
       });
-      debugPrint('[ReturnBillPrintPage] Scan finished. devices.length=${devices.length}');
+      debugPrint(
+          '[ReturnBillPrintPage] Scan finished. devices.length=${devices.length}');
     }
   }
 
@@ -262,7 +256,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       setState(() {
         _isLoading = false;
       });
-      debugPrint('[ReturnBillPrintPage] No default printer found in SharedPreferences');
+      debugPrint(
+          '[ReturnBillPrintPage] No default printer found in SharedPreferences');
     }
   }
 
@@ -300,9 +295,11 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
       final docConfigProvider =
           Provider.of<DocumentConfigProvider>(context, listen: false);
 
-      debugPrint("Loading Return Bill document configurations from provider...");
-      
-      _returnBillDocumentConfig = docConfigProvider.getDocumentConfig("Return Bill");
+      debugPrint(
+          "Loading Return Bill document configurations from provider...");
+
+      _returnBillDocumentConfig =
+          docConfigProvider.getDocumentConfig("Return Bill");
 
       if (_returnBillDocumentConfig == null) {
         debugPrint(
@@ -311,13 +308,13 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
         if (accessToken != null) {
-          
           debugPrint("Fetching document configurations from API...");
           await _loadDocumentConfigurations(accessToken);
           return;
         }
       } else {
-        debugPrint("SUCCESS: Return Bill document configuration loaded from provider");
+        debugPrint(
+            "SUCCESS: Return Bill document configuration loaded from provider");
       }
 
       setState(() {
@@ -340,10 +337,12 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
           accessToken: accessToken);
 
       debugPrint("Loading 'Return Bill' configuration from API...");
-      _returnBillDocumentConfig = docConfigProvider.getDocumentConfig("Return Bill");
+      _returnBillDocumentConfig =
+          docConfigProvider.getDocumentConfig("Return Bill");
 
       if (_returnBillDocumentConfig != null) {
-        debugPrint("SUCCESS: Return Bill document configuration loaded from API");
+        debugPrint(
+            "SUCCESS: Return Bill document configuration loaded from API");
       } else {
         debugPrint(
             "ERROR: Return Bill document configuration still null after API fetch");
@@ -537,8 +536,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         filled: true,
                         fillColor: Colors.white,
                       ),
@@ -728,7 +727,8 @@ class _ReturnBillPrintPageState extends State<ReturnBillPrintPage> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    Icon(Icons.info_outline,
+                        color: Colors.orange[700], size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
