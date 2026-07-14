@@ -25,8 +25,7 @@ class PaymentHelper {
       final Map<String, dynamic> data = json.decode(paymentMethod);
       if (data['isMultiPayment'] != true) return null;
 
-      final List<String> methods =
-          List<String>.from(data['methods'] ?? []);
+      final List<String> methods = List<String>.from(data['methods'] ?? []);
       final Map<String, dynamic> amounts =
           Map<String, dynamic>.from(data['amounts'] ?? {});
 
@@ -134,8 +133,8 @@ class PaymentHelper {
     };
 
     return normalized
-        .where((payment) =>
-            ((payment['amount'] as num?)?.toDouble() ?? 0.0) > 0)
+        .where(
+            (payment) => ((payment['amount'] as num?)?.toDouble() ?? 0.0) > 0)
         .toList();
   }
 
@@ -299,6 +298,7 @@ class PaymentHelper {
       }
       // DEBIT is always stored as the literal string "DEBIT"
       map['DEBIT'] = 'DEBIT';
+      map['CREDIT'] = 'DEBIT';
       map['ONLINE'] = 'ONLINE';
     } catch (_) {
       // BillingProvider may not be available in all contexts
@@ -309,6 +309,7 @@ class PaymentHelper {
   static Map<String, String> _buildNameToIdMap(BuildContext context) {
     final map = <String, String>{
       'DEBIT': 'DEBIT',
+      'CREDIT': 'DEBIT',
       'BALANCE': 'DEBIT',
       'ONLINE': 'ONLINE',
     };
@@ -327,7 +328,8 @@ class PaymentHelper {
     return map;
   }
 
-  static String _normalizeMethodIdForApi(BuildContext context, String? rawMethod) {
+  static String _normalizeMethodIdForApi(
+      BuildContext context, String? rawMethod) {
     if (rawMethod == null) return '';
     final method = rawMethod.trim();
     if (method.isEmpty) return '';
@@ -339,6 +341,6 @@ class PaymentHelper {
 
   static bool _isCreditOnlyMethod(String methodId) {
     final upper = methodId.trim().toUpperCase();
-    return upper == 'DEBIT' || upper == 'BALANCE';
+    return upper == 'DEBIT' || upper == 'CREDIT' || upper == 'BALANCE';
   }
 }

@@ -192,10 +192,11 @@ class BillingMobileController {
               billingProvider.setPaymentMethod('UPI', true);
               billingProvider.upiAmountController.text = firstAmount(['UPI']);
             }
-            if (hasMethodOrAmount(['DEBIT'])) {
+            if (hasMethodOrAmount(['DEBIT', 'CREDIT'])) {
               billingProvider.setPaymentMethod('DEBIT', true);
-              billingProvider.debitAmountController.text =
-                  (amounts['DEBIT'] ?? '0').toString();
+              billingProvider.debitAmountController.text = firstAmount(
+                ['DEBIT', 'CREDIT'],
+              );
             }
             final cashId = billingProvider.cashPaymentMethodId ?? 'CASH';
             final cardId = billingProvider.cardPaymentMethodId ?? 'CARD';
@@ -259,6 +260,7 @@ class BillingMobileController {
             billingProvider.upiAmountController.text = paid;
             break;
           case 'DEBIT':
+          case 'CREDIT':
             billingProvider.setPaymentMethod('DEBIT', true);
             billingProvider.debitAmountController.text = paid;
             break;
@@ -719,8 +721,7 @@ class BillingMobileController {
 
   bool hasSelectedPayment(BuildContext context) =>
       Provider.of<BillingProvider>(context, listen: false)
-          .getSelectedPaymentMethodsExcludingEmpty()
-          .isNotEmpty;
+          .hasAnyPaymentSelected();
 
   /// Prepares default customer, payment, and delivery for direct confirm/save & print
   /// when [AppSettings.skipCheckoutOnConfirmAndPrint] is enabled.

@@ -347,7 +347,8 @@ void main() {
       expect(bp.debitAmountController.text, '65.00');
     });
 
-    test('CHEQUE dynamic method contributes to collected total and paid methods',
+    test(
+        'CHEQUE dynamic method contributes to collected total and paid methods',
         () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(200);
@@ -361,7 +362,8 @@ void main() {
 
       final paidMethods = bp.getPaidMethods();
       expect(
-        paidMethods.any((entry) => entry['method'] == '99' && entry['amount'] == 75),
+        paidMethods
+            .any((entry) => entry['method'] == '99' && entry['amount'] == 75),
         isTrue,
       );
       expect(bp.getSelectedPaymentMethodsForApi(), contains('99'));
@@ -385,6 +387,25 @@ void main() {
       expect(dynamicItems.single.name, 'Cheque');
     });
 
+    test('CREDIT backend code uses the core credit-sale state', () {
+      final bp = BillingProvider();
+      bp.setTotalOrderAmount(100);
+      final creditMethod = PaymentMethod.fromMasterDataValue(
+        MasterDataValue(id: 5, value: 'CREDIT', description: 'Credit'),
+      );
+
+      final item = controller.paymentItems(bp, [creditMethod]).single;
+      expect(item.isDynamic, isFalse);
+      expect(item.behavior, PaymentBehavior.credit);
+      expect(item.controller, same(bp.debitAmountController));
+
+      controller.toggleMethod('CREDIT', bp);
+
+      expect(bp.isDebitSelected, isTrue);
+      expect(bp.debitAmountController.text, '100.00');
+      expect(bp.validatePayment(), isTrue);
+    });
+
     test('remainingPayable subtracts dynamic method amounts', () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(150);
@@ -393,7 +414,8 @@ void main() {
       expect(controller.remainingPayable(bp), 110);
     });
 
-    test('remapPaymentsAfterDiscountChange adjusts single full cash payment', () {
+    test('remapPaymentsAfterDiscountChange adjusts single full cash payment',
+        () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(100);
       bp.cashAmountController.text = '100.00';
@@ -762,7 +784,8 @@ void main() {
       expect(billingProvider.isCustomerManuallySelected, isTrue);
     });
 
-    test('defaultSalesExecutivePhoneCustomer mirrors read-only phone field', () {
+    test('defaultSalesExecutivePhoneCustomer mirrors read-only phone field',
+        () {
       final selectionProvider = CustomerSelectionProvider();
       final billingProvider = BillingProvider()
         ..setSalesExecutiveMobileNumberText('5555')
@@ -786,7 +809,8 @@ void main() {
       );
     });
 
-    test('applyDefaultCustomerFromCacheIfNeeded assigns matched default customer',
+    test(
+        'applyDefaultCustomerFromCacheIfNeeded assigns matched default customer',
         () {
       final localProvider = LocalProductProvider();
       final billingProvider = BillingProvider();
@@ -827,7 +851,8 @@ void main() {
       expect(cartProvider.fetchedCustomerId, 2);
     });
 
-    test('applyDefaultCustomerFromCacheIfNeeded fills phone when no match exists',
+    test(
+        'applyDefaultCustomerFromCacheIfNeeded fills phone when no match exists',
         () {
       final billingProvider = BillingProvider();
       final selectionProvider = CustomerSelectionProvider();
@@ -889,7 +914,8 @@ void main() {
       );
     });
 
-    test('shouldShowCustomerBalance hides default and sales-executive phones', () {
+    test('shouldShowCustomerBalance hides default and sales-executive phones',
+        () {
       final selectionProvider = CustomerSelectionProvider();
       final defaultCustomer = CustomerListModelData(
         id: 1,

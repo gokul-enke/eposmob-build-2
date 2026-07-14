@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/providers/billing_provider.dart';
@@ -17,7 +18,8 @@ void main() {
 
   final controller = BillingMobileController();
 
-  SavedOrder orderWith(String? paymentMethod, {String? paidAmount}) => SavedOrder(
+  SavedOrder orderWith(String? paymentMethod, {String? paidAmount}) =>
+      SavedOrder(
         id: 'o1',
         orderNumber: '1',
         items: const [],
@@ -82,6 +84,32 @@ void main() {
     expect(bp.isCashSelected, isFalse);
     expect(bp.isCardSelected, isFalse);
     expect(bp.isOnlineSelected, isFalse);
+  });
+
+  testWidgets('payment gate accepts zero cash with the full amount on credit',
+      (tester) async {
+    final bp = BillingProvider();
+    bp.setTotalOrderAmount(100);
+    bp.setPaymentMethod('CASH', true);
+    bp.cashAmountController.text = '0';
+    bp.setPaymentMethod('DEBIT', true);
+    bp.debitAmountController.text = '100';
+
+    late BuildContext providerContext;
+    await tester.pumpWidget(
+      ChangeNotifierProvider<BillingProvider>.value(
+        value: bp,
+        child: Builder(
+          builder: (context) {
+            providerContext = context;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(controller.hasSelectedPayment(providerContext), isTrue);
+    expect(bp.validatePayment(), isTrue);
   });
 
   test('restoreOrderDetails rehydrates delivery date and time', () {

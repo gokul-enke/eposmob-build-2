@@ -1225,6 +1225,7 @@ class BillingMobilePaymentController {
     'UPI',
     'COD',
     'DEBIT',
+    'CREDIT',
     'ONLINE',
   };
 
@@ -1543,6 +1544,7 @@ class BillingMobilePaymentController {
       case 'COD':
         return bp.isCodSelected;
       case 'DEBIT':
+      case 'CREDIT':
         return bp.isDebitSelected;
       default:
         if (methodKey.startsWith('extra_')) {
@@ -1589,7 +1591,7 @@ class BillingMobilePaymentController {
     BillingProvider bp,
     TextEditingController targetController,
   ) {
-    if (newMethodKey == 'DEBIT' || newMethodKey == 'credit') return false;
+    if (newMethodKey == 'DEBIT' || newMethodKey == 'CREDIT') return false;
     final pristineKey = bp.pristinePaymentMethodKey;
     if (pristineKey == null || pristineKey == newMethodKey) return false;
 
@@ -1938,6 +1940,7 @@ class BillingMobilePaymentController {
       case 'COD':
         return bp.isCodSelected;
       case 'DEBIT':
+      case 'CREDIT':
         return bp.isDebitSelected;
       default:
         return false;
@@ -1955,6 +1958,7 @@ class BillingMobilePaymentController {
       case 'COD':
         return bp.codAmountController;
       case 'DEBIT':
+      case 'CREDIT':
         return bp.debitAmountController;
       default:
         return null;

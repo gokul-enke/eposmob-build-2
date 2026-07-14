@@ -1041,6 +1041,7 @@ class BillingProvider extends ChangeNotifier {
         if (!selected) codAmountController.clear();
         break;
       case 'DEBIT':
+      case 'CREDIT':
         _isDebitSelected = selected;
         if (!selected) debitAmountController.clear();
         break;
@@ -1090,6 +1091,7 @@ class BillingProvider extends ChangeNotifier {
         c == 'UPI' ||
         c == 'COD' ||
         c == 'DEBIT' ||
+        c == 'CREDIT' ||
         c == 'ONLINE';
   }
 
@@ -1111,6 +1113,7 @@ class BillingProvider extends ChangeNotifier {
       case 'COD':
         return codAmountController;
       case 'DEBIT':
+      case 'CREDIT':
         return debitAmountController;
       default:
         return getExtraAmountController(
@@ -1132,6 +1135,7 @@ class BillingProvider extends ChangeNotifier {
       case 'COD':
         return _isCodSelected;
       case 'DEBIT':
+      case 'CREDIT':
         return _isDebitSelected;
       case 'ONLINE':
         return _isOnlineSelected;
@@ -1366,6 +1370,7 @@ class BillingProvider extends ChangeNotifier {
       'COD',
       codId,
       'DEBIT',
+      'CREDIT',
       'BALANCE',
       'ONLINE',
     };
@@ -1915,7 +1920,8 @@ class BillingProvider extends ChangeNotifier {
             _isCardSelected = methods.contains('CARD');
             _isUpiSelected = methods.contains('UPI');
             _isCodSelected = methods.contains('COD');
-            _isDebitSelected = methods.contains('DEBIT');
+            _isDebitSelected =
+                methods.contains('DEBIT') || methods.contains('CREDIT');
             _isOnlineSelected = methods.contains('ONLINE');
 
             if (_isCashSelected) {
@@ -1931,7 +1937,8 @@ class BillingProvider extends ChangeNotifier {
               codAmountController.text = (amounts['COD'] ?? '0').toString();
             }
             if (_isDebitSelected) {
-              debitAmountController.text = (amounts['DEBIT'] ?? '0').toString();
+              debitAmountController.text =
+                  (amounts['DEBIT'] ?? amounts['CREDIT'] ?? '0').toString();
             }
 
             bool hasMethodOrAmount(List<String> candidates) {
@@ -2039,6 +2046,7 @@ class BillingProvider extends ChangeNotifier {
               codAmountController.text = paidText;
               break;
             case 'DEBIT':
+            case 'CREDIT':
               debitAmountController.text = paidText;
               break;
             case 'ONLINE':
