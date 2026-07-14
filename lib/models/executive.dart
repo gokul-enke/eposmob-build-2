@@ -112,6 +112,7 @@ class Store {
   final int? districtId;
   final int? pincodeId;
   final int? localLocationId;
+  final String? storeOpenTime;
 
   Store({
     this.storeId,
@@ -124,6 +125,7 @@ class Store {
     this.districtId,
     this.pincodeId,
     this.localLocationId,
+    this.storeOpenTime,
   });
 
   factory Store.fromJson(Map<String, dynamic> json) => Store(
@@ -137,6 +139,7 @@ class Store {
         districtId: json["district_id"],
         pincodeId: json["pincode_id"],
         localLocationId: json["local_location_id"] ?? json["location_id"],
+        storeOpenTime: json["store_open_time"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -150,5 +153,6 @@ class Store {
         "district_id": districtId,
         "pincode_id": pincodeId,
         "local_location_id": localLocationId,
+        "store_open_time": storeOpenTime,
       };
 }

@@ -2111,54 +2111,54 @@ Powered by CloudPOS''',
                                       height: 55,
                                       child: _buildTableCell("$serialNumber"),
                                     ),
-                                    SizedBox(
-                                       height: 55,
-                                       child: TableCell(
-                                         verticalAlignment:
-                                             TableCellVerticalAlignment.middle,
-                                         child: Padding(
-                                           padding: const EdgeInsets.all(8.0),
-                                           child: Row(
-                                             mainAxisAlignment:
-                                                 MainAxisAlignment.center,
-                                             children: [
-                                               Text(
-                                                 "#${order.orderNumber}",
-                                                 textAlign: TextAlign.center,
-                                                 style: buildCustomStyle(
-                                                   FontWeightManager.medium,
-                                                   FontSize.s9,
-                                                   0.13,
-                                                   Colors.black,
-                                                 ),
-                                               ),
-                                               if (order.orderNumber != null &&
-                                                   order.orderNumber!
-                                                       .isNotEmpty) ...[
-                                                 const SizedBox(width: 6),
-                                                 GestureDetector(
-                                                   onTap: () {
-                                                     Clipboard.setData(
-                                                         ClipboardData(
-                                                             text: order.orderNumber!));
-                                                     showScaffold(
-                                                       context: context,
-                                                       message:
-                                                           'Order number copied to clipboard',
-                                                     );
-                                                   },
-                                                   child: const Icon(
-                                                     Icons.copy,
-                                                     size: 14,
-                                                     color: Colors.black38,
-                                                   ),
-                                                 ),
-                                               ],
-                                             ],
-                                           ),
-                                         ),
-                                       ),
-                                     ),
+                                    TableCell(
+                                      verticalAlignment:
+                                          TableCellVerticalAlignment.middle,
+                                      child: SizedBox(
+                                        height: 55,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                "#${order.orderNumber}",
+                                                textAlign: TextAlign.center,
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.medium,
+                                                  FontSize.s9,
+                                                  0.13,
+                                                  Colors.black,
+                                                ),
+                                              ),
+                                              if (order.orderNumber != null &&
+                                                  order.orderNumber!
+                                                      .isNotEmpty) ...[
+                                                const SizedBox(width: 6),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    Clipboard.setData(
+                                                        ClipboardData(
+                                                            text: order.orderNumber!));
+                                                    showScaffold(
+                                                      context: context,
+                                                      message:
+                                                          'Order number copied to clipboard',
+                                                    );
+                                                  },
+                                                  child: const Icon(
+                                                    Icons.copy,
+                                                    size: 14,
+                                                    color: Colors.black38,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                     SizedBox(
                                        height: 55,
                                        child: Padding(

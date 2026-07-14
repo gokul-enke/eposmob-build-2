@@ -20,6 +20,7 @@ import 'package:pos_machine/models/list_invoice.dart';
 import 'package:provider/provider.dart';
 
 Future<dynamic> showCreateReceiptModal(BuildContext context, Size size) {
+  final isMobile = size.width < 768;
   return showDialog(
     context: context,
     barrierDismissible: true,
@@ -30,7 +31,7 @@ Future<dynamic> showCreateReceiptModal(BuildContext context, Size size) {
         ),
         backgroundColor: Colors.transparent,
         child: Container(
-          width: size.width * 0.7, // Increased modal width from 60% to 70%
+          width: isMobile ? size.width * 0.98 : size.width * 0.7,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -1139,6 +1140,186 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
   @override
   Widget build(BuildContext context) {
     Get.put(SideBarController());
+    final isMobile = MediaQuery.of(context).size.width < 768;
+
+    final customerColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel("Customer", isRequired: true),
+        const SizedBox(height: 4),
+        CustomDropDownWithSearch<String>(
+          hintText: _isLoadingCustomers
+              ? "Loading customers..."
+              : "Select a customer",
+          title: "",
+          value: _selectedCustomer,
+          items: _customerList
+              .map((customer) => customer.id.toString())
+              .toList(),
+          focusNode: _customerFocus,
+          onChanged: (value) {
+            // Check if there are existing items and customer is changing
+            if (_receiptItemCards.isNotEmpty &&
+                value != _selectedCustomer) {
+              // Show confirmation dialog
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: Colors.white,
+                  title: const Text('Change Customer?'),
+                  content: const Text(
+                    'Changing the customer will clear all added items. Do you want to continue?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _resetItemsAndChangeCustomer(value);
+                      },
+                      child: const Text('Continue'),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              setState(() {
+                _selectedCustomer = value;
+                // Also reset the new item card's invoice selection
+                _newItemCard.selectedInvoice = null;
+                _newItemCard.invoiceAmountController.text =
+                    "0.00";
+              });
+              // Move focus to payment reference
+              FocusScope.of(context)
+                  .requestFocus(_paymentReferenceFocus);
+            }
+          },
+          displayText: (item) {
+            if (_isLoadingCustomers) return "Loading...";
+            // Find the customer by ID
+            final customer = _customerList.firstWhere(
+              (c) => c.id?.toString() == item,
+              orElse: () => CustomerListModelData(
+                  id: 0, name: "Select customer"),
+            );
+            // Return the customer name or a default message
+            return customer.name ?? "Unnamed customer";
+          },
+          showName: false,
+          height: 48,
+        ),
+        const SizedBox(height: 4),
+        if (_selectedCustomer != null &&
+            _selectedCustomer!.isNotEmpty)
+          Builder(
+            builder: (context) {
+              final customer = _customerList.firstWhere(
+                (c) =>
+                    c.id?.toString() == _selectedCustomer,
+                orElse: () => CustomerListModelData(id: 0),
+              );
+
+              final balance = customer.balance;
+              if (balance == null) {
+                return const SizedBox.shrink();
+              }
+
+              final balanceValue =
+                  double.tryParse(balance.toString());
+
+              if (balanceValue == null) {
+                return const SizedBox.shrink();
+              }
+
+              final textColor = balanceValue >= 0
+                  ? Colors.green.shade700
+                  : Colors.red.shade700;
+
+              return Text(
+                'Balance: ${balanceValue.toStringAsFixed(2)}',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s11,
+                  0.27,
+                  textColor,
+                ),
+              );
+            },
+          ),
+      ],
+    );
+
+    final itemTypeColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel("Item Type", isRequired: true),
+        const SizedBox(height: 4),
+        CustomDropDownWithSearch<String>(
+          hintText: "Item Type",
+          title: "",
+          value: _newItemCard.selectedItemType,
+          items: const [
+            "Invoice Payment",
+            "General Payment"
+          ],
+          focusNode: _newItemCard.itemTypeFocus,
+          onChanged: (value) {
+            setState(() {
+              _newItemCard.selectedItemType = value;
+              // Reset fields when type changes
+              if (value == "General Payment") {
+                _newItemCard.selectedInvoice = null;
+                _newItemCard.invoiceAmountController.text =
+                    "0.00";
+              }
+            });
+            // Move focus based on selection
+            WidgetsBinding.instance
+                .addPostFrameCallback((_) {
+              if (value == "Invoice Payment") {
+                FocusScope.of(context).requestFocus(
+                    _newItemCard.invoiceFocus);
+              } else {
+                FocusScope.of(context).requestFocus(
+                    _newItemCard.descriptionFocus);
+              }
+            });
+          },
+          displayText: (item) => item,
+          showName: false,
+          height: 48,
+        ),
+      ],
+    );
+
+    final paymentDateColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel("Payment Date", isRequired: true),
+        const SizedBox(height: 4),
+        CustomCalendarPickerTableCell(
+          initialDate: DateTime.tryParse(_newItemCard
+                  .paymentDateController.text) ??
+              DateTime.now(),
+          onDateSelected: (date) {
+            setState(() {
+              _newItemCard.paymentDateController.text =
+                  date.toIso8601String().split('T')[0];
+            });
+            // Move focus to amount
+            FocusScope.of(context)
+                .requestFocus(_newItemCard.amountFocus);
+          },
+          hintText: "Select payment date",
+          height: 48,
+          focusNode: _newItemCard.paymentDateFocus,
+        ),
+      ],
+    );
 
     return SingleChildScrollView(
       child: Padding(
@@ -1167,245 +1348,27 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
               child: Column(
                 children: [
                   // 1st row: Payment Method | Total Receipt Amount
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
+                  isMobile
+                      ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel("Customer", isRequired: true),
-                            const SizedBox(height: 4),
-                            CustomDropDownWithSearch<String>(
-                              hintText: _isLoadingCustomers
-                                  ? "Loading customers..."
-                                  : "Select a customer",
-                              title: "",
-                              value: _selectedCustomer,
-                              items: _customerList
-                                  .map((customer) => customer.id.toString())
-                                  .toList(),
-                              focusNode: _customerFocus,
-                              onChanged: (value) {
-                                // Check if there are existing items and customer is changing
-                                if (_receiptItemCards.isNotEmpty &&
-                                    value != _selectedCustomer) {
-                                  // Show confirmation dialog
-                                  showDialog(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      backgroundColor: Colors.white,
-                                      title: const Text('Change Customer?'),
-                                      content: const Text(
-                                        'Changing the customer will clear all added items. Do you want to continue?',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(ctx);
-                                            _resetItemsAndChangeCustomer(value);
-                                          },
-                                          child: const Text('Continue'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                } else {
-                                  setState(() {
-                                    _selectedCustomer = value;
-                                    // Also reset the new item card's invoice selection
-                                    _newItemCard.selectedInvoice = null;
-                                    _newItemCard.invoiceAmountController.text =
-                                        "0.00";
-                                  });
-                                  // Move focus to payment reference
-                                  FocusScope.of(context)
-                                      .requestFocus(_paymentReferenceFocus);
-                                }
-                              },
-                              displayText: (item) {
-                                if (_isLoadingCustomers) return "Loading...";
-                                // Find the customer by ID
-                                final customer = _customerList.firstWhere(
-                                  (c) => c.id?.toString() == item,
-                                  orElse: () => CustomerListModelData(
-                                      id: 0, name: "Select customer"),
-                                );
-                                // Return the customer name or a default message
-                                return customer.name ?? "Unnamed customer";
-                              },
-                              showName: false,
-                              height: 48,
-                            ),
-                            const SizedBox(height: 4),
-                            if (_selectedCustomer != null &&
-                                _selectedCustomer!.isNotEmpty)
-                              Builder(
-                                builder: (context) {
-                                  final customer = _customerList.firstWhere(
-                                    (c) =>
-                                        c.id?.toString() == _selectedCustomer,
-                                    orElse: () => CustomerListModelData(id: 0),
-                                  );
-
-                                  final balance = customer.balance;
-                                  if (balance == null) {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  final balanceValue =
-                                      double.tryParse(balance.toString());
-
-                                  if (balanceValue == null) {
-                                    return const SizedBox.shrink();
-                                  }
-
-                                  final textColor = balanceValue >= 0
-                                      ? Colors.green.shade700
-                                      : Colors.red.shade700;
-
-                                  return Text(
-                                    'Balance: ${balanceValue.toStringAsFixed(2)}',
-                                    style: buildCustomStyle(
-                                      FontWeightManager.medium,
-                                      FontSize.s11,
-                                      0.27,
-                                      textColor,
-                                    ),
-                                  );
-                                },
-                              ),
+                            customerColumn,
+                            const SizedBox(height: 12),
+                            itemTypeColumn,
+                            const SizedBox(height: 12),
+                            paymentDateColumn,
                           ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
+                        )
+                      : Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel("Item Type", isRequired: true),
-                            const SizedBox(height: 4),
-                            CustomDropDownWithSearch<String>(
-                              hintText: "Item Type",
-                              title: "",
-                              value: _newItemCard.selectedItemType,
-                              items: const [
-                                "Invoice Payment",
-                                "General Payment"
-                              ],
-                              focusNode: _newItemCard.itemTypeFocus,
-                              onChanged: (value) {
-                                setState(() {
-                                  _newItemCard.selectedItemType = value;
-                                  // Reset fields when type changes
-                                  if (value == "General Payment") {
-                                    _newItemCard.selectedInvoice = null;
-                                    _newItemCard.invoiceAmountController.text =
-                                        "0.00";
-                                  }
-                                });
-                                // Move focus based on selection
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  if (value == "Invoice Payment") {
-                                    FocusScope.of(context).requestFocus(
-                                        _newItemCard.invoiceFocus);
-                                  } else {
-                                    FocusScope.of(context).requestFocus(
-                                        _newItemCard.descriptionFocus);
-                                  }
-                                });
-                              },
-                              displayText: (item) => item,
-                              showName: false,
-                              height: 48,
-                            ),
+                            Expanded(child: customerColumn),
+                            const SizedBox(width: 8),
+                            Expanded(child: itemTypeColumn),
+                            const SizedBox(width: 8),
+                            Expanded(child: paymentDateColumn),
                           ],
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel("Payment Date", isRequired: true),
-                            const SizedBox(height: 4),
-                            CustomCalendarPickerTableCell(
-                              initialDate: DateTime.tryParse(_newItemCard
-                                      .paymentDateController.text) ??
-                                  DateTime.now(),
-                              onDateSelected: (date) {
-                                setState(() {
-                                  _newItemCard.paymentDateController.text =
-                                      date.toIso8601String().split('T')[0];
-                                });
-                                // Move focus to amount
-                                FocusScope.of(context)
-                                    .requestFocus(_newItemCard.amountFocus);
-                              },
-                              hintText: "Select payment date",
-                              height: 48,
-                              focusNode: _newItemCard.paymentDateFocus,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Expanded(
-                      //   child: Column(
-                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                      //     children: [
-                      //       _buildLabel("Payment Method", isRequired: true),
-                      //       const SizedBox(height: 4),
-                      //       CustomDropDownWithSearch<String>(
-                      //         hintText: _isLoadingPaymentMethods
-                      //             ? "Loading..."
-                      //             : "Payment Method",
-                      //         title: "",
-                      //         value: _selectedPaymentMethod,
-                      //         items:
-                      //             _paymentMethods.map((m) => m.value).toList(),
-                      //         focusNode: _paymentMethodFocus,
-                      //         onChanged: (value) {
-                      //           setState(() {
-                      //             _selectedPaymentMethod = value;
-                      //           });
-                      //           // Move focus to customer
-                      //           FocusScope.of(context)
-                      //               .requestFocus(_customerFocus);
-                      //         },
-                      //         displayText: (item) {
-                      //           try {
-                      //             return _paymentMethods
-                      //                 .firstWhere((m) => m.value == item)
-                      //                 .description;
-                      //           } catch (e) {
-                      //             return item;
-                      //           }
-                      //         },
-                      //         showName: false,
-                      //         height: 48,
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
-                      // const SizedBox(width: 8),
-                      // Expanded(
-                      //   child: _buildTextField(
-                      //     "Total Receipt Amount",
-                      //     _totalAmountController,
-                      //     TextInputType.number,
-                      //     widget.size,
-                      //     readOnly: true,
-                      //     placeholder: "Auto-calculated from items",
-                      //   ),
-                      // ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -1796,10 +1759,12 @@ class _CreateReceiptModalState extends State<CreateReceiptModal> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Expanded(child: SizedBox()),
-                      const Expanded(child: SizedBox(width: 16)),
+                      if (!isMobile) ...[
+                        const Expanded(child: SizedBox()),
+                        const Expanded(child: SizedBox(width: 16)),
+                      ],
                       Expanded(
-                        flex: 1,
+                        flex: isMobile ? 3 : 1,
                         child: Column(
                           children: [
                             Row(
