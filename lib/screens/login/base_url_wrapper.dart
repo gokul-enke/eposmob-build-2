@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pos_machine/providers/shared_preferences.dart';
+import 'package:pos_machine/resources/app_url.dart';
 import 'package:pos_machine/screens/login/api_key_screen.dart';
+import 'package:pos_machine/services/tenant_domain_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login.dart';
 
 class BaseUrlWrapper extends StatefulWidget {
@@ -11,43 +13,66 @@ class BaseUrlWrapper extends StatefulWidget {
 }
 
 class _BaseUrlWrapperState extends State<BaseUrlWrapper> {
-  bool? _hasApiKey;
-  final SharedPreferenceProvider _prefs = SharedPreferenceProvider();
+  Widget? _destination;
 
   @override
   void initState() {
     super.initState();
-    _checkApiKey();
+    _resolveLoginConfiguration();
   }
 
-  Future<void> _checkApiKey() async {
+  Future<void> _resolveLoginConfiguration() async {
     try {
-      bool hasKey = await _prefs.hasApiKey();
-      setState(() {
-        _hasApiKey = hasKey;
-      });
-    } catch (e) {
-      setState(() {
-        _hasApiKey = false;
-      });
+      final prefs = await SharedPreferences.getInstance();
+      final apiKey = prefs.getString('api_key')?.trim() ?? '';
+      if (apiKey.isEmpty) {
+        if (mounted) setState(() => _destination = const ApiKeyScreen());
+        return;
+      }
+
+      final savedUrl = prefs.getString('app_url')?.trim() ?? '';
+      final usedUnverifiedDefault =
+          prefs.getBool('show_default_domain_warning') ?? false;
+      final isDefaultUrl = savedUrl.isNotEmpty &&
+          APPUrl.normalizeBaseUrl(savedUrl) ==
+              APPUrl.normalizeBaseUrl(APPUrl.defaultBaseURL);
+      final needsRepair =
+          savedUrl.isEmpty || usedUnverifiedDefault || isDefaultUrl;
+
+      if (needsRepair) {
+        try {
+          await TenantDomainService.discoverAndSave(apiKey);
+        } on TenantDomainException catch (e) {
+          if (mounted) {
+            setState(() => _destination = ApiKeyScreen(
+                  initialError: e.message,
+                ));
+          }
+          return;
+        }
+      } else {
+        APPUrl.updateBaseURL(savedUrl);
+      }
+
+      if (mounted) setState(() => _destination = const SignInScreen());
+    } catch (_) {
+      if (mounted) {
+        setState(() => _destination = const ApiKeyScreen(
+              initialError: 'Unable to load the saved login configuration.',
+            ));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_hasApiKey == null) {
-      // Loading state
+    if (_destination == null) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
         ),
       );
-    } else if (_hasApiKey == true) {
-      // API key exists, go to login
-      return const SignInScreen();
-    } else {
-      // No API key, show setup screen
-      return const ApiKeyScreen();
     }
+    return _destination!;
   }
 }

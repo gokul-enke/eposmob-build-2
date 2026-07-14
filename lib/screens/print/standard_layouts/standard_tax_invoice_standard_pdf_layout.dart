@@ -119,10 +119,13 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     // Resolve B2B/B2C invoice title — params.displayConfig is B2B-aware
     final _resolvedTitleOpt = params.displayConfig?['showInvoiceTitle'];
     final _resolvedTitleVal = _resolvedTitleOpt?.value?.toString().trim();
-    final _resolvedTitleDefault = _resolvedTitleOpt?.defaultValue?.toString().trim();
+    final _resolvedTitleDefault =
+        _resolvedTitleOpt?.defaultValue?.toString().trim();
     final invoiceTitleText = (_resolvedTitleVal?.isNotEmpty == true)
         ? _resolvedTitleVal!
-        : (_resolvedTitleDefault?.isNotEmpty == true ? _resolvedTitleDefault! : 'Tax Invoice');
+        : (_resolvedTitleDefault?.isNotEmpty == true
+            ? _resolvedTitleDefault!
+            : 'Tax Invoice');
     final pageFormat = isA5 ? PdfPageFormat.a5 : PdfPageFormat.a4;
 
     // ── Fonts & RTL ─────────────────────────────────────────────────
@@ -248,7 +251,9 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     final _cfgStoreName = _cfgVal('showStoreName', '');
     final storeName = _cfgStoreName.isNotEmpty
         ? _cfgStoreName
-        : (params.storeName?.isNotEmpty == true ? params.storeName! : 'STORE NAME');
+        : (params.storeName?.isNotEmpty == true
+            ? params.storeName!
+            : 'STORE NAME');
     final storeDesc = _cfgVal('showDescription', '');
     final addressLabel = _cfgVal('showStoreAddress', '');
     final addressVal = params.storeLocation ?? '';
@@ -257,12 +262,16 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         : '';
     final storeFssai = _cfgVal('showFssaiInfo', '');
     final telLabel = _cfgVal('showTel', '');
-    final telVal = params.storePhone?.isNotEmpty == true ? params.storePhone! : params.customerCareNumber;
+    final telVal = params.storePhone?.isNotEmpty == true
+        ? params.storePhone!
+        : params.customerCareNumber;
     final storeTel = telVal.isNotEmpty
         ? (telLabel.isNotEmpty ? '$telLabel: $telVal' : telVal)
         : '';
     final emailLabel = _cfgVal('showEmail', '');
-    final emailVal = params.storeEmail?.isNotEmpty == true ? params.storeEmail! : params.customerCareEmail;
+    final emailVal = params.storeEmail?.isNotEmpty == true
+        ? params.storeEmail!
+        : params.customerCareEmail;
     final storeEmail = emailVal.isNotEmpty
         ? (emailLabel.isNotEmpty ? '$emailLabel: $emailVal' : emailVal)
         : '';
@@ -435,7 +444,8 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.end,
                           children: [
-                            pw.Text(invoiceTitleText, style: taxInvoiceTitleStyle),
+                            pw.Text(invoiceTitleText,
+                                style: taxInvoiceTitleStyle),
                             pw.Text('فاتورة ضريبية',
                                 style: taxInvoiceArabicStyle,
                                 textDirection: pw.TextDirection.rtl),
@@ -633,127 +643,131 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
             // Bilingual headers, bordered, exact column widths
             // ═══════════════════════════════════════════════════════
             if (!params.isReturnOnly) ...[
-            _buildItemsTable(
-                params, dc, config, itemsHeaderStyle, itemsBodyStyle),
-            pw.SizedBox(height: 4),
+              _buildItemsTable(
+                  params, dc, config, itemsHeaderStyle, itemsBodyStyle),
+              pw.SizedBox(height: 4),
 
-            // ═══════════════════════════════════════════════════════
-            // SECTION 5: FOOTER  (Amount in Words + Totals)
-            // ═══════════════════════════════════════════════════════
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                // Left side: Amount in Words, Delivery, Payment, etc.
-                pw.Expanded(
-                  flex: 5,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      if (_cfgVisible('showAmountInWords'))
-                        pw.RichText(
-                          text: pw.TextSpan(children: [
-                            pw.TextSpan(
-                                text: 'Amount in Words: ', style: footerBold),
-                            pw.TextSpan(
-                                text:
-                                    '${AmountHelper().convertNumberToWords(totalAmount, currency: currency)} Only',
-                                style: footerStyle),
-                          ]),
-                        ),
-                      if (_cfgVisible('showDate'))
-                        pw.Text(
-                            'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
-                            style: pw.TextStyle(
-                                font: font,
-                                fontBold: fontBold,
-                                fontSize: fs(6))),
-                      if (_cfgVisible('showPayment') &&
-                          params.paymentMethod != null)
-                        pw.Text(
-                            isRtl
-                                ? 'طريقة الدفع: ${params.paymentMethod}'
-                                : 'Payment Method: ${params.paymentMethod}',
-                            style: pw.TextStyle(
-                                font: font,
-                                fontBold: fontBold,
-                                fontSize: fs(6))),
-                      if (params.orderComment != null &&
-                          params.orderComment!.isNotEmpty)
-                        pw.Text(
-                            '${isRtl ? 'تعليق:' : 'Comment:'} ${params.orderComment}',
-                            style: footerStyle),
-                      if (params.deliveryMethod != null &&
-                          params.deliveryMethod!.isNotEmpty)
-                        pw.Text(
-                            '${isRtl ? 'التوصيل:' : 'Delivery:'} ${params.deliveryMethod}',
-                            style: footerStyle),
-                      // Customer Paid Amount
-                      if (_cfgVisible('showCustomerPaidAmount') &&
-                          params.paidAmount != null)
-                        pw.Text(
-                            '${_cfgVal('showCustomerPaidAmount', isRtl ? 'المبلغ المدفوع' : 'Paid Amt')}: ${_formatMoney(currency, params.paidAmount!)}',
-                            style: footerStyle),
-                      // Customer Current Balance
-                      if (_cfgVisible('showCustomerCurrentBalance') &&
-                          params.customerCurrentBalance != null)
-                        pw.Text(
-                            '${_cfgVal('showCustomerCurrentBalance', isRtl ? 'الرصيد الحالي' : 'Cur Bal')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
-                            style: footerStyle),
-                    ],
+              // ═══════════════════════════════════════════════════════
+              // SECTION 5: FOOTER  (Amount in Words + Totals)
+              // ═══════════════════════════════════════════════════════
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // Left side: Amount in Words, Delivery, Payment, etc.
+                  pw.Expanded(
+                    flex: 5,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        if (_cfgVisible('showAmountInWords'))
+                          pw.RichText(
+                            text: pw.TextSpan(children: [
+                              pw.TextSpan(
+                                  text: 'Amount in Words: ', style: footerBold),
+                              pw.TextSpan(
+                                  text:
+                                      '${AmountHelper().convertNumberToWords(totalAmount, currency: currency)} Only',
+                                  style: footerStyle),
+                            ]),
+                          ),
+                        if (_cfgVisible('showDate'))
+                          pw.Text(
+                              'Delivery Time: $displayDate${displayTime.isNotEmpty ? ' $displayTime' : ''}',
+                              style: pw.TextStyle(
+                                  font: font,
+                                  fontBold: fontBold,
+                                  fontSize: fs(6))),
+                        if (_cfgVisible('showPayment') &&
+                            params.paymentMethod != null)
+                          pw.Text(
+                              isRtl
+                                  ? 'طريقة الدفع: ${params.paymentMethod}'
+                                  : 'Payment Method: ${params.paymentMethod}',
+                              style: pw.TextStyle(
+                                  font: font,
+                                  fontBold: fontBold,
+                                  fontSize: fs(6))),
+                        if (params.orderComment != null &&
+                            params.orderComment!.isNotEmpty)
+                          pw.Text(
+                              '${isRtl ? 'تعليق:' : 'Comment:'} ${params.orderComment}',
+                              style: footerStyle),
+                        if (params.deliveryMethod != null &&
+                            params.deliveryMethod!.isNotEmpty)
+                          pw.Text(
+                              '${isRtl ? 'التوصيل:' : 'Delivery:'} ${params.deliveryMethod}',
+                              style: footerStyle),
+                        // Customer Paid Amount
+                        if (_cfgVisible('showCustomerPaidAmount') &&
+                            params.paidAmount != null)
+                          pw.Text(
+                              '${_cfgVal('showCustomerPaidAmount', isRtl ? 'المبلغ المدفوع' : 'Paid Amt')}: ${_formatMoney(currency, params.paidAmount!)}',
+                              style: footerStyle),
+                        // Customer Current Balance
+                        if (_cfgVisible('showCustomerCurrentBalance') &&
+                            params.customerCurrentBalance != null)
+                          pw.Text(
+                              '${_cfgVal('showCustomerCurrentBalance', isRtl ? 'الرصيد الحالي' : 'Cur Bal')}: ${_formatMoney(currency, params.customerCurrentBalance!)}',
+                              style: footerStyle),
+                      ],
+                    ),
                   ),
-                ),
-                // Right side: Totals table
-                pw.Expanded(
-                  flex: 3,
-                  child: pw.Table(
-                    border: pw.TableBorder.all(width: 0.5),
-                    children: [
-                      if ((dc?['showSubTotal']?.visible ?? dc?['showMRPTotal']?.visible) != false)
-                        _totalsRow('Total (Exc VAT)',
-                            _formatMoney(currency, totalExclTax), footerStyle),
-                      if (dc?['showDiscount']?.visible != false &&
-                          discountAmountValue != 0)
-                        _totalsRow(
-                            'Discount',
-                            _formatMoney(currency, discountAmountValue),
-                            footerStyle),
-                      if (dc?['showTax']?.visible != false)
-                        _totalsRow('Total VAT',
-                            _formatMoney(currency, totalTax), footerStyle),
-                      if (dc?['showNetAmount']?.visible != false)
-                        _totalsRow('Total (Inc VAT)',
-                            _formatMoney(currency, totalAmount), footerBold),
-                    ],
+                  // Right side: Totals table
+                  pw.Expanded(
+                    flex: 3,
+                    child: pw.Table(
+                      border: pw.TableBorder.all(width: 0.5),
+                      children: [
+                        if ((dc?['showSubTotal']?.visible ??
+                                dc?['showMRPTotal']?.visible) !=
+                            false)
+                          _totalsRow(
+                              'Total (Exc VAT)',
+                              _formatMoney(currency, totalExclTax),
+                              footerStyle),
+                        if (dc?['showDiscount']?.visible != false &&
+                            discountAmountValue != 0)
+                          _totalsRow(
+                              'Discount',
+                              _formatMoney(currency, discountAmountValue),
+                              footerStyle),
+                        if (dc?['showTax']?.visible != false)
+                          _totalsRow('Total VAT',
+                              _formatMoney(currency, totalTax), footerStyle),
+                        if (dc?['showNetAmount']?.visible != false)
+                          _totalsRow('Total (Inc VAT)',
+                              _formatMoney(currency, totalAmount), footerBold),
+                      ],
+                    ),
                   ),
+                ],
+              ),
+              pw.SizedBox(height: 3),
+
+              // ═══════════════════════════════════════════════════════
+              // ITEMS COUNT
+              // ═══════════════════════════════════════════════════════
+              if (_cfgVisible('showItemsCount'))
+                pw.Text(
+                  '${_cfgVal('showItemsCount', isRtl ? 'العدد' : 'Items')}: ${params.cartItems.length}',
+                  style: footerStyle,
                 ),
-              ],
-            ),
-            pw.SizedBox(height: 3),
+              if (_cfgVisible('showQuantityCount'))
+                pw.Text(
+                  '${_cfgVal('showQuantityCount', isRtl ? 'إجمالي الكمية' : 'Total Qty')}: ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
+                  style: footerStyle,
+                ),
 
-            // ═══════════════════════════════════════════════════════
-            // ITEMS COUNT
-            // ═══════════════════════════════════════════════════════
-            if (_cfgVisible('showItemsCount'))
-              pw.Text(
-                '${_cfgVal('showItemsCount', isRtl ? 'العدد' : 'Items')}: ${params.cartItems.length}',
-                style: footerStyle,
-              ),
-            if (_cfgVisible('showQuantityCount'))
-              pw.Text(
-                '${_cfgVal('showQuantityCount', isRtl ? 'إجمالي الكمية' : 'Total Qty')}: ${params.totalQuantity % 1 == 0 ? params.totalQuantity.toInt().toString() : params.totalQuantity.toStringAsFixed(2)}',
-                style: footerStyle,
-              ),
+              // ═══════════════════════════════════════════════════════
+              // YOU SAVED
+              // ═══════════════════════════════════════════════════════
+              if (_cfgVisible('showSaved') && saved > 0)
+                pw.Text(
+                  '${_cfgVal('showSaved', isRtl ? 'لقد وفرت:' : 'You Saved:')} ${_formatMoney(currency, saved)}',
+                  style: footerBold,
+                ),
 
-            // ═══════════════════════════════════════════════════════
-            // YOU SAVED
-            // ═══════════════════════════════════════════════════════
-            if (_cfgVisible('showSaved') && saved > 0)
-              pw.Text(
-                '${_cfgVal('showSaved', isRtl ? 'لقد وفرت:' : 'You Saved:')} ${_formatMoney(currency, saved)}',
-                style: footerBold,
-              ),
-
-            pw.SizedBox(height: 3),
+              pw.SizedBox(height: 3),
             ],
 
             if (params.orderReturns != null &&
@@ -908,7 +922,8 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
     String? ar;
     try {
       if (item is Map) {
-        final n = item['product_names'] ?? item['productNames'] ?? item['names'];
+        final n =
+            item['product_names'] ?? item['productNames'] ?? item['names'];
         if (n is Map) ar = (n['ar'] ?? n['arabic'])?.toString();
       } else {
         ar = item.names?.ar?.toString();
@@ -1000,9 +1015,7 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
         name = item['productName']?.toString() ?? '';
         qty = double.tryParse(item['quantity']?.toString() ?? '0') ?? 0;
         unitPrice = double.tryParse(item['unitPrice']?.toString() ?? '0') ?? 0;
-        unitName =
-            (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
-                .toString();
+        unitName = getPrintUnit(item);
         iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
         iTax = double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0;
         iTotal = double.tryParse(item['totalPrice']?.toString() ?? '0') ?? 0;
@@ -1015,9 +1028,7 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
                 item['unitPrice']?.toString() ??
                 '0') ??
             0;
-        unitName =
-            (item['product_unit'] ?? item['productUnit'] ?? item['unit'] ?? '')
-                .toString();
+        unitName = getPrintUnit(item);
         iDiscount = double.tryParse(item['discount']?.toString() ?? '0') ?? 0;
         iTax = double.tryParse(item['tax_amount']?.toString() ?? '0') ?? 0;
         iTotal = double.tryParse(item['total_price']?.toString() ??
@@ -1029,7 +1040,7 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
           name = item.productName ?? '';
           qty = double.tryParse(item.quantity?.toString() ?? '0') ?? 0;
           unitPrice = double.tryParse(item.unitPrice?.toString() ?? '0') ?? 0;
-          unitName = (item.productUnit ?? '').toString();
+          unitName = getPrintUnit(item);
           iTax = double.tryParse(item.taxAmount?.toString() ?? '0') ?? 0;
           iTotal = double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0;
         } catch (_) {}
@@ -1051,7 +1062,8 @@ class StandardTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
       if (showSL) cells.add(_dataCell('${i + 1}', bodyStyle));
       if (showItems) {
         cells.add(_dataCell(name, bodyStyle,
-            align: isArName ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
+            align:
+                isArName ? pw.Alignment.centerRight : pw.Alignment.centerLeft,
             textDirection:
                 isArName ? pw.TextDirection.rtl : pw.TextDirection.ltr));
       }

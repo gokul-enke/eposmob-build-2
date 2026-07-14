@@ -1,6 +1,8 @@
 import 'package:pdf/widgets.dart' as pw;
 import 'receipt_layout_params.dart';
 
+export '../print_unit_helper.dart';
+
 /// Abstract base class for receipt layouts.
 ///
 /// Each theme (classic, modern, minimal, etc.) implements this interface

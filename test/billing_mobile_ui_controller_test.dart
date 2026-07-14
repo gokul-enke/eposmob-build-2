@@ -3,9 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:pos_machine/features/billing/controllers/billing_mobile_controller.dart';
 import 'package:pos_machine/features/billing/controllers/billing_mobile_ui_controller.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/mobile/billing/customer_summary_card.dart';
 import 'package:pos_machine/models/get_app_settings.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/models/delivery_method.dart';
@@ -14,10 +17,14 @@ import 'package:pos_machine/models/local_models.dart';
 import 'package:pos_machine/models/master_data.dart';
 import 'package:pos_machine/models/payment_method.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/providers/cart_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
+import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
+
+import 'test_support/hive_test_teardown.dart';
 
 class _FakeCartProvider extends CartProvider {
   int? fetchedCustomerId;
@@ -37,6 +44,18 @@ class _FakeCartProvider extends CartProvider {
     fetchedCustomerId = customerId;
     fetchedAccessToken = accessToken;
   }
+}
+
+class _FakeAppSettingsProvider extends AppSettingsProvider {
+  _FakeAppSettingsProvider(this.settings);
+
+  final AppSettings settings;
+
+  @override
+  AppSettings? get appSettings => settings;
+
+  @override
+  Future<void> fetchAppSettings() async {}
 }
 
 void main() {
@@ -68,11 +87,16 @@ void main() {
   });
 
   setUp(() async {
+    await awaitPendingHiveBoxWrites();
     SharedPreferences.setMockInitialValues({});
     await Hive.box<HiveProduct>('products').clear();
     await Hive.box<HiveLocalCartItem>('cart_items').clear();
     await Hive.box<HiveSavedOrder>('saved_orders').clear();
     await Hive.box<HiveSavedOrder>('confirmed_orders').clear();
+  });
+
+  tearDown(() async {
+    await awaitPendingHiveBoxWrites();
   });
 
   tearDownAll(() async {
@@ -302,6 +326,20 @@ void main() {
       expect(bp.cashAmountController.text, '25');
     });
 
+    test('syncPaymentAutofillIfNeeded does not replace full credit with cash',
+        () {
+      final bp = BillingProvider();
+      bp.setTotalOrderAmount(50);
+      bp.setPaymentMethod('CREDIT', true);
+      bp.debitAmountController.text = '50.00';
+
+      expect(controller.syncPaymentAutofillIfNeeded(bp), isFalse);
+      expect(bp.isDebitSelected, isTrue);
+      expect(bp.debitAmountController.text, '50.00');
+      expect(bp.isCashSelected, isFalse);
+      expect(bp.cashAmountController.text, isEmpty);
+    });
+
     test('fillExactCash selects cash for the full payable total', () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(88.5);
@@ -329,6 +367,11 @@ void main() {
       expect(bp.cashAmountController.text, isEmpty);
       expect(bp.isExtraMethodSelected('99'), isFalse);
       expect(bp.getTotalPaidAmount(), 0);
+      expect(bp.paymentAutofillSuppressed, isTrue);
+
+      expect(controller.syncPaymentAutofillIfNeeded(bp), isFalse);
+      expect(bp.isCashSelected, isFalse);
+      expect(bp.cashAmountController.text, isEmpty);
     });
 
     test('syncDebitAmount mirrors the unpaid balance for customer credit', () {
@@ -347,7 +390,8 @@ void main() {
       expect(bp.debitAmountController.text, '65.00');
     });
 
-    test('CHEQUE dynamic method contributes to collected total and paid methods',
+    test(
+        'CHEQUE dynamic method contributes to collected total and paid methods',
         () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(200);
@@ -361,7 +405,8 @@ void main() {
 
       final paidMethods = bp.getPaidMethods();
       expect(
-        paidMethods.any((entry) => entry['method'] == '99' && entry['amount'] == 75),
+        paidMethods
+            .any((entry) => entry['method'] == '99' && entry['amount'] == 75),
         isTrue,
       );
       expect(bp.getSelectedPaymentMethodsForApi(), contains('99'));
@@ -385,6 +430,25 @@ void main() {
       expect(dynamicItems.single.name, 'Cheque');
     });
 
+    test('CREDIT backend code uses the core credit-sale state', () {
+      final bp = BillingProvider();
+      bp.setTotalOrderAmount(100);
+      final creditMethod = PaymentMethod.fromMasterDataValue(
+        MasterDataValue(id: 5, value: 'CREDIT', description: 'Credit'),
+      );
+
+      final item = controller.paymentItems(bp, [creditMethod]).single;
+      expect(item.isDynamic, isFalse);
+      expect(item.behavior, PaymentBehavior.credit);
+      expect(item.controller, same(bp.debitAmountController));
+
+      controller.toggleMethod('CREDIT', bp);
+
+      expect(bp.isDebitSelected, isTrue);
+      expect(bp.debitAmountController.text, '100.00');
+      expect(bp.validatePayment(), isTrue);
+    });
+
     test('remainingPayable subtracts dynamic method amounts', () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(150);
@@ -393,7 +457,8 @@ void main() {
       expect(controller.remainingPayable(bp), 110);
     });
 
-    test('remapPaymentsAfterDiscountChange adjusts single full cash payment', () {
+    test('remapPaymentsAfterDiscountChange adjusts single full cash payment',
+        () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(100);
       bp.cashAmountController.text = '100.00';
@@ -762,7 +827,8 @@ void main() {
       expect(billingProvider.isCustomerManuallySelected, isTrue);
     });
 
-    test('defaultSalesExecutivePhoneCustomer mirrors read-only phone field', () {
+    test('defaultSalesExecutivePhoneCustomer mirrors read-only phone field',
+        () {
       final selectionProvider = CustomerSelectionProvider();
       final billingProvider = BillingProvider()
         ..setSalesExecutiveMobileNumberText('5555')
@@ -786,7 +852,8 @@ void main() {
       );
     });
 
-    test('applyDefaultCustomerFromCacheIfNeeded assigns matched default customer',
+    test(
+        'applyDefaultCustomerFromCacheIfNeeded assigns matched default customer',
         () {
       final localProvider = LocalProductProvider();
       final billingProvider = BillingProvider();
@@ -827,7 +894,8 @@ void main() {
       expect(cartProvider.fetchedCustomerId, 2);
     });
 
-    test('applyDefaultCustomerFromCacheIfNeeded fills phone when no match exists',
+    test(
+        'applyDefaultCustomerFromCacheIfNeeded fills phone when no match exists',
         () {
       final billingProvider = BillingProvider();
       final selectionProvider = CustomerSelectionProvider();
@@ -858,7 +926,166 @@ void main() {
 
       expect(selectionProvider.hasSelectedCustomer, isFalse);
       expect(billingProvider.mobileNumberText, '7777');
+      expect(billingProvider.selectedCustomerPhone, '7777');
+      expect(billingProvider.salesExecutivemobileNumberText, '7777');
       expect(billingProvider.selectedCustomer, isNull);
+    });
+
+    test('phone-only automatic default upgrades when full cache arrives', () {
+      final billingProvider = BillingProvider();
+      final selectionProvider = CustomerSelectionProvider();
+      final cartProvider = _FakeCartProvider();
+      final auth = AuthModel()..login('token-upgrade', 1);
+      final settings = appSettings(
+        autoAssignDefaultCustomer: true,
+        autoAssignDefaultCustomerPhone: '7777',
+      );
+
+      final phoneOnly = controller.applyDefaultCustomerFromCacheIfNeeded(
+        localProductProvider: LocalProductProvider(),
+        billingProvider: billingProvider,
+        customerSelectionProvider: selectionProvider,
+        appSettings: settings,
+        customers: [
+          CustomerListModelData(id: 1, name: 'Other', phone: '1111'),
+        ],
+      );
+      controller.applyDefaultCustomerResult(
+        result: phoneOnly,
+        customerSelectionProvider: selectionProvider,
+        billingProvider: billingProvider,
+        cartProvider: cartProvider,
+        auth: auth,
+      );
+
+      final resolvedCustomer = CustomerListModelData(
+          id: 77, name: 'Default Customer', phone: '7777');
+      final upgraded = controller.applyDefaultCustomerFromCacheIfNeeded(
+        localProductProvider: LocalProductProvider(),
+        billingProvider: billingProvider,
+        customerSelectionProvider: selectionProvider,
+        appSettings: settings,
+        customers: [resolvedCustomer],
+      );
+      controller.applyDefaultCustomerResult(
+        result: upgraded,
+        customerSelectionProvider: selectionProvider,
+        billingProvider: billingProvider,
+        cartProvider: cartProvider,
+        auth: auth,
+      );
+
+      expect(upgraded.matchedCustomer?.id, 77);
+      expect(selectionProvider.selectedCustomerID, 77);
+      expect(selectionProvider.isDefaultCustomer, isTrue);
+      expect(billingProvider.selectedCustomer?.id, 77);
+      expect(cartProvider.fetchedCustomerId, 77);
+    });
+
+    test('reset can defer auth cart fetch while default is being resolved', () {
+      final billingProvider = BillingProvider();
+      final selectionProvider = CustomerSelectionProvider();
+      final cartProvider = _FakeCartProvider();
+      final auth = AuthModel()..login('token-reset', 41);
+
+      controller.clearSelection(
+        customerSelectionProvider: selectionProvider,
+        billingProvider: billingProvider,
+        cartProvider: cartProvider,
+        auth: auth,
+        resetCartContext: false,
+      );
+
+      expect(cartProvider.fetchedCustomerId, isNull);
+    });
+
+    testWidgets('phone-only default card shows the phone instead of dummy name',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CustomerSummaryCard(
+              customer: CustomerListModelData(phone: '7777'),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('7777'), findsOneWidget);
+      expect(find.text('Default B2C'), findsNothing);
+    });
+
+    testWidgets(
+        'clear-cart and post-order resets select the real default customer once',
+        (tester) async {
+      final settings = appSettings(
+        autoAssignDefaultCustomer: true,
+        autoAssignDefaultCustomerPhone: '7777',
+      );
+      final defaultCustomer = CustomerListModelData(
+        id: 77,
+        name: 'Default Customer',
+        phone: '7777',
+      );
+      final manualCustomer =
+          CustomerListModelData(id: 9, name: 'Manual', phone: '9999');
+      final billingProvider = BillingProvider()
+        ..setCustomerList([manualCustomer, defaultCustomer])
+        ..setSelectedCustomer(manualCustomer, isManual: true);
+      final selectionProvider = CustomerSelectionProvider()
+        ..setSelectedCustomer(manualCustomer);
+      final cartProvider = _FakeCartProvider();
+      final auth = AuthModel()..login('token-reset-flow', 41);
+      final localProductProvider = LocalProductProvider();
+      late BuildContext providerContext;
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<BillingProvider>.value(
+                value: billingProvider),
+            ChangeNotifierProvider<CustomerSelectionProvider>.value(
+                value: selectionProvider),
+            ChangeNotifierProvider<CartProvider>.value(value: cartProvider),
+            ChangeNotifierProvider<AuthModel>.value(value: auth),
+            ChangeNotifierProvider<LocalProductProvider>.value(
+                value: localProductProvider),
+            ChangeNotifierProvider<AppSettingsProvider>(
+              create: (_) => _FakeAppSettingsProvider(settings),
+            ),
+            ChangeNotifierProvider<DeliveryMethodsProvider>(
+              create: (_) => DeliveryMethodsProvider(),
+            ),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) {
+                providerContext = context;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+      );
+
+      final mobileController = BillingMobileController();
+      mobileController.clearCartData(providerContext);
+
+      expect(selectionProvider.selectedCustomerID, 77);
+      expect(selectionProvider.isDefaultCustomer, isTrue);
+      expect(billingProvider.selectedCustomer?.id, 77);
+      expect(cartProvider.fetchedCustomerId, 77);
+
+      selectionProvider.setSelectedCustomer(manualCustomer);
+      billingProvider.setSelectedCustomer(manualCustomer, isManual: true);
+      cartProvider.fetchedCustomerId = null;
+
+      mobileController.resetBillingWorkspaceAfterOrder(providerContext);
+
+      expect(selectionProvider.selectedCustomerID, 77);
+      expect(selectionProvider.isDefaultCustomer, isTrue);
+      expect(billingProvider.selectedCustomer?.id, 77);
+      expect(cartProvider.fetchedCustomerId, 77);
     });
 
     test('isCustomerSatisfiedForCheckout respects skipCustomerSelection', () {
@@ -889,7 +1116,8 @@ void main() {
       );
     });
 
-    test('shouldShowCustomerBalance hides default and sales-executive phones', () {
+    test('shouldShowCustomerBalance hides default and sales-executive phones',
+        () {
       final selectionProvider = CustomerSelectionProvider();
       final defaultCustomer = CustomerListModelData(
         id: 1,

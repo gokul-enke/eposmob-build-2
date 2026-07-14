@@ -311,15 +311,25 @@ class BillingProvider extends ChangeNotifier {
       // Indicate loading when first called
       setInitLoading(true);
 
-      final response = await CustomerProvider()
-          .listCustomer(accessToken: accessToken, sortAscending: sortAscending);
+      final customerProvider = CustomerProvider();
+      final response = await customerProvider.listCustomer(
+        accessToken: accessToken,
+        sortAscending: sortAscending,
+        loadAll: true,
+      );
 
       if (response["status"] == "success") {
-        final CustomerListModel customerListModel =
-            CustomerListModel.fromJson(response);
-        setCustomerList(customerListModel.data);
+        // Default-customer resolution must use the complete customer cache.
+        // A cache-success response may omit `data`, so prefer the provider's
+        // populated all-customers collection.
+        final cachedCustomers = customerProvider.allCustomers;
+        final responseCustomers = CustomerListModel.fromJson(response).data;
+        final customers = cachedCustomers?.isNotEmpty == true
+            ? cachedCustomers
+            : responseCustomers;
+        setCustomerList(customers);
         // By default, filtered list equals full list
-        setFilteredCustomerList(customerListModel.data);
+        setFilteredCustomerList(customers);
         setInitLoading(false);
         return true;
       }
@@ -452,6 +462,23 @@ class BillingProvider extends ChangeNotifier {
     _isCustomerFound = false;
     _isCustomerManuallySelected = false;
     _highlightedCustomerIndex = null;
+    notifyListeners();
+  }
+
+  /// Stores an automatic phone-only default without fabricating a customer.
+  /// The phone remains available for order payloads while id/name stay null
+  /// until a complete customer cache can resolve the real record.
+  void setPhoneOnlyDefaultCustomer(String phone) {
+    final normalizedPhone = phone.trim();
+    _selectedCustomer = null;
+    _selectedCustomerID = null;
+    _selectedCustomerPhone = normalizedPhone;
+    _isCustomerFound = false;
+    _isCustomerManuallySelected = false;
+    _mobileNumberText = normalizedPhone;
+    _salesExecutivemobileNumberText = normalizedPhone;
+    _highlightedCustomerIndex = null;
+    mobileNumberTextController.text = normalizedPhone;
     notifyListeners();
   }
 
@@ -937,6 +964,10 @@ class BillingProvider extends ChangeNotifier {
   /// Whether the cashier opened the payment section (confirm gate).
   bool _paymentStepVisited = false;
 
+  /// Prevents automatic payment fallback after the cashier explicitly clears
+  /// the payment section. Programmatic resets and quick actions clear this flag.
+  bool _paymentAutofillSuppressed = false;
+
   /// Order total used for payment validation, balance/change and autofill.
   ///
   /// Matches desktop `BillingPage._getEffectiveOrderTotal()` — i.e. the net
@@ -961,6 +992,8 @@ class BillingProvider extends ChangeNotifier {
   String? get pristinePaymentAmount => _pristinePaymentAmount;
 
   bool get paymentStepVisited => _paymentStepVisited;
+
+  bool get paymentAutofillSuppressed => _paymentAutofillSuppressed;
 
   void setDeliveryChargeOverride(double? charge) {
     _deliveryChargeOverride = charge;
@@ -1041,6 +1074,7 @@ class BillingProvider extends ChangeNotifier {
         if (!selected) codAmountController.clear();
         break;
       case 'DEBIT':
+      case 'CREDIT':
         _isDebitSelected = selected;
         if (!selected) debitAmountController.clear();
         break;
@@ -1090,6 +1124,7 @@ class BillingProvider extends ChangeNotifier {
         c == 'UPI' ||
         c == 'COD' ||
         c == 'DEBIT' ||
+        c == 'CREDIT' ||
         c == 'ONLINE';
   }
 
@@ -1111,6 +1146,7 @@ class BillingProvider extends ChangeNotifier {
       case 'COD':
         return codAmountController;
       case 'DEBIT':
+      case 'CREDIT':
         return debitAmountController;
       default:
         return getExtraAmountController(
@@ -1132,6 +1168,7 @@ class BillingProvider extends ChangeNotifier {
       case 'COD':
         return _isCodSelected;
       case 'DEBIT':
+      case 'CREDIT':
         return _isDebitSelected;
       case 'ONLINE':
         return _isOnlineSelected;
@@ -1184,7 +1221,8 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void clearAllPaymentMethods() {
+  void clearAllPaymentMethods({bool suppressAutofill = false}) {
+    _paymentAutofillSuppressed = suppressAutofill;
     _isCashSelected = false;
     _isCardSelected = false;
     _isUpiSelected = false;
@@ -1366,6 +1404,7 @@ class BillingProvider extends ChangeNotifier {
       'COD',
       codId,
       'DEBIT',
+      'CREDIT',
       'BALANCE',
       'ONLINE',
     };
@@ -1915,7 +1954,8 @@ class BillingProvider extends ChangeNotifier {
             _isCardSelected = methods.contains('CARD');
             _isUpiSelected = methods.contains('UPI');
             _isCodSelected = methods.contains('COD');
-            _isDebitSelected = methods.contains('DEBIT');
+            _isDebitSelected =
+                methods.contains('DEBIT') || methods.contains('CREDIT');
             _isOnlineSelected = methods.contains('ONLINE');
 
             if (_isCashSelected) {
@@ -1931,7 +1971,8 @@ class BillingProvider extends ChangeNotifier {
               codAmountController.text = (amounts['COD'] ?? '0').toString();
             }
             if (_isDebitSelected) {
-              debitAmountController.text = (amounts['DEBIT'] ?? '0').toString();
+              debitAmountController.text =
+                  (amounts['DEBIT'] ?? amounts['CREDIT'] ?? '0').toString();
             }
 
             bool hasMethodOrAmount(List<String> candidates) {
@@ -2039,6 +2080,7 @@ class BillingProvider extends ChangeNotifier {
               codAmountController.text = paidText;
               break;
             case 'DEBIT':
+            case 'CREDIT':
               debitAmountController.text = paidText;
               break;
             case 'ONLINE':

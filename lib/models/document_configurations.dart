@@ -313,6 +313,7 @@ class ResolvedLabels {
   final String? mrp;
   final String? qty;
   final String? rate;
+  final String? rateExcTax;
   final String? total;
   // Sales Return Bill specific fields
   final String? returnSlNumber;
@@ -324,8 +325,11 @@ class ResolvedLabels {
   // Default values for bilingual support (English defaults)
   final String? slNumberDefault;
   final String? particularsDefault;
+  final String? mrpDefault;
   final String? qtyDefault;
   final String? rateDefault;
+  final String? rateExcTaxDefault;
+  final String? unitNameDefault;
   final String? totalDefault;
   final String? taxDefault;
 
@@ -349,6 +353,7 @@ class ResolvedLabels {
     this.mrp,
     this.qty,
     this.rate,
+    this.rateExcTax,
     this.total,
     this.returnSlNumber,
     this.returnParticulars,
@@ -358,15 +363,18 @@ class ResolvedLabels {
     this.returnTotal,
     this.slNumberDefault,
     this.particularsDefault,
+    this.mrpDefault,
     this.qtyDefault,
     this.rateDefault,
+    this.rateExcTaxDefault,
+    this.unitNameDefault,
     this.totalDefault,
     this.taxDefault,
   });
 
   factory ResolvedLabels.fromJson(Map<String, dynamic> json) => ResolvedLabels(
         itemName: json["item_name"],
-        unitName: json["unit_name"],
+        unitName: json["unit_name"] ?? json["unit"],
         priceName: json["price_name"],
         taxName: json["tax_name"],
         amountName: json["amount_name"],
@@ -385,6 +393,7 @@ class ResolvedLabels {
         mrp: json["mrp"],
         qty: json["qty"],
         rate: json["rate"],
+        rateExcTax: json["rate_exc_tax"],
         total: json["total"],
         returnSlNumber: json["return_sl_number"],
         returnParticulars: json["return_particulars"],
@@ -394,8 +403,11 @@ class ResolvedLabels {
         returnTotal: json["return_total"],
         slNumberDefault: json["sl_number_default"],
         particularsDefault: json["particulars_default"],
+        mrpDefault: json["mrp_default"],
         qtyDefault: json["qty_default"],
         rateDefault: json["rate_default"],
+        rateExcTaxDefault: json["rate_exc_tax_default"],
+        unitNameDefault: json["unit_name_default"] ?? json["unit_default"],
         totalDefault: json["total_default"],
         taxDefault: json["tax_default"],
       );
@@ -420,6 +432,7 @@ class ResolvedLabels {
         "mrp": mrp,
         "qty": qty,
         "rate": rate,
+        "rate_exc_tax": rateExcTax,
         "total": total,
         "return_sl_number": returnSlNumber,
         "return_particulars": returnParticulars,
@@ -429,8 +442,11 @@ class ResolvedLabels {
         "return_total": returnTotal,
         "sl_number_default": slNumberDefault,
         "particulars_default": particularsDefault,
+        "mrp_default": mrpDefault,
         "qty_default": qtyDefault,
         "rate_default": rateDefault,
+        "rate_exc_tax_default": rateExcTaxDefault,
+        "unit_name_default": unitNameDefault,
         "total_default": totalDefault,
         "tax_default": taxDefault,
       };

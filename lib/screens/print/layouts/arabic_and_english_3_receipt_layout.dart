@@ -806,13 +806,11 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         ? _getLabel(displayConfig, 'showMRP', resolvedLabels?.mrp, 'MRP')
         : _getLabel(displayConfig, 'showMRP', resolvedLabels?.mrp, 'MRP');
     final String qtyLabel = isDualLanguage
-        ? _getLabel(
-            displayConfig, 'showQty', resolvedLabels?.qty, 'الكمية')
+        ? _getLabel(displayConfig, 'showQty', resolvedLabels?.qty, 'الكمية')
         : _getLabel(displayConfig, 'showQty', resolvedLabels?.qty,
             isEnglish ? 'Qty' : 'Qty');
     final String rateLabel = isDualLanguage
-        ? _getLabel(
-            displayConfig, 'showRate', resolvedLabels?.rate, 'السعر')
+        ? _getLabel(displayConfig, 'showRate', resolvedLabels?.rate, 'السعر')
         : _getLabel(displayConfig, 'showRate', resolvedLabels?.rate,
             isEnglish ? 'Rate' : 'Rate');
     final String rateExcTaxLabel = isDualLanguage
@@ -1037,9 +1035,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       final taxPerUnit = quantityValue > 0 ? taxValue / quantityValue : 0.0;
       unitPrice = unitPriceValue.toStringAsFixed(2);
       unitPriceExTax = (unitPriceValue - taxPerUnit).toStringAsFixed(2);
-      unitName =
-          (item['productUnit'] ?? item['product_unit'] ?? item['unit'] ?? '')
-              .toString();
+      unitName = getPrintUnit(item);
       totalPrice = (double.tryParse(
                   (item['totalPrice'] ?? item['total_price'])?.toString() ??
                       '0') ??
@@ -1069,7 +1065,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       final taxPerUnit = quantityValue > 0 ? taxValue / quantityValue : 0.0;
       unitPrice = unitPriceValue.toStringAsFixed(2);
       unitPriceExTax = (unitPriceValue - taxPerUnit).toStringAsFixed(2);
-      unitName = (item.productUnit ?? '').toString();
+      unitName = getPrintUnit(item);
       totalPrice = (double.tryParse(item.totalPrice?.toString() ?? '0') ?? 0.0)
           .toStringAsFixed(2);
       itemTaxAmount = taxValue.toStringAsFixed(2);
@@ -2041,7 +2037,9 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
 
     final slLabel = _getLabel(displayConfig, 'showReturnSLNumber',
         resolvedLabels?.returnSlNumber, isEnglish ? 'SL#' : '#');
-    final particularsLabel = _getLabel(displayConfig, 'showReturnParticulars',
+    final particularsLabel = _getLabel(
+        displayConfig,
+        'showReturnParticulars',
         resolvedLabels?.returnParticulars,
         isEnglish ? 'PARTICULARS' : 'البيان');
     final mrpLabel = _getLabel(
@@ -2069,13 +2067,17 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       if (showRate) 'rate': 0.15,
       if (showTotal) 'total': 0.15,
     };
-    final double totalW =
-        baseWeights.values.fold<double>(0, (s, w) => s + w);
+    final double totalW = baseWeights.values.fold<double>(0, (s, w) => s + w);
     final Map<String, double> weights = totalW > 0
         ? {for (final e in baseWeights.entries) e.key: e.value / totalW}
         : baseWeights;
 
-    if (showSl || showParticulars || showMrp || showQty || showRate || showTotal) {
+    if (showSl ||
+        showParticulars ||
+        showMrp ||
+        showQty ||
+        showRate ||
+        showTotal) {
       List<ReceiptTableColumn> headerCols = [];
       if (showSl) {
         headerCols.add(ReceiptTableColumn(slLabel,
@@ -2137,23 +2139,20 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         double cartMrp = 0.0;
 
         if (params.isFromLocalStorage || cartItem is Map) {
-          cartName =
-              (cartItem['product_name'] ?? cartItem['productName'] ?? '')
-                  .toString();
+          cartName = (cartItem['product_name'] ?? cartItem['productName'] ?? '')
+              .toString();
           cartRate = double.tryParse(
                   (cartItem['unit_price'] ?? cartItem['unitPrice'])
                           ?.toString() ??
                       '0') ??
               0.0;
-          cartMrp =
-              double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
+          cartMrp = double.tryParse(cartItem['mrp']?.toString() ?? '0') ?? 0.0;
         } else {
           try {
             cartName = cartItem.productName?.toString() ?? '';
             cartRate =
                 double.tryParse(cartItem.unitPrice?.toString() ?? '0') ?? 0.0;
-            cartMrp =
-                double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0;
+            cartMrp = double.tryParse(cartItem.mrp?.toString() ?? '0') ?? 0.0;
           } catch (_) {}
         }
 
@@ -2178,8 +2177,7 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       final double itemTotal = itemQty * itemRate;
 
       if (showParticulars || showSl) {
-        final String nameText =
-            showSl ? '${i + 1}. $productName' : productName;
+        final String nameText = showSl ? '${i + 1}. $productName' : productName;
         rows.add(ReceiptTableRow([
           ReceiptTableColumn(nameText,
               weight: 1.0, align: TextAlign.left, scale: scale),
@@ -2231,15 +2229,9 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
       final countLabel = isEnglish ? 'Return Items:' : 'عناصر المرتجع:';
       rows.add(ReceiptTableRow([
         ReceiptTableColumn(countLabel,
-            weight: 0.6,
-            align: TextAlign.left,
-            isBold: true,
-            scale: scale),
+            weight: 0.6, align: TextAlign.left, isBold: true, scale: scale),
         ReceiptTableColumn(orderReturns.returnItems!.length.toString(),
-            weight: 0.4,
-            align: TextAlign.right,
-            isBold: true,
-            scale: scale),
+            weight: 0.4, align: TextAlign.right, isBold: true, scale: scale),
       ]));
     }
 
@@ -2327,9 +2319,8 @@ class ArabicAndEnglish3ReceiptLayout implements ReceiptLayout {
         double cartRate = 0.0;
 
         if (params.isFromLocalStorage || cartItem is Map) {
-          cartName =
-              (cartItem['product_name'] ?? cartItem['productName'] ?? '')
-                  .toString();
+          cartName = (cartItem['product_name'] ?? cartItem['productName'] ?? '')
+              .toString();
           cartRate = double.tryParse(
                   (cartItem['unit_price'] ?? cartItem['unitPrice'])
                           ?.toString() ??

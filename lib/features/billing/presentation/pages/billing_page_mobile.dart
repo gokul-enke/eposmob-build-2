@@ -389,6 +389,14 @@ class BillingPageMobileState extends State<BillingPageMobile>
         deliveryMethodsProvider: deliveryMethodsProvider,
         appSettings: appSettings,
       );
+      // Customer fetch and app-settings fetch complete independently. Retry
+      // automatic default resolution when settings arrive so initialization
+      // does not depend on which request wins the race.
+      if (_isQuotationPage) {
+        _controller.clearAutomaticDefaultCustomerForQuotation(context);
+      } else {
+        _applyDefaultCustomerFromCacheIfNeeded();
+      }
       setState(() {});
     };
     appSettingsProvider.addListener(_appSettingsSyncListener!);

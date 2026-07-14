@@ -432,16 +432,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
                                               try {
                                                 final value =
-                                                    await AuthenticationProvider()
-                                                        .login(
-                                                            _emailController
-                                                                .text,
-                                                            _passwordTextController
-                                                                .text,
-                                                            context);
-                                                debugPrint(
-                                                    "Login response: ${json.encode(value)}");
-
+                                                    await AuthenticationProvider().login(
+                                                        _emailController.text
+                                                            .trim(),
+                                                        _passwordTextController
+                                                            .text,
+                                                        context);
                                                 if (value["status"] ==
                                                     "success") {
                                                   ExecutiveModel
@@ -552,10 +548,6 @@ class _SignInScreenState extends State<SignInScreen> {
                                                             ?.userId ??
                                                         0,
                                                   );
-                                                  debugPrint(
-                                                      " authmodel token ${authModel.token}");
-                                                  debugPrint(
-                                                      " authmodel token ${authModel.token}");
                                                   showScaffold(
                                                     context: context,
                                                     message:
@@ -647,8 +639,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 _updateLoadingState(false, "");
                                                 showScaffoldError(
                                                   context: context,
-                                                  message:
-                                                      'Login failed: ${e.toString()}',
+                                                  message: e.toString(),
                                                 );
                                               }
                                             } else {

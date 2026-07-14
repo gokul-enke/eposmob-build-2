@@ -200,6 +200,9 @@ class ReceiptTableColumn {
     final double baseFontSize = fontSize * scale;
     final double minFontSize = fontSize * minScale;
     final effectiveTextDirection = textDirection ?? contextTextDirection;
+    final explicitLineCount = '\n'.allMatches(text).length + 1;
+    final effectiveMaxLines =
+        explicitLineCount > maxLines ? explicitLineCount : maxLines;
 
     TextPainter buildPainter(double size, {String? ellipsis}) {
       return TextPainter(
@@ -214,7 +217,7 @@ class ReceiptTableColumn {
         ),
         textDirection: effectiveTextDirection,
         textAlign: align,
-        maxLines: maxLines,
+        maxLines: effectiveMaxLines,
         ellipsis: ellipsis,
       )..layout(maxWidth: maxWidth);
     }

@@ -7,6 +7,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 class CustomerSummaryCard extends StatelessWidget {
   final CustomerListModelData? customer;
   final MobileCustomerBalanceDisplay? balanceDisplay;
+
   /// When non-null and non-empty, shows a B2B/B2C badge (gated by parent via
   /// [companyB2BEnabled], matching desktop billing header logic).
   final String? customerType;
@@ -24,6 +25,13 @@ class CustomerSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final customerName = customer?.name?.trim();
+    final customerPhone = BillingCrashGuards.customerDisplayPhone(customer);
+    final displayName = customerName?.isNotEmpty == true
+        ? customerName!
+        : (customerPhone ?? BillingCrashGuards.customerDisplayName(customer));
+    final displayPhone =
+        customerName?.isNotEmpty == true ? customerPhone : null;
     final String? displayCustomerType = customerType?.trim().isEmpty == true
         ? null
         : customerType?.trim().toUpperCase();
@@ -77,7 +85,7 @@ class CustomerSummaryCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          BillingCrashGuards.customerDisplayName(customer),
+                          displayName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -94,11 +102,10 @@ class CustomerSummaryCard extends StatelessWidget {
                       ],
                     ],
                   ),
-                  if (BillingCrashGuards.customerDisplayPhone(customer) !=
-                      null) ...[
+                  if (displayPhone != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      BillingCrashGuards.customerDisplayPhone(customer)!,
+                      displayPhone,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

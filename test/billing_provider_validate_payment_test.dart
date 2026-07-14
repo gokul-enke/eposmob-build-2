@@ -57,4 +57,17 @@ void main() {
 
     expect(bp.validatePayment(), isTrue);
   });
+
+  test('validatePayment accepts zero cash plus a full CREDIT alias sale', () {
+    final bp = BillingProvider();
+    bp.setTotalOrderAmount(100);
+    bp.setPaymentMethod('CASH', true);
+    bp.cashAmountController.text = '0';
+    bp.setPaymentMethod('CREDIT', true);
+    bp.debitAmountController.text = '100';
+
+    expect(bp.isDebitSelected, isTrue);
+    expect(bp.hasAnyPaymentSelected(), isTrue);
+    expect(bp.validatePayment(), isTrue);
+  });
 }

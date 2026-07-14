@@ -13,6 +13,19 @@ import '../resources/app_url.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:http/http.dart' as http;
 
+@visibleForTesting
+Uri buildListCartUri({
+  required int customerId,
+  int? cartId,
+  int? storeId,
+}) {
+  return Uri.parse(APPUrl.listCartUrl).replace(queryParameters: {
+    'customer_id': customerId.toString(),
+    if (cartId != null) 'cart_id': cartId.toString(),
+    if (storeId != null) 'store_id': storeId.toString(),
+  });
+}
+
 class CartProvider with ChangeNotifier {
   final StreamController<List<ListCartModelData>> _cartStreamController =
       StreamController<List<ListCartModelData>>.broadcast();
@@ -137,11 +150,6 @@ class CartProvider with ChangeNotifier {
     debugPrint("customerId $customerId");
     debugPrint("cart_id IS $cartId");
 
-    final url = Uri.parse(APPUrl.listCartUrl).replace(queryParameters: {
-      'customer_id': "1",
-      if (cartId != null) 'cart_id': cartId.toString(),
-    });
-    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -153,13 +161,12 @@ class CartProvider with ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    // Add store_id to query parameters
-    final Map<String, String> queryParams = {};
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
-    final updatedUrl = url.replace(
-        queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    final updatedUrl = buildListCartUri(
+      customerId: customerId,
+      cartId: cartId,
+      storeId: activeStoreId,
+    );
+    debugPrint('🌐 API URL: ${updatedUrl.toString()}');
 
     try {
       final response = await http.get(updatedUrl, headers: {
