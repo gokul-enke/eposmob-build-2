@@ -931,7 +931,6 @@ class _DayCloseModalState extends State<DayCloseModal> {
   List<MasterDataValue> _cashDenominations = [];
   bool _isLoadingDenominations = true;
   bool _openingPrefilled = false;
-  bool _openingTimeReadOnly = false;
 
   @override
   void initState() {
@@ -1113,8 +1112,6 @@ class _DayCloseModalState extends State<DayCloseModal> {
               (result?.openingTime != null && result!.openingTime!.isNotEmpty)
                   ? result.openingTime!
                   : fallbackTime;
-          _openingTimeReadOnly = (result?.openingTime != null &&
-              result!.openingTime!.isNotEmpty);
         }
         _closingTimeController.text = result?.closingTime ?? '';
         _notesController.text = result?.notes ?? '';
@@ -2277,7 +2274,6 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       left: _buildTimePickerField(
                                         label: 'Opening Time',
                                         controller: _openingTimeController,
-                                        readOnly: _openingPrefilled || _openingTimeReadOnly,
                                       ),
                                       right: _buildTimePickerField(
                                         label: 'Closing Time',
