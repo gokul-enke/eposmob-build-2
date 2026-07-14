@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../resources/color_manager.dart';
 import '../../../../resources/font_manager.dart';
 import '../../../../resources/style_manager.dart';
 import '../../../../components/build_round_button.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 
 class CommonDetailsDialog extends StatelessWidget {
   final String title;
@@ -22,7 +24,11 @@ class CommonDetailsDialog extends StatelessWidget {
     this.extraActions,
   }) : super(key: key);
 
-  static Widget buildKeyValueRow(String label, String value) {
+  static Widget buildKeyValueRow(
+    String label,
+    String value, {
+    bool copyable = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
@@ -42,7 +48,7 @@ class CommonDetailsDialog extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
+            child: SelectableText(
               value.isNotEmpty ? value : 'N/A',
               style: buildCustomStyle(
                 FontWeightManager.regular,

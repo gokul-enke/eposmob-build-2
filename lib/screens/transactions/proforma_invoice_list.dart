@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
-import '../../components/build_dialog_box.dart';
+import '../../components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_text_fields.dart';
 import '../../providers/auth_model.dart';
@@ -167,7 +169,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
         title: 'Proforma Invoice Details',
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Invoice #', _text(data['invoice_number'])),
+            CommonDetailsDialog.buildKeyValueRow('Invoice #', _text(data['invoice_number']), copyable: true),
             CommonDetailsDialog.buildKeyValueRow('Status', _text(data['status'])),
             CommonDetailsDialog.buildKeyValueRow('Amount', _text(data['amount'])),
             CommonDetailsDialog.buildKeyValueRow('Invoice Date', _text(data['invoice_date'])),
@@ -175,7 +177,7 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
           [
             CommonDetailsDialog.buildKeyValueRow('Due Date', _text(data['due_date'])),
             CommonDetailsDialog.buildKeyValueRow('Customer', _text(customer['name'])),
-            CommonDetailsDialog.buildKeyValueRow('Phone', _text(customer['phone'])),
+            CommonDetailsDialog.buildKeyValueRow('Phone', _text(customer['phone']), copyable: true),
             CommonDetailsDialog.buildKeyValueRow('Quotation #', _text(quotation['quotation_number'])),
           ],
         ],
@@ -376,28 +378,88 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _text(invoice['invoice_number']),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: buildCustomStyle(
-                        FontWeightManager.bold,
-                        FontSize.s14,
-                        0.20,
-                        ColorManager.kPrimaryColor,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _text(invoice['invoice_number']),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: buildCustomStyle(
+                              FontWeightManager.bold,
+                              FontSize.s14,
+                              0.20,
+                              ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(
+                                text: _text(invoice['invoice_number'])));
+                            showScaffold(
+                              context: context,
+                              message: 'Invoice number copied to clipboard',
+                            );
+                          },
+                          child: const Icon(
+                            Icons.copy,
+                            size: 14,
+                            color: Colors.black38,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '${_text(customer['name'])} · ${_text(quotation['quotation_number'])}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s11,
-                        0.15,
-                        Colors.grey.shade600,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: SelectableText(
+                                  _text(customer['name']),
+                                  style: buildCustomStyle(
+                                    FontWeightManager.regular,
+                                    FontSize.s11,
+                                    0.15,
+                                    Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                ' · ${_text(quotation['quotation_number'])}',
+                                style: buildCustomStyle(
+                                  FontWeightManager.regular,
+                                  FontSize.s11,
+                                  0.15,
+                                  Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_text(quotation['quotation_number']) != '-') ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(
+                                  text: _text(quotation['quotation_number'])));
+                              showScaffold(
+                                context: context,
+                                message: 'Quotation number copied to clipboard',
+                              );
+                            },
+                            child: const Icon(
+                              Icons.copy,
+                              size: 14,
+                              color: Colors.black38,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -772,9 +834,110 @@ class _ProformaInvoiceListScreenState extends State<ProformaInvoiceListScreen> {
             index % 2 == 0 ? Colors.white : Colors.grey.withValues(alpha: 0.1),
       ),
       children: [
-        _tableCell(_text(invoice['invoice_number'])),
-        _tableCell(_text(customer['name'])),
-        _tableCell(_text(quotation['quotation_number'])),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 22.0, horizontal: 10.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    _text(invoice['invoice_number']),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s9,
+                      0.18,
+                      Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(
+                        text: _text(invoice['invoice_number'])));
+                    showScaffold(
+                      context: context,
+                      message: 'Invoice number copied to clipboard',
+                    );
+                  },
+                  child: const Icon(
+                    Icons.copy,
+                    size: 14,
+                    color: Colors.black38,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 22.0, horizontal: 10.0),
+            child: Center(
+              child: SelectableText(
+                _text(customer['name']),
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s9,
+                  0.18,
+                  Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 22.0, horizontal: 10.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    _text(quotation['quotation_number']),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s9,
+                      0.18,
+                      Colors.black,
+                    ),
+                  ),
+                ),
+                if (_text(quotation['quotation_number']) != '-') ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(
+                          text: _text(quotation['quotation_number'])));
+                      showScaffold(
+                        context: context,
+                        message: 'Quotation number copied to clipboard',
+                      );
+                    },
+                    child: const Icon(
+                      Icons.copy,
+                      size: 14,
+                      color: Colors.black38,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
         _tableCell(_text(invoice['invoice_date'])),
         _tableCell(_text(invoice['due_date'])),
         _tableCell(_text(invoice['amount'])),

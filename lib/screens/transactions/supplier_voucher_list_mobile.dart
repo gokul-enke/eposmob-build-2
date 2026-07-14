@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/models/supplier_voucher.dart';
 import 'package:provider/provider.dart';
 import '../../components/build_container_box.dart';
@@ -361,10 +363,30 @@ class _SupplierVoucherCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  voucher.voucherNumber,
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s13, 0.19, ColorManager.textColor),
+                Row(
+                  children: [
+                    Text(
+                      voucher.voucherNumber,
+                      style: buildCustomStyle(FontWeightManager.semiBold,
+                          FontSize.s13, 0.19, ColorManager.textColor),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(
+                            ClipboardData(text: voucher.voucherNumber));
+                        showScaffold(
+                          context: context,
+                          message: 'Voucher number copied to clipboard',
+                        );
+                      },
+                      child: const Icon(
+                        Icons.copy,
+                        size: 14,
+                        color: Colors.black38,
+                      ),
+                    ),
+                  ],
                 ),
                 _statusChip(voucher.status),
               ],

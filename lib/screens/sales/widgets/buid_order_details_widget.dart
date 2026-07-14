@@ -794,7 +794,7 @@ class OrderDetailWidget extends StatelessWidget {
               builder: (context, appSettingsProvider, child) {
                 final currency =
                     appSettingsProvider.appSettings?.currency ?? 'INR';
-                return Text(
+                return SelectableText(
                   _formatOrderPropertyValue(label, value, currency),
                   style: buildCustomStyle(
                     FontWeightManager.regular,
@@ -832,7 +832,7 @@ class OrderDetailWidget extends StatelessWidget {
               builder: (context, appSettingsProvider, child) {
                 final currency =
                     appSettingsProvider.appSettings?.currency ?? 'INR';
-                return Text(
+                return SelectableText(
                   _formatOrderPropertyValue(label, value, currency),
                   style: buildCustomStyle(
                     FontWeightManager.regular,

@@ -13,6 +13,7 @@ import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/screens/print/print_daily_close.dart';
+import 'package:pos_machine/screens/print/daily_close_standard_printer.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/auth_model.dart';
@@ -51,6 +52,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
           id: basicData.id!,
         );
         if (detailData != null) {
+          debugPrint('transactions count: ${detailData.transactions?.length}');
           salesProvider.setSelectedDailySalesCloseData(detailData);
           if (mounted) {
             setState(() {
@@ -105,14 +107,14 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     });
   }
 
-  Future<bool?> _askIncludeTransactions() async {
+  Future<bool?> _askIncludeTransactions({String action = 'Print'}) async {
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Print Transaction List?'),
-          content: const Text(
-            'Do you want to include transaction details in this print?',
+          title: Text('$action Transaction List?'),
+          content: Text(
+            'Do you want to include transaction details in this ${action.toLowerCase()}?',
           ),
           actions: [
             TextButton(
@@ -134,7 +136,7 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
   }
 
   Future<void> _handlePrint(DailySalesCloseData data) async {
-    final includeTransactions = await _askIncludeTransactions();
+    final includeTransactions = await _askIncludeTransactions(action: 'Print');
     if (includeTransactions == null) {
       return;
     }
@@ -156,6 +158,17 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
 
     if (!mounted) return;
     Get.to(() => DailyClosePrintPage(data: data));
+  }
+
+  Future<void> _handleExport(DailySalesCloseData data) async {
+    final includeTransactions = await _askIncludeTransactions(action: 'Export');
+    if (includeTransactions == null) return;
+
+    await DailyCloseStandardPrinter(context).generateAndShareDailyClosePDF(
+      data: data,
+      selectedPaperSize: 'A4',
+      includeTransactions: includeTransactions,
+    );
   }
 
   @override
@@ -746,6 +759,17 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
             textColor: ColorManager.kPrimaryColor,
             fct: () {
               _handlePrint(data);
+            },
+            height: 50,
+            width: size.width * 0.19,
+            fontSize: FontSize.s12,
+          ),
+          CustomRoundButton(
+            title: "Export",
+            boxColor: ColorManager.kPrimaryColor,
+            textColor: Colors.white,
+            fct: () {
+              _handleExport(data);
             },
             height: 50,
             width: size.width * 0.19,

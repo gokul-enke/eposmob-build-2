@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'dart:async';
 import 'dart:ui';
-import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/models/list_invoice.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
@@ -1644,9 +1646,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           title: 'Invoice details',
           gridColumns: [
             [
-              CommonDetailsDialog.buildKeyValueRow('Invoice Number', details.invoiceNumber),
+              CommonDetailsDialog.buildKeyValueRow('Invoice Number', details.invoiceNumber, copyable: true),
               CommonDetailsDialog.buildKeyValueRow('Customer Name', details.customer.name),
-              CommonDetailsDialog.buildKeyValueRow('Customer Phone', details.customer.phone),
+              CommonDetailsDialog.buildKeyValueRow('Customer Phone', details.customer.phone, copyable: true),
               CommonDetailsDialog.buildKeyValueRow('Amount', details.amount),
               CommonDetailsDialog.buildKeyValueRow('Type', details.type),
             ],
@@ -2091,13 +2093,80 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                                                     },
                                                   ),
                                                 ),
-                                                _buildTableCell(
-                                                    invoice.invoiceNumber),
+                                                 TableCell(
+                                                   verticalAlignment:
+                                                       TableCellVerticalAlignment
+                                                           .middle,
+                                                   child: Padding(
+                                                     padding:
+                                                         const EdgeInsets.all(
+                                                             8.0),
+                                                     child: Row(
+                                                       mainAxisAlignment:
+                                                           MainAxisAlignment
+                                                               .center,
+                                                       children: [
+                                                         Text(
+                                                           invoice
+                                                               .invoiceNumber,
+                                                           textAlign:
+                                                               TextAlign.center,
+                                                           style:
+                                                               buildCustomStyle(
+                                                             FontWeightManager
+                                                                 .medium,
+                                                             FontSize.s9,
+                                                             0.13,
+                                                             Colors.black,
+                                                           ),
+                                                         ),
+                                                         const SizedBox(
+                                                             width: 6),
+                                                         GestureDetector(
+                                                           onTap: () {
+                                                             Clipboard.setData(
+                                                                 ClipboardData(
+                                                                     text: invoice
+                                                                         .invoiceNumber));
+                                                             showScaffold(
+                                                               context: context,
+                                                               message:
+                                                                   'Invoice number copied to clipboard',
+                                                             );
+                                                           },
+                                                           child: Icon(
+                                                             Icons.copy,
+                                                             size: 14,
+                                                             color: ColorManager
+                                                                 .textColor
+                                                                 .withOpacity(
+                                                                     0.6),
+                                                           ),
+                                                         ),
+                                                       ],
+                                                     ),
+                                                   ),
+                                                 ),
                                                 _buildTableCell(
                                                     invoice.amount.toString()),
-                                                _buildTableCell(invoice
-                                                    .customer.user.name
-                                                    .toString()),
+                                                TableCell(
+                                                  verticalAlignment: TableCellVerticalAlignment.middle,
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.all(8.0),
+                                                    child: Center(
+                                                      child: SelectableText(
+                                                        invoice.customer.user.name.toString(),
+                                                        textAlign: TextAlign.center,
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager.medium,
+                                                          FontSize.s9,
+                                                          0.13,
+                                                          Colors.black,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
                                                 _buildTableCell(
                                                     invoice.invoiceDate),
                                                 _buildTableCell(invoice.type),
@@ -2601,8 +2670,61 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                   index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
             ),
             children: [
-              _buildTableCell(invoice.customer.user.name.toString()),
-              _buildTableCell(invoice.invoiceNumber),
+              TableCell(
+                verticalAlignment: TableCellVerticalAlignment.middle,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Center(
+                    child: SelectableText(
+                      invoice.customer.user.name.toString(),
+                      textAlign: TextAlign.center,
+                      style: buildCustomStyle(
+                        FontWeightManager.medium,
+                        FontSize.s9,
+                        0.13,
+                        Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              TableCell(
+                verticalAlignment: TableCellVerticalAlignment.middle,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        invoice.invoiceNumber,
+                        textAlign: TextAlign.center,
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s9,
+                          0.13,
+                          Colors.black,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () {
+                          Clipboard.setData(
+                              ClipboardData(text: invoice.invoiceNumber));
+                          showScaffold(
+                            context: context,
+                            message: 'Invoice number copied to clipboard',
+                          );
+                        },
+                        child: Icon(
+                          Icons.copy,
+                          size: 14,
+                          color: ColorManager.textColor.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               _buildTableCell(invoice.type),
               _buildTableCell(invoice.invoiceDate),
               _buildTableCell(invoice.dueDate),

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
@@ -10,7 +11,8 @@ import 'package:pos_machine/screens/transactions/widgets/customer_auto_complete.
 import 'package:provider/provider.dart';
 
 import '../../components/build_container_box.dart';
-import '../../components/build_dialog_box.dart';
+import '../../components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import '../../components/build_round_button.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../helpers/date_helper.dart';
@@ -267,8 +269,8 @@ class _CustomerTransactionListScreenState
           ],
           [
             CommonDetailsDialog.buildKeyValueRow('Amount', '${transaction.currency ?? ''} ${transaction.amount ?? ''}'),
-            CommonDetailsDialog.buildKeyValueRow('Reference ID', transaction.referenceId ?? 'N/A'),
-            CommonDetailsDialog.buildKeyValueRow('Reference', transaction.reference ?? 'N/A'),
+            CommonDetailsDialog.buildKeyValueRow('Reference ID', transaction.referenceId ?? 'N/A', copyable: true),
+            CommonDetailsDialog.buildKeyValueRow('Reference', transaction.reference ?? 'N/A', copyable: true),
             CommonDetailsDialog.buildKeyValueRow('Status', transaction.status ?? 'N/A'),
             CommonDetailsDialog.buildKeyValueRow('Comment', transaction.transactionComment ?? 'N/A'),
             CommonDetailsDialog.buildKeyValueRow(
@@ -641,19 +643,41 @@ class _CustomerTransactionListScreenState
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                SelectableText(
                                   tx.customerName ?? 'No Name',
                                   style: buildCustomStyle(FontWeightManager.semiBold,
                                       FontSize.s13, 0.19, ColorManager.textColor),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 if (tx.referenceId != null && tx.referenceId!.isNotEmpty) ...[
                                   const SizedBox(height: 2),
-                                  Text(
-                                    'Ref: ${tx.referenceId}',
-                                    style: buildCustomStyle(FontWeightManager.regular,
-                                        FontSize.s10, 0.15, Colors.grey),
-                                    overflow: TextOverflow.ellipsis,
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          'Ref: ${tx.referenceId}',
+                                          style: buildCustomStyle(FontWeightManager.regular,
+                                              FontSize.s10, 0.15, Colors.grey),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Clipboard.setData(ClipboardData(
+                                              text: tx.referenceId!));
+                                          showScaffold(
+                                            context: context,
+                                            message:
+                                                'Reference ID copied to clipboard',
+                                          );
+                                        },
+                                        child: const Icon(
+                                          Icons.copy,
+                                          size: 14,
+                                          color: Colors.black38,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ],
@@ -1220,14 +1244,90 @@ class _CustomerTransactionListScreenState
                                                           children: [
                                                             _buildTableCell(
                                                                 '${index + 1 + (currentPage - 1) * itemsPerPage}'),
-                                                            _buildTableCell(
-                                                                "${transaction.customerName ?? 'No Name'}"),
+                                                             TableCell(
+                                                               verticalAlignment: TableCellVerticalAlignment.middle,
+                                                               child: Padding(
+                                                                 padding: const EdgeInsets.all(8.0),
+                                                                 child: Center(
+                                                                   child: SelectableText(
+                                                                     "${transaction.customerName ?? 'No Name'}",
+                                                                     textAlign: TextAlign.center,
+                                                                     style: buildCustomStyle(
+                                                                       FontWeightManager.medium,
+                                                                       FontSize.s9,
+                                                                       0.13,
+                                                                       Colors.black,
+                                                                     ),
+                                                                   ),
+                                                                 ),
+                                                               ),
+                                                             ),
                                                             _buildTableCell(
                                                                 "${transaction.date ?? 'N/A'}"),
                                                             _buildTableCell(
                                                                 "${transaction.currency} ${transaction.amount}"),
-                                                            _buildTableCell(
-                                                                "${transaction.referenceId ?? 'N/A'}"),
+                                                            TableCell(
+                                                              verticalAlignment:
+                                                                  TableCellVerticalAlignment
+                                                                      .middle,
+                                                              child: Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .all(
+                                                                        8.0),
+                                                                child: Row(
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .center,
+                                                                  children: [
+                                                                    Text(
+                                                                      transaction.referenceId ?? 'N/A',
+                                                                      textAlign:
+                                                                          TextAlign
+                                                                              .center,
+                                                                      style:
+                                                                          buildCustomStyle(
+                                                                        FontWeightManager
+                                                                            .medium,
+                                                                        FontSize
+                                                                            .s9,
+                                                                        0.13,
+                                                                        Colors
+                                                                            .black,
+                                                                      ),
+                                                                    ),
+                                                                    if (transaction.referenceId != null && transaction.referenceId!.isNotEmpty) ...[
+                                                                      const SizedBox(
+                                                                          width:
+                                                                              6),
+                                                                      GestureDetector(
+                                                                        onTap:
+                                                                            () {
+                                                                          Clipboard.setData(
+                                                                              ClipboardData(
+                                                                                  text: transaction.referenceId!));
+                                                                          showScaffold(
+                                                                            context:
+                                                                                context,
+                                                                            message:
+                                                                                'Reference ID copied to clipboard',
+                                                                          );
+                                                                        },
+                                                                        child:
+                                                                            const Icon(
+                                                                          Icons
+                                                                              .copy,
+                                                                          size:
+                                                                              14,
+                                                                          color:
+                                                                              Colors.black38,
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
                                                             Center(
                                                               child: _buildTypeCell(
                                                                   "${transaction.type}"),

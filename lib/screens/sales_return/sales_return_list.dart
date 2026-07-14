@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
 import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -281,16 +283,40 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '#$orderNumber',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s14,
-                        0.20,
-                        ColorManager.textColor,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '#$orderNumber',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s14,
+                              0.20,
+                              ColorManager.textColor,
+                            ),
+                          ),
+                        ),
+                        if (orderNumber.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(
+                                  ClipboardData(text: orderNumber));
+                              showScaffold(
+                                context: context,
+                                message: 'Order number copied to clipboard',
+                              );
+                            },
+                            child: const Icon(
+                              Icons.copy,
+                              size: 14,
+                              color: Colors.black38,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -530,7 +556,48 @@ class _SalesReturnPageState extends State<SalesReturnPage> {
         color: index.isEven ? Colors.white : Colors.grey.withOpacity(0.04),
       ),
       children: [
-        _buildTableCell(order.order?.orderNumber ?? order.orderId.toString()),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsetsDirectional.all(14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    order.order?.orderNumber ?? order.orderId.toString(),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s12,
+                      0.13,
+                      Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(
+                        text: order.order?.orderNumber ??
+                            order.orderId.toString()));
+                    showScaffold(
+                      context: context,
+                      message: 'Order number copied to clipboard',
+                    );
+                  },
+                  child: const Icon(
+                    Icons.copy,
+                    size: 14,
+                    color: Colors.black38,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         _buildTableCell(totalQuantity.toString()),
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,

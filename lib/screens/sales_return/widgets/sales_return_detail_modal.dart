@@ -243,10 +243,8 @@ class SalesReturnDetailModal extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                SelectableText(
                   value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s13,
@@ -273,10 +271,8 @@ class SalesReturnDetailModal extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: Text(
+                child: SelectableText(
                   value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(
                     FontWeightManager.semiBold,
                     FontSize.s13,
