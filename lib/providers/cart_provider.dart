@@ -13,6 +13,19 @@ import '../resources/app_url.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:http/http.dart' as http;
 
+@visibleForTesting
+Uri buildListCartUri({
+  required int customerId,
+  int? cartId,
+  int? storeId,
+}) {
+  return Uri.parse(APPUrl.listCartUrl).replace(queryParameters: {
+    'customer_id': customerId.toString(),
+    if (cartId != null) 'cart_id': cartId.toString(),
+    if (storeId != null) 'store_id': storeId.toString(),
+  });
+}
+
 class CartProvider with ChangeNotifier {
   final StreamController<List<ListCartModelData>> _cartStreamController =
       StreamController<List<ListCartModelData>>.broadcast();
@@ -148,16 +161,11 @@ class CartProvider with ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    // Preserve the selected customer/cart context while adding the store.
-    final Map<String, String> queryParams = {
-      'customer_id': customerId.toString(),
-      if (cartId != null) 'cart_id': cartId.toString(),
-    };
-    if (activeStoreId != null) {
-      queryParams['store_id'] = activeStoreId.toString();
-    }
-    final updatedUrl =
-        Uri.parse(APPUrl.listCartUrl).replace(queryParameters: queryParams);
+    final updatedUrl = buildListCartUri(
+      customerId: customerId,
+      cartId: cartId,
+      storeId: activeStoreId,
+    );
     debugPrint('🌐 API URL: ${updatedUrl.toString()}');
 
     try {
