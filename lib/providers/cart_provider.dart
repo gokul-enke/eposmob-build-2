@@ -137,11 +137,6 @@ class CartProvider with ChangeNotifier {
     debugPrint("customerId $customerId");
     debugPrint("cart_id IS $cartId");
 
-    final url = Uri.parse(APPUrl.listCartUrl).replace(queryParameters: {
-      'customer_id': "1",
-      if (cartId != null) 'cart_id': cartId.toString(),
-    });
-    debugPrint('🌐 API URL: ${url.toString()}');
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -153,13 +148,17 @@ class CartProvider with ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    // Add store_id to query parameters
-    final Map<String, String> queryParams = {};
+    // Preserve the selected customer/cart context while adding the store.
+    final Map<String, String> queryParams = {
+      'customer_id': customerId.toString(),
+      if (cartId != null) 'cart_id': cartId.toString(),
+    };
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();
     }
-    final updatedUrl = url.replace(
-        queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    final updatedUrl =
+        Uri.parse(APPUrl.listCartUrl).replace(queryParameters: queryParams);
+    debugPrint('🌐 API URL: ${updatedUrl.toString()}');
 
     try {
       final response = await http.get(updatedUrl, headers: {

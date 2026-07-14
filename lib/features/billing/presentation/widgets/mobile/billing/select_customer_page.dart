@@ -53,7 +53,8 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
     try {
       final accessToken =
           Provider.of<AuthModel>(context, listen: false).token ?? '';
-      final customerProvider = CustomerProvider();
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
       final response = await customerProvider.listCustomer(
         accessToken: accessToken,
         loadAll: true,
@@ -65,8 +66,14 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
       // response to get our local list.
       if (response != null && response['status'] == 'success') {
         final model = CustomerListModel.fromJson(response);
+        final customers = customerProvider.allCustomers?.isNotEmpty == true
+            ? customerProvider.allCustomers!
+            : (model.data ?? <CustomerListModelData>[]);
+        Provider.of<BillingProvider>(context, listen: false).setCustomerList(
+          List<CustomerListModelData>.from(customers),
+        );
         setState(() {
-          _allCustomers = model.data ?? [];
+          _allCustomers = List<CustomerListModelData>.from(customers);
           _filteredCustomers = List.from(_allCustomers);
           _isLoading = false;
         });
@@ -151,7 +158,9 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
           message: BillingMobileErrorMessages.addCustomerFailed,
         );
       }
-    } else if (result != null && result is Map && result['status'] != 'success') {
+    } else if (result != null &&
+        result is Map &&
+        result['status'] != 'success') {
       if (mounted) {
         final apiMessage = result['message']?.toString();
         showScaffoldError(
@@ -176,19 +185,18 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final customerSelection =
         Provider.of<CustomerSelectionProvider>(context, listen: false);
-    final isQuotationDraft = Provider.of<LocalProductProvider>(context,
-            listen: false)
-        .currentOrder
-        ?.quotationId !=
-        null;
-    final salesExecutive = Provider.of<SalesExecutiveProvider>(context,
-            listen: false)
-        .getCurrentUser(context);
+    final isQuotationDraft =
+        Provider.of<LocalProductProvider>(context, listen: false)
+                .currentOrder
+                ?.quotationId !=
+            null;
+    final salesExecutive =
+        Provider.of<SalesExecutiveProvider>(context, listen: false)
+            .getCurrentUser(context);
     final shouldShow = _controller.shouldShowCustomerBalance(
       customer: customer,
       customerSelectionProvider: customerSelection,
-      defaultCustomerPhone:
-          appSettings?.autoAssignDefaultCustomerPhone ?? '',
+      defaultCustomerPhone: appSettings?.autoAssignDefaultCustomerPhone ?? '',
       isQuotationDraft: isQuotationDraft,
       salesExecutivePhone: salesExecutive?.phone,
     );
@@ -528,7 +536,8 @@ class _SelectCustomerPageState extends State<SelectCustomerPage> {
               width: 22,
               height: 22,
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF22C55E) : Colors.transparent,
+                color:
+                    isSelected ? const Color(0xFF22C55E) : Colors.transparent,
                 shape: BoxShape.circle,
                 border: isSelected
                     ? null

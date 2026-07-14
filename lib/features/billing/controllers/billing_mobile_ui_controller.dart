@@ -2354,13 +2354,6 @@ class BillingMobileCustomerController {
       return const MobileDefaultCustomerResult.skipped();
     }
 
-    if (billingProvider.selectedCustomer != null ||
-        billingProvider.selectedCustomerID != null ||
-        (billingProvider.selectedCustomerPhone?.isNotEmpty ?? false) ||
-        customerSelectionProvider.hasSelectedCustomer) {
-      return const MobileDefaultCustomerResult.skipped();
-    }
-
     final autoAssignEnabled = appSettings?.autoAssignDefaultCustomer ?? false;
     if (!autoAssignEnabled) {
       return const MobileDefaultCustomerResult.skipped();
@@ -2371,12 +2364,34 @@ class BillingMobileCustomerController {
       return const MobileDefaultCustomerResult.skipped();
     }
 
+    // A previous attempt may have retained only the configured phone because
+    // the customer cache was incomplete. Permit that automatic state to be
+    // upgraded after a full customer refresh.
+    final normalizedDefaultPhone = defaultPhone.trim();
+    final isPhoneOnlyAutomaticDefault =
+        !billingProvider.isCustomerManuallySelected &&
+            billingProvider.selectedCustomer == null &&
+            billingProvider.selectedCustomerID == null &&
+            !customerSelectionProvider.hasSelectedCustomer &&
+            <String?>[
+              billingProvider.selectedCustomerPhone,
+              billingProvider.mobileNumberText,
+              billingProvider.salesExecutivemobileNumberText,
+            ].any((phone) => phone?.trim() == normalizedDefaultPhone);
+
+    if (!isPhoneOnlyAutomaticDefault &&
+        (billingProvider.selectedCustomer != null ||
+            billingProvider.selectedCustomerID != null ||
+            (billingProvider.selectedCustomerPhone?.isNotEmpty ?? false) ||
+            customerSelectionProvider.hasSelectedCustomer)) {
+      return const MobileDefaultCustomerResult.skipped();
+    }
+
     if (customers == null || customers.isEmpty) {
       return const MobileDefaultCustomerResult.skipped();
     }
 
     CustomerListModelData? matched;
-    final normalizedDefaultPhone = defaultPhone.trim();
     for (final customer in customers) {
       if (customer.phone?.trim() == normalizedDefaultPhone) {
         matched = customer;
@@ -2420,10 +2435,7 @@ class BillingMobileCustomerController {
     }
 
     final phone = result.phoneOnlyText ?? '';
-    billingProvider.setSalesExecutiveMobileNumberText(phone);
-    billingProvider.setMobileNumberText(phone);
-    billingProvider.mobileNumberTextController.text = phone;
-    billingProvider.clearSelectedCustomerButKeepText();
+    billingProvider.setPhoneOnlyDefaultCustomer(phone);
     customerSelectionProvider.clearSelectedCustomer();
   }
 
@@ -2538,13 +2550,16 @@ class BillingMobileCustomerController {
     required BillingProvider billingProvider,
     required CartProvider cartProvider,
     required AuthModel auth,
+    bool resetCartContext = true,
     bool reapplyDefaultCustomer = false,
     MobileDefaultCustomerResult? defaultCustomerResult,
   }) {
     customerSelectionProvider.clearSelectedCustomer();
     billingProvider.clearSelectedCustomer();
     billingProvider.setSalesExecutiveMobileNumberText('');
-    resetCartContextForAuthUser(cartProvider: cartProvider, auth: auth);
+    if (resetCartContext) {
+      resetCartContextForAuthUser(cartProvider: cartProvider, auth: auth);
+    }
 
     if (reapplyDefaultCustomer && defaultCustomerResult != null) {
       applyDefaultCustomerResult(
@@ -2619,15 +2634,21 @@ class BillingMobileCustomerController {
   }) {
     final customer = customerSelectionProvider.selectedCustomer ??
         billingProvider.selectedCustomer;
+    final configuredDefaultPhone =
+        appSettings?.autoAssignDefaultCustomerPhone ?? '';
     final isDefault = isDefaultCustomer(
-      customer: customer,
-      customerSelectionProvider: customerSelectionProvider,
-      defaultCustomerPhone: appSettings?.autoAssignDefaultCustomerPhone ?? '',
-    );
+          customer: customer,
+          customerSelectionProvider: customerSelectionProvider,
+          defaultCustomerPhone: configuredDefaultPhone,
+        ) ||
+        isDefaultCustomerPhone(
+          billingProvider.selectedCustomerPhone ??
+              billingProvider.mobileNumberText,
+          configuredDefaultPhone,
+        );
     billingProvider.setPaymentValidationCustomerContext(
       isDefaultCustomer: isDefault,
-      configuredDefaultCustomerPhone:
-          appSettings?.autoAssignDefaultCustomerPhone ?? '',
+      configuredDefaultCustomerPhone: configuredDefaultPhone,
     );
   }
 

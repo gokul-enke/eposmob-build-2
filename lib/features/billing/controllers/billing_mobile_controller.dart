@@ -686,6 +686,8 @@ class BillingMobileController {
         billingProvider: billingProvider,
         cartProvider: Provider.of<CartProvider>(context, listen: false),
         auth: Provider.of<AuthModel>(context, listen: false),
+        // The next-order customer resolution below establishes cart context.
+        resetCartContext: false,
       );
 
       final defaultResult =
@@ -703,6 +705,12 @@ class BillingMobileController {
         cartProvider: Provider.of<CartProvider>(context, listen: false),
         auth: Provider.of<AuthModel>(context, listen: false),
       );
+      if (!defaultResult.applied || defaultResult.matchedCustomer == null) {
+        _customerController.resetCartContextForAuthUser(
+          cartProvider: Provider.of<CartProvider>(context, listen: false),
+          auth: Provider.of<AuthModel>(context, listen: false),
+        );
+      }
     }
   }
 
@@ -816,11 +824,18 @@ class BillingMobileController {
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final selectedCustomer = customerSelectionProvider.selectedCustomer ??
         billingProvider.selectedCustomer;
+    final configuredDefaultPhone =
+        appSettings?.autoAssignDefaultCustomerPhone ?? '';
     final isDefaultCustomer = _customerController.isDefaultCustomer(
-      customer: selectedCustomer,
-      customerSelectionProvider: customerSelectionProvider,
-      defaultCustomerPhone: appSettings?.autoAssignDefaultCustomerPhone ?? '',
-    );
+          customer: selectedCustomer,
+          customerSelectionProvider: customerSelectionProvider,
+          defaultCustomerPhone: configuredDefaultPhone,
+        ) ||
+        _customerController.isDefaultCustomerPhone(
+          billingProvider.selectedCustomerPhone ??
+              billingProvider.mobileNumberText,
+          configuredDefaultPhone,
+        );
     final checkoutOldBalance =
         isDefaultCustomer ? null : selectedCustomer?.balance;
     final checkoutTotalPaid = billingProvider.getTotalPaidAmount();
@@ -1056,6 +1071,32 @@ class BillingMobileController {
 
           billingProvider.setCustomerList(
             List<CustomerListModelData>.from(refreshedCustomers),
+          );
+          if (!context.mounted) return;
+
+          // If the reset temporarily retained only the configured default
+          // phone, upgrade it to the real customer as soon as the refreshed
+          // complete cache arrives. Manual/current-order selections are
+          // protected by the resolver's normal preconditions.
+          final customerSelectionProvider =
+              Provider.of<CustomerSelectionProvider>(context, listen: false);
+          final defaultResult =
+              _customerController.applyDefaultCustomerFromCacheIfNeeded(
+            localProductProvider:
+                Provider.of<LocalProductProvider>(context, listen: false),
+            billingProvider: billingProvider,
+            customerSelectionProvider: customerSelectionProvider,
+            appSettings:
+                Provider.of<AppSettingsProvider>(context, listen: false)
+                    .appSettings,
+            customers: billingProvider.customerList,
+          );
+          _customerController.applyDefaultCustomerResult(
+            result: defaultResult,
+            customerSelectionProvider: customerSelectionProvider,
+            billingProvider: billingProvider,
+            cartProvider: Provider.of<CartProvider>(context, listen: false),
+            auth: authModel,
           );
           billingDebugLog(
             'Background customer refresh completed: ${refreshedCustomers.length} customers',
@@ -1369,11 +1410,18 @@ class BillingMobileController {
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final selectedCustomer = customerSelectionProvider.selectedCustomer ??
         billingProvider.selectedCustomer;
+    final configuredDefaultPhone =
+        appSettings?.autoAssignDefaultCustomerPhone ?? '';
     final isDefaultCustomer = _customerController.isDefaultCustomer(
-      customer: selectedCustomer,
-      customerSelectionProvider: customerSelectionProvider,
-      defaultCustomerPhone: appSettings?.autoAssignDefaultCustomerPhone ?? '',
-    );
+          customer: selectedCustomer,
+          customerSelectionProvider: customerSelectionProvider,
+          defaultCustomerPhone: configuredDefaultPhone,
+        ) ||
+        _customerController.isDefaultCustomerPhone(
+          billingProvider.selectedCustomerPhone ??
+              billingProvider.mobileNumberText,
+          configuredDefaultPhone,
+        );
 
     return const QuotationPrintService().printQuotationDetails(
       context,

@@ -311,15 +311,25 @@ class BillingProvider extends ChangeNotifier {
       // Indicate loading when first called
       setInitLoading(true);
 
-      final response = await CustomerProvider()
-          .listCustomer(accessToken: accessToken, sortAscending: sortAscending);
+      final customerProvider = CustomerProvider();
+      final response = await customerProvider.listCustomer(
+        accessToken: accessToken,
+        sortAscending: sortAscending,
+        loadAll: true,
+      );
 
       if (response["status"] == "success") {
-        final CustomerListModel customerListModel =
-            CustomerListModel.fromJson(response);
-        setCustomerList(customerListModel.data);
+        // Default-customer resolution must use the complete customer cache.
+        // A cache-success response may omit `data`, so prefer the provider's
+        // populated all-customers collection.
+        final cachedCustomers = customerProvider.allCustomers;
+        final responseCustomers = CustomerListModel.fromJson(response).data;
+        final customers = cachedCustomers?.isNotEmpty == true
+            ? cachedCustomers
+            : responseCustomers;
+        setCustomerList(customers);
         // By default, filtered list equals full list
-        setFilteredCustomerList(customerListModel.data);
+        setFilteredCustomerList(customers);
         setInitLoading(false);
         return true;
       }
@@ -452,6 +462,23 @@ class BillingProvider extends ChangeNotifier {
     _isCustomerFound = false;
     _isCustomerManuallySelected = false;
     _highlightedCustomerIndex = null;
+    notifyListeners();
+  }
+
+  /// Stores an automatic phone-only default without fabricating a customer.
+  /// The phone remains available for order payloads while id/name stay null
+  /// until a complete customer cache can resolve the real record.
+  void setPhoneOnlyDefaultCustomer(String phone) {
+    final normalizedPhone = phone.trim();
+    _selectedCustomer = null;
+    _selectedCustomerID = null;
+    _selectedCustomerPhone = normalizedPhone;
+    _isCustomerFound = false;
+    _isCustomerManuallySelected = false;
+    _mobileNumberText = normalizedPhone;
+    _salesExecutivemobileNumberText = normalizedPhone;
+    _highlightedCustomerIndex = null;
+    mobileNumberTextController.text = normalizedPhone;
     notifyListeners();
   }
 
