@@ -342,8 +342,21 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                             ),
                             SizedBox(
                               height: 55,
-                              child: _buildTableCell(
-                                  data.salesExecutive?.phone ?? '-'),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                                child: Center(
+                                  child: SelectableText(
+                                    data.salesExecutive?.phone ?? '-',
+                                    textAlign: TextAlign.center,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s9,
+                                      0.18,
+                                      Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                             SizedBox(
                               height: 55,

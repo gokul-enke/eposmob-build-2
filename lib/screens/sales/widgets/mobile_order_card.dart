@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -461,16 +463,40 @@ class MobileOrderCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      "#${order.orderNumber}",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: buildCustomStyle(
-                        FontWeightManager.semiBold,
-                        FontSize.s16,
-                        0.18,
-                        ColorManager.kPrimaryColor,
-                      ),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            "#${order.orderNumber}",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              FontSize.s16,
+                              0.18,
+                              ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                        ),
+                        if (order.orderNumber != null && order.orderNumber!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(
+                                  text: order.orderNumber!));
+                              showScaffold(
+                                context: context,
+                                message: 'Order number copied to clipboard',
+                              );
+                            },
+                            child: const Icon(
+                              Icons.copy,
+                              size: 14,
+                              color: Colors.black38,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   _buildStatusChip(order.status ?? "pending"),
@@ -483,10 +509,8 @@ class MobileOrderCard extends StatelessWidget {
                       size: 16, color: Colors.grey.shade600),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                    child: SelectableText(
                       customerLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: buildCustomStyle(
                         FontWeightManager.medium,
                         FontSize.s12,

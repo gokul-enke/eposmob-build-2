@@ -1,10 +1,10 @@
 import 'dart:ui';
-
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
@@ -1120,6 +1120,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
     required String value,
     Color? valueColor,
     Color? valueBgColor,
+    bool copyable = false,
   }) {
     return Container(
       width: double.infinity,
@@ -1163,14 +1164,39 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     ),
                   ),
                 )
-              : Text(
-                  value,
-                  style: buildCustomStyle(
-                    FontWeightManager.bold,
-                    FontSize.s12,
-                    0.18,
-                    valueColor ?? ColorManager.textColor,
-                  ),
+              : Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        value,
+                        style: buildCustomStyle(
+                          FontWeightManager.bold,
+                          FontSize.s12,
+                          0.18,
+                          valueColor ?? ColorManager.textColor,
+                        ),
+                      ),
+                    ),
+                    if (copyable && value.isNotEmpty && value != 'N/A') ...[
+                      const SizedBox(width: 6),
+                      Builder(
+                        builder: (context) => GestureDetector(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: value));
+                            showScaffold(
+                              context: context,
+                              message: '$label copied to clipboard',
+                            );
+                          },
+                          child: const Icon(
+                            Icons.copy,
+                            size: 14,
+                            color: Colors.black38,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
         ],
       ),
@@ -1196,10 +1222,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    SelectableText(
                       stock.productName ?? 'Unnamed',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: buildCustomStyle(
                         FontWeightManager.semiBold,
                         FontSize.s14,
@@ -1256,6 +1280,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 child: _buildCompactFieldBox(
                   label: 'Barcode',
                   value: barcode,
+                  copyable: true,
                 ),
               ),
               const SizedBox(width: 6),
@@ -1483,8 +1508,76 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                 : Colors.grey.withOpacity(0.1),
                           ),
                           children: [
-                            _buildTableCell('${stock.productName}'),
-                            _buildTableCell(barcode),
+                            TableCell(
+                              verticalAlignment: TableCellVerticalAlignment.middle,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: SelectableText(
+                                      '${stock.productName}',
+                                      textAlign: TextAlign.center,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.medium,
+                                        FontSize.s12,
+                                        0.13,
+                                        Colors.black,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                             TableCell(
+                              verticalAlignment:
+                                  TableCellVerticalAlignment.middle,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          barcode,
+                                          textAlign: TextAlign.center,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.13,
+                                            Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                      if (barcode.isNotEmpty && barcode != 'N/A') ...[
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Clipboard.setData(ClipboardData(
+                                                text: barcode));
+                                            showScaffold(
+                                              context: context,
+                                              message: 'Barcode copied to clipboard',
+                                            );
+                                          },
+                                          child: const Icon(
+                                            Icons.copy,
+                                            size: 14,
+                                            color: Colors.black38,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                             _buildTableCell('${stock.retailPrice}'),
                             _buildTableCell(stock.mrp ?? "N/A"),
                             _buildTableCell(stock.purchaseRate ?? "N/A"),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/models/list_receipt.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart' as new_dialog;
 
 import '../../components/build_container_box.dart';
 import '../../components/build_dialog_box.dart';
@@ -748,7 +750,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         title: 'Receipt payment details',
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Receipt Number', receipt.receiptNumber),
+            CommonDetailsDialog.buildKeyValueRow('Receipt Number', receipt.receiptNumber, copyable: true),
             CommonDetailsDialog.buildKeyValueRow('Customer', receipt.customer.user.name),
             CommonDetailsDialog.buildKeyValueRow('Amount', receipt.amount),
           ],
@@ -1104,19 +1106,122 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                                                 : Colors.grey.withOpacity(0.1),
                                           ),
                                           children: [
-                                            _buildTableCell(
-                                                receipt.receiptNumber),
-                                            _buildTableCell(receipt
-                                                .customer.user.name
-                                                .toString()),
+                                            TableCell(
+                                              verticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(8.0),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      receipt.receiptNumber,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager.medium,
+                                                        FontSize.s9,
+                                                        0.13,
+                                                        Colors.black,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    GestureDetector(
+                                                      onTap: () {
+                                                        Clipboard.setData(
+                                                            ClipboardData(
+                                                                text: receipt
+                                                                    .receiptNumber));
+                                                        new_dialog.showScaffold(
+                                                          context: context,
+                                                          message:
+                                                              'Copied to clipboard',
+                                                        );
+                                                      },
+                                                      child: const Icon(
+                                                        Icons.copy,
+                                                        size: 14,
+                                                        color: Colors.black38,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            TableCell(
+                                              verticalAlignment: TableCellVerticalAlignment.middle,
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(8.0),
+                                                child: Center(
+                                                  child: SelectableText(
+                                                    receipt.customer.user.name.toString(),
+                                                    textAlign: TextAlign.center,
+                                                    style: buildCustomStyle(
+                                                      FontWeightManager.medium,
+                                                      FontSize.s9,
+                                                      0.13,
+                                                      Colors.black,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
                                             _buildTableCell(receipt.amount),
                                             Center(
                                                 child: _buildTypeChip(receipt)),
                                             Center(
                                                 child: _buildStatusChip(
                                                     receipt.receiptStatus)),
-                                            _buildTableCell(
-                                                receipt.paymentReference),
+                                            TableCell(
+                                              verticalAlignment:
+                                                  TableCellVerticalAlignment
+                                                      .middle,
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(8.0),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      receipt.paymentReference,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager.medium,
+                                                        FontSize.s9,
+                                                        0.13,
+                                                        Colors.black,
+                                                      ),
+                                                    ),
+                                                    if (receipt.paymentReference.isNotEmpty) ...[
+                                                      const SizedBox(width: 6),
+                                                      GestureDetector(
+                                                        onTap: () {
+                                                          Clipboard.setData(
+                                                              ClipboardData(
+                                                                  text: receipt
+                                                                      .paymentReference));
+                                                          new_dialog.showScaffold(
+                                                            context: context,
+                                                            message:
+                                                                'Copied to clipboard',
+                                                          );
+                                                        },
+                                                        child: const Icon(
+                                                          Icons.copy,
+                                                          size: 14,
+                                                          color: Colors.black38,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
                                             Center(
                                               child: Padding(
                                                 padding:

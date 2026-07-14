@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -1024,15 +1026,91 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                   children: [
                                                     _buildTableCell(
                                                         "$serialNumber"),
-                                                    _buildTableCell(
-                                                        "${product.productName}"),
-                                                    _buildTableCell(
-                                                        itemCodeEnabled
-                                                            ? (product.itemCode ??
-                                                                '')
-                                                            : ''),
-                                                    _buildTableCell(
-                                                        categoryName),
+                                                    TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment.middle,
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.all(12.0),
+                                                        child: Center(
+                                                          child: SelectableText(
+                                                            "${product.productName}",
+                                                            textAlign: TextAlign.center,
+                                                            style: buildCustomStyle(
+                                                              FontWeightManager.medium,
+                                                              FontSize.s11,
+                                                              0.13,
+                                                              ColorManager.kTextColor,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment.middle,
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.all(12.0),
+                                                        child: Center(
+                                                          child: Row(
+                                                            mainAxisAlignment: MainAxisAlignment.center,
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Flexible(
+                                                                child: Text(
+                                                                  itemCodeEnabled ? (product.itemCode ?? '') : '',
+                                                                  maxLines: 2,
+                                                                  overflow: TextOverflow.ellipsis,
+                                                                  textAlign: TextAlign.center,
+                                                                  style: buildCustomStyle(
+                                                                    FontWeightManager.medium,
+                                                                    FontSize.s11,
+                                                                    0.13,
+                                                                    ColorManager.kTextColor,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              if (itemCodeEnabled && product.itemCode != null && product.itemCode!.isNotEmpty) ...[
+                                                                const SizedBox(width: 6),
+                                                                GestureDetector(
+                                                                  onTap: () {
+                                                                    Clipboard.setData(ClipboardData(
+                                                                        text: product.itemCode!));
+                                                                    showScaffold(
+                                                                      context: context,
+                                                                      message: 'Item code copied to clipboard',
+                                                                    );
+                                                                  },
+                                                                  child: const Icon(
+                                                                    Icons.copy,
+                                                                    size: 14,
+                                                                    color: Colors.black38,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment.middle,
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.all(12.0),
+                                                        child: Center(
+                                                          child: SelectableText(
+                                                            categoryName,
+                                                            textAlign: TextAlign.center,
+                                                            style: buildCustomStyle(
+                                                              FontWeightManager.medium,
+                                                              FontSize.s11,
+                                                              0.13,
+                                                              ColorManager.kTextColor,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
                                                     _buildTableCell(
                                                         "${product.price?.price ?? 'N/A'}"),
                                                     _buildTableCell(
@@ -1072,9 +1150,53 @@ class _AddProductScreenState extends State<AddProductScreen> {
                                                     }()),
                                                     _buildTableCell(
                                                         product.unit ?? 'N/A'),
-                                                    _buildTableCell(
-                                                        product.barcode ??
-                                                            'N/A'),
+                                                    TableCell(
+                                                      verticalAlignment:
+                                                          TableCellVerticalAlignment.middle,
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.all(12.0),
+                                                        child: Center(
+                                                          child: Row(
+                                                            mainAxisAlignment: MainAxisAlignment.center,
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Flexible(
+                                                                child: Text(
+                                                                  product.barcode ?? 'N/A',
+                                                                  maxLines: 2,
+                                                                  overflow: TextOverflow.ellipsis,
+                                                                  textAlign: TextAlign.center,
+                                                                  style: buildCustomStyle(
+                                                                    FontWeightManager.medium,
+                                                                    FontSize.s11,
+                                                                    0.13,
+                                                                    ColorManager.kTextColor,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              if (product.barcode != null && product.barcode!.isNotEmpty && product.barcode != 'N/A') ...[
+                                                                const SizedBox(width: 6),
+                                                                GestureDetector(
+                                                                  onTap: () {
+                                                                    Clipboard.setData(ClipboardData(
+                                                                        text: product.barcode!));
+                                                                    showScaffold(
+                                                                      context: context,
+                                                                      message: 'Barcode copied to clipboard',
+                                                                    );
+                                                                  },
+                                                                  child: const Icon(
+                                                                    Icons.copy,
+                                                                    size: 14,
+                                                                    color: Colors.black38,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
                                                     Center(
                                                       child: Padding(
                                                         padding:
@@ -1250,10 +1372,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
             Row(
               children: [
                 Expanded(
-                  child: Text(
+                  child: SelectableText(
                     product.productName ?? 'Unnamed',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s14,
@@ -1274,10 +1394,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
+            SelectableText(
               categoryName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(
                 FontWeightManager.regular,
                 FontSize.s11,
@@ -1290,16 +1408,75 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 product.itemCode!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Item: ${product.itemCode}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: buildCustomStyle(
-                    FontWeightManager.regular,
-                    FontSize.s11,
-                    0.13,
-                    Colors.black54,
-                  ),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Item: ${product.itemCode}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s11,
+                          0.13,
+                          Colors.black54,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(
+                            text: product.itemCode!));
+                        showScaffold(
+                          context: context,
+                          message: 'Item code copied to clipboard',
+                        );
+                      },
+                      child: const Icon(
+                        Icons.copy,
+                        size: 14,
+                        color: Colors.black38,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (product.barcode != null && product.barcode!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Barcode: ${product.barcode}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s11,
+                          0.13,
+                          Colors.black54,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(
+                            text: product.barcode!));
+                        showScaffold(
+                          context: context,
+                          message: 'Barcode copied to clipboard',
+                        );
+                      },
+                      child: const Icon(
+                        Icons.copy,
+                        size: 14,
+                        color: Colors.black38,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             const SizedBox(height: 10),

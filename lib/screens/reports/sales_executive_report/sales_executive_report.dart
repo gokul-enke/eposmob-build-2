@@ -456,7 +456,7 @@ class _SalesExecutiveReportScreenState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
+                  child: SelectableText(
                     report.name ?? 'N/A',
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s14, 0.20, ColorManager.textColor),
@@ -472,7 +472,7 @@ class _SalesExecutiveReportScreenState
                 ),
               ],
             ),
-            Text(
+            SelectableText(
               report.phone ?? 'N/A',
               style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
                   0.18, Colors.grey),
@@ -667,10 +667,38 @@ class _SalesExecutiveReportScreenState
                                                     color: Colors.white,
                                                   ),
                                                   children: [
-                                                    _buildTableCell(
-                                                        report.name ?? "N/A"),
-                                                    _buildTableCell(
-                                                        report.phone ?? "N/A"),
+                                                     TableCell(
+                                                       verticalAlignment: TableCellVerticalAlignment.middle,
+                                                       child: Padding(
+                                                         padding: const EdgeInsets.all(8.0),
+                                                         child: SelectableText(
+                                                           report.name ?? "N/A",
+                                                           textAlign: TextAlign.center,
+                                                           style: buildCustomStyle(
+                                                             FontWeightManager.medium,
+                                                             FontSize.s9,
+                                                             0.13,
+                                                             Colors.black,
+                                                           ),
+                                                         ),
+                                                       ),
+                                                     ),
+                                                     TableCell(
+                                                       verticalAlignment: TableCellVerticalAlignment.middle,
+                                                       child: Padding(
+                                                         padding: const EdgeInsets.all(8.0),
+                                                         child: SelectableText(
+                                                           report.phone ?? "N/A",
+                                                           textAlign: TextAlign.center,
+                                                           style: buildCustomStyle(
+                                                             FontWeightManager.medium,
+                                                             FontSize.s9,
+                                                             0.13,
+                                                             Colors.black,
+                                                           ),
+                                                         ),
+                                                       ),
+                                                     ),
                                                     _buildTableCell(report
                                                             .orderCount
                                                             ?.toString() ??

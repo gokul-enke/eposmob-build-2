@@ -39,10 +39,8 @@ class QuotationDetailWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (isPhone) ...[
-            Text(
+            SelectableText(
               "Quotation # ${data.quotationNumber ?? ''}",
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
                 FontSize.s16,
@@ -58,10 +56,8 @@ class QuotationDetailWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
+                  child: SelectableText(
                     "Quotation # ${data.quotationNumber ?? ''}",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s18,
@@ -149,10 +145,8 @@ class QuotationDetailWidget extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
+            child: SelectableText(
               value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,

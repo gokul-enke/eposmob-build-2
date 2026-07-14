@@ -198,14 +198,13 @@ class _SalesOrderDetailsScreenState extends State<SalesOrderDetailsScreen> {
                         children: [
                           _buildHeader(),
                           const SizedBox(height: 10),
-                          Text(
+                          SelectableText(
                             'Order Details - # $orderNumber',
                             style: ResponsiveWidget.isMobile(context)
                                 ? buildCustomStyle(FontWeightManager.semiBold,
                                     FontSize.s12, 0.30, ColorManager.textColor)
                                 : buildCustomStyle(FontWeightManager.semiBold,
                                     FontSize.s20, 0.30, ColorManager.textColor),
-                            overflow: TextOverflow.ellipsis, // Handle overflow
                           ),
                           // Delivery Date/Time if present
                           if ((orderDetailsModelData?.orderProps != null) ||

@@ -11,7 +11,8 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
@@ -2111,22 +2112,77 @@ Powered by CloudPOS''',
                                       child: _buildTableCell("$serialNumber"),
                                     ),
                                     SizedBox(
-                                      height: 55,
-                                      child: _buildTableCell(
-                                          "#${order.orderNumber}"),
-                                    ),
+                                       height: 55,
+                                       child: TableCell(
+                                         verticalAlignment:
+                                             TableCellVerticalAlignment.middle,
+                                         child: Padding(
+                                           padding: const EdgeInsets.all(8.0),
+                                           child: Row(
+                                             mainAxisAlignment:
+                                                 MainAxisAlignment.center,
+                                             children: [
+                                               Text(
+                                                 "#${order.orderNumber}",
+                                                 textAlign: TextAlign.center,
+                                                 style: buildCustomStyle(
+                                                   FontWeightManager.medium,
+                                                   FontSize.s9,
+                                                   0.13,
+                                                   Colors.black,
+                                                 ),
+                                               ),
+                                               if (order.orderNumber != null &&
+                                                   order.orderNumber!
+                                                       .isNotEmpty) ...[
+                                                 const SizedBox(width: 6),
+                                                 GestureDetector(
+                                                   onTap: () {
+                                                     Clipboard.setData(
+                                                         ClipboardData(
+                                                             text: order.orderNumber!));
+                                                     showScaffold(
+                                                       context: context,
+                                                       message:
+                                                           'Order number copied to clipboard',
+                                                     );
+                                                   },
+                                                   child: const Icon(
+                                                     Icons.copy,
+                                                     size: 14,
+                                                     color: Colors.black38,
+                                                   ),
+                                                 ),
+                                               ],
+                                             ],
+                                           ),
+                                         ),
+                                       ),
+                                     ),
                                     SizedBox(
-                                      height: 55,
-                                      child: _buildTableCell(
-                                        (order.customerName?.isNotEmpty == true)
-                                            ? order.customerName!
-                                            : (order.customerDetails?.phone
-                                                        ?.isNotEmpty ==
-                                                    true
-                                                ? order.customerDetails!.phone!
-                                                : "NA"),
-                                      ),
-                                    ),
+                                       height: 55,
+                                       child: Padding(
+                                         padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                                         child: Center(
+                                           child: SelectableText(
+                                             (order.customerName?.isNotEmpty == true)
+                                                 ? order.customerName!
+                                                 : (order.customerDetails?.phone
+                                                             ?.isNotEmpty ==
+                                                         true
+                                                     ? order.customerDetails!.phone!
+                                                     : "NA"),
+                                             textAlign: TextAlign.center,
+                                             style: buildCustomStyle(
+                                               FontWeightManager.medium,
+                                               FontSize.s11,
+                                               0.18,
+                                               ColorManager.kTextColor,
+                                             ),
+                                           ),
+                                         ),
+                                       ),
+                                     ),
                                     SizedBox(
                                       height: 55,
                                       child: _buildTableCell(

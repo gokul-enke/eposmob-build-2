@@ -703,7 +703,7 @@ class _CustomerTransactionsReportScreenState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
+                  child: SelectableText(
                     summary.displayName,
                     style: buildCustomStyle(FontWeightManager.semiBold,
                         FontSize.s14, 0.20, ColorManager.textColor),
@@ -970,7 +970,24 @@ class _CustomerTransactionsReportScreenState
         color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.1),
       ),
       children: [
-        _buildTableCell(summary.displayName),
+        TableCell(
+          verticalAlignment: TableCellVerticalAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Center(
+              child: SelectableText(
+                summary.displayName,
+                textAlign: TextAlign.center,
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  FontSize.s9,
+                  0.13,
+                  Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
         _buildTableCell(
           summary.totalDebit.toStringAsFixed(2),
         ),

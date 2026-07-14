@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:get/get.dart';
-import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart'
     as pagination;
 import 'package:pos_machine/models/customer_voucher.dart';
@@ -812,11 +814,78 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
                                                           .withOpacity(0.1),
                                                 ),
                                                 children: [
-                                                  _buildTableCell(
-                                                      voucher.voucherNumber),
-                                                  _buildTableCell(voucher
-                                                      .customer.user.name
-                                                      .toString()),
+                                                   TableCell(
+                                                     verticalAlignment:
+                                                         TableCellVerticalAlignment
+                                                             .middle,
+                                                     child: Padding(
+                                                       padding:
+                                                           const EdgeInsets.all(
+                                                               8.0),
+                                                       child: Row(
+                                                         mainAxisAlignment:
+                                                             MainAxisAlignment
+                                                                 .center,
+                                                         children: [
+                                                           Text(
+                                                             voucher
+                                                                 .voucherNumber,
+                                                             textAlign:
+                                                                 TextAlign
+                                                                     .center,
+                                                             style:
+                                                                 buildCustomStyle(
+                                                               FontWeightManager
+                                                                   .medium,
+                                                               FontSize.s9,
+                                                               0.13,
+                                                               Colors.black,
+                                                             ),
+                                                           ),
+                                                           const SizedBox(
+                                                               width: 6),
+                                                           GestureDetector(
+                                                             onTap: () {
+                                                               Clipboard.setData(
+                                                                   ClipboardData(
+                                                                       text: voucher
+                                                                           .voucherNumber));
+                                                               showScaffold(
+                                                                 context:
+                                                                     context,
+                                                                 message:
+                                                                     'Voucher number copied to clipboard',
+                                                               );
+                                                             },
+                                                             child: const Icon(
+                                                               Icons.copy,
+                                                               size: 14,
+                                                               color: Colors
+                                                                   .black38,
+                                                             ),
+                                                           ),
+                                                         ],
+                                                       ),
+                                                     ),
+                                                   ),
+                                                   TableCell(
+                                                     verticalAlignment: TableCellVerticalAlignment.middle,
+                                                     child: Padding(
+                                                       padding: const EdgeInsets.all(8.0),
+                                                       child: Center(
+                                                         child: SelectableText(
+                                                           voucher.customer.user.name.toString(),
+                                                           textAlign: TextAlign.center,
+                                                           style: buildCustomStyle(
+                                                             FontWeightManager.medium,
+                                                             FontSize.s9,
+                                                             0.13,
+                                                             Colors.black,
+                                                           ),
+                                                         ),
+                                                       ),
+                                                     ),
+                                                   ),
                                                   _buildTableCell(voucher.type),
                                                   _buildTableCell(
                                                       voucher.voucherDate),
@@ -1100,9 +1169,9 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
         title: 'Voucher details',
         gridColumns: [
           [
-            CommonDetailsDialog.buildKeyValueRow('Voucher Number', voucher.voucherNumber),
+            CommonDetailsDialog.buildKeyValueRow('Voucher Number', voucher.voucherNumber, copyable: true),
             CommonDetailsDialog.buildKeyValueRow('Customer Name', voucher.customer.user.name),
-            CommonDetailsDialog.buildKeyValueRow('Customer Phone', voucher.customer.user.phone),
+            CommonDetailsDialog.buildKeyValueRow('Customer Phone', voucher.customer.user.phone, copyable: true),
             CommonDetailsDialog.buildKeyValueRow('Type', voucher.type),
           ],
           [

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
 import '../../newcomponents/custom_container_box.dart';
+import '../../newcomponents/custom_dialog_box.dart';
 import '../../newcomponents/custom_round_button.dart';
 import '../../newcomponents/custom_dropdown_with_search.dart';
 import '../../components/build_pagination_control.dart';
@@ -656,14 +657,36 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        exp.referenceNumber,
-                        style: buildCustomStyle(
-                          FontWeightManager.medium,
-                          FontSize.s13,
-                          0.15,
-                          ColorManager.textColor,
-                        ),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              exp.referenceNumber,
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s13,
+                                0.15,
+                                ColorManager.textColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(
+                                  text: exp.referenceNumber));
+                              showScaffold(
+                                context: context,
+                                message: 'Reference number copied to clipboard',
+                              );
+                            },
+                            child: const Icon(
+                              Icons.copy,
+                              size: 14,
+                              color: Colors.black38,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -760,7 +783,47 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                       ),
                     ),
                     children: [
-                      _buildTableCell(exp.referenceNumber),
+                       TableCell(
+                        verticalAlignment: TableCellVerticalAlignment.middle,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12.0, horizontal: 10.0),
+                          child: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  exp.referenceNumber,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: buildCustomStyle(
+                                    FontWeightManager.medium,
+                                    FontSize.s12,
+                                    0.1,
+                                    ColorManager.textColor,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(
+                                      text: exp.referenceNumber));
+                                  showScaffold(
+                                    context: context,
+                                    message:
+                                        'Reference number copied to clipboard',
+                                  );
+                                },
+                                child: const Icon(
+                                  Icons.copy,
+                                  size: 14,
+                                  color: Colors.black38,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       _buildTableCell(dateStr),
                       _buildTableCell(exp.category),
                       _buildTableCell(exp.debitAccount),
