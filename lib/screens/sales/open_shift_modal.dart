@@ -53,7 +53,9 @@ class _OpenShiftModalState extends State<OpenShiftModal> {
     _selectedStoreName = storeSession.activeStore?.storeName;
 
     _businessDateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    _openingTimeController.text = DateFormat('HH:mm').format(DateTime.now()) + ':00';
+    
+    final storeOpenTime = storeSession.activeStore?.storeOpenTime;
+    _openingTimeController.text = storeOpenTime ?? '08:00:00';
 
     _fetchDenominations();
     _ensureBreakdownRows();

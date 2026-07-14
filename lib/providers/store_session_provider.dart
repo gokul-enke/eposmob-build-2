@@ -190,6 +190,31 @@ class StoreSessionProvider extends ChangeNotifier {
       await _updateStatus('Retrieving store details...');
       await purchaseProvider.listAllStores(accessToken, null);
 
+      try {
+        final fetchedStore = purchaseProvider.storeList.firstWhere(
+          (s) => s.id == _activeStore?.storeId,
+        );
+        if (fetchedStore.storeOpenTime != null) {
+          final updatedStore = Store(
+            storeId: _activeStore?.storeId,
+            storeName: _activeStore?.storeName,
+            code: _activeStore?.code ?? fetchedStore.code,
+            location: _activeStore?.location ?? fetchedStore.localLocationId?.toString(),
+            email: _activeStore?.email ?? fetchedStore.email,
+            phone: _activeStore?.phone ?? fetchedStore.phone,
+            stateId: _activeStore?.stateId ?? fetchedStore.stateId,
+            districtId: _activeStore?.districtId ?? fetchedStore.districtId,
+            pincodeId: _activeStore?.pincodeId ?? fetchedStore.pincodeId,
+            localLocationId: _activeStore?.localLocationId ?? fetchedStore.localLocationId,
+            storeOpenTime: fetchedStore.storeOpenTime,
+          );
+          _activeStore = updatedStore;
+          await sharedPrefProvider.saveActiveStoreDetails(updatedStore.toJson());
+        }
+      } catch (e) {
+        debugPrint('Warning: Could not find/map store_open_time details: $e');
+      }
+
       await _updateStatus('Loading supplier catalog...');
       await purchaseProvider.listAllSuppliers(accessToken, null);
       final supplierLength = purchaseProvider.getSupplierList?.length ?? 0;
