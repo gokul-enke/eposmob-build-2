@@ -2010,8 +2010,22 @@ class InvoiceProvider extends ChangeNotifier {
     required String accessToken,
     String? paymentReference,
   }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final int? activeStoreId = prefs.getInt('active_store_id');
+    final String? apiKey = prefs.getString('api_key');
+
+    if (activeStoreId == null) {
+      throw const HttpException(
+          'Active store not found. Please select a store and try again.');
+    }
+
+    if (apiKey == null || apiKey.isEmpty) {
+      throw const HttpException('API key not found. Please restart the app.');
+    }
+
     final Map<String, dynamic> apiBodyData = {
       'customer_id': customerId,
+      'store_id': activeStoreId,
       'receipt_status': receiptStatus,
       'receipt_items': receiptItems,
     };
@@ -2022,13 +2036,6 @@ class InvoiceProvider extends ChangeNotifier {
     }
 
     final url = Uri.parse(APPUrl.createReceipt);
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
 
     try {
       debugPrint(
