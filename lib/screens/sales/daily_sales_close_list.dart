@@ -1107,7 +1107,12 @@ class _DayCloseModalState extends State<DayCloseModal> {
         // Opening Time: always fill from summary if still empty
         // (widget.openingTime from pending-status can be null)
         if (_openingTimeController.text.isEmpty) {
-          _openingTimeController.text = result?.openingTime ?? '';
+          final storeOpenTime = storeSession.activeStore?.storeOpenTime;
+          final fallbackTime = storeOpenTime ?? '08:00:00';
+          _openingTimeController.text =
+              (result?.openingTime != null && result!.openingTime!.isNotEmpty)
+                  ? result.openingTime!
+                  : fallbackTime;
           _openingTimeReadOnly = (result?.openingTime != null &&
               result!.openingTime!.isNotEmpty);
         }

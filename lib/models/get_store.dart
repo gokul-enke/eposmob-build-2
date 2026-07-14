@@ -49,6 +49,7 @@ class GetStoreModelData {
   final int? userId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? storeOpenTime;
 
   GetStoreModelData({
     this.id,
@@ -65,6 +66,7 @@ class GetStoreModelData {
     this.userId,
     this.createdAt,
     this.updatedAt,
+    this.storeOpenTime,
   });
 
   factory GetStoreModelData.fromJson(Map<String, dynamic> json) =>
@@ -87,6 +89,7 @@ class GetStoreModelData {
         updatedAt: json["updated_at"] == null
             ? null
             : DateTime.parse(json["updated_at"]),
+        storeOpenTime: json["store_open_time"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -104,6 +107,7 @@ class GetStoreModelData {
         "user_id": userId,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
+        "store_open_time": storeOpenTime,
       };
 
   // Override the equality operator
