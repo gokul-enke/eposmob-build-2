@@ -99,6 +99,21 @@ class ThermalPrinterUtils {
         throw Exception('Could not connect to Bluetooth printer');
       }
       _connectedBluetoothAddress = address;
+    } else if (selectedPrinter.typePrinter == PrinterType.network) {
+      final address = selectedPrinter.address?.trim();
+      if (address == null || address.isEmpty) {
+        throw Exception('Network printer address is null');
+      }
+      final connected = await printerManager.connect(
+        type: PrinterType.network,
+        model: TcpPrinterInput(
+          ipAddress: address,
+          port: int.tryParse(selectedPrinter.port ?? '') ?? 9100,
+        ),
+      );
+      if (!connected) {
+        throw Exception('Could not connect to network printer');
+      }
     }
   }
 

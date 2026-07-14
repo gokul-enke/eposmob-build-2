@@ -1,16 +1,15 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/customer_voucher.dart';
+import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerVoucherThermalPrinter {
   final BuildContext context;
-  var printerManager = PrinterManager.instance;
 
   // Font configuration - default fallback (will be overridden by user preference)
   static const PosFontType defaultFontType = PosFontType.fontB;
@@ -88,11 +87,6 @@ class CustomerVoucherThermalPrinter {
       final selectedFontType = await _loadFontType();
       debugPrint(
           "Using font type: ${selectedFontType == PosFontType.fontA ? 'Font A' : 'Font B'}");
-
-      // Connect to the printer
-      debugPrint("Connecting to printer...");
-      await _connectToPrinter(selectedPrinter);
-      debugPrint("Connected successfully");
 
       // Generate receipt
       final profile = await CapabilityProfile.load();
@@ -388,54 +382,17 @@ class CustomerVoucherThermalPrinter {
     return const SizedBox.shrink();
   }
 
-  Future<void> _connectToPrinter(BluetoothPrinter printer) async {
-    try {
-      if (printer.typePrinter == PrinterType.usb) {
-        await printerManager.connect(
-          type: PrinterType.usb,
-          model: UsbPrinterInput(
-            name: printer.deviceName ?? 'Unknown',
-            productId: printer.productId,
-            vendorId: printer.vendorId,
-          ),
-        );
-      } else if (printer.typePrinter == PrinterType.bluetooth) {
-        if (printer.address == null) {
-          throw Exception('Bluetooth printer address is null');
-        }
-        await printerManager.connect(
-          type: PrinterType.bluetooth,
-          model: BluetoothPrinterInput(
-            name: printer.deviceName ?? 'Unknown',
-            address: printer.address!,
-            isBle: false,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error connecting to printer: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> _disconnectPrinter(BluetoothPrinter printer) async {
-    try {
-      await printerManager.disconnect(type: printer.typePrinter);
-    } catch (e) {
-      debugPrint('Error disconnecting printer: $e');
-    }
-  }
-
   Future<void> _printBytes(BluetoothPrinter printer, List<int> bytes) async {
+    final printerUtils = ThermalPrinterUtils();
     try {
-      await _connectToPrinter(printer);
-      await printerManager.send(type: printer.typePrinter, bytes: bytes);
+      await printerUtils.connectToPrinter(printer);
+      await printerUtils.sendPrintJob(printer, bytes);
       debugPrint("Print job sent successfully");
     } catch (e) {
       debugPrint('Error in _printBytes: $e');
       rethrow;
     } finally {
-      await _disconnectPrinter(printer);
+      await printerUtils.disconnectPrinter(printer);
     }
   }
 }

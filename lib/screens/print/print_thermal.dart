@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart' hide TableRow;
-import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -20,10 +19,11 @@ import 'package:pos_machine/resources/localization_service.dart';
 import 'package:pos_machine/utils/arabic_printer_helper.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:image/image.dart' as img;
+import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 
 class ThermalPrinter {
   final BuildContext context;
-  var printerManager = PrinterManager.instance;
+  final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // Font configuration - default fallback (will be overridden by user preference)
   static const PosFontType defaultFontType = PosFontType.fontB;
@@ -152,7 +152,7 @@ class ThermalPrinter {
 
       // Connect to the printer
       debugPrint("Connecting to printer...");
-      await _connectToPrinter(selectedPrinter);
+      await _printerUtils.connectToPrinter(selectedPrinter);
       debugPrint("Connected successfully");
 
       // Generate receipt
@@ -356,8 +356,7 @@ class ThermalPrinter {
 
       debugPrint("Receipt generated, sending to printer...");
       // Print receipt
-      await printerManager.send(
-          type: selectedPrinter.typePrinter, bytes: bytes);
+      await _printerUtils.sendPrintJob(selectedPrinter, bytes);
       debugPrint("Print job sent successfully");
 
       if (context.mounted) {
@@ -376,7 +375,7 @@ class ThermalPrinter {
       }
     } finally {
       debugPrint("Disconnecting from printer...");
-      await _disconnectPrinter(selectedPrinter);
+      await _printerUtils.disconnectPrinter(selectedPrinter);
       debugPrint("==========================");
     }
   }
@@ -422,7 +421,7 @@ class ThermalPrinter {
 
     try {
       debugPrint("Connecting to printer...");
-      await _connectToPrinter(selectedPrinter);
+      await _printerUtils.connectToPrinter(selectedPrinter);
       debugPrint("Connected successfully.");
 
       // Determine language direction
@@ -1138,8 +1137,7 @@ class ThermalPrinter {
 
       // ========== SEND TO PRINTER ==========
       debugPrint("Sending ${bytes.length} bytes to printer...");
-      await printerManager.send(
-          type: selectedPrinter.typePrinter, bytes: bytes);
+      await _printerUtils.sendPrintJob(selectedPrinter, bytes);
       debugPrint("Print job sent successfully.");
 
       if (context.mounted) {
@@ -1157,7 +1155,7 @@ class ThermalPrinter {
       }
     } finally {
       debugPrint("Disconnecting from printer...");
-      await _disconnectPrinter(selectedPrinter);
+      await _printerUtils.disconnectPrinter(selectedPrinter);
       debugPrint("===== END IMAGE-BASED PRINTING =====");
     }
   }
@@ -3203,39 +3201,6 @@ class ThermalPrinter {
     // Add separator line after terms
     bytes += generator.hr();
     return bytes;
-  }
-
-  Future<void> _connectToPrinter(BluetoothPrinter selectedPrinter) async {
-    if (selectedPrinter.typePrinter == PrinterType.usb) {
-      await printerManager.connect(
-        type: PrinterType.usb,
-        model: UsbPrinterInput(
-          name: selectedPrinter.deviceName ?? 'Unknown',
-          productId: selectedPrinter.productId,
-          vendorId: selectedPrinter.vendorId,
-        ),
-      );
-    } else if (selectedPrinter.typePrinter == PrinterType.bluetooth) {
-      if (selectedPrinter.address == null) {
-        throw Exception('Bluetooth printer address is null');
-      }
-      await printerManager.connect(
-        type: PrinterType.bluetooth,
-        model: BluetoothPrinterInput(
-          name: selectedPrinter.deviceName ?? 'Unknown',
-          address: selectedPrinter.address!,
-          isBle: false,
-        ),
-      );
-    }
-  }
-
-  Future<void> _disconnectPrinter(BluetoothPrinter selectedPrinter) async {
-    try {
-      await printerManager.disconnect(type: selectedPrinter.typePrinter);
-    } catch (e) {
-      // Handle disconnection error
-    }
   }
 
   void _debugPrintTemplateSettings(Map<String, DisplayOption>? displayConfig) {

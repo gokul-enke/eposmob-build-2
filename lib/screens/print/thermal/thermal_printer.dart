@@ -6,7 +6,6 @@
 library thermal_printer;
 
 import 'package:flutter/material.dart' hide TableRow;
-import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
@@ -47,7 +46,6 @@ export 'sections/sections.dart';
 class ThermalPrinter {
   final BuildContext context;
   final ThermalPrinterUtils _printerUtils;
-  final PrinterManager printerManager;
 
   // Section builders
   late final HeaderSectionBuilder _headerBuilder;
@@ -61,9 +59,7 @@ class ThermalPrinter {
   late final BarcodeSectionBuilder _barcodeBuilder;
   late final FooterSectionBuilder _footerBuilder;
 
-  ThermalPrinter(this.context)
-      : _printerUtils = ThermalPrinterUtils(),
-        printerManager = PrinterManager.instance {
+  ThermalPrinter(this.context) : _printerUtils = ThermalPrinterUtils() {
     _headerBuilder = HeaderSectionBuilder(context);
     _customerBuilder = CustomerSectionBuilder(utils: _printerUtils);
     _cartItemsBuilder = CartItemsSectionBuilder(utils: _printerUtils);
@@ -391,8 +387,7 @@ class ThermalPrinter {
       bytes += generator.cut();
 
       debugPrint("Sending to printer...");
-      await printerManager.send(
-          type: selectedPrinter.typePrinter, bytes: bytes);
+      await _printerUtils.sendPrintJob(selectedPrinter, bytes);
       debugPrint("Print job sent successfully");
 
       if (context.mounted) {
@@ -1507,8 +1502,7 @@ class ThermalPrinter {
 
       // ========== SEND TO PRINTER ==========
       debugPrint("Sending ${bytes.length} bytes to printer...");
-      await printerManager.send(
-          type: selectedPrinter.typePrinter, bytes: bytes);
+      await _printerUtils.sendPrintJob(selectedPrinter, bytes);
       debugPrint("Print job sent successfully.");
 
       if (context.mounted) {

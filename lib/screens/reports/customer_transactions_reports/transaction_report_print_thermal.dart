@@ -1,6 +1,5 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
@@ -11,11 +10,11 @@ import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
+import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TransactionReportThermalPrinter {
   final BuildContext context;
-  var printerManager = PrinterManager.instance;
 
   // Font configuration - default fallback (will be overridden by user preference)
   static const PosFontType defaultFontType = PosFontType.fontB;
@@ -56,6 +55,7 @@ class TransactionReportThermalPrinter {
     String? fromDate,
     String? toDate,
   }) async {
+    final printerUtils = ThermalPrinterUtils();
     debugPrint("===== THERMAL PRINTER DEBUG INFO =====");
     debugPrint("Customer data received:");
     debugPrint("  Name: $customerName");
@@ -134,7 +134,7 @@ class TransactionReportThermalPrinter {
 
       // Connect to the printer
       debugPrint("Connecting to printer...");
-      await _connectToPrinter(selectedPrinter);
+      await printerUtils.connectToPrinter(selectedPrinter);
       debugPrint("Connected successfully");
 
       // Generate receipt
@@ -250,8 +250,7 @@ class TransactionReportThermalPrinter {
 
       debugPrint("Transaction report generated, sending to printer...");
       // Print receipt
-      await printerManager.send(
-          type: selectedPrinter.typePrinter, bytes: bytes);
+      await printerUtils.sendPrintJob(selectedPrinter, bytes);
       debugPrint("Print job sent successfully");
 
       if (context.mounted) {
@@ -268,7 +267,7 @@ class TransactionReportThermalPrinter {
       }
     } finally {
       debugPrint("Disconnecting from printer...");
-      await _disconnectPrinter(selectedPrinter);
+      await printerUtils.disconnectPrinter(selectedPrinter);
       debugPrint("==========================");
     }
   }
@@ -1066,39 +1065,6 @@ class TransactionReportThermalPrinter {
     }
 
     return bytes;
-  }
-
-  Future<void> _connectToPrinter(BluetoothPrinter selectedPrinter) async {
-    if (selectedPrinter.typePrinter == PrinterType.usb) {
-      await printerManager.connect(
-        type: PrinterType.usb,
-        model: UsbPrinterInput(
-          name: selectedPrinter.deviceName ?? 'Unknown',
-          productId: selectedPrinter.productId,
-          vendorId: selectedPrinter.vendorId,
-        ),
-      );
-    } else if (selectedPrinter.typePrinter == PrinterType.bluetooth) {
-      if (selectedPrinter.address == null) {
-        throw Exception('Bluetooth printer address is null');
-      }
-      await printerManager.connect(
-        type: PrinterType.bluetooth,
-        model: BluetoothPrinterInput(
-          name: selectedPrinter.deviceName ?? 'Unknown',
-          address: selectedPrinter.address!,
-          isBle: false,
-        ),
-      );
-    }
-  }
-
-  Future<void> _disconnectPrinter(BluetoothPrinter selectedPrinter) async {
-    try {
-      await printerManager.disconnect(type: selectedPrinter.typePrinter);
-    } catch (e) {
-      // Handle disconnection error
-    }
   }
 
   void _debugPrintTemplateSettings(Map<String, DisplayOption>? displayConfig) {

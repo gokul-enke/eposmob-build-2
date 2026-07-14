@@ -1,12 +1,12 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/daily_sales_close.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
@@ -18,12 +18,12 @@ import 'dart:math' as math;
 /// Supports responsive layouts for both 80mm and 58mm thermal paper
 class DailyCloseThermalPrinter {
   final BuildContext context;
-  var printerManager = PrinterManager.instance;
+  final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // =========================================================
   // RESPONSIVE SIZING SYSTEM
   // =========================================================
-  
+
   /// Print width in pixels for each paper size
   static double getPrintWidth(bool is58mm) => is58mm ? 384.0 : 576.0;
 
@@ -56,40 +56,6 @@ class DailyCloseThermalPrinter {
 
   DailyCloseThermalPrinter(this.context);
 
-  /// Connect to thermal printer (supports both Bluetooth and USB)
-  Future<void> _connectToPrinter(BluetoothPrinter printer) async {
-    try {
-      if (printer.typePrinter == PrinterType.usb) {
-        await printerManager.connect(
-          type: PrinterType.usb,
-          model: UsbPrinterInput(
-            name: printer.deviceName ?? 'Unknown',
-            productId: printer.productId,
-            vendorId: printer.vendorId,
-          ),
-        );
-      } else if (printer.typePrinter == PrinterType.bluetooth) {
-        if (printer.address == null) {
-          throw Exception('Bluetooth printer address is null');
-        }
-        await printerManager.connect(
-          type: PrinterType.bluetooth,
-          model: BluetoothPrinterInput(
-            name: printer.deviceName ?? 'Unknown',
-            address: printer.address!,
-            isBle: false,
-            autoConnect: false,
-          ),
-        );
-      } else {
-        throw Exception('Unsupported printer type: ${printer.typePrinter}');
-      }
-    } catch (e) {
-      debugPrint('Error connecting to printer: $e');
-      rethrow;
-    }
-  }
-
   /// Print Daily Close Report
   Future<void> printDailyClose({
     required BluetoothPrinter selectedPrinter,
@@ -98,11 +64,12 @@ class DailyCloseThermalPrinter {
     required bool includeTransactions,
   }) async {
     debugPrint("===== DAILY CLOSE THERMAL PRINTING ====");
-    debugPrint("Printer: ${selectedPrinter.deviceName}, Paper: $selectedPaperSize");
+    debugPrint(
+        "Printer: ${selectedPrinter.deviceName}, Paper: $selectedPaperSize");
 
     try {
       debugPrint("Connecting to printer...");
-      await _connectToPrinter(selectedPrinter);
+      await _printerUtils.connectToPrinter(selectedPrinter);
       debugPrint("Connected successfully.");
 
       final bool is58mm = selectedPaperSize == '58mm';
@@ -118,7 +85,7 @@ class DailyCloseThermalPrinter {
         scale: getHeaderScale(is58mm),
         center: true,
       ));
-      
+
       if (data.store?.name != null) {
         rows.add(_ReportTextRow(
           data.store!.name!,
@@ -127,13 +94,13 @@ class DailyCloseThermalPrinter {
           center: true,
         ));
       }
-      
+
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
       rows.add(_ReportDividerRow(char: '═'));
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
 
       // ========== INFO SECTION ==========
-      
+
       // Opening Date & Time
       if (data.openingDate != null) {
         String openingStr = _formatDateTime(data.openingDate, data.openingTime);
@@ -153,7 +120,7 @@ class DailyCloseThermalPrinter {
           scale: getNormalScale(is58mm),
         ));
       }
-      
+
       if (data.salesExecutive?.name != null) {
         rows.add(_ReportKeyValueRow(
           'Executive:',
@@ -180,7 +147,7 @@ class DailyCloseThermalPrinter {
         data.totalOrders?.toString() ?? '0',
         scale: getNormalScale(is58mm),
       ));
-      
+
       rows.add(_ReportKeyValueRow(
         'Total Sales:',
         data.totalSales ?? '0.00',
@@ -206,19 +173,19 @@ class DailyCloseThermalPrinter {
         data.totalCash ?? '0.00',
         scale: getNormalScale(is58mm),
       ));
-      
+
       rows.add(_ReportKeyValueRow(
         'Online Sales:',
         data.totalOnline ?? '0.00',
         scale: getNormalScale(is58mm),
       ));
-      
+
       rows.add(_ReportKeyValueRow(
         'Credit Amount:',
         data.totalCredit ?? '0.00',
         scale: getNormalScale(is58mm),
       ));
-      
+
       rows.add(_ReportKeyValueRow(
         'Credit Collected:',
         data.totalCreditCollected ?? '0.00',
@@ -236,21 +203,21 @@ class DailyCloseThermalPrinter {
         isBold: true,
         scale: getTitleScale(is58mm),
       ));
-      
+
       rows.add(_ReportKeyValueRow(
         'Collected on Sale:',
         data.totalAmountCollectedOnSale ?? '0.00',
         scale: getNormalScale(is58mm),
       ));
 
-        // ========== TRANSACTIONS ==========
-        if (includeTransactions &&
+      // ========== TRANSACTIONS ==========
+      if (includeTransactions &&
           data.transactions != null &&
           data.transactions!.isNotEmpty) {
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
         rows.add(_ReportDividerRow(char: '─'));
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
-        
+
         rows.add(_ReportTextRow(
           'TRANSACTIONS',
           isBold: true,
@@ -262,11 +229,11 @@ class DailyCloseThermalPrinter {
         for (int i = 0; i < data.transactions!.length; i++) {
           final tx = data.transactions![i];
           final index = i + 1;
-          
+
           // Minimal Layout:
           // 1. ORD-xxx ................. 100.00
           //    CASH | Customer Name
-          
+
           // Row 1: # OrderNo (Left) ... Amount (Right)
           rows.add(_ReportKeyValueRow(
             '$index. ${tx.orderNumber ?? '-'}',
@@ -274,20 +241,24 @@ class DailyCloseThermalPrinter {
             isBold: false,
             scale: getNormalScale(is58mm),
           ));
-          
+
           // Row 2: Details (Payment Type | Customer | Paid if diff)
           List<String> detailParts = [];
           if (tx.paymentType != null) detailParts.add(tx.paymentType!);
-          if (tx.customerName != null && tx.customerName!.isNotEmpty && tx.customerName != 'Default CUSTOMER') {
-             detailParts.add(tx.customerName!);
+          if (tx.customerName != null &&
+              tx.customerName!.isNotEmpty &&
+              tx.customerName != 'Default CUSTOMER') {
+            detailParts.add(tx.customerName!);
           }
           // Show Paid if different from Order Amount
-          if (tx.paidAmount != null && tx.orderAmount != null && tx.paidAmount != tx.orderAmount) {
-             detailParts.add('Paid: ${tx.paidAmount}');
+          if (tx.paidAmount != null &&
+              tx.orderAmount != null &&
+              tx.paidAmount != tx.orderAmount) {
+            detailParts.add('Paid: ${tx.paidAmount}');
           }
-          
+
           String details = detailParts.join(' | ');
-          
+
           rows.add(_ReportTextRow(
             '   $details',
             scale: getSmallScale(is58mm),
@@ -303,7 +274,7 @@ class DailyCloseThermalPrinter {
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm)));
         rows.add(_ReportDividerRow(char: '─'));
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
-        
+
         rows.add(_ReportTextRow(
           'TRANSACTIONS',
           isBold: true,
@@ -311,7 +282,7 @@ class DailyCloseThermalPrinter {
           center: true,
         ));
         rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
-        
+
         rows.add(_ReportTextRow(
           '(No transaction details available)',
           scale: getSmallScale(is58mm),
@@ -329,7 +300,7 @@ class DailyCloseThermalPrinter {
         scale: getSmallScale(is58mm),
         center: true,
       ));
-      
+
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 3)); // Feed space
 
       // Render and print
@@ -338,7 +309,8 @@ class DailyCloseThermalPrinter {
       if (kDebugMode) {
         try {
           final String desktopPath = 'C:/Users/gokul/Desktop';
-          final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+          final String timestamp =
+              DateTime.now().millisecondsSinceEpoch.toString();
           final File file = File('$desktopPath/daily_close_${timestamp}.png');
           await file.writeAsBytes(img.encodePng(image));
           debugPrint("Saved debug image to: ${file.path}");
@@ -347,7 +319,7 @@ class DailyCloseThermalPrinter {
         }
       }
       // ==================================================
-      await _printImage(image, selectedPaperSize, selectedPrinter.typePrinter);
+      await _printImage(image, selectedPaperSize, selectedPrinter);
 
       debugPrint("Daily Close Report printed successfully!");
     } catch (e, stackTrace) {
@@ -359,27 +331,21 @@ class DailyCloseThermalPrinter {
 
   String _formatDateTime(String? dateStr, String? timeStr) {
     if (dateStr == null) return '';
-    
+
     try {
       // Parse date (yyyy-MM-dd)
       DateTime date = DateTime.parse(dateStr);
-      
+
       // If time is provided, combine
       if (timeStr != null) {
         // timeStr is usually HH:mm:ss
         List<String> parts = timeStr.split(':');
         if (parts.length >= 2) {
-          date = DateTime(
-            date.year, 
-            date.month, 
-            date.day, 
-            int.parse(parts[0]), 
-            int.parse(parts[1]), 
-            parts.length > 2 ? int.parse(parts[2]) : 0
-          );
+          date = DateTime(date.year, date.month, date.day, int.parse(parts[0]),
+              int.parse(parts[1]), parts.length > 2 ? int.parse(parts[2]) : 0);
         }
       }
-      
+
       return DateFormat('dd-MM-yyyy hh:mm a').format(date);
     } catch (e) {
       // Fallback
@@ -435,7 +401,7 @@ class DailyCloseThermalPrinter {
     } else if (row is _ReportKeyValueRow) {
       final fontSize = baseFontSize * row.scale;
       final availableWidth = width - (padding * 2);
-      
+
       // Calculate height for key (max 50% width)
       final keyPainter = TextPainter(
         text: TextSpan(
@@ -445,20 +411,22 @@ class DailyCloseThermalPrinter {
         textDirection: ui.TextDirection.ltr,
       );
       keyPainter.layout(maxWidth: availableWidth / 2);
-      
+
       // Calculate height for value (max 50% width)
       final valuePainter = TextPainter(
         text: TextSpan(
           text: row.value,
-          style: TextStyle(fontSize: fontSize, fontWeight: row.isBold ? FontWeight.bold : FontWeight.normal),
+          style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: row.isBold ? FontWeight.bold : FontWeight.normal),
         ),
         textDirection: ui.TextDirection.ltr,
       );
       valuePainter.layout(maxWidth: availableWidth / 2);
-      
+
       // Return the maximum height of either key or value
-      return math.max(keyPainter.height, valuePainter.height) + (fontSize * 0.2); // Add a little padding
-      
+      return math.max(keyPainter.height, valuePainter.height) +
+          (fontSize * 0.2); // Add a little padding
     } else if (row is _ReportSpacingRow) {
       return row.height;
     } else if (row is _ReportDividerRow) {
@@ -494,11 +462,10 @@ class DailyCloseThermalPrinter {
 
       textPainter.paint(canvas, Offset(xOffset, yOffset));
       return yOffset + fontSize * lineHeight;
-      
     } else if (row is _ReportKeyValueRow) {
       final fontSize = baseFontSize * row.scale;
       final availableWidth = width - (padding * 2);
-      
+
       // Key
       final keyPainter = TextPainter(
         text: TextSpan(
@@ -512,7 +479,7 @@ class DailyCloseThermalPrinter {
         textDirection: ui.TextDirection.ltr,
       );
       keyPainter.layout(maxWidth: availableWidth / 2);
-      
+
       // Value
       final valuePainter = TextPainter(
         text: TextSpan(
@@ -527,16 +494,17 @@ class DailyCloseThermalPrinter {
         textAlign: TextAlign.right,
       );
       valuePainter.layout(maxWidth: availableWidth / 2);
-      
-      keyPainter.paint(canvas, Offset(padding, yOffset));
-      valuePainter.paint(canvas, Offset(width - padding - valuePainter.width, yOffset));
-      
-      // Return the actual height used
-      return yOffset + math.max(keyPainter.height, valuePainter.height) + (fontSize * 0.2);
 
+      keyPainter.paint(canvas, Offset(padding, yOffset));
+      valuePainter.paint(
+          canvas, Offset(width - padding - valuePainter.width, yOffset));
+
+      // Return the actual height used
+      return yOffset +
+          math.max(keyPainter.height, valuePainter.height) +
+          (fontSize * 0.2);
     } else if (row is _ReportSpacingRow) {
       return yOffset + row.height;
-      
     } else if (row is _ReportDividerRow) {
       final dividerFontSize = baseFontSize * getDividerScale(is58mm);
       final charsNeeded =
@@ -564,7 +532,7 @@ class DailyCloseThermalPrinter {
   }
 
   Future<void> _printImage(
-      img.Image image, String paperSize, PrinterType printerType) async {
+      img.Image image, String paperSize, BluetoothPrinter printer) async {
     final profile = await CapabilityProfile.load();
     final generator = Generator(
       paperSize == '58mm' ? PaperSize.mm58 : PaperSize.mm80,
@@ -577,7 +545,7 @@ class DailyCloseThermalPrinter {
     bytes += generator.feed(2);
     bytes += generator.cut();
 
-    await printerManager.send(type: printerType, bytes: bytes);
+    await _printerUtils.sendPrintJob(printer, bytes);
   }
 }
 
