@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
@@ -227,9 +226,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
 
       // ========== SEND TO PRINTER ==========
       debugPrint("Sending ${bytes.length} bytes to printer...");
-      final printerManager = PrinterManager.instance;
-      await printerManager.send(
-          type: selectedPrinter.typePrinter, bytes: bytes);
+      await _printerUtils.sendPrintJob(selectedPrinter, bytes);
       debugPrint("Print job sent successfully.");
 
       if (context.mounted) {
@@ -244,6 +241,7 @@ class supermarket3ReciptLayout implements ReceiptLayout {
         showScaffoldError(
             context: context, message: "Error printing: ${e.toString()}");
       }
+      rethrow;
     } finally {
       debugPrint("Disconnecting from printer...");
       await _printerUtils.disconnectPrinter(selectedPrinter);

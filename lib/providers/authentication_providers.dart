@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/helpers/date_helper.dart';
+import 'package:pos_machine/services/play_store_review_access.dart';
+import 'package:pos_machine/services/tenant_domain_service.dart';
 
 class AuthenticationException implements Exception {
   const AuthenticationException(this.message);
@@ -18,32 +20,44 @@ class AuthenticationException implements Exception {
   String toString() => message;
 }
 
+class ApiKeyRequiredException extends AuthenticationException {
+  const ApiKeyRequiredException()
+      : super('Enter your API key before signing in.');
+}
+
 class AuthenticationProvider {
   //                 *********************** Login API ***************************************************
 
   Future<dynamic> login(
     String email,
     String password,
-    BuildContext context, {
+    BuildContext? context, {
     http.Client? client,
     Duration timeout = const Duration(seconds: 25),
   }) async {
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
-
-    if (apiKey == null || apiKey.isEmpty) {
-      throw const HttpException("API key not found. Please restart the app.");
-    }
-
-    final Map<String, dynamic> apiBodyData = {
-      'email': email.trim(),
-      'password': password,
-    };
-    final url = Uri.parse(APPUrl.loginUrl);
     final httpClient = client ?? http.Client();
     final ownsClient = client == null;
     try {
+      final normalizedEmail = email.trim();
+      final prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key')?.trim();
+
+      if (PlayStoreReviewAccess.matchesEmail(normalizedEmail)) {
+        await TenantDomainService.discoverAndSave(
+          PlayStoreReviewAccess.tenantKey,
+          client: httpClient,
+          timeout: timeout,
+        );
+        apiKey = PlayStoreReviewAccess.tenantKey;
+      } else if (apiKey == null || apiKey.isEmpty) {
+        throw const ApiKeyRequiredException();
+      }
+
+      final apiBodyData = <String, dynamic>{
+        'email': normalizedEmail,
+        'password': password,
+      };
+      final url = Uri.parse(APPUrl.loginUrl);
       final response =
           await httpClient.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
@@ -92,6 +106,8 @@ class AuthenticationProvider {
       throw const AuthenticationException(
         'Unable to reach the login server. Check your connection and try again.',
       );
+    } on TenantDomainException catch (e) {
+      throw AuthenticationException(e.message);
     } on AuthenticationException {
       rethrow;
     } catch (_) {

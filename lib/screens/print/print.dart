@@ -880,12 +880,19 @@ class _PrintPageState extends State<PrintPage> {
       return;
     }
 
-    if (selectedPaperSize == '112mm' ||
-        selectedPaperSize == '80mm' ||
-        selectedPaperSize == '58mm') {
-      await _printThermalReceipt(customerCareNumber, customerCareEmail);
-    } else {
-      await _generateAndPrintPDF(customerCareNumber, customerCareEmail);
+    try {
+      if (selectedPaperSize == '112mm' ||
+          selectedPaperSize == '80mm' ||
+          selectedPaperSize == '58mm') {
+        await _printThermalReceipt(customerCareNumber, customerCareEmail);
+      } else {
+        await _generateAndPrintPDF(customerCareNumber, customerCareEmail);
+      }
+    } catch (e, stacktrace) {
+      // Receipt layouts already show the actionable error. Catch it here so
+      // automatic printing from this page does not create an unhandled Future.
+      debugPrint('[PrintPage] Print failed: $e');
+      debugPrint('Stacktrace: $stacktrace');
     }
   }
 

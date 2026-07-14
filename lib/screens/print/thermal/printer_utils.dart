@@ -9,6 +9,13 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 class ThermalPrinterUtils {
   final PrinterManager printerManager;
 
+  // Bluetooth receipt data is mostly raster images and can be much larger
+  // than a printer's input buffer. Sending it in paced chunks prevents cheap
+  // thermal printers from dropping the tail of a receipt.
+  static const int _bluetoothChunkSize = 1024;
+  static const Duration _bluetoothChunkDelay = Duration(milliseconds: 15);
+  static String? _connectedBluetoothAddress;
+
   ThermalPrinterUtils({PrinterManager? manager})
       : printerManager = manager ?? PrinterManager.instance;
 
@@ -66,19 +73,82 @@ class ThermalPrinterUtils {
       if (selectedPrinter.address == null) {
         throw Exception('Bluetooth printer address is null');
       }
-      await printerManager.connect(
+      final address = selectedPrinter.address!;
+      if (printerManager.currentStatusBT == BTStatus.connected &&
+          _connectedBluetoothAddress == address) {
+        debugPrint('Reusing Bluetooth printer connection: $address');
+        return;
+      }
+
+      // A different printer may still own the package's single Bluetooth
+      // socket. Close it before connecting to the newly selected device.
+      if (printerManager.currentStatusBT == BTStatus.connected) {
+        await printerManager.disconnect(type: PrinterType.bluetooth);
+      }
+
+      final connected = await printerManager.connect(
         type: PrinterType.bluetooth,
         model: BluetoothPrinterInput(
           name: selectedPrinter.deviceName ?? 'Unknown',
-          address: selectedPrinter.address!,
+          address: address,
           isBle: false,
         ),
       );
+      if (!connected) {
+        _connectedBluetoothAddress = null;
+        throw Exception('Could not connect to Bluetooth printer');
+      }
+      _connectedBluetoothAddress = address;
+    }
+  }
+
+  /// Sends a complete print job and fails if the printer package rejects any
+  /// part of it. Bluetooth is deliberately paced because `send` only confirms
+  /// that bytes reached Android's socket, not that the printer consumed them.
+  Future<void> sendPrintJob(
+    BluetoothPrinter selectedPrinter,
+    List<int> bytes,
+  ) async {
+    if (selectedPrinter.typePrinter != PrinterType.bluetooth) {
+      final sent = await printerManager.send(
+        type: selectedPrinter.typePrinter,
+        bytes: bytes,
+      );
+      if (!sent) {
+        throw Exception('Printer rejected the print job');
+      }
+      return;
+    }
+
+    for (var offset = 0; offset < bytes.length; offset += _bluetoothChunkSize) {
+      final end = (offset + _bluetoothChunkSize < bytes.length)
+          ? offset + _bluetoothChunkSize
+          : bytes.length;
+      final sent = await printerManager.send(
+        type: PrinterType.bluetooth,
+        bytes: bytes.sublist(offset, end),
+      );
+      if (!sent) {
+        _connectedBluetoothAddress = null;
+        throw Exception(
+          'Bluetooth printer disconnected while sending the print job',
+        );
+      }
+      if (end < bytes.length) {
+        await Future<void>.delayed(_bluetoothChunkDelay);
+      }
     }
   }
 
   /// Disconnect from the specified printer
   Future<void> disconnectPrinter(BluetoothPrinter selectedPrinter) async {
+    // Keep Bluetooth connected after a job. The printer package reports an
+    // intentional socket close as "Bluetooth connection lost", and closing as
+    // soon as `send` returns can truncate bytes still buffered by the printer.
+    if (selectedPrinter.typePrinter == PrinterType.bluetooth) {
+      return;
+    }
+
     try {
       await printerManager.disconnect(type: selectedPrinter.typePrinter);
     } catch (e) {
