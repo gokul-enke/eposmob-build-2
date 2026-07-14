@@ -19,6 +19,7 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
+import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.dart';
 import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
 import 'package:pos_machine/resources/font_manager.dart';
@@ -682,11 +683,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     String orderDate,
     String orderNumber,
   ) async {
-    var printerManager = PrinterManager.instance;
+    final printerUtils = ThermalPrinterUtils();
 
     try {
       // Connect to printer
-      await _connectToPrinter(printer);
+      await printerUtils.connectToPrinter(printer);
 
       // Generate receipt with all fields enabled (dummy document config)
       final profile = await CapabilityProfile.load();
@@ -1070,42 +1071,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       bytes += generator.cut();
 
       // Print
-      await printerManager.send(type: printer.typePrinter, bytes: bytes);
+      await printerUtils.sendPrintJob(printer, bytes);
     } finally {
-      await _disconnectPrinter(printer);
-    }
-  }
-
-  Future<void> _connectToPrinter(BluetoothPrinter selectedPrinter) async {
-    if (selectedPrinter.typePrinter == PrinterType.usb) {
-      await printerManager.connect(
-        type: PrinterType.usb,
-        model: UsbPrinterInput(
-          name: selectedPrinter.deviceName ?? 'Unknown',
-          productId: selectedPrinter.productId,
-          vendorId: selectedPrinter.vendorId,
-        ),
-      );
-    } else if (selectedPrinter.typePrinter == PrinterType.bluetooth) {
-      if (selectedPrinter.address == null) {
-        throw Exception('Bluetooth printer address is null');
-      }
-      await printerManager.connect(
-        type: PrinterType.bluetooth,
-        model: BluetoothPrinterInput(
-          name: selectedPrinter.deviceName ?? 'Unknown',
-          address: selectedPrinter.address!,
-          isBle: false,
-        ),
-      );
-    }
-  }
-
-  Future<void> _disconnectPrinter(BluetoothPrinter selectedPrinter) async {
-    try {
-      await printerManager.disconnect(type: selectedPrinter.typePrinter);
-    } catch (e) {
-      debugPrint('Error disconnecting printer: $e');
+      await printerUtils.disconnectPrinter(printer);
     }
   }
 

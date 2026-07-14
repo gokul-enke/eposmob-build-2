@@ -1,10 +1,10 @@
 ﻿import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:pos_machine/models/document_configurations.dart';
 import 'package:pos_machine/screens/print/thermal/debug_image_saver.dart';
+import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image/image.dart' as img;
 import 'dart:ui' as ui;
@@ -15,7 +15,7 @@ import 'dart:ui' as ui;
 /// Supports responsive layouts for both 80mm and 58mm thermal paper
 class KotThermalPrinter {
   final BuildContext context;
-  var printerManager = PrinterManager.instance;
+  final ThermalPrinterUtils _printerUtils = ThermalPrinterUtils();
 
   // =========================================================
   // RESPONSIVE SIZING SYSTEM
@@ -102,40 +102,6 @@ class KotThermalPrinter {
     }
   }
 
-  /// Connect to thermal printer (supports both Bluetooth and USB)
-  Future<void> _connectToPrinter(BluetoothPrinter printer) async {
-    try {
-      if (printer.typePrinter == PrinterType.usb) {
-        await printerManager.connect(
-          type: PrinterType.usb,
-          model: UsbPrinterInput(
-            name: printer.deviceName ?? 'Unknown',
-            productId: printer.productId,
-            vendorId: printer.vendorId,
-          ),
-        );
-      } else if (printer.typePrinter == PrinterType.bluetooth) {
-        if (printer.address == null) {
-          throw Exception('Bluetooth printer address is null');
-        }
-        await printerManager.connect(
-          type: PrinterType.bluetooth,
-          model: BluetoothPrinterInput(
-            name: printer.deviceName ?? 'Unknown',
-            address: printer.address!,
-            isBle: false,
-            autoConnect: false,
-          ),
-        );
-      } else {
-        throw Exception('Unsupported printer type: ${printer.typePrinter}');
-      }
-    } catch (e) {
-      debugPrint('Error connecting to printer: $e');
-      rethrow;
-    }
-  }
-
   /// Print Kitchen Order Ticket using document configuration
   Future<void> printKot({
     required BluetoothPrinter selectedPrinter,
@@ -158,7 +124,7 @@ class KotThermalPrinter {
 
     try {
       debugPrint("Connecting to printer...");
-      await _connectToPrinter(selectedPrinter);
+      await _printerUtils.connectToPrinter(selectedPrinter);
       debugPrint("Connected successfully.");
 
       final bool is58mm = selectedPaperSize == '58mm';
@@ -468,7 +434,7 @@ class KotThermalPrinter {
 
       // Render and print
       final image = await _renderKotToImage(rows, printWidth, is58mm);
-      await _printImage(image, selectedPaperSize, selectedPrinter.typePrinter);
+      await _printImage(image, selectedPaperSize, selectedPrinter);
 
       debugPrint("KOT printed successfully!");
     } catch (e, stackTrace) {
@@ -774,7 +740,7 @@ class KotThermalPrinter {
   }
 
   Future<void> _printImage(
-      img.Image image, String paperSize, PrinterType printerType) async {
+      img.Image image, String paperSize, BluetoothPrinter printer) async {
     // DEBUG: Save bitmap image before printing
     await PrintDebugImageSaver.saveKotImage(image, paperSize);
 
@@ -790,7 +756,7 @@ class KotThermalPrinter {
     bytes += generator.feed(2);
     bytes += generator.cut();
 
-    await printerManager.send(type: printerType, bytes: bytes);
+    await _printerUtils.sendPrintJob(printer, bytes);
   }
 
   /// Load default printer from SharedPreferences

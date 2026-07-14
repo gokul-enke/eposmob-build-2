@@ -21,6 +21,7 @@ import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
 import 'package:pos_machine/screens/print/barcode_sticker_image_renderer.dart';
+import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:pos_machine/models/barcode_layout_settings.dart';
 import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -139,47 +140,6 @@ class BarcodePrinterService {
     } catch (e) {
       debugPrint('[BarcodePrint] Failed to parse saved barcode printer: $e');
       return null;
-    }
-  }
-
-  Future<void> _connectToPrinter(
-    PrinterManager printerManager,
-    BluetoothPrinter printer,
-  ) async {
-    if (printer.typePrinter == PrinterType.usb) {
-      await printerManager.connect(
-        type: PrinterType.usb,
-        model: UsbPrinterInput(
-          name: printer.deviceName ?? 'Unknown',
-          productId: printer.productId,
-          vendorId: printer.vendorId,
-        ),
-      );
-      return;
-    }
-
-    if (printer.address == null || printer.address!.trim().isEmpty) {
-      throw Exception('Bluetooth printer address is missing');
-    }
-
-    await printerManager.connect(
-      type: PrinterType.bluetooth,
-      model: BluetoothPrinterInput(
-        name: printer.deviceName ?? 'Unknown',
-        address: printer.address!,
-        isBle: false,
-      ),
-    );
-  }
-
-  Future<void> _disconnectPrinter(
-    PrinterManager printerManager,
-    BluetoothPrinter printer,
-  ) async {
-    try {
-      await printerManager.disconnect(type: printer.typePrinter);
-    } catch (e) {
-      debugPrint('[BarcodePrint] Printer disconnect error: $e');
     }
   }
 
@@ -335,7 +295,7 @@ class BarcodePrinterService {
       );
     }
 
-    final printerManager = PrinterManager.instance;
+    final printerUtils = ThermalPrinterUtils();
     try {
       final profile = await CapabilityProfile.load();
       final paperSize =
@@ -411,11 +371,8 @@ class BarcodePrinterService {
 
       // Build the complete job before connecting so rendering failures cannot
       // create a partially printed batch.
-      await _connectToPrinter(printerManager, selectedPrinter);
-      await printerManager.send(
-        type: selectedPrinter.typePrinter,
-        bytes: bytes,
-      );
+      await printerUtils.connectToPrinter(selectedPrinter);
+      await printerUtils.sendPrintJob(selectedPrinter, bytes);
       return _DirectPrintResult(
         _DirectPrintStatus.success,
         'Sent to printer: ${selectedPrinter.deviceName ?? 'Barcode printer'}',
@@ -428,7 +385,7 @@ class BarcodePrinterService {
         'Direct printing failed: $error',
       );
     } finally {
-      await _disconnectPrinter(printerManager, selectedPrinter);
+      await printerUtils.disconnectPrinter(selectedPrinter);
     }
   }
 
