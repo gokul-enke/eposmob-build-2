@@ -26,7 +26,10 @@ class _BaseUrlWrapperState extends State<BaseUrlWrapper> {
       final prefs = await SharedPreferences.getInstance();
       final apiKey = prefs.getString('api_key')?.trim() ?? '';
       if (apiKey.isEmpty) {
-        if (mounted) setState(() => _destination = const ApiKeyScreen());
+        // Allow the dedicated Play reviewer account to bootstrap its tenant
+        // from the email entered on the login screen. All other accounts are
+        // routed to API-key setup when they attempt to sign in.
+        if (mounted) setState(() => _destination = const SignInScreen());
         return;
       }
 

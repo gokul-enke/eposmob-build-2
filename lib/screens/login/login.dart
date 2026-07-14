@@ -635,6 +635,13 @@ class _SignInScreenState extends State<SignInScreen> {
                                                         '${value["message"]}',
                                                   );
                                                 }
+                                              } on ApiKeyRequiredException {
+                                                _updateLoadingState(false, "");
+                                                if (mounted) {
+                                                  Navigator
+                                                      .pushReplacementNamed(
+                                                          context, '/api-key');
+                                                }
                                               } catch (e) {
                                                 _updateLoadingState(false, "");
                                                 showScaffoldError(
