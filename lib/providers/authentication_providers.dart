@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,13 +9,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pos_machine/helpers/date_helper.dart';
 
+class AuthenticationException implements Exception {
+  const AuthenticationException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class AuthenticationProvider {
   //                 *********************** Login API ***************************************************
 
   Future<dynamic> login(
-      String email, String password, BuildContext context) async {
-    // debugPrint("login");
-
+    String email,
+    String password,
+    BuildContext context, {
+    http.Client? client,
+    Duration timeout = const Duration(seconds: 25),
+  }) async {
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -24,19 +37,20 @@ class AuthenticationProvider {
     }
 
     final Map<String, dynamic> apiBodyData = {
-      'email': email,
+      'email': email.trim(),
       'password': password,
     };
-    debugPrint('Login request body: ${json.encode(apiBodyData)}');
     final url = Uri.parse(APPUrl.loginUrl);
-    debugPrint('Login URL: $url');
+    final httpClient = client ?? http.Client();
+    final ownsClient = client == null;
     try {
       final response =
-          await http.post(url, body: json.encode(apiBodyData), headers: {
+          await httpClient.post(url, body: json.encode(apiBodyData), headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'X-Tenant': apiKey,
-      });
-      
+      }).timeout(timeout);
+
       // Sync server time from headers
       if (response.headers['date'] != null) {
         try {
@@ -48,20 +62,45 @@ class AuthenticationProvider {
         }
       }
 
-      debugPrint('Login response status code: ${response.statusCode}');
-      if (response.statusCode == 200 ||
-          response.statusCode == 400 ||
-          response.statusCode == 401) {
-        debugPrint('Login response body: ${response.body}');
-        return json.decode(response.body);
-      } else if (response.statusCode > 400) {
-        throw const HttpException("User Not Found.Try Again!");
-      } else {
-        throw const HttpException('Failed to load data ,Try Again Later!');
+      dynamic payload;
+      try {
+        payload = json.decode(response.body);
+      } catch (_) {
+        payload = null;
       }
-    } catch (error) {
+
+      if (payload is Map<String, dynamic> &&
+          response.statusCode >= 200 &&
+          response.statusCode < 500) {
+        return payload;
+      }
+
+      if (response.statusCode >= 500) {
+        throw const AuthenticationException(
+          'The login service is temporarily unavailable. Please try again.',
+        );
+      }
+
+      throw AuthenticationException(
+        'Login failed (HTTP ${response.statusCode}). Please try again.',
+      );
+    } on TimeoutException {
+      throw const AuthenticationException(
+        'Login timed out. Check your connection and try again.',
+      );
+    } on SocketException {
+      throw const AuthenticationException(
+        'Unable to reach the login server. Check your connection and try again.',
+      );
+    } on AuthenticationException {
       rethrow;
-    } finally {}
+    } catch (_) {
+      throw const AuthenticationException(
+        'Unable to complete login. Check your connection and try again.',
+      );
+    } finally {
+      if (ownsClient) httpClient.close();
+    }
   }
 
 //                 *********************** LOGOUT API ***************************************************

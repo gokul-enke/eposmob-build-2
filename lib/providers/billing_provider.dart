@@ -937,6 +937,10 @@ class BillingProvider extends ChangeNotifier {
   /// Whether the cashier opened the payment section (confirm gate).
   bool _paymentStepVisited = false;
 
+  /// Prevents automatic payment fallback after the cashier explicitly clears
+  /// the payment section. Programmatic resets and quick actions clear this flag.
+  bool _paymentAutofillSuppressed = false;
+
   /// Order total used for payment validation, balance/change and autofill.
   ///
   /// Matches desktop `BillingPage._getEffectiveOrderTotal()` — i.e. the net
@@ -961,6 +965,8 @@ class BillingProvider extends ChangeNotifier {
   String? get pristinePaymentAmount => _pristinePaymentAmount;
 
   bool get paymentStepVisited => _paymentStepVisited;
+
+  bool get paymentAutofillSuppressed => _paymentAutofillSuppressed;
 
   void setDeliveryChargeOverride(double? charge) {
     _deliveryChargeOverride = charge;
@@ -1188,7 +1194,8 @@ class BillingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void clearAllPaymentMethods() {
+  void clearAllPaymentMethods({bool suppressAutofill = false}) {
+    _paymentAutofillSuppressed = suppressAutofill;
     _isCashSelected = false;
     _isCardSelected = false;
     _isUpiSelected = false;

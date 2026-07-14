@@ -1803,9 +1803,12 @@ class BillingMobilePaymentController {
   /// amounts are entered yet, prefill the selected method with the full total.
   /// Falls back to CASH when nothing is selected (desktop safety net).
   bool syncPaymentAutofillIfNeeded(BillingProvider bp) {
+    if (bp.paymentAutofillSuppressed) return false;
     final total = bp.effectiveOrderTotal;
     if (total <= 0) return false;
-    if (_hasAnyCollectedPayment(bp)) return false;
+    // Customer credit settles the remaining payable amount separately. It is a
+    // valid selected payment and must not trigger the CASH safety fallback.
+    if (_hasAnyCollectedPayment(bp) || bp.isDebitSelected) return false;
 
     final totalStr = total.toStringAsFixed(2);
     String pristineKey = 'CASH';
@@ -1854,7 +1857,7 @@ class BillingMobilePaymentController {
 
   /// Clears all selected payment methods and entered amounts.
   void clearAllCollectedPayments(BillingProvider bp) {
-    bp.clearAllPaymentMethods();
+    bp.clearAllPaymentMethods(suppressAutofill: true);
     bp.calculateBalance();
   }
 

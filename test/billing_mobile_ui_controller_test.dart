@@ -302,6 +302,20 @@ void main() {
       expect(bp.cashAmountController.text, '25');
     });
 
+    test('syncPaymentAutofillIfNeeded does not replace full credit with cash',
+        () {
+      final bp = BillingProvider();
+      bp.setTotalOrderAmount(50);
+      bp.setPaymentMethod('CREDIT', true);
+      bp.debitAmountController.text = '50.00';
+
+      expect(controller.syncPaymentAutofillIfNeeded(bp), isFalse);
+      expect(bp.isDebitSelected, isTrue);
+      expect(bp.debitAmountController.text, '50.00');
+      expect(bp.isCashSelected, isFalse);
+      expect(bp.cashAmountController.text, isEmpty);
+    });
+
     test('fillExactCash selects cash for the full payable total', () {
       final bp = BillingProvider();
       bp.setTotalOrderAmount(88.5);
@@ -329,6 +343,11 @@ void main() {
       expect(bp.cashAmountController.text, isEmpty);
       expect(bp.isExtraMethodSelected('99'), isFalse);
       expect(bp.getTotalPaidAmount(), 0);
+      expect(bp.paymentAutofillSuppressed, isTrue);
+
+      expect(controller.syncPaymentAutofillIfNeeded(bp), isFalse);
+      expect(bp.isCashSelected, isFalse);
+      expect(bp.cashAmountController.text, isEmpty);
     });
 
     test('syncDebitAmount mirrors the unpaid balance for customer credit', () {

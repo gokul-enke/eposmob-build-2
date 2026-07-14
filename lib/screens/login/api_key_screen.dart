@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
-import 'dart:async';
-import 'dart:convert';
-import '../../resources/app_url.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_title.dart';
 import '../../resources/color_manager.dart';
@@ -13,10 +9,16 @@ import 'package:provider/provider.dart';
 import 'package:pos_machine/providers/keyboard_provider.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/helpers/debug_login_autofill.dart';
+import 'package:pos_machine/services/tenant_domain_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ApiKeyScreen extends StatefulWidget {
-  const ApiKeyScreen({super.key});
+  const ApiKeyScreen({
+    super.key,
+    this.initialError,
+  });
+
+  final String? initialError;
 
   @override
   State<ApiKeyScreen> createState() => _ApiKeyScreenState();
@@ -51,14 +53,26 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
   @override
   void initState() {
     super.initState();
+    _errorMessage = widget.initialError;
     // Keep virtual keyboard off on first open; re-apply after Hive may finish loading.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _ensureVirtualKeyboardOffByDefault();
-      DebugLoginAutofill.applyApiKeyIfNeeded(_apiKeyController);
+      _loadExistingApiKey();
       Future<void>.delayed(const Duration(milliseconds: 100), () {
         if (mounted) _ensureVirtualKeyboardOffByDefault();
       });
     });
+  }
+
+  Future<void> _loadExistingApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedApiKey = prefs.getString('api_key')?.trim();
+    if (savedApiKey != null && savedApiKey.isNotEmpty) {
+      _apiKeyController.text = savedApiKey;
+    } else {
+      await DebugLoginAutofill.applyApiKeyIfNeeded(_apiKeyController);
+    }
+    if (mounted) setState(() {});
   }
 
   @override
@@ -66,36 +80,6 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     _apiKeyFocusNode.dispose();
     _apiKeyController.dispose();
     super.dispose();
-  }
-
-  Future<void> _saveApiConfig({
-    required String tenantKey,
-    required String domain,
-    bool usedDefaultDomain = false,
-  }) async {
-    String normalizedDomain = APPUrl.normalizeBaseUrl(domain);
-    if (!normalizedDomain.startsWith('http://') &&
-        !normalizedDomain.startsWith('https://')) {
-      normalizedDomain = 'https://$normalizedDomain';
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('api_key', tenantKey);
-    await prefs.setString('app_url', normalizedDomain);
-    await prefs.setBool('show_default_domain_warning', usedDefaultDomain);
-    APPUrl.updateBaseURL(normalizedDomain);
-  }
-
-  Future<void> _saveAndContinueWithDefaultDomain(String tenantKey) async {
-    await _saveApiConfig(
-      tenantKey: tenantKey,
-      domain: APPUrl.defaultBaseURL,
-      usedDefaultDomain: true,
-    );
-
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
   }
 
   Future<void> _verifyAndSaveApiKey() async {
@@ -111,52 +95,15 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse(APPUrl.findDomainUrl),
-        headers: {
-          'X-Tenant-Key': tenantKey,
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 20));
+      await TenantDomainService.discoverAndSave(tenantKey);
 
-      Map<String, dynamic> responseBody = {};
-      try {
-        responseBody = jsonDecode(response.body) as Map<String, dynamic>;
-      } catch (_) {}
-
-      final int apiStatus =
-          (responseBody['status'] is int) ? responseBody['status'] as int : -1;
-
-      if (response.statusCode == 200 && apiStatus == 200) {
-        final data = responseBody['data'];
-        final String? domain =
-            (data is Map<String, dynamic>) ? data['domain']?.toString() : null;
-
-        if (domain == null || domain.trim().isEmpty) {
-          await _saveAndContinueWithDefaultDomain(tenantKey);
-          return;
-        }
-
-        await _saveApiConfig(
-          tenantKey: tenantKey,
-          domain: domain,
-          usedDefaultDomain: false,
-        );
-
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
-        return;
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
       }
-
-      await _saveAndContinueWithDefaultDomain(tenantKey);
-
-    } on TimeoutException {
-      await _saveAndContinueWithDefaultDomain(tenantKey);
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Unable to verify API key. Please try again.';
-      });
+    } on TenantDomainException catch (e) {
+      if (mounted) {
+        setState(() => _errorMessage = e.message);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -194,181 +141,184 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
         children: [
           SafeArea(
             child: Container(
-            alignment: Alignment.center,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 10.0, bottom: 10.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(height: titleTopSpace),
-                    BuildTextTile(
-                      title: 'API Key Required',
-                      textStyle: buildTitleStyle,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Please enter your API key to continue',
-                      style: buildCustomStyle(
-                        FontWeightManager.regular,
-                        FontSize.s14,
-                        0.27,
-                        Colors.black.withOpacity(0.6),
+              alignment: Alignment.center,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 10.0, bottom: 10.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(height: titleTopSpace),
+                      BuildTextTile(
+                        title: 'API Key Required',
+                        textStyle: buildTitleStyle,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: betweenTitleAndForm),
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: formWidth,
-                            child: Padding(
-                              padding: fieldPadding,
-                              child: TextFormField(
-                                focusNode: _apiKeyFocusNode,
-                                autofocus: false,
-                                autovalidateMode:
-                                    AutovalidateMode.onUserInteraction,
-                                validator: _validateApiKey,
-                                cursorColor: ColorManager.kPrimaryColor,
-                                controller: _apiKeyController,
-                                obscureText: _obscureText,
-                                readOnly: _shouldSuppressSystemKeyboard(),
-                                showCursor: true,
-                                onTap: () {
-                                  final keyboardProvider =
-                                      Provider.of<KeyboardProvider>(context,
-                                          listen: false);
-                                  if (keyboardProvider.showKeyboardFeature) {
-                                    keyboardProvider.show(
-                                        'api_key', _apiKeyController);
-                                  }
-                                },
-                                keyboardType: TextInputType.text,
-                                decoration: decoration.copyWith(
-                                  prefixIcon: Icon(
-                                    Icons.key,
-                                    color:
-                                        ColorManager.kPrimaryColor.withOpacity(0.5),
-                                  ),
-                                  hintText: 'Enter your API key',
-                                  hintStyle: buildTextFieldStyle,
-                                  suffixIcon: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _obscureText = !_obscureText;
-                                      });
-                                    },
-                                    child: Icon(
-                                      _obscureText
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
+                      const SizedBox(height: 16),
+                      Text(
+                        'Please enter your API key to continue',
+                        style: buildCustomStyle(
+                          FontWeightManager.regular,
+                          FontSize.s14,
+                          0.27,
+                          Colors.black.withOpacity(0.6),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: betweenTitleAndForm),
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: formWidth,
+                              child: Padding(
+                                padding: fieldPadding,
+                                child: TextFormField(
+                                  focusNode: _apiKeyFocusNode,
+                                  autofocus: false,
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  validator: _validateApiKey,
+                                  cursorColor: ColorManager.kPrimaryColor,
+                                  controller: _apiKeyController,
+                                  obscureText: _obscureText,
+                                  readOnly: _shouldSuppressSystemKeyboard(),
+                                  showCursor: true,
+                                  onTap: () {
+                                    final keyboardProvider =
+                                        Provider.of<KeyboardProvider>(context,
+                                            listen: false);
+                                    if (keyboardProvider.showKeyboardFeature) {
+                                      keyboardProvider.show(
+                                          'api_key', _apiKeyController);
+                                    }
+                                  },
+                                  keyboardType: TextInputType.text,
+                                  decoration: decoration.copyWith(
+                                    prefixIcon: Icon(
+                                      Icons.key,
                                       color: ColorManager.kPrimaryColor
                                           .withOpacity(0.5),
                                     ),
-                                  ),
-                                  errorBorder: const OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.red,
-                                      width: 2.0,
+                                    hintText: 'Enter your API key',
+                                    hintStyle: buildTextFieldStyle,
+                                    suffixIcon: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _obscureText = !_obscureText;
+                                        });
+                                      },
+                                      child: Icon(
+                                        _obscureText
+                                            ? Icons.visibility_off
+                                            : Icons.visibility,
+                                        color: ColorManager.kPrimaryColor
+                                            .withOpacity(0.5),
+                                      ),
                                     ),
-                                  ),
-                                  focusedErrorBorder: const OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: Colors.red,
-                                      width: 2.0,
+                                    errorBorder: const OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.red,
+                                        width: 2.0,
+                                      ),
+                                    ),
+                                    focusedErrorBorder:
+                                        const OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.red,
+                                        width: 2.0,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          if (_errorMessage != null)
-                            Container(
-                              width: formWidth,
-                              margin: fieldPadding,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.red[50],
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.red[200]!),
-                              ),
-                              child: Text(
-                                _errorMessage!,
-                                style: TextStyle(
-                                  color: Colors.red[700],
-                                  fontSize: FontSize.s12,
-                                  fontFamily: FontConstants.fontFamily,
+                            const SizedBox(height: 20),
+                            if (_errorMessage != null)
+                              Container(
+                                width: formWidth,
+                                margin: fieldPadding,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red[50],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.red[200]!),
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          const SizedBox(height: 30),
-                          _isLoading
-                              ? const Center(
-                                  child: CircularProgressIndicator(
-                                    color: ColorManager.kPrimaryColor,
-                                  ),
-                                )
-                              : Padding(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: isMobile ? 16 : 25, vertical: 5),
-                                  child: CustomRoundButton(
-                                    width: formWidth,
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: Colors.red[700],
                                     fontSize: FontSize.s12,
-                                    height: size.height * .07,
-                                    title: 'Submit',
-                                    fct: _verifyAndSaveApiKey,
-                                    isLoading: _isLoading,
+                                    fontFamily: FontConstants.fontFamily,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Don't have an API key? ",
-                          style: buildCustomStyle(
-                            FontWeightManager.regular,
-                            FontSize.s14,
-                            0.27,
-                            Colors.black.withOpacity(0.6),
-                          ),
+                              ),
+                            const SizedBox(height: 30),
+                            _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      color: ColorManager.kPrimaryColor,
+                                    ),
+                                  )
+                                : Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: isMobile ? 16 : 25,
+                                        vertical: 5),
+                                    child: CustomRoundButton(
+                                      width: formWidth,
+                                      fontSize: FontSize.s12,
+                                      height: size.height * .07,
+                                      title: 'Submit',
+                                      fct: _verifyAndSaveApiKey,
+                                      isLoading: _isLoading,
+                                    ),
+                                  ),
+                          ],
                         ),
-                        GestureDetector(
-                          onTap: () async {
-                            final uri = Uri.parse('https://cloudposai.com');
-                            if (await canLaunchUrl(uri)) {
-                              await launchUrl(uri, mode: LaunchMode.externalApplication);
-                            }
-                          },
-                          child: Text(
-                            'Register Here',
+                      ),
+                      const SizedBox(height: 30),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Don't have an API key? ",
                             style: buildCustomStyle(
-                              FontWeightManager.semiBold,
+                              FontWeightManager.regular,
                               FontSize.s14,
                               0.27,
-                              ColorManager.kPrimaryColor,
+                              Colors.black.withOpacity(0.6),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          GestureDetector(
+                            onTap: () async {
+                              final uri = Uri.parse('https://cloudposai.com');
+                              if (await canLaunchUrl(uri)) {
+                                await launchUrl(uri,
+                                    mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            child: Text(
+                              'Register Here',
+                              style: buildCustomStyle(
+                                FontWeightManager.semiBold,
+                                FontSize.s14,
+                                0.27,
+                                ColorManager.kPrimaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
           ),
           // Keyboard toggle button (top-right)
           SafeArea(
@@ -381,15 +331,18 @@ class _ApiKeyScreenState extends State<ApiKeyScreen> {
                     Provider.of<KeyboardProvider>(context).showKeyboardFeature
                         ? Icons.keyboard_hide
                         : Icons.keyboard,
-                    color: Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                    color: Provider.of<KeyboardProvider>(context)
+                            .showKeyboardFeature
                         ? ColorManager.kPrimaryColor
                         : Colors.grey.shade600,
                   ),
-                  tooltip: Provider.of<KeyboardProvider>(context).showKeyboardFeature
-                      ? 'Hide Keyboard'
-                      : 'Show Keyboard',
+                  tooltip:
+                      Provider.of<KeyboardProvider>(context).showKeyboardFeature
+                          ? 'Hide Keyboard'
+                          : 'Show Keyboard',
                   onPressed: () {
-                    final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+                    final keyboardProvider =
+                        Provider.of<KeyboardProvider>(context, listen: false);
                     if (keyboardProvider.showKeyboardFeature) {
                       keyboardProvider.featureOff();
                       keyboardProvider.clear();

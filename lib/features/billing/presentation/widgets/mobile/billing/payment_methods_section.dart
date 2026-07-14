@@ -27,6 +27,7 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
   static const _customerController = BillingMobileCustomerController();
   static const _settingsController = BillingMobileSettingsController();
   bool _isLoadingPaymentMethods = false;
+  bool _paymentAutofillSynced = false;
   List<PaymentMethod> _paymentMethods = [];
 
   @override
@@ -102,7 +103,11 @@ class _PaymentMethodsSectionState extends State<PaymentMethodsSection> {
         final bp = Provider.of<BillingProvider>(context, listen: false);
         final items = _controller.paymentItems(bp, _paymentMethods);
 
-        if (snapshot.totalOrderAmount > 0) {
+        // Desktop applies its initial payment autofill only once. Re-running it
+        // on every provider rebuild would undo Clear Payments and can replace a
+        // full customer-credit payment with CASH.
+        if (snapshot.totalOrderAmount > 0 && !_paymentAutofillSynced) {
+          _paymentAutofillSynced = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               _controller.syncPaymentAutofillIfNeeded(bp);
