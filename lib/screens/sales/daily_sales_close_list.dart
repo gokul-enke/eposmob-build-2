@@ -24,6 +24,7 @@ import 'package:provider/provider.dart';
 import '../../components/build_round_button.dart';
 import '../../components/build_dialog_box.dart';
 import '../../models/daily_sales_close.dart';
+import 'package:pos_machine/providers/expense_provider.dart';
 import 'package:pos_machine/screens/print/print_daily_close.dart';
 import 'package:pos_machine/screens/sales/daily_sales_close_detail.dart';
 import 'package:pos_machine/models/day_close_pending_status.dart';
@@ -932,6 +933,10 @@ class _DayCloseModalState extends State<DayCloseModal> {
   bool _isLoadingDenominations = true;
   bool _openingPrefilled = false;
 
+  double _expenseCash = 0.0;
+  double _expenseBank = 0.0;
+  double _expenseTotal = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -1099,6 +1104,9 @@ class _DayCloseModalState extends State<DayCloseModal> {
         summary = result;
         _businessDateController.text =
             widget.pendingBusinessDate ?? result?.businessDate ?? '';
+        _expenseCash = (result?.cashExpenses ?? 0).toDouble();
+        _expenseBank = (result?.bankExpenses ?? 0).toDouble();
+        _expenseTotal = (result?.totalExpenses ?? 0).toDouble();
         if (!_openingPrefilled) {
           _shiftNameController.text = result?.shiftName ?? '';
         }
@@ -1145,6 +1153,36 @@ class _DayCloseModalState extends State<DayCloseModal> {
         errorMessage = e.toString();
         isLoadingSummary = false;
       });
+    }
+  }
+
+  Future<void> _fetchExpenses() async {
+    try {
+      final authModel = Provider.of<AuthModel>(context, listen: false);
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      final expenseProvider =
+          Provider.of<ExpenseProvider>(context, listen: false);
+
+      final storeId = storeSession.activeStore?.storeId ?? 0;
+      final businessDate =
+          widget.pendingBusinessDate ?? _businessDateController.text;
+
+      final result = await expenseProvider.getExpenseBreakdownForDate(
+        accessToken: authModel.token ?? '',
+        storeId: storeId,
+        businessDate: businessDate,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _expenseCash = result['cash'] ?? 0.0;
+        _expenseBank = result['bank'] ?? 0.0;
+        _expenseTotal = result['total'] ?? 0.0;
+      });
+    } catch (e) {
+      debugPrint('Error fetching expenses: $e');
     }
   }
 
@@ -2367,6 +2405,19 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       '$currency ${summary?.creditAmount ?? '0.00'}',
                                       'CREDIT COLLECTED',
                                       '$currency ${summary?.creditCollected ?? '0.00'}',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _buildSmallSummaryRow(
+                                      'CASH EXPENSES',
+                                      '$currency ${_expenseCash.toStringAsFixed(2)}',
+                                      'BANK EXPENSES',
+                                      '$currency ${_expenseBank.toStringAsFixed(2)}',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _buildSmallSummaryItem(
+                                      'TOTAL EXPENSE',
+                                      '$currency ${_expenseTotal.toStringAsFixed(2)}',
+                                      color: Colors.red.shade700,
                                     ),
                                     const SizedBox(height: 16),
 
