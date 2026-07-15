@@ -48,6 +48,13 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
   // Pagination
   int _currentPage = 1;
 
+  int get _pageSize =>
+      Provider.of<ReportsProvider>(context, listen: false)
+          .nonStockReport
+          ?.pagination
+          ?.perPage ??
+      20;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +71,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
   }
 
   Future<void> loadInitData({int? page}) async {
+    if (!mounted) return;
     setState(() {
       initLoading = true;
     });
@@ -91,10 +99,22 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
       }
     } catch (error) {
       debugPrint('Error loading non-stock report: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Non-stock report is currently unavailable.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+      }
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -111,7 +131,6 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
     ReportsProvider reportsProvider = Provider.of<ReportsProvider>(context);
 
     return SafeArea(
@@ -199,8 +218,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
       label: "Store",
       hint: "Select a store",
       value: selectedStoreName != null
-          ? storeProvider.availableStores.firstWhereOrNull(
-              (s) => s.storeName == selectedStoreName)
+          ? storeProvider.availableStores
+              .firstWhereOrNull((s) => s.storeName == selectedStoreName)
           : null,
       items: storeProvider.availableStores,
       displayText: (s) => s.storeName ?? "",
@@ -217,8 +236,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
       label: "Category",
       hint: "Select a category",
       value: selectedCategoryName != null
-          ? categoryProvider.category?.firstWhereOrNull(
-              (c) => c.categoryName == selectedCategoryName)
+          ? categoryProvider.category
+              ?.firstWhereOrNull((c) => c.categoryName == selectedCategoryName)
           : null,
       items: categoryProvider.category ?? [],
       displayText: (c) => c.categoryName ?? "",
@@ -235,8 +254,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
       label: "Product",
       hint: "Select a product",
       value: selectedProductName != null
-          ? productProvider.products.firstWhereOrNull(
-              (p) => p.productName == selectedProductName)
+          ? productProvider.products
+              .firstWhereOrNull((p) => p.productName == selectedProductName)
           : null,
       items: productProvider.products,
       displayText: (p) => p.productName ?? "",
@@ -394,8 +413,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
     );
   }
 
-  Widget _buildMobileNonStockCard(
-      int index, NonStockReportData item) {
+  Widget _buildMobileNonStockCard(int index, NonStockReportData item) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       elevation: 2,
@@ -412,7 +430,7 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
                   child: Row(
                     children: [
                       Text(
-                        '#${(_currentPage - 1) * 10 + index + 1}  ',
+                        '#${(_currentPage - 1) * _pageSize + index + 1}  ',
                         style: buildCustomStyle(FontWeightManager.semiBold,
                             FontSize.s13, 0.20, ColorManager.textColor),
                       ),
@@ -432,15 +450,16 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat(
-                    'Category', item.categoryName ?? '-', selectable: true),
+                _buildMobileCardStat('Category', item.categoryName ?? '-',
+                    selectable: true),
                 _buildMobileCardStat('Store', item.store ?? '-'),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildMobileCardStat('Barcode', item.barcode ?? '-', copyable: true),
+                _buildMobileCardStat('Barcode', item.barcode ?? '-',
+                    copyable: true),
                 _buildMobileCardStat('Unit', item.unit ?? '-'),
               ],
             ),
@@ -466,8 +485,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
-                  0.15, Colors.grey)),
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey)),
           Row(
             children: [
               Flexible(
@@ -478,8 +497,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
                             FontSize.s12, 0.18, Colors.black87),
                       )
                     : Text(value,
-                        style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                            0.18, Colors.black87),
+                        style: buildCustomStyle(FontWeightManager.medium,
+                            FontSize.s12, 0.18, Colors.black87),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
               ),
@@ -528,99 +547,98 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
 
     return Expanded(
       child: BuildBoxShadowContainer(
-              margin: const EdgeInsets.only(top: 5),
-              circleRadius: 7,
-              offsetValue: const Offset(2, 2),
-              blurRadius: 8.0,
-              color: Colors.white,
-              child: Column(
-                children: [
-                  // Table Header
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: ColorManager.tableBGColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          offset: Offset(0, 2),
-                          blurRadius: 2.0,
-                        ),
-                      ],
-                    ),
-                    child: Table(
-                      columnWidths: const {
-                        0: FlexColumnWidth(0.5), // No
-                        1: FlexColumnWidth(2.0), // Product Name
-                        2: FlexColumnWidth(1.5), // Category
-                        3: FlexColumnWidth(1.2), // Store
-                        4: FlexColumnWidth(1.2), // Barcode
-                        5: FlexColumnWidth(1.0), // Current Stock
-                        6: FlexColumnWidth(1.0), // Reorder Level
-                        7: FlexColumnWidth(0.8), // Unit
-                        8: FlexColumnWidth(1.2), // Status
-                      },
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
-                      children: [
-                        TableRow(
-                          children: [
-                            _buildTableHeaderCell("No"),
-                            _buildTableHeaderCell("Product Name"),
-                            _buildTableHeaderCell("Category"),
-                            _buildTableHeaderCell("Store"),
-                            _buildTableHeaderCell("Barcode"),
-                            _buildTableHeaderCell("Current\nStock"),
-                            _buildTableHeaderCell("Reorder\nLevel"),
-                            _buildTableHeaderCell("Unit"),
-                            _buildTableHeaderCell("Status"),
-                          ],
-                        ),
-                      ],
-                    ),
+        margin: const EdgeInsets.only(top: 5),
+        circleRadius: 7,
+        offsetValue: const Offset(2, 2),
+        blurRadius: 8.0,
+        color: Colors.white,
+        child: Column(
+          children: [
+            // Table Header
+            Container(
+              decoration: const BoxDecoration(
+                color: ColorManager.tableBGColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    offset: Offset(0, 2),
+                    blurRadius: 2.0,
                   ),
-                  // Table Body
-                  Expanded(
-                    child: reportsProvider.nonStockReport == null ||
-                            reportsProvider.nonStockReport!.data.isEmpty
-                        ? _buildNoDataFoundUI()
-                        : ScrollConfiguration(
-                            behavior: ScrollConfiguration.of(context).copyWith(
-                              dragDevices: {
-                                PointerDeviceKind.mouse,
-                                PointerDeviceKind.touch,
-                                PointerDeviceKind.stylus,
-                                PointerDeviceKind.trackpad,
-                              },
-                            ),
-                            child: SingleChildScrollView(
-                              physics: const BouncingScrollPhysics(),
-                              child: Table(
-                                columnWidths: const {
-                                  0: FlexColumnWidth(0.5),
-                                  1: FlexColumnWidth(2.0),
-                                  2: FlexColumnWidth(1.5),
-                                  3: FlexColumnWidth(1.2),
-                                  4: FlexColumnWidth(1.2),
-                                  5: FlexColumnWidth(1.0),
-                                  6: FlexColumnWidth(1.0),
-                                  7: FlexColumnWidth(0.8),
-                                  8: FlexColumnWidth(1.2),
-                                },
-                                defaultVerticalAlignment:
-                                    TableCellVerticalAlignment.middle,
-                                children: reportsProvider.nonStockReport!.data
-                                    .asMap()
-                                    .entries
-                                    .map((entry) => _buildDataRow(
-                                        entry.key, entry.value, context))
-                                    .toList(),
-                              ),
-                            ),
-                          ),
+                ],
+              ),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(0.5), // No
+                  1: FlexColumnWidth(2.0), // Product Name
+                  2: FlexColumnWidth(1.5), // Category
+                  3: FlexColumnWidth(1.2), // Store
+                  4: FlexColumnWidth(1.2), // Barcode
+                  5: FlexColumnWidth(1.0), // Current Stock
+                  6: FlexColumnWidth(1.0), // Reorder Level
+                  7: FlexColumnWidth(0.8), // Unit
+                  8: FlexColumnWidth(1.2), // Status
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  TableRow(
+                    children: [
+                      _buildTableHeaderCell("No"),
+                      _buildTableHeaderCell("Product Name"),
+                      _buildTableHeaderCell("Category"),
+                      _buildTableHeaderCell("Store"),
+                      _buildTableHeaderCell("Barcode"),
+                      _buildTableHeaderCell("Current\nStock"),
+                      _buildTableHeaderCell("Reorder\nLevel"),
+                      _buildTableHeaderCell("Unit"),
+                      _buildTableHeaderCell("Status"),
+                    ],
                   ),
                 ],
               ),
             ),
+            // Table Body
+            Expanded(
+              child: reportsProvider.nonStockReport == null ||
+                      reportsProvider.nonStockReport!.data.isEmpty
+                  ? _buildNoDataFoundUI()
+                  : ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.mouse,
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.stylus,
+                          PointerDeviceKind.trackpad,
+                        },
+                      ),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Table(
+                          columnWidths: const {
+                            0: FlexColumnWidth(0.5),
+                            1: FlexColumnWidth(2.0),
+                            2: FlexColumnWidth(1.5),
+                            3: FlexColumnWidth(1.2),
+                            4: FlexColumnWidth(1.2),
+                            5: FlexColumnWidth(1.0),
+                            6: FlexColumnWidth(1.0),
+                            7: FlexColumnWidth(0.8),
+                            8: FlexColumnWidth(1.2),
+                          },
+                          defaultVerticalAlignment:
+                              TableCellVerticalAlignment.middle,
+                          children: reportsProvider.nonStockReport!.data
+                              .asMap()
+                              .entries
+                              .map((entry) => _buildDataRow(
+                                  entry.key, entry.value, context))
+                              .toList(),
+                        ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -647,7 +665,8 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
         color: index % 2 == 0 ? Colors.white : Colors.grey.withOpacity(0.05),
       ),
       children: [
-        _buildTableCell(((_currentPage - 1) * 10 + index + 1).toString()),
+        _buildTableCell(
+            ((_currentPage - 1) * _pageSize + index + 1).toString()),
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
@@ -708,12 +727,13 @@ class _NonStockReportScreenState extends State<NonStockReportScreen> {
                       ),
                     ),
                   ),
-                  if (item.barcode != null && item.barcode!.isNotEmpty && item.barcode != '-') ...[
+                  if (item.barcode != null &&
+                      item.barcode!.isNotEmpty &&
+                      item.barcode != '-') ...[
                     const SizedBox(width: 6),
                     GestureDetector(
                       onTap: () {
-                        Clipboard.setData(ClipboardData(
-                            text: item.barcode!));
+                        Clipboard.setData(ClipboardData(text: item.barcode!));
                         showScaffold(
                           context: context,
                           message: 'Barcode copied to clipboard',

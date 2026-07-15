@@ -16,8 +16,6 @@ import 'dart:ui';
 import 'package:intl/intl.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 
-// Import the new simple transaction details screen
-import 'customer_transaction_details_screen.dart';
 // Add imports for customer autocomplete and date filtering
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
@@ -72,7 +70,8 @@ class _CustomerTransactionsReportScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) setState(() => _showFilters = !_isMobile(context));
       try {
-        final accessToken = Provider.of<AuthModel>(context, listen: false).token;
+        final accessToken =
+            Provider.of<AuthModel>(context, listen: false).token;
         await Provider.of<CustomerProvider>(context, listen: false)
             .fetchCustomers(accessToken: accessToken ?? '', listAll: true);
       } catch (e) {
@@ -116,6 +115,8 @@ class _CustomerTransactionsReportScreenState
     String? dateTo,
     int? page,
   }) async {
+    if (!mounted) return;
+    if (!_isDateRangeValid(dateFrom, dateTo)) return;
     setState(() {
       initLoading = true;
     });
@@ -134,7 +135,6 @@ class _CustomerTransactionsReportScreenState
         transactionType: transactionType,
         dateFrom: dateFrom,
         dateTo: dateTo,
-        page: page,
       );
 
       if (value['status'] == 'success') {
@@ -158,7 +158,8 @@ class _CustomerTransactionsReportScreenState
 
           for (final g in groups) {
             if (g is! Map) continue;
-            final String displayName = (g['customer_name'] ?? 'Unknown Customer').toString();
+            final String displayName =
+                (g['customer_name'] ?? 'Unknown Customer').toString();
             final String idStr = (g['customer_id']?.toString() ?? '').trim();
             final String key = idStr.isNotEmpty ? idStr : displayName;
 
@@ -171,7 +172,13 @@ class _CustomerTransactionsReportScreenState
             final double balanceVal = (g['balance'] is num)
                 ? (g['balance'] as num).toDouble()
                 : double.tryParse((g['balance'] ?? '0').toString()) ?? 0.0;
-            final int txnCount = (g['transactions'] is List) ? (g['transactions'] as List).length : 0;
+            final int txnCount = g['transaction_count'] is num
+                ? (g['transaction_count'] as num).toInt()
+                : (g['transactions'] is List)
+                    ? (g['transactions'] as List).length
+                    : int.tryParse(
+                            (g['transactions_count'] ?? '0').toString()) ??
+                        0;
 
             summaries[key] = CustomerTransactionSummary(
               customerId: idStr.isNotEmpty ? idStr : null,
@@ -188,7 +195,8 @@ class _CustomerTransactionsReportScreenState
             customerSummary = summaries;
             // Suggestions from grouped names
             customerSuggestions = groups
-                .map((e) => (e is Map ? (e['customer_name'] ?? '').toString() : ''))
+                .map((e) =>
+                    (e is Map ? (e['customer_name'] ?? '').toString() : ''))
                 .where((s) => s.isNotEmpty)
                 .cast<String>()
                 .toList();
@@ -225,22 +233,44 @@ class _CustomerTransactionsReportScreenState
         );
       }
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
+  bool _isDateRangeValid(String? from, String? to) {
+    if (from == null || to == null || from.isEmpty || to.isEmpty) return true;
+    final fromDate = DateTime.tryParse(from);
+    final toDate = DateTime.tryParse(to);
+    if (fromDate == null || toDate == null || !fromDate.isAfter(toDate)) {
+      return true;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('From Date cannot be after To Date.'),
+        backgroundColor: Colors.orange,
+      ));
+    return false;
+  }
+
   void _loadPage(int page) {
-    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+    final customerProvider =
+        Provider.of<CustomerProvider>(context, listen: false);
     loadInitDataWithFilters(
-      customerId: (customerProvider.selectedCustomerId != null && customerProvider.selectedCustomerId!.isNotEmpty)
+      customerId: (customerProvider.selectedCustomerId != null &&
+              customerProvider.selectedCustomerId!.isNotEmpty)
           ? customerProvider.selectedCustomerId
           : null,
-      customerName: (customerProvider.selectedCustomerId == null || customerProvider.selectedCustomerId!.isEmpty)
+      customerName: (customerProvider.selectedCustomerId == null ||
+              customerProvider.selectedCustomerId!.isEmpty)
           ? (searchCustomer.isNotEmpty ? searchCustomer : null)
           : null,
-      dateFrom: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
+      dateFrom:
+          _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
       dateTo: _toDateController.text.isNotEmpty ? _toDateController.text : null,
       page: page,
     );
@@ -316,16 +346,20 @@ class _CustomerTransactionsReportScreenState
 
   void _applyFilters() {
     // Use API filtering instead of client-side filtering
-    final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+    final customerProvider =
+        Provider.of<CustomerProvider>(context, listen: false);
     loadInitDataWithFilters(
-      customerId: (customerProvider.selectedCustomerId != null && customerProvider.selectedCustomerId!.isNotEmpty)
+      customerId: (customerProvider.selectedCustomerId != null &&
+              customerProvider.selectedCustomerId!.isNotEmpty)
           ? customerProvider.selectedCustomerId
           : null,
       // Fallback by name if needed
-      customerName: (customerProvider.selectedCustomerId == null || customerProvider.selectedCustomerId!.isEmpty)
+      customerName: (customerProvider.selectedCustomerId == null ||
+              customerProvider.selectedCustomerId!.isEmpty)
           ? (searchCustomer.isNotEmpty ? searchCustomer : null)
           : null,
-      dateFrom: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
+      dateFrom:
+          _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
       dateTo: _toDateController.text.isNotEmpty ? _toDateController.text : null,
     );
   }
@@ -343,11 +377,14 @@ class _CustomerTransactionsReportScreenState
     for (var transaction in allTransactions!) {
       final String displayName = transaction.customerName ?? 'Unknown Customer';
       final String idStr = (transaction.customerId?.toString() ?? '').trim();
-      final String key = idStr.isNotEmpty ? idStr : displayName; // Fallback to name if ID missing
+      final String key = idStr.isNotEmpty
+          ? idStr
+          : displayName; // Fallback to name if ID missing
 
       final double amount = double.tryParse(transaction.amount ?? '0') ?? 0.0;
       final String type = transaction.type ?? 'unknown';
-      final double transactionBalance = double.tryParse(transaction.balance ?? '0') ?? 0.0;
+      final double transactionBalance =
+          double.tryParse(transaction.balance ?? '0') ?? 0.0;
 
       if (!filteredCustomerSummary.containsKey(key)) {
         filteredCustomerSummary[key] = CustomerTransactionSummary(
@@ -361,9 +398,10 @@ class _CustomerTransactionsReportScreenState
       }
 
       // Calculate totals for display purposes
-      if (type.toLowerCase() == 'credit') {
+      final normalizedType = type.trim().toLowerCase();
+      if (normalizedType == 'credit' || normalizedType == 'cr') {
         filteredCustomerSummary[key]!.totalCredit += amount;
-      } else if (type.toLowerCase() == 'debit') {
+      } else if (normalizedType == 'debit' || normalizedType == 'dr') {
         filteredCustomerSummary[key]!.totalDebit += amount;
       }
 
@@ -407,10 +445,13 @@ class _CustomerTransactionsReportScreenState
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async => loadInitDataWithFilters(
-        customerName: searchCustomer.isNotEmpty ? searchCustomer : null,
-        dateFrom: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
-        dateTo: _toDateController.text.isNotEmpty ? _toDateController.text : null,
-      ),
+          customerName: searchCustomer.isNotEmpty ? searchCustomer : null,
+          dateFrom: _fromDateController.text.isNotEmpty
+              ? _fromDateController.text
+              : null,
+          dateTo:
+              _toDateController.text.isNotEmpty ? _toDateController.text : null,
+        ),
         child: Container(
           margin: EdgeInsets.symmetric(
             horizontal: _isMobile(context) ? 5 : 10,
@@ -571,10 +612,12 @@ class _CustomerTransactionsReportScreenState
 
     // Derive selected value from selectedCustomerId
     dynamic currentSelected;
-    if ((customerProvider.selectedCustomerId ?? '').isNotEmpty && allCustomers.isNotEmpty) {
+    if ((customerProvider.selectedCustomerId ?? '').isNotEmpty &&
+        allCustomers.isNotEmpty) {
       try {
         currentSelected = allCustomers.firstWhere(
-          (c) => (c.id?.toString() ?? '') == customerProvider.selectedCustomerId,
+          (c) =>
+              (c.id?.toString() ?? '') == customerProvider.selectedCustomerId,
         );
       } catch (_) {
         currentSelected = null;
@@ -688,8 +731,7 @@ class _CustomerTransactionsReportScreenState
 
   Widget _buildMobileCustomerCard(
       CustomerTransactionSummary summary, BuildContext context) {
-    final Color balanceColor =
-        summary.balance < 0 ? Colors.red : Colors.green;
+    final Color balanceColor = summary.balance < 0 ? Colors.red : Colors.green;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       elevation: 2,
@@ -769,8 +811,8 @@ class _CustomerTransactionsReportScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
-                  0.15, Colors.grey)),
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey)),
           Text(value,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.18, Colors.black87)),
@@ -801,93 +843,92 @@ class _CustomerTransactionsReportScreenState
 
     return Expanded(
       child: BuildBoxShadowContainer(
-              margin: const EdgeInsets.only(top: 5),
-              circleRadius: 7,
-              offsetValue: const Offset(2, 2),
-              blurRadius: 8.0,
-              color: Colors.white,
-              child: Column(
-                children: [
-                  // Fixed table header
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: ColorManager.tableBGColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          offset: Offset(0, 2),
-                          blurRadius: 2.0,
-                        ),
-                      ],
-                    ),
-                    child: Table(
-                      columnWidths: const {
-                        0: FlexColumnWidth(2.0), // Customer Name
-                        1: FlexColumnWidth(1.5), // Total Debit
-                        2: FlexColumnWidth(1.5), // Total Credit
-                        3: FlexColumnWidth(1.5), // Balance
-                        4: FlexColumnWidth(1.2), // Transactions
-                        5: FlexColumnWidth(1.0), // Action
-                      },
-                      border: null,
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
-                      children: [
-                        TableRow(
-                          children: [
-                            _buildTableHeader("Customer Name"),
-                            _buildTableHeader("Total Debit"),
-                            _buildTableHeader("Total Credit"),
-                            _buildTableHeader("Balance"),
-                            _buildTableHeader("Transactions"),
-                            _buildTableHeader("Action"),
-                          ],
-                        ),
-                      ],
-                    ),
+        margin: const EdgeInsets.only(top: 5),
+        circleRadius: 7,
+        offsetValue: const Offset(2, 2),
+        blurRadius: 8.0,
+        color: Colors.white,
+        child: Column(
+          children: [
+            // Fixed table header
+            Container(
+              decoration: const BoxDecoration(
+                color: ColorManager.tableBGColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    offset: Offset(0, 2),
+                    blurRadius: 2.0,
                   ),
-                  // Scrollable table body
-                  Expanded(
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
-                          },
-                        ),
-                        child: customerSummary.isEmpty
-                            ? _buildNoDataFoundUI()
-                            : SingleChildScrollView(
-                                physics: const BouncingScrollPhysics(),
-                                scrollDirection: Axis.vertical,
-                                child: Table(
-                                  columnWidths: const {
-                                    0: FlexColumnWidth(2.0), // Customer Name
-                                    1: FlexColumnWidth(1.5), // Total Debit
-                                    2: FlexColumnWidth(1.5), // Total Credit
-                                    3: FlexColumnWidth(1.5), // Balance
-                                    4: FlexColumnWidth(1.2), // Transactions
-                                    5: FlexColumnWidth(1.0), // Action
-                                  },
-                                  border: null,
-                                  defaultVerticalAlignment:
-                                      TableCellVerticalAlignment.middle,
-                                  children: customerSummary.entries
-                                      .map((entry) => _buildCustomerRow(
-                                          entry.value, context))
-                                      .toList(),
-                                ),
-                              ),
-                      ),
-                    ),
+                ],
+              ),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(2.0), // Customer Name
+                  1: FlexColumnWidth(1.5), // Total Debit
+                  2: FlexColumnWidth(1.5), // Total Credit
+                  3: FlexColumnWidth(1.5), // Balance
+                  4: FlexColumnWidth(1.2), // Transactions
+                  5: FlexColumnWidth(1.0), // Action
+                },
+                border: null,
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  TableRow(
+                    children: [
+                      _buildTableHeader("Customer Name"),
+                      _buildTableHeader("Total Debit"),
+                      _buildTableHeader("Total Credit"),
+                      _buildTableHeader("Balance"),
+                      _buildTableHeader("Transactions"),
+                      _buildTableHeader("Action"),
+                    ],
                   ),
                 ],
               ),
             ),
+            // Scrollable table body
+            Expanded(
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: customerSummary.isEmpty
+                      ? _buildNoDataFoundUI()
+                      : SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          scrollDirection: Axis.vertical,
+                          child: Table(
+                            columnWidths: const {
+                              0: FlexColumnWidth(2.0), // Customer Name
+                              1: FlexColumnWidth(1.5), // Total Debit
+                              2: FlexColumnWidth(1.5), // Total Credit
+                              3: FlexColumnWidth(1.5), // Balance
+                              4: FlexColumnWidth(1.2), // Transactions
+                              5: FlexColumnWidth(1.0), // Action
+                            },
+                            border: null,
+                            defaultVerticalAlignment:
+                                TableCellVerticalAlignment.middle,
+                            children: customerSummary.entries
+                                .map((entry) =>
+                                    _buildCustomerRow(entry.value, context))
+                                .toList(),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1058,7 +1099,8 @@ class _CustomerTransactionsReportScreenState
 }
 
 class CustomerTransactionSummary {
-  final String? customerId; // string form of ID; can be null if API didn't provide
+  final String?
+      customerId; // string form of ID; can be null if API didn't provide
   final String displayName;
   double totalDebit;
   double totalCredit;

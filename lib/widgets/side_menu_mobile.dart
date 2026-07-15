@@ -65,18 +65,15 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
     }
 
     void fetchSalesOrders() {
-      final salesProvider =
-          Provider.of<SalesProvider>(context, listen: false);
-      final accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
+      final salesProvider = Provider.of<SalesProvider>(context, listen: false);
+      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
       salesProvider.fetchOrders(accessToken: accessToken ?? '', storeId: 1);
     }
 
     void fetchSuppliers() {
       final supplierProvider =
           Provider.of<SupplierProvider>(context, listen: false);
-      final accessToken =
-          Provider.of<AuthModel>(context, listen: false).token;
+      final accessToken = Provider.of<AuthModel>(context, listen: false).token;
       supplierProvider.fetchSuppliers(accessToken: accessToken ?? '');
     }
 
@@ -352,8 +349,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                 () => _MobileDrawerExpandableTile(
                   icon: Icons.request_quote_rounded,
                   title: 'Quotations',
-                  selected: [86, 87, 88]
-                      .contains(sideBarController.index.value),
+                  selected:
+                      [86, 87, 88].contains(sideBarController.index.value),
                   subItems: [
                     _MobileDrawerSubItem(
                       title: 'Quotations',
@@ -384,8 +381,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             .currentUserHasPermissionSync('menu.catalog.product.list.access');
         final hasStockPermission = roleProvider
             .currentUserHasPermissionSync('menu.catalog.product.stock.access');
-        final hasBarcodePermission = roleProvider
-            .currentUserHasPermissionSync('menu.catalog.product.barcode.access');
+        final hasBarcodePermission = roleProvider.currentUserHasPermissionSync(
+            'menu.catalog.product.barcode.access');
         final hasPurchase = roleProvider
             .currentUserHasPermissionSync('menu.purchase.orders.access');
 
@@ -443,8 +440,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   icon: Icons.shopping_bag_rounded,
                   title: 'Purchase',
                   onTap: () => navigate(81),
-                  selected: [81, 82, 36]
-                      .contains(sideBarController.index.value),
+                  selected:
+                      [81, 82, 36].contains(sideBarController.index.value),
                 ),
               ),
           ],
@@ -459,26 +456,30 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
   ) {
     return Consumer<RoleProvider>(
       builder: (context, roleProvider, child) {
-        final hasSalesExecutiveReportsPermission = roleProvider
-            .currentUserHasPermissionSync('menu.reports.sales_executive.access');
-        final hasExecutiveSummaryPermission = roleProvider
-            .currentUserHasPermissionSync('menu.reports.executive_summary.access');
-        final hasCustomerTransactionsPermission = roleProvider
-            .currentUserHasPermissionSync(
+        final hasSalesExecutiveReportsPermission =
+            roleProvider.currentUserHasPermissionSync(
+                'menu.reports.sales_executive.access');
+        final hasExecutiveSummaryPermission =
+            roleProvider.currentUserHasPermissionSync(
+                'menu.reports.executive_summary.access');
+        final hasCustomerTransactionsPermission =
+            roleProvider.currentUserHasPermissionSync(
                 'menu.reports.customer_transactions.access');
-        final hasSupplierTransactionsPermission = roleProvider
-            .currentUserHasPermissionSync(
+        final hasSupplierTransactionsPermission =
+            roleProvider.currentUserHasPermissionSync(
                 'menu.reports.supplier_transactions.access');
         final hasNonStockPermission = roleProvider
             .currentUserHasPermissionSync('menu.reports.non_stock.access');
         final hasConsumedStockPermission = roleProvider
             .currentUserHasPermissionSync('menu.reports.consumed_stock.access');
         final isCompanyAdmin = userRole == 'company_admin';
+        final canViewExecutiveSummary = isCompanyAdmin ||
+            (hasExecutiveSummaryPermission && userRole != 'sales_executive');
 
         if (!hasSalesExecutiveReportsPermission &&
             !hasCustomerTransactionsPermission &&
             !hasSupplierTransactionsPermission &&
-            !hasExecutiveSummaryPermission &&
+            !canViewExecutiveSummary &&
             !hasNonStockPermission &&
             !hasConsumedStockPermission &&
             !isCompanyAdmin) {
@@ -514,7 +515,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                       title: 'Sales Executive Reports',
                       onTap: () => navigate(58),
                     ),
-                  if (isCompanyAdmin || hasExecutiveSummaryPermission)
+                  if (canViewExecutiveSummary)
                     _MobileDrawerSubItem(
                       title: 'Executive Reports',
                       onTap: () => navigate(85),
@@ -560,11 +561,11 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             .currentUserHasPermissionSync('menu.transactions.proforma.access');
         final hasReceiptsPermission = roleProvider
             .currentUserHasPermissionSync('menu.transactions.receipts.access');
-        final hasCustomerVouchersPermission = roleProvider
-            .currentUserHasPermissionSync(
+        final hasCustomerVouchersPermission =
+            roleProvider.currentUserHasPermissionSync(
                 'menu.transactions.customer_voucher.access');
-        final hasSupplierVouchersPermission = roleProvider
-            .currentUserHasPermissionSync(
+        final hasSupplierVouchersPermission =
+            roleProvider.currentUserHasPermissionSync(
                 'menu.transactions.supplier_voucher_purchase.access');
         final hasPartyCustomer = roleProvider.currentUserHasPermissionSync(
             'menu.party_accounts.customer_transactions.access');
@@ -702,8 +703,8 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   icon: Icons.people_rounded,
                   title: 'Customers',
                   onTap: () => navigate(5),
-                  selected: [5, 9, 10, 38]
-                      .contains(sideBarController.index.value),
+                  selected:
+                      [5, 9, 10, 38].contains(sideBarController.index.value),
                 ),
               ),
             if (hasSuppliersGroup)
@@ -880,7 +881,8 @@ class _MobileDrawerExpandableTile extends StatefulWidget {
       _MobileDrawerExpandableTileState();
 }
 
-class _MobileDrawerExpandableTileState extends State<_MobileDrawerExpandableTile> {
+class _MobileDrawerExpandableTileState
+    extends State<_MobileDrawerExpandableTile> {
   late bool _isExpanded;
 
   @override
@@ -1144,9 +1146,8 @@ class _MobileDrawerFooter extends StatelessWidget {
           FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
             builder: (context, snapshot) {
-              final version = snapshot.hasData
-                  ? 'v${snapshot.data!.version}'
-                  : 'CloudPOS';
+              final version =
+                  snapshot.hasData ? 'v${snapshot.data!.version}' : 'CloudPOS';
               return Center(
                 child: Text(
                   version,

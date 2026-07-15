@@ -30,6 +30,15 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
 
+  void _showLoadError(Object error) {
+    debugPrint('Sales report unavailable: $error');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Sales report is currently unavailable.'),
+      backgroundColor: Colors.red,
+    ));
+  }
+
   @override
   void initState() {
     loadInitData();
@@ -50,11 +59,13 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
         accessToken: accessToken ?? "",
       );
     } catch (error) {
-      // debugPrint(error.toString());
+      _showLoadError(error);
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -76,11 +87,13 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
         createdBy: createdByController.text,
       );
     } catch (error) {
-      // debugPrint(error.toString());
+      _showLoadError(error);
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -97,7 +110,6 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    String? token = Provider.of<AuthModel>(context, listen: false).token;
     ReportsProvider reportsProvider = Provider.of<ReportsProvider>(context);
     return SafeArea(
       child: Container(
@@ -115,7 +127,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
             color: Colors.white),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-          child: ListView(
+          child: RefreshIndicator(
+            onRefresh: () async => loadInitData(),
+            child: ListView(
             children: [
               Text(
                 "Customer Sales Report ",
@@ -125,8 +139,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
               const SizedBox(
                 height: 15,
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -339,7 +354,9 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                 margin: const EdgeInsets.only(top: 20),
                 circleRadius: 7,
                 offsetValue: const Offset(1, 1),
-                child: Table(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Table(
                   columnWidths: const {
                     0: FractionColumnWidth(0.06),
                     1: FractionColumnWidth(0.15),
@@ -413,10 +430,12 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                       }).toList(),
                   ],
                 ),
+                ),
               ),
             ],
           ),
         ),
+      ),
       ),
     );
   }

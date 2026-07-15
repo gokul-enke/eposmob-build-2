@@ -30,6 +30,15 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
   SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
 
+  void _showLoadError(Object error) {
+    debugPrint('Customer account book unavailable: $error');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Customer account book is currently unavailable.'),
+      backgroundColor: Colors.red,
+    ));
+  }
+
   @override
   void initState() {
     loadInitData();
@@ -50,11 +59,13 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
         accessToken: accessToken ?? "",
       );
     } catch (error) {
-      // debugPrint(error.toString());
+      _showLoadError(error);
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -76,11 +87,13 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
         amount: amountController.text,
       );
     } catch (error) {
-      // debugPrint(error.toString());
+      _showLoadError(error);
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -116,7 +129,9 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
             color: Colors.white),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-          child: ListView(
+          child: RefreshIndicator(
+            onRefresh: () async => loadInitData(),
+            child: ListView(
             children: [
               Text(
                 "Customer Account Book",
@@ -309,7 +324,9 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                 margin: const EdgeInsets.only(top: 20),
                 circleRadius: 7,
                 offsetValue: const Offset(1, 1),
-                child: Table(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Table(
                   columnWidths: const {
                     0: FractionColumnWidth(0.06),
                     1: FractionColumnWidth(0.15),
@@ -386,10 +403,12 @@ class _AccountBookScreenState extends State<AccountBookScreen> {
                       }).toList(),
                   ],
                 ),
+                ),
               ),
             ],
           ),
         ),
+      ),
       ),
     );
   }
