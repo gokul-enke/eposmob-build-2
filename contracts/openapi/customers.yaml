@@ -1,0 +1,476 @@
+openapi: 3.1.0
+info:
+  title: CloudPOS Customers API
+  version: 1.0.0
+  description: |
+    Backend-owned contract for POS customer listing, creation, editing, and
+    executive address management.
+
+    This file documents the Laravel implementation in this repository. UI rules
+    belong to the frontend feature specification.
+servers:
+  - url: https://{tenantHost}/api
+    variables:
+      tenantHost:
+        default: eeezeeerp.cloudposai.com
+security:
+  - bearerAuth: []
+    tenantHeader: []
+tags:
+  - name: Customers
+  - name: Customer Addresses
+paths:
+  /v1/customer/customer-searchbar:
+    get:
+      tags: [Customers]
+      operationId: searchCustomers
+      summary: Search and paginate customers
+      parameters:
+        - $ref: "#/components/parameters/FilterName"
+        - $ref: "#/components/parameters/FilterEmail"
+        - $ref: "#/components/parameters/FilterPhone"
+        - $ref: "#/components/parameters/FilterAgeRange"
+        - $ref: "#/components/parameters/FilterAltPhone"
+        - $ref: "#/components/parameters/CustomerId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PerPage"
+        - name: sort_asc
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Paginated customer search result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerSearchSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /v1/customer/add-customer:
+    post:
+      tags: [Customers]
+      operationId: addCustomer
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerRequest"
+      responses:
+        "201":
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateCustomerSuccess"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /v1/customer/customer-edit:
+    post:
+      tags: [Customers]
+      operationId: editCustomer
+      summary: Edit an existing customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditCustomerRequest"
+      responses:
+        "200":
+          description: Customer updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardSuccess"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/ServerError"
+  /v1/customer/executive-add-address:
+    post:
+      tags: [Customer Addresses]
+      operationId: executiveAddCustomerAddress
+      summary: Add an address as a sales executive
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutiveAddressRequest"
+      responses:
+        "200":
+          description: Address created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardSuccess"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /v1/customer/executive-update-address/{id}:
+    post:
+      tags: [Customer Addresses]
+      operationId: executiveUpdateCustomerAddress
+      summary: Update an address as a sales executive
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutiveAddressRequest"
+      responses:
+        "200":
+          description: Address updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StandardSuccess"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    tenantHeader:
+      type: apiKey
+      in: header
+      name: X-Tenant
+  parameters:
+    FilterName:
+      name: filter_name
+      in: query
+      schema:
+        type: string
+    FilterEmail:
+      name: filter_email
+      in: query
+      schema:
+        type: string
+    FilterPhone:
+      name: filter_phone
+      in: query
+      description: Matches primary or alternate phone.
+      schema:
+        type: string
+    FilterAgeRange:
+      name: filter_age_range
+      in: query
+      description: Age range formatted as `from-to`, for example `18-30`.
+      schema:
+        type: string
+        pattern: '^[0-9]*-[0-9]*$'
+    FilterAltPhone:
+      name: filter_alt_phone
+      in: query
+      description: Accepted by the controller filter list but not independently applied.
+      schema:
+        type: string
+    CustomerId:
+      name: customer_id
+      in: query
+      schema:
+        type: integer
+    StoreId:
+      name: store_id
+      in: query
+      schema:
+        type: integer
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: per_page
+      in: query
+      description: Backend caps this value at 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 15
+  schemas:
+    CustomerSearchItem:
+      type: object
+      properties:
+        name:
+          type: [string, "null"]
+        email:
+          type: [string, "null"]
+        balance:
+          type: number
+          format: double
+        phone:
+          type: [string, "null"]
+        alt_phone:
+          type: [string, "null"]
+        customerType:
+          type: [string, "null"]
+          enum: [B2C, B2B, null]
+      x-contract-notes:
+        - The current transformed response does not include customer id.
+        - The current key is customerType, while some clients expect customer_type.
+    PaginationLinks:
+      type: object
+      additionalProperties: true
+    CustomerPaginator:
+      type: object
+      required: [current_page, data, per_page]
+      properties:
+        current_page:
+          type: integer
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerSearchItem"
+        first_page_url:
+          type: [string, "null"]
+        from:
+          type: [integer, "null"]
+        last_page:
+          type: integer
+        last_page_url:
+          type: [string, "null"]
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaginationLinks"
+        next_page_url:
+          type: [string, "null"]
+        path:
+          type: [string, "null"]
+        per_page:
+          type: integer
+        prev_page_url:
+          type: [string, "null"]
+        to:
+          type: [integer, "null"]
+        total:
+          type: integer
+    CustomerSearchSuccess:
+      type: object
+      required: [status, message, data]
+      properties:
+        status:
+          const: success
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/CustomerPaginator"
+    CreateCustomerRequest:
+      type: object
+      required: [phone, payment_type, customer_type, balance]
+      properties:
+        name:
+          type: [string, "null"]
+          maxLength: 255
+        email:
+          type: [string, "null"]
+          format: email
+        phone:
+          type: string
+          pattern: '^[0-9]{8,15}$'
+        alt_phone:
+          type: [string, "null"]
+          pattern: '^[0-9]{8,15}$'
+        payment_type:
+          type: string
+          enum: [to_pay, to_receive]
+        customer_type:
+          type: string
+          enum: [B2C, B2B]
+        balance:
+          type: number
+        company_id:
+          type: [integer, "null"]
+        store_id:
+          type: [integer, "null"]
+        gender:
+          type: [string, "null"]
+          enum: [male, female, null]
+        dob:
+          type: [string, "null"]
+          format: date
+        cr_number:
+          type: [string, "null"]
+        vat_number:
+          type: [string, "null"]
+        expiry_date:
+          type: [string, "null"]
+          format: date
+        address:
+          type: [string, "null"]
+        city:
+          type: [string, "null"]
+        state_id:
+          type: [integer, "null"]
+        district_id:
+          type: [integer, "null"]
+        pincode_id:
+          type: [integer, "null"]
+        landmark:
+          type: [string, "null"]
+        address_type:
+          type: [string, "null"]
+          enum: [Home, Office, Other, null]
+        zatca_street_name:
+          type: [string, "null"]
+        zatca_building_number:
+          type: [string, "null"]
+        zatca_plot_identification:
+          type: [string, "null"]
+        zatca_city_subdivision_name:
+          type: [string, "null"]
+    EditCustomerRequest:
+      allOf:
+        - type: object
+          required: [customer_id]
+          properties:
+            customer_id:
+              type: integer
+        - $ref: "#/components/schemas/CustomerEditableFields"
+    CustomerEditableFields:
+      type: object
+      properties:
+        name:
+          type: [string, "null"]
+        email:
+          type: [string, "null"]
+          format: email
+        phone:
+          type: [string, "null"]
+          pattern: '^[0-9]{8,15}$'
+        alt_phone:
+          type: [string, "null"]
+          pattern: '^[0-9]{8,15}$'
+        payment_type:
+          type: [string, "null"]
+          enum: [to_pay, to_receive, null]
+        customer_type:
+          type: [string, "null"]
+          enum: [B2C, B2B, null]
+        balance:
+          type: [number, "null"]
+        gender:
+          type: [string, "null"]
+          enum: [male, female, null]
+        dob:
+          type: [string, "null"]
+          format: date
+        store_id:
+          type: [integer, "null"]
+        cr_number:
+          type: [string, "null"]
+        vat_number:
+          type: [string, "null"]
+        expiry_date:
+          type: [string, "null"]
+          format: date
+    ExecutiveAddressRequest:
+      type: object
+      required: [customer_id, state_id, district_id, address, phone, name, type]
+      properties:
+        customer_id:
+          type: integer
+        state_id:
+          type: integer
+        district_id:
+          type: integer
+        pincode_id:
+          type: [integer, "null"]
+        address:
+          type: string
+        phone:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [Office, Home, Other]
+        landmark:
+          type: [string, "null"]
+        city:
+          type: [string, "null"]
+    CreateCustomerSuccess:
+      type: object
+      required: [status, message, data]
+      properties:
+        status:
+          const: success
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+              additionalProperties: true
+            customer:
+              type: object
+              additionalProperties: true
+            address:
+              type: [object, "null"]
+              additionalProperties: true
+    StandardSuccess:
+      type: object
+      required: [status, message, data]
+      properties:
+        status:
+          const: success
+        message:
+          type: string
+        data: {}
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [error, failed]
+        message: {}
+        data: {}
+        errors: {}
+        error: {}
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthenticated:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Authenticated user lacks the required role
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: Server failed while processing the request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
