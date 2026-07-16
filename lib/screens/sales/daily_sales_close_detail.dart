@@ -217,6 +217,10 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                 const SizedBox(height: 10),
                 _buildSalesSummary(context, data),
                 const SizedBox(height: 20),
+                _buildSectionHeader('Expenses Breakdown', Icons.receipt_long_outlined),
+                const SizedBox(height: 10),
+                _buildExpensesBreakdown(data),
+                const SizedBox(height: 20),
                 if (data.cashSummary != null) ...[
                   _buildSectionHeader('Cash Summary', Icons.account_balance_wallet_outlined),
                   const SizedBox(height: 10),
@@ -390,6 +394,42 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
           Expanded(child: _buildDetailItem('Closing Time', data.closingTime ?? '-')),
         ],
       ),
+    );
+  }
+
+  Widget _buildExpensesBreakdown(DailySalesCloseData data) {
+    return Consumer<AppSettingsProvider>(
+      builder: (context, appSettingsProvider, child) {
+        final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
+        return _buildCard(
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildDetailItem(
+                  'Cash Expenses',
+                  '$currency ${data.cashExpenses ?? '0.00'}',
+                  valueColor: Colors.red,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  'Bank Expenses',
+                  '$currency ${data.bankExpenses ?? '0.00'}',
+                  valueColor: Colors.red,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailItem(
+                  'Total Expense',
+                  '$currency ${data.totalExpenses ?? '0.00'}',
+                  valueColor: Colors.red,
+                  isValueBold: true,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

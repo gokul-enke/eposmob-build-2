@@ -45,6 +45,9 @@ class DailySalesCloseData {
   String? totalCreditCollected;
   String? totalReturns;
   String? totalRefunds;
+  String? totalExpenses;
+  String? cashExpenses;
+  String? bankExpenses;
   CashSummary? cashSummary;
   List<DailySalesTransaction>? transactions;
   ProductSummary? productSummary;
@@ -74,6 +77,9 @@ class DailySalesCloseData {
       this.totalCreditCollected,
       this.totalReturns,
       this.totalRefunds,
+      this.totalExpenses,
+      this.cashExpenses,
+      this.bankExpenses,
       this.cashSummary,
       this.transactions,
       this.productSummary,
@@ -105,6 +111,9 @@ class DailySalesCloseData {
     totalCreditCollected = json['total_credit_collected'];
     totalReturns = json['total_returns'];
     totalRefunds = json['total_refunds'];
+    totalExpenses = json['total_expenses']?.toString();
+    cashExpenses = json['cash_expenses']?.toString();
+    bankExpenses = json['bank_expenses']?.toString();
     if (json['cash_summary'] != null) {
       cashSummary = CashSummary.fromJson(
         Map<String, dynamic>.from(json['cash_summary']),
@@ -239,6 +248,8 @@ class DailySalesCloseSummary {
   String? closingTime;
   num? cashRefunds;
   num? cashExpenses;
+  num? bankExpenses;
+  num? totalExpenses;
   num? cashDropAmount;
   num? openingCashInHand;
   List<dynamic>? openingCashBreakdown;
@@ -267,6 +278,8 @@ class DailySalesCloseSummary {
     this.closingTime,
     this.cashRefunds,
     this.cashExpenses,
+    this.bankExpenses,
+    this.totalExpenses,
     this.cashDropAmount,
     this.openingCashInHand,
     this.openingCashBreakdown,
@@ -296,6 +309,8 @@ class DailySalesCloseSummary {
     closingTime = _stringValue(json['closing_time']);
     cashRefunds = _numValue(json['cash_refunds']);
     cashExpenses = _numValue(json['cash_expenses']);
+    bankExpenses = _numValue(json['bank_expenses']);
+    totalExpenses = _numValue(json['total_expenses']);
     cashDropAmount = _numValue(json['cash_drop_amount']);
     openingCashInHand = _numValue(json['opening_cash_in_hand']);
     openingCashBreakdown = json['opening_cash_breakdown'] is List
