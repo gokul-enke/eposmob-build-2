@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
-import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/providers/customer_provider.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../features/customers/presentation/widgets/customer_desktop_table.dart';
+import '../../features/customers/presentation/widgets/customer_page_header.dart';
 import '../../models/customer_list.dart';
 import '../../providers/auth_model.dart';
 import '../../resources/color_manager.dart';
@@ -395,32 +395,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      runSpacing: 12,
-                      spacing: 12,
-                      children: [
-                        Text(
-                          'Customers',
-                          style: buildCustomStyle(
-                            FontWeightManager.semiBold,
-                            FontSize.s20,
-                            0.30,
-                            ColorManager.textColor,
-                          ),
-                        ),
-                        CustomRoundButton(
-                          title: "Add New Customer",
-                          fct: () {
-                            showAddCustomerModal(context, size,
-                                mobileNumber: '');
-                          },
-                          fontSize: 12,
-                          height: 45,
-                          width: 150,
-                        ),
-                      ],
+                    CustomerPageHeader(
+                      onAddCustomer: () {
+                        showAddCustomerModal(
+                          context,
+                          size,
+                          mobileNumber: '',
+                        );
+                      },
                     ),
                     const SizedBox(height: 20),
                     CustomerFilterPanel(
