@@ -89,6 +89,20 @@ void main() {
     expect(searchCount, 3);
   });
 
+  testWidgets('pressing Enter in a text field triggers search', (tester) async {
+    var searchCount = 0;
+    await pumpPanel(tester, onSearch: () => searchCount++);
+
+    await tester.tap(fieldWithController(nameController));
+    await tester.enterText(fieldWithController(nameController), 'Alice');
+    searchCount = 0;
+
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(searchCount, 1);
+  });
+
   testWidgets('changing balance reports the selected filter', (tester) async {
     String? selectedBalance;
     await pumpPanel(

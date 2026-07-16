@@ -51,6 +51,7 @@ class CustomerFilterPanel extends StatelessWidget {
           height: 45,
           width: double.infinity,
           onchanged: (_) => onSearch(),
+          onSubmitted: (_) => onSearch(),
           controller: controller,
           size: size,
           hintText: hintText,
