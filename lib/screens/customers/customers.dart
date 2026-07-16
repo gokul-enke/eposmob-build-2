@@ -37,6 +37,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    customerNameController.dispose();
+    customerEmailController.dispose();
+    customerPhoneController.dispose();
+    super.dispose();
+  }
+
   Future<void> loadCustomers() async {
     if (isInitialized) return;
 
@@ -54,11 +62,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
       // Load all customers for local pagination
       await Provider.of<CustomerProvider>(context, listen: false)
           .loadAllCustomers(accessToken);
+      if (!mounted) return;
       setState(() {
         isInitialized = true;
       });
     } catch (error) {
       debugPrint("Error loading customers: $error");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error loading customers: $error")),
       );
