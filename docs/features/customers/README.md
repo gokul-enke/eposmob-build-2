@@ -5,6 +5,7 @@ This directory is the shared human-readable reference for the Customers feature.
 ## Documents
 
 - `FEATURE_SPEC.md` — frontend UI, UX, formatting, keyboard, and business rules.
+- `TODO.md` — technical work waiting for backend/frontend coordination.
 - `CHANGELOG.md` — coordinated frontend/backend changes and compatibility notes.
 - `contracts/openapi/customers.yaml` — synchronized machine-readable backend API
   contract.
@@ -16,6 +17,7 @@ This directory is the shared human-readable reference for the Customers feature.
 | Endpoint, request, response, validation | Backend OpenAPI contract |
 | Table columns, filters, colors, keyboard behavior | `FEATURE_SPEC.md` |
 | Flutter implementation | `lib/features/customers/` and `lib/screens/customers/` |
+| Open technical work | `TODO.md` and linked Jira tickets |
 | Change history | `CHANGELOG.md` |
 
 ## Relevant frontend files
@@ -37,4 +39,3 @@ Run:
 ```
 
 The frontend copy should never be manually edited.
-

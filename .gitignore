@@ -50,6 +50,7 @@ app.*.map.json
 
 Todo.md
 !wikidata/billing/todo.md
+!docs/features/customers/TODO.md
 .idx
 # .opencode
 /enkepos
