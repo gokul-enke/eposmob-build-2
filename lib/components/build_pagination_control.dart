@@ -6,21 +6,14 @@ class PaginationControl extends StatelessWidget {
   final Function(int) onPageChanged;
 
   const PaginationControl({
-    Key? key,
+    super.key,
     required this.currentPage,
     required this.totalPages,
     required this.onPageChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    // DEBUG: Print pagination state
-    debugPrint('=== PAGINATION CONTROL DEBUG ===');
-    debugPrint('Current Page: $currentPage');
-    debugPrint('Total Pages: $totalPages');
-    debugPrint('Previous Button Enabled: ${currentPage > 1}');
-    debugPrint('Next Button Enabled: ${currentPage < totalPages}');
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 4.0),
       child: Row(
@@ -28,13 +21,8 @@ class PaginationControl extends StatelessWidget {
         children: [
           _PaginationButton(
             title: "Previous",
-            onPressed: currentPage > 1
-                ? () {
-                    debugPrint(
-                        'Previous button pressed - going to page ${currentPage - 1}');
-                    onPageChanged(currentPage - 1);
-                  }
-                : null,
+            onPressed:
+                currentPage > 1 ? () => onPageChanged(currentPage - 1) : null,
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -43,11 +31,7 @@ class PaginationControl extends StatelessWidget {
           _PaginationButton(
             title: "Next",
             onPressed: currentPage < totalPages
-                ? () {
-                    debugPrint(
-                        'Next button pressed - going to page ${currentPage + 1}');
-                    onPageChanged(currentPage + 1);
-                  }
+                ? () => onPageChanged(currentPage + 1)
                 : null,
           ),
         ],
@@ -61,10 +45,9 @@ class _PaginationButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
   const _PaginationButton({
-    Key? key,
     required this.title,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
