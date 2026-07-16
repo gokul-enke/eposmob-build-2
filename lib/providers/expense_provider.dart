@@ -359,6 +359,63 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, double>> getExpenseBreakdownForDate({
+    required String accessToken,
+    required int storeId,
+    required String businessDate,
+  }) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? apiKey = prefs.getString('api_key');
+
+      final queryParams = <String, String>{
+        'type': 'EXPENSE',
+        'store_id': storeId.toString(),
+      };
+
+      final uri = Uri.parse(APPUrl.listGeneralPayments)
+          .replace(queryParameters: queryParams);
+
+      final response = await http.get(uri, headers: {
+        'Authorization': 'Bearer $accessToken',
+        'X-Tenant': apiKey ?? '',
+      });
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        List<dynamic> rawList = [];
+        if (jsonData['data'] is List) {
+          rawList = jsonData['data'];
+        } else if (jsonData['data'] is Map &&
+            jsonData['data']['data'] is List) {
+          rawList = jsonData['data']['data'];
+        }
+
+        double cash = 0.0;
+        double bank = 0.0;
+
+        for (var item in rawList) {
+          final expense = Expense.fromJson(item);
+          final expDate =
+              '${expense.paymentDate.year}-${expense.paymentDate.month.toString().padLeft(2, '0')}-${expense.paymentDate.day.toString().padLeft(2, '0')}';
+          if (expDate == businessDate) {
+            final credit = expense.creditAccount.toLowerCase();
+            if (credit.contains('cash')) {
+              cash += expense.amount;
+            } else if (credit.contains('bank')) {
+              bank += expense.amount;
+            }
+          }
+        }
+
+        return {'cash': cash, 'bank': bank, 'total': cash + bank};
+      }
+    } catch (e) {
+      debugPrint('Error fetching expense breakdown: $e');
+    }
+    return {'cash': 0.0, 'bank': 0.0, 'total': 0.0};
+  }
+
   Future<void> fetchAccountOptions({
     required String accessToken,
   }) async {

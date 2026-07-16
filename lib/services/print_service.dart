@@ -393,13 +393,18 @@ class PrintService {
 
     double? paidAmount;
     if (paymentBreakdown != null) {
-      final totalPaid = paymentBreakdown.values.fold<double>(
+      const excludedKeys = {'DEBIT', 'CREDIT', 'BALANCE'};
+      final totalPaid = paymentBreakdown.entries
+          .where((e) => !excludedKeys.contains(e.key.trim().toUpperCase()))
+          .fold<double>(
         0.0,
-        (sum, val) =>
-            sum +
-            (val is num
-                ? val.toDouble()
-                : double.tryParse(val.toString()) ?? 0.0),
+        (sum, e) {
+          final val = e.value;
+          return sum +
+              (val is num
+                  ? val.toDouble()
+                  : double.tryParse(val.toString()) ?? 0.0);
+        },
       );
       if (totalPaid > 0) paidAmount = totalPaid;
     }
