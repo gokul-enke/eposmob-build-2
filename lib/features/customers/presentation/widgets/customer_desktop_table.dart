@@ -1,11 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:pos_machine/components/build_container_box.dart';
 import 'package:pos_machine/models/customer_list.dart';
 import 'package:pos_machine/resources/color_manager.dart';
-import 'package:pos_machine/resources/font_manager.dart';
-import 'package:pos_machine/resources/style_manager.dart';
+
+import 'customer_ui.dart';
 
 class CustomerDesktopTable extends StatelessWidget {
   const CustomerDesktopTable({
@@ -14,113 +13,58 @@ class CustomerDesktopTable extends StatelessWidget {
     required this.currentPage,
     required this.itemsPerPage,
     required this.onViewCustomer,
+    this.onRefresh,
   });
 
   final List<CustomerListModelData>? customers;
   final int currentPage;
   final int itemsPerPage;
   final ValueChanged<CustomerListModelData> onViewCustomer;
+  final Future<void> Function()? onRefresh;
 
   static const Map<int, TableColumnWidth> _columnWidths = {
-    0: FlexColumnWidth(0.5),
-    1: FlexColumnWidth(2),
-    2: FlexColumnWidth(2),
-    3: FlexColumnWidth(1.5),
+    0: FlexColumnWidth(0.55),
+    1: FlexColumnWidth(2.3),
+    2: FlexColumnWidth(1.25),
+    3: FlexColumnWidth(1.55),
     4: FlexColumnWidth(1.2),
-    5: FlexColumnWidth(1),
+    5: FlexColumnWidth(1.15),
   };
 
-  Widget _headerCell(String text) {
+  Widget _headerCell(String text, {TextAlign alignment = TextAlign.left}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
       child: Text(
         text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s12,
-          0.18,
-          ColorManager.kPrimaryColor,
+        textAlign: alignment,
+        style: const TextStyle(
+          color: CustomerUiColors.muted,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.35,
         ),
       ),
     );
   }
 
-  Widget _bodyCell(String text, {Color? textColor}) {
+  Widget _bodyCell(
+    String text, {
+    Color? textColor,
+    FontWeight fontWeight = FontWeight.w500,
+    TextAlign alignment = TextAlign.left,
+  }) {
     return Padding(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
       child: Text(
         text,
-        textAlign: TextAlign.center,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s9,
-          0.13,
-          textColor ?? Colors.black,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: alignment,
+        style: TextStyle(
+          color: textColor ?? CustomerUiColors.body,
+          fontSize: 13,
+          fontWeight: fontWeight,
         ),
-      ),
-    );
-  }
-
-  Widget _customerTypeBadge(String? type) {
-    final value = (type ?? 'B2C').toUpperCase();
-    final isB2B = value == 'B2B';
-    final background = isB2B ? Colors.green.shade50 : Colors.blue.shade50;
-    final foreground = isB2B ? Colors.green.shade700 : Colors.blue.shade700;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: foreground.withOpacity(0.3)),
-      ),
-      child: Text(
-        value,
-        style: buildCustomStyle(
-          FontWeightManager.medium,
-          FontSize.s11,
-          0.18,
-          foreground,
-        ),
-      ),
-    );
-  }
-
-  Widget _emptyState() {
-    return Container(
-      height: 300,
-      width: double.infinity,
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.person_search,
-            size: 60,
-            color: ColorManager.kPrimaryColor.withOpacity(0.7),
-          ),
-          const SizedBox(height: 15),
-          Text(
-            'No customers found',
-            style: buildCustomStyle(
-              FontWeightManager.medium,
-              FontSize.s18,
-              0.27,
-              ColorManager.textColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Try adjusting your search criteria',
-            style: buildCustomStyle(
-              FontWeightManager.regular,
-              FontSize.s14,
-              0.20,
-              Colors.grey,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -131,38 +75,78 @@ class CustomerDesktopTable extends StatelessWidget {
       final customer = entry.value;
       final balance = customer.balance ?? 0;
       final displayNumber = index + 1 + (currentPage - 1) * itemsPerPage;
+      final name = customer.name?.trim();
 
       return TableRow(
-        decoration: BoxDecoration(
-          color: index.isEven ? Colors.white : Colors.grey.withOpacity(0.1),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            bottom: BorderSide(color: CustomerUiColors.subtleBorder),
+          ),
         ),
         children: [
-          _bodyCell('$displayNumber'),
-          _bodyCell(customer.name ?? ''),
+          _bodyCell(
+            '$displayNumber',
+            textColor: CustomerUiColors.muted,
+            alignment: TextAlign.center,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 14),
+            child: Row(
+              children: [
+                CustomerAvatar(name: customer.name, size: 36),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    name == null || name.isEmpty ? 'Unnamed customer' : name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: CustomerUiColors.heading,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           _bodyCell(
             balance.toStringAsFixed(2),
-            textColor: balance >= 0 ? ColorManager.kSuccessColor : Colors.red,
+            textColor:
+                balance >= 0 ? CustomerUiColors.green : CustomerUiColors.red,
+            fontWeight: FontWeight.w700,
           ),
-          _bodyCell(customer.phone ?? ''),
-          Center(child: _customerTypeBadge(customer.customerType)),
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: BuildBoxShadowContainer(
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                circleRadius: 5,
-                child: IconButton(
-                  icon: Icon(
-                    Icons.visibility,
-                    size: 18,
-                    color: ColorManager.kPrimaryColor.withOpacity(0.9),
+          _bodyCell(
+            customer.phone?.isNotEmpty == true ? customer.phone! : '—',
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: CustomerTypeBadge(type: customer.customerType),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => onViewCustomer(customer),
+                icon: const Icon(Icons.visibility, size: 15),
+                label: const Text('View'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  foregroundColor: ColorManager.kPrimaryColor,
+                  side: const BorderSide(color: CustomerUiColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
                   ),
-                  onPressed: () => onViewCustomer(customer),
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
-                  padding: EdgeInsets.zero,
                 ),
               ),
             ),
@@ -172,65 +156,74 @@ class CustomerDesktopTable extends StatelessWidget {
     }).toList();
   }
 
+  Widget _scrollableBody() {
+    final body = SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      child: customers == null || customers!.isEmpty
+          ? const SizedBox(height: 310, child: CustomerEmptyState())
+          : Table(
+              columnWidths: _columnWidths,
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: _rows(),
+            ),
+    );
+
+    if (onRefresh == null) return body;
+    return RefreshIndicator(onRefresh: onRefresh!, child: body);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            color: ColorManager.tableBGColor,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                offset: Offset(0, 2),
-                blurRadius: 2,
-              ),
-            ],
-          ),
-          child: Table(
-            columnWidths: _columnWidths,
-            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-            children: [
-              TableRow(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: CustomerUiColors.border),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Container(
+              color: CustomerUiColors.canvas,
+              child: Table(
+                columnWidths: _columnWidths,
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
-                  _headerCell('No'),
-                  _headerCell('Name'),
-                  _headerCell('Balance'),
-                  _headerCell('Phone No.'),
-                  _headerCell('Customer Type'),
-                  _headerCell('Action'),
+                  TableRow(
+                    children: [
+                      _headerCell('NO.', alignment: TextAlign.center),
+                      _headerCell('CUSTOMER'),
+                      _headerCell('BALANCE'),
+                      _headerCell('PHONE'),
+                      _headerCell('TYPE'),
+                      _headerCell('ACTION'),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: MouseRegion(
-            cursor: SystemMouseCursors.grab,
-            child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context).copyWith(
-                dragDevices: {
-                  PointerDeviceKind.mouse,
-                  PointerDeviceKind.touch,
-                  PointerDeviceKind.stylus,
-                  PointerDeviceKind.trackpad,
-                },
-              ),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: customers == null || customers!.isEmpty
-                    ? _emptyState()
-                    : Table(
-                        columnWidths: _columnWidths,
-                        defaultVerticalAlignment:
-                            TableCellVerticalAlignment.middle,
-                        children: _rows(),
-                      ),
+            ),
+            Expanded(
+              child: MouseRegion(
+                cursor: SystemMouseCursors.basic,
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: _scrollableBody(),
+                ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

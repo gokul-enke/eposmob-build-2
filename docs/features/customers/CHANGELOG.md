@@ -22,16 +22,29 @@
 - Added Enter-key filter submission.
 - Preserved keyboard Tab navigation.
 - Preserved local pagination and continuous customer numbering.
+- Reworked the Customer list into a polished commerce-admin layout with a
+  neutral canvas, consistent surfaces, clearer hierarchy, and responsive cards.
+- Added a visible refresh action while preserving pull-to-refresh.
+- Removed the fixed desktop list height so the table uses available window
+  space.
+
+### Reusable presentation
+
+- Added feature-scoped Customer surface, avatar, type badge, metric, empty
+  state, and pagination widgets.
+- Reused the same visual primitives in desktop and mobile layouts.
+- Kept these widgets feature-scoped until another module proves a genuinely
+  shared API.
 
 ### Tests
 
 - Added Customer filter-panel tests.
 - Added desktop table/card-list tests.
 - Added shared pagination tests.
+- Added desktop and phone visual-regression snapshots.
 
 ### Backend compatibility
 
 - No backend runtime code was changed during the frontend refactor.
 - The initial contract comparison found response-shape and naming mismatches;
   see `FEATURE_SPEC.md`.
-

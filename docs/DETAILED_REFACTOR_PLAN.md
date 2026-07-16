@@ -472,6 +472,48 @@ when it removes a real mixed responsibility or enables testing/reuse.
 - Focusable action button
 - Date-range filter
 
+### Feature-scoped UI kit pattern
+
+When a page needs a consistent visual language, first create small
+feature-scoped presentation primitives rather than adding one-off styling to
+every row, card, and responsive variant.
+
+Useful primitives can include:
+
+- Surface/card container
+- Record avatar or identity marker
+- Status/type badge
+- Label-and-value metric
+- Empty state
+- Pagination footer
+- Page header and action group
+
+Desktop and mobile presentations should compose the same primitives whenever
+their meaning and behavior are identical. Keep these widgets inside the feature
+until at least one other feature proves that the API and styling are genuinely
+shared. Then promote only the reusable pieces to the project component layer.
+
+### Commerce-admin visual quality checklist
+
+For a polished, calm admin layout similar to modern commerce tools:
+
+- [ ] Use one neutral page canvas and clear white content surfaces.
+- [ ] Use subtle borders before adding strong shadows.
+- [ ] Keep corner radii, spacing, and control heights consistent.
+- [ ] Give the page title, supporting text, primary action, and filters a clear
+      visual hierarchy.
+- [ ] Keep the main action visually stronger than refresh, reset, or row
+      actions.
+- [ ] Use compact badges for status/type information.
+- [ ] Use icons to support labels, not replace important labels.
+- [ ] Keep tables comfortably dense and cards easy to scan.
+- [ ] Preserve existing business colors and meanings when restyling.
+- [ ] Verify hover, focus, pressed, selected, loading, disabled, empty, and
+      error states.
+- [ ] Compare desktop and mobile so both feel like the same product.
+- [ ] Do not copy another product's branding; reuse only general layout and
+      interaction principles.
+
 ### Avoid
 
 - `CommonWidget1`
@@ -951,4 +993,3 @@ Copy this section into the feature documentation before starting.
 - `docs/BILLING_RESPONSIVE_REFACTOR_PLAN.md`
 - `docs/features/<feature>/FEATURE_SPEC.md`
 - `contracts/openapi/<feature>.yaml`
-
