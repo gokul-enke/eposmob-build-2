@@ -257,10 +257,13 @@ class CustomerPaginationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: const ValueKey('customer_pagination_bar'),
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: CustomerUiColors.surface,
-        border: Border(top: BorderSide(color: CustomerUiColors.subtleBorder)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: CustomerUiColors.border),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
