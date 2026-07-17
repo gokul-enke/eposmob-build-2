@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 
@@ -16,6 +16,7 @@ import '../../providers/auth_model.dart';
 import '../../providers/expense_provider.dart';
 import '../../providers/master_data_provider.dart';
 import '../../providers/app_settings_provider.dart';
+import '../../providers/company_account_provider.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
 import '../../resources/style_manager.dart';
@@ -40,6 +41,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
   final TextEditingController amountController = TextEditingController();
   Map<String, dynamic>? selectedPaymentMethod;
   final TextEditingController notesController = TextEditingController();
+  List<String> _allowedPaymentMethods = [];
   bool _isSubmitting = false;
 
   final FocusNode categoryFocus = FocusNode();
@@ -63,6 +65,12 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
       final token = Provider.of<AuthModel>(context, listen: false).token;
       if (token != null) {
         await provider.fetchAccountOptions(accessToken: token);
+        if (mounted) {
+          final companyAccountProvider =
+              Provider.of<CompanyAccountProvider>(context, listen: false);
+          await companyAccountProvider.listCompanyAccounts(
+              accessToken: token, loadAll: true);
+        }
       }
       await _loadMasterDataOptions();
       dateFocus.requestFocus();
@@ -224,6 +232,18 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
     });
   }
 
+  List<Map<String, dynamic>> _getFilteredPaymentMethods(
+      ExpenseProvider provider) {
+    if (selectedCreditAccount == null || _allowedPaymentMethods.isEmpty) {
+      return provider.paymentMethodOptions;
+    }
+    return provider.paymentMethodOptions.where((method) {
+      final name = method['name']?.toString().toUpperCase();
+      return _allowedPaymentMethods.any(
+          (allowed) => allowed.toUpperCase() == name);
+    }).toList();
+  }
+
   bool _isPhone(BuildContext context) =>
       MediaQuery.of(context).size.width < 600;
 
@@ -348,6 +368,21 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
             onChanged: (val) {
               setState(() {
                 selectedCreditAccount = val;
+                final companyAccountProvider =
+                    Provider.of<CompanyAccountProvider>(context, listen: false);
+                final selectedAccountName = val?['name']?.toString();
+                final matchedAccount = companyAccountProvider
+                    .getCompanyAccountsList?.firstWhereOrNull(
+                      (account) => account.name == selectedAccountName);
+                _allowedPaymentMethods = matchedAccount?.paymentMethod ?? [];
+                // Reset payment method if no longer valid
+                if (selectedPaymentMethod != null) {
+                  final currentName = selectedPaymentMethod!['name']
+                      ?.toString().toUpperCase();
+                  final stillValid = _allowedPaymentMethods.any(
+                      (m) => m.toUpperCase() == currentName);
+                  if (!stillValid) selectedPaymentMethod = null;
+                }
               });
             },
           ),
@@ -361,7 +396,7 @@ class _CreateExpenseScreenState extends State<CreateExpenseScreen> {
             focusNode: paymentMethodFocus,
             hint: "Select an option",
             value: selectedPaymentMethod,
-            items: provider.paymentMethodOptions,
+            items: _getFilteredPaymentMethods(provider),
             displayText: (item) => item['name'] ?? '',
             onChanged: (val) => setState(() => selectedPaymentMethod = val),
           ),
