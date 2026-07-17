@@ -116,7 +116,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
     if (size.width < 700) {
       return SafeArea(
         child: ColoredBox(
-          color: CustomerUiColors.canvas,
+          color: Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: CustomersMobileView(
@@ -141,7 +141,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
     return SafeArea(
       child: ColoredBox(
-        color: CustomerUiColors.canvas,
+        color: Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Center(
@@ -230,6 +230,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                             return Column(
                               children: [
                                 Expanded(child: list),
+                                const SizedBox(height: 8),
                                 CustomerPaginationBar(
                                   currentPage: customerProvider.currentPage,
                                   totalPages: customerProvider.totalPages,

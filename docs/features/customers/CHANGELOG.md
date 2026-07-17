@@ -27,6 +27,10 @@
 - Added a visible refresh action while preserving pull-to-refresh.
 - Removed the fixed desktop list height so the table uses available window
   space.
+- Changed the Customer page canvas to white while retaining subtle neutral
+  backgrounds inside cards and metrics.
+- Made the pagination surface full-width on mobile and aligned its border and
+  14px corner radius with the other Customer surfaces.
 
 ### Reusable presentation
 
