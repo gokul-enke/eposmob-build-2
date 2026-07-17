@@ -35,6 +35,14 @@ class _ConsumedStocksReportScreenState
   String? selectedStoreId;
   int currentPage = 1;
 
+  int get _pageSize =>
+      Provider.of<ReportsProvider>(context, listen: false)
+          .consumedStocksReport
+          ?.data
+          ?.pagination
+          ?.perPage ??
+      25;
+
   SideBarController sideBarController = Get.put(SideBarController());
   bool initLoading = false;
   bool _showFilters = true;
@@ -55,11 +63,24 @@ class _ConsumedStocksReportScreenState
 
   Future<void> _loadStores() async {
     final storesList = await SharedPreferenceProvider().getStores();
-    if (storesList != null) {
+    if (storesList != null && mounted) {
       setState(() {
         stores = storesList;
       });
     }
+  }
+
+  void _showLoadError(Object error) {
+    debugPrint('Error fetching consumed stocks report: $error');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Consumed stock report is currently unavailable.'),
+          backgroundColor: Colors.red,
+        ),
+      );
   }
 
   void loadInitData({int page = 1}) async {
@@ -83,7 +104,7 @@ class _ConsumedStocksReportScreenState
         page: page,
       );
     } catch (error) {
-      debugPrint("Error fetching consumed stocks report: $error");
+      _showLoadError(error);
     } finally {
       if (mounted) {
         setState(() {
@@ -216,8 +237,8 @@ class _ConsumedStocksReportScreenState
         title: null,
         hintText: "All Stores",
         value: selectedStoreId != null
-            ? stores.firstWhereOrNull(
-                (s) => s['id'].toString() == selectedStoreId)
+            ? stores
+                .firstWhereOrNull((s) => s['id'].toString() == selectedStoreId)
             : null,
         items: stores,
         displayText: (s) => s['store_name'] ?? "",
@@ -332,7 +353,7 @@ class _ConsumedStocksReportScreenState
             Row(
               children: [
                 Text(
-                  '#${(currentPage - 1) * 10 + index + 1}  ',
+                  '#${(currentPage - 1) * _pageSize + index + 1}  ',
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s13, 0.20, ColorManager.textColor),
                 ),
@@ -348,9 +369,10 @@ class _ConsumedStocksReportScreenState
             const Divider(height: 12),
             Row(
               children: [
-                 _buildMobileCardStat('Store', item.store ?? '-', selectable: true),
-                _buildMobileCardStat(
-                    'Withdrawn By', item.withdrawnBy ?? '-', selectable: true),
+                _buildMobileCardStat('Store', item.store ?? '-',
+                    selectable: true),
+                _buildMobileCardStat('Withdrawn By', item.withdrawnBy ?? '-',
+                    selectable: true),
               ],
             ),
             const SizedBox(height: 8),
@@ -358,8 +380,7 @@ class _ConsumedStocksReportScreenState
               children: [
                 _buildMobileCardStat(
                     'Qty Withdrawn', item.quantityWithdrawn ?? '-'),
-                _buildMobileCardStat(
-                    'New Qty', '${item.newQuantity ?? 0}'),
+                _buildMobileCardStat('New Qty', '${item.newQuantity ?? 0}'),
               ],
             ),
             const SizedBox(height: 8),
@@ -374,14 +395,15 @@ class _ConsumedStocksReportScreenState
     );
   }
 
-   Widget _buildMobileCardStat(String label, String value, {bool selectable = false}) {
+  Widget _buildMobileCardStat(String label, String value,
+      {bool selectable = false}) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
-                  0.15, Colors.grey)),
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey)),
           selectable
               ? SelectableText(
                   value,
@@ -402,8 +424,7 @@ class _ConsumedStocksReportScreenState
 
   Widget _buildReportContent(List<dynamic> reportData, dynamic pagination) {
     if (initLoading) {
-      return const Expanded(
-          child: Center(child: CircularProgressIndicator()));
+      return const Expanded(child: Center(child: CircularProgressIndicator()));
     }
 
     if (_isMobile(context)) {
@@ -571,7 +592,8 @@ class _ConsumedStocksReportScreenState
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
             child: Center(
               child: SelectableText(
                 item.product ?? "",
@@ -589,7 +611,8 @@ class _ConsumedStocksReportScreenState
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
             child: Center(
               child: SelectableText(
                 item.store ?? "",
@@ -609,7 +632,8 @@ class _ConsumedStocksReportScreenState
         TableCell(
           verticalAlignment: TableCellVerticalAlignment.middle,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8.0, vertical: 18.0),
             child: Center(
               child: SelectableText(
                 item.withdrawnBy ?? "",

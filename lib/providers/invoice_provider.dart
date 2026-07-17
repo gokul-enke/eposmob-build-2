@@ -211,11 +211,11 @@ class InvoiceProvider extends ChangeNotifier {
       throw const HttpException("API key not found. Please restart the app.");
     }
 
-    // Temporarily disable store_id filtering for customer transactions so
-    // records with null store_id are also returned.
-    // if (activeStoreId != null) {
-    //   queryParams['store_id'] = activeStoreId.toString();
-    // }
+    // Reports are store-scoped. Keep the active store consistent with the
+    // other report endpoints and prevent cross-store ledger totals.
+    if (activeStoreId != null) {
+      queryParams['store_id'] = activeStoreId.toString();
+    }
 
     final uri = Uri.parse(APPUrl.customerTransactions)
         .replace(queryParameters: queryParams);
@@ -374,7 +374,8 @@ class InvoiceProvider extends ChangeNotifier {
 
     debugPrint('[ZATCA][Provider] Bulk Send URL: $uri (POST)');
     debugPrint('[ZATCA][Provider] Sending IDs: ${ids.join(',')}');
-    debugPrint('[ZATCA][Provider] Flags - bulkNotSend: $bulkNotSend, bulkFailed: $bulkFailed');
+    debugPrint(
+        '[ZATCA][Provider] Flags - bulkNotSend: $bulkNotSend, bulkFailed: $bulkFailed');
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
@@ -945,10 +946,9 @@ class InvoiceProvider extends ChangeNotifier {
   //          *********************** LIST ALL PAYMENT LIST  API ***************************************************
 
   Future<void> listAllPaymentList(
-    String accessToken,
-    {bool forceRefresh = false,
-    }
-  ) async {
+    String accessToken, {
+    bool forceRefresh = false,
+  }) async {
     debugPrint("[InvoiceProvider] listAllPaymentList called");
 
     // Get API key from SharedPreferences
@@ -1070,7 +1070,8 @@ class InvoiceProvider extends ChangeNotifier {
     int? activeStoreId,
     String reason,
   ) {
-    final cachedPaymentList = _loadPaymentListFromLocalCache(prefs, activeStoreId);
+    final cachedPaymentList =
+        _loadPaymentListFromLocalCache(prefs, activeStoreId);
     if (cachedPaymentList != null && cachedPaymentList.isNotEmpty) {
       _setPaymentList(cachedPaymentList, activeStoreId);
       debugPrint(
@@ -1508,7 +1509,6 @@ class InvoiceProvider extends ChangeNotifier {
       // debugPrint('inside ${response.statusCode}');
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-
         // Detect new grouped structure: data.data is a List of customer groups each having 'transactions'
         try {
           final data = jsonData['data'];
@@ -1598,7 +1598,8 @@ class InvoiceProvider extends ChangeNotifier {
     int? perPage,
     bool loadAll = false,
   }) async {
-    debugPrint("listAllInvoices called: name=$name, page=$page, loadAll=$loadAll");
+    debugPrint(
+        "listAllInvoices called: name=$name, page=$page, loadAll=$loadAll");
     _isLoading = true;
     notifyListeners();
     _lastInvoiceAccessToken = accessToken;
@@ -1637,7 +1638,8 @@ class InvoiceProvider extends ChangeNotifier {
     final int? activeStoreId = prefs.getInt('active_store_id');
 
     final resolvedPage = loadAll ? 1 : (page ?? _currentPage);
-    final resolvedPerPage = loadAll ? (perPage ?? 1000) : (perPage ?? _itemsPerPage);
+    final resolvedPerPage =
+        loadAll ? (perPage ?? 1000) : (perPage ?? _itemsPerPage);
     final mappedZatcaStatus = _mapZatcaStatusToApi(_filterZatcaStatus);
 
     final queryParams = <String, String>{
@@ -1681,7 +1683,8 @@ class InvoiceProvider extends ChangeNotifier {
         ListInvoiceModel listInvoiceModel = ListInvoiceModel.fromJson(jsonData);
 
         final responseData = jsonData['data'] as Map<String, dynamic>? ?? {};
-        final fetchedInvoices = List<Invoice>.from(listInvoiceModel.data.invoices);
+        final fetchedInvoices =
+            List<Invoice>.from(listInvoiceModel.data.invoices);
 
         _allInvoices = fetchedInvoices;
         _filteredInvoices = fetchedInvoices;

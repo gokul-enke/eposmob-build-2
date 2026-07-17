@@ -38,7 +38,7 @@ class _SupplierTransactionReportScreenState
 
   // For storing API response data
   List<dynamic>? _groupedData = [];
-  
+
   // For grouping supplier transactions (keyed by supplierId)
   Map<String, SupplierTransactionSummary> supplierSummary = {};
 
@@ -111,13 +111,14 @@ class _SupplierTransactionReportScreenState
       allSuppliers = supplierProvider.allSuppliers ?? [];
       final suggestions = getSupplierSuggestions();
 
-      setState(() {
-        supplierSuggestions = suggestions;
-      });
+      if (mounted) {
+        setState(() {
+          supplierSuggestions = suggestions;
+        });
+      }
 
       // Load filtered transaction data from API
       await _loadFilteredTransactionData();
-
     } catch (error) {
       debugPrint('Error loading supplier data: $error');
       if (mounted) {
@@ -129,9 +130,11 @@ class _SupplierTransactionReportScreenState
         );
       }
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -153,52 +156,70 @@ class _SupplierTransactionReportScreenState
 
   // Load filtered supplier grouped data from API
   Future<void> _loadFilteredTransactionData({int? page}) async {
+    if (!mounted) return;
+    if (!_isDateRangeValid()) return;
     debugPrint('🔄 [SUPPLIER_TX_REPORT] Starting _loadFilteredTransactionData');
     debugPrint('📋 [SUPPLIER_TX_REPORT] Search supplier: "${searchSupplier}"');
-    debugPrint('📅 [SUPPLIER_TX_REPORT] From date: "${_fromDateController.text}"');
+    debugPrint(
+        '📅 [SUPPLIER_TX_REPORT] From date: "${_fromDateController.text}"');
     debugPrint('📅 [SUPPLIER_TX_REPORT] To date: "${_toDateController.text}"');
-    debugPrint('👥 [SUPPLIER_TX_REPORT] Total suppliers available: ${allSuppliers?.length ?? 0}');
-    
+    debugPrint(
+        '👥 [SUPPLIER_TX_REPORT] Total suppliers available: ${allSuppliers?.length ?? 0}');
+
     try {
       String? accessToken =
           Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('🔑 [SUPPLIER_TX_REPORT] Access token: ${accessToken != null ? "Present" : "NULL"}');
-      
+      debugPrint(
+          '🔑 [SUPPLIER_TX_REPORT] Access token: ${accessToken != null ? "Present" : "NULL"}');
+
       SupplierProvider supplierProvider =
           Provider.of<SupplierProvider>(context, listen: false);
 
       // Use pre-selected supplierId if available (set on autocomplete selection)
       String? supplierId = selectedSupplierId;
       if (supplierId != null && supplierId.isNotEmpty) {
-        debugPrint('✅ [SUPPLIER_TX_REPORT] Using selected supplierId: $supplierId for fetch');
+        debugPrint(
+            '✅ [SUPPLIER_TX_REPORT] Using selected supplierId: $supplierId for fetch');
       } else {
-        debugPrint('ℹ️ [SUPPLIER_TX_REPORT] No supplier selected, fetching for all suppliers');
+        debugPrint(
+            'ℹ️ [SUPPLIER_TX_REPORT] No supplier selected, fetching for all suppliers');
       }
 
       // Call API with filters
-      debugPrint('🌐 [SUPPLIER_TX_REPORT] Calling fetchSupplierTransactions API');
+      debugPrint(
+          '🌐 [SUPPLIER_TX_REPORT] Calling fetchSupplierTransactions API');
       debugPrint('📤 [SUPPLIER_TX_REPORT] API Parameters:');
       debugPrint('   - supplierName: null (using supplierId when selected)');
       debugPrint('   - supplierId: ${supplierId ?? "null"}');
-      debugPrint('   - fromDate: ${_fromDateController.text.isNotEmpty ? _fromDateController.text : "null"}');
-      debugPrint('   - toDate: ${_toDateController.text.isNotEmpty ? _toDateController.text : "null"}');
-      debugPrint('   - listAll: true');
-      
+      debugPrint(
+          '   - fromDate: ${_fromDateController.text.isNotEmpty ? _fromDateController.text : "null"}');
+      debugPrint(
+          '   - toDate: ${_toDateController.text.isNotEmpty ? _toDateController.text : "null"}');
+      debugPrint('   - listAll: false (server-side pagination)');
+
       final response = await supplierProvider.fetchSupplierTransactions(
         accessToken: accessToken ?? "",
         supplierName: null, // Always prefer ID for accuracy
         supplierId: supplierId,
         transactionType: null, // Can be added later if needed
-        fromDate: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
-        toDate: _toDateController.text.isNotEmpty ? _toDateController.text : null,
-        listAll: true,
+        fromDate: _fromDateController.text.isNotEmpty
+            ? _fromDateController.text
+            : null,
+        toDate:
+            _toDateController.text.isNotEmpty ? _toDateController.text : null,
+        // The report has a pagination control; request the backend paginator
+        // instead of loading the entire grouped ledger into memory.
+        listAll: false,
         page: page ?? _currentPage,
       );
-      
+
       debugPrint('📥 [SUPPLIER_TX_REPORT] API Response received');
-      debugPrint('📊 [SUPPLIER_TX_REPORT] Response keys: ${response.keys.toList()}');
+      debugPrint(
+          '📊 [SUPPLIER_TX_REPORT] Response keys: ${response.keys.toList()}');
+      if (!mounted) return;
       final dataNode = response['data'];
-      debugPrint('🧪 [SUPPLIER_TX_REPORT] data node type: ${dataNode.runtimeType}');
+      debugPrint(
+          '🧪 [SUPPLIER_TX_REPORT] data node type: ${dataNode.runtimeType}');
       // New grouped response: data is Map with pagination and data list
       if (dataNode is Map && dataNode['data'] is List) {
         // Update pagination
@@ -212,7 +233,8 @@ class _SupplierTransactionReportScreenState
         } catch (_) {}
 
         final groups = List<dynamic>.from(dataNode['data']);
-        debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed groups from data["data"] (count=${groups.length})');
+        debugPrint(
+            '🧾 [SUPPLIER_TX_REPORT] Parsed groups from data["data"] (count=${groups.length})');
         setState(() {
           _groupedData = groups;
         });
@@ -220,7 +242,8 @@ class _SupplierTransactionReportScreenState
       } else if (dataNode is List) {
         // Legacy/alternate response: data is a top-level list of groups
         final groups = List<dynamic>.from(dataNode);
-        debugPrint('🧾 [SUPPLIER_TX_REPORT] Parsed groups from top-level List (count=${groups.length})');
+        debugPrint(
+            '🧾 [SUPPLIER_TX_REPORT] Parsed groups from top-level List (count=${groups.length})');
         setState(() {
           _groupedData = groups;
           _currentPage = 1;
@@ -234,22 +257,44 @@ class _SupplierTransactionReportScreenState
           supplierSummary.clear();
         });
       }
-      debugPrint('✅ [SUPPLIER_TX_REPORT] _loadFilteredTransactionData completed successfully');
-
+      debugPrint(
+          '✅ [SUPPLIER_TX_REPORT] _loadFilteredTransactionData completed successfully');
     } catch (error) {
-      debugPrint('💥 [SUPPLIER_TX_REPORT] ERROR in _loadFilteredTransactionData: $error');
-      debugPrint('📍 [SUPPLIER_TX_REPORT] Error stack trace: ${StackTrace.current}');
-      setState(() {
-        _groupedData = [];
-        supplierSummary.clear();
-      });
+      debugPrint(
+          '💥 [SUPPLIER_TX_REPORT] ERROR in _loadFilteredTransactionData: $error');
+      debugPrint(
+          '📍 [SUPPLIER_TX_REPORT] Error stack trace: ${StackTrace.current}');
+      if (mounted) {
+        setState(() {
+          _groupedData = [];
+          supplierSummary.clear();
+        });
+      }
     }
+  }
+
+  bool _isDateRangeValid() {
+    final from = _fromDateController.text.trim();
+    final to = _toDateController.text.trim();
+    if (from.isEmpty || to.isEmpty) return true;
+    final fromDate = DateTime.tryParse(from);
+    final toDate = DateTime.tryParse(to);
+    if (fromDate == null || toDate == null || !fromDate.isAfter(toDate)) {
+      return true;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('From Date cannot be after To Date.'),
+        backgroundColor: Colors.orange,
+      ));
+    return false;
   }
 
   // Process grouped API data to create supplier summary
   void _processGroupedData() {
     debugPrint('⚙️ [SUPPLIER_TX_REPORT] Starting _processApiTransactionData');
-    
+
     if (_groupedData == null || _groupedData!.isEmpty) {
       debugPrint('📭 [SUPPLIER_TX_REPORT] No transaction data to process');
       setState(() {
@@ -257,8 +302,9 @@ class _SupplierTransactionReportScreenState
       });
       return;
     }
-    
-    debugPrint('📊 [SUPPLIER_TX_REPORT] Processing ${_groupedData!.length} supplier groups');
+
+    debugPrint(
+        '📊 [SUPPLIER_TX_REPORT] Processing ${_groupedData!.length} supplier groups');
 
     // Keyed by supplierId
     Map<String, SupplierTransactionSummary> processedSummary = {};
@@ -275,7 +321,8 @@ class _SupplierTransactionReportScreenState
       final double balance = (g['balance'] is num)
           ? (g['balance'] as num).toDouble()
           : double.tryParse((g['balance'] ?? '0').toString()) ?? 0.0;
-      final int txnCount = (g['transactions'] is List) ? (g['transactions'] as List).length : 0;
+      final int txnCount =
+          (g['transactions'] is List) ? (g['transactions'] as List).length : 0;
 
       if (supplierIdKey.isEmpty) continue;
 
@@ -292,8 +339,9 @@ class _SupplierTransactionReportScreenState
     setState(() {
       supplierSummary = processedSummary;
     });
-    
-    debugPrint('✅ [SUPPLIER_TX_REPORT] _processApiTransactionData completed. ${processedSummary.length} suppliers in summary');
+
+    debugPrint(
+        '✅ [SUPPLIER_TX_REPORT] _processApiTransactionData completed. ${processedSummary.length} suppliers in summary');
   }
 
   void _resetFilters() {
@@ -410,12 +458,11 @@ class _SupplierTransactionReportScreenState
           Row(
             children: [
               Expanded(
-                  child: _buildDateField(
-                      "From Date", _fromDateController, true)),
+                  child:
+                      _buildDateField("From Date", _fromDateController, true)),
               const SizedBox(width: 8),
               Expanded(
-                  child: _buildDateField(
-                      "To Date", _toDateController, false)),
+                  child: _buildDateField("To Date", _toDateController, false)),
             ],
           ),
           const SizedBox(height: 8),
@@ -481,7 +528,9 @@ class _SupplierTransactionReportScreenState
   Widget _buildSupplierAutocompleteField() {
     // Derive currently selected Supplier from selectedSupplierId to show in dropdown
     Supplier? currentSelected;
-    if (selectedSupplierId != null && allSuppliers != null && allSuppliers!.isNotEmpty) {
+    if (selectedSupplierId != null &&
+        allSuppliers != null &&
+        allSuppliers!.isNotEmpty) {
       try {
         currentSelected = allSuppliers!
             .firstWhere((s) => s.id.toString() == selectedSupplierId);
@@ -521,7 +570,8 @@ class _SupplierTransactionReportScreenState
                 selectedSupplierId = s?.id.toString();
                 searchSupplier = s?.name ?? '';
               });
-              debugPrint('🔗 [SUPPLIER_TX_REPORT] dropdown onChanged: name="${s?.name}", supplierId=${selectedSupplierId ?? 'null'}');
+              debugPrint(
+                  '🔗 [SUPPLIER_TX_REPORT] dropdown onChanged: name="${s?.name}", supplierId=${selectedSupplierId ?? 'null'}');
               _loadFilteredTransactionData();
             },
             searchHintText: 'Type to search supplier...',
@@ -585,8 +635,7 @@ class _SupplierTransactionReportScreenState
   }
 
   Widget _buildMobileSupplierCard(SupplierTransactionSummary summary) {
-    final Color balanceColor =
-        summary.balance < 0 ? Colors.red : Colors.green;
+    final Color balanceColor = summary.balance < 0 ? Colors.red : Colors.green;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       elevation: 2,
@@ -667,8 +716,8 @@ class _SupplierTransactionReportScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
-                  0.15, Colors.grey)),
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey)),
           Text(value,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.18, Colors.black87)),
@@ -699,93 +748,92 @@ class _SupplierTransactionReportScreenState
 
     return Expanded(
       child: BuildBoxShadowContainer(
-              margin: const EdgeInsets.only(top: 5),
-              circleRadius: 7,
-              offsetValue: const Offset(2, 2),
-              blurRadius: 8.0,
-              color: Colors.white,
-              child: Column(
-                children: [
-                  // Fixed table header
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: ColorManager.tableBGColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          offset: Offset(0, 2),
-                          blurRadius: 2.0,
-                        ),
-                      ],
-                    ),
-                    child: Table(
-                      columnWidths: const {
-                        0: FlexColumnWidth(2.0), // Supplier Name
-                        1: FlexColumnWidth(1.5), // Total Debit
-                        2: FlexColumnWidth(1.5), // Total Credit
-                        3: FlexColumnWidth(1.5), // Balance
-                        4: FlexColumnWidth(1.2), // Transaction Count
-                        5: FlexColumnWidth(1.0), // Action
-                      },
-                      border: null,
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
-                      children: [
-                        TableRow(
-                          children: [
-                            _buildTableHeader("Supplier Name"),
-                            _buildTableHeader("Total Debit"),
-                            _buildTableHeader("Total Credit"),
-                            _buildTableHeader("Balance"),
-                            _buildTableHeader("Transactions"),
-                            _buildTableHeader("Action"),
-                          ],
-                        ),
-                      ],
-                    ),
+        margin: const EdgeInsets.only(top: 5),
+        circleRadius: 7,
+        offsetValue: const Offset(2, 2),
+        blurRadius: 8.0,
+        color: Colors.white,
+        child: Column(
+          children: [
+            // Fixed table header
+            Container(
+              decoration: const BoxDecoration(
+                color: ColorManager.tableBGColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    offset: Offset(0, 2),
+                    blurRadius: 2.0,
                   ),
-                  // Scrollable table body
-                  Expanded(
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
-                          },
-                        ),
-                        child: supplierSummary.isEmpty
-                            ? _buildNoDataFoundUI()
-                            : SingleChildScrollView(
-                                physics: const BouncingScrollPhysics(),
-                                scrollDirection: Axis.vertical,
-                                child: Table(
-                                  columnWidths: const {
-                                    0: FlexColumnWidth(2.0), // Supplier Name
-                                    1: FlexColumnWidth(1.5), // Total Debit
-                                    2: FlexColumnWidth(1.5), // Total Credit
-                                    3: FlexColumnWidth(1.5), // Balance
-                                    4: FlexColumnWidth(1.2), // Transaction Count
-                                    5: FlexColumnWidth(1.0), // Action
-                                  },
-                                  border: null,
-                                  defaultVerticalAlignment:
-                                      TableCellVerticalAlignment.middle,
-                                  children: supplierSummary.entries
-                                      .map((entry) => _buildSupplierRow(
-                                          entry.value, context))
-                                      .toList(),
-                                ),
-                              ),
-                      ),
-                    ),
+                ],
+              ),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(2.0), // Supplier Name
+                  1: FlexColumnWidth(1.5), // Total Debit
+                  2: FlexColumnWidth(1.5), // Total Credit
+                  3: FlexColumnWidth(1.5), // Balance
+                  4: FlexColumnWidth(1.2), // Transaction Count
+                  5: FlexColumnWidth(1.0), // Action
+                },
+                border: null,
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  TableRow(
+                    children: [
+                      _buildTableHeader("Supplier Name"),
+                      _buildTableHeader("Total Debit"),
+                      _buildTableHeader("Total Credit"),
+                      _buildTableHeader("Balance"),
+                      _buildTableHeader("Transactions"),
+                      _buildTableHeader("Action"),
+                    ],
                   ),
                 ],
               ),
             ),
+            // Scrollable table body
+            Expanded(
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: supplierSummary.isEmpty
+                      ? _buildNoDataFoundUI()
+                      : SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          scrollDirection: Axis.vertical,
+                          child: Table(
+                            columnWidths: const {
+                              0: FlexColumnWidth(2.0), // Supplier Name
+                              1: FlexColumnWidth(1.5), // Total Debit
+                              2: FlexColumnWidth(1.5), // Total Credit
+                              3: FlexColumnWidth(1.5), // Balance
+                              4: FlexColumnWidth(1.2), // Transaction Count
+                              5: FlexColumnWidth(1.0), // Action
+                            },
+                            border: null,
+                            defaultVerticalAlignment:
+                                TableCellVerticalAlignment.middle,
+                            children: supplierSummary.entries
+                                .map((entry) =>
+                                    _buildSupplierRow(entry.value, context))
+                                .toList(),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -847,8 +895,7 @@ class _SupplierTransactionReportScreenState
   TableRow _buildSupplierRow(
       SupplierTransactionSummary summary, BuildContext context) {
     // Alternate row colors for better readability
-    final int index =
-        supplierSummary.keys.toList().indexOf(summary.supplierId);
+    final int index = supplierSummary.keys.toList().indexOf(summary.supplierId);
 
     return TableRow(
       decoration: BoxDecoration(
@@ -902,9 +949,10 @@ class _SupplierTransactionReportScreenState
                 onPressed: () {
                   // Set the selected supplier and navigate to details
                   Provider.of<SupplierProvider>(context, listen: false)
-                      ..setSelectedSupplierName(summary.displayName)
-                      ..setSelectedSupplierId(summary.supplierId);
-                  debugPrint('👁️ [SUPPLIER_TX_REPORT] View clicked for supplierId=${summary.supplierId}, name="${summary.displayName}"');
+                    ..setSelectedSupplierName(summary.displayName)
+                    ..setSelectedSupplierId(summary.supplierId);
+                  debugPrint(
+                      '👁️ [SUPPLIER_TX_REPORT] View clicked for supplierId=${summary.supplierId}, name="${summary.displayName}"');
                   sideBarController.index.value =
                       68; // Navigate to SupplierTransactionDetailsScreen
                 },

@@ -11,7 +11,6 @@ import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
 
@@ -84,66 +83,85 @@ class _SupplierTransactionDetailsScreenState
   }
 
   Future<void> loadInitData() async {
+    if (!mounted) return;
     setState(() {
       initLoading = true;
     });
 
     try {
-      final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
+      final supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
 
       final String? supplierId = supplierProvider.selectedSupplierId;
       selectedSupplierName = supplierProvider.selectedSupplierName ?? '';
 
       debugPrint('🔎 [SUPP_TX_DETAILS] loadInitData start');
-      debugPrint('🔖 [SUPP_TX_DETAILS] selectedSupplierId: ${supplierId ?? 'null'}');
-      debugPrint('🔖 [SUPP_TX_DETAILS] selectedSupplierName: ${selectedSupplierName.isEmpty ? '(empty)' : selectedSupplierName}');
+      debugPrint(
+          '🔖 [SUPP_TX_DETAILS] selectedSupplierId: ${supplierId ?? 'null'}');
+      debugPrint(
+          '🔖 [SUPP_TX_DETAILS] selectedSupplierName: ${selectedSupplierName.isEmpty ? '(empty)' : selectedSupplierName}');
 
-      if ((supplierId == null || supplierId.isEmpty) && selectedSupplierName.isEmpty) {
+      if ((supplierId == null || supplierId.isEmpty) &&
+          selectedSupplierName.isEmpty) {
         // No context, go back to report
         sideBarController.index.value = 67; // Supplier Transaction Report
         return;
       }
 
       // Fetch grouped transactions from API filtered by supplierId and date range
-      String? accessToken = Provider.of<AuthModel>(context, listen: false).token;
-      debugPrint('🌐 [SUPP_TX_DETAILS] Calling fetchSupplierTransactions with:');
-      debugPrint('    supplierId=${supplierId ?? 'null'} fromDate=${_fromDateController.text} toDate=${_toDateController.text}');
+      String? accessToken =
+          Provider.of<AuthModel>(context, listen: false).token;
+      debugPrint(
+          '🌐 [SUPP_TX_DETAILS] Calling fetchSupplierTransactions with:');
+      debugPrint(
+          '    supplierId=${supplierId ?? 'null'} fromDate=${_fromDateController.text} toDate=${_toDateController.text}');
       final response = await supplierProvider.fetchSupplierTransactions(
         accessToken: accessToken ?? '',
         supplierId: supplierId,
-        fromDate: _fromDateController.text.isNotEmpty ? _fromDateController.text : null,
-        toDate: _toDateController.text.isNotEmpty ? _toDateController.text : null,
+        fromDate: _fromDateController.text.isNotEmpty
+            ? _fromDateController.text
+            : null,
+        toDate:
+            _toDateController.text.isNotEmpty ? _toDateController.text : null,
         listAll: true,
       );
 
+      if (!mounted) return;
+
       final dataNode = response['data'];
-      debugPrint('📬 [SUPP_TX_DETAILS] Response received. data node type: ${dataNode.runtimeType}');
+      debugPrint(
+          '📬 [SUPP_TX_DETAILS] Response received. data node type: ${dataNode.runtimeType}');
       List<SupplierTransaction> txns = [];
       if (dataNode is Map && dataNode['data'] is List) {
         final groups = (dataNode['data'] as List).cast<dynamic>();
-        debugPrint('🧾 [SUPP_TX_DETAILS] Parsed groups from data["data"], count=${groups.length}');
+        debugPrint(
+            '🧾 [SUPP_TX_DETAILS] Parsed groups from data["data"], count=${groups.length}');
         // Find the group for our supplier
         Map? group;
         if (supplierId != null && supplierId.isNotEmpty) {
           group = groups.cast<Map?>().firstWhere(
-            (g) => (g?['supplier_id']?.toString() ?? '') == supplierId,
-            orElse: () => null,
-          );
-          debugPrint('🔗 [SUPP_TX_DETAILS] Group lookup by supplierId ${group == null ? 'failed' : 'succeeded'}');
+                (g) => (g?['supplier_id']?.toString() ?? '') == supplierId,
+                orElse: () => null,
+              );
+          debugPrint(
+              '🔗 [SUPP_TX_DETAILS] Group lookup by supplierId ${group == null ? 'failed' : 'succeeded'}');
         }
         group ??= groups.cast<Map?>().firstWhere(
-          (g) => (g?['supplier_name'] ?? '') == selectedSupplierName,
-          orElse: () => null,
-        );
-        if (group == null) debugPrint('❗ [SUPP_TX_DETAILS] Group lookup by name also failed');
+              (g) => (g?['supplier_name'] ?? '') == selectedSupplierName,
+              orElse: () => null,
+            );
+        if (group == null)
+          debugPrint('❗ [SUPP_TX_DETAILS] Group lookup by name also failed');
 
         if (group != null) {
           // Update title name if needed
           if (selectedSupplierName.isEmpty) {
             selectedSupplierName = (group['supplier_name'] ?? '').toString();
           }
-          final List<dynamic> list = (group['transactions'] as List?) ?? const [];
-          debugPrint('🧮 [SUPP_TX_DETAILS] Transactions in group: ${list.length}');
+          final List<dynamic> list =
+              (group['transactions'] as List?) ?? const [];
+          debugPrint(
+              '🧮 [SUPP_TX_DETAILS] Transactions in group: ${list.length}');
           txns = list
               .whereType<Map<String, dynamic>>()
               .map((m) => SupplierTransaction.fromJson(m))
@@ -152,7 +170,8 @@ class _SupplierTransactionDetailsScreenState
       } else if (dataNode is List) {
         // Rare case: top-level list; try to find group similarly
         final groups = dataNode.cast<Map?>();
-        debugPrint('🧾 [SUPP_TX_DETAILS] Parsed groups from top-level List, count=${groups.length}');
+        debugPrint(
+            '🧾 [SUPP_TX_DETAILS] Parsed groups from top-level List, count=${groups.length}');
         Map? group;
         if (supplierId != null && supplierId.isNotEmpty) {
           group = groups.firstWhere(
@@ -165,18 +184,22 @@ class _SupplierTransactionDetailsScreenState
           orElse: () => null,
         );
         if (group != null) {
-          final List<dynamic> list = (group['transactions'] as List?) ?? const [];
-          debugPrint('🧮 [SUPP_TX_DETAILS] Transactions in group (top-level): ${list.length}');
+          final List<dynamic> list =
+              (group['transactions'] as List?) ?? const [];
+          debugPrint(
+              '🧮 [SUPP_TX_DETAILS] Transactions in group (top-level): ${list.length}');
           txns = list
               .whereType<Map<String, dynamic>>()
               .map((m) => SupplierTransaction.fromJson(m))
               .toList();
         } else {
-          debugPrint('❗ [SUPP_TX_DETAILS] No matching group found in top-level list');
+          debugPrint(
+              '❗ [SUPP_TX_DETAILS] No matching group found in top-level list');
         }
       }
 
-      debugPrint('✅ [SUPP_TX_DETAILS] Parsed transactions count: ${txns.length}');
+      debugPrint(
+          '✅ [SUPP_TX_DETAILS] Parsed transactions count: ${txns.length}');
       _applyFilters(txns);
     } catch (error) {
       debugPrint('Error loading supplier transaction data: $error');
@@ -189,16 +212,20 @@ class _SupplierTransactionDetailsScreenState
         );
       }
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
   void _applyFilters(List<SupplierTransaction> allTransactions) {
     debugPrint('🔧 [SUPP_TX_DETAILS] Applying filters:');
-    debugPrint('    type=$selectedTransactionType payment=$selectedPaymentMethod search="$searchQuery"');
-    debugPrint('    from=${_fromDateController.text} to=${_toDateController.text}');
+    debugPrint(
+        '    type=$selectedTransactionType payment=$selectedPaymentMethod search="$searchQuery"');
+    debugPrint(
+        '    from=${_fromDateController.text} to=${_toDateController.text}');
     List<SupplierTransaction> filtered = [...allTransactions];
 
     // Date range filter
@@ -222,7 +249,9 @@ class _SupplierTransactionDetailsScreenState
             // If to date is set, check that transaction date is not after it
             if (_toDateController.text.isNotEmpty) {
               final toDate = formatter.parse(_toDateController.text);
-              if (transactionDate.isAfter(toDate)) return false;
+              // Treat the selected end date as inclusive for business users.
+              final toDateExclusive = toDate.add(const Duration(days: 1));
+              if (!transactionDate.isBefore(toDateExclusive)) return false;
             }
 
             return true;
@@ -270,7 +299,8 @@ class _SupplierTransactionDetailsScreenState
           .toList();
     }
 
-    debugPrint('📊 [SUPP_TX_DETAILS] Filtered transactions count: ${filtered.length}');
+    debugPrint(
+        '📊 [SUPP_TX_DETAILS] Filtered transactions count: ${filtered.length}');
     setState(() {
       filteredTransactions = filtered;
     });
@@ -459,7 +489,8 @@ class _SupplierTransactionDetailsScreenState
           Row(
             children: [
               Expanded(
-                  child: _buildDateField("From Date", _fromDateController, true)),
+                  child:
+                      _buildDateField("From Date", _fromDateController, true)),
               const SizedBox(width: 8),
               Expanded(
                   child: _buildDateField("To Date", _toDateController, false)),
@@ -763,7 +794,9 @@ class _SupplierTransactionDetailsScreenState
                     ),
                   ),
                 ),
-                ...options.where((option) => option != 'All').map((String option) {
+                ...options
+                    .where((option) => option != 'All')
+                    .map((String option) {
                   return DropdownMenuItem<String>(
                     value: option,
                     child: Text(
@@ -791,7 +824,7 @@ class _SupplierTransactionDetailsScreenState
   void _applyFiltersFromCurrentData() {
     SupplierProvider supplierProvider =
         Provider.of<SupplierProvider>(context, listen: false);
-    
+
     final supplier = supplierProvider.supplierList?.firstWhere(
       (s) => s.name == selectedSupplierName,
       orElse: () => Supplier(
@@ -849,8 +882,8 @@ class _SupplierTransactionDetailsScreenState
             const SizedBox(height: 8),
             Text(
               tx.reference.isNotEmpty ? tx.reference : '-',
-              style: buildCustomStyle(FontWeightManager.semiBold,
-                  FontSize.s13, 0.20, ColorManager.textColor),
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s13,
+                  0.20, ColorManager.textColor),
             ),
             const Divider(height: 12),
             Row(
@@ -860,15 +893,14 @@ class _SupplierTransactionDetailsScreenState
                 _buildMobileCardStat('Payment', tx.paymentMethod),
               ],
             ),
-            if (tx.transactionType.isNotEmpty) ...
-              [
-                const SizedBox(height: 4),
-                Text(
-                  tx.transactionType,
-                  style: buildCustomStyle(FontWeightManager.regular,
-                      FontSize.s10, 0.15, Colors.grey),
-                ),
-              ],
+            if (tx.transactionType.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                tx.transactionType,
+                style: buildCustomStyle(
+                    FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey),
+              ),
+            ],
           ],
         ),
       ),
@@ -913,8 +945,8 @@ class _SupplierTransactionDetailsScreenState
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(label,
-          style: TextStyle(
-              color: fg, fontWeight: FontWeight.bold, fontSize: 11)),
+          style:
+              TextStyle(color: fg, fontWeight: FontWeight.bold, fontSize: 11)),
     );
   }
 
@@ -924,11 +956,11 @@ class _SupplierTransactionDetailsScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
-                  0.15, Colors.grey)),
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey)),
           Text(value,
-              style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                  0.18, Colors.black87),
+              style: buildCustomStyle(
+                  FontWeightManager.medium, FontSize.s12, 0.18, Colors.black87),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
         ],
@@ -956,98 +988,97 @@ class _SupplierTransactionDetailsScreenState
 
     return Expanded(
       child: BuildBoxShadowContainer(
-              margin: const EdgeInsets.only(top: 5),
-              circleRadius: 7,
-              offsetValue: const Offset(2, 2),
-              blurRadius: 8.0,
-              color: Colors.white,
-              child: Column(
-                children: [
-                  // Fixed table header
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: ColorManager.tableBGColor,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          offset: Offset(0, 2),
-                          blurRadius: 2.0,
-                        ),
-                      ],
-                    ),
-                    child: Table(
-                      columnWidths: const {
-                        0: FlexColumnWidth(0.8), // Date
-                        1: FlexColumnWidth(1.2), // Reference
-                        2: FlexColumnWidth(1.0), // Type
-                        3: FlexColumnWidth(1.2), // Transaction Type
-                        4: FlexColumnWidth(1.0), // Amount
-                        5: FlexColumnWidth(1.2), // Payment Method
-                        6: FlexColumnWidth(0.8), // Status
-                      },
-                      border: null,
-                      defaultVerticalAlignment:
-                          TableCellVerticalAlignment.middle,
-                      children: [
-                        TableRow(
-                          children: [
-                            _buildTableHeader("Date"),
-                            _buildTableHeader("Reference"),
-                            _buildTableHeader("Type"),
-                            _buildTableHeader("Transaction Type"),
-                            _buildTableHeader("Amount"),
-                            _buildTableHeader("Payment Method"),
-                            _buildTableHeader("Status"),
-                          ],
-                        ),
-                      ],
-                    ),
+        margin: const EdgeInsets.only(top: 5),
+        circleRadius: 7,
+        offsetValue: const Offset(2, 2),
+        blurRadius: 8.0,
+        color: Colors.white,
+        child: Column(
+          children: [
+            // Fixed table header
+            Container(
+              decoration: const BoxDecoration(
+                color: ColorManager.tableBGColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    offset: Offset(0, 2),
+                    blurRadius: 2.0,
                   ),
-                  // Scrollable table body
-                  Expanded(
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.grab,
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(
-                          dragDevices: {
-                            PointerDeviceKind.mouse,
-                            PointerDeviceKind.touch,
-                            PointerDeviceKind.stylus,
-                            PointerDeviceKind.trackpad,
-                          },
-                        ),
-                        child: filteredTransactions.isEmpty
-                            ? _buildNoDataFoundUI()
-                            : SingleChildScrollView(
-                                physics: const BouncingScrollPhysics(),
-                                scrollDirection: Axis.vertical,
-                                child: Table(
-                                  columnWidths: const {
-                                    0: FlexColumnWidth(0.8), // Date
-                                    1: FlexColumnWidth(1.2), // Reference
-                                    2: FlexColumnWidth(1.0), // Type
-                                    3: FlexColumnWidth(1.2), // Transaction Type
-                                    4: FlexColumnWidth(1.0), // Amount
-                                    5: FlexColumnWidth(1.2), // Payment Method
-                                    6: FlexColumnWidth(0.8), // Status
-                                  },
-                                  border: null,
-                                  defaultVerticalAlignment:
-                                      TableCellVerticalAlignment.middle,
-                                  children: filteredTransactions
-                                      .asMap()
-                                      .entries
-                                      .map((entry) => _buildTransactionRow(
-                                          entry.value, entry.key))
-                                      .toList(),
-                                ),
-                              ),
-                      ),
-                    ),
+                ],
+              ),
+              child: Table(
+                columnWidths: const {
+                  0: FlexColumnWidth(0.8), // Date
+                  1: FlexColumnWidth(1.2), // Reference
+                  2: FlexColumnWidth(1.0), // Type
+                  3: FlexColumnWidth(1.2), // Transaction Type
+                  4: FlexColumnWidth(1.0), // Amount
+                  5: FlexColumnWidth(1.2), // Payment Method
+                  6: FlexColumnWidth(0.8), // Status
+                },
+                border: null,
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: [
+                  TableRow(
+                    children: [
+                      _buildTableHeader("Date"),
+                      _buildTableHeader("Reference"),
+                      _buildTableHeader("Type"),
+                      _buildTableHeader("Transaction Type"),
+                      _buildTableHeader("Amount"),
+                      _buildTableHeader("Payment Method"),
+                      _buildTableHeader("Status"),
+                    ],
                   ),
                 ],
               ),
             ),
+            // Scrollable table body
+            Expanded(
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(
+                    dragDevices: {
+                      PointerDeviceKind.mouse,
+                      PointerDeviceKind.touch,
+                      PointerDeviceKind.stylus,
+                      PointerDeviceKind.trackpad,
+                    },
+                  ),
+                  child: filteredTransactions.isEmpty
+                      ? _buildNoDataFoundUI()
+                      : SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          scrollDirection: Axis.vertical,
+                          child: Table(
+                            columnWidths: const {
+                              0: FlexColumnWidth(0.8), // Date
+                              1: FlexColumnWidth(1.2), // Reference
+                              2: FlexColumnWidth(1.0), // Type
+                              3: FlexColumnWidth(1.2), // Transaction Type
+                              4: FlexColumnWidth(1.0), // Amount
+                              5: FlexColumnWidth(1.2), // Payment Method
+                              6: FlexColumnWidth(0.8), // Status
+                            },
+                            border: null,
+                            defaultVerticalAlignment:
+                                TableCellVerticalAlignment.middle,
+                            children: filteredTransactions
+                                .asMap()
+                                .entries
+                                .map((entry) => _buildTransactionRow(
+                                    entry.value, entry.key))
+                                .toList(),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

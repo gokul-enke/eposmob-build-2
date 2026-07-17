@@ -325,7 +325,8 @@ class SupplierProvider with ChangeNotifier {
       queryParameters['supplier_id'] = supplierId;
     }
     if (transactionType != null && transactionType.isNotEmpty) {
-      queryParameters['transaction_type'] = transactionType;
+      // SupplierController expects the transaction type in the `type` query key.
+      queryParameters['type'] = transactionType;
     }
     if (fromDate != null && fromDate.isNotEmpty) {
       queryParameters['from_date'] = fromDate;

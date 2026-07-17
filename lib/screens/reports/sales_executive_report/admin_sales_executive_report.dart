@@ -13,11 +13,11 @@ import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 
-/// Admin-facing screen that shows sales reports for ALL sales executives.
-/// The API endpoint and response model will be wired up once the backend is ready.
+/// Admin-facing screen that shows sales reports for all sales executives.
 class AdminSalesExecutiveReportScreen extends StatefulWidget {
   const AdminSalesExecutiveReportScreen({super.key});
 
@@ -48,10 +48,17 @@ class _AdminSalesExecutiveReportScreenState
 
   @override
   void initState() {
-    loadInitData();
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _showFilters = !_isMobile(context));
+      if (!mounted) return;
+      final role =
+          Provider.of<RoleProvider>(context, listen: false).currentUserRole;
+      if (role == 'sales_executive') {
+        sideBarController.index.value = 58;
+        return;
+      }
+      setState(() => _showFilters = !_isMobile(context));
+      loadInitData();
     });
   }
 
@@ -62,7 +69,6 @@ class _AdminSalesExecutiveReportScreenState
           initLoading = true;
         });
       }
-      // TODO: Replace with admin-specific fetch once API is confirmed.
       await fetchAdminSalesReport();
     } catch (error) {
       debugPrint('Error loading admin sales executive data: $error');
@@ -83,6 +89,7 @@ class _AdminSalesExecutiveReportScreenState
 
   Future<void> fetchAdminSalesReport() async {
     if (!mounted) return;
+    if (!_isDateRangeValid()) return;
 
     try {
       SalesExecutiveProvider provider =
@@ -100,8 +107,6 @@ class _AdminSalesExecutiveReportScreenState
         toDate = toDateController.text;
       }
 
-      // TODO: Replace with admin-specific provider method once API is ready.
-      // Currently reuses the existing endpoint as a placeholder.
       final response = await provider.getAdminSalesExecutiveReport(
         context: context,
         fromDate: fromDate,
@@ -125,6 +130,19 @@ class _AdminSalesExecutiveReportScreenState
         );
       }
     }
+  }
+
+  bool _isDateRangeValid() {
+    final from = DateTime.tryParse(fromDateController.text.trim());
+    final to = DateTime.tryParse(toDateController.text.trim());
+    if (from == null || to == null || !from.isAfter(to)) return true;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(
+        content: Text('From Date cannot be after To Date.'),
+        backgroundColor: Colors.orange,
+      ));
+    return false;
   }
 
   void searchReport() => fetchAdminSalesReport();
@@ -461,8 +479,10 @@ class _AdminSalesExecutiveReportScreenState
   }
 
   Widget _buildMobileExecutiveCard(SalesExecutiveReportData report) {
-    final currency =
-        Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR';
+    final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+            .appSettings
+            ?.currency ??
+        'INR';
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       elevation: 2,
@@ -494,8 +514,8 @@ class _AdminSalesExecutiveReportScreenState
             ),
             SelectableText(
               report.phone ?? 'N/A',
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s12,
-                  0.18, Colors.grey),
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s12, 0.18, Colors.grey),
             ),
             const Divider(height: 16),
             Row(
@@ -520,8 +540,8 @@ class _AdminSalesExecutiveReportScreenState
               children: [
                 _buildMobileCardStat(
                     'Credit Sales', '$currency ${report.formattedCreditSales}'),
-                _buildMobileCardStat('Collected',
-                    '$currency ${report.formattedCollectedSales}'),
+                _buildMobileCardStat(
+                    'Collected', '$currency ${report.formattedCollectedSales}'),
               ],
             ),
           ],
@@ -536,8 +556,8 @@ class _AdminSalesExecutiveReportScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s10,
-                  0.15, Colors.grey)),
+              style: buildCustomStyle(
+                  FontWeightManager.regular, FontSize.s10, 0.15, Colors.grey)),
           Text(value,
               style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
                   0.18, Colors.black87)),
@@ -548,10 +568,9 @@ class _AdminSalesExecutiveReportScreenState
 
   Widget _buildExecutiveTable() {
     return Expanded(
-      child: Consumer<SalesExecutiveProvider>(
-          builder: (context, provider, child) {
-        final isLoading =
-            provider.isLoading || provider.isAdminReportLoading;
+      child:
+          Consumer<SalesExecutiveProvider>(builder: (context, provider, child) {
+        final isLoading = provider.isLoading || provider.isAdminReportLoading;
         final allReports = provider.adminSalesExecutiveReportList;
         final reportError = provider.adminReportError;
 
@@ -560,8 +579,7 @@ class _AdminSalesExecutiveReportScreenState
         final reportList = nameQuery.isEmpty
             ? allReports
             : allReports
-                .where((r) =>
-                    (r.name ?? '').toLowerCase().contains(nameQuery))
+                .where((r) => (r.name ?? '').toLowerCase().contains(nameQuery))
                 .toList();
 
         if (isLoading) {
@@ -590,151 +608,159 @@ class _AdminSalesExecutiveReportScreenState
           children: [
             Expanded(
               child: BuildBoxShadowContainer(
-                      margin: const EdgeInsets.only(top: 5),
-                      circleRadius: 7,
-                      offsetValue: const Offset(2, 2),
-                      blurRadius: 8.0,
-                      color: Colors.white,
-                      child: Column(
-                        children: [
-                          // Fixed table header
-                          Container(
-                            decoration: const BoxDecoration(
-                              color: ColorManager.tableBGColor,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  offset: Offset(0, 2),
-                                  blurRadius: 2.0,
-                                ),
-                              ],
-                            ),
-                            child: Table(
-                              columnWidths: const {
-                                0: FlexColumnWidth(2.0),
-                                1: FlexColumnWidth(1.5),
-                                2: FlexColumnWidth(1.5),
-                                3: FlexColumnWidth(1.5),
-                                4: FlexColumnWidth(1.5),
-                                5: FlexColumnWidth(1.5),
-                                6: FlexColumnWidth(1.5),
-                                7: FlexColumnWidth(1.5),
-                                8: FlexColumnWidth(1.2),
-                              },
-                              defaultVerticalAlignment:
-                                  TableCellVerticalAlignment.middle,
-                              children: [
-                                TableRow(
-                                  children: [
-                                    _buildTableHeader("Executive Name"),
-                                    _buildTableHeader("Phone"),
-                                    _buildTableHeader("Total Orders"),
-                                    _buildTableHeader("Total Sales"),
-                                    _buildTableHeader("Online Sales"),
-                                    _buildTableHeader("Cash Sales"),
-                                    _buildTableHeader("Credit Sales"),
-                                    _buildTableHeader("Collected Sales"),
-                                    _buildTableHeader("Actions"),
-                                  ],
-                                ),
-                              ],
-                            ),
+                margin: const EdgeInsets.only(top: 5),
+                circleRadius: 7,
+                offsetValue: const Offset(2, 2),
+                blurRadius: 8.0,
+                color: Colors.white,
+                child: Column(
+                  children: [
+                    // Fixed table header
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: ColorManager.tableBGColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            offset: Offset(0, 2),
+                            blurRadius: 2.0,
                           ),
-                          // Scrollable table body
-                          Expanded(
-                            child: MouseRegion(
-                              cursor: SystemMouseCursors.grab,
-                              child: ScrollConfiguration(
-                                behavior:
-                                    ScrollConfiguration.of(context).copyWith(
-                                  dragDevices: {
-                                    PointerDeviceKind.mouse,
-                                    PointerDeviceKind.touch,
-                                    PointerDeviceKind.stylus,
-                                    PointerDeviceKind.trackpad,
-                                  },
-                                ),
-                                child: reportError != null
-                                    ? _buildErrorUI(reportError)
-                                    : reportList.isEmpty
-                                        ? _buildNoDataFoundUI()
-                                        : SingleChildScrollView(
-                                            physics:
-                                                const BouncingScrollPhysics(),
-                                            scrollDirection: Axis.vertical,
-                                            child: Table(
-                                              columnWidths: const {
-                                                0: FlexColumnWidth(2.0),
-                                                1: FlexColumnWidth(1.5),
-                                                2: FlexColumnWidth(1.5),
-                                                3: FlexColumnWidth(1.5),
-                                                4: FlexColumnWidth(1.5),
-                                                5: FlexColumnWidth(1.5),
-                                                6: FlexColumnWidth(1.5),
-                                                7: FlexColumnWidth(1.5),
-                                                8: FlexColumnWidth(1.2),
-                                              },
-                                              defaultVerticalAlignment:
-                                                  TableCellVerticalAlignment
-                                                      .middle,
-                                              children:
-                                                  reportList.map((report) {
-                                                return TableRow(
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color: Colors.white,
-                                                  ),
-                                                  children: [
-                                                     TableCell(
-                                                       verticalAlignment: TableCellVerticalAlignment.middle,
-                                                       child: Padding(
-                                                         padding: const EdgeInsets.all(8.0),
-                                                         child: SelectableText(
-                                                           report.name ?? "N/A",
-                                                           textAlign: TextAlign.center,
-                                                           style: buildCustomStyle(
-                                                               FontWeightManager.medium, FontSize.s9, 0.13, Colors.black),
-                                                         ),
-                                                       ),
-                                                     ),
-                                                     TableCell(
-                                                       verticalAlignment: TableCellVerticalAlignment.middle,
-                                                       child: Padding(
-                                                         padding: const EdgeInsets.all(8.0),
-                                                         child: SelectableText(
-                                                           report.phone ?? "N/A",
-                                                           textAlign: TextAlign.center,
-                                                           style: buildCustomStyle(
-                                                               FontWeightManager.medium, FontSize.s9, 0.13, Colors.black),
-                                                         ),
-                                                       ),
-                                                     ),
-                                                    _buildTableCell(
-                                                        report.orderCount
-                                                                ?.toString() ??
-                                                            "0"),
-                                                    _buildTableCell(
-                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedTotalSales}"),
-                                                    _buildTableCell(
-                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedOnlineSales}"),
-                                                    _buildTableCell(
-                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCashSales}"),
-                                                    _buildTableCell(
-                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCreditSales}"),
-                                                    _buildTableCell(
-                                                        "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCollectedSales}"),
-                                                    _buildActionsCell(report),
-                                                  ],
-                                                );
-                                              }).toList(),
-                                            ),
-                                          ),
-                              ),
-                            ),
+                        ],
+                      ),
+                      child: Table(
+                        columnWidths: const {
+                          0: FlexColumnWidth(2.0),
+                          1: FlexColumnWidth(1.5),
+                          2: FlexColumnWidth(1.5),
+                          3: FlexColumnWidth(1.5),
+                          4: FlexColumnWidth(1.5),
+                          5: FlexColumnWidth(1.5),
+                          6: FlexColumnWidth(1.5),
+                          7: FlexColumnWidth(1.5),
+                          8: FlexColumnWidth(1.2),
+                        },
+                        defaultVerticalAlignment:
+                            TableCellVerticalAlignment.middle,
+                        children: [
+                          TableRow(
+                            children: [
+                              _buildTableHeader("Executive Name"),
+                              _buildTableHeader("Phone"),
+                              _buildTableHeader("Total Orders"),
+                              _buildTableHeader("Total Sales"),
+                              _buildTableHeader("Online Sales"),
+                              _buildTableHeader("Cash Sales"),
+                              _buildTableHeader("Credit Sales"),
+                              _buildTableHeader("Collected Sales"),
+                              _buildTableHeader("Actions"),
+                            ],
                           ),
                         ],
                       ),
                     ),
+                    // Scrollable table body
+                    Expanded(
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.grab,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.stylus,
+                              PointerDeviceKind.trackpad,
+                            },
+                          ),
+                          child: reportError != null
+                              ? _buildErrorUI(reportError)
+                              : reportList.isEmpty
+                                  ? _buildNoDataFoundUI()
+                                  : SingleChildScrollView(
+                                      physics: const BouncingScrollPhysics(),
+                                      scrollDirection: Axis.vertical,
+                                      child: Table(
+                                        columnWidths: const {
+                                          0: FlexColumnWidth(2.0),
+                                          1: FlexColumnWidth(1.5),
+                                          2: FlexColumnWidth(1.5),
+                                          3: FlexColumnWidth(1.5),
+                                          4: FlexColumnWidth(1.5),
+                                          5: FlexColumnWidth(1.5),
+                                          6: FlexColumnWidth(1.5),
+                                          7: FlexColumnWidth(1.5),
+                                          8: FlexColumnWidth(1.2),
+                                        },
+                                        defaultVerticalAlignment:
+                                            TableCellVerticalAlignment.middle,
+                                        children: reportList.map((report) {
+                                          return TableRow(
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white,
+                                            ),
+                                            children: [
+                                              TableCell(
+                                                verticalAlignment:
+                                                    TableCellVerticalAlignment
+                                                        .middle,
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(8.0),
+                                                  child: SelectableText(
+                                                    report.name ?? "N/A",
+                                                    textAlign: TextAlign.center,
+                                                    style: buildCustomStyle(
+                                                        FontWeightManager
+                                                            .medium,
+                                                        FontSize.s9,
+                                                        0.13,
+                                                        Colors.black),
+                                                  ),
+                                                ),
+                                              ),
+                                              TableCell(
+                                                verticalAlignment:
+                                                    TableCellVerticalAlignment
+                                                        .middle,
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(8.0),
+                                                  child: SelectableText(
+                                                    report.phone ?? "N/A",
+                                                    textAlign: TextAlign.center,
+                                                    style: buildCustomStyle(
+                                                        FontWeightManager
+                                                            .medium,
+                                                        FontSize.s9,
+                                                        0.13,
+                                                        Colors.black),
+                                                  ),
+                                                ),
+                                              ),
+                                              _buildTableCell(report.orderCount
+                                                      ?.toString() ??
+                                                  "0"),
+                                              _buildTableCell(
+                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedTotalSales}"),
+                                              _buildTableCell(
+                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedOnlineSales}"),
+                                              _buildTableCell(
+                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCashSales}"),
+                                              _buildTableCell(
+                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCreditSales}"),
+                                              _buildTableCell(
+                                                  "${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? 'INR'} ${report.formattedCollectedSales}"),
+                                              _buildActionsCell(report),
+                                            ],
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         );
@@ -752,8 +778,7 @@ class _AdminSalesExecutiveReportScreenState
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(Icons.bar_chart_outlined,
-              size: 60,
-              color: ColorManager.kPrimaryColor.withOpacity(0.7)),
+              size: 60, color: ColorManager.kPrimaryColor.withOpacity(0.7)),
           const SizedBox(height: 15),
           Text(
             'No report data found',
@@ -852,11 +877,9 @@ class _AdminSalesExecutiveReportScreenState
             circleRadius: 5,
             child: IconButton(
               icon: Icon(Icons.visibility,
-                  size: 18,
-                  color: ColorManager.kPrimaryColor.withOpacity(0.9)),
+                  size: 18, color: ColorManager.kPrimaryColor.withOpacity(0.9)),
               onPressed: () => _showExecutiveDetails(report),
-              constraints:
-                  const BoxConstraints(minWidth: 36, minHeight: 36),
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               padding: EdgeInsets.zero,
             ),
           ),
@@ -892,8 +915,7 @@ class _AdminSalesExecutiveReportScreenState
               maxHeight: MediaQuery.of(context).size.height * 0.85,
             ),
             decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16)),
+                color: Colors.white, borderRadius: BorderRadius.circular(16)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -944,10 +966,8 @@ class _AdminSalesExecutiveReportScreenState
                           title: 'Executive Information',
                           children: [
                             _buildInfoRow(
-                              _buildInfoItem(
-                                  'Name', report.name ?? 'N/A'),
-                              _buildInfoItem(
-                                  'Phone', report.phone ?? 'N/A'),
+                              _buildInfoItem('Name', report.name ?? 'N/A'),
+                              _buildInfoItem('Phone', report.phone ?? 'N/A'),
                             ),
                             const SizedBox(height: 16),
                             _buildInfoRow(
@@ -961,26 +981,19 @@ class _AdminSalesExecutiveReportScreenState
                         _buildSection(
                           title: 'Financial Summary',
                           children: [
-                            _buildFinancialItem(
-                                'Total Sales',
+                            _buildFinancialItem('Total Sales',
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedTotalSales}'),
-                            _buildFinancialItem(
-                                'Online Sales',
+                            _buildFinancialItem('Online Sales',
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedOnlineSales}'),
-                            _buildFinancialItem(
-                                'Cash Sales',
+                            _buildFinancialItem('Cash Sales',
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCashSales}'),
-                            _buildFinancialItem(
-                                'Credit Sales',
+                            _buildFinancialItem('Credit Sales',
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCreditSales}'),
-                            _buildFinancialItem(
-                                'Collected Sales',
+                            _buildFinancialItem('Collected Sales',
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCollectedSales}'),
-                            _buildFinancialItem(
-                                'UPI Sales',
+                            _buildFinancialItem('UPI Sales',
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedUpiSales}'),
-                            _buildFinancialItem(
-                                'Card Sales',
+                            _buildFinancialItem('Card Sales',
                                 '${Provider.of<AppSettingsProvider>(context, listen: false).appSettings?.currency ?? "INR"} ${report.formattedCardSales}'),
                           ],
                         ),
@@ -1010,8 +1023,8 @@ class _AdminSalesExecutiveReportScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-              style: buildCustomStyle(FontWeightManager.semiBold,
-                  FontSize.s16, 0.24, Colors.black)),
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s16,
+                  0.24, Colors.black)),
           const SizedBox(height: 16),
           ...children,
         ],
@@ -1036,12 +1049,12 @@ class _AdminSalesExecutiveReportScreenState
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label,
-            style: buildCustomStyle(FontWeightManager.medium, FontSize.s12,
-                0.18, Colors.black87)),
+            style: buildCustomStyle(
+                FontWeightManager.medium, FontSize.s12, 0.18, Colors.black87)),
         const SizedBox(height: 4),
         Text(value,
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
-                0.20, Colors.black),
+            style: buildCustomStyle(
+                FontWeightManager.semiBold, FontSize.s14, 0.20, Colors.black),
             maxLines: 1,
             overflow: TextOverflow.ellipsis),
       ],
@@ -1056,13 +1069,13 @@ class _AdminSalesExecutiveReportScreenState
         children: [
           Expanded(
             child: Text(label,
-                style: buildCustomStyle(FontWeightManager.medium,
-                    FontSize.s13, 0.18, Colors.black87)),
+                style: buildCustomStyle(FontWeightManager.medium, FontSize.s13,
+                    0.18, Colors.black87)),
           ),
           const SizedBox(width: 16),
           Text(value,
-              style: buildCustomStyle(FontWeightManager.semiBold,
-                  FontSize.s14, 0.20, Colors.black)),
+              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s14,
+                  0.20, Colors.black)),
         ],
       ),
     );

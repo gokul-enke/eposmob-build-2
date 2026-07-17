@@ -706,6 +706,9 @@ class _SideMenuState extends State<SideMenu> {
               final hasExecutiveSummaryPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.reports.executive_summary.access');
+              final canViewExecutiveSummary = userRole == 'company_admin' ||
+                  (hasExecutiveSummaryPermission &&
+                      userRole != 'sales_executive');
               final hasCustomerTransactionsPermission =
                   // roleProvider.currentUserHasPermissionSync(
                   //     'page_CustomerTransactionReport') ||
@@ -728,7 +731,7 @@ class _SideMenuState extends State<SideMenu> {
               if (!hasSalesExecutiveReportsPermission &&
                   !hasCustomerTransactionsPermission &&
                   !hasSupplierTransactionsPermission &&
-                  !hasExecutiveSummaryPermission &&
+                  !canViewExecutiveSummary &&
                   !hasNonStockPermission &&
                   !hasConsumedStockPermission &&
                   !isCompanyAdmin) {
@@ -763,7 +766,7 @@ class _SideMenuState extends State<SideMenu> {
                     listTitle6: "Consumed Stocks Report",
                     // Permission-based visibility
                     showTitle1: hasSalesExecutiveReportsPermission,
-                    showTitle2: isCompanyAdmin || hasExecutiveSummaryPermission,
+                    showTitle2: canViewExecutiveSummary,
                     showTitle3: hasCustomerTransactionsPermission,
                     showTitle4: hasSupplierTransactionsPermission,
                     showTitle5: hasNonStockPermission,

@@ -15,7 +15,6 @@ import 'package:pos_machine/providers/transaction_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
-import 'package:pos_machine/components/build_text_fields.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
 
@@ -97,6 +96,7 @@ class _SimpleTransactionDetailsScreenState
     super.initState();
     // Set the customer name from the TransactionProvider instead of sidebar controller
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final customerName =
           Provider.of<TransactionProvider>(context, listen: false).customerName;
       setState(() {
@@ -112,6 +112,7 @@ class _SimpleTransactionDetailsScreenState
 
   // Add the missing loadInitData method
   Future<void> loadInitData() async {
+    if (!mounted) return;
     setState(() {
       initLoading = true;
     });
@@ -121,20 +122,26 @@ class _SimpleTransactionDetailsScreenState
           Provider.of<AuthModel>(context, listen: false).token;
       InvoiceProvider invoiceProvider =
           Provider.of<InvoiceProvider>(context, listen: false);
+      final customerProvider =
+          Provider.of<CustomerProvider>(context, listen: false);
+      final selectedIdStr = customerProvider.selectedCustomerId;
 
       final value = await invoiceProvider.listAllTransaction(
         type: null,
         accessToken: accessToken ?? "",
+        customerId: selectedIdStr,
+        customerName: selectedIdStr == null || selectedIdStr.isEmpty
+            ? (searchCustomer.isNotEmpty ? searchCustomer : null)
+            : null,
       );
+
+      if (!mounted) return;
 
       if (value['status'] == 'success') {
         final data = value['data'];
         // If new grouped response, extract the selected customer's transactions
         if (data is Map && data['data'] is List) {
           final groups = (data['data'] as List).cast<dynamic>();
-          final customerProvider =
-              Provider.of<CustomerProvider>(context, listen: false);
-          final selectedIdStr = customerProvider.selectedCustomerId;
           final selectedName = searchCustomer;
 
           Map? matchedGroup;
@@ -243,9 +250,11 @@ class _SimpleTransactionDetailsScreenState
         );
       }
     } finally {
-      setState(() {
-        initLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          initLoading = false;
+        });
+      }
     }
   }
 
@@ -321,9 +330,9 @@ class _SimpleTransactionDetailsScreenState
             // If to date is set, check that transaction date is not after it
             if (_toDateController.text.isNotEmpty) {
               final toDate = formatter.parse(_toDateController.text);
-              // Include the to date by adding one day and checking if transaction date is before
-              final toDatePlusOne = toDate.add(const Duration(days: 1));
-              if (transactionDate.isAfter(toDate)) return false;
+              // Treat the selected end date as inclusive for business users.
+              final toDateExclusive = toDate.add(const Duration(days: 1));
+              if (!transactionDate.isBefore(toDateExclusive)) return false;
             }
 
             return true;
