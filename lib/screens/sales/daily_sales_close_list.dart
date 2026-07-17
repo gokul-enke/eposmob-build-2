@@ -916,7 +916,6 @@ class _DayCloseModalState extends State<DayCloseModal> {
   final TextEditingController _closingTimeController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _cashRefundsController = TextEditingController();
-  final TextEditingController _cashExpensesController = TextEditingController();
   final TextEditingController _cashDropAmountController =
       TextEditingController();
   final TextEditingController _openingCashInHandController =
@@ -1058,7 +1057,6 @@ class _DayCloseModalState extends State<DayCloseModal> {
     _closingTimeController.dispose();
     _notesController.dispose();
     _cashRefundsController.dispose();
-    _cashExpensesController.dispose();
     _cashDropAmountController.dispose();
     _openingCashInHandController.dispose();
     _closingCashInHandController.dispose();
@@ -1116,15 +1114,17 @@ class _DayCloseModalState extends State<DayCloseModal> {
         if (_openingTimeController.text.isEmpty) {
           final storeOpenTime = storeSession.activeStore?.storeOpenTime;
           final fallbackTime = storeOpenTime ?? '08:00:00';
+          final hasActiveShift = widget.openDraft != null;
           _openingTimeController.text =
-              (result?.openingTime != null && result!.openingTime!.isNotEmpty)
+              (hasActiveShift &&
+               result?.openingTime != null &&
+               result!.openingTime!.isNotEmpty)
                   ? result.openingTime!
                   : fallbackTime;
         }
-        _closingTimeController.text = result?.closingTime ?? '';
+        _closingTimeController.text = '';
         _notesController.text = result?.notes ?? '';
         _cashRefundsController.text = result?.cashRefunds?.toString() ?? '';
-        _cashExpensesController.text = result?.cashExpenses?.toString() ?? '';
         _cashDropAmountController.text = result?.cashDropAmount?.toString() ?? '';
         if (!_openingPrefilled) {
           _openingCashInHandController.text =
@@ -1233,7 +1233,6 @@ class _DayCloseModalState extends State<DayCloseModal> {
       debugPrint('selected opening_time: ${_openingTimeController.text.trim()}');
       debugPrint('selected closing_time: ${_closingTimeController.text.trim()}');
       debugPrint('selected cash_refunds: ${_cashRefundsController.text.trim()}');
-      debugPrint('selected cash_expenses: ${_cashExpensesController.text.trim()}');
       debugPrint('selected cash_drop_amount: ${_cashDropAmountController.text.trim()}');
       debugPrint('selected opening_cash_in_hand: ${_openingCashInHandController.text.trim()}');
       debugPrint('selected closing_cash_in_hand: ${_closingCashInHandController.text.trim()}');
@@ -1269,8 +1268,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
             : _closingTimeController.text.trim(),
         cashRefunds: num.tryParse(_cashRefundsController.text.trim()) ??
             summary?.cashRefunds,
-        cashExpenses: num.tryParse(_cashExpensesController.text.trim()) ??
-            summary?.cashExpenses,
+        cashExpenses: summary?.cashExpenses,
         cashDropAmount: num.tryParse(_cashDropAmountController.text.trim()) ??
             summary?.cashDropAmount,
         openingCashInHand:
@@ -2276,7 +2274,7 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       right: _buildAmountField(
                                         label: 'Shift Name',
                                         controller: _shiftNameController,
-                                        enabled: !_openingPrefilled,
+                                        enabled: true,
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -2486,16 +2484,9 @@ class _DayCloseModalState extends State<DayCloseModal> {
                                       },
                                     ),
                                     const SizedBox(height: 12),
-                                    _buildTwoColumnRow(
-                                      isNarrow: isNarrow,
-                                      left: _buildAmountField(
-                                        label: 'Cash Refunds',
-                                        controller: _cashRefundsController,
-                                      ),
-                                      right: _buildAmountField(
-                                        label: 'Cash Expenses',
-                                        controller: _cashExpensesController,
-                                      ),
+                                    _buildAmountField(
+                                      label: 'Cash Refunds',
+                                      controller: _cashRefundsController,
                                     ),
                                     const SizedBox(height: 12),
                                     _buildAmountField(

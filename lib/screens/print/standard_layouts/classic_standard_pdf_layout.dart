@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/print_standard.dart';
 import 'standard_pdf_layout.dart';
+import 'new_classic_standad_pdf_layout.dart';
 
 /// Classic standard PDF layout - the default A4/A5 PDF design.
 ///
@@ -65,11 +66,8 @@ class ClassicStandardPdfLayout implements StandardPdfLayout {
   @override
   Future<pw.Document> buildPdfDocument(ReceiptLayoutParams params) async {
     debugPrint(
-        '[ClassicStandardPdfLayout] buildPdfDocument - delegating to StandardPrinter');
-    // For now, return an empty document.
-    // The full PDF building logic lives in StandardPrinter.generateAndPrintPDF
-    // which handles both building AND saving/opening. When we need standalone
-    // PDF building (e.g. for sharing), this can be migrated.
-    return pw.Document();
+        '[ClassicStandardPdfLayout] buildPdfDocument - delegating to NewClassicStandardPdfLayout');
+    final newClassic = NewClassicStandardPdfLayout();
+    return newClassic.buildPdfDocument(params);
   }
 }
