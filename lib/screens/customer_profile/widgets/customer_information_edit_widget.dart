@@ -164,7 +164,7 @@ class _CustomerInformationEditWidgetState
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(widget.size.width < 600 ? 12 : 24),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -233,6 +233,7 @@ class _CustomerInformationEditWidgetState
   }
 
   Widget _buildHeader() {
+    final isMobile = widget.size.width < 600;
     return Container(
       decoration: const BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
@@ -241,16 +242,23 @@ class _CustomerInformationEditWidgetState
           topRight: Radius.circular(12),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 20,
+        vertical: isMobile ? 10 : 16,
+      ),
       child: Row(
         children: [
-          const Icon(Icons.edit_note,
-              color: ColorManager.kPrimaryColor, size: 28),
-          const SizedBox(width: 12),
-          Text(
-            'Edit Customer Information',
-            style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
-                ColorManager.kTitleTextColor),
+          Icon(Icons.edit_note,
+              color: ColorManager.kPrimaryColor, size: isMobile ? 24 : 28),
+          SizedBox(width: isMobile ? 8 : 12),
+          Flexible(
+            child: Text(
+              'Edit Customer Information',
+              overflow: TextOverflow.ellipsis,
+              style: buildCustomStyle(FontWeightManager.bold,
+                  isMobile ? FontSize.s16 : FontSize.s18, 0,
+                  ColorManager.kTitleTextColor),
+            ),
           ),
         ],
       ),
@@ -258,70 +266,88 @@ class _CustomerInformationEditWidgetState
   }
 
   Widget _buildNameFields() {
+    final firstNameField = buildColumnWidgetForTextFields(
+      controller: firstNameController,
+      hintText: 'First Name',
+      title: 'First Name',
+      size: widget.size,
+      isStarRed: true,
+      width: double.infinity,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'First name is required';
+        }
+        return null;
+      },
+    );
+    final lastNameField = buildColumnWidgetForTextFields(
+      controller: lastNameController,
+      hintText: 'Last Name',
+      title: 'Last Name',
+      size: widget.size,
+      isStarRed: false,
+      width: double.infinity,
+      validator: (value) {
+        return null;
+      },
+    );
+
+    if (widget.size.width < 600) {
+      return Column(
+        children: [
+          firstNameField,
+          const SizedBox(height: 12),
+          lastNameField,
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: buildColumnWidgetForTextFields(
-            controller: firstNameController,
-            hintText: 'First Name',
-            title: 'First Name',
-            size: widget.size,
-            isStarRed: true,
-            width: double.infinity,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'First name is required';
-              }
-              return null;
-            },
-          ),
-        ),
+        Expanded(child: firstNameField),
         const SizedBox(width: 20),
-        Expanded(
-          child: buildColumnWidgetForTextFields(
-            controller: lastNameController,
-            hintText: 'Last Name',
-            title: 'Last Name',
-            size: widget.size,
-            isStarRed: false,
-            width: double.infinity,
-            validator: (value) {
-              return null;
-            },
-          ),
-        ),
+        Expanded(child: lastNameField),
       ],
     );
   }
 
   Widget _buildActionButtons() {
+    final saveButton = CustomRoundButton(
+      radius: 10,
+      title: "Save Changes",
+      fct: _updateProfile,
+      height: 50,
+      width: double.infinity,
+      fontSize: FontSize.s14,
+    );
+    final passwordButton = CustomRoundButton(
+      radius: 10,
+      title: "Change Password",
+      fct: () => _showPasswordChangeConfirmation(context),
+      height: 50,
+      width: double.infinity,
+      fontSize: FontSize.s14,
+      boxColor: Colors.white,
+      textColor: ColorManager.kPrimaryColor,
+      borderColor: ColorManager.kPrimaryColor,
+    );
+
+    if (widget.size.width < 600) {
+      return Column(
+        children: [
+          saveButton,
+          const SizedBox(height: 12),
+          passwordButton,
+        ],
+      );
+    }
+
     return Row(
       children: [
-        Expanded(
-          child: CustomRoundButton(
-            radius: 10,
-            title: "Save Changes",
-            fct: _updateProfile,
-            height: 50,
-            width: 150,
-            fontSize: FontSize.s14,
-          ),
-        ),
+        Expanded(child: saveButton),
         const SizedBox(width: 16),
-        Expanded(
-          child: CustomRoundButton(
-            radius: 10,
-            title: "Change Password",
-            fct: () => _showPasswordChangeConfirmation(context),
-            height: 50,
-            width: 150,
-            fontSize: FontSize.s14,
-            boxColor: Colors.white,
-            textColor: ColorManager.kPrimaryColor,
-            borderColor: ColorManager.kPrimaryColor,
-          ),
-        ),
+        Expanded(child: passwordButton),
       ],
     );
   }
@@ -692,123 +718,128 @@ class _CustomerInformationEditWidgetState
   }
 
   Widget _buildBalanceAndPaymentTypeFields() {
+    final isMobile = widget.size.width < 600;
+
+    final paymentTypeField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        BuildTextTile(
+          title: 'Payment Type',
+          isStarRed: true,
+          textStyle: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s14,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        BuildBoxShadowContainer(
+          circleRadius: 7,
+          alignment: Alignment.centerLeft,
+          margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+          padding: EdgeInsets.only(left: isMobile ? 8 : 15),
+          height: widget.size.height * .07,
+          width: double.infinity,
+          child: Row(
+            children: [
+              Radio<PaymentType>(
+                value: PaymentType.to_pay,
+                groupValue: selectedPaymentType,
+                activeColor: ColorManager.kPrimaryColor,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: const VisualDensity(
+                  horizontal: VisualDensity.minimumDensity,
+                  vertical: VisualDensity.minimumDensity,
+                ),
+                onChanged: (PaymentType? value) {
+                  setState(() {
+                    selectedPaymentType = value ?? PaymentType.to_pay;
+                  });
+                },
+              ),
+              Text(
+                'To Pay',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  isMobile ? FontSize.s12 : FontSize.s13,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+              ),
+              SizedBox(width: isMobile ? 8 : 16),
+              Radio<PaymentType>(
+                value: PaymentType.to_receive,
+                groupValue: selectedPaymentType,
+                activeColor: ColorManager.kPrimaryColor,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: const VisualDensity(
+                  horizontal: VisualDensity.minimumDensity,
+                  vertical: VisualDensity.minimumDensity,
+                ),
+                onChanged: (PaymentType? value) {
+                  setState(() {
+                    selectedPaymentType = value ?? PaymentType.to_pay;
+                  });
+                },
+              ),
+              Text(
+                'To Receive',
+                style: buildCustomStyle(
+                  FontWeightManager.medium,
+                  isMobile ? FontSize.s12 : FontSize.s13,
+                  0.27,
+                  ColorManager.textColor.withOpacity(.5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final balanceField = buildColumnWidgetForTextFields(
+      controller: balanceController,
+      hintText: 'Balance',
+      title: 'Balance',
+      size: widget.size,
+      width: double.infinity,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+      ],
+      validator: (value) {
+        if (value != null && value.isNotEmpty) {
+          final balance = double.tryParse(value);
+          if (balance == null) {
+            return 'Please enter a valid balance';
+          }
+          if (balance < 0) {
+            return 'Balance cannot be negative';
+          }
+        }
+        return null;
+      },
+      onchanged: (value) {
+        setState(() {});
+      },
+    );
+
+    if (isMobile) {
+      return Column(
+        children: [
+          paymentTypeField,
+          const SizedBox(height: 12),
+          balanceField,
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Payment type on the left - custom built to match text field styling
-        Expanded(
-          flex: 2,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              BuildTextTile(
-                title: 'Payment Type',
-                isStarRed: true,
-                textStyle: buildCustomStyle(
-                  FontWeightManager.regular,
-                  FontSize.s14,
-                  0.27,
-                  Colors.black.withOpacity(0.6),
-                ),
-              ),
-              // Container matching text field style
-              BuildBoxShadowContainer(
-                circleRadius: 7,
-                alignment: Alignment.centerLeft,
-                margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                padding: const EdgeInsets.only(left: 15),
-                height: widget.size.height * .07,
-                width: double.infinity,
-                child: Row(
-                  children: [
-                    Radio<PaymentType>(
-                      value: PaymentType.to_pay,
-                      groupValue: selectedPaymentType,
-                      activeColor: ColorManager.kPrimaryColor,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: const VisualDensity(
-                        horizontal: VisualDensity.minimumDensity,
-                        vertical: VisualDensity.minimumDensity,
-                      ),
-                      onChanged: (PaymentType? value) {
-                        setState(() {
-                          selectedPaymentType = value ?? PaymentType.to_pay;
-                        });
-                      },
-                    ),
-                    Text(
-                      'To Pay',
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s13,
-                        0.27,
-                        ColorManager.textColor.withOpacity(.5),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Radio<PaymentType>(
-                      value: PaymentType.to_receive,
-                      groupValue: selectedPaymentType,
-                      activeColor: ColorManager.kPrimaryColor,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: const VisualDensity(
-                        horizontal: VisualDensity.minimumDensity,
-                        vertical: VisualDensity.minimumDensity,
-                      ),
-                      onChanged: (PaymentType? value) {
-                        setState(() {
-                          selectedPaymentType = value ?? PaymentType.to_pay;
-                        });
-                      },
-                    ),
-                    Text(
-                      'To Receive',
-                      style: buildCustomStyle(
-                        FontWeightManager.medium,
-                        FontSize.s13,
-                        0.27,
-                        ColorManager.textColor.withOpacity(.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        Expanded(flex: 2, child: paymentTypeField),
         const SizedBox(width: 20),
-        // Balance field on the right
-        Expanded(
-          flex: 2,
-          child: buildColumnWidgetForTextFields(
-            controller: balanceController,
-            hintText: 'Balance',
-            title: 'Balance',
-            size: widget.size,
-            width: double.infinity,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
-            ],
-            validator: (value) {
-              if (value != null && value.isNotEmpty) {
-                final balance = double.tryParse(value);
-                if (balance == null) {
-                  return 'Please enter a valid balance';
-                }
-                if (balance < 0) {
-                  return 'Balance cannot be negative';
-                }
-                // Payment type validation removed since only two options now
-              }
-              return null;
-            },
-            onchanged: (value) {
-              // Trigger validation when balance changes
-              setState(() {});
-            },
-          ),
-        ),
+        Expanded(flex: 2, child: balanceField),
       ],
     );
   }

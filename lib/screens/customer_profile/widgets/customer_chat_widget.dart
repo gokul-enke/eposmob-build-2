@@ -101,12 +101,13 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = widget.size.width < 600;
     return Expanded(
       child: BuildBoxShadowContainer(
-        margin: EdgeInsets.all(widget.size.width < 600 ? 10 : 24),
+        margin: EdgeInsets.all(isMobile ? 10 : 24),
         padding: const EdgeInsets.all(0),
         height: widget.size.height * 0.75,
-        width: widget.size.width / 1.8,
+        width: isMobile ? double.infinity : widget.size.width / 1.8,
         circleRadius: 12,
         child: Column(
           children: [
@@ -125,6 +126,7 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
   }
 
   Widget _buildChatHeader() {
+    final isMobile = widget.size.width < 600;
     return Container(
       decoration: BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
@@ -133,31 +135,38 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
           topRight: Radius.circular(12),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 20,
+        vertical: isMobile ? 10 : 16,
+      ),
       child: Row(
         children: [
           CircleAvatar(
+            radius: isMobile ? 18 : 20,
             backgroundColor: ColorManager.kPrimaryColor,
             child: Text(
-              widget.customer.name![0],
+              (widget.customer.name?.isNotEmpty ?? false)
+                  ? widget.customer.name![0]
+                  : '?',
               style: buildCustomStyle(
                 FontWeightManager.semiBold,
-                FontSize.s18,
+                isMobile ? FontSize.s16 : FontSize.s18,
                 0,
                 Colors.white,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: isMobile ? 8 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.customer.name ?? 'Customer Name',
+                  softWrap: true,
                   style: buildCustomStyle(
                     FontWeightManager.bold,
-                    FontSize.s16,
+                    isMobile ? FontSize.s14 : FontSize.s16,
                     0,
                     ColorManager.kTitleTextColor,
                   ),
@@ -178,6 +187,8 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
             icon: const Icon(Icons.more_vert),
             onPressed: () {},
             color: ColorManager.kGreyColor,
+            constraints: isMobile ? const BoxConstraints() : null,
+            padding: isMobile ? const EdgeInsets.all(4) : null,
           ),
         ],
       ),
@@ -296,13 +307,17 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
 
   Widget _buildChatBubble(ChatMessage message) {
     final isMe = message.isFromMe;
+    final isMobile = widget.size.width < 600;
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        padding: EdgeInsets.symmetric(
+          vertical: isMobile ? 8 : 10,
+          horizontal: isMobile ? 14 : 16,
+        ),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.45,
+          maxWidth: widget.size.width * (isMobile ? 0.85 : 0.45),
         ),
         decoration: BoxDecoration(
           color: isMe
@@ -323,9 +338,10 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
           children: [
             Text(
               message.text,
+              softWrap: true,
               style: TextStyle(
                 color: isMe ? Colors.white : ColorManager.kTitleTextColor,
-                fontSize: 15,
+                fontSize: isMobile ? 14 : 15,
               ),
             ),
             const SizedBox(height: 5),
@@ -343,8 +359,12 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
   }
 
   Widget _buildMessageInput() {
+    final isMobile = widget.size.width < 600;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 12,
+        vertical: 8,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
@@ -361,6 +381,8 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
             icon: const Icon(Icons.add_photo_alternate_outlined),
             color: ColorManager.kGreyColor,
             onPressed: () {},
+            constraints: isMobile ? const BoxConstraints() : null,
+            padding: isMobile ? const EdgeInsets.all(6) : null,
           ),
           Expanded(
             child: TextField(
@@ -377,6 +399,8 @@ class _CustomerChatWidgetState extends State<CustomerChatWidget> {
             icon: const Icon(Icons.send_rounded),
             color: ColorManager.kPrimaryColor,
             onPressed: _sendMessage,
+            constraints: isMobile ? const BoxConstraints() : null,
+            padding: isMobile ? const EdgeInsets.all(6) : null,
           ),
         ],
       ),

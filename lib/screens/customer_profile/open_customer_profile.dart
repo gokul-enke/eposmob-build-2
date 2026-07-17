@@ -30,11 +30,31 @@ class OpenCustomerProfileScreen extends StatefulWidget {
 
 class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
   int selectedIndex = 0;
+  final ScrollController _tabScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _tabScrollController.dispose();
+    super.dispose();
+  }
 
   void navigateToTab(int index) {
     setState(() {
       selectedIndex = index;
     });
+  }
+
+  void _scrollToSelectedTab(int tabPosition) {
+    if (!_tabScrollController.hasClients) return;
+    const double tabWidth = 100.0;
+    final double screenWidth = MediaQuery.of(context).size.width - 32;
+    final double targetOffset =
+        (tabPosition * tabWidth) - (screenWidth / 2) + (tabWidth / 2);
+    _tabScrollController.animateTo(
+      targetOffset.clamp(0.0, _tabScrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -73,16 +93,17 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
                 _buildMobileProfileHeader(selectedCustomer),
                 const SizedBox(height: 10),
                 SingleChildScrollView(
+                  controller: _tabScrollController,
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _mobileTab(0, 'Info', Icons.person_outline),
-                      _mobileTab(1, 'Edit', Icons.edit_outlined),
-                      _mobileTab(2, 'Transactions', Icons.receipt_long_outlined),
-                      _mobileTab(3, 'Orders', Icons.shopping_bag_outlined),
-                      _mobileTab(6, 'Address', Icons.location_on_outlined),
-                      _mobileTab(4, 'Loyalty', Icons.card_membership_outlined),
-                      _mobileTab(5, 'Chat', Icons.chat_outlined),
+                      _mobileTab(0, 'Info', Icons.person_outline, 0),
+                      _mobileTab(1, 'Edit', Icons.edit_outlined, 1),
+                      _mobileTab(2, 'Transactions', Icons.receipt_long_outlined, 2),
+                      _mobileTab(3, 'Orders', Icons.shopping_bag_outlined, 3),
+                      _mobileTab(6, 'Address', Icons.location_on_outlined, 4),
+                      _mobileTab(4, 'Loyalty', Icons.card_membership_outlined, 5),
+                      _mobileTab(5, 'Chat', Icons.chat_outlined, 6),
                     ],
                   ),
                 ),
@@ -151,57 +172,54 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
   Widget _buildMobileProfileHeader(CustomerListModelData customer) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
+      child: Column(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 50,
+            height: 50,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: ColorManager.kPrimaryColor.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(25),
             ),
             child: const Icon(Icons.person,
                 color: ColorManager.kPrimaryColor, size: 26),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  customer.name ?? 'Customer Name',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
-                      0, ColorManager.kTitleTextColor),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'ID: ${customer.id}',
-                  style: buildCustomStyle(FontWeightManager.regular,
-                      FontSize.s12, 0, ColorManager.kGreyColor),
-                ),
-              ],
-            ),
+          const SizedBox(height: 6),
+          Text(
+            customer.name ?? 'Customer Name',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: buildCustomStyle(FontWeightManager.bold, FontSize.s16,
+                0, ColorManager.kTitleTextColor),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'ID: ${customer.id}',
+            style: buildCustomStyle(FontWeightManager.regular,
+                FontSize.s12, 0, ColorManager.kGreyColor),
           ),
         ],
       ),
     );
   }
 
-  Widget _mobileTab(int index, String label, IconData icon) {
+  Widget _mobileTab(int index, String label, IconData icon, int tabPosition) {
     final isSelected = selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => selectedIndex = index),
+      onTap: () {
+        setState(() => selectedIndex = index);
+        _scrollToSelectedTab(tabPosition);
+      },
       child: Container(
         margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? ColorManager.kPrimaryColor : Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -221,7 +239,7 @@ class _OpenCustomerProfileScreenState extends State<OpenCustomerProfileScreen> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: isSelected ? Colors.white : Colors.grey.shade700,
               ),

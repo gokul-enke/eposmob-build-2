@@ -125,7 +125,8 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                       : orders.isEmpty
                           ? _buildEmptyState()
                           : ListView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(
+                          widget.size.width < 600 ? 10 : 16),
                       itemCount: orders.length,
                       itemBuilder: (context, index) =>
                           _buildOrderCard(orders[index]),
@@ -133,7 +134,12 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
             ),
             if (!isLoading && orders.isNotEmpty && totalPages > 1)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: EdgeInsets.fromLTRB(
+                  widget.size.width < 600 ? 10 : 16,
+                  0,
+                  widget.size.width < 600 ? 10 : 16,
+                  widget.size.width < 600 ? 8 : 16,
+                ),
                 child: PaginationControl(
                   currentPage: currentPage,
                   totalPages: totalPages,
@@ -147,6 +153,7 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
   }
 
   Widget _buildHeader() {
+    final isMobile = widget.size.width < 600;
     return Container(
       decoration: const BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
@@ -155,30 +162,71 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
           topRight: Radius.circular(12),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.shopping_bag,
-                  color: ColorManager.kPrimaryColor, size: 28),
-              const SizedBox(width: 12),
-              Text(
-                'Order History (${orders.length})',
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
-                    ColorManager.kTitleTextColor),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.sort),
-            onPressed: () {},
-            color: ColorManager.kGreyColor,
-            tooltip: 'Sort orders',
-          ),
-        ],
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 20,
+        vertical: isMobile ? 10 : 16,
       ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.shopping_bag,
+                        color: ColorManager.kPrimaryColor, size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Order History',
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(FontWeightManager.bold,
+                            FontSize.s16, 0, ColorManager.kTitleTextColor),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.sort, size: 20),
+                      onPressed: () {},
+                      color: ColorManager.kGreyColor,
+                      tooltip: 'Sort orders',
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(4),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 32),
+                  child: Text(
+                    '(${orders.length}) · Page $currentPage/$totalPages',
+                    style: buildCustomStyle(FontWeightManager.medium,
+                        FontSize.s12, 0, ColorManager.kGreyColor),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.shopping_bag,
+                        color: ColorManager.kPrimaryColor, size: 28),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Order History (${orders.length})',
+                      style: buildCustomStyle(FontWeightManager.bold,
+                          FontSize.s18, 0, ColorManager.kTitleTextColor),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.sort),
+                  onPressed: () {},
+                  color: ColorManager.kGreyColor,
+                  tooltip: 'Sort orders',
+                ),
+              ],
+            ),
     );
   }
 
@@ -208,26 +256,34 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
   }
 
   Widget _buildErrorState() {
+    final isMobile = widget.size.width < 600;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isMobile ? 12 : 20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline,
-                size: 50, color: ColorManager.kRed),
+            Icon(Icons.error_outline,
+                size: isMobile ? 40 : 50, color: ColorManager.kRed),
             const SizedBox(height: 16),
             Text(
               'Error Loading Orders',
+              textAlign: TextAlign.center,
               style: buildCustomStyle(FontWeightManager.semiBold,
-                  FontSize.s18, 0, ColorManager.kTitleTextColor),
+                  isMobile ? FontSize.s16 : FontSize.s18, 0,
+                  ColorManager.kTitleTextColor),
             ),
             const SizedBox(height: 8),
-            Text(
-              errorMessage ?? 'An unknown error occurred.',
-              textAlign: TextAlign.center,
-              style: buildCustomStyle(FontWeightManager.regular, FontSize.s14,
-                  0, ColorManager.kGreyColor),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 8 : 0),
+              child: Text(
+                errorMessage ?? 'An unknown error occurred.',
+                textAlign: TextAlign.center,
+                softWrap: true,
+                style: buildCustomStyle(FontWeightManager.regular,
+                    FontSize.s14, 0, ColorManager.kGreyColor),
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -244,21 +300,27 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
   }
 
   Widget _buildOrderCard(ListOrderModelData order) {
+    final isMobile = widget.size.width < 600;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isMobile ? 8 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
         border: Border.all(color: ColorManager.kBgDarkColor),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          tilePadding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 10 : 16,
+            vertical: isMobile ? 4 : 8,
+          ),
           leading: _buildOrderStatusIcon(order.status),
           title: Text(
             'Order #${order.orderNumber ?? 'N/A'}',
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15, 0,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold,
+                isMobile ? FontSize.s13 : FontSize.s15, 0,
                 ColorManager.kTitleTextColor),
           ),
           subtitle: Text(
@@ -277,7 +339,8 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
                   Text(
                     '$currency${_getGrandTotal(order)}',
                     style: buildCustomStyle(FontWeightManager.bold,
-                        FontSize.s14, 0, ColorManager.kSuccessColor),
+                        isMobile ? FontSize.s12 : FontSize.s14, 0,
+                        ColorManager.kSuccessColor),
                   ),
                   const SizedBox(height: 2),
                   _buildStatusBadge(order.status),
@@ -331,8 +394,12 @@ class _CustomerOrdersWidgetState extends State<CustomerOrdersWidget> {
   }
 
   Widget _buildOrderDetails(ListOrderModelData order) {
+    final isMobile = widget.size.width < 600;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 10 : 16,
+        vertical: isMobile ? 8 : 12,
+      ),
       decoration: const BoxDecoration(
         color: ColorManager.kBgLightColor,
         borderRadius: BorderRadius.only(

@@ -2372,7 +2372,12 @@ Powered by CloudPOS''',
                       return const SizedBox.shrink();
                     }
 
-                    return _isMobile(context)
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: size.height * 0.45,
+                      ),
+                      child: SingleChildScrollView(
+                        child: _isMobile(context)
                         ? MobileFilters(
                             orderNumberController: orderNumberController,
                             customerNameController: customerNameController,
@@ -2748,7 +2753,9 @@ Powered by CloudPOS''',
                                 ],
                               ),
                             ],
-                          );
+                          ),
+                      ),
+                    );
                   },
                 ),
 

@@ -450,7 +450,8 @@ class _CustomerTransactionsWidgetState
                   : filteredTransactions.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: EdgeInsets.all(
+                              widget.size.width < 600 ? 10 : 16),
                           itemCount: filteredTransactions.length,
                           itemBuilder: (context, index) =>
                               _buildTransactionCard(
@@ -478,6 +479,7 @@ class _CustomerTransactionsWidgetState
   }
 
   Widget _buildHeader() {
+    final isMobile = widget.size.width < 600;
     return Container(
       decoration: const BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
@@ -486,47 +488,110 @@ class _CustomerTransactionsWidgetState
           topRight: Radius.circular(12),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.receipt_long,
-                  color: Color(0xFF3C92F5), size: 28),
-              const SizedBox(width: 12),
-              Text(
-                'Transactions (${filteredTransactions.length})  Page $_currentPage/$_lastPage',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2C3E50),
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.print),
-                onPressed: _printReport,
-                color: const Color(0xFF7F8C8D),
-                tooltip: 'Print transactions',
-              ),
-              IconButton(
-                icon: Icon(_isFilterPanelVisible
-                    ? Icons.filter_list_off
-                    : Icons.filter_list_alt),
-                onPressed: _toggleFilterPanel,
-                color: const Color(0xFF7F8C8D),
-                tooltip: _isFilterPanelVisible
-                    ? 'Close filters'
-                    : 'Filter transactions',
-              ),
-            ],
-          ),
-        ],
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 20,
+        vertical: isMobile ? 10 : 16,
       ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.receipt_long,
+                        color: Color(0xFF3C92F5), size: 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Transactions',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C3E50),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.print, size: 20),
+                      onPressed: _printReport,
+                      color: const Color(0xFF7F8C8D),
+                      tooltip: 'Print transactions',
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(4),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: Icon(
+                        _isFilterPanelVisible
+                            ? Icons.filter_list_off
+                            : Icons.filter_list_alt,
+                        size: 20,
+                      ),
+                      onPressed: _toggleFilterPanel,
+                      color: const Color(0xFF7F8C8D),
+                      tooltip: _isFilterPanelVisible
+                          ? 'Close filters'
+                          : 'Filter transactions',
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(4),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Padding(
+                  padding: const EdgeInsets.only(left: 32),
+                  child: Text(
+                    '(${filteredTransactions.length}) · Page $_currentPage/$_lastPage',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF7F8C8D),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.receipt_long,
+                        color: Color(0xFF3C92F5), size: 28),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Transactions (${filteredTransactions.length})  Page $_currentPage/$_lastPage',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.print),
+                      onPressed: _printReport,
+                      color: const Color(0xFF7F8C8D),
+                      tooltip: 'Print transactions',
+                    ),
+                    IconButton(
+                      icon: Icon(_isFilterPanelVisible
+                          ? Icons.filter_list_off
+                          : Icons.filter_list_alt),
+                      onPressed: _toggleFilterPanel,
+                      color: const Color(0xFF7F8C8D),
+                      tooltip: _isFilterPanelVisible
+                          ? 'Close filters'
+                          : 'Filter transactions',
+                    ),
+                  ],
+                ),
+              ],
+            ),
     );
   }
 
@@ -743,16 +808,16 @@ class _CustomerTransactionsWidgetState
     BuildContext context,
     CustomerTransaction transaction,
   ) {
-    // Determine if this is a credit or debit transaction
     final bool isCredit = _isCreditTransaction(transaction);
     final Color amountColor =
         isCredit ? ColorManager.kSuccessColor : ColorManager.kRed;
+    final isMobile = widget.size.width < 600;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isMobile ? 8 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
         border: Border.all(color: ColorManager.kBgDarkColor),
         boxShadow: [
           BoxShadow(
@@ -765,11 +830,16 @@ class _CustomerTransactionsWidgetState
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          tilePadding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 10 : 16,
+            vertical: isMobile ? 4 : 8,
+          ),
           leading: _buildTransactionIcon(transaction.type),
           title: Text(
             transaction.referenceId ?? 'No Reference',
-            style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s15, 0,
+            overflow: TextOverflow.ellipsis,
+            style: buildCustomStyle(FontWeightManager.semiBold,
+                isMobile ? FontSize.s13 : FontSize.s15, 0,
                 ColorManager.kTitleTextColor),
           ),
           subtitle: Text(
@@ -785,9 +855,9 @@ class _CustomerTransactionsWidgetState
                 '${transaction.amount} ${transaction.currency ?? ''}',
                 style: buildCustomStyle(
                   FontWeightManager.bold,
-                  FontSize.s14,
+                  isMobile ? FontSize.s12 : FontSize.s14,
                   0,
-                  amountColor, // Use credit/debit color
+                  amountColor,
                 ),
               ),
               const SizedBox(height: 2),
