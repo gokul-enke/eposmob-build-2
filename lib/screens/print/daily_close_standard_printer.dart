@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -227,6 +227,19 @@ class DailyCloseStandardPrinter {
                     _buildTableRow('Online Sales', data.totalOnline ?? '0.00', bodyStyle),
                     _buildTableRow('Credit Amount', data.totalCredit ?? '0.00', bodyStyle),
                     _buildTableRow('Credit Collected', data.totalCreditCollected ?? '0.00', bodyStyle),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+
+                // Expenses Breakdown Section
+                pw.Text('EXPENSES BREAKDOWN', style: sectionTitleStyle),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300),
+                  children: [
+                    _buildTableRow('Cash Expenses', data.cashExpenses ?? '0.00', bodyStyle),
+                    _buildTableRow('Bank Expenses', data.bankExpenses ?? '0.00', bodyStyle),
+                    _buildTableRow('Total Expenses', data.totalExpenses ?? '0.00', bodyStyle),
                   ],
                 ),
                 pw.SizedBox(height: 20),
@@ -525,6 +538,19 @@ class DailyCloseStandardPrinter {
                     _buildTableRow('Online Sales', data.totalOnline ?? '0.00', bodyStyle),
                     _buildTableRow('Credit Amount', data.totalCredit ?? '0.00', bodyStyle),
                     _buildTableRow('Credit Collected', data.totalCreditCollected ?? '0.00', bodyStyle),
+                  ],
+                ),
+                pw.SizedBox(height: 20),
+
+                // Expenses Breakdown Section
+                pw.Text('EXPENSES BREAKDOWN', style: sectionTitleStyle),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300),
+                  children: [
+                    _buildTableRow('Cash Expenses', data.cashExpenses ?? '0.00', bodyStyle),
+                    _buildTableRow('Bank Expenses', data.bankExpenses ?? '0.00', bodyStyle),
+                    _buildTableRow('Total Expenses', data.totalExpenses ?? '0.00', bodyStyle),
                   ],
                 ),
                 pw.SizedBox(height: 20),

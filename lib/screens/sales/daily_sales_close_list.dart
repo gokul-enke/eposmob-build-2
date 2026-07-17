@@ -1222,33 +1222,6 @@ class _DayCloseModalState extends State<DayCloseModal> {
           : _openingTimeController.text.trim();
       debugPrint('final openingTimeText for validation: "$openingTimeText"');
 
-      if (workingStartTime != null && openingTimeText != null) {
-        final selectedOpeningTime = _parseTimeOfDay(openingTimeText);
-        debugPrint('parsed selectedOpeningTime: $selectedOpeningTime');
-        if (selectedOpeningTime != null) {
-          final isBefore = _isTimeBefore(selectedOpeningTime, workingStartTime);
-          debugPrint('comparison result selected < workingStart: $isBefore');
-          if (isBefore) {
-            debugPrint('BLOCKED: opening time is before working start time');
-            if (mounted) {
-              showScaffoldError(
-                context: context,
-                message:
-                    'Opening time cannot be before working time start ($workingStartTime).',
-              );
-            }
-            debugPrint('=== DAY CLOSE OPENING CHECK DEBUG END (BLOCKED) ===');
-            return;
-          }
-        } else {
-          debugPrint('WARNING: selectedOpeningTime parsed as null');
-        }
-      } else {
-        debugPrint(
-          'SKIP CHECK: workingStartTime or openingTimeText is null/empty',
-        );
-      }
-
       debugPrint('=== DEBUG: createDailySalesClose CALLER CONTEXT ===');
       debugPrint('store_id: $storeId');
       debugPrint('Summary opening_time: ${summary?.openingTime}');
