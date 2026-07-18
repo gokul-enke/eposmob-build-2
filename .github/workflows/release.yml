@@ -54,8 +54,37 @@ jobs:
         run: |
           cp dependencies/*.dll build/windows/x64/runner/Release/
 
-      - name: Verify Files in Release Directory
-        run: dir build/windows/x64/runner/Release/
+      - name: Verify Release DLLs
+        shell: pwsh
+        run: |
+          $releaseDir = "build/windows/x64/runner/Release"
+          Get-ChildItem $releaseDir | Format-Table Name, Length
+          $required = @(
+            "cloudpos.exe",
+            "flutter_windows.dll",
+            "flutter_pos_printer_platform_image_3_plugin.dll",
+            "msvcp140.dll",
+            "vcruntime140.dll",
+            "vcruntime140_1.dll"
+          )
+          foreach ($name in $required) {
+            $path = Join-Path $releaseDir $name
+            if (-not (Test-Path $path)) {
+              throw "Missing required file: $path"
+            }
+            $info = Get-Item $path
+            if ($info.Length -lt 1024) {
+              throw "File looks corrupt/empty: $path ($($info.Length) bytes)"
+            }
+            Write-Host "OK $name ($($info.Length) bytes)"
+          }
+          # Fail if printer DLL is not a PE (MZ header) — catches truncated copies early
+          $printerDll = Join-Path $releaseDir "flutter_pos_printer_platform_image_3_plugin.dll"
+          $bytes = [System.IO.File]::ReadAllBytes($printerDll)[0..1]
+          if ([char]$bytes[0] -ne 'M' -or [char]$bytes[1] -ne 'Z') {
+            throw "Printer plugin DLL is not a valid PE image: $printerDll"
+          }
+          Write-Host "Printer plugin DLL PE header OK"
 
       - name: Install Inno Setup
         run: |
