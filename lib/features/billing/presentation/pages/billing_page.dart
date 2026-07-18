@@ -9771,6 +9771,12 @@ class BillingPageState extends State<BillingPage>
   Future<void> _checkOpenShiftRequired() async {
     if (!mounted) return;
     try {
+      final appSettingsProvider =
+          Provider.of<AppSettingsProvider>(context, listen: false);
+      final compulsoryShiftOpen =
+          appSettingsProvider.appSettings?.compulsoryShiftOpen ?? false;
+      if (!compulsoryShiftOpen) return;
+
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final storeSession =
           Provider.of<StoreSessionProvider>(context, listen: false);

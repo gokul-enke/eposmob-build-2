@@ -178,93 +178,114 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                 : Column(
                     children: [
                       // Header Section
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: ColorManager.kPrimaryWithOpacity10,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12),
-                            topRight: Radius.circular(12),
+                      Builder(builder: (context) {
+                        final isMobile = size.width < 600;
+                        return Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: ColorManager.kPrimaryWithOpacity10,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(isMobile ? 8 : 12),
+                              topRight: Radius.circular(isMobile ? 8 : 12),
+                            ),
                           ),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 24, horizontal: 24),
-                        child: Row(
-                          children: [
-                            // Address Icon
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color:
-                                    ColorManager.kPrimaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(
-                                    color: ColorManager.kPrimaryColor
-                                        .withOpacity(0.2),
-                                    width: 2),
-                              ),
-                              child: const Icon(
-                                Icons.location_on,
-                                size: 32,
-                                color: ColorManager.kPrimaryColor,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            // Address Header Info
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Address Information",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.bold,
-                                      FontSize.s20,
-                                      0,
-                                      ColorManager.kTitleTextColor,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Customer: ${currentCustomer?.name ?? "N/A"}",
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s14,
-                                      0,
-                                      ColorManager.kGreyColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            // Add Address Button
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  addressToEdit = null;
-                                  showForm = true;
-                                });
-                              },
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text("Add New"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: ColorManager.kPrimaryColor,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                          padding: EdgeInsets.symmetric(
+                            vertical: isMobile ? 12 : 24,
+                            horizontal: isMobile ? 12 : 24,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: isMobile ? 40 : 60,
+                                height: isMobile ? 40 : 60,
+                                decoration: BoxDecoration(
+                                  color: ColorManager.kPrimaryColor
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(
+                                      isMobile ? 20 : 30),
+                                  border: Border.all(
+                                      color: ColorManager.kPrimaryColor
+                                          .withOpacity(0.2),
+                                      width: 2),
+                                ),
+                                child: Icon(
+                                  Icons.location_on,
+                                  size: isMobile ? 22 : 32,
+                                  color: ColorManager.kPrimaryColor,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
+                              SizedBox(width: isMobile ? 8 : 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Address Information",
+                                      overflow: TextOverflow.ellipsis,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.bold,
+                                        isMobile ? FontSize.s16 : FontSize.s20,
+                                        0,
+                                        ColorManager.kTitleTextColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "Customer: ${currentCustomer?.name ?? "N/A"}",
+                                      overflow: TextOverflow.ellipsis,
+                                      style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        isMobile ? FontSize.s12 : FontSize.s14,
+                                        0,
+                                        ColorManager.kGreyColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: isMobile ? 4 : 16),
+                              isMobile
+                                  ? IconButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          addressToEdit = null;
+                                          showForm = true;
+                                        });
+                                      },
+                                      icon: const Icon(Icons.add_circle,
+                                          color: ColorManager.kPrimaryColor),
+                                      tooltip: 'Add New Address',
+                                      constraints: const BoxConstraints(),
+                                      padding: const EdgeInsets.all(4),
+                                    )
+                                  : ElevatedButton.icon(
+                                      onPressed: () {
+                                        setState(() {
+                                          addressToEdit = null;
+                                          showForm = true;
+                                        });
+                                      },
+                                      icon: const Icon(Icons.add, size: 18),
+                                      label: const Text("Add New"),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            ColorManager.kPrimaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        );
+                      }),
 
                       // Content Section
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.all(size.width < 600 ? 12 : 24),
                           child: SingleChildScrollView(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,11 +375,13 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
     required List<Widget> children,
     VoidCallback? onEdit,
   }) {
+    final isMobile = widget.size.width < 600;
+    final radius = isMobile ? 8.0 : 12.0;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: ColorManager.kSecondaryColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: ColorManager.kPrimaryWithOpacity10),
       ),
       child: Column(
@@ -366,12 +389,12 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
         children: [
           // Card Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
             decoration: BoxDecoration(
               color: ColorManager.kPrimaryWithOpacity10,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(radius),
+                topRight: Radius.circular(radius),
               ),
             ),
             child: Row(
@@ -382,17 +405,20 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
                   color: ColorManager.kPrimaryColor,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s14,
-                    0.30,
-                    ColorManager.kPrimaryColor,
+                Flexible(
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s14,
+                      0.30,
+                      ColorManager.kPrimaryColor,
+                    ),
                   ),
                 ),
                 if (onEdit != null) ...[
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.edit,
                         size: 20, color: ColorManager.kPrimaryColor),
@@ -406,7 +432,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
           ),
           // Card Content
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isMobile ? 12 : 16),
             child: Column(
               children: children,
             ),
@@ -422,22 +448,24 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
     required String value,
     Color? valueColor,
   }) {
+    final isMobile = widget.size.width < 600;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 36,
-          height: 36,
+          width: isMobile ? 30 : 36,
+          height: isMobile ? 30 : 36,
           decoration: BoxDecoration(
             color: ColorManager.kPrimaryWithOpacity10,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(isMobile ? 6 : 8),
           ),
           child: Icon(
             icon,
-            size: 18,
+            size: isMobile ? 16 : 18,
             color: ColorManager.kPrimaryColor,
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: isMobile ? 8 : 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,6 +482,7 @@ class _CustomerAddressViewWidgetState extends State<CustomerAddressViewWidget> {
               const SizedBox(height: 2),
               Text(
                 value,
+                softWrap: true,
                 style: buildCustomStyle(
                   FontWeightManager.regular,
                   FontSize.s14,

@@ -47,12 +47,13 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = widget.size.width < 600;
     return Expanded(
       child: BuildBoxShadowContainer(
-        margin: EdgeInsets.all(widget.size.width < 600 ? 10 : 24),
+        margin: EdgeInsets.all(isMobile ? 10 : 24),
         padding: const EdgeInsets.all(0),
         height: widget.size.height * 0.75,
-        width: widget.size.width / 1.8,
+        width: isMobile ? double.infinity : widget.size.width / 1.8,
         circleRadius: 12,
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -95,17 +96,18 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
   }
 
   Widget _buildLoyaltyContent() {
+    final isMobile = widget.size.width < 600;
     return Column(
       children: [
         _buildHeader(),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(isMobile ? 12 : 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildLoyaltyCard(),
-                const SizedBox(height: 24),
+                SizedBox(height: isMobile ? 16 : 24),
                 _buildLoyaltyDetails(),
               ],
             ),
@@ -116,6 +118,7 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
   }
 
   Widget _buildHeader() {
+    final isMobile = widget.size.width < 600;
     return Container(
       decoration: BoxDecoration(
         color: ColorManager.kPrimaryWithOpacity10,
@@ -124,17 +127,32 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
           topRight: Radius.circular(12),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 20,
+        vertical: isMobile ? 10 : 16,
+      ),
       child: Row(
         children: [
-          const Icon(Icons.card_membership,
-              color: ColorManager.kPrimaryColor, size: 28),
-          const SizedBox(width: 12),
-          Text(
-            'Loyalty Program',
-            style: buildCustomStyle(FontWeightManager.bold, FontSize.s18, 0,
-                ColorManager.kTitleTextColor),
-          ),
+          Icon(Icons.card_membership,
+              color: ColorManager.kPrimaryColor, size: isMobile ? 24 : 28),
+          SizedBox(width: isMobile ? 8 : 12),
+          isMobile
+              ? Expanded(
+                  child: Text(
+                    'Loyalty Program',
+                    softWrap: true,
+                    style: buildCustomStyle(FontWeightManager.bold,
+                        FontSize.s16, 0, ColorManager.kTitleTextColor),
+                  ),
+                )
+              : Flexible(
+                  child: Text(
+                    'Loyalty Program',
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(FontWeightManager.bold,
+                        FontSize.s18, 0, ColorManager.kTitleTextColor),
+                  ),
+                ),
         ],
       ),
     );
@@ -142,12 +160,14 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
 
   Widget _buildLoyaltyCard() {
     final cardColor = _getLoyaltyCardColor(widget.customer.membershipName);
+    final isMobile = widget.size.width < 600;
 
     return Container(
       width: double.infinity,
-      height: 200,
+      height: isMobile ? null : 200,
+      constraints: isMobile ? const BoxConstraints(minHeight: 170) : null,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -160,57 +180,90 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
               offset: const Offset(0, 6))
         ],
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -60,
-            bottom: -60,
-            child: Icon(Icons.stars,
-                size: 180, color: Colors.white.withOpacity(0.1)),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'EPOS Loyalty',
-                      style: buildCustomStyle(FontWeightManager.bold,
-                          FontSize.s20, 0, Colors.white),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20)),
-                      child: Text(
-                        widget.customer.membershipName ?? "Bronze",
-                        style: buildCustomStyle(FontWeightManager.semiBold,
-                            FontSize.s12, 0, Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  widget.customer.name ?? 'Customer Name',
-                  style: buildCustomStyle(FontWeightManager.semiBold,
-                      FontSize.s18, 0, Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.customer.cardNumber ?? 'N/A',
-                  style: buildCustomStyle(FontWeightManager.regular,
-                      FontSize.s14, 0, Colors.white.withOpacity(0.9)),
-                ),
-              ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -60,
+              bottom: -60,
+              child: Icon(Icons.stars,
+                  size: 180, color: Colors.white.withOpacity(0.1)),
             ),
-          ),
-        ],
+            Padding(
+              padding: EdgeInsets.all(isMobile ? 14 : 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: isMobile ? MainAxisSize.min : MainAxisSize.max,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      isMobile
+                          ? Expanded(
+                              child: Text(
+                                'EPOS Loyalty',
+                                softWrap: true,
+                                style: buildCustomStyle(FontWeightManager.bold,
+                                    FontSize.s16, 0, Colors.white),
+                              ),
+                            )
+                          : Flexible(
+                              child: Text(
+                                'EPOS Loyalty',
+                                softWrap: true,
+                                style: buildCustomStyle(FontWeightManager.bold,
+                                    FontSize.s20, 0, Colors.white),
+                              ),
+                            ),
+                      SizedBox(width: isMobile ? 8 : 12),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 8 : 12,
+                            vertical: isMobile ? 4 : 6),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20)),
+                        child: Text(
+                          widget.customer.membershipName ?? "Bronze",
+                          style: buildCustomStyle(
+                              FontWeightManager.semiBold,
+                              isMobile ? FontSize.s10 : FontSize.s12,
+                              0,
+                              Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                  isMobile
+                      ? const SizedBox(height: 24)
+                      : const Spacer(),
+                  Text(
+                    widget.customer.name ?? 'Customer Name',
+                    softWrap: true,
+                    maxLines: isMobile ? null : 2,
+                    overflow: isMobile ? null : TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                        FontWeightManager.semiBold,
+                        isMobile ? FontSize.s15 : FontSize.s18,
+                        0,
+                        Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.customer.cardNumber ?? 'N/A',
+                    softWrap: true,
+                    style: buildCustomStyle(
+                        FontWeightManager.regular,
+                        isMobile ? FontSize.s12 : FontSize.s14,
+                        0,
+                        Colors.white.withOpacity(0.9)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -264,42 +317,83 @@ class _CustomerLoyaltyWidgetState extends State<CustomerLoyaltyWidget> {
     Color? valueColor,
     bool showDivider = true,
   }) {
+    final isMobile = widget.size.width < 600;
+
+    Widget buildLabel() {
+      if (isMobile) {
+        return Expanded(
+          flex: 3,
+          child: Text(
+            title,
+            softWrap: true,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s14,
+                0, ColorManager.kGreyColor),
+          ),
+        );
+      }
+      return Expanded(
+        child: Text(
+          title,
+          overflow: TextOverflow.ellipsis,
+          style: buildCustomStyle(FontWeightManager.medium, FontSize.s14, 0,
+              ColorManager.kGreyColor),
+        ),
+      );
+    }
+
+    Widget buildValue(String text, Color color) {
+      if (isMobile) {
+        return Expanded(
+          flex: 2,
+          child: Text(
+            text,
+            textAlign: TextAlign.right,
+            softWrap: true,
+            style:
+                buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0, color),
+          ),
+        );
+      }
+      return Flexible(
+        child: Text(
+          text,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.right,
+          style:
+              buildCustomStyle(FontWeightManager.bold, FontSize.s14, 0, color),
+        ),
+      );
+    }
+
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 12 : 16,
+            vertical: isMobile ? 10 : 12,
+          ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: ColorManager.kPrimaryColor, size: 22),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  title,
-                  style: buildCustomStyle(FontWeightManager.medium,
-                      FontSize.s14, 0, ColorManager.kGreyColor),
-                ),
-              ),
+              Icon(icon,
+                  color: ColorManager.kPrimaryColor,
+                  size: isMobile ? 18 : 22),
+              SizedBox(width: isMobile ? 12 : 16),
+              buildLabel(),
+              const SizedBox(width: 8),
               if (title == 'Price Per Point')
                 Consumer<AppSettingsProvider>(
                   builder: (context, appSettingsProvider, child) {
                     final currency =
                         appSettingsProvider.appSettings?.currency ?? 'INR';
-                    return Text(
+                    return buildValue(
                       '$currency${widget.customer.pricePerPoint?.toStringAsFixed(2) ?? '0.00'}',
-                      style: buildCustomStyle(
-                          FontWeightManager.bold,
-                          FontSize.s14,
-                          0,
-                          valueColor ?? ColorManager.kTitleTextColor),
+                      valueColor ?? ColorManager.kTitleTextColor,
                     );
                   },
                 )
               else
-                Text(
-                  value,
-                  style: buildCustomStyle(FontWeightManager.bold, FontSize.s14,
-                      0, valueColor ?? ColorManager.kTitleTextColor),
-                ),
+                buildValue(value, valueColor ?? ColorManager.kTitleTextColor),
             ],
           ),
         ),

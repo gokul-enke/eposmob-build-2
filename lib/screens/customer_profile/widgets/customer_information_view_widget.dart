@@ -34,6 +34,7 @@ class _CustomerInformationViewWidgetState
   @override
   Widget build(BuildContext context) {
     Size size = widget.size;
+    final isMobile = size.width < 700;
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
     final bool isZatcaPhase1Enabled = appSettings?.zatcaPhase1Enabled ?? false;
@@ -42,50 +43,53 @@ class _CustomerInformationViewWidgetState
         margin: EdgeInsets.all(size.width < 600 ? 10 : 24),
         padding: const EdgeInsets.all(0),
         height: size.height * 0.75,
-        circleRadius: 12,
+        circleRadius: isMobile ? 8 : 12,
         child: Column(
           children: [
             // Header Section
             Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: ColorManager.kPrimaryWithOpacity10,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
+                  topLeft: Radius.circular(isMobile ? 8 : 12),
+                  topRight: Radius.circular(isMobile ? 8 : 12),
                 ),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+              padding: EdgeInsets.symmetric(
+                vertical: isMobile ? 12 : 24,
+                horizontal: isMobile ? 12 : 24,
+              ),
               child: Row(
                 children: [
-                  // Avatar Circle
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: isMobile ? 40 : 60,
+                    height: isMobile ? 40 : 60,
                     decoration: BoxDecoration(
                       color: ColorManager.kPrimaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius:
+                          BorderRadius.circular(isMobile ? 20 : 30),
                       border: Border.all(
                           color: ColorManager.kPrimaryColor.withOpacity(0.2),
                           width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.person,
-                      size: 32,
+                      size: isMobile ? 22 : 32,
                       color: ColorManager.kPrimaryColor,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  // Customer Name and ID
+                  SizedBox(width: isMobile ? 8 : 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           widget.customer?.name ?? "Customer Name",
+                          overflow: TextOverflow.ellipsis,
                           style: buildCustomStyle(
                             FontWeightManager.bold,
-                            FontSize.s20,
+                            isMobile ? FontSize.s16 : FontSize.s20,
                             0,
                             ColorManager.kTitleTextColor,
                           ),
@@ -93,11 +97,12 @@ class _CustomerInformationViewWidgetState
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // Customer Type Badge
+                  SizedBox(width: isMobile ? 4 : 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: size.width < 600 ? 6 : 10,
+                      vertical: size.width < 600 ? 4 : 6,
+                    ),
                     decoration: BoxDecoration(
                       color: (widget.customer?.customerType ?? 'B2C')
                                   .toUpperCase() ==
@@ -116,7 +121,7 @@ class _CustomerInformationViewWidgetState
                       (widget.customer?.customerType ?? 'B2C').toUpperCase(),
                       style: buildCustomStyle(
                         FontWeightManager.medium,
-                        FontSize.s11,
+                        size.width < 600 ? FontSize.s10 : FontSize.s11,
                         0.18,
                         (widget.customer?.customerType ?? 'B2C')
                                     .toUpperCase() ==
@@ -126,20 +131,22 @@ class _CustomerInformationViewWidgetState
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // Status Badge
+                  SizedBox(width: size.width < 600 ? 4 : 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: size.width < 600 ? 6 : 12,
+                      vertical: size.width < 600 ? 4 : 6,
+                    ),
                     decoration: BoxDecoration(
                       color: ColorManager.kSuccessColor,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius:
+                          BorderRadius.circular(size.width < 600 ? 12 : 20),
                     ),
                     child: Text(
                       "Active",
                       style: buildCustomStyle(
                         FontWeightManager.medium,
-                        FontSize.s12,
+                        size.width < 600 ? FontSize.s10 : FontSize.s12,
                         0.30,
                         Colors.white,
                       ),
@@ -152,7 +159,7 @@ class _CustomerInformationViewWidgetState
             // Content Section
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(widget.size.width < 600 ? 12 : 24),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,11 +315,13 @@ class _CustomerInformationViewWidgetState
     required IconData icon,
     required List<Widget> children,
   }) {
+    final isMobile = widget.size.width < 700;
+    final radius = isMobile ? 8.0 : 12.0;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: ColorManager.kSecondaryColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: ColorManager.kPrimaryWithOpacity10),
       ),
       child: Column(
@@ -321,11 +330,11 @@ class _CustomerInformationViewWidgetState
           // Card Header
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: ColorManager.kPrimaryWithOpacity10,
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+                topLeft: Radius.circular(radius),
+                topRight: Radius.circular(radius),
               ),
             ),
             child: Row(
@@ -336,13 +345,16 @@ class _CustomerInformationViewWidgetState
                   color: ColorManager.kPrimaryColor,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.30,
-                    ColorManager.kPrimaryColor,
+                Flexible(
+                  child: Text(
+                    title,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s16,
+                      0.30,
+                      ColorManager.kPrimaryColor,
+                    ),
                   ),
                 ),
               ],
@@ -413,12 +425,13 @@ class _CustomerInformationViewWidgetState
   }
 
   Widget _buildQuickActions() {
+    final isMobile = widget.size.width < 700;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 10 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
         border: Border.all(color: ColorManager.kPrimaryWithOpacity10),
         boxShadow: [
           BoxShadow(
@@ -708,11 +721,13 @@ class _CustomerInformationViewWidgetState
   }
 
   Widget _buildTransactionHistoryCard() {
+    final isMobile = widget.size.width < 700;
+    final radius = isMobile ? 8.0 : 12.0;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: ColorManager.kSecondaryColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: ColorManager.kPrimaryWithOpacity10),
       ),
       child: Column(
@@ -721,11 +736,11 @@ class _CustomerInformationViewWidgetState
           // Card Header
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: ColorManager.kPrimaryWithOpacity10,
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+                topLeft: Radius.circular(radius),
+                topRight: Radius.circular(radius),
               ),
             ),
             child: Row(
@@ -736,13 +751,16 @@ class _CustomerInformationViewWidgetState
                   color: ColorManager.kPrimaryColor,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  "Recent Transactions",
-                  style: buildCustomStyle(
-                    FontWeightManager.semiBold,
-                    FontSize.s16,
-                    0.30,
-                    ColorManager.kPrimaryColor,
+                Flexible(
+                  child: Text(
+                    "Recent Transactions",
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.semiBold,
+                      FontSize.s16,
+                      0.30,
+                      ColorManager.kPrimaryColor,
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -872,11 +890,11 @@ class _CustomerInformationViewWidgetState
           if (widget.customer!.transactions!.length > 3)
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: ColorManager.kPrimaryWithOpacity10,
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(12),
-                  bottomRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(radius),
+                  bottomRight: Radius.circular(radius),
                 ),
               ),
               child: Center(

@@ -55,6 +55,7 @@ class AppSettings {
   final bool compulsoryDayCloseRegister;
   final bool productVariantEnabled;
   final bool allowOverselling;
+  final bool compulsoryShiftOpen;
 
   AppSettings({
     required this.barcodeSales,
@@ -95,6 +96,7 @@ class AppSettings {
     this.compulsoryDayCloseRegister = false,
     this.productVariantEnabled = false,
     this.allowOverselling = true,
+    this.compulsoryShiftOpen = false,
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -215,6 +217,11 @@ class AppSettings {
         settingsMap,
         'ALLOW_OVERSELL',
         defaultValue: true,
+      ),
+      compulsoryShiftOpen: _readSettingStatus(
+        settingsMap,
+        'COMPULSORY_SHIFT_OPEN_',
+        defaultValue: false,
       ),
     );
   }
@@ -437,6 +444,12 @@ class AppSettings {
           "code": "ALLOW_OVERSELL",
           "value": "",
           "status": allowOverselling.toString(),
+        },
+        {
+          "name": "Compulsory Shift Open",
+          "code": "COMPULSORY_SHIFT_OPEN_",
+          "value": "",
+          "status": compulsoryShiftOpen.toString(),
         },
       ],
     };
