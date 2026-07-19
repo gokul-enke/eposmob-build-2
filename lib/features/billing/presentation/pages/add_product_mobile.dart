@@ -846,7 +846,6 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           await addCreatedProductToCart(
             context: context,
             product: createdProduct,
-            quantityText: _quantityController.text,
             sellingPriceText: _sellingPriceController.text,
           );
           if (!mounted) return;

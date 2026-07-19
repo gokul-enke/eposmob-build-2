@@ -8,10 +8,12 @@ import 'package:provider/provider.dart';
 /// Routes a freshly created product through [ProductCartHelper] so mobile
 /// create-and-add matches the standard add-to-cart path (stock modal, sale
 /// units, reservations, wholesale/tax).
+///
+/// Cart quantity is always `1`. The create-product form's quantity field is
+/// opening stock for the catalog, not the line qty to sell.
 Future<void> addCreatedProductToCart({
   required BuildContext context,
   required GetProduct product,
-  required String quantityText,
   required String sellingPriceText,
   int? customerId,
   String? customerName,
@@ -24,7 +26,7 @@ Future<void> addCreatedProductToCart({
   await ProductCartHelper.handleProductSelection(
     context: context,
     product: product,
-    quantity: AddProductFormHelpers.parseAddToCartQuantity(quantityText),
+    quantity: 1,
     customPrice:
         AddProductFormHelpers.parseAddToCartSellingPrice(sellingPriceText),
     addToCartDirectly: true,

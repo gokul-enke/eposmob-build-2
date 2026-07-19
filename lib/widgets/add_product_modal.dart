@@ -2846,7 +2846,6 @@ class _AddProductWithBarcodeModalState
             await addCreatedProductToCart(
               context: context,
               product: createdProduct,
-              quantityText: _productQuantityController.text,
               sellingPriceText: _productSellingPriceController.text,
             );
             if (!mounted) {

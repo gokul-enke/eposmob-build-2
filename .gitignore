@@ -61,3 +61,4 @@ Todo.md
 
 .env*
 /local-release
+/.cursor

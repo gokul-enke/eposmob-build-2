@@ -395,8 +395,8 @@ class AddProductFormHelpers {
     return true;
   }
 
-  /// Cart quantity from the add-product form; invalid or non-positive values
-  /// fall back to [defaultValue] (opening stock "0" should still add 1 to cart).
+  /// Parses a quantity string for cart use; invalid or non-positive values
+  /// fall back to [defaultValue].
   static num parseAddToCartQuantity(String text, {num defaultValue = 1}) {
     final parsed = num.tryParse(text.trim());
     if (parsed == null || parsed <= 0) return defaultValue;

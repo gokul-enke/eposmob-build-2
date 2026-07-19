@@ -171,7 +171,7 @@ void main() {
     expect(matches.first.productName, 'Updated Name');
   });
 
-  // ── Mobile create-and-add: form quantity parsing for cart (not opening stock) ─
+  // ── Create-and-add: cart qty is always 1; form quantity is opening stock ─
 
   test('parseAddToCartQuantity treats form default "0" as cart qty 1', () {
     expect(
@@ -181,19 +181,21 @@ void main() {
     );
   });
 
-  test('P-02 sign-off: parsed qty 3 adds single cart line with quantity 3', () {
+  test('P-02 sign-off: create-and-add uses cart qty 1 with form selling price',
+      () {
     final provider = LocalProductProvider()..setStockEnabled(false);
-    final product = makeProduct(id: 101, barcode: 'BC-101', name: 'Created Qty3');
+    final product =
+        makeProduct(id: 101, barcode: 'BC-101', name: 'Created Qty1');
     provider.addProduct(product);
 
-    final quantity = AddProductFormHelpers.parseAddToCartQuantity('3');
+    // Opening stock on the form may be 100; cart line after create is always 1.
+    const cartQuantity = 1;
     final price = AddProductFormHelpers.parseAddToCartSellingPrice('120');
 
-    provider.addToCart(product: product, quantity: quantity, price: price);
+    provider.addToCart(product: product, quantity: cartQuantity, price: price);
 
-    expect(quantity, 3);
     expect(provider.cartItems, hasLength(1));
-    expect(provider.cartItems.single.quantity, 3);
+    expect(provider.cartItems.single.quantity, 1);
     expect(provider.cartItems.single.price, 120);
   });
 }
