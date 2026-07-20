@@ -173,7 +173,7 @@ class OrderDetailWidget extends StatelessWidget {
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.netTotal)}",
-                                  title: "Net amount",
+                                  title: "Net Total (Inc Tax)",
                                   color: ColorManager.textColor,
                                   firstRowTextStyle: buildCustomStyle(
                                     FontWeightManager.semiBold,
@@ -190,29 +190,10 @@ class OrderDetailWidget extends StatelessWidget {
                                 ),
                                 BuildPaymentRow(
                                   amount:
-                                      "$currency ${_formatAmount(effectivePriceSummary.totalMrp ?? _calculateTotalMRP())}",
-                                  title: "Total MRP",
+                                      "$currency ${_formatAmount(effectivePriceSummary.netExcTax ?? orderDetailsModelData?.cart?.priceSummary?.netExcTax)}",
+                                  title: "Net Total (Without Tax)",
                                   color: ColorManager.textColor,
                                 ),
-                                if ((effectivePriceSummary.savedTotal ?? 0) > 0)
-                                  BuildPaymentRow(
-                                    amount:
-                                        "$currency ${_formatAmount(effectivePriceSummary.savedTotal)}",
-                                    title: "You saved",
-                                    color: ColorManager.textColor,
-                                    // firstRowTextStyle: buildCustomStyle(
-                                    //   FontWeightManager.semiBold,
-                                    //   FontSize.s14,
-                                    //   0.21,
-                                    //   ColorManager.kButtonGreen,
-                                    // ),
-                                    // secondRowTextStyle: buildCustomStyle(
-                                    //   FontWeightManager.semiBold,
-                                    //   FontSize.s14,
-                                    //   0.21,
-                                    //   ColorManager.kButtonGreen,
-                                    // ),
-                                  ),
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.discount)}",
@@ -226,6 +207,24 @@ class OrderDetailWidget extends StatelessWidget {
                                   color: ColorManager.textColor,
                                 ),
                                 const Divider(thickness: 2),
+                                BuildPaymentRow(
+                                  amount:
+                                      "$currency ${_formatAmount(effectivePriceSummary.subTotal)}",
+                                  title: "Sub Total",
+                                  secondRowTextStyle: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    FontSize.s15,
+                                    0.23,
+                                    ColorManager.kButtonGreen,
+                                  ),
+                                  firstRowTextStyle: buildCustomStyle(
+                                    FontWeightManager.bold,
+                                    FontSize.s15,
+                                    0.23,
+                                    ColorManager.kButtonGreen,
+                                  ),
+                                  color: ColorManager.kButtonGreen,
+                                ),
                                 BuildPaymentRow(
                                   amount:
                                       "$currency ${_formatAmount(effectivePriceSummary.netPayable)}",
