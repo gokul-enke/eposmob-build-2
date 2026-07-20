@@ -1,9 +1,8 @@
 name: Build MSIX for Manual Store Upload
 
 on:
-  push:
-    tags:
-      - v*
+  # MSIX is a separate manual/store package and is not part of the three-file
+  # APK, Windows installer, and Linux release triggered by a v* tag.
   workflow_dispatch:
 
 permissions:

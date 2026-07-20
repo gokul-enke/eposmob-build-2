@@ -10,18 +10,6 @@ permissions:
 
 jobs:
   build-and-release-linux:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: eeezeeerp
-            url: "https://eeezeeerp.cloudposai.com"
-          - name: eposdemo
-            url: "https://eposdemo.yougoit.in"
-          - name: linetolinepos
-            url: "https://linetolinepos.yougoit.in"
-          - name: hypersouq
-            url: "https://epos.hypersouq.in"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,16 +36,29 @@ jobs:
       - name: Install project dependencies
         run: flutter pub get
 
+      - name: Read app version from pubspec
+        id: app_version
+        shell: bash
+        run: |
+          version="$(awk '$1 == "version:" { print $2; exit }' pubspec.yaml | tr -d '\r')"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?$ ]]; then
+            echo "Unsupported pubspec version: $version" >&2
+            exit 1
+          fi
+          release_version="${version//+/.}"
+          echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
+          echo "Release version: $release_version"
+
       - name: Create .env file
         run: echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" > .env
 
       - name: Build Linux artifacts
-        run: flutter build linux --release -v --dart-define=BASE_URL=${{ matrix.url }}
+        run: flutter build linux --release -v --dart-define=BASE_URL=https://eeezeeerp.cloudposai.com
 
       - name: Package Linux bundle
         run: |
           cd build/linux/x64/release/bundle
-          tar -czf ../../cloudpos-${{ matrix.name }}-linux-${{ github.ref_name }}.tar.gz .
+          tar -czf ../../cloudpos-${{ steps.app_version.outputs.release_version }}-linux.tar.gz .
 
       - name: Verify Linux package
         run: ls -la build/linux/x64/
@@ -65,12 +66,12 @@ jobs:
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
-          path: build/linux/x64/cloudpos-${{ matrix.name }}-linux-${{ github.ref_name }}.tar.gz
-          name: cloudpos-${{ matrix.name }}-linux-${{ github.ref_name }}.tar.gz
+          path: build/linux/x64/cloudpos-${{ steps.app_version.outputs.release_version }}-linux.tar.gz
+          name: cloudpos-${{ steps.app_version.outputs.release_version }}-linux.tar.gz
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/linux/x64/cloudpos-${{ matrix.name }}-linux-${{ github.ref_name }}.tar.gz
+          files: build/linux/x64/cloudpos-${{ steps.app_version.outputs.release_version }}-linux.tar.gz
           draft: true
           prerelease: true
