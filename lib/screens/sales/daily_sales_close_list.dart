@@ -278,7 +278,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                     _buildTableHeader('Sales Executive'),
                     _buildTableHeader('Phone'),
                     _buildTableHeader('Store'),
-                    _buildTableHeader('Closing Period'),
+                    _buildTableHeader('Business Date'),
                     _buildTableHeader('Total Orders'),
                     _buildTableHeader('Total Sales'),
                     _buildTableHeader('Online Sales'),
@@ -365,7 +365,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                             ),
                             SizedBox(
                               height: 55,
-                              child: _buildTableCell(data.closingPeriod ?? '-'),
+                              child: _buildTableCell(data.businessDate ?? '-'),
                             ),
                             SizedBox(
                               height: 55,
@@ -1304,9 +1304,21 @@ class _DayCloseModalState extends State<DayCloseModal> {
       } else {
         debugPrint('DAY CLOSE RESULT FAILURE: ${result['message']}');
         if (mounted) {
+          String errorMessage =
+              result['message'] ?? 'Failed to create day close';
+          final errors = result['errors'];
+          if (errors != null && errors is Map) {
+            final errorDetails = errors.values
+                .expand((e) => e is List ? e : [e])
+                .join('\n');
+            if (errorDetails.isNotEmpty) {
+              errorMessage = '$errorMessage:\n$errorDetails';
+            }
+          }
+
           showScaffoldError(
             context: context,
-            message: result['message'] ?? 'Failed to create day close',
+            message: errorMessage,
           );
         }
       }
@@ -2710,7 +2722,7 @@ class _DayCloseMobileCard extends StatelessWidget {
                   MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    data.closingPeriod ?? '-',
+                    data.businessDate ?? '-',
                     style: buildCustomStyle(
                       FontWeightManager.semiBold,
                       FontSize.s13, 0.19,
