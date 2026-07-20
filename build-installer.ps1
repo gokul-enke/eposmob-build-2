@@ -1,5 +1,6 @@
 param(
   [string]$BaseUrl = "https://eeezeeerp.cloudposai.com",
+  [string]$InnoSetupPath,
   [switch]$SkipClean
 )
 
@@ -16,18 +17,29 @@ if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
   throw "Flutter was not found on PATH. Install Flutter and reopen PowerShell."
 }
 
-$isccCandidates = @(
-  "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-  "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
-)
-$iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $iscc) {
-  $isccCommand = Get-Command ISCC.exe -ErrorAction SilentlyContinue
-  if ($isccCommand) { $iscc = $isccCommand.Source }
+$iscc = $null
+if ($InnoSetupPath) {
+  if (-not (Test-Path -LiteralPath $InnoSetupPath)) {
+    throw "The specified Inno Setup compiler was not found: $InnoSetupPath"
+  }
+  $iscc = (Resolve-Path -LiteralPath $InnoSetupPath).Path
+} else {
+  $isccCandidates = @(
+    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+    "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+  )
+  $iscc = $isccCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+
+  if (-not $iscc) {
+    $isccCommand = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if ($isccCommand) { $iscc = $isccCommand.Source }
+  }
 }
 if (-not $iscc) {
-  throw "Inno Setup was not found. Install it with: winget install JRSoftware.InnoSetup"
+  throw "Inno Setup is installed but ISCC.exe was not found. Locate it with: where.exe /r C:\\ ISCC.exe, then run with -InnoSetupPath <full path>"
 }
+Write-Host "Using Inno Setup: $iscc"
 
 $versionLine = Get-Content pubspec.yaml |
   Where-Object { $_ -match '^version:\s+\S+' } |

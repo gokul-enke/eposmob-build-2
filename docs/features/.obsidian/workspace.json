@@ -4,17 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "c3040b593661defe",
+        "id": "8303f14c4b46a2b3",
         "type": "tabs",
         "children": [
           {
-            "id": "cd493914b70c8815",
+            "id": "614e86b50ed1a65d",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "ORDER_CONFIRM_FAST_SYNC_PLAN.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "ORDER_CONFIRM_FAST_SYNC_PLAN"
             }
           }
         ]
@@ -90,6 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
+                "file": "ORDER_CONFIRM_FAST_SYNC_PLAN.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -99,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for ORDER_CONFIRM_FAST_SYNC_PLAN"
             }
           },
           {
@@ -108,11 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
+                "file": "ORDER_CONFIRM_FAST_SYNC_PLAN.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links"
+              "title": "Outgoing links from ORDER_CONFIRM_FAST_SYNC_PLAN"
             }
           },
           {
@@ -150,12 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "ORDER_CONFIRM_FAST_SYNC_PLAN.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline"
+              "title": "Outline of ORDER_CONFIRM_FAST_SYNC_PLAN"
             }
           }
         ]
@@ -176,8 +183,9 @@
       "bases:Create new base": false
     }
   },
-  "active": "cfa8f372631c6fd2",
+  "active": "614e86b50ed1a65d",
   "lastOpenFiles": [
+    "ORDER_CONFIRM_FAST_SYNC_PLAN.md",
     "customers/TODO.md",
     "customers/README.md",
     "customers/FEATURE_SPEC.md",
