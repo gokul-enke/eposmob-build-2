@@ -1104,11 +1104,13 @@ class SalesProvider with ChangeNotifier {
         return {
           'success': jsonData['success'] ?? true,
           'message': jsonData['message'] ?? 'Day close created successfully',
+          'errors': jsonData['errors'],
         };
       } else {
         return {
           'success': false,
           'message': jsonData['message'] ?? 'Failed to create day close',
+          'errors': jsonData['errors'],
         };
       }
     } catch (error, stackTrace) {
