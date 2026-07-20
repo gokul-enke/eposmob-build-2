@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
@@ -411,27 +413,62 @@ class AddProductFormHelpers {
   }
 
   static String parseCreateProductError(dynamic result) {
-    String errorMessage = 'Failed to add product';
-    if (result is Map<String, dynamic>) {
-      if (result.containsKey('message')) {
-        errorMessage = result['message'].toString();
-      } else if (result.containsKey('errors')) {
-        final errors = result['errors'] as Map<String, dynamic>;
-        final errorMessages = <String>[];
-        errors.forEach((field, messages) {
-          if (messages is List) {
-            for (final message in messages) {
-              errorMessages.add('$field: $message');
-            }
-          } else {
-            errorMessages.add('$field: $messages');
-          }
-        });
-        errorMessage = errorMessages.join('\n');
+    const fallback = 'Failed to add product';
+    dynamic response = result;
+
+    if (result is String) {
+      final body = result.trim();
+      if (body.isEmpty) return fallback;
+
+      try {
+        response = json.decode(body);
+      } catch (_) {
+        return body;
       }
-    } else if (result is String) {
-      errorMessage = result;
     }
-    return errorMessage;
+
+    if (response is Map) {
+      // Validation errors from the create-product API are returned in `data`,
+      // while some endpoints return them in `errors`.
+      final errorMessages = <String>[
+        ..._formatValidationErrors(response['data']),
+        ..._formatValidationErrors(response['errors']),
+      ];
+      if (errorMessages.isNotEmpty) {
+        return errorMessages.join('\n');
+      }
+
+      final message = response['message']?.toString().trim();
+      if (message != null && message.isNotEmpty) {
+        return message;
+      }
+
+      final data = response['data']?.toString().trim();
+      if (data != null && data.isNotEmpty) {
+        return data;
+      }
+    }
+
+    return result is String && result.trim().isNotEmpty
+        ? result.trim()
+        : fallback;
+  }
+
+  static List<String> _formatValidationErrors(dynamic errors) {
+    if (errors is! Map) return const <String>[];
+
+    final messages = <String>[];
+    errors.forEach((field, fieldMessages) {
+      if (fieldMessages is Iterable) {
+        for (final message in fieldMessages) {
+          final text = message.toString().trim();
+          if (text.isNotEmpty) messages.add('$field: $text');
+        }
+      } else {
+        final text = fieldMessages.toString().trim();
+        if (text.isNotEmpty) messages.add('$field: $text');
+      }
+    });
+    return messages;
   }
 }

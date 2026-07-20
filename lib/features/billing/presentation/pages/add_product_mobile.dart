@@ -832,7 +832,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
 
       if (!mounted) return;
 
-      if (result is Map<String, dynamic> && result.containsKey('data')) {
+      if (result is Map<String, dynamic> &&
+          result['status'] != 'failed' &&
+          result.containsKey('data')) {
         GetProduct? createdProduct;
         try {
           createdProduct = GetProduct.fromJson(result['data']);

@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/features/billing/domain/add_created_product_to_cart.dart';
+import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
 import 'package:pos_machine/models/category_list.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/language.dart';
@@ -2832,7 +2832,9 @@ class _AddProductWithBarcodeModalState
           return;
         }
 
-        if (result is Map<String, dynamic> && result.containsKey('data')) {
+        if (result is Map<String, dynamic> &&
+            result['status'] != 'failed' &&
+            result.containsKey('data')) {
           GetProduct? createdProduct;
           try {
             createdProduct = GetProduct.fromJson(result['data']);
@@ -2877,35 +2879,10 @@ class _AddProductWithBarcodeModalState
           }
           showScaffold(context: context, message: 'Product added successfully');
         } else {
-          String errorMessage = 'Failed to add product';
-          if (result is Map<String, dynamic>) {
-            if (result.containsKey('message')) {
-              errorMessage = result['message'].toString();
-            } else if (result.containsKey('errors')) {
-              Map<String, dynamic> errors = result['errors'];
-              List<String> errorMessages = [];
-              errors.forEach((field, messages) {
-                if (messages is List) {
-                  for (var message in messages) {
-                    errorMessages.add("$field: $message");
-                  }
-                } else {
-                  errorMessages.add("$field: $messages");
-                }
-              });
-              errorMessage = errorMessages.join('\n');
-            }
-          } else if (result is String) {
-            try {
-              final jsonResponse = json.decode(result);
-              if (jsonResponse['message'] != null) {
-                errorMessage = jsonResponse['message'];
-              }
-            } catch (e) {
-              errorMessage = result;
-            }
-          }
-          showScaffoldError(context: context, message: errorMessage);
+          showScaffoldError(
+            context: context,
+            message: AddProductFormHelpers.parseCreateProductError(result),
+          );
         }
       } catch (e) {
         showScaffoldError(
