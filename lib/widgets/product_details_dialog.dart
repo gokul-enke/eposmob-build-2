@@ -73,6 +73,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   bool isLoading = false;
   late TabController _tabController;
   bool _tabControllerReady = false;
+  final ScrollController _stockScrollController = ScrollController();
 
   final GlobalKey<FormState> _editFormKey = GlobalKey<FormState>();
   bool _controllersInitialized = false;
@@ -1036,6 +1037,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     _languageNameControllers.clear();
     _languageTranslating.clear();
     _variantController.dispose();
+    _stockScrollController.dispose();
     super.dispose();
   }
 
@@ -1565,12 +1567,148 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       );
     }
 
+    final nonBaseUnits = (product.saleUnits ?? []).where((u) {
+      final rate = double.tryParse(u.conversionRate?.toString() ?? '0') ?? 0;
+      return rate > 1.0;
+    }).toList();
+
     return SelectionArea(
       child: ListView(
         shrinkWrap: true,
         physics: const BouncingScrollPhysics(),
         children: [
           detailSections,
+          if (nonBaseUnits.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Additional Sale Units',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s16,
+                0.20,
+                ColorManager.kPrimaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Text('Unit',
+                              style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s14,
+                                  0.20,
+                                  ColorManager.textColor)),
+                        ),
+                        Expanded(
+                          flex: 3,
+                          child: Text('Barcode',
+                              style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s14,
+                                  0.20,
+                                  ColorManager.textColor)),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text('Price',
+                              style: buildCustomStyle(
+                                  FontWeightManager.semiBold,
+                                  FontSize.s14,
+                                  0.20,
+                                  ColorManager.textColor)),
+                        ),
+                      ],
+                    ),
+                    ...nonBaseUnits.map((saleUnit) {
+                      final resolvedPrice =
+                          saleUnit.resolvedPrice ?? saleUnit.price;
+                      return Column(
+                        children: [
+                          const Divider(),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: Text(saleUnit.unitName ?? 'N/A',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s14,
+                                        0.20,
+                                        ColorManager.textColor)),
+                              ),
+                              Expanded(
+                                flex: 3,
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(saleUnit.barcode ?? 'N/A',
+                                          style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
+                                              0.20,
+                                              ColorManager.textColor)),
+                                    ),
+                                    if (saleUnit.barcode != null &&
+                                        saleUnit.barcode!.isNotEmpty)
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 8.0),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Clipboard.setData(ClipboardData(
+                                                text: saleUnit.barcode!));
+                                            showScaffold(
+                                              context: context,
+                                              message: 'Barcode copied',
+                                            );
+                                          },
+                                          child: Icon(
+                                            Icons.copy,
+                                            size: 16,
+                                            color: ColorManager.textColor
+                                                .withOpacity(0.6),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                    resolvedPrice != null
+                                        ? '$currency ${resolvedPrice.toStringAsFixed(2)}'
+                                        : 'N/A',
+                                    style: buildCustomStyle(
+                                        FontWeightManager.regular,
+                                        FontSize.s14,
+                                        0.20,
+                                        ColorManager.textColor)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (product.description != null &&
               product.description.toString().isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -1670,9 +1808,14 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           ),
           const SizedBox(height: 8),
           if (product.stock != null && product.stock!.isNotEmpty)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Container(
+            Scrollbar(
+              controller: _stockScrollController,
+              thumbVisibility: true,
+              trackVisibility: true,
+              child: SingleChildScrollView(
+                controller: _stockScrollController,
+                scrollDirection: Axis.horizontal,
+                child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
@@ -1771,7 +1914,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   ),
                 ),
               ),
-            )
+            ),
+          )
           else
             Container(
               padding: const EdgeInsets.all(16),

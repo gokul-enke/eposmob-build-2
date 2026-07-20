@@ -345,7 +345,8 @@ class DailySalesCloseSummary {
 
   static num? _numValue(dynamic value) {
     if (value is num) return value;
-    return num.tryParse(value?.toString() ?? '');
+    final cleaned = value?.toString().replaceAll(',', '') ?? '';
+    return num.tryParse(cleaned);
   }
 }
 
