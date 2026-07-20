@@ -1936,6 +1936,50 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 ),
               ),
             ),
+          if (product.attachment != null && product.attachment!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Product Images',
+              style: buildCustomStyle(
+                FontWeightManager.semiBold,
+                FontSize.s16,
+                0.20,
+                ColorManager.kPrimaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Builder(builder: (context) {
+              final sorted = [
+                ...product.attachment!.where((a) => a.isPrimary == 1),
+                ...product.attachment!.where((a) => a.isPrimary != 1),
+              ];
+              return SizedBox(
+                height: 100,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: sorted.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (_, index) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        sorted[index].filePath ?? '',
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                          Icons.image_not_supported,
+                          size: 24,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }),
+          ],
         ],
       ),
     );
