@@ -2,7 +2,11 @@
 ; Used by GitHub Actions Release CI and local packaging.
 
 #define MyAppName "CLOUDPOS"
+; GitHub Actions supplies /DMyAppVersion=<pubspec version>.
+; Keep a local fallback when compiling this script directly.
+#ifndef MyAppVersion
 #define MyAppVersion "1.0"
+#endif
 #define MyAppPublisher "ENKE"
 #define MyAppURL "https://enke.ae/"
 #define MyAppExeName "cloudpos.exe"
