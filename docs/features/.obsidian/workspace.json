@@ -4,21 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "e1a3921c4badabc7",
+        "id": "c3040b593661defe",
         "type": "tabs",
         "children": [
           {
-            "id": "8ba4720550934b08",
+            "id": "cd493914b70c8815",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "customers/CHANGELOG.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "CHANGELOG"
+              "title": "New tab"
             }
           }
         ]
@@ -94,7 +90,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "customers/CHANGELOG.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +99,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for CHANGELOG"
+              "title": "Backlinks"
             }
           },
           {
@@ -113,12 +108,11 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "customers/CHANGELOG.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from CHANGELOG"
+              "title": "Outgoing links"
             }
           },
           {
@@ -156,13 +150,12 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "customers/CHANGELOG.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of CHANGELOG"
+              "title": "Outline"
             }
           }
         ]
@@ -183,6 +176,13 @@
       "bases:Create new base": false
     }
   },
-  "active": "8ba4720550934b08",
-  "lastOpenFiles": []
+  "active": "cfa8f372631c6fd2",
+  "lastOpenFiles": [
+    "customers/TODO.md",
+    "customers/README.md",
+    "customers/FEATURE_SPEC.md",
+    "customers/CHANGELOG.md",
+    "Untitled.base",
+    "2026-07-20.md"
+  ]
 }
