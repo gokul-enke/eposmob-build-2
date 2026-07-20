@@ -95,7 +95,7 @@ class AppSettings {
     this.skipCheckoutOnConfirmAndPrint = false,
     this.compulsoryDayCloseRegister = false,
     this.productVariantEnabled = false,
-    this.allowOverselling = false,
+    this.allowOverselling = true,
     this.compulsoryShiftOpen = false,
   });
 
@@ -216,7 +216,7 @@ class AppSettings {
       allowOverselling: _readSettingStatus(
         settingsMap,
         'ALLOW_OVERSELL',
-        defaultValue: false,
+        defaultValue: true,
       ),
       compulsoryShiftOpen: _readSettingStatus(
         settingsMap,
