@@ -59,6 +59,31 @@ Cashier presses Confirm
 
 The target is that local persistence and screen reset complete in under one second. The backend request is no longer part of the cashier's critical UI path.
 
+### Failed-order behavior
+
+A failed network request must not delete the local order.
+
+```text
+Local save
+   |
+   +--> temporary network/server failure --> retry
+   |                                         |
+   |                                         `--> synced
+   |
+   +--> validation/business failure -------> failed/conflict
+   |
+   `--> app crash/restart ------------------> pending_sync after restart
+```
+
+There are two important failure types:
+
+1. **Temporary failure** — timeout, no internet, `500`, or `503`. The order stays in the outbox and is retried using the same `client_order_id`.
+2. **Permanent failure** — invalid payment, invalid product, insufficient stock, or another `422/409` business response. The order stays locally with the reason. It is not retried endlessly; the cashier can correct it and retry or cancel it explicitly.
+
+If the backend committed the order but the response was lost, the retry uses the same `client_order_id`. Backend idempotency returns the original order, so the POS marks it `synced` instead of creating a duplicate.
+
+The current backend has a dangerous case: `add_to_order()` commits the database transaction and then builds the large `getOrderDetails()` response. If that response-building step fails, the API can return `500` even though the order already exists. The first backend change must therefore return a small acknowledgement immediately after commit and make retries idempotent.
+
 ### 1.4 What will change
 
 #### Backend
