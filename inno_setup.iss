@@ -24,7 +24,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ; Do not reuse an old (x86) install path on upgrade.
 UsePreviousAppDir=no
 DisableProgramGroupPage=yes
-OutputBaseFilename=EposMachine-setup-{#MyAppVersion}
+OutputBaseFilename=cloudpos-{#MyAppVersion}
 SetupIconFile=.\windows\runner\resources\app_icon.ico
 Compression=lzma
 SolidCompression=yes
