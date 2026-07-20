@@ -96,14 +96,6 @@ void main() {
       expect(AddProductFormHelpers.parseAddToCartQuantity(' 2.5 '), 2.5);
     });
 
-    test('P-04 desktop modal uses same qty-3 parsing as mobile create-and-add',
-        () {
-      // AddProductWithBarcodeModal passes _productQuantityController.text
-      // through addCreatedProductToCart — same helper path as P-02 mobile.
-      expect(AddProductFormHelpers.parseAddToCartQuantity('3'), 3);
-      expect(AddProductFormHelpers.parseAddToCartSellingPrice('150'), 150);
-    });
-
     test('parseAddToCartSellingPrice only returns positive values', () {
       expect(AddProductFormHelpers.parseAddToCartSellingPrice(''), isNull);
       expect(AddProductFormHelpers.parseAddToCartSellingPrice('0'), isNull);
@@ -114,7 +106,7 @@ void main() {
 
   group('addCreatedProductToCart', () {
     testWidgets(
-        'routes through ProductCartHelper with form quantity and opening-stock zero',
+        'adds qty 1 with form selling price (form quantity is opening stock)',
         (tester) async {
       final localProductProvider = LocalProductProvider();
       final product = _product();
@@ -153,10 +145,10 @@ void main() {
       );
       await tester.pump();
 
+      // Form quantity "100" is opening stock — cart must still get 1.
       await addCreatedProductToCart(
         context: capturedContext,
         product: product,
-        quantityText: '4',
         sellingPriceText: '175',
       );
       await tester.pump();
@@ -164,23 +156,8 @@ void main() {
 
       expect(localProductProvider.cartItems, hasLength(1));
       expect(localProductProvider.cartItems.first.product.productId, 99);
-      expect(localProductProvider.cartItems.first.quantity, 4);
+      expect(localProductProvider.cartItems.first.quantity, 1);
       expect(localProductProvider.cartItems.first.price, 175);
-
-      localProductProvider.clearCart();
-      final zeroStockProduct = _product(id: 100);
-      localProductProvider.addProduct(zeroStockProduct);
-
-      await addCreatedProductToCart(
-        context: capturedContext,
-        product: zeroStockProduct,
-        quantityText: '0',
-        sellingPriceText: '150',
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 3));
-
-      expect(localProductProvider.cartItems.single.quantity, 1);
     });
   });
 }

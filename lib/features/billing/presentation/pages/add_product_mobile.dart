@@ -832,7 +832,9 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
 
       if (!mounted) return;
 
-      if (result is Map<String, dynamic> && result.containsKey('data')) {
+      if (result is Map<String, dynamic> &&
+          result['status'] != 'failed' &&
+          result.containsKey('data')) {
         GetProduct? createdProduct;
         try {
           createdProduct = GetProduct.fromJson(result['data']);
@@ -846,7 +848,6 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           await addCreatedProductToCart(
             context: context,
             product: createdProduct,
-            quantityText: _quantityController.text,
             sellingPriceText: _sellingPriceController.text,
           );
           if (!mounted) return;

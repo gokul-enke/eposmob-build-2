@@ -1,171 +1,86 @@
-# Customers Feature Specification
+# Customers Feature
 
-This document explains how the Flutter application interprets and presents the
-backend Customer API. It is intentionally understandable without knowledge of
-Flutter or Laravel.
+This document describes the customer list page.
 
-## Current scope
+## Scope
 
-Documented here:
+Included:
 
-- Customer list
-- Search filters
+- Customer search and balance filters
 - Pagination
-- Desktop table
-- Narrow-width customer cards
+- Desktop table and mobile cards
 - Customer profile navigation
-- Customer creation/edit endpoint references
-- Executive address endpoint references
 
-The shared create-customer form is not being redesigned in the current frontend
-refactor.
+The shared create-customer form is unchanged.
 
-## API operations
+## API
 
-| Purpose | Method | Endpoint |
-|---|---|---|
-| Search/list customers | GET | `/api/v1/customer/customer-searchbar` |
-| Create customer | POST | `/api/v1/customer/add-customer` |
-| Edit customer | POST | `/api/v1/customer/customer-edit` |
-| Add address | POST | `/api/v1/customer/executive-add-address` |
-| Update address | POST | `/api/v1/customer/executive-update-address/{id}` |
+The page loads customers with:
 
-All operations use:
+```text
+GET /api/v1/customer/customer-searchbar
+```
 
-- `Authorization: Bearer <token>`
-- `X-Tenant: <tenant key>`
-- `Content-Type: application/json` for JSON requests
+Requests use the bearer token and tenant headers. The backend owns the full
+request and response contract.
 
-The complete field-level contract is in
-`contracts/openapi/customers.yaml`.
+The frontend may send `page`, `per_page`, `filter_name`, `filter_email`,
+`filter_phone`, `filter_age_range`, and `store_id`.
 
-## List request
+## Filters
 
-Flutter currently sends these query parameters:
-
-| Parameter | When sent | Notes |
-|---|---|---|
-| `page` | Always | Starts at 1 |
-| `per_page` | Load-all mode | Flutter sends `1000`; backend currently caps at `100` |
-| `sort_asc` | Optional | Sent as `true` |
-| `filter_name` | Name is not empty | Partial match |
-| `filter_email` | Email is not empty | Partial match |
-| `filter_phone` | Phone is not empty | Matches primary or alternate phone |
-| `filter_age_range` | Optional legacy usage | Format such as `18-30` |
-| `store_id` | Active store exists | Store scope |
-
-## Frontend filtering behavior
-
-The current Customers page requests customers and then performs local filtering
-and pagination through `CustomerProvider`.
-
-| Filter | Behavior |
-|---|---|
-| Name | Case-insensitive contains |
-| Email | Case-insensitive contains |
-| Phone | Contains primary phone or alternate phone |
-| Balance: Positive | `balance > 0` |
-| Balance: Negative | `balance < 0` |
-| Balance: Zero | `balance == 0` |
-| Balance: All | No balance restriction |
-
-Typing runs the filter immediately. Pressing Enter also runs the filter.
-
-Keyboard Tab order:
-
-`Name → Email → Phone → Balance → Reset`
-
-The first three transitions are covered by focused widget tests.
+- Name, email, and phone use case-insensitive partial matching.
+- Phone checks the primary and alternate phone when available.
+- Balance can be positive, negative, zero, or unrestricted.
+- Filtering happens while typing and when Enter is pressed.
+- Tab order: `Name → Email → Phone → Balance → Reset`.
 
 ## Pagination
 
-- Frontend local page size: 20 customers.
-- Page numbering starts at 1.
-- Row/card numbering continues across pages.
-- Previous is unavailable on page 1.
-- Next is unavailable on the final page.
+- 20 customers per page.
+- Numbering starts at 1 and continues across pages.
+- Previous is disabled on the first page.
+- Next is disabled on the last page.
 
-Example:
+## Layout
 
-| Page | Display numbers |
-|---|---|
-| 1 | 1–20 |
-| 2 | 21–40 |
-| 3 | 41–60 |
+- Below 700px screen width: mobile view.
+- Narrow content: customer cards.
+- Wider content: desktop table.
 
-## Desktop table
+The table shows:
 
-| UI column | API/model field | Display rule |
-|---|---|---|
-| No | Calculated | Continues across pages |
-| Name | `name` | Empty string if unavailable |
-| Balance | `balance` | Two decimal places |
-| Phone No. | `phone` | Empty string if unavailable |
-| Customer Type | `customer_type` / current backend `customerType` | B2B or B2C badge |
-| Action | — | Opens selected customer profile |
-
-## Narrow-width customer card
-
-Cards display:
-
-- Customer initial
-- Customer name
-- Continuous display number
+- Number
+- Name
 - Balance
 - Phone
-- Customer type badge
-- View Profile button
+- Customer type
+- Profile action
 
-## Formatting and colors
+Cards show the same information plus a customer initial and a View Profile
+button.
 
-| Condition | Presentation |
-|---|---|
-| Balance `>= 0` | Success/green color |
-| Balance `< 0` | Red color |
-| Customer type `B2B` | Green badge |
-| Other/missing customer type | Blue `B2C` badge |
+## Display rules
 
-## Responsive behavior
+- Balance is shown with two decimal places.
+- Zero or positive balance is green.
+- Negative balance is red.
+- `B2B` uses a green badge.
+- Other or missing types display as `B2C` with a blue badge.
 
-- Screen width below 700 uses `CustomersMobileView`.
-- Within the desktop page, content width below 640 uses customer cards.
-- Wider content uses the desktop table.
+## States
 
-## UI states
+- Loading: show a progress indicator.
+- No results: show “No customers found” and filter guidance.
+- Refresh: reload the customer list.
+- Missing token: show a snackbar.
 
-| State | UI behavior |
-|---|---|
-| Loading | Adaptive progress indicator |
-| Empty result | “No customers found” and filter-adjustment guidance |
-| Refresh | Pull/refresh reloads customer data |
-| Missing authentication token | Snackbar message |
+## Known API issues
 
-## Known contract mismatches
+These need backend/frontend coordination:
 
-These were found by comparing the current backend and frontend implementations:
-
-1. Backend `customer-searchbar` returns a Laravel paginator inside the top-level
-   `data` property. The current Flutter `CustomerListModel` expects the top-level
-   `data` property itself to be a list.
-2. Backend search items currently return `customerType`; Flutter parses
-   `customer_type`.
-3. Backend transformed search items currently omit `id`; Flutter model and
-   customer profile selection expect customer identity.
-4. Flutter load-all mode requests `per_page=1000`; backend caps `per_page` at
-   100, so local filtering may not include every customer.
-5. The backend accepts `filter_alt_phone` in its filter collection but does not
-   independently apply that parameter.
-
-These should be resolved through a coordinated API change, not hidden in the
-frontend.
-
-## Change rule
-
-When adding a backend field:
-
-1. Update backend `contracts/openapi/customers.yaml`.
-2. Synchronize the frontend copy.
-3. Decide whether the field is displayed, filtered, stored only, or ignored.
-4. Update the table/card mapping in this document.
-5. Update tests and `CHANGELOG.md`.
-
+- The response pagination shape does not match the Flutter parser.
+- The backend returns `customerType`; Flutter expects `customer_type`.
+- Search results do not currently include the customer `id`.
+- The frontend requests up to 1,000 records, but the backend caps requests at 100.
+- Alternate-phone filtering is not applied independently by the backend.
