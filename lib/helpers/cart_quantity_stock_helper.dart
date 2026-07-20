@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/helpers/oversell_approval.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/master_data_provider.dart';
@@ -42,6 +43,7 @@ class CartQuantityStockHelper {
     String? activeStoreName,
     CartQuantityStockSelectionResolver? selectionResolver,
     CartQuantityStockMessageHandler? onBlocked,
+    OversellApprovalPrompt? oversellApprovalPrompt,
   }) async {
     final provider = localProductProvider ??
         Provider.of<LocalProductProvider>(context!, listen: false);
@@ -91,7 +93,7 @@ class CartQuantityStockHelper {
       };
     }
 
-    onBlocked ??= (message) {
+    final block = onBlocked ?? (message) {
       if (context != null && context.mounted) {
         showScaffoldError(
           context: context,
@@ -107,6 +109,59 @@ class CartQuantityStockHelper {
     num appliedQuantity = currentQuantity;
     num remainingIncrease = newQuantity - currentQuantity;
     bool changed = false;
+
+    Future<bool> approveAndAddOversell({
+      required GetProduct product,
+      required Stock? selectedStock,
+      required List<int>? stockGroupIds,
+      required num availableQuantity,
+    }) async {
+      const blockedMessage =
+          'Selected stock is exhausted. No other stock is available.';
+      if (context == null || !context.mounted) {
+        block(blockedMessage);
+        return false;
+      }
+
+      final approvalPrompt =
+          oversellApprovalPrompt ?? showOversellApprovalDialog;
+      final approved = await approvalPrompt(
+        context: context,
+        product: product,
+        availableQuantity: availableQuantity,
+        requestedQuantity: newQuantity,
+        unitLabel: cartItem.saleUnitName ?? cartItem.product.unit ?? 'unit',
+      );
+      if (!approved || !context.mounted) {
+        return false;
+      }
+
+      final added = provider.addToCart(
+        product: product,
+        quantity: remainingIncrease,
+        price: cartItem.price,
+        mrp: cartItem.mrp,
+        markPriceAsManualOverride: cartItem.isManualPriceOverride,
+        isIncreamentUsingCompactQuantityControl: true,
+        selectedStock: selectedStock,
+        stockGroupIds: stockGroupIds,
+        saleUnitId: cartItem.saleUnitId,
+        saleUnitName: cartItem.saleUnitName,
+        saleUnitConversionRate: cartItem.saleUnitConversionRate,
+        variantId: cartItem.variantId,
+        variantAttributes: cartItem.variantAttributes,
+        allowOversellOverride: true,
+      );
+      if (!added) {
+        block(blockedMessage);
+        return false;
+      }
+
+      appliedQuantity += remainingIncrease;
+      remainingIncrease = 0;
+      changed = true;
+      return true;
+    }
 
     final availableOnCurrentSelection =
         provider.getAvailableQuantityForSelection(
@@ -180,8 +235,12 @@ class CartQuantityStockHelper {
             changed = true;
           }
         } else {
-          onBlocked(
-              'Selected stock is exhausted. No other stock is available.');
+          await approveAndAddOversell(
+            product: refreshedProduct,
+            selectedStock: cartItem.selectedStock,
+            stockGroupIds: cartItem.stockGroupIds,
+            availableQuantity: 0,
+          );
         }
         break;
       }
@@ -226,6 +285,13 @@ class CartQuantityStockHelper {
             remainingIncrease = 0;
             changed = true;
           }
+        } else {
+          await approveAndAddOversell(
+            product: refreshedProduct,
+            selectedStock: cartItem.selectedStock,
+            stockGroupIds: cartItem.stockGroupIds,
+            availableQuantity: 0,
+          );
         }
         break;
       }
@@ -238,7 +304,7 @@ class CartQuantityStockHelper {
       );
 
       if (availableForSelection <= 0) {
-        onBlocked(
+        block(
           'Selected stock is no longer available. Please choose another stock.',
         );
         continue;
@@ -252,7 +318,7 @@ class CartQuantityStockHelper {
           : _minQuantity(remainingIncrease, availableForSelection);
 
       if (quantityForSelection <= 0) {
-        onBlocked(
+        block(
           'Selected stock does not have enough quantity for one ${cartItem.saleUnitName ?? cartItem.product.unit ?? "unit"}.',
         );
         break;

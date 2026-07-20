@@ -2700,6 +2700,9 @@ class LocalProductProvider extends ChangeNotifier {
     int? variantId,
     Map<String, dynamic>? variantAttributes,
     bool? warrantyEnabled,
+    /// One-time approval from the billing flow. This does not change the
+    /// tenant-level [allowOverselling] setting.
+    bool allowOversellOverride = false,
   }) {
     debugPrint("🛒 ADD TO CART STARTED");
     debugPrint("Product: ${product?.productName}");
@@ -2720,6 +2723,7 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     final cartQuantity = quantity ?? 1;
+    final enforceStockLimit = !allowOverselling && !allowOversellOverride;
     if (cartQuantity <= 0) {
       debugPrint("❌ Cannot add to cart: quantity must be greater than zero");
       return false;
@@ -2734,7 +2738,7 @@ class LocalProductProvider extends ChangeNotifier {
           );
 
     if (isStockEnabled &&
-        !allowOverselling &&
+        enforceStockLimit &&
         variantId != null &&
         selectedStock == null) {
       debugPrint(
@@ -2742,7 +2746,7 @@ class LocalProductProvider extends ChangeNotifier {
       return false;
     }
 
-    if (isStockEnabled && !allowOverselling && selectedStock != null) {
+    if (isStockEnabled && enforceStockLimit && selectedStock != null) {
       final availableQuantity = getAvailableQuantityForSelection(
         product: product,
         selectedStock: selectedStock,
