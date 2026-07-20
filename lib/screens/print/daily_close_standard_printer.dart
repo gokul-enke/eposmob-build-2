@@ -215,6 +215,14 @@ class DailyCloseStandardPrinter {
                     ],
                   ),
                 ),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300),
+                  children: [
+                    _buildTableRow('Total Returns', data.totalReturns ?? '0.00', bodyStyle),
+                    _buildTableRow('Total Refunds', data.totalRefunds ?? '0.00', bodyStyle),
+                  ],
+                ),
                 pw.SizedBox(height: 20),
 
                 // Payment Breakdown Section
@@ -243,6 +251,25 @@ class DailyCloseStandardPrinter {
                   ],
                 ),
                 pw.SizedBox(height: 20),
+
+                // Cash Summary Section
+                if (data.cashSummary != null) ...[
+                  pw.Text('CASH SUMMARY', style: sectionTitleStyle),
+                  pw.SizedBox(height: 10),
+                  pw.Table(
+                    border: pw.TableBorder.all(color: PdfColors.grey300),
+                    children: [
+                      _buildTableRow('Opening Cash In Hand', data.cashSummary?.openingCashInHand ?? '0.00', bodyStyle),
+                      _buildTableRow('Cash Refunds', data.cashSummary?.cashRefunds ?? '0.00', bodyStyle),
+                      _buildTableRow('Cash Drop Amount', data.cashSummary?.cashDropAmount ?? '0.00', bodyStyle),
+                      _buildTableRow('Expected Closing Cash', data.cashSummary?.expectedClosingCash ?? '0.00', bodyStyle),
+                      _buildTableRow('Closing Cash In Hand', data.cashSummary?.closingCashInHand ?? '0.00', bodyStyle),
+                      _buildTableRow('Short Cash', data.cashSummary?.shortCash ?? '0.00', bodyStyle),
+                      _buildTableRow('Excess Cash', data.cashSummary?.excessCash ?? '0.00', bodyStyle),
+                    ],
+                  ),
+                  pw.SizedBox(height: 20),
+                ],
 
                 // Totals Section
                 pw.Container(
@@ -526,6 +553,14 @@ class DailyCloseStandardPrinter {
                     ],
                   ),
                 ),
+                pw.SizedBox(height: 10),
+                pw.Table(
+                  border: pw.TableBorder.all(color: PdfColors.grey300),
+                  children: [
+                    _buildTableRow('Total Returns', data.totalReturns ?? '0.00', bodyStyle),
+                    _buildTableRow('Total Refunds', data.totalRefunds ?? '0.00', bodyStyle),
+                  ],
+                ),
                 pw.SizedBox(height: 20),
 
                 // Payment Breakdown Section
@@ -554,6 +589,25 @@ class DailyCloseStandardPrinter {
                   ],
                 ),
                 pw.SizedBox(height: 20),
+
+                // Cash Summary Section
+                if (data.cashSummary != null) ...[
+                  pw.Text('CASH SUMMARY', style: sectionTitleStyle),
+                  pw.SizedBox(height: 10),
+                  pw.Table(
+                    border: pw.TableBorder.all(color: PdfColors.grey300),
+                    children: [
+                      _buildTableRow('Opening Cash In Hand', data.cashSummary?.openingCashInHand ?? '0.00', bodyStyle),
+                      _buildTableRow('Cash Refunds', data.cashSummary?.cashRefunds ?? '0.00', bodyStyle),
+                      _buildTableRow('Cash Drop Amount', data.cashSummary?.cashDropAmount ?? '0.00', bodyStyle),
+                      _buildTableRow('Expected Closing Cash', data.cashSummary?.expectedClosingCash ?? '0.00', bodyStyle),
+                      _buildTableRow('Closing Cash In Hand', data.cashSummary?.closingCashInHand ?? '0.00', bodyStyle),
+                      _buildTableRow('Short Cash', data.cashSummary?.shortCash ?? '0.00', bodyStyle),
+                      _buildTableRow('Excess Cash', data.cashSummary?.excessCash ?? '0.00', bodyStyle),
+                    ],
+                  ),
+                  pw.SizedBox(height: 20),
+                ],
 
                 // Totals Section
                 pw.Container(
