@@ -688,6 +688,9 @@ class HiveCategory extends HiveObject {
   @HiveField(6)
   final HiveParentCategory? parent;
 
+  @HiveField(7)
+  final Map<String, String>? translations;
+
   HiveCategory({
     this.categoryId,
     this.categoryName,
@@ -696,6 +699,7 @@ class HiveCategory extends HiveObject {
     this.categoryImage,
     this.categoryIcon,
     this.parent,
+    this.translations,
   });
 
   // Convert from app model to Hive model
@@ -710,6 +714,7 @@ class HiveCategory extends HiveObject {
       parent: category.parent != null
           ? HiveParentCategory.fromParentCategory(category.parent!)
           : null,
+      translations: category.translations,
     );
   }
 
@@ -718,6 +723,7 @@ class HiveCategory extends HiveObject {
     return Category(
       categoryId: categoryId,
       categoryName: categoryName,
+      translations: translations,
       categorySlug: categorySlug,
       productsCount: productsCount,
       categoryImage: categoryImage,

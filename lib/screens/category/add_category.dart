@@ -219,7 +219,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
     return SizedBox(
       height: 90,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(flex: 3, child: _buildSearchField(size)),
           const SizedBox(width: 15),
@@ -284,6 +284,7 @@ class AddCategoryScreenState extends State<AddCategoryScreen> {
                   ColorManager.textColor.withOpacity(.5),
                 ),
                 border: InputBorder.none,
+                focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 isDense: true,
                 suffixIcon: _searchController.text.isNotEmpty

@@ -53,6 +53,7 @@ class DailySalesCloseData {
   ProductSummary? productSummary;
   String? createdAt;
   String? updatedAt;
+  String? status;
 
   DailySalesCloseData(
       {this.id,
@@ -84,7 +85,8 @@ class DailySalesCloseData {
       this.transactions,
       this.productSummary,
       this.createdAt,
-      this.updatedAt});
+      this.updatedAt,
+      this.status});
 
   DailySalesCloseData.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -130,6 +132,7 @@ class DailySalesCloseData {
     }
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
+    status = json['status'];
   }
 }
 
