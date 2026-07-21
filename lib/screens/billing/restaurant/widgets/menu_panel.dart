@@ -8,6 +8,7 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/keyboard_focus_highlight_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/models/get_product.dart';
 import '../../../../components/build_container_box.dart';
 import '../../../../components/build_dialog_box.dart';
@@ -558,7 +559,7 @@ class MenuPanelState extends State<MenuPanel> {
     LocalProductProvider productProvider,
   ) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final totalCategories = categories.length + 1;
+    final totalCategories = categories.length + 2;
     if (totalCategories <= 0) return KeyEventResult.ignored;
 
     if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
@@ -633,12 +634,19 @@ class MenuPanelState extends State<MenuPanel> {
   ) {
     setState(() => _focusedMenuItemIndex = 0);
     if (_focusedCategoryIndex == 0) {
+      widget.onCategoryChanged(-1);
+      final gridProvider =
+          Provider.of<GridSelectionProvider>(context, listen: false);
+      gridProvider.listQuickAccessProducts();
+      return;
+    }
+    if (_focusedCategoryIndex == 1) {
       widget.onCategoryChanged(0);
       productProvider.refreshProducts();
       return;
     }
 
-    final category = categories[_focusedCategoryIndex - 1];
+    final category = categories[_focusedCategoryIndex - 2];
     final categoryId = category.categoryId;
     widget.onCategoryChanged(categoryId);
     if (categoryId == 0) {
@@ -807,8 +815,8 @@ class MenuPanelState extends State<MenuPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<CategoryProvider, LocalProductProvider>(
-      builder: (context, categoryProvider, productProvider, _) {
+    return Consumer3<CategoryProvider, LocalProductProvider, GridSelectionProvider>(
+      builder: (context, categoryProvider, productProvider, gridProvider, _) {
         final fontProvider =
             Provider.of<AppFontProvider>(context, listen: true);
         if (categoryProvider.isLoading &&
@@ -822,12 +830,16 @@ class MenuPanelState extends State<MenuPanel> {
 
         final categories = categoryProvider.category ?? [];
         final selectedCategoryId = widget.activeCategoryId ?? 0;
+        final isFavouritesSelected = selectedCategoryId == -1;
         final bool isProductsLoading =
-            productProvider.isLoading || _isResyncingProducts;
+            (isFavouritesSelected ? gridProvider.isLoading : productProvider.isLoading) ||
+                _isResyncingProducts;
 
         // Get products for selected category - only show sellable products in billing
         List<GetProduct> items = [];
-        if (selectedCategoryId == 0) {
+        if (isFavouritesSelected) {
+          items = gridProvider.quickAccessProductList ?? [];
+        } else if (selectedCategoryId == 0) {
           // "ALL" category - show all sellable products
           items = productProvider.sellableFilteredProducts;
         } else {
@@ -848,7 +860,7 @@ class MenuPanelState extends State<MenuPanel> {
 
         final int fontLevel = fontProvider.fontSizeLevel;
         final cardMode = _resolveCardMode(fontLevel);
-        _ensureCategoryItemKeys(categories.length + 1);
+        _ensureCategoryItemKeys(categories.length + 2);
 
         return Container(
           margin: const EdgeInsets.all(8),
@@ -1017,17 +1029,18 @@ class MenuPanelState extends State<MenuPanel> {
                           padding: EdgeInsets.symmetric(
                               horizontal: widget.isCompact ? 12 : 16),
                           scrollDirection: Axis.horizontal,
-                          itemCount: categories.length + 1,
+                          itemCount: categories.length + 2,
                           itemBuilder: (_, idx) {
-                            final isAll = idx == 0;
-                            final category = isAll ? null : categories[idx - 1];
-                            final categoryId = isAll ? 0 : category!.categoryId;
-                            final categoryName = isAll
-                                ? 'All'
-                                : category!.categoryName ?? 'Unknown';
-                            final active = isAll
-                                ? selectedCategoryId == 0
-                                : categoryId == selectedCategoryId;
+                            final isFavourites = idx == 0;
+                            final isAll = idx == 1;
+                            final category = (isFavourites || isAll) ? null : categories[idx - 2];
+                            final categoryId = isFavourites ? -1 : (isAll ? 0 : category!.categoryId);
+                            final categoryName = isFavourites
+                                ? 'Favourites'
+                                : (isAll ? 'All' : category!.categoryName ?? 'Unknown');
+                            final active = isFavourites
+                                ? selectedCategoryId == -1
+                                : (isAll ? selectedCategoryId == 0 : categoryId == selectedCategoryId);
                             final isKeyboardFocused =
                                 _categoryFocusNode.hasFocus &&
                                     _focusedCategoryIndex == idx;
@@ -1046,7 +1059,10 @@ class MenuPanelState extends State<MenuPanel> {
                                           _focusedCategoryIndex = idx;
                                           _focusedMenuItemIndex = 0;
                                         });
-                                        if (isAll) {
+                                        if (isFavourites) {
+                                          widget.onCategoryChanged(-1);
+                                          gridProvider.listQuickAccessProducts();
+                                        } else if (isAll) {
                                           widget.onCategoryChanged(0);
                                           productProvider.refreshProducts();
                                         } else if (categoryId == 0) {
@@ -1092,19 +1108,52 @@ class MenuPanelState extends State<MenuPanel> {
                                               : [],
                                         ),
                                         child: Center(
-                                          child: Text(
-                                            categoryName,
-                                            style: buildCustomStyle(
-                                              FontWeightManager.semiBold,
-                                              widget.isCompact
-                                                  ? FontSize.s12
-                                                  : FontSize.s13,
-                                              0.21,
-                                              active
-                                                  ? Colors.white
-                                                  : const Color(0xFF64748B),
-                                            ),
-                                          ),
+                                          child: isFavourites
+                                              ? Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.star_rounded,
+                                                      size: 14,
+                                                      color: active
+                                                          ? Colors.white
+                                                          : const Color(
+                                                              0xFF64748B),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      categoryName,
+                                                      style: buildCustomStyle(
+                                                        FontWeightManager
+                                                            .semiBold,
+                                                        widget.isCompact
+                                                            ? FontSize.s12
+                                                            : FontSize.s13,
+                                                        0.21,
+                                                        active
+                                                            ? Colors.white
+                                                            : const Color(
+                                                                0xFF64748B),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
+                                              : Text(
+                                                  categoryName,
+                                                  style: buildCustomStyle(
+                                                    FontWeightManager
+                                                        .semiBold,
+                                                    widget.isCompact
+                                                        ? FontSize.s12
+                                                        : FontSize.s13,
+                                                    0.21,
+                                                    active
+                                                        ? Colors.white
+                                                        : const Color(
+                                                            0xFF64748B),
+                                                  ),
+                                                ),
                                         ),
                                       ),
                                     ),
@@ -1153,36 +1202,42 @@ class MenuPanelState extends State<MenuPanel> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.restaurant_menu,
+                                  isFavouritesSelected
+                                      ? Icons.star_border_rounded
+                                      : Icons.restaurant_menu,
                                   size: 48,
                                   color:
                                       ColorManager.textColor.withOpacity(0.3),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'No items in this category',
+                                  isFavouritesSelected
+                                      ? 'No favourites added yet'
+                                      : 'No items in this category',
                                   style: buildCustomStyle(
                                       FontWeightManager.medium,
                                       FontSize.s14,
                                       0.21,
                                       ColorManager.textColor.withOpacity(0.7)),
                                 ),
-                                const SizedBox(height: 12),
-                                CustomRoundButton(
-                                  title: _isResyncingProducts
-                                      ? 'Resyncing...'
-                                      : 'Resync Products',
-                                  fct: _isResyncingProducts
-                                      ? () {}
-                                      : _resyncProductsFromEmptyState,
-                                  width: 170,
-                                  height: 36,
-                                  fontSize: 11,
-                                  boxColor: ColorManager.kPrimaryColor,
-                                  borderColor: ColorManager.kPrimaryColor,
-                                  textColor: Colors.white,
-                                  radius: 8,
-                                ),
+                                if (!isFavouritesSelected) ...[
+                                  const SizedBox(height: 12),
+                                  CustomRoundButton(
+                                    title: _isResyncingProducts
+                                        ? 'Resyncing...'
+                                        : 'Resync Products',
+                                    fct: _isResyncingProducts
+                                        ? () {}
+                                        : _resyncProductsFromEmptyState,
+                                    width: 170,
+                                    height: 36,
+                                    fontSize: 11,
+                                    boxColor: ColorManager.kPrimaryColor,
+                                    borderColor: ColorManager.kPrimaryColor,
+                                    textColor: Colors.white,
+                                    radius: 8,
+                                  ),
+                                ],
                               ],
                             ),
                           )

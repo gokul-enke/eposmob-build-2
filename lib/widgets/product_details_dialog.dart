@@ -1569,7 +1569,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
 
     final nonBaseUnits = (product.saleUnits ?? []).where((u) {
       final rate = double.tryParse(u.conversionRate?.toString() ?? '0') ?? 0;
-      return rate > 1.0;
+      return rate > 0;
     }).toList();
 
     return SelectionArea(
