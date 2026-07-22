@@ -76,6 +76,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'supermarkerrecpt3', 'name': 'Supermarker Recpt3'},
     {'id': 'bilingual', 'name': 'Bilingual'},
     {'id': 'multi_store', 'name': 'Multi Store'},
+    {'id': 'mobile_shop_tax_invoice', 'name': 'Mobile Shop Tax Invoice'},
   ];
 
   // List of available receipt themes for standard PDF printing (A4/A5)
@@ -202,6 +203,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return 'Supermarket-style receipt layout (version 3)';
       case 'bilingual':
         return 'Bilingual layout with English and Arabic support';
+      case 'mobile_shop_tax_invoice':
+        return 'Bilingual ZATCA tax invoice for mobile shops with SN, VAT, QTY, PRICE and AMOUNT columns';
       default:
         return 'Modern & clean design with enhanced spacing';
     }
