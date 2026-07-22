@@ -361,7 +361,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return _SettingsInfoCard(
             title: 'Offline Data',
             subtitle: subtitle,
-            icon: FontAwesomeIcons.database,
+            icon: const FaIcon(
+              FontAwesomeIcons.database,
+              color: Color(0xFF2E7D32),
+              size: 22,
+            ),
             backgroundColor: const Color(0xFFE8F5E9),
             iconColor: const Color(0xFF2E7D32),
             onTap: () {
@@ -383,7 +387,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return _SettingsInfoCard(
             title: 'Last Product Sync',
             subtitle: displayTime,
-            icon: FontAwesomeIcons.clockRotateLeft,
+            icon: const FaIcon(
+              FontAwesomeIcons.clockRotateLeft,
+              color: Color(0xFFEF6C00),
+              size: 22,
+            ),
             backgroundColor: const Color(0xFFFFF3E0),
             iconColor: const Color(0xFFEF6C00),
             onTap: () => _showLastSyncDialog(
@@ -411,7 +419,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: isOfflineModeEnabled
                 ? 'Manually enabled'
                 : 'Uses live internet status',
-            icon: isOfflineModeEnabled ? Icons.wifi_off : Icons.wifi,
+            icon: Icon(
+              isOfflineModeEnabled ? Icons.wifi_off : Icons.wifi,
+              color: isOfflineModeEnabled
+                  ? const Color(0xFFC62828)
+                  : const Color(0xFF2E7D32),
+              size: 22,
+            ),
             backgroundColor: isOfflineModeEnabled
                 ? const Color(0xFFFFEBEE)
                 : const Color(0xFFE8F5E9),
@@ -432,7 +446,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           return _SettingsInfoCard(
             title: 'Notification Position',
             subtitle: label,
-            icon: Icons.view_week,
+            icon: const Icon(
+              Icons.view_week,
+              color: Color(0xFF1565C0),
+              size: 22,
+            ),
             backgroundColor: const Color(0xFFE3F2FD),
             iconColor: const Color(0xFF1565C0),
             onTap: () async {
@@ -449,7 +467,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return _SettingsInfoCard(
               title: 'Screen Orientation',
               subtitle: OrientationHelper.labelForMode(current),
-              icon: Icons.screen_rotation,
+              icon: const Icon(
+                Icons.screen_rotation,
+                color: Color(0xFF3949AB),
+                size: 22,
+              ),
               backgroundColor: const Color(0xFFE8EAF6),
               iconColor: const Color(0xFF3949AB),
               onTap: () async {
@@ -692,7 +714,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 class _SettingsCardWithIcon extends StatefulWidget {
   final String title;
-  final IconData icon;
+  final FaIconData icon;
   final VoidCallback onTap;
   final Color backgroundColor;
   final Color iconColor;
@@ -776,7 +798,7 @@ class _SettingsCardWithIconState extends State<_SettingsCardWithIcon> {
 class _SettingsInfoCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final IconData icon;
+  final Widget icon;
   final Color backgroundColor;
   final Color iconColor;
   final VoidCallback? onTap;
@@ -817,13 +839,7 @@ class _SettingsInfoCard extends StatelessWidget {
                     color: backgroundColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Center(
-                    child: FaIcon(
-                      icon,
-                      color: iconColor,
-                      size: 22,
-                    ),
-                  ),
+                  child: Center(child: icon),
                 ),
                 const SizedBox(height: 12),
                 Text(

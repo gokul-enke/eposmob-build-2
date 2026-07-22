@@ -235,7 +235,7 @@ class _OfflineDataList extends StatelessWidget {
           ),
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.box,
+          faIcon: FontAwesomeIcons.box,
           iconColor: const Color(0xFF5E35B1),
           backgroundColor: const Color(0xFFEDE7F6),
           title: 'Products',
@@ -258,7 +258,7 @@ class _OfflineDataList extends StatelessWidget {
           canClear: canClear,
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.tags,
+          faIcon: FontAwesomeIcons.tags,
           iconColor: const Color(0xFF1565C0),
           backgroundColor: const Color(0xFFE3F2FD),
           title: 'Categories',
@@ -289,7 +289,7 @@ class _OfflineDataList extends StatelessWidget {
                 ? 'Never synced'
                 : DateHelper.formatISODateToIST(iso);
             return _OfflineDataTile(
-              icon: FontAwesomeIcons.clockRotateLeft,
+              faIcon: FontAwesomeIcons.clockRotateLeft,
               iconColor: const Color(0xFFEF6C00),
               backgroundColor: const Color(0xFFFFF3E0),
               title: 'Last product sync',
@@ -320,7 +320,7 @@ class _OfflineDataList extends StatelessWidget {
           ),
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.creditCard,
+          faIcon: FontAwesomeIcons.creditCard,
           iconColor: const Color(0xFF00897B),
           backgroundColor: const Color(0xFFE0F2F1),
           title: 'Payment methods',
@@ -344,7 +344,7 @@ class _OfflineDataList extends StatelessWidget {
           canClear: canClear,
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.truck,
+          faIcon: FontAwesomeIcons.truck,
           iconColor: const Color(0xFF3949AB),
           backgroundColor: const Color(0xFFE8EAF6),
           title: 'Delivery methods',
@@ -369,7 +369,7 @@ class _OfflineDataList extends StatelessWidget {
           canClear: canClear,
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.fileLines,
+          faIcon: FontAwesomeIcons.fileLines,
           iconColor: const Color(0xFF6A1B9A),
           backgroundColor: const Color(0xFFF3E5F5),
           title: 'Document configurations',
@@ -410,7 +410,7 @@ class _OfflineDataList extends StatelessWidget {
           ),
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.users,
+          faIcon: FontAwesomeIcons.users,
           iconColor: const Color(0xFF0277BD),
           backgroundColor: const Color(0xFFE1F5FE),
           title: 'Customers',
@@ -434,7 +434,7 @@ class _OfflineDataList extends StatelessWidget {
           canClear: canClear,
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.truckField,
+          faIcon: FontAwesomeIcons.truckField,
           iconColor: const Color(0xFF558B2F),
           backgroundColor: const Color(0xFFF1F8E9),
           title: 'Suppliers',
@@ -474,7 +474,7 @@ class _OfflineDataList extends StatelessWidget {
           ),
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.store,
+          faIcon: FontAwesomeIcons.store,
           iconColor: const Color(0xFF2E7D32),
           backgroundColor: const Color(0xFFE8F5E9),
           title: 'Stores',
@@ -497,7 +497,7 @@ class _OfflineDataList extends StatelessWidget {
           canClear: canClear,
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.ruler,
+          faIcon: FontAwesomeIcons.ruler,
           iconColor: const Color(0xFF455A64),
           backgroundColor: const Color(0xFFECEFF1),
           title: 'Units of measure',
@@ -520,7 +520,7 @@ class _OfflineDataList extends StatelessWidget {
           canClear: canClear,
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.warehouse,
+          faIcon: FontAwesomeIcons.warehouse,
           iconColor: const Color(0xFF5D4037),
           backgroundColor: const Color(0xFFEFEBE9),
           title: 'Rack / master data',
@@ -552,7 +552,7 @@ class _OfflineDataList extends StatelessWidget {
                 ? name
                 : (id != null ? 'Store #$id' : 'Not selected');
             return _OfflineDataTile(
-              icon: FontAwesomeIcons.locationDot,
+              faIcon: FontAwesomeIcons.locationDot,
               iconColor: const Color(0xFFC62828),
               backgroundColor: const Color(0xFFFFEBEE),
               title: 'Active store',
@@ -564,7 +564,7 @@ class _OfflineDataList extends StatelessWidget {
         const SizedBox(height: 8),
         _SectionHeader(title: 'Local drafts (on device)'),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.cartShopping,
+          faIcon: FontAwesomeIcons.cartShopping,
           iconColor: const Color(0xFF1565C0),
           backgroundColor: const Color(0xFFE3F2FD),
           title: 'Cart items',
@@ -577,7 +577,7 @@ class _OfflineDataList extends StatelessWidget {
           ),
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.bookmark,
+          faIcon: FontAwesomeIcons.bookmark,
           iconColor: const Color(0xFFEF6C00),
           backgroundColor: const Color(0xFFFFF3E0),
           title: 'Saved orders',
@@ -590,7 +590,7 @@ class _OfflineDataList extends StatelessWidget {
           ),
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.circleCheck,
+          faIcon: FontAwesomeIcons.circleCheck,
           iconColor: const Color(0xFF2E7D32),
           backgroundColor: const Color(0xFFE8F5E9),
           title: 'Confirmed orders',
@@ -605,7 +605,8 @@ class _OfflineDataList extends StatelessWidget {
         const SizedBox(height: 8),
         _SectionHeader(title: 'Connection'),
         _OfflineDataTile(
-          icon: billingProvider.hasInternet ? Icons.wifi : Icons.wifi_off,
+          materialIcon:
+              billingProvider.hasInternet ? Icons.wifi : Icons.wifi_off,
           iconColor: billingProvider.hasInternet
               ? const Color(0xFF2E7D32)
               : const Color(0xFFC62828),
@@ -619,7 +620,7 @@ class _OfflineDataList extends StatelessWidget {
           value: billingProvider.hasInternet ? 'Online' : 'Offline',
         ),
         _OfflineDataTile(
-          icon: FontAwesomeIcons.arrowsRotate,
+          faIcon: FontAwesomeIcons.arrowsRotate,
           iconColor: const Color(0xFF5E35B1),
           backgroundColor: const Color(0xFFEDE7F6),
           title: 'Last full sync',
@@ -898,7 +899,8 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _OfflineDataTile extends StatelessWidget {
-  final IconData icon;
+  final FaIconData? faIcon;
+  final IconData? materialIcon;
   final Color iconColor;
   final Color backgroundColor;
   final String title;
@@ -911,7 +913,8 @@ class _OfflineDataTile extends StatelessWidget {
   final VoidCallback? onClear;
 
   const _OfflineDataTile({
-    required this.icon,
+    this.faIcon,
+    this.materialIcon,
     required this.iconColor,
     required this.backgroundColor,
     required this.title,
@@ -922,7 +925,10 @@ class _OfflineDataTile extends StatelessWidget {
     this.isSyncing = false,
     this.onSync,
     this.onClear,
-  });
+  }) : assert(
+          (faIcon == null) != (materialIcon == null),
+          'Provide either faIcon or materialIcon',
+        );
 
   @override
   Widget build(BuildContext context) {
@@ -945,7 +951,9 @@ class _OfflineDataTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: FaIcon(icon, color: iconColor, size: 16),
+              child: faIcon != null
+                  ? FaIcon(faIcon!, color: iconColor, size: 16)
+                  : Icon(materialIcon!, color: iconColor, size: 16),
             ),
           ),
           const SizedBox(width: 12),
