@@ -268,7 +268,8 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                 6: FlexColumnWidth(2), // Online Sales
                 7: FlexColumnWidth(2), // Cash Sales
                 8: FlexColumnWidth(2), // Credit Amount
-                9: FixedColumnWidth(100), // Action
+                9: FlexColumnWidth(1.5), // Status
+                10: FixedColumnWidth(100), // Action
               },
               border: null,
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -284,6 +285,7 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                     _buildTableHeader('Online Sales'),
                     _buildTableHeader('Cash Sales'),
                     _buildTableHeader('Credit Amount'),
+                    _buildTableHeader('Status'),
                     _buildTableHeader('Action'),
                   ],
                 ),
@@ -317,7 +319,8 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                       6: FlexColumnWidth(2), // Online Sales
                       7: FlexColumnWidth(2), // Cash Sales
                       8: FlexColumnWidth(2), // Credit Amount
-                      9: FixedColumnWidth(100), // Action
+                      9: FlexColumnWidth(1.5), // Status
+                      10: FixedColumnWidth(100), // Action
                     },
                     border: null,
                     defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -423,6 +426,11 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
                             SizedBox(
                               height: 55,
                               child: Center(
+                                  child: _buildStatusChip(data.status ?? 'closed')),
+                            ),
+                            SizedBox(
+                              height: 55,
+                              child: Center(
                                   child: _buildActionButtons(data, context)),
                             ),
                           ],
@@ -464,6 +472,60 @@ class _DailySalesCloseListScreenState extends State<DailySalesCloseListScreen> {
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color backgroundColor;
+    Color textColor;
+
+    switch (status.toLowerCase()) {
+      case 'closed':
+      case 'completed':
+        backgroundColor = Colors.green.withOpacity(0.1);
+        textColor = Colors.green.shade700;
+        break;
+      case 'draft':
+      case 'open':
+      case 'pending':
+        backgroundColor = Colors.orange.withOpacity(0.1);
+        textColor = Colors.orange.shade800;
+        break;
+      default:
+        backgroundColor = Colors.green.withOpacity(0.1);
+        textColor = Colors.green.shade700;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withOpacity(0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: textColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            status.toUpperCase(),
+            style: buildCustomStyle(
+              FontWeightManager.medium,
+              FontSize.s9,
+              0.18,
+              textColor,
             ),
           ),
         ],

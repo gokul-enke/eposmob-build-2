@@ -412,7 +412,9 @@ class CategoryProvider extends ChangeNotifier {
       filtered = filtered
           .where(
             (category) =>
-                category.categoryName?.toLowerCase().contains(query) ?? false,
+                (category.categoryName?.toLowerCase().contains(query) ?? false) ||
+                (category.translations?.values.any((name) =>
+                    name.toLowerCase().contains(query)) ?? false),
           )
           .toList();
     }
@@ -779,9 +781,10 @@ class CategoryProvider extends ChangeNotifier {
   List<Category> searchCategories(String query) {
     if (query.isNotEmpty) {
       return categoryList!
-          .where((category) => category.categoryName!
-              .toLowerCase()
-              .contains(query.toLowerCase()))
+          .where((category) =>
+              (category.categoryName?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
+              (category.translations?.values.any((name) =>
+                  name.toLowerCase().contains(query.toLowerCase())) ?? false))
           .toList();
     } else {
       return categoryListWithoutQuery!;
@@ -792,9 +795,10 @@ class CategoryProvider extends ChangeNotifier {
     // debugPrint("searchCategoryPageCategories $query");
     if (query.isNotEmpty) {
       return categoryListWithoutQuery!
-          .where((category) => category.categoryName!
-              .toLowerCase()
-              .contains(query.toLowerCase()))
+          .where((category) =>
+              (category.categoryName?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
+              (category.translations?.values.any((name) =>
+                  name.toLowerCase().contains(query.toLowerCase())) ?? false))
           .toList();
     } else {
       return categoryListWithoutQuery!;

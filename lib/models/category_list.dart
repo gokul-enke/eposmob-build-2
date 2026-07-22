@@ -42,6 +42,7 @@ class CategoryListModel {
 class Category {
   final int? categoryId;
   final String? categoryName;
+  final Map<String, String>? translations;
   final String? categorySlug;
   final int? productsCount;
   final String? categoryImage;
@@ -51,6 +52,7 @@ class Category {
   Category({
     this.categoryId,
     this.categoryName,
+    this.translations,
     this.categorySlug,
     this.productsCount,
     this.categoryImage,
@@ -58,21 +60,31 @@ class Category {
     this.parent,
   });
 
-  factory Category.fromJson(Map<String, dynamic> json) => Category(
-        categoryId: json["id"],
-        categoryName: json["name"],
-        categorySlug: json["slug"],
-        productsCount: 0, // Assuming productsCount is not provided in the API
-        categoryImage: json["image_url"], // Updated to match the new API
-        categoryIcon: json["icon_url"], // Updated to match the new API
-        parent: json["parent"] == null
-            ? null
-            : ParentCategory.fromJson(json["parent"]),
-      );
+  factory Category.fromJson(Map<String, dynamic> json) {
+    final translations = {
+      for (var n in (json['names'] as List? ?? []))
+        if (n['code'] != null && n['name'] != null)
+          n['code'] as String: n['name'] as String
+    };
+    print('Category: ${json["name"]} | translations: $translations');
+    return Category(
+      categoryId: json["id"],
+      categoryName: json["name"],
+      translations: translations,
+      categorySlug: json["slug"],
+      productsCount: 0, // Assuming productsCount is not provided in the API
+      categoryImage: json["image_url"], // Updated to match the new API
+      categoryIcon: json["icon_url"], // Updated to match the new API
+      parent: json["parent"] == null
+          ? null
+          : ParentCategory.fromJson(json["parent"]),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "category_id": categoryId,
         "category_name": categoryName,
+        "translations": translations,
         "category_slug": categorySlug,
         "products_count": productsCount,
         "category_image": categoryImage,
