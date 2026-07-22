@@ -274,7 +274,16 @@ class QrRow extends ReceiptRow {
   final String data;
   final double size;
 
-  QrRow(this.data, {this.size = 200});
+  /// Module fill ratio in each QR cell. Lower values leave more white gap
+  /// (helps thermal bleed); higher values print darker/solid modules.
+  /// Default [0.85]. Use [0.95]–[1.0] when the QR looks too light.
+  final double shrinkFactor;
+
+  QrRow(
+    this.data, {
+    this.size = 200,
+    this.shrinkFactor = 0.85,
+  });
 
   @override
   double calculateHeight(
@@ -308,10 +317,10 @@ class QrRow extends ReceiptRow {
 
     final paint = Paint()..color = Colors.black;
 
-    // Shrink factor to prevent thermal ink bleed (0.85 = 15% gap between modules)
-    // This creates small white gaps that prevent ink from bleeding together
-    const double shrinkFactor = 0.85;
-    final double drawnModuleSize = moduleSize * shrinkFactor;
+    // Shrink factor to prevent thermal ink bleed (0.85 = 15% gap between modules).
+  final double safeShrink =
+      shrinkFactor.clamp(0.5, 1.0).toDouble();
+  final double drawnModuleSize = moduleSize * safeShrink;
     final double moduleOffset = (moduleSize - drawnModuleSize) / 2;
 
     for (int ix = 0; ix < qrImage.moduleCount; ix++) {
