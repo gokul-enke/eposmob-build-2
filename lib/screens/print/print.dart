@@ -23,6 +23,7 @@ import 'package:pos_machine/screens/print/standard_layouts/standard_layouts.dart
 import 'package:pos_machine/screens/print/receipt_customer_segment.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/helpers/payment_helper.dart';
+import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
 // import 'package:pos_machine/resources/localization_service.dart';
 
@@ -141,25 +142,38 @@ class PrintPage extends StatefulWidget {
       );
       final printerPrefsKey =
           _printerPrefsKeyForDocument(documentConfigType, isB2B: isB2B);
+      final useDevelopmentPrinter =
+          await DevelopmentPrinterService.shouldUseForTarget(
+        printerPrefsKey,
+        fallbackPrinterPreferenceKey:
+            printerPrefsKey == 'default_printer' ? null : 'default_printer',
+        preferences: prefs,
+      );
       // B2B falls back to the legacy B2C printer when not separately configured.
       final defaultPrinterJson = prefs.getString(printerPrefsKey) ??
           prefs.getString('default_printer');
 
-      if (defaultPrinterJson == null) {
+      if (!useDevelopmentPrinter && defaultPrinterJson == null) {
         debugPrint('[PrintPage] No default printer found');
         return false;
       }
 
-      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
-      final selectedPrinter = BluetoothPrinter(
-        deviceName: printerData['deviceName'],
-        address: printerData['address'],
-        vendorId: printerData['vendorId'],
-        productId: printerData['productId'],
-        typePrinter: PrinterType.values.firstWhere(
-          (e) => e.toString() == printerData['typePrinter'],
-        ),
-      );
+      final BluetoothPrinter selectedPrinter;
+      if (useDevelopmentPrinter) {
+        selectedPrinter = BluetoothPrinter.development();
+      } else {
+        final Map<String, dynamic> printerData =
+            json.decode(defaultPrinterJson!);
+        selectedPrinter = BluetoothPrinter(
+          deviceName: printerData['deviceName'],
+          address: printerData['address'],
+          vendorId: printerData['vendorId'],
+          productId: printerData['productId'],
+          typePrinter: PrinterType.values.firstWhere(
+            (e) => e.toString() == printerData['typePrinter'],
+          ),
+        );
+      }
 
       debugPrint(
           '[PrintPage] Auto-printing with default printer: ${selectedPrinter.deviceName}');
@@ -573,7 +587,28 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> _checkPermissions() async {
     debugPrint('[PrintPage] _checkPermissions() called');
-    if (await _requestPermissions()) {
+    final prefs = await SharedPreferences.getInstance();
+    final printerPreferenceKey = PrintPage._printerPrefsKeyForDocument(
+      widget.documentConfigType,
+      isB2B: _isB2B,
+    );
+    final useDevelopmentPrinter =
+        await DevelopmentPrinterService.shouldUseForTarget(
+      printerPreferenceKey,
+      fallbackPrinterPreferenceKey:
+          printerPreferenceKey == 'default_printer' ? null : 'default_printer',
+      preferences: prefs,
+    );
+    if (!mounted) return;
+    if (useDevelopmentPrinter) {
+      debugPrint(
+        '[PrintPage] Development Printer selected; skipping device scan',
+      );
+      return;
+    }
+    final permissionsGranted = await _requestPermissions();
+    if (!mounted) return;
+    if (permissionsGranted) {
       debugPrint('[PrintPage] Permissions granted. Proceeding to scan.');
       _scan();
     } else {
@@ -692,18 +727,28 @@ class _PrintPageState extends State<PrintPage> {
     debugPrint(
         '[PrintPage] _loadDefaultPrinter() reading from SharedPreferences');
     final prefs = await SharedPreferences.getInstance();
-    final defaultPrinterJson =
-        prefs.getString(PrintPage._printerPrefsKeyForDocument(
-              widget.documentConfigType,
-              isB2B: _isB2B,
-            )) ??
-            prefs.getString('default_printer');
+    final printerPreferenceKey = PrintPage._printerPrefsKeyForDocument(
+      widget.documentConfigType,
+      isB2B: _isB2B,
+    );
+    final useDevelopmentPrinter =
+        await DevelopmentPrinterService.shouldUseForTarget(
+      printerPreferenceKey,
+      fallbackPrinterPreferenceKey:
+          printerPreferenceKey == 'default_printer' ? null : 'default_printer',
+      preferences: prefs,
+    );
+    final defaultPrinterJson = prefs.getString(printerPreferenceKey) ??
+        prefs.getString('default_printer');
 
-    if (defaultPrinterJson != null) {
-      final Map<String, dynamic> printerData = json.decode(defaultPrinterJson);
-
-      setState(() {
-        selectedPrinter = BluetoothPrinter(
+    if (useDevelopmentPrinter || defaultPrinterJson != null) {
+      BluetoothPrinter printer;
+      if (useDevelopmentPrinter) {
+        printer = BluetoothPrinter.development();
+      } else {
+        final Map<String, dynamic> printerData =
+            json.decode(defaultPrinterJson!);
+        printer = BluetoothPrinter(
           deviceName: printerData['deviceName'],
           address: printerData['address'],
           vendorId: printerData['vendorId'],
@@ -712,6 +757,11 @@ class _PrintPageState extends State<PrintPage> {
             (e) => e.toString() == printerData['typePrinter'],
           ),
         );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        selectedPrinter = printer;
         _isLoading = false;
       });
       debugPrint(
@@ -727,6 +777,7 @@ class _PrintPageState extends State<PrintPage> {
         }
       }
     } else {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
@@ -736,6 +787,23 @@ class _PrintPageState extends State<PrintPage> {
 
   Future<void> _saveDefaultPrinter(BluetoothPrinter printer) async {
     final prefs = await SharedPreferences.getInstance();
+    final printerPreferenceKey = PrintPage._printerPrefsKeyForDocument(
+      widget.documentConfigType,
+      isB2B: _isB2B,
+    );
+    if (printer.isDevelopment) {
+      await DevelopmentPrinterService.selectForTarget(
+        printerPreferenceKey,
+        selected: true,
+        preferences: prefs,
+      );
+      return;
+    }
+    await DevelopmentPrinterService.selectForTarget(
+      printerPreferenceKey,
+      selected: false,
+      preferences: prefs,
+    );
     final printerData = {
       'deviceName': printer.deviceName,
       'address': printer.address,
@@ -744,8 +812,7 @@ class _PrintPageState extends State<PrintPage> {
       'typePrinter': printer.typePrinter.toString(),
     };
     await prefs.setString(
-      PrintPage._printerPrefsKeyForDocument(widget.documentConfigType,
-          isB2B: _isB2B),
+      printerPreferenceKey,
       json.encode(printerData),
     );
   }

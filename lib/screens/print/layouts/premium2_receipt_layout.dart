@@ -197,15 +197,30 @@ class Premium2ReceiptLayout implements ReceiptLayout {
       );
 
       // ========== DEBUG: SAVE IMAGES TO DESKTOP ==========
-      if (kDebugMode) {
+      if (kDebugMode || selectedPrinter.isDevelopment) {
         try {
-          await PrintDebugImageSaver.saveReceiptImages(
+          final savedFile = await PrintDebugImageSaver.saveReceiptImages(
             imagePart1,
             imagePart2,
             params.selectedPaperSize,
+            developmentOutput: selectedPrinter.isDevelopment,
+            orderNumber: params.orderNumber,
+            layoutId: layoutId,
           );
+          if (selectedPrinter.isDevelopment) {
+            if (savedFile != null && context.mounted) {
+              showScaffold(
+                context: context,
+                message: 'Development print saved to ${savedFile.path}',
+              );
+            }
+            return;
+          }
         } catch (e) {
           debugPrint("Error saving debug images: $e");
+          if (selectedPrinter.isDevelopment) {
+            rethrow;
+          }
         }
       }
       // ===================================================

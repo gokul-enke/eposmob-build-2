@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
+import 'package:pos_machine/services/development_printer_service.dart';
 
 class PrintDebugImageSaver {
   static Future<void> saveKotImage(img.Image image, String paperSize) async {
@@ -42,12 +43,26 @@ class PrintDebugImageSaver {
     }
   }
 
-  static Future<void> saveReceiptImages(
+  static Future<File?> saveReceiptImages(
     img.Image imagePart1,
     img.Image imagePart2,
-    String paperSize,
-  ) async {
-    if (!kDebugMode) return;
+    String paperSize, {
+    required bool developmentOutput,
+    required String orderNumber,
+    required String layoutId,
+  }) async {
+    File? developmentFile;
+    if (developmentOutput) {
+      developmentFile = await DevelopmentPrinterService.saveThermalReceipt(
+        firstPart: imagePart1,
+        secondPart: imagePart2,
+        paperSize: paperSize,
+        orderNumber: orderNumber,
+        layoutId: layoutId,
+      );
+    }
+
+    if (!kDebugMode) return developmentFile;
 
     try {
       final tempDir = await getTemporaryDirectory();
@@ -94,6 +109,7 @@ class PrintDebugImageSaver {
     } catch (e) {
       debugPrint('⚠️ Error saving receipt debug images: $e');
     }
+    return developmentFile;
   }
 
   static Future<void> _cleanupOldPngFiles({

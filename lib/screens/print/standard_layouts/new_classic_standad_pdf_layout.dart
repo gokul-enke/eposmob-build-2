@@ -19,6 +19,7 @@ import 'package:pos_machine/resources/localization_service.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
 import 'package:pos_machine/screens/print/logo_loader.dart';
 import 'package:pos_machine/screens/print/standard_layouts/standard_pdf_layout.dart';
+import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -41,6 +42,21 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
     try {
       final doc = await buildPdfDocument(params);
       final pdfBytes = await doc.save();
+
+      if (params.selectedPrinter.isDevelopment) {
+        final savedFile = await DevelopmentPrinterService.savePdf(
+          bytes: pdfBytes,
+          orderNumber: params.orderNumber,
+          layoutId: layoutId,
+        );
+        if (params.context.mounted) {
+          showScaffold(
+            context: params.context,
+            message: 'Development PDF saved to ${savedFile.path}',
+          );
+        }
+        return;
+      }
 
       // Save PDF to documents/epos folder
       final output = await _getEposDirectory();
@@ -78,6 +94,9 @@ class NewClassicStandardPdfLayout implements StandardPdfLayout {
           context: params.context,
           message: "Error generating PDF: ${e.toString()}",
         );
+      }
+      if (params.selectedPrinter.isDevelopment) {
+        rethrow;
       }
     }
   }

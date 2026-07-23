@@ -17,6 +17,7 @@ import 'package:pos_machine/providers/sync_provider.dart';
 import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
+import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/screens/settings/widgets/offline_data_page.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart'
@@ -325,6 +326,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showScaffold(context: context, message: 'Screen orientation updated');
   }
 
+  Future<void> _toggleDeveloperMode() async {
+    try {
+      final wasEnabled = await DevelopmentPrinterService.isEnabled();
+      final isEnabled = !wasEnabled;
+      await DevelopmentPrinterService.setEnabled(isEnabled);
+      if (!mounted) return;
+      setState(() {});
+      showScaffold(
+        context: context,
+        message: isEnabled
+            ? 'Developer Mode enabled. Select Development Printer in Printer settings.'
+            : 'Developer Mode disabled. Physical printer settings restored.',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Could not update Developer Mode: $error',
+      );
+    }
+  }
+
   List<Widget> _buildSettingsCards(BuildContext context) {
     return [
       // _SettingsCard(
@@ -480,6 +503,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             );
           },
         ),
+      FutureBuilder<bool>(
+        future: DevelopmentPrinterService.isEnabled(),
+        builder: (context, snapshot) {
+          final isEnabled = snapshot.data ?? false;
+          return _SettingsInfoCard(
+            title: 'Developer Mode',
+            subtitle: isEnabled
+                ? 'On • file-output printer available'
+                : 'Off • production printing',
+            icon: FaIcon(
+              FontAwesomeIcons.code,
+              color:
+                  isEnabled ? const Color(0xFF6A1B9A) : const Color(0xFF546E7A),
+              size: 22,
+            ),
+            backgroundColor:
+                isEnabled ? const Color(0xFFF3E5F5) : const Color(0xFFECEFF1),
+            iconColor:
+                isEnabled ? const Color(0xFF6A1B9A) : const Color(0xFF546E7A),
+            onTap: _toggleDeveloperMode,
+          );
+        },
+      ),
       _SettingsCardWithIcon(
         title: 'Clear Local Storage',
         icon: FontAwesomeIcons.trashCan,

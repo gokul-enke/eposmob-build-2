@@ -60,6 +60,13 @@ class ThermalPrinterUtils {
 
   /// Connect to the specified printer
   Future<void> connectToPrinter(BluetoothPrinter selectedPrinter) async {
+    if (selectedPrinter.isDevelopment) {
+      debugPrint(
+        '[DevelopmentPrinter] Skipping physical printer connection',
+      );
+      return;
+    }
+
     if (selectedPrinter.typePrinter == PrinterType.usb) {
       await printerManager.connect(
         type: PrinterType.usb,
@@ -124,6 +131,13 @@ class ThermalPrinterUtils {
     BluetoothPrinter selectedPrinter,
     List<int> bytes,
   ) async {
+    if (selectedPrinter.isDevelopment) {
+      debugPrint(
+        '[DevelopmentPrinter] Skipping ${bytes.length}-byte physical send',
+      );
+      return;
+    }
+
     if (selectedPrinter.typePrinter != PrinterType.bluetooth) {
       final sent = await printerManager.send(
         type: selectedPrinter.typePrinter,
@@ -157,6 +171,8 @@ class ThermalPrinterUtils {
 
   /// Disconnect from the specified printer
   Future<void> disconnectPrinter(BluetoothPrinter selectedPrinter) async {
+    if (selectedPrinter.isDevelopment) return;
+
     // Keep Bluetooth connected after a job. The printer package reports an
     // intentional socket close as "Bluetooth connection lost", and closing as
     // soon as `send` returns can truncate bytes still buffered by the printer.
