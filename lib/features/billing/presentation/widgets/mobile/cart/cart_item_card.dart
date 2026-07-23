@@ -374,6 +374,7 @@ void _showProductDetailsDialog(BuildContext context, LocalCartItem item) {
     mrp: item.mrp,
     quantity: item.quantity,
     selectedStock: item.selectedStock,
+    selectedVariantId: item.variantId,
     isCompact: true,
     currency: currency,
     useBillingProductPermissions: true,

@@ -150,6 +150,14 @@ class GetProduct {
   /// Null keeps compatibility with older API responses, where the presence of
   /// variant rows is the only available signal.
   final bool? variantMode;
+
+  /// Raw `has_variants` signal returned by the catalog API. This is kept
+  /// separately from [variantMode] so Hive round trips do not discard either
+  /// backend field.
+  final bool? hasVariantsFlag;
+
+  /// Variant pre-matched by the backend (for example for a variant barcode).
+  final int? matchedVariantId;
   final String? sku;
   final dynamic offerPrice;
   final dynamic productLocation;
@@ -187,6 +195,8 @@ class GetProduct {
     this.saleUnits,
     this.variants,
     this.variantMode,
+    this.hasVariantsFlag,
+    this.matchedVariantId,
     this.sku,
     this.offerPrice,
     this.productLocation,
@@ -225,6 +235,8 @@ class GetProduct {
     List<SaleUnit>? saleUnits,
     List<ProductVariant>? variants,
     bool? variantMode,
+    bool? hasVariantsFlag,
+    int? matchedVariantId,
     String? sku,
     dynamic offerPrice,
     dynamic productLocation,
@@ -263,6 +275,8 @@ class GetProduct {
       saleUnits: saleUnits ?? this.saleUnits,
       variants: variants ?? this.variants,
       variantMode: variantMode ?? this.variantMode,
+      hasVariantsFlag: hasVariantsFlag ?? this.hasVariantsFlag,
+      matchedVariantId: matchedVariantId ?? this.matchedVariantId,
       sku: sku ?? this.sku,
       offerPrice: offerPrice ?? this.offerPrice,
       productLocation: productLocation ?? this.productLocation,
@@ -354,7 +368,14 @@ class GetProduct {
             : List<ProductVariant>.from((json["variants"] as List).map(
                 (x) => ProductVariant.fromJson(x as Map<String, dynamic>),
               )),
-        variantMode: _parseBool(json["variant_mode"] ?? json["has_variants"]),
+        variantMode: _parseBool(json["variant_mode"]),
+        hasVariantsFlag: _parseBool(json["has_variants"]),
+        matchedVariantId: (() {
+          final raw = json["matched_variant_id"];
+          if (raw == null) return null;
+          if (raw is int) return raw;
+          return int.tryParse(raw.toString());
+        })(),
         sku: json["sku"],
         offerPrice: json["offer_price"]?.toString(),
         productLocation: json["product_location"],
@@ -391,7 +412,9 @@ class GetProduct {
   }
 
   bool get hasVariants =>
-      variantMode ?? (variants != null && variants!.isNotEmpty);
+      variantMode ??
+      hasVariantsFlag ??
+      (variants != null && variants!.isNotEmpty);
 
   List<ProductVariant> get activeVariants =>
       variants?.where((variant) => variant.active).toList() ?? const [];
@@ -435,6 +458,8 @@ class GetProduct {
             ? []
             : List<dynamic>.from(variants!.map((x) => x.toJson())),
         "variant_mode": variantMode,
+        "has_variants": hasVariantsFlag,
+        "matched_variant_id": matchedVariantId,
         "sku": sku,
         "offer_price": offerPrice,
         "product_location": productLocation,
@@ -711,6 +736,13 @@ double? _parseNullableDouble(dynamic value) {
   if (value == null) return null;
   if (value is num) return value.toDouble();
   return double.tryParse(value.toString());
+}
+
+num? _parseNullableNum(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value;
+  final text = value.toString();
+  return int.tryParse(text) ?? double.tryParse(text);
 }
 
 /// Parses batch `unit_prices` into a `{ sale_unit_id: price }` map.
@@ -1061,7 +1093,16 @@ class ProductVariant {
   final double? price;
   final double? mrp;
   final double? purchasePrice;
+
+  /// Store-scoped available quantity used by billing. [quantity] remains the
+  /// compatibility/effective value used by existing callers.
   final num? quantity;
+
+  /// Raw total/legacy `quantity` value when the API also supplies a separate
+  /// `available_quantity`.
+  final num? totalQuantity;
+  final num? availableQuantity;
+  final int? storeId;
   final bool active;
   final Map<String, dynamic> attributes;
   final List<VariantImage> images;
@@ -1074,6 +1115,9 @@ class ProductVariant {
     this.mrp,
     this.purchasePrice,
     this.quantity,
+    this.totalQuantity,
+    this.availableQuantity,
+    this.storeId,
     this.active = true,
     this.attributes = const {},
     this.images = const [],
@@ -1109,19 +1153,19 @@ class ProductVariant {
           if (value is String) return double.tryParse(value);
           return null;
         })(),
+        totalQuantity: _parseNullableNum(json['quantity']),
+        availableQuantity: _parseNullableNum(json['available_quantity']),
         quantity: (() {
           // Prefer store-scoped availability from the new API contract. The
           // legacy `quantity` field remains a compatibility fallback.
           final q = json['available_quantity'] ?? json['quantity'];
-          if (q == null) return null;
-          if (q is num) return q;
-          if (q is String) {
-            final i = int.tryParse(q);
-            if (i != null) return i;
-            final d = double.tryParse(q);
-            if (d != null) return d;
-          }
-          return null;
+          return _parseNullableNum(q);
+        })(),
+        storeId: (() {
+          final raw = json['store_id'];
+          if (raw == null) return null;
+          if (raw is int) return raw;
+          return int.tryParse(raw.toString());
         })(),
         active: _parseBool(json['active']) ?? true,
         attributes: _parseVariantAttributes(json['attributes']),
@@ -1142,7 +1186,9 @@ class ProductVariant {
         'price': price,
         'mrp': mrp,
         'purchase_price': purchasePrice,
-        'quantity': quantity,
+        'quantity': totalQuantity ?? quantity,
+        'available_quantity': availableQuantity ?? quantity,
+        'store_id': storeId,
         'active': active,
         'attributes': attributes,
         'images': images.map((image) => image.toJson()).toList(),
@@ -1156,6 +1202,9 @@ class ProductVariant {
     double? mrp,
     double? purchasePrice,
     num? quantity,
+    num? totalQuantity,
+    num? availableQuantity,
+    int? storeId,
     bool? active,
     Map<String, dynamic>? attributes,
     List<VariantImage>? images,
@@ -1168,6 +1217,11 @@ class ProductVariant {
       mrp: mrp ?? this.mrp,
       purchasePrice: purchasePrice ?? this.purchasePrice,
       quantity: quantity ?? this.quantity,
+      totalQuantity: totalQuantity ?? this.totalQuantity,
+      // A local stock movement updates the effective store availability.
+      availableQuantity:
+          availableQuantity ?? quantity ?? this.availableQuantity,
+      storeId: storeId ?? this.storeId,
       active: active ?? this.active,
       attributes: attributes ?? this.attributes,
       images: images ?? this.images,

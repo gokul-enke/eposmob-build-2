@@ -105,6 +105,17 @@ class ProductCartHelper {
     bool variantsOn = variantEnabled ?? false;
     bool variantSettingResolved = variantEnabled != null;
     bool allowOverselling = true;
+    int? activeStoreId;
+    String? activeStoreName;
+    try {
+      final storeSessionProvider =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      activeStoreId = storeSessionProvider.activeStore?.storeId;
+      activeStoreName = storeSessionProvider.activeStore?.storeName;
+    } on ProviderNotFoundException catch (_) {
+      // Isolated tests and legacy embedding trees may not expose store
+      // session state. Unscoped variants/stocks remain compatible.
+    }
     try {
       final appSettingsProvider =
           Provider.of<AppSettingsProvider>(context, listen: false);
@@ -134,7 +145,12 @@ class ProductCartHelper {
     }
 
     if (variantsOn && product.hasVariants) {
-      if (product.activeVariants.isEmpty) {
+      final activeStoreVariants =
+          ProductVariantSelection.activeVariantsForStore(
+        product,
+        activeStoreId: activeStoreId,
+      );
+      if (activeStoreVariants.isEmpty) {
         showScaffoldError(
           context: context,
           message: BillingMobileErrorMessages.noActiveVariants(
@@ -143,7 +159,12 @@ class ProductCartHelper {
         );
         return;
       }
-      if (selectedVariant != null && !selectedVariant.active) {
+      if (selectedVariant != null &&
+          (!selectedVariant.active ||
+              !ProductVariantSelection.isVariantAvailableInStore(
+                selectedVariant,
+                activeStoreId: activeStoreId,
+              ))) {
         showScaffoldError(
           context: context,
           message: BillingMobileErrorMessages.noActiveVariants(
@@ -158,13 +179,18 @@ class ProductCartHelper {
       selectedVariant = ProductVariantSelection.tryResolveWithoutPicker(
         product,
         scannedBarcode: scannedBarcode,
+        activeStoreId: activeStoreId,
       );
 
       if (selectedVariant == null &&
-          ProductVariantSelection.needsVariantPicker(product)) {
+          ProductVariantSelection.needsVariantPicker(
+            product,
+            activeStoreId: activeStoreId,
+          )) {
         selectedVariant = await showMobileVariantPickerSheet(
           context: context,
           product: product,
+          activeStoreId: activeStoreId,
         );
         if (selectedVariant == null || !context.mounted) {
           debugPrint("❌ Variant picker cancelled - aborting add");
@@ -223,11 +249,8 @@ class ProductCartHelper {
         Provider.of<LocalProductProvider>(context, listen: false);
     final generalSettingsProvider =
         Provider.of<GeneralSettingsProvider>(context, listen: false);
-    final storeSessionProvider =
-        Provider.of<StoreSessionProvider>(context, listen: false);
     final masterDataProvider =
         Provider.of<MasterDataProvider>(context, listen: false);
-    final activeStore = storeSessionProvider.activeStore;
 
     // Check if stock management is enabled
     bool stockEnabled =
@@ -272,8 +295,8 @@ class ProductCartHelper {
           LocalProductProvider.filterStocksForVariant(
         localProductProvider.getStockOptionsForStore(
           product,
-          activeStoreId: activeStore?.storeId,
-          activeStoreName: activeStore?.storeName,
+          activeStoreId: activeStoreId,
+          activeStoreName: activeStoreName,
           // Keep zero-quantity rows selectable in strict mode so the
           // cashier can explicitly approve a one-time oversell.
           includeNonPositive: true,
@@ -282,8 +305,8 @@ class ProductCartHelper {
       );
 
       debugPrint("🏪 Active store filter applied:");
-      debugPrint("  - Active Store ID: ${activeStore?.storeId}");
-      debugPrint("  - Active Store Name: ${activeStore?.storeName}");
+      debugPrint("  - Active Store ID: $activeStoreId");
+      debugPrint("  - Active Store Name: $activeStoreName");
       debugPrint(
           "  - Matching selectable stock entries: ${availableStocks.length}");
 

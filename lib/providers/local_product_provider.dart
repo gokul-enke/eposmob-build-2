@@ -353,8 +353,7 @@ class LocalProductProvider extends ChangeNotifier {
     // finish, which would strand the tail and deadlock flushPendingPersistence.
     Zone.root.run(() {
       final next = _persistenceTail.then((_) => task());
-      _persistenceTail =
-          next.catchError((Object error, StackTrace stackTrace) {
+      _persistenceTail = next.catchError((Object error, StackTrace stackTrace) {
         _persistenceError = error;
         _persistenceStackTrace = stackTrace;
         debugPrint('Hive persistence failed during $operation: $error');
@@ -2700,6 +2699,7 @@ class LocalProductProvider extends ChangeNotifier {
     int? variantId,
     Map<String, dynamic>? variantAttributes,
     bool? warrantyEnabled,
+
     /// One-time approval from the billing flow. This does not change the
     /// tenant-level [allowOverselling] setting.
     bool allowOversellOverride = false,
@@ -4503,29 +4503,34 @@ class LocalProductProvider extends ChangeNotifier {
       return const <Stock>[];
     }
 
+    return filterStocksForStore(
+      availableStocks,
+      activeStoreId: activeStoreId,
+      activeStoreName: activeStoreName,
+    );
+  }
+
+  /// Store filter shared by billing and product-details views. `store_id` is
+  /// authoritative; store name is only a compatibility fallback.
+  static List<Stock> filterStocksForStore(
+    List<Stock> stocks, {
+    int? activeStoreId,
+    String? activeStoreName,
+  }) {
     final normalizedActiveStoreName = activeStoreName?.trim().toLowerCase();
-    final hasActiveStoreId = activeStoreId != null;
     final hasActiveStoreName = normalizedActiveStoreName != null &&
         normalizedActiveStoreName.isNotEmpty;
 
-    if (!hasActiveStoreId && !hasActiveStoreName) {
-      return availableStocks;
+    if (activeStoreId == null && !hasActiveStoreName) {
+      return List<Stock>.from(stocks);
     }
 
-    return availableStocks.where((stock) {
-      if (hasActiveStoreId) {
-        // Primary matching by store_id (API provides this reliably)
+    return stocks.where((stock) {
+      if (activeStoreId != null) {
         return stock.storeId == activeStoreId;
       }
-
-      // Fallback matching only when active store id is unavailable
-      if (hasActiveStoreName) {
-        final normalizedStockStoreName = stock.storeName?.trim().toLowerCase();
-        return normalizedStockStoreName == normalizedActiveStoreName;
-      }
-
-      return false;
-    }).toList();
+      return stock.storeName?.trim().toLowerCase() == normalizedActiveStoreName;
+    }).toList(growable: false);
   }
 
   List<int> getSelectionStockIds({

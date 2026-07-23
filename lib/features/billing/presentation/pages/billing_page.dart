@@ -4327,6 +4327,7 @@ class BillingPageState extends State<BillingPage>
           mrp: item.mrp,
           quantity: item.quantity,
           selectedStock: item.selectedStock,
+          selectedVariantId: item.variantId,
           isCompact: false,
           currency: currency,
           useBillingProductPermissions: true,
