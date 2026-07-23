@@ -409,7 +409,11 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     }
 
     if (displayConfig?['showStoreAddress']?.visible == true) {
-      final address = params.storeLocation ?? '';
+      final configuredAddress =
+          displayConfig?['showStoreAddress']?.value?.toString().trim() ?? '';
+      final address = configuredAddress.isNotEmpty
+          ? configuredAddress
+          : (params.storeLocation ?? '').trim();
       if (address.isNotEmpty) {
         rows.add(TextRow(address, scale: 0.85, isBold: false));
       }

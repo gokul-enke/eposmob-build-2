@@ -68,6 +68,8 @@ class StockItem {
   String supplier;
   int supplierId;
   GetProduct? productData;
+  int? productVariantId;
+  String? variantName;
   Category? categoryData;
   Supplier? supplierData;
   bool isExpanded; // Add this field for expandable functionality
@@ -103,6 +105,8 @@ class StockItem {
     this.supplier = '',
     this.supplierId = 1,
     this.productData,
+    this.productVariantId,
+    this.variantName,
     this.categoryData,
     this.supplierData,
     this.isExpanded = false,
@@ -195,6 +199,81 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
   bool _needsIndexRebuild = true;
   // Track which item index is being edited (null if adding new)
   int? _editingItemIndex;
+
+  bool _variantFeatureEnabled({bool listen = false}) =>
+      Provider.of<AppSettingsProvider>(context, listen: listen)
+              .appSettings
+              ?.productVariantEnabled ??
+          false;
+
+  bool _requiresVariant(StockItem item) =>
+      _variantFeatureEnabled() &&
+      item.productData != null &&
+      item.productData!.hasVariants;
+
+  ProductVariant? _selectedVariant(StockItem item) {
+    final variantId = item.productVariantId;
+    if (variantId == null || item.productData == null) return null;
+    for (final variant in item.productData!.activeVariants) {
+      if (variant.id == variantId) return variant;
+    }
+    return null;
+  }
+
+  ProductVariant? _variantForBarcode(GetProduct product, String barcode) {
+    if (!_variantFeatureEnabled()) return null;
+    final normalized = barcode.trim();
+    if (normalized.isEmpty) return null;
+    for (final variant in product.activeVariants) {
+      if ((variant.barcode ?? '').trim() == normalized) return variant;
+    }
+    return null;
+  }
+
+  String _variantLabel(ProductVariant variant) {
+    final attributes = variant.formattedAttributes.trim();
+    if (attributes.isNotEmpty) return attributes;
+    final sku = variant.sku?.trim() ?? '';
+    return sku.isNotEmpty ? sku : 'Variant ${variant.id}';
+  }
+
+  void _applyVariantToItem(
+    int index,
+    ProductVariant? variant, {
+    bool updatePending = true,
+  }) {
+    final item = stockItems[index];
+    final product = item.productData;
+    if (product == null) return;
+
+    item.productVariantId = variant?.id;
+    item.variantName = variant == null ? null : _variantLabel(variant);
+
+    final productPrice =
+        double.tryParse(product.price?.price?.toString() ?? '') ?? 0;
+    final productMrp = double.tryParse(product.mrp?.toString() ?? '');
+    final productPurchase =
+        double.tryParse(product.purchasePrice?.toString() ?? '');
+
+    item.barcode = variant?.barcode?.trim().isNotEmpty == true
+        ? variant!.barcode!.trim()
+        : (product.barcode ?? '');
+    item.salePrice =
+        (variant?.price ?? productPrice).toStringAsFixed(2);
+    item.mrp =
+        (variant?.mrp ?? productMrp ?? variant?.price ?? productPrice)
+            .toStringAsFixed(2);
+    item.purchaseRate =
+        (variant?.purchasePrice ?? productPurchase ?? 0).toStringAsFixed(2);
+
+    _getBarcodeController(index).text = item.barcode;
+    _getRetailPriceController(index).text = item.salePrice;
+    _getMrpController(index).text = item.mrp;
+    _getPurchaseRateController(index).text = item.purchaseRate;
+
+    _markForRecalculation();
+    if (updatePending) _updatePendingStockItem(index);
+  }
 
   // Clear product cache when category changes
   void _clearProductCache() {
@@ -481,6 +560,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       'selectedRack': item.selectedRack,
       'taxInclude': item.taxInclude,
       'productId': item.productData?.productId,
+      'productVariantId':
+          _variantFeatureEnabled() ? item.productVariantId : null,
+      'variantName': item.variantName,
       'categoryId': item.categoryData?.categoryId,
     };
   }
@@ -510,6 +592,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       purchaseConversionRate: map['purchaseConversionRate'],
       selectedRack: map['selectedRack'],
       taxInclude: map['taxInclude'] ?? true,
+      productVariantId: map['productVariantId'] is int
+          ? map['productVariantId']
+          : int.tryParse(map['productVariantId']?.toString() ?? ''),
+      variantName: map['variantName']?.toString(),
     );
 
     // Try to restore product data
@@ -1278,6 +1364,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       selectedPurchaseUnit: pendingData['purchaseUnitId']?.toString(),
       purchaseUnitName: pendingData['purchaseUnitName']?.toString(),
       purchaseConversionRate: pendingData['purchaseConversionRate']?.toString(),
+      productVariantId: pendingData['productVariantId'] is int
+          ? pendingData['productVariantId']
+          : int.tryParse(pendingData['productVariantId']?.toString() ?? ''),
+      variantName: pendingData['variantName']?.toString(),
       rack: rackValue,
       selectedRack: rackValue.isNotEmpty
           ? rackValue
@@ -1376,6 +1466,13 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         if (product.productId != null) {
           stockItem.productData = product;
+          final variant = _selectedVariant(stockItem);
+          if (stockItem.productVariantId != null && variant == null) {
+            stockItem.productVariantId = null;
+            stockItem.variantName = null;
+          } else if (variant != null) {
+            stockItem.variantName = _variantLabel(variant);
+          }
           debugPrint(
               '   - Product data set: ${product.productName} (ID: ${product.productId})');
         } else {
@@ -1522,6 +1619,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       // Check if any values actually changed
       bool hasChanges = oldItem.barcode != currentItem.barcode ||
           oldItem.product != currentItem.product ||
+          oldItem.productVariantId != currentItem.productVariantId ||
           oldItem.category != currentItem.category ||
           oldItem.quantity != currentItem.quantity ||
           oldItem.salePrice != currentItem.salePrice ||
@@ -1621,6 +1719,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
       // Prepare stock item data for local storage
       final Map<String, dynamic> stockItemData = {
         'productId': item.productData?.productId,
+        'productVariantId':
+            _variantFeatureEnabled() ? item.productVariantId : null,
+        'variantName': item.variantName,
+        'variantRequired': _requiresVariant(item),
         'categoryId': item.categoryData?.categoryId,
         'quantity': item.quantity,
         // Only include purchaseQty for multi-unit products
@@ -1844,6 +1946,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         expDate: item.expDate,
         batchNumber: item.batchNumber,
         productData: item.productData,
+        productVariantId: item.productVariantId,
+        variantName: item.variantName,
         categoryData: item.categoryData,
         selectedUnit: item.selectedUnit,
         selectedPurchaseUnit: item.selectedPurchaseUnit,
@@ -1966,6 +2070,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // Map containing updated fields
         final Map<String, dynamic> updatedData = {
           'productId': item.productData?.productId,
+          'productVariantId':
+              _variantFeatureEnabled() ? item.productVariantId : null,
+          'variantName': item.variantName,
+          'variantRequired': _requiresVariant(item),
           'categoryId': item.categoryData?.categoryId,
           'quantity': item.quantity,
           'purchaseQty': item.purchaseQty,
@@ -2057,6 +2165,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         setState(() {
           // Set product data
           stockItems[index].productData = product;
+          stockItems[index].productVariantId = null;
+          stockItems[index].variantName = null;
           stockItems[index].product = product.productName ?? '';
           stockItems[index].barcode = product.barcode ?? '';
 
@@ -2194,6 +2304,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
     // Prepare updated stock item data
     final Map<String, dynamic> updatedStockItemData = {
       'productId': item.productData?.productId,
+      'productVariantId':
+          _variantFeatureEnabled() ? item.productVariantId : null,
+      'variantName': item.variantName,
+      'variantRequired': _requiresVariant(item),
       'categoryId': item.categoryData?.categoryId,
       'quantity': item.quantity,
       'purchaseQty': item.purchaseQty,
@@ -2783,12 +2897,25 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
         // Update the stock item with the refreshed product data
         setState(() {
+          final previousVariantId = stockItems[index].productVariantId;
           stockItems[index].productData = updatedProduct;
           stockItems[index].product = updatedProduct.productName ?? '';
-          stockItems[index].barcode = updatedProduct.barcode ?? '';
+          ProductVariant? refreshedVariant;
+          for (final variant in updatedProduct.activeVariants) {
+            if (variant.id == previousVariantId) {
+              refreshedVariant = variant;
+              break;
+            }
+          }
+          stockItems[index].productVariantId = refreshedVariant?.id;
+          stockItems[index].variantName = refreshedVariant == null
+              ? null
+              : _variantLabel(refreshedVariant);
+          stockItems[index].barcode =
+              refreshedVariant?.barcode ?? updatedProduct.barcode ?? '';
 
           // Update barcode controller
-          _getBarcodeController(index).text = updatedProduct.barcode ?? '';
+          _getBarcodeController(index).text = stockItems[index].barcode;
 
           // Clear the filtered products cache to force rebuild with updated names
           _clearProductCache();
@@ -4748,6 +4875,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
               ],
             ),
           ),
+          _buildVariantSelector(index),
           // Quick preview for collapsed items with data - Single Row Layout
           if (!item.isExpanded &&
               (item.salePrice.isNotEmpty ||
@@ -4767,6 +4895,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                       spacing: 12,
                       runSpacing: 4,
                       children: [
+                        if (_variantFeatureEnabled() &&
+                            item.variantName?.isNotEmpty == true)
+                          _buildDetailChip(
+                            'Variant',
+                            item.variantName!,
+                            Icons.tune,
+                            Colors.deepPurple.shade600,
+                          ),
                         if (item.salePrice.isNotEmpty)
                           _buildDetailChip(
                               "Retail",
@@ -5341,6 +5477,7 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
     if (products.isNotEmpty) {
       GetProduct localProduct = products.first;
+      final matchedVariant = _variantForBarcode(localProduct, barcode);
       debugPrint(
           '✅ PRODUCT FOUND: ${localProduct.productName} (ID: ${localProduct.productId})');
 
@@ -5349,10 +5486,14 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         // Auto-fill basic fields
         stockItems[index].productData =
             localProduct; // Now safe to set directly
-        stockItems[index].barcode = localProduct.barcode ?? '';
+        stockItems[index].productVariantId = matchedVariant?.id;
+        stockItems[index].variantName =
+            matchedVariant == null ? null : _variantLabel(matchedVariant);
+        stockItems[index].barcode =
+            matchedVariant?.barcode ?? localProduct.barcode ?? '';
         stockItems[index].product = localProduct.productName ?? '';
         // Update barcode controller to reflect the change
-        _getBarcodeController(index).text = localProduct.barcode ?? '';
+        _getBarcodeController(index).text = stockItems[index].barcode;
         debugPrint('   - Product: ${localProduct.productName}');
         debugPrint('   - Barcode: ${localProduct.barcode}');
 
@@ -5429,8 +5570,11 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
 // Auto-fill expanded fields
         stockItems[index].salePrice =
-            localProduct.price?.price?.toString() ?? '0';
-        stockItems[index].mrp = localProduct.mrp?.toString() ??
+            matchedVariant?.price?.toString() ??
+                localProduct.price?.price?.toString() ??
+                '0';
+        stockItems[index].mrp = matchedVariant?.mrp?.toString() ??
+            localProduct.mrp?.toString() ??
             localProduct.price?.price?.toString() ??
             '0';
         _applyBaseUnitFromProduct(index, localProduct);
@@ -5448,7 +5592,9 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
         _getMrpController(index).text = stockItems[index].mrp;
 
         // Auto-fill purchase rate: use only product-level purchasePrice; do not fall back to stock entries
-        final String? computedPurchasePrice = localProduct.purchasePrice;
+        final String? computedPurchasePrice =
+            matchedVariant?.purchasePrice?.toString() ??
+                localProduct.purchasePrice;
         if (computedPurchasePrice != null &&
             computedPurchasePrice.toString().isNotEmpty) {
           stockItems[index].purchaseRate = computedPurchasePrice.toString();
@@ -6095,6 +6241,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     stockItems[index].category = category?.categoryName ?? '';
                     // Clear product when category changes
                     stockItems[index].productData = null;
+                    stockItems[index].productVariantId = null;
+                    stockItems[index].variantName = null;
                     stockItems[index].product = '';
                     // Clear product cache to force refresh
                     _clearProductCache();
@@ -6117,6 +6265,73 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildVariantSelector(int index) {
+    return Consumer<AppSettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final item = stockItems[index];
+        final enabled =
+            settingsProvider.appSettings?.productVariantEnabled ?? false;
+        final product = item.productData;
+        if (!enabled || product == null || !product.hasVariants) {
+          return const SizedBox.shrink();
+        }
+
+        final variants = product.activeVariants;
+        final selected = _selectedVariant(item);
+
+        return Padding(
+          padding: EdgeInsets.only(
+            left: stockIsPhone(context) ? 8 : 48,
+            right: 8,
+            bottom: 10,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Product Variant *',
+                style: buildCustomStyle(
+                  FontWeightManager.regular,
+                  FontSize.s11,
+                  0.27,
+                  Colors.black.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 2),
+              SizedBox(
+                height: 40,
+                child: BuildDropDownWithSearch<ProductVariant>(
+                  title: null,
+                  hintText: variants.isEmpty
+                      ? 'No active variants'
+                      : 'Select product variant',
+                  value: selected,
+                  items: variants,
+                  onChanged: (variant) {
+                    setState(() {
+                      _applyVariantToItem(
+                        index,
+                        variant,
+                        updatePending: false,
+                      );
+                    });
+                    _updatePendingStockItem(index);
+                    _calculateTaxForStockItem(index, isRetail: true);
+                    _calculateTaxForStockItem(index, isPurchase: true);
+                  },
+                  displayText: _variantLabel,
+                  isRequired: true,
+                  height: 40,
+                  searchHintText: 'Search variant...',
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -6210,6 +6425,8 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
                     '🔄 AUTO-FILLING ALL FIELDS FROM PRODUCT SELECTION...');
                 // Auto-fill basic fields
                 stockItems[index].productData = product;
+                stockItems[index].productVariantId = null;
+                stockItems[index].variantName = null;
                 stockItems[index].product = product.productName ?? '';
                 stockItems[index].barcode = product.barcode ?? '';
                 // Update barcode controller to reflect the change
@@ -7143,7 +7360,10 @@ class _AddProductStockScreenState extends State<AddProductStockScreen> {
 
                     // Process all pending stock items
                     final batchResult = await stockProvider
-                        .processPendingStockItems(accessToken);
+                        .processPendingStockItems(
+                      accessToken,
+                      variantsEnabled: _variantFeatureEnabled(),
+                    );
 
                     debugPrint('📡 BATCH PROCESSING RESULT: $batchResult');
                     debugPrint('📡 BATCH PROCESSING RESULT (PRETTY):');

@@ -9,6 +9,7 @@ import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/providers/auth_model.dart';
+import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
@@ -44,6 +45,12 @@ class _AddStockScreenState extends State<AddStockScreen> {
   final TextEditingController storeController = TextEditingController();
   final TextEditingController storeSearchController = TextEditingController();
   final TextEditingController stockStatusController = TextEditingController();
+
+  bool _variantFeatureEnabled({bool listen = false}) =>
+      Provider.of<AppSettingsProvider>(context, listen: listen)
+              .appSettings
+              ?.productVariantEnabled ??
+          false;
   ListStockModelData? selectedStock;
   bool initLoading = false;
   bool isInitialized = false;
@@ -169,6 +176,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       filterStatus: stockStatusController.text == "All Statuses"
           ? null
           : stockStatusController.text,
+      includeVariants: _variantFeatureEnabled(),
       page: 1,
     );
   }
@@ -242,6 +250,14 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   physics: const BouncingScrollPhysics(),
                   children: [
                     _buildDetailRow('Product Name', stock.productName ?? 'N/A'),
+                    if (_variantFeatureEnabled() &&
+                        stock.productVariantId != null)
+                      _buildDetailRow(
+                        'Product Variant',
+                        stock.variantName?.trim().isNotEmpty == true
+                            ? stock.variantName!
+                            : 'Variant #${stock.productVariantId}',
+                      ),
                     _buildDetailRow('Category', stock.categoryName ?? 'N/A'),
                     _buildDetailRow('Store Name', stock.storeName ?? 'N/A'),
                     _buildDetailRow('Supplier', stock.supplierName ?? 'N/A'),
@@ -414,6 +430,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    _variantFeatureEnabled(listen: true);
     final SideBarController sideBarController = Get.put(SideBarController());
     final bool isMobile = stockIsPhone(context);
     final double horizontalMargin = isMobile ? 8 : 10;
@@ -1231,6 +1248,23 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         ColorManager.kPrimaryColor,
                       ),
                     ),
+                    if (_variantFeatureEnabled() &&
+                        stock.productVariantId != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        stock.variantName?.trim().isNotEmpty == true
+                            ? stock.variantName!
+                            : 'Variant #${stock.productVariantId}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s11,
+                          0.15,
+                          Colors.deepPurple.shade600,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       '${stock.categoryName ?? ''}${(stock.categoryName ?? '').isNotEmpty && (stock.storeName ?? '').isNotEmpty ? ' · ' : ''}${stock.storeName ?? ''}',
@@ -1519,15 +1553,37 @@ class _AddStockScreenState extends State<AddStockScreen> {
                                       color: Colors.transparent,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
-                                    child: SelectableText(
-                                      '${stock.productName}',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.13,
-                                        Colors.black,
-                                      ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        SelectableText(
+                                          '${stock.productName}',
+                                          textAlign: TextAlign.center,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.medium,
+                                            FontSize.s12,
+                                            0.13,
+                                            Colors.black,
+                                          ),
+                                        ),
+                                        if (_variantFeatureEnabled() &&
+                                            stock.productVariantId != null)
+                                          Text(
+                                            stock.variantName
+                                                        ?.trim()
+                                                        .isNotEmpty ==
+                                                    true
+                                                ? stock.variantName!
+                                                : 'Variant #${stock.productVariantId}',
+                                            textAlign: TextAlign.center,
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s10,
+                                              0.13,
+                                              Colors.deepPurple.shade600,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 ),
