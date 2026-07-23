@@ -75,6 +75,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'arabic_and_english_3', 'name': 'Arabic&English 3'},
     {'id': 'supermarket', 'name': 'Supermarket'},
     {'id': 'supermarket2', 'name': 'Supermarket 2'},
+    {'id': 'supermarket2_bilingual', 'name': 'Supermarket 2 Bilingual'},
     {'id': 'supermarkerrecpt3', 'name': 'Supermarker Recpt3'},
     {'id': 'bilingual', 'name': 'Bilingual'},
     {'id': 'multi_store', 'name': 'Multi Store'},

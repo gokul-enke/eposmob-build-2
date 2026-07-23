@@ -13,6 +13,7 @@ import 'supermarket_en_receipt_layout.dart';
 import 'standard_receipt_layout.dart';
 import 'supermarket_receipt_layout.dart';
 import 'supermarket2_receipt_layout.dart';
+import 'supermarket2_bilingual_receipt_layout.dart';
 import 'supermarket3_receipt_layout.dart';
 import 'bilingual_receipt_layout.dart';
 import 'mobile_shop_tax_invoice_receipt_layout.dart';
@@ -45,6 +46,7 @@ class ReceiptLayoutFactory {
     'arabic_and_english_3': () => ArabicAndEnglish3ReceiptLayout(),
     'supermarket': () => SupermarketReceiptLayout(),
     'supermarket2': () => Supermarket2ReceiptLayout(),
+    'supermarket2_bilingual': () => Supermarket2BilingualReceiptLayout(),
     'supermarkerrecpt3': () => supermarket3ReciptLayout(),
     'bilingual': () => BilingualReceiptLayout(),
     'multi_store': () => MultiStoreReceiptLayout(),
