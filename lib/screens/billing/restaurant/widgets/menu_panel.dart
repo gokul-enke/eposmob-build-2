@@ -16,6 +16,7 @@ import '../../../../components/build_round_button.dart';
 import '../../../../resources/color_manager.dart';
 import '../../../../resources/font_manager.dart';
 import '../../../../resources/style_manager.dart';
+import '../../../../widgets/product_details_dialog.dart';
 
 enum MenuCardMode { compact, medium, large }
 
@@ -131,6 +132,27 @@ class MenuPanelState extends State<MenuPanel> {
 
   void _showProductInfoDialog(
       BuildContext context, GetProduct product, bool compact) {
+    if (widget.storeMode) {
+      final currency = Provider.of<AppSettingsProvider>(context, listen: false)
+              .appSettings
+              ?.currency ??
+          '';
+
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (ctx) {
+          return ProductDetailsDialog(
+            product: product,
+            isCompact: false,
+            currency: currency,
+            useBillingProductPermissions: true,
+          );
+        },
+      );
+      return;
+    }
+
     final stockEnabled =
         Provider.of<LocalProductProvider>(context, listen: false)
             .isStockEnabled;

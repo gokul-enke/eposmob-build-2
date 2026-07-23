@@ -1337,7 +1337,7 @@ class SidebarBrandLogo extends StatelessWidget {
 
 class DrawerListTile extends StatelessWidget {
   final String? iconPath;
-  final IconData? icon;
+  final fa.FaIconData? icon;
   final String title;
   final int? items;
   final bool selected;
@@ -1390,8 +1390,8 @@ class DrawerListTile extends StatelessWidget {
                 ),
                 child: Center(
                   child: icon != null
-                      ? Icon(
-                          icon,
+                      ? fa.FaIcon(
+                          icon!,
                           size: 16,
                           color: selected
                               ? Colors.white
@@ -1450,8 +1450,8 @@ class DrawerListTile extends StatelessWidget {
                 height: leadingBox,
                 child: Center(
                   child: icon != null
-                      ? Icon(
-                          icon,
+                      ? fa.FaIcon(
+                          icon!,
                           color: Colors.white,
                           size: resolvedIconSize,
                         )
@@ -1505,8 +1505,8 @@ class DrawerListTile extends StatelessWidget {
                     height: leadingBox,
                     child: Center(
                       child: icon != null
-                          ? Icon(
-                              icon,
+                          ? fa.FaIcon(
+                              icon!,
                               size: resolvedIconSize,
                               color: ColorManager.kPrimaryColor,
                             )

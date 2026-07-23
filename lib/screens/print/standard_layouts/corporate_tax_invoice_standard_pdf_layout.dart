@@ -7,6 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
+import 'package:pos_machine/components/build_dialog_box.dart';
 import 'package:pos_machine/helpers/amount_helper.dart';
 import 'package:pos_machine/helpers/date_helper.dart';
 import 'package:pos_machine/helpers/string_helper.dart';
@@ -15,6 +16,7 @@ import 'package:pos_machine/models/payment_gateway.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/payment_gateways_provider.dart';
 import 'package:pos_machine/screens/print/layouts/receipt_layout_params.dart';
+import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/utils/zatca_qr_helper.dart';
 import 'package:pos_machine/resources/localization_service.dart';
 import '../logo_loader.dart';
@@ -132,6 +134,21 @@ class CorporateTaxInvoiceStandardPdfLayout implements StandardPdfLayout {
   @override
   Future<void> generateAndPrintPdf(ReceiptLayoutParams params) async {
     final pdf = await buildPdfDocument(params);
+    if (params.selectedPrinter.isDevelopment) {
+      final savedFile = await DevelopmentPrinterService.savePdf(
+        bytes: await pdf.save(),
+        orderNumber: params.orderNumber,
+        layoutId: layoutId,
+      );
+      if (params.context.mounted) {
+        showScaffold(
+          context: params.context,
+          message: 'Development PDF saved to ${savedFile.path}',
+        );
+      }
+      return;
+    }
+
     final sanitized = params.orderNumber.replaceAll('/', '_');
     final output = await _getEposDirectory();
     final file = File('${output.path}/CorporateTaxInvoice_$sanitized.pdf');

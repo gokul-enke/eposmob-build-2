@@ -22,6 +22,7 @@ import 'package:pos_machine/models/bluetooth_printer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pos_machine/models/order_details.dart';
 import 'package:pos_machine/resources/localization_service.dart';
+import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/bank_provider.dart';
@@ -886,6 +887,21 @@ class StandardPrinter {
         ),
       );
 
+      if (selectedPrinter.isDevelopment) {
+        final savedFile = await DevelopmentPrinterService.savePdf(
+          bytes: await pdf.save(),
+          orderNumber: orderNumber,
+          layoutId: 'classic',
+        );
+        if (context.mounted) {
+          showScaffold(
+            context: context,
+            message: 'Development PDF saved to ${savedFile.path}',
+          );
+        }
+        return;
+      }
+
       // Save PDF to documents/epos folder for better organization
       final output = await _getEposDirectory();
 
@@ -944,6 +960,9 @@ class StandardPrinter {
           context: context,
           message: "Error generating PDF: ${e.toString()}",
         );
+      }
+      if (selectedPrinter?.isDevelopment == true) {
+        rethrow;
       }
     }
   }

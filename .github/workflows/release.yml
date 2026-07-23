@@ -20,18 +20,6 @@ jobs:
 
   build-and-release-windows:
     needs: create-release
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: eeezeeerp
-            url: "https://eeezeeerp.cloudposai.com"
-          - name: eposdemo
-            url: "https://eposdemo.yougoit.in"
-          - name: linetolinepos
-            url: "https://linetolinepos.yougoit.in"
-          - name: hypersouq
-            url: "https://epos.hypersouq.in"
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,11 +32,26 @@ jobs:
       - name: Install project dependencies
         run: flutter pub get
 
+      - name: Read app version from pubspec
+        id: app_version
+        shell: pwsh
+        run: |
+          $version = (Get-Content pubspec.yaml |
+            Where-Object { $_ -match '^version:\s+\S+' } |
+            Select-Object -First 1) -replace '^version:\s*', ''
+          $version = $version.Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+(\+\d+)?$') {
+            throw "Unsupported pubspec version: $version"
+          }
+          $releaseVersion = $version.Replace('+', '.')
+          "release_version=$releaseVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Release version: $releaseVersion"
+
       - name: Create .env file
         run: echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" > .env
 
       - name: Build artifacts
-        run: flutter build windows --release -v --dart-define=BASE_URL=${{ matrix.url }}
+        run: flutter build windows --release -v --dart-define=BASE_URL=https://eeezeeerp.cloudposai.com
 
       - name: Copy DLLs to Release Folder
         run: |
@@ -91,16 +94,32 @@ jobs:
           choco install innosetup --yes --no-progress
 
       - name: Build Installer
-        run: iex ("& {0} {1} {2}" -f '"C:\Program Files (x86)\Inno Setup 6\iscc.exe"',"/DMyAppVersion='${{github.ref_name}}'", ".\inno_setup.iss")
-
-      - name: Rename for GitHub Release
+        shell: pwsh
         run: |
-           Rename-Item -Path "Output\*.exe" -NewName "cloudpos-${{ matrix.name }}.exe"
+          if (Test-Path Output) {
+            Remove-Item Output -Recurse -Force
+          }
+          & "C:\Program Files (x86)\Inno Setup 6\iscc.exe" `
+            "/DMyAppVersion=${{ steps.app_version.outputs.release_version }}" `
+            ".\inno_setup.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed"
+          }
+
+      - name: Verify installer name
+        shell: pwsh
+        run: |
+          $expected = "Output\cloudpos-${{ steps.app_version.outputs.release_version }}.exe"
+          $installers = @(Get-ChildItem -Path Output -Filter "*.exe")
+          if ($installers.Count -ne 1 -or -not (Test-Path $expected)) {
+            throw "Expected exactly one installer named $expected; found: $($installers.Name -join ', ')"
+          }
+          Write-Host "Created $expected"
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: Output/cloudpos-${{ matrix.name }}.exe
+          files: Output/cloudpos-${{ steps.app_version.outputs.release_version }}.exe
           draft: true
           prerelease: true
 

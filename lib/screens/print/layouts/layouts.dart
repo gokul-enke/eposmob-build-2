@@ -20,3 +20,9 @@ export 'arabic_and_english_3_receipt_layout.dart';
 export 'multi_store_receipt_layout.dart';
 export 'supermarket2_bilingual_receipt_layout.dart';
 //export 'premium2_bilingual_receipt_layout.dart';
+// Do not barrel-export these cloned layouts: they redefine shared helper
+// classes (ThinDividerRow, DottedDividerRow, BoxedTotalsRow, BoxedLineItem)
+// already exported from premium_receipt_layout.dart, which causes
+// ambiguous_export. ReceiptLayoutFactory imports them directly.
+// export 'mobile_shop_tax_invoice_receipt_layout.dart';
+// export 'premium2_bilingual_receipt_layout.dart';

@@ -47,6 +47,8 @@ class ListStockModel {
 
 class ListStockModelData {
   final int? stockId;
+  final int? productVariantId;
+  final String? variantName;
   final String? barCode;
   final String? productName;
   final String? categoryName;
@@ -66,6 +68,8 @@ class ListStockModelData {
 
   ListStockModelData({
     this.stockId,
+    this.productVariantId,
+    this.variantName,
     this.barCode,
     this.productName,
     this.categoryName,
@@ -86,6 +90,8 @@ class ListStockModelData {
 
   ListStockModelData copyWith({
     int? stockId,
+    int? productVariantId,
+    String? variantName,
     String? barCode,
     String? productName,
     String? categoryName,
@@ -105,6 +111,8 @@ class ListStockModelData {
   }) {
     return ListStockModelData(
       stockId: stockId ?? this.stockId,
+      productVariantId: productVariantId ?? this.productVariantId,
+      variantName: variantName ?? this.variantName,
       barCode: barCode ?? this.barCode,
       productName: productName ?? this.productName,
       categoryName: categoryName ?? this.categoryName,
@@ -127,6 +135,10 @@ class ListStockModelData {
   factory ListStockModelData.fromJson(Map<String, dynamic> json) =>
       ListStockModelData(
         stockId: json["id"],
+        productVariantId: json["product_variant_id"] is int
+            ? json["product_variant_id"]
+            : int.tryParse(json["product_variant_id"]?.toString() ?? ''),
+        variantName: json["variant_name"]?.toString(),
         barCode: json["barcode"]?.toString(),
         productName: json["product_name"],
         categoryName: json["category_name"],
@@ -149,6 +161,8 @@ class ListStockModelData {
 
   Map<String, dynamic> toJson() => {
         "id": stockId,
+        "product_variant_id": productVariantId,
+        "variant_name": variantName,
         "barcode": barCode,
         "product_name": productName,
         "category_name": categoryName,

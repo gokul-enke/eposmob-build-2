@@ -59,6 +59,7 @@ class StockProvider extends ChangeNotifier {
   String? _stockFilterRack;
   String? _stockFilterStore;
   String? _stockFilterStatus;
+  bool _stockIncludeVariants = false;
 
   // Loading state
   bool _stockIsLoading = false;
@@ -145,6 +146,12 @@ class StockProvider extends ChangeNotifier {
     if (stockItem['categoryId'] == null ||
         stockItem['categoryId'].toString().isEmpty) {
       errors['category'] = 'Category is required';
+    }
+
+    if (stockItem['variantRequired'] == true &&
+        (stockItem['productVariantId'] == null ||
+            stockItem['productVariantId'].toString().trim().isEmpty)) {
+      errors['variant'] = 'Product variant is required';
     }
 
     if (stockItem['quantity'] == null ||
@@ -444,7 +451,9 @@ class StockProvider extends ChangeNotifier {
 
   /// Process all pending stock items via API calls
   Future<Map<String, dynamic>> processPendingStockItems(
-      String accessToken) async {
+    String accessToken, {
+    bool variantsEnabled = false,
+  }) async {
     if (_pendingStockItems.isEmpty) {
       return {
         'success': false,
@@ -476,6 +485,9 @@ class StockProvider extends ChangeNotifier {
         final stockItem = _pendingStockItems[i];
         final productData = <String, dynamic>{
           'product_id': int.parse(stockItem['productId'].toString()),
+          if (variantsEnabled && stockItem['productVariantId'] != null)
+            'product_variant_id':
+                int.parse(stockItem['productVariantId'].toString()),
           'category_id': int.parse(stockItem['categoryId'].toString()),
           'quantity': double.parse(stockItem['quantity'].toString()),
           'retail_price': double.parse(stockItem['retailPrice'].toString()),
@@ -712,6 +724,7 @@ class StockProvider extends ChangeNotifier {
   Future<dynamic> addProductStockAPI({
     required String accessToken,
     required String productId,
+    String? productVariantId,
     required String categoryId,
     required String quantity,
     required String retailPrice,
@@ -743,6 +756,8 @@ class StockProvider extends ChangeNotifier {
   }) async {
     final Map<String, dynamic> apiBodyData = {
       'product_id': int.parse(productId),
+      if (productVariantId != null && productVariantId.trim().isNotEmpty)
+        'product_variant_id': int.parse(productVariantId),
       'category_id': int.parse(categoryId),
       'quantity': double.parse(quantity),
       'retail_price': double.parse(retailPrice),
@@ -1009,6 +1024,7 @@ class StockProvider extends ChangeNotifier {
     String? filterRack,
     String? filterStore,
     String? filterStatus,
+    bool? includeVariants,
     int page = 1,
   }) {
     if (_allStocks == null || _allStocks!.isEmpty) {
@@ -1028,6 +1044,7 @@ class StockProvider extends ChangeNotifier {
     _stockFilterRack = filterRack;
     _stockFilterStore = filterStore;
     _stockFilterStatus = filterStatus;
+    _stockIncludeVariants = includeVariants ?? _stockIncludeVariants;
     _stockCurrentPage = page;
 
     // Apply filters
@@ -1035,24 +1052,22 @@ class StockProvider extends ChangeNotifier {
 
     // Apply name filter
     if (filterName != null && filterName.isNotEmpty) {
-      filteredList = filteredList
-          .where((stock) =>
-              stock.productName != null &&
-              stock.productName!
-                  .toLowerCase()
-                  .contains(filterName.toLowerCase()))
-          .toList();
+      filteredList = filteredList.where((stock) {
+        final query = filterName.toLowerCase();
+        return (stock.productName?.toLowerCase().contains(query) ?? false) ||
+            (_stockIncludeVariants &&
+                (stock.variantName?.toLowerCase().contains(query) ?? false));
+      }).toList();
     }
 
     // Apply secondary product name filter
     if (filterNameSecondary != null && filterNameSecondary.isNotEmpty) {
-      filteredList = filteredList
-          .where((stock) =>
-              stock.productName != null &&
-              stock.productName!
-                  .toLowerCase()
-                  .contains(filterNameSecondary.toLowerCase()))
-          .toList();
+      filteredList = filteredList.where((stock) {
+        final query = filterNameSecondary.toLowerCase();
+        return (stock.productName?.toLowerCase().contains(query) ?? false) ||
+            (_stockIncludeVariants &&
+                (stock.variantName?.toLowerCase().contains(query) ?? false));
+      }).toList();
     }
 
     // Apply category filter

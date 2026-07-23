@@ -552,6 +552,8 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
           productProvider: productProvider,
           mainBarcode: _barcodeController.text,
           saleUnitRows: _saleUnitRows,
+          additionalBarcodeControllers:
+              _variantController.rows.map((row) => row.barcodeController),
           excludeController: controller,
           mainBarcodeController: _barcodeController,
         );

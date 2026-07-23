@@ -2,7 +2,11 @@
 ; Used by GitHub Actions Release CI and local packaging.
 
 #define MyAppName "CLOUDPOS"
+; GitHub Actions supplies /DMyAppVersion=<pubspec version>.
+; Keep a local fallback when compiling this script directly.
+#ifndef MyAppVersion
 #define MyAppVersion "1.0"
+#endif
 #define MyAppPublisher "ENKE"
 #define MyAppURL "https://enke.ae/"
 #define MyAppExeName "cloudpos.exe"
@@ -24,7 +28,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ; Do not reuse an old (x86) install path on upgrade.
 UsePreviousAppDir=no
 DisableProgramGroupPage=yes
-OutputBaseFilename=EposMachine-setup-{#MyAppVersion}
+OutputBaseFilename=cloudpos-{#MyAppVersion}
 SetupIconFile=.\windows\runner\resources\app_icon.ico
 Compression=lzma
 SolidCompression=yes

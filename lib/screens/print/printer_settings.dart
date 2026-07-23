@@ -24,6 +24,7 @@ import 'package:pos_machine/screens/print/widgets/printer_settings_responsive.da
 import 'package:pos_machine/screens/settings/widgets/settings_responsive.dart';
 import 'package:pos_machine/resources/font_manager.dart';
 import 'package:pos_machine/resources/style_manager.dart';
+import 'package:pos_machine/services/development_printer_service.dart';
 import 'package:pos_machine/services/printer_permission_service.dart';
 
 class PrinterSettings extends StatefulWidget {
@@ -48,6 +49,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   StreamSubscription<PrinterDevice>? _subscription;
   bool _isScanning = false;
   bool _isResyncingDocConfig = false;
+  bool _developerModeEnabled = false;
   int _settingsLoadVersion = 0;
 
   // List of available paper sizes
@@ -77,6 +79,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     {'id': 'supermarkerrecpt3', 'name': 'Supermarker Recpt3'},
     {'id': 'bilingual', 'name': 'Bilingual'},
     {'id': 'multi_store', 'name': 'Multi Store'},
+    {'id': 'mobile_shop_tax_invoice', 'name': 'Mobile Shop Tax Invoice'},
   ];
 
   // List of available receipt themes for standard PDF printing (A4/A5)
@@ -99,6 +102,18 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   bool get _usesReceiptSettings =>
       selectedSettingsType == 'Billing' || selectedSettingsType == 'Quotation';
+
+  bool get _supportsDevelopmentPrinter => _usesReceiptSettings;
+
+  List<BluetoothPrinter> get _displayDevices {
+    if (!_developerModeEnabled || !_supportsDevelopmentPrinter) {
+      return devices;
+    }
+    return [
+      BluetoothPrinter.development(),
+      ...devices.where((printer) => !printer.isDevelopment),
+    ];
+  }
 
   /// True when editing the B2B variant of the Billing settings.
   bool get _isB2BSegment =>
@@ -203,6 +218,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         return 'Supermarket-style receipt layout (version 3)';
       case 'bilingual':
         return 'Bilingual layout with English and Arabic support';
+      case 'mobile_shop_tax_invoice':
+        return 'Bilingual ZATCA tax invoice for mobile shops with SN, VAT, QTY, PRICE and AMOUNT columns';
       default:
         return 'Modern & clean design with enhanced spacing';
     }
@@ -211,9 +228,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   @override
   void initState() {
     super.initState();
-    _loadSettings();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _checkPermissions();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadSettings();
+      if (mounted && !_developerModeEnabled) {
+        _checkPermissions();
+      }
     });
   }
 
@@ -384,12 +403,28 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
   Future<void> selectPrinter(BluetoothPrinter printer) async {
     try {
-      await _saveDefaultPrinter(printer);
+      if (printer.isDevelopment) {
+        if (!_developerModeEnabled || !_supportsDevelopmentPrinter) {
+          throw StateError('Developer Mode is not enabled for this printer');
+        }
+        await DevelopmentPrinterService.selectForTarget(
+          _printerPrefsKey,
+          selected: true,
+        );
+      } else {
+        await DevelopmentPrinterService.selectForTarget(
+          _printerPrefsKey,
+          selected: false,
+        );
+        await _saveDefaultPrinter(printer);
+      }
       if (!mounted) return;
       setState(() => selectedPrinter = printer);
       showScaffold(
         context: context,
-        message: "${printer.deviceName.toString()} Printer Selected",
+        message: printer.isDevelopment
+            ? 'Development Printer selected. Prints will be saved to a folder.'
+            : "${printer.deviceName.toString()} Printer Selected",
       );
     } catch (error) {
       if (!mounted) return;
@@ -401,6 +436,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   }
 
   Future<void> _saveDefaultPrinter(BluetoothPrinter printer) async {
+    if (printer.isDevelopment) {
+      throw ArgumentError(
+          'Development printer must not replace a real printer');
+    }
     final prefs = await SharedPreferences.getInstance();
     final printerData = {
       'deviceName': printer.deviceName,
@@ -427,6 +466,14 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      final developerModeEnabled =
+          await DevelopmentPrinterService.isEnabled(preferences: prefs);
+      final developmentPrinterSelected = developerModeEnabled &&
+          _supportsDevelopmentPrinter &&
+          await DevelopmentPrinterService.shouldUseForTarget(
+            printerKey,
+            preferences: prefs,
+          );
       final defaultPrinterJson = prefs.getString(printerKey);
       final defaultPaperSize =
           settingsType == 'Barcode' ? null : prefs.getString(paperSizeKey);
@@ -453,7 +500,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           : 'classic';
 
       BluetoothPrinter? printer;
-      if (defaultPrinterJson != null) {
+      if (developmentPrinterSelected) {
+        printer = BluetoothPrinter.development();
+      } else if (defaultPrinterJson != null) {
         try {
           final printerData =
               json.decode(defaultPrinterJson) as Map<String, dynamic>;
@@ -479,6 +528,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
         selectedFontStyle = fontStyle;
         selectedReceiptTheme = receiptTheme;
         selectedPrinter = printer;
+        _developerModeEnabled = developerModeEnabled;
         isLoading = false;
       });
     } catch (error) {
@@ -502,6 +552,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
 
       // Also clear current context keys
       final prefs = await SharedPreferences.getInstance();
+      await DevelopmentPrinterService.clearTargetSelection(
+        _printerPrefsKey,
+        preferences: prefs,
+      );
       if (selectedSettingsType == 'Barcode') {
         await prefs.remove(_printerPrefsKey);
       } else {
@@ -599,6 +653,15 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       showScaffoldError(
         context: context,
         message: "Please select a printer first",
+      );
+      return;
+    }
+    if (selectedPrinter!.isDevelopment) {
+      showScaffoldError(
+        context: context,
+        message:
+            'Development Printer previews are created from actual receipts. '
+            'Print a bill or quotation to save its image.',
       );
       return;
     }
@@ -1557,6 +1620,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     final isCompact = printerIsCompact(context);
     final cardPadding = printerCardPadding(context);
     final listGap = printerSectionGap(context);
+    final displayDevices = _displayDevices;
 
     return PrinterSettingsCard(
       padding: cardPadding,
@@ -1566,7 +1630,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           PrinterSectionHeader(
             icon: Icons.devices_rounded,
             title: 'Available Printers',
-            subtitle: 'Scan and select a default printer',
+            subtitle: _developerModeEnabled && _supportsDevelopmentPrinter
+                ? 'Select a physical printer or save output to a folder'
+                : 'Scan and select a default printer',
             trailing: CustomRoundButton(
               fct: () => _isScanning ? null : _checkPermissions(),
               title: _isScanning ? 'Scanning...' : 'Scan for Printers',
@@ -1587,7 +1653,7 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           PrinterInfoStrip(
             text: _isScanning
                 ? 'Scanning for printers...'
-                : '${devices.length} devices found',
+                : '${displayDevices.length} devices found',
             icon: _isScanning
                 ? Icons.bluetooth_searching_rounded
                 : Icons.devices_other_rounded,
@@ -1599,9 +1665,21 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               isPositive: true,
               icon: Icons.check_circle_outline_rounded,
             ),
+            if (selectedPrinter!.isDevelopment) ...[
+              const SizedBox(height: 10),
+              FutureBuilder<Directory>(
+                future: DevelopmentPrinterService.getOutputDirectory(),
+                builder: (context, snapshot) => PrinterInfoStrip(
+                  text: snapshot.hasData
+                      ? 'Output folder: ${snapshot.data!.path}'
+                      : 'Preparing development output folder...',
+                  icon: Icons.folder_outlined,
+                ),
+              ),
+            ],
           ],
           SizedBox(height: listGap),
-          devices.isEmpty
+          displayDevices.isEmpty
               ? const PrinterEmptyState(
                   title: 'No printers found',
                   subtitle:
@@ -1610,11 +1688,11 @@ class _PrinterSettingsState extends State<PrinterSettings> {
               : ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: devices.length,
+                  itemCount: displayDevices.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 10),
                   itemBuilder: (context, index) {
-                    final printer = devices[index];
+                    final printer = displayDevices[index];
                     final isSelected = selectedPrinter != null &&
                         _printerIdentity(selectedPrinter!) ==
                             _printerIdentity(printer);
@@ -1637,7 +1715,9 @@ class _PrinterSettingsState extends State<PrinterSettings> {
     required bool isCompact,
   }) {
     final deviceName = printer.deviceName ?? 'Unknown device';
-    final subtitle = printer.address ?? printer.typePrinter.name;
+    final subtitle = printer.isDevelopment
+        ? 'Saves PDFs and thermal receipt images to a local folder'
+        : printer.address ?? printer.typePrinter.name;
 
     if (isCompact) {
       return Container(

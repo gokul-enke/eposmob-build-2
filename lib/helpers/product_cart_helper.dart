@@ -11,6 +11,7 @@ import 'package:pos_machine/providers/master_data_provider.dart';
 import 'package:pos_machine/providers/customer_selection_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/helpers/zero_price_quick_entry_helper.dart';
+import 'package:pos_machine/helpers/oversell_approval.dart';
 import 'package:pos_machine/widgets/stock_selection_modal.dart';
 import 'package:provider/provider.dart';
 
@@ -46,6 +47,7 @@ class ProductCartHelper {
     String? scannedBarcode,
     bool? variantEnabled,
     ZeroPriceQuickEntryPrompt? zeroPricePrompt,
+    OversellApprovalPrompt? oversellApprovalPrompt,
   }) async {
     try {
       await _handleProductSelectionImpl(
@@ -63,6 +65,7 @@ class ProductCartHelper {
         scannedBarcode: scannedBarcode,
         variantEnabled: variantEnabled,
         zeroPricePrompt: zeroPricePrompt,
+        oversellApprovalPrompt: oversellApprovalPrompt,
       );
     } catch (error) {
       debugPrint('ProductCartHelper error: $error');
@@ -90,6 +93,7 @@ class ProductCartHelper {
     String? scannedBarcode,
     bool? variantEnabled,
     ZeroPriceQuickEntryPrompt? zeroPricePrompt,
+    OversellApprovalPrompt? oversellApprovalPrompt,
   }) async {
     debugPrint("=== PRODUCT CART HELPER DEBUG START ===");
 
@@ -270,7 +274,9 @@ class ProductCartHelper {
           product,
           activeStoreId: activeStore?.storeId,
           activeStoreName: activeStore?.storeName,
-          includeNonPositive: allowOverselling,
+          // Keep zero-quantity rows selectable in strict mode so the
+          // cashier can explicitly approve a one-time oversell.
+          includeNonPositive: true,
         ),
         selectedVariant?.id,
       );
@@ -479,24 +485,6 @@ class ProductCartHelper {
       debugPrint("  - Final MRP: $finalMrp");
     }
 
-    if (stockEnabled &&
-        !allowOverselling &&
-        selectedStock != null &&
-        (selectedStock.quantity ?? 0) < requestedQuantity) {
-      if (!context.mounted) {
-        return;
-      }
-      showScaffoldError(
-        context: context,
-        message: BillingMobileErrorMessages.insufficientStockConfirm(
-          selectedSaleUnit?.unitName ?? product.unit ?? 'selected unit',
-          selectedStock.quantity ?? 0,
-          requestedQuantity,
-        ),
-      );
-      return;
-    }
-
     // STEP 3: Handle onSelected callback if provided
     if (onSelected != null) {
       debugPrint("🔄 STEP 3: Calling onSelected callback...");
@@ -622,6 +610,30 @@ class ProductCartHelper {
             "💰 Zero-price entry applied: price=${entry.price}, quantity=${entry.quantity}");
       }
 
+      // ALLOW_OVERSELL=false is the strict tenant policy. A cashier may
+      // approve this individual sale, but the tenant-level setting remains
+      // unchanged.
+      bool oversellApproved = false;
+      if (stockEnabled && !allowOverselling && selectedStock != null) {
+        final availableQuantity = selectedStock.quantity ?? 0;
+        if (availableQuantity < cartQuantity) {
+          if (!context.mounted) return;
+          final approvalPrompt =
+              oversellApprovalPrompt ?? showOversellApprovalDialog;
+          oversellApproved = await approvalPrompt(
+            context: context,
+            product: product,
+            availableQuantity: availableQuantity,
+            requestedQuantity: cartQuantity,
+            unitLabel: selectedSaleUnit?.unitName ?? product.unit ?? 'unit',
+          );
+          if (!oversellApproved || !context.mounted) {
+            debugPrint('❌ Oversell was not approved - product not added');
+            return;
+          }
+        }
+      }
+
       debugPrint("🛒 STEP 4: ADDING TO CART");
       debugPrint("Product: ${product.productName}");
       debugPrint("Final Quantity: $cartQuantity");
@@ -654,6 +666,7 @@ class ProductCartHelper {
         variantId: selectedVariant?.id,
         variantAttributes: selectedVariant?.attributes,
         warrantyEnabled: warrantyEnabled,
+        allowOversellOverride: oversellApproved,
       );
 
       if (!added) {

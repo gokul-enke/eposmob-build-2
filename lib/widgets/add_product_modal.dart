@@ -908,6 +908,9 @@ class _AddProductWithBarcodeModalState
     for (final row in _saleUnitRows) {
       addBarcode(row.barcodeController.text, row.barcodeController);
     }
+    for (final row in _variantController.rows) {
+      addBarcode(row.barcodeController.text, row.barcodeController);
+    }
 
     return usedBarcodes;
   }

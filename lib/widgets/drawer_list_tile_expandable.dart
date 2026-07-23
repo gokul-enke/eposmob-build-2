@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:websafe_svg/websafe_svg.dart';
 
 import '../resources/color_manager.dart';
@@ -8,7 +9,7 @@ import 'side_menu.dart';
 
 class DrawerListTileExpandableColumn extends StatefulWidget {
   final String? iconPath;
-  final IconData? icon;
+  final FaIconData? icon;
   final String title;
   final String listTitle1;
   final String? listTitle2;
@@ -116,7 +117,7 @@ class _DrawerListTileExpandableColumnState
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: widget.icon != null
-                    ? Icon(widget.icon, size: 14, color: ColorManager.kPrimaryColor)
+                    ? FaIcon(widget.icon!, size: 14, color: ColorManager.kPrimaryColor)
                     : const SizedBox.shrink(),
               ),
               const SizedBox(width: 8),
@@ -386,8 +387,8 @@ class _DrawerListTileExpandableColumnState
                 ),
                 child: Center(
                   child: widget.icon != null
-                      ? Icon(
-                          widget.icon,
+                      ? FaIcon(
+                          widget.icon!,
                           size: 16,
                           color: widget.selected ? Colors.white : ColorManager.kPrimaryColor,
                         )
@@ -449,8 +450,8 @@ class _DrawerListTileExpandableColumnState
                     height: leadingBox,
                     child: Center(
                       child: widget.icon != null
-                          ? Icon(
-                              widget.icon,
+                          ? FaIcon(
+                              widget.icon!,
                               color: Colors.white,
                               size: resolvedIconSize,
                             )
@@ -684,8 +685,8 @@ class _DrawerListTileExpandableColumnState
                     height: leadingBox,
                     child: Center(
                       child: widget.icon != null
-                          ? Icon(
-                              widget.icon,
+                          ? FaIcon(
+                              widget.icon!,
                               size: resolvedIconSize,
                               color: ColorManager.kPrimaryColor,
                             )

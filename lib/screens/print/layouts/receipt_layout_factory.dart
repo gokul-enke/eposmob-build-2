@@ -16,6 +16,7 @@ import 'supermarket2_receipt_layout.dart';
 import 'supermarket2_bilingual_receipt_layout.dart';
 import 'supermarket3_receipt_layout.dart';
 import 'bilingual_receipt_layout.dart';
+import 'mobile_shop_tax_invoice_receipt_layout.dart';
 
 /// Factory class for creating receipt layouts based on theme.
 ///
@@ -49,6 +50,7 @@ class ReceiptLayoutFactory {
     'supermarkerrecpt3': () => supermarket3ReciptLayout(),
     'bilingual': () => BilingualReceiptLayout(),
     'multi_store': () => MultiStoreReceiptLayout(),
+    'mobile_shop_tax_invoice': () => MobileShopTaxInvoiceReceiptLayout(),
   };
 
   /// Get a layout instance based on the theme identifier.
