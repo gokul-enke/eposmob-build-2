@@ -91,7 +91,9 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     final option = displayConfig?[key];
     final configuredArabic =
         option?.value is String ? (option!.value as String).trim() : '';
-    final configuredEnglish = option?.defaultValue?.trim() ?? '';
+    final rawEnglish = option?.defaultValue?.trim() ?? '';
+    final configuredEnglish =
+        rawEnglish.startsWith('EN ') ? rawEnglish.substring(3).trim() : rawEnglish;
     final arabicText = configuredArabic.isNotEmpty
         ? configuredArabic
         : (resolvedArabic?.trim().isNotEmpty == true
@@ -121,6 +123,33 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       return arabicText;
     }
     return '$arabicText / $englishText';
+  }
+
+  ({String english, String arabic}) _getModeLabelParts({
+    required Map<String, DisplayOption>? displayConfig,
+    required String key,
+    String? resolvedArabic,
+    String? resolvedEnglish,
+    required String english,
+    required String arabic,
+  }) {
+    final option = displayConfig?[key];
+    final configuredArabic =
+        option?.value is String ? (option!.value as String).trim() : '';
+    final rawEnglish = option?.defaultValue?.trim() ?? '';
+    final configuredEnglish =
+        rawEnglish.startsWith('EN ') ? rawEnglish.substring(3).trim() : rawEnglish;
+    final arabicText = configuredArabic.isNotEmpty
+        ? configuredArabic
+        : (resolvedArabic?.trim().isNotEmpty == true
+            ? resolvedArabic!.trim()
+            : arabic);
+    final englishText = configuredEnglish.isNotEmpty
+        ? configuredEnglish
+        : (resolvedEnglish?.trim().isNotEmpty == true
+            ? resolvedEnglish!.trim()
+            : english);
+    return (english: englishText, arabic: arabicText);
   }
 
   String _getBilingualText({required String arabic, required String english}) {
@@ -269,7 +298,6 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
       // Build receipt rows
       List<ReceiptRow> part1Rows = [];
-      List<ReceiptRow> part2Rows = [];
 
       // ========== LOAD SAR SYMBOL ==========
       ui.Image? sarSymbol;
@@ -335,22 +363,14 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
 
       // ========== FOOTER SECTION ==========
       await _buildFooterSection(
-          part2Rows, params, displayConfig, isEnglish, isBilingual, context);
+          part1Rows, params, displayConfig, isEnglish, isBilingual, context);
 
-      // ========== RENDER IMAGES ==========
-      debugPrint("Rendering standard receipt images...");
+      // ========== RENDER SINGLE IMAGE ==========
+      debugPrint("Rendering receipt image...");
 
-      final img.Image imagePart1 =
+      final img.Image receiptImage =
           await ArabicPrinterHelper.renderReceiptToImage(
         rows: part1Rows,
-        width: printWidth,
-        fontSize: baseFontSize,
-        textDirection: textDirection,
-      );
-
-      final img.Image imagePart2 =
-          await ArabicPrinterHelper.renderReceiptToImage(
-        rows: part2Rows,
         width: printWidth,
         fontSize: baseFontSize,
         textDirection: textDirection,
@@ -360,8 +380,8 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       if (kDebugMode) {
         try {
           await PrintDebugImageSaver.saveReceiptImages(
-            imagePart1,
-            imagePart2,
+            receiptImage,
+            receiptImage,
             params.selectedPaperSize,
           );
         } catch (e) {
@@ -377,8 +397,7 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
           Generator(params.is58mm ? PaperSize.mm58 : PaperSize.mm80, profile);
       List<int> bytes = [];
 
-      bytes += generator.image(imagePart1);
-      bytes += generator.image(imagePart2);
+      bytes += generator.image(receiptImage);
 
       // Native barcode
       String cleanOrderNumber = params.orderNumber
@@ -1379,190 +1398,211 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
     final showTax = displayConfig?['showTax']?.visible ?? true;
     final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
 
-    final subtotalLabel = _getModeLabel(
-      displayConfig: displayConfig,
-      key: 'showSubTotal',
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
-      english: 'NET TOTAL (Exc Tax)',
-      arabic: 'المجموع',
+    final subtotalParts = _getModeLabelParts(
+      displayConfig: displayConfig, key: 'showSubTotal',
+      english: 'NET TOTAL (Exc Tax)', arabic: 'المجموع',
     );
-
-    final discountLabel = _getModeLabel(
-      displayConfig: displayConfig,
-      key: 'showDiscount',
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
-      english: 'DISCOUNTS',
-      arabic: 'الخصم',
+    final discountParts = _getModeLabelParts(
+      displayConfig: displayConfig, key: 'showDiscount',
+      english: 'DISCOUNTS', arabic: 'الخصم',
     );
-
-    final vatLabel = _getModeLabel(
-      displayConfig: displayConfig,
-      key: 'showTax',
+    final vatParts = _getModeLabelParts(
+      displayConfig: displayConfig, key: 'showTax',
       resolvedArabic: resolvedLabels?.tax,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
-      english: 'VAT',
-      arabic: 'الضريبة',
+      english: 'VAT', arabic: 'الضريبة',
+    );
+    final grandTotalParts = _getModeLabelParts(
+      displayConfig: displayConfig, key: 'showNetAmount',
+      english: 'GRAND TOTAL', arabic: 'المبلغ الاجمالي',
+    );
+    final cashParts = _getModeLabelParts(
+      displayConfig: displayConfig, key: 'showCash',
+      english: 'Cash', arabic: 'نقدي',
     );
 
-    final grandTotalLabel = _getModeLabel(
-      displayConfig: displayConfig,
-      key: 'showNetAmount',
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
-      english: 'GRAND TOTAL',
-      arabic: 'المبلغ الاجمالي',
-    );
-
-    final cashLabel = _getModeLabel(
-      displayConfig: displayConfig,
-      key: 'showCash',
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
-      english: 'Cash',
-      arabic: 'نقدي',
-    );
-
-    List<StandardBoxedLineItem> boxedItems = [];
     final totalsScale = 0.85;
 
-    if (showMRPTotal) {
-      boxedItems.add(StandardBoxedLineItem(
-        label: subtotalLabel,
-        value: subtotal.toStringAsFixed(2),
-        isBold: true,
-        scale: 0.75,
-        icon: currencyIcon,
-        currencySymbol: currencySymbol,
-      ));
-    }
+    if (isBilingual) {
+      List<_BilingualBoxedLineItem> biItems = [];
 
-    if (showDiscount && discountAmountValue != 0) {
-      boxedItems.add(StandardBoxedLineItem(
-        label: discountLabel,
-        value: discountAmountValue.toStringAsFixed(2),
-        isBold: true,
-        scale: 0.75,
-        icon: currencyIcon,
-        currencySymbol: currencySymbol,
-      ));
-    }
-
-    if (showTax) {
-      boxedItems.add(StandardBoxedLineItem(
-        label: vatLabel,
-        value: taxAmount.toStringAsFixed(2),
-        isBold: true,
-        scale: 0.75,
-        icon: currencyIcon,
-        currencySymbol: currencySymbol,
-      ));
-    }
-
-    if (showNetAmount) {
-      boxedItems.add(StandardBoxedLineItem(
-        label: grandTotalLabel,
-        value: total.toStringAsFixed(2),
-        isBold: true,
-        scale: 0.9,
-        icon: currencyIcon,
-        currencySymbol: currencySymbol,
-      ));
-    }
-
-    final bool showPaymentBreaked =
-        displayConfig?['showPaymentBreaked']?.visible ?? true;
-
-    if (params.paidAmount != null && showPaymentBreaked) {
-      boxedItems.add(StandardBoxedLineItem(isSeparator: true));
-
-      bool isMultiPayment = false;
-
-      if (params.paymentBreakdown != null &&
-          params.paymentBreakdown!.isNotEmpty) {
-        isMultiPayment = true;
-        params.paymentBreakdown!.forEach((method, amount) {
-          double amt = double.tryParse(amount.toString()) ?? 0.0;
-          if (amt > 0) {
-            String label = method;
-            if (method == 'CASH') {
-              label = isEnglish ? "Cash" : (isBilingual ? "نقدي\nCash" : "نقدي");
-            } else if (method == 'CARD') {
-              label = isEnglish ? "Card" : (isBilingual ? "بطاقة\nCard" : "بطاقة");
-            } else if (method == 'UPI') {
-              label = "UPI";
-            }
-
-            boxedItems.add(StandardBoxedLineItem(
-              label: label,
-              value: amt.toStringAsFixed(2),
-              isBold: true,
-              scale: totalsScale,
-              icon: currencyIcon,
-              currencySymbol: currencySymbol,
-            ));
-          }
-        });
-      } else if (params.paymentMethod != null &&
-          params.paymentMethod!.startsWith('{')) {
-        try {
-          final Map<String, dynamic> paymentData =
-              json.decode(params.paymentMethod!);
-          if (paymentData['isMultiPayment'] == true) {
-            isMultiPayment = true;
-            final Map<String, dynamic> amounts = paymentData['amounts'];
-            amounts.forEach((method, amount) {
-              double amt = double.tryParse(amount.toString()) ?? 0.0;
-              if (amt > 0) {
-                String label = method;
-                if (method == 'CASH') {
-                  label = isEnglish ? "Cash" : (isBilingual ? "نقدي\nCash" : "نقدي");
-                } else if (method == 'CARD') {
-                  label = isEnglish ? "Card" : (isBilingual ? "بطاقة\nCard" : "بطاقة");
-                } else if (method == 'UPI') {
-                  label = "UPI";
-                }
-
-                boxedItems.add(StandardBoxedLineItem(
-                  label: label,
-                  value: amt.toStringAsFixed(2),
-                  isBold: true,
-                  scale: totalsScale,
-                  icon: currencyIcon,
-                  currencySymbol: currencySymbol,
-                ));
-              }
-            });
-          }
-        } catch (e) {
-          debugPrint("Error parsing multi-payment: $e");
-        }
-      }
-
-      if (!isMultiPayment) {
-        String label = cashLabel;
-        if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty) {
-          if (params.paymentMethod == 'CASH') {
-            label = cashLabel;
-          } else {
-            label = params.paymentMethod!;
-          }
-        }
-
-        boxedItems.add(StandardBoxedLineItem(
-          label: label,
-          value: params.paidAmount!.toStringAsFixed(2),
-          isBold: true,
-          scale: totalsScale,
-          icon: currencyIcon,
-          currencySymbol: currencySymbol,
+      if (showMRPTotal) {
+        biItems.add(_BilingualBoxedLineItem(
+          englishLabel: subtotalParts.english, arabicLabel: subtotalParts.arabic,
+          value: subtotal.toStringAsFixed(2), isBold: true, scale: 0.75,
+          icon: currencyIcon, currencySymbol: currencySymbol,
         ));
       }
-    }
+      if (showDiscount && discountAmountValue != 0) {
+        biItems.add(_BilingualBoxedLineItem(
+          englishLabel: discountParts.english, arabicLabel: discountParts.arabic,
+          value: discountAmountValue.toStringAsFixed(2), isBold: true, scale: 0.75,
+          icon: currencyIcon, currencySymbol: currencySymbol,
+        ));
+      }
+      if (showTax) {
+        biItems.add(_BilingualBoxedLineItem(
+          englishLabel: vatParts.english, arabicLabel: vatParts.arabic,
+          value: taxAmount.toStringAsFixed(2), isBold: true, scale: 0.75,
+          icon: currencyIcon, currencySymbol: currencySymbol,
+        ));
+      }
+      if (showNetAmount) {
+        biItems.add(_BilingualBoxedLineItem(
+          englishLabel: grandTotalParts.english, arabicLabel: grandTotalParts.arabic,
+          value: total.toStringAsFixed(2), isBold: true, scale: 0.9,
+          icon: currencyIcon, currencySymbol: currencySymbol,
+        ));
+      }
 
-    rows.add(StandardBoxedTotalsRow(items: boxedItems));
+      final bool showPaymentBreaked =
+          displayConfig?['showPaymentBreaked']?.visible ?? true;
+      if (params.paidAmount != null && showPaymentBreaked) {
+        biItems.add(_BilingualBoxedLineItem(isSeparator: true));
+
+        bool isMultiPayment = false;
+        if (params.paymentBreakdown != null && params.paymentBreakdown!.isNotEmpty) {
+          isMultiPayment = true;
+          params.paymentBreakdown!.forEach((method, amount) {
+            double amt = double.tryParse(amount.toString()) ?? 0.0;
+            if (amt > 0) {
+              String enLabel = method, arLabel = method;
+              if (method == 'CASH') { enLabel = 'Cash'; arLabel = 'نقدي'; }
+              else if (method == 'CARD') { enLabel = 'Card'; arLabel = 'بطاقة'; }
+              biItems.add(_BilingualBoxedLineItem(
+                englishLabel: enLabel, arabicLabel: arLabel,
+                value: amt.toStringAsFixed(2), isBold: true, scale: totalsScale,
+                icon: currencyIcon, currencySymbol: currencySymbol,
+              ));
+            }
+          });
+        } else if (params.paymentMethod != null && params.paymentMethod!.startsWith('{')) {
+          try {
+            final Map<String, dynamic> paymentData = json.decode(params.paymentMethod!);
+            if (paymentData['isMultiPayment'] == true) {
+              isMultiPayment = true;
+              final Map<String, dynamic> amounts = paymentData['amounts'];
+              amounts.forEach((method, amount) {
+                double amt = double.tryParse(amount.toString()) ?? 0.0;
+                if (amt > 0) {
+                  String enLabel = method, arLabel = method;
+                  if (method == 'CASH') { enLabel = 'Cash'; arLabel = 'نقدي'; }
+                  else if (method == 'CARD') { enLabel = 'Card'; arLabel = 'بطاقة'; }
+                  biItems.add(_BilingualBoxedLineItem(
+                    englishLabel: enLabel, arabicLabel: arLabel,
+                    value: amt.toStringAsFixed(2), isBold: true, scale: totalsScale,
+                    icon: currencyIcon, currencySymbol: currencySymbol,
+                  ));
+                }
+              });
+            }
+          } catch (e) {
+            debugPrint("Error parsing multi-payment: $e");
+          }
+        }
+
+        if (!isMultiPayment) {
+          String enLabel = cashParts.english;
+          String arLabel = cashParts.arabic;
+          if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty &&
+              params.paymentMethod != 'CASH') {
+            enLabel = params.paymentMethod!;
+            arLabel = params.paymentMethod!;
+          }
+          biItems.add(_BilingualBoxedLineItem(
+            englishLabel: enLabel, arabicLabel: arLabel,
+            value: params.paidAmount!.toStringAsFixed(2), isBold: true, scale: totalsScale,
+            icon: currencyIcon, currencySymbol: currencySymbol,
+          ));
+        }
+      }
+
+      rows.add(_BilingualBoxedTotalsRow(items: biItems));
+    } else {
+      final subtotalLabel = isEnglish ? subtotalParts.english : subtotalParts.arabic;
+      final discountLabel = isEnglish ? discountParts.english : discountParts.arabic;
+      final vatLabel = isEnglish ? vatParts.english : vatParts.arabic;
+      final grandTotalLabel = isEnglish ? grandTotalParts.english : grandTotalParts.arabic;
+      final cashLabel = isEnglish ? cashParts.english : cashParts.arabic;
+
+      List<StandardBoxedLineItem> boxedItems = [];
+
+      if (showMRPTotal) {
+        boxedItems.add(StandardBoxedLineItem(
+          label: subtotalLabel, value: subtotal.toStringAsFixed(2),
+          isBold: true, scale: 0.75, icon: currencyIcon, currencySymbol: currencySymbol,
+        ));
+      }
+      if (showDiscount && discountAmountValue != 0) {
+        boxedItems.add(StandardBoxedLineItem(
+          label: discountLabel, value: discountAmountValue.toStringAsFixed(2),
+          isBold: true, scale: 0.75, icon: currencyIcon, currencySymbol: currencySymbol,
+        ));
+      }
+      if (showTax) {
+        boxedItems.add(StandardBoxedLineItem(
+          label: vatLabel, value: taxAmount.toStringAsFixed(2),
+          isBold: true, scale: 0.75, icon: currencyIcon, currencySymbol: currencySymbol,
+        ));
+      }
+      if (showNetAmount) {
+        boxedItems.add(StandardBoxedLineItem(
+          label: grandTotalLabel, value: total.toStringAsFixed(2),
+          isBold: true, scale: 0.9, icon: currencyIcon, currencySymbol: currencySymbol,
+        ));
+      }
+
+      final bool showPaymentBreaked =
+          displayConfig?['showPaymentBreaked']?.visible ?? true;
+      if (params.paidAmount != null && showPaymentBreaked) {
+        boxedItems.add(StandardBoxedLineItem(isSeparator: true));
+        bool isMultiPayment = false;
+
+        if (params.paymentBreakdown != null && params.paymentBreakdown!.isNotEmpty) {
+          isMultiPayment = true;
+          params.paymentBreakdown!.forEach((method, amount) {
+            double amt = double.tryParse(amount.toString()) ?? 0.0;
+            if (amt > 0) {
+              boxedItems.add(StandardBoxedLineItem(
+                label: method, value: amt.toStringAsFixed(2),
+                isBold: true, scale: totalsScale, icon: currencyIcon, currencySymbol: currencySymbol,
+              ));
+            }
+          });
+        } else if (params.paymentMethod != null && params.paymentMethod!.startsWith('{')) {
+          try {
+            final Map<String, dynamic> paymentData = json.decode(params.paymentMethod!);
+            if (paymentData['isMultiPayment'] == true) {
+              isMultiPayment = true;
+              (paymentData['amounts'] as Map<String, dynamic>).forEach((method, amount) {
+                double amt = double.tryParse(amount.toString()) ?? 0.0;
+                if (amt > 0) {
+                  boxedItems.add(StandardBoxedLineItem(
+                    label: method, value: amt.toStringAsFixed(2),
+                    isBold: true, scale: totalsScale, icon: currencyIcon, currencySymbol: currencySymbol,
+                  ));
+                }
+              });
+            }
+          } catch (e) {
+            debugPrint("Error parsing multi-payment: $e");
+          }
+        }
+
+        if (!isMultiPayment) {
+          String label = cashLabel;
+          if (params.paymentMethod != null && params.paymentMethod!.isNotEmpty &&
+              params.paymentMethod != 'CASH') {
+            label = params.paymentMethod!;
+          }
+          boxedItems.add(StandardBoxedLineItem(
+            label: label, value: params.paidAmount!.toStringAsFixed(2),
+            isBold: true, scale: totalsScale, icon: currencyIcon, currencySymbol: currencySymbol,
+          ));
+        }
+      }
+
+      rows.add(StandardBoxedTotalsRow(items: boxedItems));
+    }
 
     // Amount in Words
     if (displayConfig?['showAmountInWords']?.visible == true) {
@@ -2464,5 +2504,196 @@ class Supermarket2BilingualReceiptLayout implements ReceiptLayout {
       }
     }
     rows.add(SpacingRow(_itemGap));
+  }
+}
+
+class _BilingualBoxedLineItem {
+  final String englishLabel;
+  final String arabicLabel;
+  final String value;
+  final bool isBold;
+  final double scale;
+  final bool isSeparator;
+  final ui.Image? icon;
+  final String? currencySymbol;
+
+  _BilingualBoxedLineItem({
+    this.englishLabel = '',
+    this.arabicLabel = '',
+    this.value = '',
+    this.isBold = false,
+    this.scale = 1.0,
+    this.isSeparator = false,
+    this.icon,
+    this.currencySymbol,
+  });
+}
+
+class _BilingualBoxedTotalsRow extends ReceiptRow {
+  final List<_BilingualBoxedLineItem> items;
+  final double padding;
+
+  _BilingualBoxedTotalsRow({required this.items, this.padding = 12.0});
+
+  @override
+  double calculateHeight(
+      double width, double fontSize, TextDirection textDirection) {
+    double h = padding * 2;
+    for (var item in items) {
+      if (item.isSeparator) {
+        h += 6;
+      } else {
+        h += (fontSize * item.scale) + 2;
+      }
+    }
+    return h;
+  }
+
+  @override
+  void render(Canvas canvas, double y, double width, double fontSize,
+      TextDirection textDirection) {
+    final paint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 1.5;
+
+    const double dashWidth = 3.0;
+    const double dashSpace = 2.0;
+
+    // Top dotted line
+    double currentX = 0;
+    while (currentX < width) {
+      canvas.drawLine(Offset(currentX, y), Offset(currentX + dashWidth, y), paint);
+      currentX += dashWidth + dashSpace;
+    }
+
+    // Bottom dotted line
+    currentX = 0;
+    double bottomY = y + calculateHeight(width, fontSize, textDirection);
+    while (currentX < width) {
+      canvas.drawLine(Offset(currentX, bottomY), Offset(currentX + dashWidth, bottomY), paint);
+      currentX += dashWidth + dashSpace;
+    }
+
+    double currentY = y + padding;
+
+    for (var item in items) {
+      if (item.isSeparator) {
+        final sepPaint = Paint()..color = Colors.black..strokeWidth = 1.5;
+        double sx = padding;
+        double endX = width - padding;
+        while (sx < endX) {
+          canvas.drawLine(Offset(sx, currentY + 6), Offset(sx + dashWidth, currentY + 6), sepPaint);
+          sx += dashWidth + dashSpace;
+        }
+        currentY += 12;
+      } else {
+        final itemFontSize = fontSize * item.scale;
+
+        // English label on the left (LTR)
+        _drawScaledText(canvas, item.englishLabel, Offset(padding, currentY),
+            width * 0.35 - padding, itemFontSize, item.isBold, TextAlign.left, TextDirection.ltr);
+
+        // Value + currency in the center
+        double centerX = width * 0.35;
+        double centerWidth = width * 0.30;
+
+        if (item.icon != null) {
+          final double iconSize = itemFontSize * 0.75;
+          final valuePainter = TextPainter(
+            text: TextSpan(
+              text: item.value,
+              style: TextStyle(color: Colors.black, fontSize: itemFontSize, fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal, fontFamily: ArabicPrinterHelper.fontFamily),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          final totalValueWidth = iconSize + 4 + valuePainter.width;
+          final valueStartX = centerX + (centerWidth - totalValueWidth) / 2;
+
+          final src = Rect.fromLTWH(0, 0, item.icon!.width.toDouble(), item.icon!.height.toDouble());
+          final dst = Rect.fromLTWH(valueStartX, currentY + (itemFontSize - iconSize) / 2 + (itemFontSize * 0.08), iconSize, iconSize);
+          canvas.drawImageRect(item.icon!, src, dst, Paint());
+          valuePainter.paint(canvas, Offset(valueStartX + iconSize + 4, currentY));
+        } else if (item.currencySymbol != null && item.currencySymbol!.isNotEmpty) {
+          final symbolPainter = TextPainter(
+            text: TextSpan(
+              text: item.currencySymbol!,
+              style: TextStyle(color: Colors.black, fontSize: itemFontSize, fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal, fontFamily: ArabicPrinterHelper.fontFamily),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          final valuePainter = TextPainter(
+            text: TextSpan(
+              text: item.value,
+              style: TextStyle(color: Colors.black, fontSize: itemFontSize, fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal, fontFamily: ArabicPrinterHelper.fontFamily),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          final totalValueWidth = symbolPainter.width + 4 + valuePainter.width;
+          final valueStartX = centerX + (centerWidth - totalValueWidth) / 2;
+          symbolPainter.paint(canvas, Offset(valueStartX, currentY));
+          valuePainter.paint(canvas, Offset(valueStartX + symbolPainter.width + 4, currentY));
+        } else {
+          _drawScaledText(canvas, item.value, Offset(centerX + centerWidth / 2, currentY),
+              centerWidth, itemFontSize, item.isBold, TextAlign.center, TextDirection.ltr);
+        }
+
+        // Arabic label on the right (RTL)
+        _drawScaledText(canvas, item.arabicLabel, Offset(width - padding, currentY),
+            width * 0.35 - padding, itemFontSize, item.isBold, TextAlign.right, TextDirection.rtl);
+
+        currentY += itemFontSize + 2;
+      }
+    }
+  }
+
+  void _drawScaledText(Canvas canvas, String text, Offset offset, double maxWidth,
+      double fontSize, bool isBold, TextAlign align, TextDirection textDirection) {
+    double currentFontSize = fontSize;
+    const double minFontSize = 8.0;
+
+    while (currentFontSize >= minFontSize) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: currentFontSize,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            fontFamily: ArabicPrinterHelper.fontFamily,
+          ),
+        ),
+        textDirection: textDirection,
+        textAlign: align,
+      )..layout();
+
+      if (painter.width <= maxWidth) {
+        double x = offset.dx;
+        if (align == TextAlign.right) {
+          x -= painter.width;
+        } else if (align == TextAlign.center) {
+          x -= painter.width / 2;
+        }
+        painter.paint(canvas, Offset(x, offset.dy));
+        return;
+      }
+      currentFontSize -= 1.0;
+    }
+
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: Colors.black, fontSize: minFontSize,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontFamily: ArabicPrinterHelper.fontFamily,
+        ),
+      ),
+      textDirection: textDirection, textAlign: align, maxLines: 1, ellipsis: '...',
+    )..layout(maxWidth: maxWidth);
+
+    double x = offset.dx;
+    if (align == TextAlign.right) x -= painter.width;
+    else if (align == TextAlign.center) x -= painter.width / 2;
+    painter.paint(canvas, Offset(x, offset.dy));
   }
 }
