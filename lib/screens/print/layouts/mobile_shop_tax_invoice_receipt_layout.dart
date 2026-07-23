@@ -392,19 +392,25 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       }
     }
 
-    // CR / commercial registration style line from FSSAI/tax info slot.
-    if (displayConfig?['showFssaiInfo']?.visible == true) {
-      final fssaiInfo = _getModeLabel(
+    if (displayConfig?['showTel']?.visible == true) {
+      final label = _getModeLabel(
         displayConfig: displayConfig,
-        key: 'showFssaiInfo',
+        key: 'showTel',
         isEnglish: isEnglish,
         isBilingual: isBilingual,
-        english: '',
-        arabic: '',
+        english: 'Phone',
+        arabic: 'رقم الهاتف',
         inlineBilingual: true,
       );
-      if (fssaiInfo.isNotEmpty) {
-        rows.add(TextRow(fssaiInfo, scale: 0.85, isBold: false));
+      final phone = params.storePhone?.isNotEmpty == true
+          ? params.storePhone!
+          : (appSettings?.customerCarePhone ?? '');
+      if (phone.isNotEmpty) {
+        rows.add(TextRow(
+          _appendValueToModeLabel(label, ' : $phone', isBilingual),
+          scale: 0.9,
+          isBold: true,
+        ));
       }
     }
 
@@ -439,25 +445,19 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       ));
     }
 
-    if (displayConfig?['showTel']?.visible == true) {
-      final label = _getModeLabel(
+    // CR / commercial registration style line from FSSAI/tax info slot.
+    if (displayConfig?['showFssaiInfo']?.visible == true) {
+      final fssaiInfo = _getModeLabel(
         displayConfig: displayConfig,
-        key: 'showTel',
+        key: 'showFssaiInfo',
         isEnglish: isEnglish,
         isBilingual: isBilingual,
-        english: 'Phone',
-        arabic: 'رقم الهاتف',
+        english: '',
+        arabic: '',
         inlineBilingual: true,
       );
-      final phone = params.storePhone?.isNotEmpty == true
-          ? params.storePhone!
-          : (appSettings?.customerCarePhone ?? '');
-      if (phone.isNotEmpty) {
-        rows.add(TextRow(
-          _appendValueToModeLabel(label, ' : $phone', isBilingual),
-          scale: 0.9,
-          isBold: true,
-        ));
+      if (fssaiInfo.isNotEmpty) {
+        rows.add(TextRow(fssaiInfo, scale: 0.85, isBold: false));
       }
     }
 
@@ -523,7 +523,6 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     final bool is58mm = params.is58mm;
     final double scale = is58mm ? 0.85 : 0.95;
     final bool isBilingual = _isBilingualContent(params);
-    final resolvedLabels = params.billDocumentConfig.resolvedLabels;
 
     void addMetaLine(String label, String value, {bool isBold = false}) {
       final trimmedValue = value.trim();
@@ -537,6 +536,31 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       ));
     }
 
+    String resolveCoreMetaLabel({
+      required String key,
+      required String english,
+      required String arabic,
+    }) {
+      final option = displayConfig?[key];
+      final configuredArabic =
+          option?.value is String ? (option!.value as String).trim() : '';
+      final configuredEnglish = option?.defaultValue?.trim() ?? '';
+
+      if (configuredArabic.isEmpty && configuredEnglish.isEmpty) {
+        return '$english / $arabic';
+      }
+
+      return _getModeLabel(
+        displayConfig: displayConfig,
+        key: key,
+        isEnglish: isEnglish,
+        isBilingual: isBilingual,
+        english: english,
+        arabic: arabic,
+        inlineBilingual: true,
+      );
+    }
+
     // Bill No. / رقم الفاتورة : #####
     final bool showInvoiceNumber =
         displayConfig?['showInvoiceNumber']?.visible != false;
@@ -545,14 +569,10 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       final match = regex.firstMatch(params.orderNumber);
       final strippedNumber =
           match != null ? match.group(0)! : params.orderNumber;
-      final billLabel = _getModeLabel(
-        displayConfig: displayConfig,
-        key: 'showInvoiceNumber',
-        isEnglish: isEnglish,
-        isBilingual: isBilingual,
+      final billLabel = resolveCoreMetaLabel(
+        key: 'showTokenNumber',
         english: 'Bill No.',
         arabic: 'رقم الفاتورة',
-        inlineBilingual: true,
       );
       addMetaLine(billLabel, strippedNumber, isBold: true);
     }
@@ -565,15 +585,10 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       String formattedTime = params.isFromLocalStorage
           ? DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)
           : DateHelper.formatISOTimeOnlyToIST(params.orderDate);
-      final dateLabel = _getModeLabel(
-        displayConfig: displayConfig,
+      final dateLabel = resolveCoreMetaLabel(
         key: 'showDate',
-        resolvedArabic: resolvedLabels?.date,
-        isEnglish: isEnglish,
-        isBilingual: isBilingual,
         english: 'Date',
         arabic: 'تاريخ',
-        inlineBilingual: true,
       );
       addMetaLine(dateLabel, '$formattedDate $formattedTime');
     }
@@ -586,14 +601,10 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     if (showCustomerName &&
         params.customerName != null &&
         params.customerName!.isNotEmpty) {
-      final customerLabel = _getModeLabel(
-        displayConfig: displayConfig,
+      final customerLabel = resolveCoreMetaLabel(
         key: 'showCustomerName',
-        isEnglish: isEnglish,
-        isBilingual: isBilingual,
         english: 'Customer',
         arabic: 'العميل',
-        inlineBilingual: true,
       );
       addMetaLine(customerLabel, params.customerName!);
     }
