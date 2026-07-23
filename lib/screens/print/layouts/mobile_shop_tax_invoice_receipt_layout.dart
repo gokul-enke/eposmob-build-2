@@ -585,12 +585,22 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       String formattedTime = params.isFromLocalStorage
           ? DateHelper.formatToISOTimeOnlyFromISO(params.orderDate)
           : DateHelper.formatISOTimeOnlyToIST(params.orderDate);
-      final dateLabel = resolveCoreMetaLabel(
-        key: 'showDate',
-        english: 'Date',
-        arabic: 'تاريخ',
-      );
-      addMetaLine(dateLabel, '$formattedDate $formattedTime');
+      rows.add(ReceiptTableRow([
+        ReceiptTableColumn(
+          'Date / تاريخ :',
+          weight: 0.38,
+          align: TextAlign.left,
+          scale: scale,
+          textDirection: TextDirection.ltr,
+        ),
+        ReceiptTableColumn(
+          '$formattedDate $formattedTime',
+          weight: 0.62,
+          align: TextAlign.left,
+          scale: scale,
+          textDirection: TextDirection.ltr,
+        ),
+      ]));
     }
 
     // Customer / العميل :
@@ -790,8 +800,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showParticulars',
       resolvedArabic: resolvedLabels?.particulars,
       resolvedEnglish: resolvedLabels?.particularsDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'DESCRIPTION',
       arabic: 'اسم الصنف',
     );
@@ -800,8 +810,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showMRP',
       resolvedArabic: resolvedLabels?.mrp,
       resolvedEnglish: resolvedLabels?.mrpDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'MRP',
       arabic: 'MRP',
     );
@@ -810,8 +820,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showQty',
       resolvedArabic: resolvedLabels?.qty,
       resolvedEnglish: resolvedLabels?.qtyDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'QTY',
       arabic: 'كمية',
     );
@@ -820,8 +830,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showRate',
       resolvedArabic: resolvedLabels?.rate,
       resolvedEnglish: resolvedLabels?.rateDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'PRICE',
       arabic: 'السعر',
     );
@@ -830,8 +840,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showRateExcTax',
       resolvedArabic: resolvedLabels?.rateExcTax,
       resolvedEnglish: resolvedLabels?.rateExcTaxDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'Rate Ex Tax',
       arabic: 'السعر بدون ضريبة',
     );
@@ -840,8 +850,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showUnit',
       resolvedArabic: resolvedLabels?.unitName,
       resolvedEnglish: resolvedLabels?.unitNameDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'Unit',
       arabic: 'الوحدة',
     );
@@ -850,8 +860,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showTotal',
       resolvedArabic: resolvedLabels?.total,
       resolvedEnglish: resolvedLabels?.totalDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'AMOUNT',
       arabic: 'القيمة',
     );
@@ -860,8 +870,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showTaxHeader',
       resolvedArabic: resolvedLabels?.tax,
       resolvedEnglish: resolvedLabels?.taxDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'VAT',
       arabic: 'ضريبة',
     );
@@ -870,8 +880,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       key: 'showSLNumber',
       resolvedArabic: resolvedLabels?.slNumber,
       resolvedEnglish: resolvedLabels?.slNumberDefault,
-      isEnglish: isEnglish,
-      isBilingual: isBilingual,
+      isEnglish: false,
+      isBilingual: true,
       english: 'SN',
       arabic: 'ر.م',
     );
@@ -882,11 +892,14 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     final tableCellPadding = _getTableCellPadding(tableColumnCount);
 
     // Build table header
+    // This layout always uses the reference table's visual LTR order:
+    // SN, DESCRIPTION, MRP (optional), VAT, QTY, PRICE, optional fields, AMOUNT.
+    const bool useLtrTableOrder = true;
     _buildTableHeader(
         rows,
         displayConfig,
         isEnglish,
-        isLtrLayout,
+        useLtrTableOrder,
         particularsLabel,
         mrpLabel,
         qtyLabel,
@@ -914,7 +927,7 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
           params.isFromLocalStorage,
           displayConfig,
           isEnglish,
-          isLtrLayout,
+          useLtrTableOrder,
           isBilingual,
           tableWeights,
           tableScale,
@@ -1310,7 +1323,8 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
         name: productName,
         qty: quantity,
         rate: unitPrice,
-        nameDirection: TextDirection.ltr,
+        nameDirection:
+            _hasArabic(productName) ? TextDirection.rtl : TextDirection.ltr,
       );
       if (primaryCols.any((c) => c.text.isNotEmpty)) {
         rows.add(ReceiptTableRow(primaryCols));
@@ -1522,16 +1536,20 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
       taxableAmount = taxAmount > 0 ? (total - taxAmount) : total;
     }
     if (taxableAmount < 0) taxableAmount = 0;
+    final double grossAmount = taxableAmount + discountAmountValue;
 
     final showItemsCount = displayConfig?['showItemsCount']?.visible ??
         displayConfig?['showQuantityCount']?.visible ??
         true;
-    final showGross = displayConfig?['showSubTotal']?.visible ??
-        displayConfig?['showMRPTotal']?.visible ??
-        true;
+    final showGross = displayConfig?['showNetAmount']?.visible ?? true;
     final showDiscount = displayConfig?['showDiscount']?.visible ?? true;
+    final showTaxable = displayConfig?['showMRPTotal']?.visible ??
+        displayConfig?['showSubTotal']?.visible ??
+        true;
     final showTax = displayConfig?['showTax']?.visible ?? true;
-    final showNetAmount = displayConfig?['showNetAmount']?.visible ?? true;
+    final showNetAmount = displayConfig?['showSubTotal']?.visible ??
+        displayConfig?['showNetAmount']?.visible ??
+        true;
     final bool showPaymentBreaked =
         displayConfig?['showPaymentBreaked']?.visible ?? true;
 
@@ -1571,14 +1589,14 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     if (showGross) {
       final grossLabel = _getModeLabel(
         displayConfig: displayConfig,
-        key: 'showMRPTotal',
+        key: 'showNetAmount',
         isEnglish: isEnglish,
         isBilingual: isDualLanguage,
         english: 'GROSS AMOUNT',
         arabic: 'المبلغ الإجمالي',
         inlineBilingual: true,
       );
-      addTotalLine(grossLabel, taxableAmount.toStringAsFixed(2));
+      addTotalLine(grossLabel, grossAmount.toStringAsFixed(2));
     }
 
     // DISCOUNT / خصم
@@ -1596,19 +1614,17 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     }
 
     // TOTAL TAXABLE AMOUNT
-    if (showGross) {
+    if (showTaxable) {
       final taxableLabel = _getModeLabel(
         displayConfig: displayConfig,
-        key: 'showSubTotal',
+        key: 'showMRPTotal',
         isEnglish: isEnglish,
         isBilingual: isDualLanguage,
         english: 'TOTAL TAXABLE AMOUNT',
         arabic: 'إجمالي المبلغ الخاضع للضريبة',
         inlineBilingual: true,
       );
-      final afterDiscount =
-          (taxableAmount - discountAmountValue).clamp(0.0, double.infinity);
-      addTotalLine(taxableLabel, afterDiscount.toStringAsFixed(2));
+      addTotalLine(taxableLabel, taxableAmount.toStringAsFixed(2));
     }
 
     // TOTAL VAT
@@ -1631,7 +1647,7 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     if (showNetAmount) {
       final netLabel = _getModeLabel(
         displayConfig: displayConfig,
-        key: 'showNetAmount',
+        key: 'showSubTotal',
         isEnglish: isEnglish,
         isBilingual: isDualLanguage,
         english: 'NET AMOUNT',
