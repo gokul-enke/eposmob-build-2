@@ -155,13 +155,19 @@ class DevelopmentPrinterService {
         firstPart.width > secondPart.width ? firstPart.width : secondPart.width;
     const barcodeHeight = 50.0;
     const barcodeVerticalPadding = 12;
+    const code39ModulesPerCharacter = 13;
+    const barcodeModuleWidth = 2.0;
     var barcodeWidth = 0.0;
     var barcodeBars = <pw.BarcodeBar>[];
     final cleanOrderNumber =
         orderNumber.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9\-]'), '');
     if (width >= 120 && cleanOrderNumber.isNotEmpty) {
       try {
-        barcodeWidth = (width - 40).toDouble();
+        // ESC/POS uses width=2. Code39 adds start and stop characters, with
+        // thirteen narrow modules per encoded character.
+        barcodeWidth = (cleanOrderNumber.length + 2) *
+            code39ModulesPerCharacter *
+            barcodeModuleWidth;
         barcodeBars = pw.Barcode.code39()
             .make(
               cleanOrderNumber,

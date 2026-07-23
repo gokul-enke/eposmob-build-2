@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:pos_machine/components/build_dialog_box.dart';
+import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
 import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_row.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_section.dart';
@@ -256,8 +257,25 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       if (result != null &&
           result['status'] == 'success' &&
           result['data'] != null) {
-        target.text = result['data']['barcode'].toString();
-        showScaffold(context: context, message: 'Barcode generated');
+        final generatedBarcode = result['data']['barcode'].toString();
+        final resolvedBarcode = AddProductFormHelpers.getNextAvailableBarcode(
+          seedBarcode: generatedBarcode,
+          productProvider:
+              Provider.of<LocalProductProvider>(context, listen: false),
+          mainBarcode: _barcodeController.text,
+          mainBarcodeController: _barcodeController,
+          saleUnitRows: const [],
+          additionalBarcodeControllers:
+              _variantController.rows.map((row) => row.barcodeController),
+          excludeController: target,
+        );
+        target.text = resolvedBarcode;
+        showScaffold(
+          context: context,
+          message: resolvedBarcode == generatedBarcode
+              ? 'Barcode generated'
+              : 'Barcode generated and incremented to keep it unique',
+        );
       } else {
         showScaffoldError(
           context: context,

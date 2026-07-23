@@ -197,6 +197,7 @@ class AddProductFormHelpers {
   static Set<String> collectCurrentFormBarcodes({
     required String mainBarcode,
     required List<AddProductSaleUnitRow> saleUnitRows,
+    Iterable<TextEditingController> additionalBarcodeControllers = const [],
     TextEditingController? excludeController,
     TextEditingController? mainBarcodeController,
   }) {
@@ -224,6 +225,9 @@ class AddProductFormHelpers {
 
     for (final row in saleUnitRows) {
       addBarcode(row.barcodeController.text, row.barcodeController);
+    }
+    for (final controller in additionalBarcodeControllers) {
+      addBarcode(controller.text, controller);
     }
 
     return usedBarcodes;
@@ -258,6 +262,7 @@ class AddProductFormHelpers {
     required LocalProductProvider productProvider,
     required String mainBarcode,
     required List<AddProductSaleUnitRow> saleUnitRows,
+    Iterable<TextEditingController> additionalBarcodeControllers = const [],
     TextEditingController? excludeController,
     TextEditingController? mainBarcodeController,
   }) {
@@ -267,6 +272,7 @@ class AddProductFormHelpers {
     final currentFormBarcodes = collectCurrentFormBarcodes(
       mainBarcode: mainBarcode,
       saleUnitRows: saleUnitRows,
+      additionalBarcodeControllers: additionalBarcodeControllers,
       excludeController: excludeController,
       mainBarcodeController: mainBarcodeController,
     );

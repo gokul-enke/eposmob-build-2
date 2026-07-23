@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
@@ -117,6 +118,52 @@ void main() {
 
     final matches = provider.filterProductByBarcode(barCode: 'BC-UNKNOWN');
     expect(matches, isEmpty);
+  });
+
+  test('barcode collection includes variant controllers and excludes target',
+      () {
+    final mainController = TextEditingController(text: 'MAIN');
+    final firstVariant = TextEditingController(text: 'VARIANT-1');
+    final targetVariant = TextEditingController(text: 'VARIANT-2');
+    addTearDown(() {
+      mainController.dispose();
+      firstVariant.dispose();
+      targetVariant.dispose();
+    });
+
+    final barcodes = AddProductFormHelpers.collectCurrentFormBarcodes(
+      mainBarcode: mainController.text,
+      mainBarcodeController: mainController,
+      saleUnitRows: const [],
+      additionalBarcodeControllers: [firstVariant, targetVariant],
+      excludeController: targetVariant,
+    );
+
+    expect(barcodes, {'MAIN', 'VARIANT-1'});
+  });
+
+  test('generated barcode increments when another variant already uses it', () {
+    final provider = LocalProductProvider();
+    final mainController = TextEditingController();
+    final firstVariant = TextEditingController(text: '000123');
+    final targetVariant = TextEditingController();
+    addTearDown(() {
+      mainController.dispose();
+      firstVariant.dispose();
+      targetVariant.dispose();
+    });
+
+    final barcode = AddProductFormHelpers.getNextAvailableBarcode(
+      seedBarcode: '000123',
+      productProvider: provider,
+      mainBarcode: mainController.text,
+      mainBarcodeController: mainController,
+      saleUnitRows: const [],
+      additionalBarcodeControllers: [firstVariant, targetVariant],
+      excludeController: targetVariant,
+    );
+
+    expect(barcode, '000124');
   });
 
   // ── addProduct does NOT duplicate if called twice with same product ─────────
