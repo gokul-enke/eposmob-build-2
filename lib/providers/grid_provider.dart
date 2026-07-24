@@ -694,13 +694,19 @@ class GridSelectionProvider extends ChangeNotifier {
       apiBodyData['variants'] = variants;
     }
 
+    // Get API key from SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? apiKey = prefs.getString('api_key');
+    final int? activeStoreId = prefs.getInt('active_store_id');
+
+    if (activeStoreId != null) {
+      apiBodyData['store_id'] = activeStoreId;
+    }
+
     debugPrint("apiBodyData ${apiBodyData.toString()}");
     debugPrint("accessToken ${accessToken.toString()}");
 
     final url = Uri.parse(APPUrl.createProductUrl);
-    // Get API key from SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString('api_key');
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");

@@ -137,6 +137,25 @@ void main() {
     expect(result.map((s) => s.id).toList(), <int>[1]);
   });
 
+  test('store filter excludes stock rows belonging to another store', () {
+    final storeOne = buildStock(id: 1, quantity: 5, productVariantId: 41);
+    final storeTwo = Stock(
+      id: 2,
+      productId: 1,
+      productVariantId: 41,
+      storeId: 2,
+      storeName: 'Store Two',
+      quantity: 8,
+    );
+
+    final result = LocalProductProvider.filterStocksForStore(
+      <Stock>[storeOne, storeTwo],
+      activeStoreId: 2,
+    );
+
+    expect(result.map((stock) => stock.id), <int?>[2]);
+  });
+
   test('variant stock never falls back to general stock', () {
     final scopedA = buildStock(id: 1, quantity: 5, productVariantId: 41);
     final general = buildStock(id: 3, quantity: 5);

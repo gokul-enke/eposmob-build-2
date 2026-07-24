@@ -11,17 +11,51 @@ class ProductVariantSelection {
   static bool isOutOfStock(ProductVariant variant) =>
       variant.quantity != null && variant.quantity == 0;
 
+  /// Variants applicable to the selected store. Older API responses did not
+  /// include `store_id`, so unscoped rows remain valid everywhere.
+  static List<ProductVariant> variantsForStore(
+    GetProduct product, {
+    int? activeStoreId,
+  }) {
+    final variants = product.variants ?? const <ProductVariant>[];
+    if (activeStoreId == null) return variants;
+    return variants
+        .where((variant) =>
+            variant.storeId == null || variant.storeId == activeStoreId)
+        .toList(growable: false);
+  }
+
+  static List<ProductVariant> activeVariantsForStore(
+    GetProduct product, {
+    int? activeStoreId,
+  }) =>
+      variantsForStore(product, activeStoreId: activeStoreId)
+          .where((variant) => variant.active)
+          .toList(growable: false);
+
+  static bool isVariantAvailableInStore(
+    ProductVariant variant, {
+    int? activeStoreId,
+  }) =>
+      activeStoreId == null ||
+      variant.storeId == null ||
+      variant.storeId == activeStoreId;
+
   /// Finds an active variant whose barcode matches [barcode] on [product].
   static ProductVariant? findVariantByBarcode(
     GetProduct product,
-    String barcode,
-  ) {
+    String barcode, {
+    int? activeStoreId,
+  }) {
     final normalized = normalizeBarcode(barcode);
     if (normalized.isEmpty || !product.hasVariants) {
       return null;
     }
 
-    for (final variant in product.activeVariants) {
+    for (final variant in activeVariantsForStore(
+      product,
+      activeStoreId: activeStoreId,
+    )) {
       if (normalizeBarcode(variant.barcode) == normalized) {
         return variant;
       }
@@ -40,6 +74,7 @@ class ProductVariantSelection {
   static ProductVariant? tryResolveWithoutPicker(
     GetProduct product, {
     String? scannedBarcode,
+    int? activeStoreId,
   }) {
     if (!product.hasVariants) {
       return null;
@@ -47,13 +82,28 @@ class ProductVariantSelection {
 
     final scanned = normalizeBarcode(scannedBarcode);
     if (scanned.isNotEmpty) {
-      final matched = findVariantByBarcode(product, scanned);
+      final matched = findVariantByBarcode(
+        product,
+        scanned,
+        activeStoreId: activeStoreId,
+      );
       if (matched != null) {
         return matched;
       }
     }
 
-    final active = product.activeVariants;
+    final active = activeVariantsForStore(
+      product,
+      activeStoreId: activeStoreId,
+    );
+    final matchedVariantId = product.matchedVariantId;
+    if (matchedVariantId != null) {
+      for (final variant in active) {
+        if (variant.id == matchedVariantId) {
+          return variant;
+        }
+      }
+    }
     if (active.length == 1) {
       return active.first;
     }
@@ -62,11 +112,18 @@ class ProductVariantSelection {
   }
 
   /// Whether the user must pick among multiple active variants.
-  static bool needsVariantPicker(GetProduct product) {
+  static bool needsVariantPicker(
+    GetProduct product, {
+    int? activeStoreId,
+  }) {
     if (!product.hasVariants) {
       return false;
     }
-    return product.activeVariants.length > 1;
+    return activeVariantsForStore(
+          product,
+          activeStoreId: activeStoreId,
+        ).length >
+        1;
   }
 
   static String cartDisplayName({

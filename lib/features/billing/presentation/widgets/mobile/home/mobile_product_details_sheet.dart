@@ -7,6 +7,7 @@ import 'package:pos_machine/features/billing/domain/product_details_helpers.dart
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_row.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_detail_section.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/mobile/shared/mobile_sheet_header.dart';
+import 'package:pos_machine/features/billing/presentation/widgets/product_variant_details_section.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 import 'package:pos_machine/models/category_list.dart';
@@ -21,6 +22,7 @@ import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
+import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +43,7 @@ Future<void> showMobileProductDetailsSheet({
   double? mrp,
   num? quantity,
   Stock? selectedStock,
+  int? selectedVariantId,
   String currency = '',
   VoidCallback? onAdd,
   bool useBillingProductPermissions = false,
@@ -61,6 +64,7 @@ Future<void> showMobileProductDetailsSheet({
       mrp: mrp,
       quantity: quantity,
       selectedStock: selectedStock,
+      selectedVariantId: selectedVariantId,
       currency: currency,
       onAdd: onAdd,
       useBillingProductPermissions: useBillingProductPermissions,
@@ -76,6 +80,7 @@ class _MobileProductDetailsSheet extends StatefulWidget {
     this.mrp,
     this.quantity,
     this.selectedStock,
+    this.selectedVariantId,
     this.currency = '',
     this.onAdd,
     this.useBillingProductPermissions = false,
@@ -87,6 +92,7 @@ class _MobileProductDetailsSheet extends StatefulWidget {
   final double? mrp;
   final num? quantity;
   final Stock? selectedStock;
+  final int? selectedVariantId;
   final String currency;
   final VoidCallback? onAdd;
   final bool useBillingProductPermissions;
@@ -1248,13 +1254,29 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     final stockEnabled = context.watch<LocalProductProvider>().isStockEnabled;
     final currency = appSettings?.currency ?? widget.currency;
     final itemCodeEnabled = appSettings?.itemCodeEnabled ?? false;
+    int? activeStoreId;
+    String? activeStoreName;
+    try {
+      final storeSession =
+          Provider.of<StoreSessionProvider>(context, listen: false);
+      activeStoreId = storeSession.activeStore?.storeId;
+      activeStoreName = storeSession.activeStore?.storeName;
+    } on ProviderNotFoundException catch (_) {}
 
-    final availableQuantity = productAvailableQuantity(product);
+    final stockRows = LocalProductProvider.filterStocksForStore(
+      product.stock ?? const <Stock>[],
+      activeStoreId: activeStoreId,
+      activeStoreName: activeStoreName,
+    );
+    final availableQuantity = stockRows.isEmpty
+        ? (product.stock == null ? null : 0)
+        : stockRows.fold<num>(
+            0,
+            (total, stock) => total + (stock.quantity ?? 0),
+          );
     final reorderLevel = product.reorderLevel;
     final isLowStock =
         stockEnabled && isProductLowStock(availableQuantity, reorderLevel);
-
-    final stockRows = product.stock ?? const <Stock>[];
 
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 24),
@@ -1365,6 +1387,18 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                   value: '${tax.rate ?? 0}%',
                 ),
             ],
+          ),
+        if (product.hasVariants)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: ProductVariantDetailsSection(
+              product: product,
+              stocks: stockRows,
+              currency: currency,
+              activeStoreId: activeStoreId,
+              selectedVariantId: widget.selectedVariantId ??
+                  widget.selectedStock?.productVariantId,
+            ),
           ),
         MobileDetailSection(
           title: 'Stock',

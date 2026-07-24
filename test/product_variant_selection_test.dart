@@ -113,13 +113,81 @@ void main() {
         'id': 10,
         'quantity': 99,
         'available_quantity': '4.5',
+        'store_id': '2',
       });
 
       expect(variant.quantity, 4.5);
+      expect(variant.totalQuantity, 99);
+      expect(variant.availableQuantity, 4.5);
+      expect(variant.storeId, 2);
+      expect(variant.toJson()['quantity'], 99);
+      expect(variant.toJson()['available_quantity'], 4.5);
+      expect(variant.toJson()['store_id'], 2);
+    });
+
+    test('product variant metadata survives a JSON/Hive payload round trip',
+        () {
+      final product = GetProduct.fromJson({
+        'product_id': 9,
+        'variant_mode': true,
+        'has_variants': true,
+        'matched_variant_id': 62,
+        'variants': [
+          {
+            'id': 62,
+            'quantity': 120,
+            'available_quantity': 100,
+            'store_id': 2,
+            'active': true,
+          },
+        ],
+      });
+
+      final restored = GetProduct.fromJson(product.toJson());
+      expect(restored.variantMode, isTrue);
+      expect(restored.hasVariantsFlag, isTrue);
+      expect(restored.matchedVariantId, 62);
+      expect(restored.variants!.single.totalQuantity, 120);
+      expect(restored.variants!.single.availableQuantity, 100);
+      expect(restored.variants!.single.quantity, 100);
+      expect(restored.variants!.single.storeId, 2);
     });
   });
 
   group('ProductVariantSelection', () {
+    test('active variants and barcode resolution are scoped to active store',
+        () {
+      final product = _variantProduct(variants: [
+        ProductVariant(id: 10, barcode: 'S1', storeId: 1),
+        ProductVariant(id: 20, barcode: 'S2', storeId: 2),
+        ProductVariant(id: 30, barcode: 'GLOBAL'),
+      ]);
+
+      expect(
+        ProductVariantSelection.activeVariantsForStore(
+          product,
+          activeStoreId: 2,
+        ).map((variant) => variant.id),
+        [20, 30],
+      );
+      expect(
+        ProductVariantSelection.findVariantByBarcode(
+          product,
+          'S1',
+          activeStoreId: 2,
+        ),
+        isNull,
+      );
+      expect(
+        ProductVariantSelection.findVariantByBarcode(
+          product,
+          'S2',
+          activeStoreId: 2,
+        )?.id,
+        20,
+      );
+    });
+
     test('findVariantByBarcode matches trimmed variant barcode', () {
       final product = _variantProduct(variants: [
         _variant(id: 10, barcode: '111'),
@@ -151,6 +219,33 @@ void main() {
           productPrice: 299,
         ),
         319,
+      );
+    });
+
+    test('tryResolveWithoutPicker honors store-valid matched_variant_id', () {
+      final product = GetProduct(
+        productId: 1,
+        matchedVariantId: 20,
+        variants: [
+          ProductVariant(id: 10, storeId: 1),
+          ProductVariant(id: 20, storeId: 2),
+          ProductVariant(id: 30, storeId: 2),
+        ],
+      );
+
+      expect(
+        ProductVariantSelection.tryResolveWithoutPicker(
+          product,
+          activeStoreId: 2,
+        )?.id,
+        20,
+      );
+      expect(
+        ProductVariantSelection.tryResolveWithoutPicker(
+          product,
+          activeStoreId: 1,
+        )?.id,
+        10,
       );
     });
 
