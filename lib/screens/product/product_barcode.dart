@@ -12,7 +12,6 @@ import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/models/get_product.dart';
 import 'package:provider/provider.dart';
 
-import '../../components/build_container_box.dart';
 import '../../components/build_round_button.dart';
 import '../../resources/color_manager.dart';
 import '../../resources/font_manager.dart';
@@ -21,6 +20,129 @@ import 'package:pos_machine/screens/print/barcode_printer_service.dart';
 import 'widgets/barcode_mobile_filters.dart';
 import 'widgets/confirm_barcode_print_modal.dart';
 import 'widgets/product_barcode_responsive.dart';
+
+// ---------------------------------------------------------------------------
+// BarcodeRow: wraps a base product + optional variant/saleUnit so every
+// printable barcode gets its own row in the list.
+// ---------------------------------------------------------------------------
+class BarcodeRow {
+  final GetProduct product;
+  final ProductVariant? variant;
+  final SaleUnit? saleUnit;
+
+  const BarcodeRow({
+    required this.product,
+    this.variant,
+    this.saleUnit,
+  });
+
+  // ── Display helpers ──
+
+  String get displayName {
+    if (variant != null) {
+      final attrs = variant!.attributes.values
+          .where((v) => v != null && v.toString().isNotEmpty)
+          .join('/');
+      final base = product.productName ?? '';
+      return attrs.isNotEmpty ? '$base - $attrs' : base;
+    }
+    if (saleUnit != null) {
+      final unitLabel = saleUnit!.unitName ?? '';
+      return '${product.productName ?? ''} ($unitLabel)';
+    }
+    return product.productName ?? '';
+  }
+
+  String? get barcode {
+    if (variant != null) return variant!.barcode;
+    if (saleUnit != null) return saleUnit!.barcode;
+    return product.barcode;
+  }
+
+  String? get sku {
+    if (variant != null) return variant!.sku ?? product.sku;
+    return product.sku;
+  }
+
+  String get quantity {
+    if (variant != null) {
+      return variant!.quantity?.toString() ?? '0';
+    }
+    // If the product has variants, the base product's own standalone quantity
+    // is the sum of stock entries where productVariantId is null (excluding variants).
+    final hasVariants = product.variants != null && product.variants!.isNotEmpty;
+    if (hasVariants) {
+      final baseStockQty = product.stock
+          ?.where((s) => s.productVariantId == null)
+          .fold<num>(0, (sum, s) => sum + (s.quantity ?? 0));
+      if (baseStockQty != null && baseStockQty > 0) {
+        return baseStockQty % 1 == 0
+            ? baseStockQty.toInt().toString()
+            : baseStockQty.toString();
+      }
+      return '0';
+    }
+    return product.numberOfProductsAvailable ?? 'N/A';
+  }
+
+  String get priceDisplay {
+    if (variant != null) {
+      return (variant!.price ?? product.price?.price)?.toString() ?? 'N/A';
+    }
+    if (saleUnit != null) {
+      return (saleUnit!.resolvedPrice ?? saleUnit!.price ?? product.price?.price)
+              ?.toString() ??
+          'N/A';
+    }
+    return product.price?.price?.toString() ?? 'N/A';
+  }
+
+  String get mrpDisplay {
+    if (variant != null) {
+      return (variant!.mrp ?? product.mrp)?.toString() ?? 'N/A';
+    }
+    return product.mrp?.toString() ?? 'N/A';
+  }
+
+  /// Stable, unique key for selection tracking.
+  String get selectionKey {
+    if (variant != null) {
+      return 'variant:${product.productId}:${variant!.id}';
+    }
+    if (saleUnit != null) {
+      return 'unit:${product.productId}:${saleUnit!.id}';
+    }
+    if (product.productId != null) {
+      return 'id:${product.productId}';
+    }
+    return 'fallback:${product.barcode ?? ''}|${product.productName ?? ''}';
+  }
+
+  /// Returns a [GetProduct] copy with this row's specific barcode, name,
+  /// price, MRP, SKU and quantity baked in — so the existing print pipeline
+  /// (ConfirmBarcodePrintModal → BarcodePrinterService) works unchanged.
+  GetProduct toProductForPrint() {
+    if (variant != null) {
+      final v = variant!;
+      return product.copyWith(
+        barcode: v.barcode ?? product.barcode,
+        productName: displayName,
+        sku: v.sku ?? product.sku,
+        numberOfProductsAvailable: quantity,
+        mrp: v.mrp ?? product.mrp,
+      );
+    }
+    if (saleUnit != null) {
+      final u = saleUnit!;
+      return product.copyWith(
+        barcode: u.barcode ?? product.barcode,
+        productName: displayName,
+        numberOfProductsAvailable: quantity,
+      );
+    }
+    return product;
+  }
+}
 
 class ProductBarcodeScreen extends StatefulWidget {
   const ProductBarcodeScreen({super.key});
@@ -44,7 +166,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
   // Track selected products by stable key so selection survives pagination.
   final Set<String> _selectedProductKeys = {};
-  final Map<String, GetProduct> _selectedProductsByKey = {};
+  final Map<String, BarcodeRow> _selectedProductsByKey = {};
 
   @override
   void initState() {
@@ -169,39 +291,62 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     });
     Provider.of<LocalProductProvider>(context, listen: false)
         .listAllProducts(categoryId: 0);
+  }
 
-    if (_isMobile(context)) {
-      setState(() {
-        _showFilters = false;
-      });
+  List<BarcodeRow> _expandProductsToBarcodeRows(List<GetProduct> products) {
+    final rows = <BarcodeRow>[];
+    for (final product in products) {
+      final subRows = <BarcodeRow>[];
+
+      final variants = product.variants;
+      if (variants != null && variants.isNotEmpty) {
+        for (final v in variants) {
+          if (!v.active) continue;
+          final bc = v.barcode?.trim() ?? '';
+          if (bc.isNotEmpty) {
+            subRows.add(BarcodeRow(product: product, variant: v));
+          }
+        }
+      }
+
+      final units = product.saleUnits;
+      if (units != null && units.isNotEmpty) {
+        final baseBarcode = (product.barcode ?? '').trim();
+        for (final u in units) {
+          final bc = u.barcode?.trim() ?? '';
+          if (bc.isNotEmpty && bc != baseBarcode) {
+            subRows.add(BarcodeRow(product: product, saleUnit: u));
+          }
+        }
+      }
+
+      // Always show the base product row.
+      rows.add(BarcodeRow(product: product));
+      
+      // Show any variant or sale-unit rows.
+      rows.addAll(subRows);
     }
+    return rows;
   }
 
-  String _productSelectionKey(GetProduct product) {
-    if (product.productId != null) {
-      return 'id:${product.productId}';
-    }
-    return 'fallback:${product.barcode ?? ''}|${product.productName ?? ''}';
+  bool _isRowSelected(BarcodeRow row) {
+    return _selectedProductKeys.contains(row.selectionKey);
   }
 
-  bool _isProductSelected(GetProduct product) {
-    return _selectedProductKeys.contains(_productSelectionKey(product));
-  }
-
-  void _setProductSelected(GetProduct product, bool selected) {
-    final key = _productSelectionKey(product);
+  void _setRowSelected(BarcodeRow row, bool selected) {
+    final key = row.selectionKey;
     if (selected) {
       _selectedProductKeys.add(key);
-      _selectedProductsByKey[key] = product;
+      _selectedProductsByKey[key] = row;
     } else {
       _selectedProductKeys.remove(key);
       _selectedProductsByKey.remove(key);
     }
   }
 
-  void _showProductDetails(GetProduct product) {
+  void _showProductDetails(BarcodeRow row) {
     setState(() {
-      selectedProduct = product;
+      selectedProduct = row.product;
     });
 
     final isPhone = productBarcodeIsPhone(context);
@@ -261,23 +406,13 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   shrinkWrap: true,
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildDetailRow(
-                        'Product Name', product.productName ?? 'N/A'),
-                    _buildDetailRow(
-                        'Category', product.category?.name ?? 'N/A'),
-                    _buildDetailRow('Store Name', 'N/A'),
-                    _buildDetailRow('Supplier', 'N/A'),
-                    _buildDetailRow('Unit', product.unit ?? 'N/A'),
-                    _buildDetailRow('Retail Price',
-                        product.price?.price?.toString() ?? 'N/A'),
-                    _buildDetailRow('MRP', product.mrp?.toString() ?? 'N/A'),
-                    _buildDetailRow('Purchase Price',
-                        product.purchasePrice?.toString() ?? 'N/A'),
-                    _buildDetailRow('Quantity',
-                        product.numberOfProductsAvailable?.toString() ?? 'N/A'),
-                    _buildDetailRow('Rack', 'N/A'),
-                    _buildDetailRow('Barcode', product.barcode ?? 'N/A'),
-                    _buildDetailRow('Wholesale Price', 'N/A'),
+                    _buildDetailRow('Product Name', row.displayName),
+                    _buildDetailRow('Category', row.product.category?.name ?? 'N/A'),
+                    _buildDetailRow('Unit', row.product.unit ?? 'N/A'),
+                    _buildDetailRow('Retail Price', row.priceDisplay),
+                    _buildDetailRow('MRP', row.mrpDisplay),
+                    _buildDetailRow('Quantity', row.quantity),
+                    _buildDetailRow('Barcode', row.barcode ?? 'N/A'),
                   ],
                 ),
               ),
@@ -302,35 +437,31 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     );
   }
 
-  Future<void> _handlePrintSelected(List<GetProduct> selectedProducts) async {
+  Future<void> _handlePrintSelected(List<BarcodeRow> selectedRows) async {
     if (_isPrinting) return;
     setState(() => _isPrinting = true);
     try {
-      debugPrint('🖨️ PRINT triggered for ${selectedProducts.length} items');
-
-      final validProducts = selectedProducts
-          .where((product) =>
-              product.barcode != null && product.barcode!.trim().isNotEmpty)
+      final validRows = selectedRows
+          .where((row) =>
+              row.barcode != null && row.barcode!.trim().isNotEmpty)
           .toList();
 
-      if (validProducts.length < selectedProducts.length) {
+      if (validRows.length < selectedRows.length) {
         final bool shouldContinue = await showDialog(
               context: context,
               builder: (context) => AlertDialog(
                 title: const Text('Missing Barcode'),
-                content: Text(validProducts.isEmpty
-                    ? 'These products don\'t have a barcode. Please add a barcode first.'
-                    : 'Some products don\'t have a barcode. Do you want to skip them and continue?'),
+                content: Text(validRows.isEmpty
+                    ? 'These products don\'t have a barcode.'
+                    : 'Some products don\'t have a barcode. Skip and continue?'),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context,
-                        false), // Returning false to indicate cancel/close
-                    child: Text(validProducts.isEmpty ? 'Close' : 'Cancel'),
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(validRows.isEmpty ? 'Close' : 'Cancel'),
                   ),
-                  if (validProducts.isNotEmpty)
+                  if (validRows.isNotEmpty)
                     TextButton(
-                      onPressed: () => Navigator.pop(
-                          context, true), // Returning true to indicate continue
+                      onPressed: () => Navigator.pop(context, true),
                       child: const Text('Continue'),
                     ),
                 ],
@@ -338,10 +469,13 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
             ) ??
             false;
 
-        if (!shouldContinue || validProducts.isEmpty) {
+        if (!shouldContinue || validRows.isEmpty) {
           return;
         }
       }
+
+      final validProducts =
+          validRows.map((r) => r.toProductForPrint()).toList();
 
       if (!mounted) return;
       final BarcodePrintRequest? result = await showDialog<BarcodePrintRequest>(
@@ -370,19 +504,16 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     }
   }
 
-  Future<void> _handlePrintSingle(GetProduct product) async {
+  Future<void> _handlePrintSingle(BarcodeRow row) async {
     if (_isPrinting) return;
     setState(() => _isPrinting = true);
     try {
-      debugPrint('🖨️ PRINT single: ${product.productName}');
-
-      if (product.barcode == null || product.barcode!.trim().isEmpty) {
+      if (row.barcode == null || row.barcode!.trim().isEmpty) {
         await showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Missing Barcode'),
-            content: const Text(
-                'This product don\'t have a barcode. Please add a barcode first.'),
+            content: const Text('This product doesn\'t have a barcode.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -394,11 +525,13 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         return;
       }
 
+      final printProduct = row.toProductForPrint();
+
       if (!mounted) return;
       final BarcodePrintRequest? result = await showDialog<BarcodePrintRequest>(
         context: context,
         builder: (context) =>
-            ConfirmBarcodePrintModal(selectedProducts: [product]),
+            ConfirmBarcodePrintModal(selectedProducts: [printProduct]),
       );
 
       if (mounted && result != null && result.items.isNotEmpty) {
@@ -420,8 +553,6 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       if (mounted) setState(() => _isPrinting = false);
     }
   }
-
-  // ── UI HELPERS ──
 
   bool _isMobile(BuildContext context) =>
       MediaQuery.of(context).size.width < kProductBarcodePhoneBreakpoint;
@@ -554,8 +685,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
           : "Print Selected (${_selectedProductKeys.length})",
       fct: () {
         if (_isPrinting) return;
-        final selected = _selectedProductsByKey.values.toList();
-        _handlePrintSelected(selected);
+        final selectedRows = _selectedProductsByKey.values.toList();
+        _handlePrintSelected(selectedRows);
       },
       fontSize: 12,
       height: 45,
@@ -663,10 +794,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     bool copyable = false,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.grey.withOpacity(0.04),
         borderRadius: BorderRadius.circular(8),
@@ -727,12 +855,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   }
 
   Widget _buildMobileProductCard({
-    required GetProduct product,
+    required BarcodeRow row,
     required int serialNumber,
     required bool isSelected,
   }) {
-    final categoryName = product.category?.name ?? 'N/A';
-
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 12),
       child: ProductBarcodeContentCard(
@@ -758,7 +884,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                           value: isSelected,
                           onChanged: (val) {
                             setState(() {
-                              _setProductSelected(product, val == true);
+                              _setRowSelected(row, val == true);
                             });
                           },
                           activeColor: ColorManager.kPrimaryColor,
@@ -770,7 +896,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SelectableText(
-                              product.productName ?? 'Unnamed',
+                              row.displayName,
                               style: buildCustomStyle(
                                 FontWeightManager.semiBold,
                                 FontSize.s14,
@@ -779,29 +905,14 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: SelectableText(
-                                    categoryName,
-                                    style: buildCustomStyle(
-                                      FontWeightManager.regular,
-                                      FontSize.s11,
-                                      0.13,
-                                      Colors.black54,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  ' · #$serialNumber',
-                                  style: buildCustomStyle(
-                                    FontWeightManager.regular,
-                                    FontSize.s11,
-                                    0.13,
-                                    Colors.black54,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              '#$serialNumber',
+                              style: buildCustomStyle(
+                                FontWeightManager.regular,
+                                FontSize.s11,
+                                0.13,
+                                Colors.black54,
+                              ),
                             ),
                           ],
                         ),
@@ -809,47 +920,16 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Tooltip(
-                      message: 'View Details',
-                      child: SizedBox(
-                        width: 30,
-                        height: 30,
-                        child: BuildBoxShadowContainer(
-                          color: Colors.white,
-                          circleRadius: 6,
-                          child: IconButton(
-                            icon: Icon(Icons.visibility,
-                                size: 14,
-                                color: ColorManager.kPrimaryColor.withOpacity(0.9)),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () => _showProductDetails(product),
-                          ),
-                        ),
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.visibility, size: 16),
+                      onPressed: () => _showProductDetails(row),
                     ),
-                    const SizedBox(width: 6),
-                    Tooltip(
-                      message: 'Print Barcode',
-                      child: SizedBox(
-                        width: 30,
-                        height: 30,
-                        child: BuildBoxShadowContainer(
-                          color: ColorManager.kPrimaryColor,
-                          circleRadius: 6,
-                          child: IconButton(
-                            icon: const Icon(Icons.print,
-                                size: 14, color: Colors.white),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () => _handlePrintSingle(product),
-                          ),
-                        ),
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.print, size: 16),
+                      onPressed: () => _handlePrintSingle(row),
                     ),
                   ],
                 ),
@@ -861,7 +941,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                 Expanded(
                   child: _buildCompactFieldBox(
                     label: 'Barcode',
-                    value: product.barcode ?? 'N/A',
+                    value: row.barcode ?? 'N/A',
                     copyable: true,
                   ),
                 ),
@@ -869,14 +949,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                 Expanded(
                   child: _buildCompactFieldBox(
                     label: 'Qty',
-                    value: product.numberOfProductsAvailable ?? 'N/A',
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _buildCompactFieldBox(
-                    label: 'Price',
-                    value: product.price?.price?.toString() ?? 'N/A',
+                    value: row.quantity,
                   ),
                 ),
               ],
@@ -898,253 +971,253 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       3: FlexColumnWidth(1.3),
       4: FlexColumnWidth(1.3),
       5: FlexColumnWidth(0.7),
-      6: FlexColumnWidth(1.0),
-      7: FlexColumnWidth(1.0),
-      8: FlexColumnWidth(1.1),
-      9: FlexColumnWidth(0.8),
+      6: FlexColumnWidth(0.8),
+      7: FlexColumnWidth(0.8),
+      8: FlexColumnWidth(1.0),
+      9: FixedColumnWidth(90),
     };
 
-    final allSelected = listProductModelDataList.isNotEmpty &&
-        listProductModelDataList
-            .every((product) => _isProductSelected(product));
+    final barcodeRows = _expandProductsToBarcodeRows(listProductModelDataList);
 
-    return ProductBarcodeResponsiveTable(
-      minWidth: 960,
-      table: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: ColorManager.tableBGColor.withValues(alpha: 0.5),
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
-              ),
+    final allSelected = barcodeRows.isNotEmpty &&
+        barcodeRows.every((row) => _isRowSelected(row));
+
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FC),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
             ),
-            child: Table(
-              columnWidths: colWidths,
-              border: null,
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              children: [
-                TableRow(
-                  children: [
-                    _buildTableHeader('No'),
-                    Center(
-                      child: Checkbox(
-                        value: allSelected,
-                        onChanged: (val) {
-                          setState(() {
-                            if (val == true) {
-                              for (final product in listProductModelDataList) {
-                                _setProductSelected(product, true);
-                              }
-                            } else {
-                              for (final product in listProductModelDataList) {
-                                _setProductSelected(product, false);
-                              }
-                            }
-                          });
-                        },
-                        activeColor: ColorManager.kPrimaryColor,
-                      ),
+            border: Border(
+              bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.15)),
+            ),
+          ),
+          child: Table(
+            columnWidths: colWidths,
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            children: [
+              TableRow(
+                children: [
+                  _buildTableHeader('No'),
+                  Center(
+                    child: Checkbox(
+                      value: allSelected,
+                      onChanged: (val) {
+                        setState(() {
+                          for (final row in barcodeRows) {
+                            _setRowSelected(row, val == true);
+                          }
+                        });
+                      },
+                      activeColor: ColorManager.kPrimaryColor,
                     ),
-                    _buildTableHeader('Product Name'),
-                    _buildTableHeader('Barcode'),
-                    _buildTableHeader('Category'),
-                    _buildTableHeader('Qty'),
-                    _buildTableHeader('Price'),
-                    _buildTableHeader('MRP'),
-                    _buildTableHeader('SKU'),
-                    _buildTableHeader('Action'),
+                  ),
+                  _buildTableHeader('Product Name'),
+                  _buildTableHeader('Barcode'),
+                  _buildTableHeader('Category'),
+                  _buildTableHeader('Qty'),
+                  _buildTableHeader('Price'),
+                  _buildTableHeader('MRP'),
+                  _buildTableHeader('SKU'),
+                  _buildTableHeader('Action'),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: MouseRegion(
+            cursor: SystemMouseCursors.grab,
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                scrollDirection: Axis.vertical,
+                child: Table(
+                  columnWidths: colWidths,
+                  border: null,
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: [
+                    ...barcodeRows.asMap().entries.map((entry) {
+                      final int index = entry.key;
+                      final row = entry.value;
+                      final isSelected = _isRowSelected(row);
+                      final serialNumber =
+                          gridProvider.paginationFrom + index;
+
+                      return TableRow(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? ColorManager.kPrimaryColor
+                                  .withValues(alpha: 0.07)
+                              : index % 2 == 0
+                                  ? Colors.white
+                                  : Colors.grey.withValues(alpha: 0.06),
+                        ),
+                        children: [
+                          _buildTableCell(serialNumber.toString()),
+                          Center(
+                            child: Checkbox(
+                              value: isSelected,
+                              onChanged: (val) {
+                                setState(() {
+                                  _setRowSelected(row, val == true);
+                                });
+                              },
+                              activeColor: ColorManager.kPrimaryColor,
+                            ),
+                          ),
+                          TableCell(
+                            verticalAlignment:
+                                TableCellVerticalAlignment.middle,
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: SelectableText(
+                                    row.displayName,
+                                    textAlign: TextAlign.center,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s12,
+                                      0.13,
+                                      Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            verticalAlignment:
+                                TableCellVerticalAlignment.middle,
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        row.barcode ?? 'N/A',
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: buildCustomStyle(
+                                          FontWeightManager.medium,
+                                          FontSize.s12,
+                                          0.13,
+                                          Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                    if (row.barcode != null &&
+                                        row.barcode!.isNotEmpty &&
+                                        row.barcode != 'N/A') ...[
+                                      const SizedBox(width: 6),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Clipboard.setData(ClipboardData(
+                                              text: row.barcode!));
+                                          showScaffold(
+                                            context: context,
+                                            message:
+                                                'Barcode copied to clipboard',
+                                          );
+                                        },
+                                        child: const Icon(
+                                          Icons.copy,
+                                          size: 14,
+                                          color: Colors.black38,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            verticalAlignment:
+                                TableCellVerticalAlignment.middle,
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: SelectableText(
+                                    row.product.category?.name ?? 'N/A',
+                                    textAlign: TextAlign.center,
+                                    style: buildCustomStyle(
+                                      FontWeightManager.medium,
+                                      FontSize.s12,
+                                      0.13,
+                                      Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          _buildTableCell(row.quantity),
+                          _buildTableCell(row.priceDisplay),
+                          _buildTableCell(row.mrpDisplay),
+                          _buildTableCell(row.sku ?? 'N/A'),
+                          Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ProductBarcodeIconAction(
+                                  icon: Icons.visibility,
+                                  iconColor: ColorManager.kPrimaryColor
+                                      .withValues(alpha: 0.9),
+                                  tooltip: 'View Details',
+                                  onPressed: () =>
+                                      _showProductDetails(row),
+                                ),
+                                const SizedBox(width: 5),
+                                ProductBarcodeIconAction(
+                                  icon: Icons.print,
+                                  iconColor: ColorManager.kPrimaryColor,
+                                  tooltip: 'Print Barcode',
+                                  onPressed: () =>
+                                      _handlePrintSingle(row),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
                   ],
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: MouseRegion(
-              cursor: SystemMouseCursors.grab,
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.stylus,
-                    PointerDeviceKind.trackpad,
-                  },
-                ),
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  scrollDirection: Axis.vertical,
-                  child: Table(
-                    columnWidths: colWidths,
-                    border: null,
-                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                    children: [
-                      ...listProductModelDataList.asMap().entries.map((entry) {
-                        final int index = entry.key;
-                        final product = entry.value;
-                        final isSelected = _isProductSelected(product);
-                        final serialNumber =
-                            gridProvider.paginationFrom + index;
-
-                        return TableRow(
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? ColorManager.kPrimaryColor
-                                    .withValues(alpha: 0.07)
-                                : index % 2 == 0
-                                    ? Colors.white
-                                    : Colors.grey.withValues(alpha: 0.06),
-                          ),
-                          children: [
-                            _buildTableCell(serialNumber.toString()),
-                            Center(
-                              child: Checkbox(
-                                value: isSelected,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _setProductSelected(product, val == true);
-                                  });
-                                },
-                                activeColor: ColorManager.kPrimaryColor,
-                              ),
-                            ),
-                            TableCell(
-                              verticalAlignment: TableCellVerticalAlignment.middle,
-                              child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: SelectableText(
-                                      product.productName ?? '',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.13,
-                                        Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            TableCell(
-                              verticalAlignment:
-                                  TableCellVerticalAlignment.middle,
-                              child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Center(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          product.barcode ?? 'N/A',
-                                          textAlign: TextAlign.center,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: buildCustomStyle(
-                                            FontWeightManager.medium,
-                                            FontSize.s12,
-                                            0.13,
-                                            Colors.black,
-                                          ),
-                                        ),
-                                      ),
-                                      if (product.barcode != null && product.barcode!.isNotEmpty && product.barcode != 'N/A') ...[
-                                        const SizedBox(width: 6),
-                                        GestureDetector(
-                                          onTap: () {
-                                            Clipboard.setData(ClipboardData(
-                                                text: product.barcode!));
-                                            showScaffold(
-                                              context: context,
-                                              message: 'Barcode copied to clipboard',
-                                            );
-                                          },
-                                          child: const Icon(
-                                            Icons.copy,
-                                            size: 14,
-                                            color: Colors.black38,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            TableCell(
-                              verticalAlignment: TableCellVerticalAlignment.middle,
-                              child: Padding(
-                                padding: const EdgeInsets.all(4.0),
-                                child: Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: SelectableText(
-                                      product.category?.name ?? 'N/A',
-                                      textAlign: TextAlign.center,
-                                      style: buildCustomStyle(
-                                        FontWeightManager.medium,
-                                        FontSize.s12,
-                                        0.13,
-                                        Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            _buildTableCell(
-                                product.numberOfProductsAvailable ?? 'N/A'),
-                            _buildTableCell(
-                                product.price?.price?.toString() ?? 'N/A'),
-                            _buildTableCell(product.mrp?.toString() ?? 'N/A'),
-                            _buildTableCell(product.sku ?? 'N/A'),
-                            Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  ProductBarcodeIconAction(
-                                    icon: Icons.visibility,
-                                    iconColor: ColorManager.kPrimaryColor
-                                        .withValues(alpha: 0.9),
-                                    tooltip: 'View Details',
-                                    onPressed: () =>
-                                        _showProductDetails(product),
-                                  ),
-                                  const SizedBox(width: 5),
-                                  ProductBarcodeIconAction(
-                                    icon: Icons.print,
-                                    iconColor: ColorManager.kPrimaryColor,
-                                    tooltip: 'Print Barcode',
-                                    onPressed: () =>
-                                        _handlePrintSingle(product),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1152,9 +1225,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
     LocalProductProvider gridProvider,
     List<GetProduct> listProductModelDataList,
   ) {
-    final allSelected = listProductModelDataList.isNotEmpty &&
-        listProductModelDataList
-            .every((product) => _isProductSelected(product));
+    // Flat-map products into barcode rows.
+    final barcodeRows =
+        _expandProductsToBarcodeRows(listProductModelDataList);
+
+    final allSelected = barcodeRows.isNotEmpty &&
+        barcodeRows.every((row) => _isRowSelected(row));
 
     return Column(
       children: [
@@ -1170,12 +1246,12 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                   onChanged: (val) {
                     setState(() {
                       if (val == true) {
-                        for (final product in listProductModelDataList) {
-                          _setProductSelected(product, true);
+                        for (final row in barcodeRows) {
+                          _setRowSelected(row, true);
                         }
                       } else {
-                        for (final product in listProductModelDataList) {
-                          _setProductSelected(product, false);
+                        for (final row in barcodeRows) {
+                          _setRowSelected(row, false);
                         }
                       }
                     });
@@ -1199,14 +1275,14 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsetsDirectional.symmetric(vertical: 4),
-            itemCount: listProductModelDataList.length,
+            itemCount: barcodeRows.length,
             itemBuilder: (context, index) {
-              final product = listProductModelDataList[index];
+              final row = barcodeRows[index];
               final serialNumber = gridProvider.paginationFrom + index;
               return _buildMobileProductCard(
-                product: product,
+                row: row,
                 serialNumber: serialNumber,
-                isSelected: _isProductSelected(product),
+                isSelected: _isRowSelected(row),
               );
             },
           ),
