@@ -90,6 +90,8 @@ class CartItemCard extends StatelessWidget {
       unitLabels: unitLabels,
     );
     final appSettings = context.watch<AppSettingsProvider>().appSettings;
+    final multiSaleUnitEnabled =
+        context.watch<AppSettingsProvider>().multiSaleUnitEnabled;
     final customerSelection = context.watch<CustomerSelectionProvider>();
     final canViewBillingProductDetails = context
         .watch<RoleProvider>()
@@ -189,7 +191,7 @@ class CartItemCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (canChangeUnit) ...[
+                    if (multiSaleUnitEnabled && canChangeUnit) ...[
                       const SizedBox(height: 6),
                       _SaleUnitSelector(
                         currentLabel: item.displayUnitName,

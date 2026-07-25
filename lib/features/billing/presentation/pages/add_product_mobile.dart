@@ -707,9 +707,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
   }
 
   Future<void> _submitForm({bool keepOpen = false}) async {
+    final multiSaleUnitEnabled =
+        context.read<AppSettingsProvider>().multiSaleUnitEnabled;
     setState(() {
       _isValidatedOnce = true;
-      _showSaleUnitValidation = _showAdvancedOptions;
+      _showSaleUnitValidation = multiSaleUnitEnabled && _showAdvancedOptions;
     });
 
     final isFormValid = _formKeyStep3.currentState!.validate();
@@ -724,14 +726,15 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       return;
     }
 
-    if (!AddProductFormHelpers.validateSaleUnits(
-      showAdvancedOptions: _showAdvancedOptions,
-      selectedUnit: _selectedUnit,
-      mainBarcode: _barcodeController.text,
-      saleUnitRows: _saleUnitRows,
-      onError: (message) =>
-          showScaffoldError(context: context, message: message),
-    )) {
+    if (multiSaleUnitEnabled &&
+        !AddProductFormHelpers.validateSaleUnits(
+          showAdvancedOptions: _showAdvancedOptions,
+          selectedUnit: _selectedUnit,
+          mainBarcode: _barcodeController.text,
+          saleUnitRows: _saleUnitRows,
+          onError: (message) =>
+              showScaffoldError(context: context, message: message),
+        )) {
       return;
     }
 
@@ -749,7 +752,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
       }
     }
 
-    if (_showAdvancedOptions) {
+    if (multiSaleUnitEnabled && _showAdvancedOptions) {
       final baseRate = _baseConversionRateController.text.trim();
       if (baseRate.isEmpty) {
         showScaffoldError(
@@ -799,7 +802,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
         languageNameControllers: _languageNameControllers,
       );
       final saleUnits = AddProductFormHelpers.buildSaleUnitsPayload(
-        showAdvancedOptions: _showAdvancedOptions,
+        showAdvancedOptions: multiSaleUnitEnabled && _showAdvancedOptions,
         selectedUnit: _selectedUnit,
         saleUnitRows: _saleUnitRows,
       );
@@ -1426,6 +1429,11 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
   }
 
   Widget _buildStep3() {
+    final multiSaleUnitEnabled = context
+            .watch<AppSettingsProvider>()
+            .appSettings
+            ?.multiSaleUnitEnabled ??
+        false;
     return Form(
       key: _formKeyStep3,
       child: Column(
@@ -1439,24 +1447,25 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
                   'Pricing & Stock',
                 ),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Advanced',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
+              if (multiSaleUnitEnabled)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Advanced',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
-                  ),
-                  Switch(
-                    value: _showAdvancedOptions,
-                    activeThumbColor: ColorManager.kPrimaryColor,
-                    onChanged: _toggleAdvancedOptions,
-                  ),
-                ],
-              ),
+                    Switch(
+                      value: _showAdvancedOptions,
+                      activeThumbColor: ColorManager.kPrimaryColor,
+                      onChanged: _toggleAdvancedOptions,
+                    ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 20),
@@ -1582,7 +1591,7 @@ class _AddProductMobileScreenState extends State<AddProductMobileScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [_decimalInputFormatter],
           ),
-          if (_showAdvancedOptions) ...[
+          if (multiSaleUnitEnabled && _showAdvancedOptions) ...[
             const SizedBox(height: 24),
             _buildAdvancedSaleUnitsSection(),
           ],
