@@ -70,3 +70,25 @@ A code audit was performed to confirm:
 - No hardcoded strings (like `"Keyboard"` or `"111000372"`) exist in the implementation.
 - All attributes and identifiers are read dynamically from model properties.
 - The project compiles clean with **0 warnings and 0 errors** on the modified file.
+
+---
+
+## 7. Post-Implementation Fix: Print Label Price/Name Mismatch
+
+### Issue
+During PR review (PR #235), it was flagged that `toProductForPrint()` copied the row's barcode correctly but did not copy its price or name. Manually verified: printing "Keyboard (BOX)" (on-screen price 700) produced a label showing 130 (the base product's price) instead of 700.
+
+### Root Cause
+`BarcodePrinterService` reads `product.price?.price` for the label price and resolves the product name from `product.names` (the localized translations map) before falling back to `productName`. Because the print clone built by `toProductForPrint()` only overrode the barcode field, variant/sale-unit rows inherited the base product's price and localized names map. This caused printed labels to fall back to base values, even though the on-screen table displayed correct row-specific values.
+
+### Fix Applied
+- **Price override**: `toProductForPrint()` now passes the row's own price (`variant.price` or `saleUnit.resolvedPrice ?? saleUnit.price`, falling back to base price) wrapped in a `ProductPrice` object during `product.copyWith()`.
+- **Localized Name suffixing**: Added `_variantSuffix` and `_saleUnitSuffix` helper getters and a `_buildRowNames()` helper. `_buildRowNames()` traverses the base product's `names` structure and appends the row's suffix (e.g. ` - Blue/XL` or ` (BOX)`) to each translation leaf. This ensures localized names (Arabic, etc.) are correctly updated and preserved on variant/unit labels instead of being cleared or falling back to English.
+- **Base row behavior**: Unchanged (returns base product as is).
+
+### Test Coverage
+Added a new unit test `BarcodeRow.toProductForPrint copies correct prices and updates names with suffixes` in [barcode_print_flow_smoke_test.dart](file:///c:/Users/Mubashir/eposmob/test/barcode_print_flow_smoke_test.dart) verifying correct price, sku, quantity, mrp, and localized names for base, variant, and sale-unit rows. All tests pass successfully.
+
+### Manual Verification
+Confirmed via manual testing that printing "Keyboard (BOX)" now produces a label showing 700, while printing the base "Keyboard" row still correctly shows 130.
+

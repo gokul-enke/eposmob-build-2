@@ -38,17 +38,72 @@ class BarcodeRow {
 
   // ── Display helpers ──
 
+  String get _variantSuffix {
+    if (variant == null) return '';
+    final attrs = variant!.attributes.values
+        .where((v) => v != null && v.toString().isNotEmpty)
+        .join('/');
+    return attrs.isNotEmpty ? ' - $attrs' : '';
+  }
+
+  String get _saleUnitSuffix {
+    if (saleUnit == null) return '';
+    final unitLabel = saleUnit!.unitName ?? '';
+    return unitLabel.isNotEmpty ? ' ($unitLabel)' : '';
+  }
+
+  dynamic _buildRowNames(dynamic originalNames, String suffix) {
+    if (originalNames == null) return null;
+    if (originalNames is Map) {
+      final newNames = <dynamic, dynamic>{};
+      originalNames.forEach((key, value) {
+        if (value is String) {
+          newNames[key] = value.trim().isNotEmpty ? '${value.trim()}$suffix' : value;
+        } else if (value is Map) {
+          final newSubMap = <dynamic, dynamic>{};
+          value.forEach((subKey, subValue) {
+            if (subKey == 'name' || subKey == 'value') {
+              newSubMap[subKey] = (subValue != null && subValue.toString().trim().isNotEmpty)
+                  ? '${subValue.toString().trim()}$suffix'
+                  : subValue;
+            } else {
+              newSubMap[subKey] = subValue;
+            }
+          });
+          newNames[key] = newSubMap;
+        } else {
+          newNames[key] = value;
+        }
+      });
+      return newNames;
+    }
+    if (originalNames is List) {
+      return originalNames.map((item) {
+        if (item is Map) {
+          final newItem = <dynamic, dynamic>{};
+          item.forEach((key, value) {
+            if (key == 'name' || key == 'value') {
+              newItem[key] = (value != null && value.toString().trim().isNotEmpty)
+                  ? '${value.toString().trim()}$suffix'
+                  : value;
+            } else {
+              newItem[key] = value;
+            }
+          });
+          return newItem;
+        }
+        return item;
+      }).toList();
+    }
+    return originalNames;
+  }
+
   String get displayName {
     if (variant != null) {
-      final attrs = variant!.attributes.values
-          .where((v) => v != null && v.toString().isNotEmpty)
-          .join('/');
-      final base = product.productName ?? '';
-      return attrs.isNotEmpty ? '$base - $attrs' : base;
+      return '${product.productName ?? ''}$_variantSuffix';
     }
     if (saleUnit != null) {
-      final unitLabel = saleUnit!.unitName ?? '';
-      return '${product.productName ?? ''} ($unitLabel)';
+      return '${product.productName ?? ''}$_saleUnitSuffix';
     }
     return product.productName ?? '';
   }
@@ -124,20 +179,36 @@ class BarcodeRow {
   GetProduct toProductForPrint() {
     if (variant != null) {
       final v = variant!;
+      final rowPrice = v.price ?? product.price?.price;
       return product.copyWith(
         barcode: v.barcode ?? product.barcode,
         productName: displayName,
         sku: v.sku ?? product.sku,
         numberOfProductsAvailable: quantity,
         mrp: v.mrp ?? product.mrp,
+        price: ProductPrice(
+          price: rowPrice,
+          oldPrice: product.price?.oldPrice,
+          percentage: product.price?.percentage,
+          totalPrice: product.price?.totalPrice,
+        ),
+        names: _buildRowNames(product.names, _variantSuffix),
       );
     }
     if (saleUnit != null) {
       final u = saleUnit!;
+      final rowPrice = u.resolvedPrice ?? u.price ?? product.price?.price;
       return product.copyWith(
         barcode: u.barcode ?? product.barcode,
         productName: displayName,
         numberOfProductsAvailable: quantity,
+        price: ProductPrice(
+          price: rowPrice,
+          oldPrice: product.price?.oldPrice,
+          percentage: product.price?.percentage,
+          totalPrice: product.price?.totalPrice,
+        ),
+        names: _buildRowNames(product.names, _saleUnitSuffix),
       );
     }
     return product;
