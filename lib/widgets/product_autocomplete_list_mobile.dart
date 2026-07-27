@@ -96,6 +96,20 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       final nameMatch = _productSearchNames(product)
           .any((name) => name.toLowerCase().contains(lowerQuery));
       if (nameMatch) return true;
+
+      // Check SKU (always on)
+      final sku = product.sku ?? '';
+      if (sku.isNotEmpty && sku.toLowerCase().contains(lowerQuery)) {
+        return true;
+      }
+
+      // Check Variant SKUs (always on)
+      final variantSkuMatch = product.variants?.any((variant) {
+        final varSku = variant.sku ?? '';
+        return varSku.isNotEmpty && varSku.toLowerCase().contains(lowerQuery);
+      }) ?? false;
+      if (variantSkuMatch) return true;
+
       if (itemCodeEnabled) {
         final itemCode = product.itemCode ?? '';
         if (itemCode.isNotEmpty && itemCode.toLowerCase().contains(lowerQuery)) {

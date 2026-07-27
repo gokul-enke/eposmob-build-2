@@ -2355,10 +2355,28 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (filterName != null && filterName.isNotEmpty) {
       final normalizedFilterName = filterName.toLowerCase();
-      result = result
-          .where((p) => _productSearchNames(p)
-              .any((name) => name.toLowerCase().contains(normalizedFilterName)))
-          .toList();
+      result = result.where((p) {
+        final nameMatch = _productSearchNames(p)
+            .any((name) => name.toLowerCase().contains(normalizedFilterName));
+        if (nameMatch) return true;
+
+        // Check SKU (always on)
+        final sku = p.sku ?? '';
+        if (sku.isNotEmpty &&
+            sku.toLowerCase().contains(normalizedFilterName)) {
+          return true;
+        }
+
+        // Check Variant SKUs (always on)
+        final variantSkuMatch = p.variants?.any((variant) {
+          final varSku = variant.sku ?? '';
+          return varSku.isNotEmpty &&
+              varSku.toLowerCase().contains(normalizedFilterName);
+        }) ?? false;
+        if (variantSkuMatch) return true;
+
+        return false;
+      }).toList();
       result = _rankProductNameMatches(result, filterName);
     }
 
@@ -2430,10 +2448,27 @@ class LocalProductProvider extends ChangeNotifier {
       return _filteredProducts;
     }
     final normalizedQuery = query.toLowerCase();
-    final matches = _filteredProducts
-        .where((p) => _productSearchNames(p)
-            .any((name) => name.toLowerCase().contains(normalizedQuery)))
-        .toList();
+    final matches = _filteredProducts.where((p) {
+      final nameMatch = _productSearchNames(p)
+          .any((name) => name.toLowerCase().contains(normalizedQuery));
+      if (nameMatch) return true;
+
+      // Check SKU (always on)
+      final sku = p.sku ?? '';
+      if (sku.isNotEmpty && sku.toLowerCase().contains(normalizedQuery)) {
+        return true;
+      }
+
+      // Check Variant SKUs (always on)
+      final variantSkuMatch = p.variants?.any((variant) {
+        final varSku = variant.sku ?? '';
+        return varSku.isNotEmpty &&
+            varSku.toLowerCase().contains(normalizedQuery);
+      }) ?? false;
+      if (variantSkuMatch) return true;
+
+      return false;
+    }).toList();
     return _rankProductNameMatches(matches, query);
   }
 
