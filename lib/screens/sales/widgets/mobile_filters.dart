@@ -28,6 +28,9 @@ class MobileFilters extends StatelessWidget {
   final Function(String?) onStatusChanged;
   final Function(DateTime) onDateSelected;
   final VoidCallback onReset;
+  final DateTime? selectedBusinessDate;
+  final Key? businessCalendarPickerKey;
+  final Function(DateTime)? onBusinessDateSelected;
 
   const MobileFilters({
     super.key,
@@ -49,6 +52,9 @@ class MobileFilters extends StatelessWidget {
     required this.onStatusChanged,
     required this.onDateSelected,
     required this.onReset,
+    this.selectedBusinessDate,
+    this.businessCalendarPickerKey,
+    this.onBusinessDateSelected,
   });
 
   Widget _buildFilterField({
@@ -210,6 +216,21 @@ class MobileFilters extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              _buildFilterField(
+                label: "Business Date",
+                child: BuildBoxShadowContainer(
+                  circleRadius: 10,
+                  height: 45,
+                  border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                  child: Center(
+                    child: CalendarPickerTableCell(
+                      key: businessCalendarPickerKey ?? UniqueKey(),
+                      onDateSelected: onBusinessDateSelected ?? (date) {},
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               _buildTextFilter(
                 label: "Price",
                 hint: 'Price',
@@ -286,6 +307,30 @@ class MobileFilters extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildFilterField(
+                    label: "Business Date",
+                    child: BuildBoxShadowContainer(
+                      circleRadius: 10,
+                      height: 45,
+                      border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                      child: Center(
+                        child: CalendarPickerTableCell(
+                          key: businessCalendarPickerKey ?? UniqueKey(),
+                          onDateSelected: onBusinessDateSelected ?? (date) {},
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(child: SizedBox.shrink()),
               ],
             ),
             const SizedBox(height: 12),

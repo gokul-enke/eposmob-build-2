@@ -74,6 +74,8 @@ class _SalesScreenState extends State<SalesScreen> {
   GetStoreModelData? storeSelected;
   DateTime? selectedDate;
   Key calendarPickerKey = UniqueKey();
+  DateTime? selectedBusinessDate;
+  Key businessCalendarPickerKey = UniqueKey();
 
   bool isInitLoading = false;
   String orderNumber = "";
@@ -1132,6 +1134,8 @@ Powered by CloudPOS''',
           'filterPhone': phoneController.text.trim(),
         if (selectedDate != null)
           'date': DateFormat('yyyy-MM-dd').format(selectedDate!),
+        if (selectedBusinessDate != null)
+          'businessDate': DateFormat('yyyy-MM-dd').format(selectedBusinessDate!),
         if (activeStoreId != null) 'filterStore': activeStoreId,
         if (selectedStatus != null && selectedStatus != 'all')
           'filterStatus': selectedStatus!.trim(), // Add status filter
@@ -1148,6 +1152,7 @@ Powered by CloudPOS''',
         filterEmail: filters['filterEmail'],
         filterPhone: filters['filterPhone'],
         date: filters['date'],
+        businessDate: filters['businessDate'],
         filterStore: filters['filterStore'],
         filterStatus: filters['filterStatus'],
         page: int.tryParse(filters['page'] ?? '1') ?? 1,
@@ -1185,6 +1190,8 @@ Powered by CloudPOS''',
       selectedStatus = null;
       selectedDate = null;
       calendarPickerKey = UniqueKey();
+      selectedBusinessDate = null;
+      businessCalendarPickerKey = UniqueKey();
     });
     searchOrders(1); // Trigger fresh search after reset
 
@@ -2435,6 +2442,14 @@ Powered by CloudPOS''',
                               searchOrders(1);
                             },
                             onReset: resetSearch,
+                            selectedBusinessDate: selectedBusinessDate,
+                            businessCalendarPickerKey: businessCalendarPickerKey,
+                            onBusinessDateSelected: (DateTime date) {
+                              setState(() {
+                                selectedBusinessDate = date;
+                              });
+                              searchOrders(1);
+                            },
                           )
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2722,6 +2737,45 @@ Powered by CloudPOS''',
                                                   } else {
                                                     statusController.clear();
                                                   }
+                                                });
+                                                searchOrders(1);
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 15),
+
+                                  // Business Date
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            "Business Date",
+                                            style: buildCustomStyle(
+                                              FontWeightManager.regular,
+                                              FontSize.s14,
+                                              0.27,
+                                              Colors.black.withOpacity(0.6),
+                                            ),
+                                          ),
+                                        ),
+                                        BuildBoxShadowContainer(
+                                          circleRadius: 7,
+                                          height: 45,
+                                          child: Center(
+                                            child: CalendarPickerTableCell(
+                                              key: businessCalendarPickerKey,
+                                              onDateSelected: (DateTime date) {
+                                                setState(() {
+                                                  selectedBusinessDate = date;
                                                 });
                                                 searchOrders(1);
                                               },
