@@ -123,4 +123,40 @@ void main() {
     expect(unitPrint.names['en'], 'Keyboard (BOX)');
     expect(unitPrint.names['ar'], 'لوحة مفاتيح (BOX)');
   });
+
+  test('BarcodeRow.toProductForPrint filters stock correctly', () {
+    final baseProduct = GetProduct(
+      productName: 'Keyboard',
+      barcode: '111111',
+      stock: [
+        Stock(id: 1, productVariantId: 10, pkgMfg: '2026-01-01', expiryDate: '2027-01-01'),
+        Stock(id: 2, productVariantId: 20, pkgMfg: '2026-02-01', expiryDate: '2027-02-01'),
+      ],
+    );
+
+    // 1. Base row case: stock list should remain unfiltered (length 2)
+    final baseRow = BarcodeRow(product: baseProduct);
+    final basePrint = baseRow.toProductForPrint();
+    expect(basePrint.stock?.length, 2);
+
+    // 2. Variant row case: stock list should only contain entries with matching productVariantId
+    final variant = ProductVariant(
+      id: 10,
+      barcode: '222222',
+    );
+    final variantRow = BarcodeRow(product: baseProduct, variant: variant);
+    final variantPrint = variantRow.toProductForPrint();
+    expect(variantPrint.stock?.length, 1);
+    expect(variantPrint.stock?.first.productVariantId, 10);
+
+    // 3. SaleUnit row case: stock list should be cleared
+    final saleUnit = SaleUnit(
+      id: 2,
+      barcode: '333333',
+      unitName: 'BOX',
+    );
+    final unitRow = BarcodeRow(product: baseProduct, saleUnit: saleUnit);
+    final unitPrint = unitRow.toProductForPrint();
+    expect(unitPrint.stock, isEmpty);
+  });
 }

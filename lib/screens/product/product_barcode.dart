@@ -193,6 +193,7 @@ class BarcodeRow {
           totalPrice: product.price?.totalPrice,
         ),
         names: _buildRowNames(product.names, _variantSuffix),
+        stock: product.stock?.where((s) => s.productVariantId == v.id).toList(),
       );
     }
     if (saleUnit != null) {
@@ -209,6 +210,7 @@ class BarcodeRow {
           totalPrice: product.price?.totalPrice,
         ),
         names: _buildRowNames(product.names, _saleUnitSuffix),
+        stock: const [],
       );
     }
     return product;
@@ -242,7 +244,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   @override
   void initState() {
     super.initState();
-    loadInitData();
+    Future.microtask(() => loadInitData());
     categoryController.text = "All Categories";
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -364,7 +366,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
         .listAllProducts(categoryId: 0);
   }
 
-  List<BarcodeRow> _expandProductsToBarcodeRows(List<GetProduct> products) {
+  List<BarcodeRow> expandProductsToBarcodeRows(List<GetProduct> products) {
     final rows = <BarcodeRow>[];
     for (final product in products) {
       final subRows = <BarcodeRow>[];
@@ -397,6 +399,15 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       // Show any variant or sale-unit rows.
       rows.addAll(subRows);
     }
+
+    final query = barcodeController.text.trim().toLowerCase();
+    if (query.isNotEmpty) {
+      return rows.where((row) {
+        final rowBc = row.barcode?.trim().toLowerCase() ?? '';
+        return rowBc.contains(query);
+      }).toList();
+    }
+
     return rows;
   }
 
@@ -1048,7 +1059,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       9: FixedColumnWidth(90),
     };
 
-    final barcodeRows = _expandProductsToBarcodeRows(listProductModelDataList);
+    final barcodeRows = expandProductsToBarcodeRows(listProductModelDataList);
 
     final allSelected = barcodeRows.isNotEmpty &&
         barcodeRows.every((row) => _isRowSelected(row));
@@ -1298,7 +1309,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   ) {
     // Flat-map products into barcode rows.
     final barcodeRows =
-        _expandProductsToBarcodeRows(listProductModelDataList);
+        expandProductsToBarcodeRows(listProductModelDataList);
 
     final allSelected = barcodeRows.isNotEmpty &&
         barcodeRows.every((row) => _isRowSelected(row));

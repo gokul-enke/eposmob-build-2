@@ -92,3 +92,25 @@ Added a new unit test `BarcodeRow.toProductForPrint copies correct prices and up
 ### Manual Verification
 Confirmed via manual testing that printing "Keyboard (BOX)" now produces a label showing 700, while printing the base "Keyboard" row still correctly shows 130.
 
+---
+
+## 8. Second Post-Implementation Fix: Print Label Batch Dates & Barcode Search Refinement
+
+### Wrong Expiry/Mfg Date on Variant/Unit Labels (P1)
+- **Issue**: `toProductForPrint()` cloned the base product but retained its unfiltered `product.stock` list. When printing a variant or unit that had no stock entries, if the base product had exactly one stock entry (belonging to a *different* variant), the `ConfirmBarcodePrintModal` assumed it was unambiguous and pre-filled that unrelated batch's manufacturing and expiry dates on the printed label.
+- **Fix**:
+  - **Variant print rows**: Overrode the `stock` field in `product.copyWith(...)` to include only stock entries matching the variant's ID (`productVariantId == v.id`).
+  - **Sale Unit print rows**: Cleared the stock list entirely (`const []`) so the print modal leaves the dates blank instead of guessing from unrelated batches.
+- **Test Coverage**: Added a unit test `BarcodeRow.toProductForPrint filters stock correctly` in [barcode_print_flow_smoke_test.dart](file:///c:/Users/Mubashir/eposmob/test/barcode_print_flow_smoke_test.dart).
+
+### Barcode Search Filter & Exact-Matching Row Expansion (P2)
+- **Issue**: The "Barcode" filter field on the Print Barcodes screen was ignoring variant/unit barcodes entirely because filtering in [local_product_provider.dart](file:///c:/Users/Mubashir/eposmob/lib/providers/local_product_provider.dart) only matched the base product's `barcode` before the UI expanded them. Additionally, when a product did match, the UI expanded all of its rows (base + every variant/unit sibling), cluttering search results with unrelated items.
+- **Fix**:
+  - **Extended search matching**: Extended the provider's `filterBarcode` predicate in `listAllProducts(...)` to also match if any associated variant's or sale unit's barcode contains the search query.
+  - **Exact-matching row expansion**: Renamed the UI helper to `expandProductsToBarcodeRows(...)` (public) and added a post-expansion exact-matching filter step. If a barcode filter query is active, the UI discards all sibling rows whose own barcode does not match the search term, displaying only the exact matched row(s). Other searches (Name, Category) continue to display all sibling rows.
+  - **Init Robustness**: Wrapped `loadInitData()` with `Future.microtask()` inside `initState()` in [product_barcode.dart](file:///c:/Users/Mubashir/eposmob/lib/screens/product/product_barcode.dart) to avoid synchronous state notification issues during widget building in testing and runtime environments.
+- **Test Coverage**:
+  - Added unit test `LocalProductProvider.listAllProducts filters by variant and sale unit barcodes` in [variant_scoped_stock_test.dart](file:///c:/Users/Mubashir/eposmob/test/variant_scoped_stock_test.dart).
+  - Added widget test `ProductBarcodeScreen.expandProductsToBarcodeRows filters correctly based on barcodeController` in [variant_scoped_stock_test.dart](file:///c:/Users/Mubashir/eposmob/test/variant_scoped_stock_test.dart) to verify sibling row discarding.
+
+

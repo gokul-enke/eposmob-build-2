@@ -2381,11 +2381,20 @@ class LocalProductProvider extends ChangeNotifier {
     }
 
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
-      result = result
-          .where((p) =>
-              p.barcode != null &&
-              p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase()))
-          .toList();
+      result = result.where((p) {
+        if (p.barcode != null &&
+            p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) {
+          return true;
+        }
+        final variantMatch = p.variants?.any((v) =>
+            v.barcode != null &&
+            v.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) ?? false;
+        if (variantMatch) return true;
+        final saleUnitMatch = p.saleUnits?.any((u) =>
+            u.barcode != null &&
+            u.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) ?? false;
+        return saleUnitMatch;
+      }).toList();
     }
 
     // HSN Code filter - check both product level and stock level HSN codes
