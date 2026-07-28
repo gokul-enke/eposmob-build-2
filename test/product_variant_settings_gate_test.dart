@@ -105,4 +105,44 @@ void main() {
       expect(entry['status'], 'true');
     });
   });
+
+  group('MULTI_SALE_UNIT_ENABLED settings gate', () {
+    test('defaults to FALSE when the setting is absent', () {
+      final settings = AppSettings.fromJson(_settingsJson(const []));
+      expect(settings.multiSaleUnitEnabled, isFalse);
+    });
+
+    test('parses string, boolean, and numeric enabled statuses', () {
+      for (final status in <dynamic>['true', true, 1]) {
+        final settings = AppSettings.fromJson(_settingsJson([
+          {
+            'code': 'MULTI_SALE_UNIT_ENABLED',
+            'value': '',
+            'status': status,
+          },
+        ]));
+        expect(settings.multiSaleUnitEnabled, isTrue, reason: '$status');
+      }
+    });
+
+    test('parses an explicit disabled status', () {
+      final settings = AppSettings.fromJson(_settingsJson(const [
+        {
+          'code': 'MULTI_SALE_UNIT_ENABLED',
+          'value': '',
+          'status': 'false',
+        },
+      ]));
+      expect(settings.multiSaleUnitEnabled, isFalse);
+    });
+
+    test('serializes the setting for cached/debug representations', () {
+      final settings = AppSettings.fromJson(_settingsJson(const []));
+      final entries = settings.toJson()['data'] as List<dynamic>;
+      final entry = entries.cast<Map<String, dynamic>>().firstWhere(
+            (item) => item['code'] == 'MULTI_SALE_UNIT_ENABLED',
+          );
+      expect(entry['status'], 'false');
+    });
+  });
 }

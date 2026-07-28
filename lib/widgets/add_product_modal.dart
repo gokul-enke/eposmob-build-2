@@ -1281,6 +1281,11 @@ class _AddProductWithBarcodeModalState
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
+    final multiSaleUnitEnabled = context
+            .watch<AppSettingsProvider>()
+            .appSettings
+            ?.multiSaleUnitEnabled ??
+        false;
     PurchaseProvider purchaseProvider =
         Provider.of<PurchaseProvider>(context, listen: false);
     Map<String, String>? unitList = purchaseProvider.getUnitList;
@@ -1365,26 +1370,27 @@ class _AddProductWithBarcodeModalState
                           ),
                         ),
                       ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Advanced',
-                            style: buildCustomStyle(
-                              FontWeightManager.medium,
-                              FontSize.s12,
-                              0.27,
-                              Colors.black54,
+                      if (multiSaleUnitEnabled)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Advanced',
+                              style: buildCustomStyle(
+                                FontWeightManager.medium,
+                                FontSize.s12,
+                                0.27,
+                                Colors.black54,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Switch(
-                            value: _showAdvancedOptions,
-                            activeThumbColor: ColorManager.kPrimaryColor,
-                            onChanged: _toggleAdvancedOptions,
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 6),
+                            Switch(
+                              value: _showAdvancedOptions,
+                              activeThumbColor: ColorManager.kPrimaryColor,
+                              onChanged: _toggleAdvancedOptions,
+                            ),
+                          ],
+                        ),
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.black54),
                         onPressed: () => Navigator.of(context).pop(),
@@ -1558,7 +1564,7 @@ class _AddProductWithBarcodeModalState
                     ],
                   ),
                   const SizedBox(height: 20),
-                  if (_showAdvancedOptions) ...[
+                  if (multiSaleUnitEnabled && _showAdvancedOptions) ...[
                     _buildAdvancedOptionsSection(size, unitList),
                     const SizedBox(height: 20),
                   ],
@@ -2721,9 +2727,11 @@ class _AddProductWithBarcodeModalState
 
   // Submit form
   Future<void> _submitForm({bool keepOpen = false}) async {
+    final multiSaleUnitEnabled =
+        context.read<AppSettingsProvider>().multiSaleUnitEnabled;
     setState(() {
       isValidatedOnce = true;
-      _showSaleUnitValidation = _showAdvancedOptions;
+      _showSaleUnitValidation = multiSaleUnitEnabled && _showAdvancedOptions;
     });
 
     bool isFormValid = formKey.currentState!.validate();
@@ -2731,11 +2739,11 @@ class _AddProductWithBarcodeModalState
     bool isCategoryValid = selectedCategory != null;
 
     if (isFormValid && isUnitValid && isCategoryValid) {
-      if (!_validateSaleUnits()) {
+      if (multiSaleUnitEnabled && !_validateSaleUnits()) {
         return;
       }
 
-      if (_showAdvancedOptions) {
+      if (multiSaleUnitEnabled && _showAdvancedOptions) {
         final baseRate = _baseConversionRateController.text.trim();
         if (baseRate.isEmpty) {
           showScaffoldError(
@@ -2791,7 +2799,9 @@ class _AddProductWithBarcodeModalState
             Provider.of<LanguageProvider>(context, listen: false);
         final productNames =
             _buildProductNamesPayload(languageProvider.languages);
-        final saleUnits = _buildSaleUnitsPayload();
+        final saleUnits = multiSaleUnitEnabled
+            ? _buildSaleUnitsPayload()
+            : const <Map<String, dynamic>>[];
         final variants = (variantEnabled && _variantController.hasRows)
             ? buildCreateVariantsPayload(_variantController.toCreateInputs())
             : const <Map<String, dynamic>>[];

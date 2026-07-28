@@ -140,6 +140,8 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
     final productName = widget.product.productName ?? 'Product';
     final showMrp =
         context.watch<AppSettingsProvider>().appSettings?.showMrpPos ?? false;
+    final multiSaleUnitEnabled =
+        context.watch<AppSettingsProvider>().multiSaleUnitEnabled;
     Map<String, String>? unitLabels;
     try {
       unitLabels =
@@ -151,10 +153,11 @@ class _MobileMarketAddSheetState extends State<_MobileMarketAddSheet> {
       widget.product,
       unitLabels: unitLabels,
     );
-    final canChangeUnit = _controller.canChangeSaleUnit(
-      widget.product,
-      unitLabels: unitLabels,
-    );
+    final canChangeUnit = multiSaleUnitEnabled &&
+        _controller.canChangeSaleUnit(
+          widget.product,
+          unitLabels: unitLabels,
+        );
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Padding(

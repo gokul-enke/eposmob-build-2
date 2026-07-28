@@ -79,16 +79,22 @@ void main() async {
   await _initializeBaseUrlFromPreferences();
   await _initializeNotificationPosition();
 
-  // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
-  // Safer than Documents (less likely to be deleted by user)
-  final supportDir = await getApplicationSupportDirectory();
-  final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
-  if (!await hiveBaseDir.exists()) {
-    await hiveBaseDir.create(recursive: true);
-  }
+  if (kIsWeb) {
+    // Browsers do not provide a native application-support directory.
+    // Hive's web adapter stores boxes in browser storage instead.
+    await Hive.initFlutter();
+  } else {
+    // Initialize Hive in a dedicated ApplicationSupport/epos/hive_data folder
+    // Safer than Documents (less likely to be deleted by user)
+    final supportDir = await getApplicationSupportDirectory();
+    final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
+    if (!await hiveBaseDir.exists()) {
+      await hiveBaseDir.create(recursive: true);
+    }
 
-  Hive.init(hiveBaseDir.path);
-  debugPrint('📁 Hive directory: ${hiveBaseDir.path}');
+    Hive.init(hiveBaseDir.path);
+    debugPrint('📁 Hive directory: ${hiveBaseDir.path}');
+  }
 
   // Register adapters
   Hive.registerAdapter(HiveStringValueAdapter());
@@ -276,6 +282,10 @@ Future<void> _initializeHiveBoxes() async {
 }
 
 Future<void> _cleanupLockFiles(String boxName) async {
+  if (kIsWeb) {
+    return;
+  }
+
   try {
     final supportDir = await getApplicationSupportDirectory();
     final hiveBaseDir = Directory('${supportDir.path}/epos/hive_data');
