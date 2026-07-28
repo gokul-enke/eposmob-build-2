@@ -54,6 +54,9 @@ class DailySalesCloseData {
   String? createdAt;
   String? updatedAt;
   String? status;
+  String? refundCash;
+  String? refundOnline;
+  Map<String, dynamic>? paymentMethodBreakdown;
 
   DailySalesCloseData(
       {this.id,
@@ -86,7 +89,10 @@ class DailySalesCloseData {
       this.productSummary,
       this.createdAt,
       this.updatedAt,
-      this.status});
+      this.status,
+      this.refundCash,
+      this.refundOnline,
+      this.paymentMethodBreakdown});
 
   DailySalesCloseData.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -116,6 +122,11 @@ class DailySalesCloseData {
     totalExpenses = json['total_expenses']?.toString();
     cashExpenses = json['cash_expenses']?.toString();
     bankExpenses = json['bank_expenses']?.toString();
+    refundCash = json['refund_cash']?.toString();
+    refundOnline = json['refund_online']?.toString();
+    paymentMethodBreakdown = json['payment_method_breakdown'] != null
+        ? Map<String, dynamic>.from(json['payment_method_breakdown'])
+        : null;
     if (json['cash_summary'] != null) {
       cashSummary = CashSummary.fromJson(
         Map<String, dynamic>.from(json['cash_summary']),
