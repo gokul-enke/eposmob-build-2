@@ -709,6 +709,51 @@ class SaleUnit {
     return parsed;
   }
 
+  /// Resolves the price to display/print for ONE sale unit using the same
+  /// fallback chain as billing's [_resolveSaleUnitBasePrice], but expressed
+  /// as a **per-sale-unit** price (not divided by conversionRate — billing
+  /// normalises to per-base-unit internally; we keep the display value here).
+  ///
+  /// Fallback chain:
+  /// 1. Batch override in [selectedStock.unitPriceOverrides]  (> 0 guard)
+  /// 2. [SaleUnit.price] master price                          (> 0 guard)
+  /// 3. [SaleUnit.resolvedPrice] backend-resolved price        (> 0 guard)
+  /// 4. [product.price.price] × [conversionRateValue] auto    (both > 0)
+  ///
+  /// Returns null when no valid price can be resolved (caller shows base price
+  /// or 'N/A').
+  static double? resolveDisplayPrice({
+    required GetProduct product,
+    required SaleUnit saleUnit,
+    Stock? selectedStock,
+  }) {
+    // 1. Batch-specific override wins over everything.
+    if (selectedStock != null && saleUnit.id != null) {
+      final override = selectedStock.unitPriceOverrideFor(saleUnit.id);
+      if (override != null && override > 0) return override;
+    }
+
+    // 2. Master price set on the sale unit.
+    final masterPrice = saleUnit.price;
+    if (masterPrice != null && masterPrice > 0) return masterPrice;
+
+    // 3. Backend-resolved price for the default batch.
+    final resolved = saleUnit.resolvedPrice;
+    if (resolved != null && resolved > 0) return resolved;
+
+    // 4. Auto fallback: base price × conversion rate.
+    final conversionRate = saleUnit.conversionRateValue;
+    if (conversionRate != null && conversionRate > 0) {
+      final basePrice =
+          double.tryParse(product.price?.price?.toString() ?? '');
+      if (basePrice != null && basePrice > 0) {
+        return basePrice * conversionRate;
+      }
+    }
+
+    return null;
+  }
+
   factory SaleUnit.fromJson(Map<String, dynamic> json) => SaleUnit(
         id: json["id"] is String ? int.tryParse(json["id"]) : json["id"],
         unitId: json["unit_id"] is String

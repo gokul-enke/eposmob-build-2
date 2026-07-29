@@ -917,8 +917,9 @@ class MenuPanelState extends State<MenuPanel> {
               return true;
             }
 
-            // Check Variant SKUs (always on)
+            //  only active variants' SKUs surface a product in search.
             final variantSkuMatch = product.variants?.any((variant) {
+              if (!variant.active) return false;
               final varSku = variant.sku ?? '';
               return varSku.isNotEmpty &&
                   varSku.toLowerCase().contains(_searchQuery);
