@@ -48,6 +48,7 @@ class ProductCartHelper {
     bool? variantEnabled,
     ZeroPriceQuickEntryPrompt? zeroPricePrompt,
     OversellApprovalPrompt? oversellApprovalPrompt,
+    VoidCallback? onAdded,
   }) async {
     try {
       await _handleProductSelectionImpl(
@@ -66,6 +67,7 @@ class ProductCartHelper {
         variantEnabled: variantEnabled,
         zeroPricePrompt: zeroPricePrompt,
         oversellApprovalPrompt: oversellApprovalPrompt,
+        onAdded: onAdded,
       );
     } catch (error) {
       debugPrint('ProductCartHelper error: $error');
@@ -94,6 +96,7 @@ class ProductCartHelper {
     bool? variantEnabled,
     ZeroPriceQuickEntryPrompt? zeroPricePrompt,
     OversellApprovalPrompt? oversellApprovalPrompt,
+    VoidCallback? onAdded,
   }) async {
     debugPrint("=== PRODUCT CART HELPER DEBUG START ===");
 
@@ -715,6 +718,12 @@ class ProductCartHelper {
           context: context,
           message: 'Added To Cart',
         );
+      }
+
+      try {
+        onAdded?.call();
+      } catch (error) {
+        debugPrint('ProductCartHelper onAdded callback error: $error');
       }
     }
 

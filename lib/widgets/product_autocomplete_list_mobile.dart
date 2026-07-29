@@ -17,6 +17,7 @@ class MobileProductAutocomplete extends StatefulWidget {
   final GlobalKey? autocompleteProductKey;
   final bool autofocus;
   final bool suppressSystemKeyboardOnAndroid;
+  final VoidCallback? onAdded;
 
   const MobileProductAutocomplete({
     Key? key,
@@ -26,10 +27,12 @@ class MobileProductAutocomplete extends StatefulWidget {
     this.autocompleteProductKey,
     this.autofocus = false,
     this.suppressSystemKeyboardOnAndroid = false,
+    this.onAdded,
   }) : super(key: key);
 
   @override
-  State<MobileProductAutocomplete> createState() => _MobileProductAutocompleteState();
+  State<MobileProductAutocomplete> createState() =>
+      _MobileProductAutocompleteState();
 }
 
 class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
@@ -41,6 +44,27 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
 
   // Tracks previous controller text to differentiate text changes from selection changes
   String _previousControllerText = '';
+  FocusNode? _fieldFocusNode;
+
+  void _requestFieldFocus() {
+    _fieldFocusNode?.requestFocus();
+  }
+
+  void _handleAdded() {
+    widget.onAdded?.call();
+    _requestFieldFocus();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _requestFieldFocus();
+      }
+    });
+    Future<void>.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _requestFieldFocus();
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -87,8 +111,10 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       return const <GetProduct>[];
     }
 
-    final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
-    final itemCodeEnabled = appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
+    final appSettingsProvider =
+        Provider.of<AppSettingsProvider>(context, listen: false);
+    final itemCodeEnabled =
+        appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
     final lowerQuery = query.toLowerCase();
 
     // Match desktop billing autocomplete: search sellable products only.
@@ -98,7 +124,8 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       if (nameMatch) return true;
       if (itemCodeEnabled) {
         final itemCode = product.itemCode ?? '';
-        if (itemCode.isNotEmpty && itemCode.toLowerCase().contains(lowerQuery)) {
+        if (itemCode.isNotEmpty &&
+            itemCode.toLowerCase().contains(lowerQuery)) {
           return true;
         }
       }
@@ -191,8 +218,8 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
       context: context,
       product: product,
       onSelected: widget.onSelected,
-      addToCartDirectly:
-          true, // Add product directly to cart on selection
+      addToCartDirectly: true, // Add product directly to cart on selection
+      onAdded: widget.onAdded == null ? null : _handleAdded,
       // Customer info will be fetched from global provider in the helper
     );
   }
@@ -216,20 +243,24 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
           currentOptions = searchResults;
           return currentOptions;
         },
-        displayStringForOption: (GetProduct product) => product.productName ?? '',
+        displayStringForOption: (GetProduct product) =>
+            product.productName ?? '',
         onSelected: (GetProduct selectedProduct) async {
           await _handleProductSelection(selectedProduct);
           Provider.of<KeyboardProvider>(context, listen: false).hide();
         },
-        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-          final keyboardProvider = Provider.of<KeyboardProvider>(context, listen: false);
+        fieldViewBuilder:
+            (context, textEditingController, focusNode, onFieldSubmitted) {
+          _fieldFocusNode = focusNode;
+          final keyboardProvider =
+              Provider.of<KeyboardProvider>(context, listen: false);
           final bool suppressSystemKeyboard =
               SystemKeyboardPolicy.shouldSuppressForContext(
             context: context,
             fieldWantsVirtualKeyboardOnly:
-              widget.suppressSystemKeyboardOnAndroid,
-            );
-          
+                widget.suppressSystemKeyboardOnAndroid,
+          );
+
           void _ensureFocus() {
             if (!focusNode.hasFocus) {
               focusNode.requestFocus();
@@ -257,7 +288,7 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
           _previousControllerText = textEditingController.text;
           textEditingController.removeListener(_ensureFocus);
           textEditingController.addListener(_ensureFocus);
-          
+
           return KeyboardListener(
             focusNode: _textFieldFocus,
             onKeyEvent: (KeyEvent event) {
@@ -295,11 +326,17 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
                   if (_highlightedOptionIndex != null &&
                       currentOptions.isNotEmpty &&
                       _highlightedOptionIndex! < currentOptions.length) {
-                    final selectedProduct = currentOptions.elementAt(_highlightedOptionIndex!);
+                    final selectedProduct =
+                        currentOptions.elementAt(_highlightedOptionIndex!);
                     _handleProductSelection(selectedProduct);
-                    textEditingController.clear();
-                    focusNode.unfocus();
-                    Provider.of<KeyboardProvider>(context, listen: false).hide();
+                    if (widget.onAdded == null) {
+                      // Preserve legacy behavior for callers that have not
+                      // opted into success-aware reset handling.
+                      textEditingController.clear();
+                      focusNode.unfocus();
+                    }
+                    Provider.of<KeyboardProvider>(context, listen: false)
+                        .hide();
                   }
                 }
               }
@@ -322,109 +359,107 @@ class _MobileProductAutocompleteState extends State<MobileProductAutocomplete> {
           );
         },
         optionsViewBuilder: (context, onSelected, options) {
-          final appSettingsProvider = Provider.of<AppSettingsProvider>(context, listen: false);
-          final itemCodeEnabled = appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
+          final appSettingsProvider =
+              Provider.of<AppSettingsProvider>(context, listen: false);
+          final itemCodeEnabled =
+              appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
 
           currentOptions = options;
 
-          if (_highlightedOptionIndex != null && _highlightedOptionIndex! >= options.length) {
+          if (_highlightedOptionIndex != null &&
+              _highlightedOptionIndex! >= options.length) {
             _highlightedOptionIndex = options.length - 1;
           }
 
-return Align(
-  alignment: Alignment.topLeft,
-  child: BuildBoxShadowContainer(
-    circleRadius: 7,
-    constraints: BoxConstraints(
-      maxHeight: _maxOptionsHeight,
-      maxWidth: double.infinity,
-    ),
-    color: Colors.white,
-    child: ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      shrinkWrap: true,
-      itemExtent: _itemHeight,
-      itemCount: options.length,
-      itemBuilder: (BuildContext context, int index) {
-        final option = options.elementAt(index);
-        final bool isHighlighted = _highlightedOptionIndex == index;
+          return Align(
+            alignment: Alignment.topLeft,
+            child: BuildBoxShadowContainer(
+              circleRadius: 7,
+              constraints: BoxConstraints(
+                maxHeight: _maxOptionsHeight,
+                maxWidth: double.infinity,
+              ),
+              color: Colors.white,
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                shrinkWrap: true,
+                itemExtent: _itemHeight,
+                itemCount: options.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final option = options.elementAt(index);
+                  final bool isHighlighted = _highlightedOptionIndex == index;
 
-        return MouseRegion(
-          onEnter: (_) {
-            setState(() {
-              _highlightedOptionIndex = index;
-            });
-          },
-          child: Container(
-            margin: const EdgeInsets.symmetric(
-              horizontal: 4,
-              vertical: 2,
-            ),
-            decoration: BoxDecoration(
-              color: isHighlighted ? Colors.blue.shade50 : Colors.white,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: ListTile(
-              dense: true,
-              visualDensity: VisualDensity.compact,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8, // Slightly more padding for mobile
-              ),
-              title: Text(
-                option.productName ?? '',
-                maxLines: 2,
-                style: TextStyle(
-                  fontSize: 14, // Slightly larger for mobile
-                  color: isHighlighted
-                      ? Colors.blue.shade800
-                      : Colors.black87,
-                  fontWeight: isHighlighted
-                      ? FontWeight.w500
-                      : FontWeight.normal,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: (itemCodeEnabled && (option.itemCode ?? '').isNotEmpty)
-                  ? Text(
-                      option.itemCode!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isHighlighted
-                            ? Colors.blue.shade600
-                            : Colors.grey.shade600,
+                  return MouseRegion(
+                    onEnter: (_) {
+                      setState(() {
+                        _highlightedOptionIndex = index;
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    )
-                  : null,
-              trailing: Text(
-                '${option.price?.price ?? ''} ${option.currency ?? ''}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: isHighlighted
-                      ? Colors.blue.shade900
-                      : Colors.black87,
-                ),
+                      decoration: BoxDecoration(
+                        color:
+                            isHighlighted ? Colors.blue.shade50 : Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8, // Slightly more padding for mobile
+                        ),
+                        title: Text(
+                          option.productName ?? '',
+                          maxLines: 2,
+                          style: TextStyle(
+                            fontSize: 14, // Slightly larger for mobile
+                            color: isHighlighted
+                                ? Colors.blue.shade800
+                                : Colors.black87,
+                            fontWeight: isHighlighted
+                                ? FontWeight.w500
+                                : FontWeight.normal,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: (itemCodeEnabled &&
+                                (option.itemCode ?? '').isNotEmpty)
+                            ? Text(
+                                option.itemCode!,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isHighlighted
+                                      ? Colors.blue.shade600
+                                      : Colors.grey.shade600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : null,
+                        trailing: Text(
+                          '${option.price?.price ?? ''} ${option.currency ?? ''}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isHighlighted
+                                ? Colors.blue.shade900
+                                : Colors.black87,
+                          ),
+                        ),
+                        onTap: () => onSelected(option),
+                      ),
+                    ),
+                  );
+                },
               ),
-              onTap: () => onSelected(option),
             ),
-          ),
-        );
-      },
-    ),
-  ),
-);
-
-
-
-
-          
+          );
         },
       ),
     );
   }
-
-
 }

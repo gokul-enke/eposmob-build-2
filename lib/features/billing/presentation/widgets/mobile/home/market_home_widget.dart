@@ -39,6 +39,26 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
   ProductViewMode _viewMode = ProductViewMode.grid;
   bool _isResyncingProducts = false;
   late final TextEditingController _searchController;
+  final FocusNode _searchFocusNode = FocusNode();
+
+  void _clearAndRefocusProductSearch() {
+    if (!mounted) return;
+
+    _searchController.clear();
+    setState(() => _searchQuery = '');
+    _searchFocusNode.requestFocus();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+    Future<void>.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
 
   Future<void> _resyncProductsFromEmptyState() async {
     if (_isResyncingProducts) return;
@@ -104,6 +124,7 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -114,190 +135,192 @@ class _MarketHomeWidgetState extends State<MarketHomeWidget> {
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
         child: Selector<AppSettingsProvider, bool?>(
-            selector: (_, provider) => provider.appSettings?.barcodeSales,
-            builder: (context, barcodeSales, _) {
-              if (barcodeSales == null) {
-                return const SizedBox.shrink();
-              }
+          selector: (_, provider) => provider.appSettings?.barcodeSales,
+          builder: (context, barcodeSales, _) {
+            if (barcodeSales == null) {
+              return const SizedBox.shrink();
+            }
 
-              return Selector<LocalProductProvider, List<GetProduct>>(
-                selector: (_, provider) => provider.sellableProducts,
-                builder: (context, sellableProducts, _) {
-                  final itemCodeEnabled = context.select<AppSettingsProvider,
-                          bool>(
-                      (p) => p.appSettings?.itemCodeEnabled ?? false);
-                  final products = filterMarketHomeProducts(
-                    controller: _controller,
-                    products: sellableProducts,
-                    query: _searchQuery,
-                    selectedCategory: _selectedCategory,
-                    itemCodeEnabled: itemCodeEnabled,
-                  );
-                  final categories = _controller.categories(sellableProducts);
+            return Selector<LocalProductProvider, List<GetProduct>>(
+              selector: (_, provider) => provider.sellableProducts,
+              builder: (context, sellableProducts, _) {
+                final itemCodeEnabled =
+                    context.select<AppSettingsProvider, bool>(
+                        (p) => p.appSettings?.itemCodeEnabled ?? false);
+                final products = filterMarketHomeProducts(
+                  controller: _controller,
+                  products: sellableProducts,
+                  query: _searchQuery,
+                  selectedCategory: _selectedCategory,
+                  itemCodeEnabled: itemCodeEnabled,
+                );
+                final categories = _controller.categories(sellableProducts);
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _ProductEntryHeader(
-                              barcodeSales: barcodeSales,
-                              autocompleteProductKey:
-                                  widget.autocompleteProductKey,
-                              productList: sellableProducts,
-                              onProcessBarcode: widget.onProcessBarcode,
-                              onClearProductFields: widget.onClearProductFields,
-                              focusTextField: widget.focusTextField,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          NewOrderButton(
-                            onTap: _openAddProduct,
-                            compact: MediaQuery.sizeOf(context).width < 380,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 44,
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (value) {
-                            setState(() => _searchQuery = value);
-                          },
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                          decoration: _entryDecoration(
-                            hintText: 'Search products',
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Colors.blueGrey.shade400,
-                              size: 22,
-                            ),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: Icon(
-                                      Icons.close,
-                                      size: 18,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                  )
-                                : null,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _ProductEntryHeader(
+                            barcodeSales: barcodeSales,
+                            autocompleteProductKey:
+                                widget.autocompleteProductKey,
+                            productList: sellableProducts,
+                            onProcessBarcode: widget.onProcessBarcode,
+                            onClearProductFields: widget.onClearProductFields,
+                            focusTextField: widget.focusTextField,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      _CategoryChips(
-                        categories: categories,
-                        selectedCategory: _selectedCategory,
-                        onSelected: (category) {
-                          setState(() => _selectedCategory = category);
+                        const SizedBox(width: 8),
+                        NewOrderButton(
+                          onTap: _openAddProduct,
+                          compact: MediaQuery.sizeOf(context).width < 380,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 44,
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
                         },
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                        decoration: _entryDecoration(
+                          hintText: 'Search products',
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: Colors.blueGrey.shade400,
+                            size: 22,
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Products',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 24),
+                    _CategoryChips(
+                      categories: categories,
+                      selectedCategory: _selectedCategory,
+                      onSelected: (category) {
+                        setState(() => _selectedCategory = category);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Products',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              if (products.isNotEmpty)
+                                Text(
+                                  '${products.length} item${products.length == 1 ? '' : 's'}',
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black,
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
                                   ),
                                 ),
-                                if (products.isNotEmpty)
-                                  Text(
-                                    '${products.length} item${products.length == 1 ? '' : 's'}',
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 13,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                              ],
-                            ),
+                            ],
                           ),
-                          _ViewModeButton(
-                            tooltip: 'Grid view',
-                            semanticsLabel: 'Grid view',
-                            icon: Icons.grid_view,
-                            selected: _viewMode == ProductViewMode.grid,
-                            onTap: () =>
-                                setState(() => _viewMode = ProductViewMode.grid),
-                          ),
-                          _ViewModeButton(
-                            tooltip: 'List view',
-                            semanticsLabel: 'List view',
-                            icon: Icons.table_rows_outlined,
-                            selected: _viewMode == ProductViewMode.list,
-                            onTap: () =>
-                                setState(() => _viewMode = ProductViewMode.list),
-                          ),
-                          _ViewModeButton(
-                            tooltip: 'Compact view',
-                            semanticsLabel: 'Compact view',
-                            icon: Icons.apps,
-                            selected: _viewMode == ProductViewMode.dense,
-                            onTap: () =>
-                                setState(() => _viewMode = ProductViewMode.dense),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      Expanded(
-                        child: Builder(
-                          builder: (context) {
-                            final isLoading = context
-                                .select<LocalProductProvider, bool>(
-                                    (p) => p.isLoading);
-                            final catalogLoading =
-                                isLoading || _isResyncingProducts;
+                        ),
+                        _ViewModeButton(
+                          tooltip: 'Grid view',
+                          semanticsLabel: 'Grid view',
+                          icon: Icons.grid_view,
+                          selected: _viewMode == ProductViewMode.grid,
+                          onTap: () =>
+                              setState(() => _viewMode = ProductViewMode.grid),
+                        ),
+                        _ViewModeButton(
+                          tooltip: 'List view',
+                          semanticsLabel: 'List view',
+                          icon: Icons.table_rows_outlined,
+                          selected: _viewMode == ProductViewMode.list,
+                          onTap: () =>
+                              setState(() => _viewMode = ProductViewMode.list),
+                        ),
+                        _ViewModeButton(
+                          tooltip: 'Compact view',
+                          semanticsLabel: 'Compact view',
+                          icon: Icons.apps,
+                          selected: _viewMode == ProductViewMode.dense,
+                          onTap: () =>
+                              setState(() => _viewMode = ProductViewMode.dense),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          final isLoading =
+                              context.select<LocalProductProvider, bool>(
+                                  (p) => p.isLoading);
+                          final catalogLoading =
+                              isLoading || _isResyncingProducts;
 
-                            if (sellableProducts.isEmpty) {
-                              if (catalogLoading) {
-                                return _EmptyCatalogLoading(
-                                  resyncing: _isResyncingProducts,
-                                );
-                              }
-                              return _EmptyCatalogResync(
-                                isResyncing: _isResyncingProducts,
-                                onResync: _resyncProductsFromEmptyState,
+                          if (sellableProducts.isEmpty) {
+                            if (catalogLoading) {
+                              return _EmptyCatalogLoading(
+                                resyncing: _isResyncingProducts,
                               );
                             }
-
-                            return MarketProductGrid(
-                              products: products,
-                              viewMode: _viewMode,
-                              currency: context.select<AppSettingsProvider,
-                                      String>(
-                                  (p) => p.appSettings?.currency ?? ''),
+                            return _EmptyCatalogResync(
+                              isResyncing: _isResyncingProducts,
+                              onResync: _resyncProductsFromEmptyState,
                             );
-                          },
-                        ),
+                          }
+
+                          return MarketProductGrid(
+                            products: products,
+                            viewMode: _viewMode,
+                            onProductAdded: _clearAndRefocusProductSearch,
+                            currency:
+                                context.select<AppSettingsProvider, String>(
+                                    (p) => p.appSettings?.currency ?? ''),
+                          );
+                        },
                       ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
         ),
+      ),
     );
   }
 }
@@ -515,7 +538,8 @@ class _ProductEntryHeader extends StatelessWidget {
             size: size,
             productList: productList,
             suppressSystemKeyboardOnAndroid: true,
-            onSelected: (_, __) {
+            onSelected: (_, __) {},
+            onAdded: () {
               onClearProductFields();
               focusTextField();
             },

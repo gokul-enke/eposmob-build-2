@@ -199,15 +199,18 @@ void main() {
 
       final context =
           await pumpHelperContext(tester, provider, stockEnabled: false);
+      var successfulAddCallbacks = 0;
 
       await ProductCartHelper.handleProductSelection(
         context: context,
         product: nonSellable,
         quantity: 1,
+        onAdded: () => successfulAddCallbacks++,
       );
       await tester.pump();
 
       expect(provider.cartItems, isEmpty);
+      expect(successfulAddCallbacks, 0);
       expect(find.text('Wholesale Crate is marked as not sellable'),
           findsOneWidget);
 
@@ -218,10 +221,12 @@ void main() {
         context: context,
         product: sellable,
         quantity: 1,
+        onAdded: () => successfulAddCallbacks++,
       );
       await tester.pump();
 
       expect(provider.cartItems, hasLength(1));
+      expect(successfulAddCallbacks, 1);
       expect(provider.cartItems.single.product.productId, 6);
       expect(find.text('Retail Crate is marked as not sellable'), findsNothing);
 
@@ -261,6 +266,7 @@ void main() {
         context: context,
         product: variantProductWithoutActiveRows,
         variantEnabled: true,
+        onAdded: () => successfulAddCallbacks++,
       );
       await tester.pump();
 
@@ -268,6 +274,7 @@ void main() {
         provider.cartItems.where((item) => item.product.productId == 9),
         isEmpty,
       );
+      expect(successfulAddCallbacks, 1);
       expect(
         find.text(
             'Unavailable Variant Product has no active variants available for sale'),
