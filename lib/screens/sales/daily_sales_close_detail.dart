@@ -213,8 +213,6 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
                 const SizedBox(height: 10),
                 _buildClosingPeriodDetails(data),
                 const SizedBox(height: 20),
-                _buildSectionHeader('Sales Summary', Icons.monetization_on_outlined),
-                const SizedBox(height: 10),
                 _buildSalesSummary(context, data),
                 const SizedBox(height: 20),
                 _buildSectionHeader('Expenses Breakdown', Icons.receipt_long_outlined),
@@ -337,48 +335,138 @@ class _DailySalesCloseDetailScreenState extends State<DailySalesCloseDetailScree
     return Consumer<AppSettingsProvider>(
       builder: (context, appSettingsProvider, child) {
         final currency = appSettingsProvider.appSettings?.currency ?? 'INR';
-        return _buildCard(
-          child: Column(
-            children: [
-              Row(
+
+        // Build payment breakdown rows dynamically
+        final List<Widget> breakdownRows = [];
+        final breakdown = data.paymentMethodBreakdown ?? {
+          'BANK': '0.00',
+          'CARD': '0.00',
+          'CASH': '0.00',
+          'COD': '0.00',
+          'ONLINE': '0.00',
+          'UPI': '0.00',
+          'CHEQUE': '0.00',
+          'CREDIT': '0.00',
+        };
+
+        String formatKey(String key) {
+          final upper = key.toUpperCase();
+          if (upper == 'COD' || upper == 'UPI') {
+            return upper;
+          }
+          if (key.isEmpty) return '';
+          return key[0].toUpperCase() + key.substring(1).toLowerCase();
+        }
+
+        final entries = breakdown.entries.toList();
+        for (int i = 0; i < entries.length; i += 2) {
+          final entry1 = entries[i];
+          final hasSecond = i + 1 < entries.length;
+          final entry2 = hasSecond ? entries[i + 1] : null;
+
+          breakdownRows.add(
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDetailItem(
+                    formatKey(entry1.key),
+                    '$currency ${entry1.value ?? '0.00'}',
+                  ),
+                ),
+                if (entry2 != null)
+                  Expanded(
+                    child: _buildDetailItem(
+                      formatKey(entry2.key),
+                      '$currency ${entry2.value ?? '0.00'}',
+                    ),
+                  )
+                else
+                  const Expanded(child: SizedBox()),
+              ],
+            ),
+          );
+          if (i + 2 < entries.length) {
+            breakdownRows.add(const SizedBox(height: 20));
+          }
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Day Close Summary', Icons.summarize_outlined),
+            const SizedBox(height: 10),
+            _buildCard(
+              child: Column(
                 children: [
-                  Expanded(child: _buildDetailItem('Total Orders', data.totalOrders?.toString() ?? '0', isValueBold: true)),
-                  Expanded(child: _buildDetailItem('Total Sales', '$currency ${data.totalSales ?? '0.00'}', valueColor: ColorManager.kSuccessColor, isValueBold: true)),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDetailItem('Total Orders', data.totalOrders?.toString() ?? '0', isValueBold: true)),
+                      Expanded(child: _buildDetailItem('Total Sales', '$currency ${data.totalSales ?? '0.00'}', valueColor: ColorManager.kSuccessColor, isValueBold: true)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDetailItem('Total Payment Received', '$currency ${data.totalPaymentReceived ?? '0.00'}', isValueBold: true)),
+                      Expanded(child: _buildDetailItem('Total Amount Collected On Sale', '$currency ${data.totalAmountCollectedOnSale ?? '0.00'}')),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDetailItem('Total Credit Collected (Prev Balance)', '$currency ${data.totalCreditCollected ?? '0.00'}')),
+                      Expanded(child: _buildDetailItem('Business Date', data.businessDate ?? data.openingDate ?? '-')),
+                    ],
+                  ),
                 ],
               ),
-              const SizedBox(height: 20),
-              Row(
+            ),
+            const SizedBox(height: 20),
+
+            _buildSectionHeader('Collection Summary', Icons.payments_outlined),
+            const SizedBox(height: 10),
+            _buildCard(
+              child: Row(
                 children: [
-                  Expanded(child: _buildDetailItem('Total Payment Received', '$currency ${data.totalPaymentReceived ?? '0.00'}', isValueBold: true)),
-                  Expanded(child: _buildDetailItem('Total Amount Collected On Sale', '$currency ${data.totalAmountCollectedOnSale ?? '0.00'}')),
-                  Expanded(child: _buildDetailItem('Total Credit Collected (Prev Balance)', '$currency ${data.totalCreditCollected ?? '0.00'}')),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(child: _buildDetailItem('Total Online Sales', '$currency ${data.totalOnline ?? '0.00'}')),
                   Expanded(child: _buildDetailItem('Total Cash Sales', '$currency ${data.totalCash ?? '0.00'}')),
+                  Expanded(child: _buildDetailItem('Total Online Sales', '$currency ${data.totalOnline ?? '0.00'}')),
                   Expanded(child: _buildDetailItem('Total Credit Amount', '$currency ${data.totalCredit ?? '0.00'}')),
                 ],
               ),
-              const SizedBox(height: 20),
-              Row(
+            ),
+            const SizedBox(height: 20),
+
+            _buildSectionHeader('Return & Refund', Icons.assignment_return_outlined),
+            const SizedBox(height: 10),
+            _buildCard(
+              child: Column(
                 children: [
-                  Expanded(child: _buildDetailItem('Credit Collected', '$currency ${data.totalCreditCollected ?? '0.00'}', valueColor: ColorManager.kSuccessColor, isValueBold: true)),
-                  Expanded(child: _buildDetailItem('Business Date', data.businessDate ?? data.openingDate ?? '-')),
-                  const Expanded(child: SizedBox()),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDetailItem('Total Returns (Sales Return)', '$currency ${data.totalReturns ?? '0.00'}', valueColor: Colors.red)),
+                      Expanded(child: _buildDetailItem('Total Refunds (Vouchers)', '$currency ${data.totalRefunds ?? '0.00'}', valueColor: Colors.red)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(child: _buildDetailItem('Refund — Cash', '$currency ${data.refundCash ?? '0.00'}', valueColor: Colors.red)),
+                      Expanded(child: _buildDetailItem('Refund — Online', '$currency ${data.refundOnline ?? '0.00'}', valueColor: Colors.red)),
+                    ],
+                  ),
                 ],
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(child: _buildDetailItem('Total Returns (Sales Return)', '$currency ${data.totalReturns ?? '0.00'}', valueColor: Colors.red)),
-                  Expanded(child: _buildDetailItem('Total Refunds (Vouchers)', '$currency ${data.totalRefunds ?? '0.00'}', valueColor: Colors.red)),
-                ],
+            ),
+            const SizedBox(height: 20),
+
+            _buildSectionHeader('Payment Method Breakdown', Icons.list_alt_outlined),
+            const SizedBox(height: 10),
+            _buildCard(
+              child: Column(
+                children: breakdownRows,
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

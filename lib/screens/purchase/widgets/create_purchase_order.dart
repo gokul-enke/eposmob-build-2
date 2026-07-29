@@ -17,6 +17,7 @@ import 'package:pos_machine/models/get_product.dart';
 import 'package:pos_machine/models/get_store.dart';
 import 'package:pos_machine/models/get_suppliers.dart';
 import 'package:pos_machine/models/master_data.dart';
+import 'package:pos_machine/screens/suppliers/add_supplier_modal.dart';
 import 'package:pos_machine/providers/auth_model.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
@@ -1418,19 +1419,86 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   _buildFieldColumn(
                     "Supplier",
                     _disableInteraction(
-                      BuildDropDownWithSearch<GetSuppliersModelData>(
-                        title: null,
-                        showName: false,
-                        hintText: "Select Supplier",
-                        value: selectedSupplier,
-                        items: purchaseProvider.getSupplierList ?? [],
-                        onChanged: (val) {
-                          setState(() => selectedSupplier = val);
-                          _saveDraftToHive();
-                        },
-                        displayText: (val) => val.user?.name ?? val.name ?? "",
-                        searchController: supplierSearchController,
-                        height: 40,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: BuildDropDownWithSearch<GetSuppliersModelData>(
+                              title: null,
+                              showName: false,
+                              hintText: "Select Supplier",
+                              value: selectedSupplier,
+                              items: purchaseProvider.getSupplierList ?? [],
+                              onChanged: (val) {
+                                setState(() => selectedSupplier = val);
+                                _saveDraftToHive();
+                              },
+                              displayText: (val) => val.user?.name ?? val.name ?? "",
+                              searchController: supplierSearchController,
+                              height: 40,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Add Supplier Button
+                          BuildBoxShadowContainer(
+                            height: 40,
+                            width: 40,
+                            circleRadius: 5,
+                            child: InkWell(
+                              onTap: () async {
+                                final size = MediaQuery.of(context).size;
+                                final result = await showAddSupplierModal(
+                                    context, size,
+                                    showCreateAnother: false);
+                                if (result != null &&
+                                    result is Map &&
+                                    result['status'] == 'success') {
+                                  final createdPhone =
+                                      (result['phone'] ?? '').toString();
+                                  try {
+                                    final String? accessToken =
+                                        Provider.of<AuthModel>(context,
+                                                listen: false)
+                                            .token;
+                                    if (accessToken != null) {
+                                      await purchaseProvider
+                                          .listAllSuppliers(accessToken, null);
+                                      final updatedList =
+                                          purchaseProvider.getSupplierList ?? [];
+                                      if (updatedList.isNotEmpty) {
+                                        try {
+                                          final newSupplier =
+                                              updatedList.firstWhere(
+                                            (s) =>
+                                                s.phone == createdPhone ||
+                                                (s.user?.phone ==
+                                                    createdPhone),
+                                          );
+                                          setState(() {
+                                            selectedSupplier = newSupplier;
+                                          });
+                                          _saveDraftToHive();
+                                        } catch (_) {
+                                          debugPrint(
+                                              'New supplier not found by phone in refreshed list');
+                                        }
+                                      }
+                                    }
+                                  } catch (e) {
+                                    debugPrint(
+                                        'Error auto-selecting new supplier: $e');
+                                  }
+                                }
+                              },
+                              child: const Center(
+                                child: Icon(
+                                  Icons.add,
+                                  size: 27,
+                                  color: ColorManager.kButtonGreen,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       disabled: _isHeaderLockedForReceive,
                     ),

@@ -873,9 +873,38 @@ class MenuPanelState extends State<MenuPanel> {
 
         // Apply search filter
         if (_searchQuery.isNotEmpty) {
+          final appSettingsProvider =
+              Provider.of<AppSettingsProvider>(context, listen: true);
+          final itemCodeEnabled =
+              appSettingsProvider.appSettings?.itemCodeEnabled ?? false;
           items = items.where((product) {
-            return _productSearchNames(product)
+            final nameMatch = _productSearchNames(product)
                 .any((name) => name.toLowerCase().contains(_searchQuery));
+            if (nameMatch) return true;
+
+            // Check SKU (always on)
+            final sku = product.sku ?? '';
+            if (sku.isNotEmpty &&
+                sku.toLowerCase().contains(_searchQuery)) {
+              return true;
+            }
+
+            // Check Variant SKUs (always on)
+            final variantSkuMatch = product.variants?.any((variant) {
+              final varSku = variant.sku ?? '';
+              return varSku.isNotEmpty &&
+                  varSku.toLowerCase().contains(_searchQuery);
+            }) ?? false;
+            if (variantSkuMatch) return true;
+
+            if (itemCodeEnabled) {
+              final itemCode = product.itemCode ?? '';
+              if (itemCode.isNotEmpty &&
+                  itemCode.toLowerCase().contains(_searchQuery)) {
+                return true;
+              }
+            }
+            return false;
           }).toList();
           items = _rankSearchMatches(items, _searchQuery);
         }

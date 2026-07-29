@@ -191,6 +191,7 @@ class SalesProvider with ChangeNotifier {
     String? orderNumber,
     String? filterName,
     String? date,
+    String? businessDate,
     int? customerId,
     int? productId,
     String? filterStatus,
@@ -218,6 +219,7 @@ class SalesProvider with ChangeNotifier {
     if (orderNumber != null) queryParameters['number'] = orderNumber;
     if (filterName != null) queryParameters['filter_name'] = filterName;
     if (date != null) queryParameters['order_date'] = date;
+    if (businessDate != null) queryParameters['business_date'] = businessDate;
     if (customerId != null) {
       queryParameters['customer_id'] = customerId.toString();
     }
@@ -413,6 +415,24 @@ class SalesProvider with ChangeNotifier {
         debugPrint('=== HTTP ERROR ===');
         debugPrint('Status Code: ${response.statusCode}');
         debugPrint('Response Body: ${response.body}');
+        if (response.statusCode == 500 && response.body.isNotEmpty) {
+          try {
+            final jsonBody = json.decode(response.body);
+            if (jsonBody is Map &&
+                jsonBody['status'] == 'failed' &&
+                jsonBody['message'] == 'No Orders Found') {
+              _orders = [];
+              currentPage = 1;
+              totalPages = 1;
+              paginationFrom = 1;
+              notifyListeners();
+              debugPrint('=== DEFENSIVE HANDLING: Treated 500 "No Orders Found" as empty list ===');
+              return;
+            }
+          } catch (e) {
+            debugPrint('Failed to parse 500 error response: $e');
+          }
+        }
         throw Exception('Failed to load orders: HTTP ${response.statusCode}');
       }
     } catch (error, stackTrace) {

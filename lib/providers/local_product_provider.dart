@@ -2355,19 +2355,46 @@ class LocalProductProvider extends ChangeNotifier {
 
     if (filterName != null && filterName.isNotEmpty) {
       final normalizedFilterName = filterName.toLowerCase();
-      result = result
-          .where((p) => _productSearchNames(p)
-              .any((name) => name.toLowerCase().contains(normalizedFilterName)))
-          .toList();
+      result = result.where((p) {
+        final nameMatch = _productSearchNames(p)
+            .any((name) => name.toLowerCase().contains(normalizedFilterName));
+        if (nameMatch) return true;
+
+        // Check SKU (always on)
+        final sku = p.sku ?? '';
+        if (sku.isNotEmpty &&
+            sku.toLowerCase().contains(normalizedFilterName)) {
+          return true;
+        }
+
+        // Check Variant SKUs (always on)
+        final variantSkuMatch = p.variants?.any((variant) {
+          final varSku = variant.sku ?? '';
+          return varSku.isNotEmpty &&
+              varSku.toLowerCase().contains(normalizedFilterName);
+        }) ?? false;
+        if (variantSkuMatch) return true;
+
+        return false;
+      }).toList();
       result = _rankProductNameMatches(result, filterName);
     }
 
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
-      result = result
-          .where((p) =>
-              p.barcode != null &&
-              p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase()))
-          .toList();
+      result = result.where((p) {
+        if (p.barcode != null &&
+            p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) {
+          return true;
+        }
+        final variantMatch = p.variants?.any((v) =>
+            v.barcode != null &&
+            v.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) ?? false;
+        if (variantMatch) return true;
+        final saleUnitMatch = p.saleUnits?.any((u) =>
+            u.barcode != null &&
+            u.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) ?? false;
+        return saleUnitMatch;
+      }).toList();
     }
 
     // HSN Code filter - check both product level and stock level HSN codes
@@ -2430,10 +2457,27 @@ class LocalProductProvider extends ChangeNotifier {
       return _filteredProducts;
     }
     final normalizedQuery = query.toLowerCase();
-    final matches = _filteredProducts
-        .where((p) => _productSearchNames(p)
-            .any((name) => name.toLowerCase().contains(normalizedQuery)))
-        .toList();
+    final matches = _filteredProducts.where((p) {
+      final nameMatch = _productSearchNames(p)
+          .any((name) => name.toLowerCase().contains(normalizedQuery));
+      if (nameMatch) return true;
+
+      // Check SKU (always on)
+      final sku = p.sku ?? '';
+      if (sku.isNotEmpty && sku.toLowerCase().contains(normalizedQuery)) {
+        return true;
+      }
+
+      // Check Variant SKUs (always on)
+      final variantSkuMatch = p.variants?.any((variant) {
+        final varSku = variant.sku ?? '';
+        return varSku.isNotEmpty &&
+            varSku.toLowerCase().contains(normalizedQuery);
+      }) ?? false;
+      if (variantSkuMatch) return true;
+
+      return false;
+    }).toList();
     return _rankProductNameMatches(matches, query);
   }
 
