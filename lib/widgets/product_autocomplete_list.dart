@@ -124,8 +124,9 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
         return true;
       }
 
-      // Check Variant SKUs (always on)
+      //  only active variants' SKUs surface a product in billing search.
       final variantSkuMatch = product.variants?.any((variant) {
+        if (!variant.active) return false;
         final varSku = variant.sku ?? '';
         return varSku.isNotEmpty && varSku.toLowerCase().contains(lowerQuery);
       }) ?? false;

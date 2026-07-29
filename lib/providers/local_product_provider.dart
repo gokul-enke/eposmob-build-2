@@ -497,10 +497,26 @@ class LocalProductProvider extends ChangeNotifier {
   int _totalPages = 1;
   int _itemsPerPage = 20;
 
+  /// Incremented each time [listAllProducts] updates [_filteredProducts].
+  /// The barcode screen uses this as a cheap memoization key to avoid
+  /// re-expanding BarcodeRows on unrelated [setState] calls (e.g. selection
+  /// state changes). Other screens that use [paginatedProducts] are unaffected.
+  int _filteredProductsVersion = 0;
+
   // Getters for pagination
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get itemsPerPage => _itemsPerPage;
+
+  /// Version counter incremented whenever the filtered product list changes.
+  /// Barcode screen memoizes row expansion against this value.
+  int get filteredProductsVersion => _filteredProductsVersion;
+
+  /// The full filtered product list (all pages) used by the barcode print
+  /// screen, which applies its own row-level pagination after expansion.
+  /// Other screens use [paginatedProducts] instead.
+  List<GetProduct> get allFilteredProducts =>
+      List.unmodifiable(_filteredProducts);
 
   // Stock management settings - need to be injected from outside since this provider
   // doesn't have access to GeneralSettingsProvider directly
@@ -1550,6 +1566,7 @@ class LocalProductProvider extends ChangeNotifier {
         _indexProductBarcode(saleUnit.barcode, product);
       }
       for (final variant in product.variants ?? const <ProductVariant>[]) {
+        if (!variant.active) continue;
         _indexProductBarcode(variant.barcode, product);
       }
     }
@@ -2367,8 +2384,9 @@ class LocalProductProvider extends ChangeNotifier {
           return true;
         }
 
-        // Check Variant SKUs (always on)
+        // Issue 6: only active variants' SKUs surface a product.
         final variantSkuMatch = p.variants?.any((variant) {
+          if (!variant.active) return false;
           final varSku = variant.sku ?? '';
           return varSku.isNotEmpty &&
               varSku.toLowerCase().contains(normalizedFilterName);
@@ -2386,7 +2404,9 @@ class LocalProductProvider extends ChangeNotifier {
             p.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) {
           return true;
         }
+        // Issue 6: only active variants' barcodes surface a product.
         final variantMatch = p.variants?.any((v) =>
+            v.active &&
             v.barcode != null &&
             v.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) ?? false;
         if (variantMatch) return true;
@@ -2439,6 +2459,7 @@ class LocalProductProvider extends ChangeNotifier {
     // These filters are kept for API compatibility but won't affect the results
 
     _filteredProducts = result;
+    _filteredProductsVersion++;
     _updatePagination();
     setPage(page);
 
@@ -2468,8 +2489,9 @@ class LocalProductProvider extends ChangeNotifier {
         return true;
       }
 
-      // Check Variant SKUs (always on)
+      // Issue 6: only active variants' SKUs surface a product.
       final variantSkuMatch = p.variants?.any((variant) {
+        if (!variant.active) return false;
         final varSku = variant.sku ?? '';
         return varSku.isNotEmpty &&
             varSku.toLowerCase().contains(normalizedQuery);
