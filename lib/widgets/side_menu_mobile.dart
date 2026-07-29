@@ -473,6 +473,9 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
         final hasConsumedStockPermission = roleProvider
             .currentUserHasPermissionSync('menu.reports.consumed_stock.access');
         final isCompanyAdmin = userRole == 'company_admin';
+        final hasStockReportPermission = roleProvider
+            .currentUserHasPermissionSync('menu.reports.stock.access') ||
+            isCompanyAdmin;
         final canViewExecutiveSummary = isCompanyAdmin ||
             (hasExecutiveSummaryPermission && userRole != 'sales_executive');
 
@@ -480,6 +483,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
             !hasCustomerTransactionsPermission &&
             !hasSupplierTransactionsPermission &&
             !canViewExecutiveSummary &&
+            !hasStockReportPermission &&
             !hasNonStockPermission &&
             !hasConsumedStockPermission &&
             !isCompanyAdmin) {
@@ -508,6 +512,7 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                   77,
                   80,
                   85,
+                  98,
                 ].contains(sideBarController.index.value),
                 subItems: [
                   if (hasSalesExecutiveReportsPermission)
@@ -529,6 +534,11 @@ class _SideMenuMobileState extends State<SideMenuMobile> {
                     _MobileDrawerSubItem(
                       title: 'Supplier Transactions Reports',
                       onTap: () => navigate(67),
+                    ),
+                  if (hasStockReportPermission)
+                    _MobileDrawerSubItem(
+                      title: 'Stock Report',
+                      onTap: () => navigate(98),
                     ),
                   if (hasNonStockPermission)
                     _MobileDrawerSubItem(

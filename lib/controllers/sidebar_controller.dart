@@ -49,6 +49,7 @@ import 'package:pos_machine/screens/reports/supplier_sales_report/supplier_sales
 import 'package:pos_machine/screens/reports/sales_executive_report/sales_executive_report.dart';
 import 'package:pos_machine/screens/reports/sales_executive_report/admin_sales_executive_report.dart';
 import 'package:pos_machine/screens/reports/non_stock_report/non_stock_report.dart';
+import 'package:pos_machine/screens/reports/stock_report/stock_report.dart';
 import 'package:pos_machine/screens/reports/consumed_stocks_report/consumed_stocks_report.dart';
 import 'package:pos_machine/screens/settings/location_managment/location_managment.dart';
 import 'package:pos_machine/screens/supplier_profile/open_supplier_profile.dart';
@@ -226,5 +227,6 @@ class SideBarController extends GetxController {
       defaultCounterBillingMode: true,
       storeMode: true,
     ), // 97 Store Billing Page (restaurant UI, summary-only order panel)
+    StockReportScreen(), // 98 Stock Report Screen
   ];
 }

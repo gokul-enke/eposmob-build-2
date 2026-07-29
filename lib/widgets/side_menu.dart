@@ -725,13 +725,24 @@ class _SideMenuState extends State<SideMenu> {
               final hasConsumedStockPermission =
                   roleProvider.currentUserHasPermissionSync(
                       'menu.reports.consumed_stock.access');
+              final hasStockReportPermission =
+                  roleProvider.currentUserHasPermissionSync(
+                      'menu.reports.stock.access') ||
+                  (userRole == 'company_admin');
               final isCompanyAdmin = userRole == 'company_admin';
+              debugPrint("🔍 [StockReportDebug] hasStockReportPermission: $hasStockReportPermission, isCompanyAdmin: $isCompanyAdmin, userRole: '$userRole', roleProvider.currentUserRole: '${roleProvider.currentUserRole}', rolesCount: ${roleProvider.roles.length}");
+              for (var role in roleProvider.roles) {
+                if (role.originalName == roleProvider.currentUserRole) {
+                  debugPrint("🔍 [StockReportDebug] currentUser role permissions: ${role.permissions}");
+                }
+              }
 
               // Only show the expandable menu if user has at least one permission
               if (!hasSalesExecutiveReportsPermission &&
                   !hasCustomerTransactionsPermission &&
                   !hasSupplierTransactionsPermission &&
                   !canViewExecutiveSummary &&
+                  !hasStockReportPermission &&
                   !hasNonStockPermission &&
                   !hasConsumedStockPermission &&
                   !isCompanyAdmin) {
@@ -753,24 +764,29 @@ class _SideMenuState extends State<SideMenu> {
                       sideBarController.index.value = 67;
                     },
                     onTapTitle5: () {
-                      sideBarController.index.value = 77;
+                      sideBarController.index.value = 98;
                     },
                     onTapTitle6: () {
+                      sideBarController.index.value = 77;
+                    },
+                    onTapTitle7: () {
                       sideBarController.index.value = 80;
                     },
                     listTitle1: "Sales Executive Reports",
                     listTitle2: "Executive Reports",
                     listTitle3: "Customer Transactions Reports",
                     listTitle4: "Supplier Transactions Reports",
-                    listTitle5: "Non-Stock Report",
-                    listTitle6: "Consumed Stocks Report",
+                    listTitle5: "Stock Report",
+                    listTitle6: "Non-Stock Report",
+                    listTitle7: "Consumed Stocks Report",
                     // Permission-based visibility
                     showTitle1: hasSalesExecutiveReportsPermission,
                     showTitle2: canViewExecutiveSummary,
                     showTitle3: hasCustomerTransactionsPermission,
                     showTitle4: hasSupplierTransactionsPermission,
-                    showTitle5: hasNonStockPermission,
-                    showTitle6: hasConsumedStockPermission,
+                    showTitle5: hasStockReportPermission,
+                    showTitle6: hasNonStockPermission,
+                    showTitle7: hasConsumedStockPermission,
                     icon: fa.FontAwesomeIcons.chartPie,
                     title: 'Reports',
                     onTap: () {
@@ -787,7 +803,8 @@ class _SideMenuState extends State<SideMenu> {
                         sideBarController.index.value == 68 ||
                         sideBarController.index.value == 77 ||
                         sideBarController.index.value == 80 ||
-                        sideBarController.index.value == 85),
+                        sideBarController.index.value == 85 ||
+                        sideBarController.index.value == 98),
               );
             },
           ),
