@@ -105,6 +105,9 @@ class InvoiceProvider extends ChangeNotifier {
   String? _receiptFilterPaymentMethod;
   String? _receiptfilterPhone;
   String? _receiptfilterEmail;
+  String? _receiptFilterDateFrom;
+  String? _receiptFilterDateTo;
+  String? _lastReceiptAccessToken;
 
   // Getters for pagination
   int get currentPage => _currentPage;
@@ -473,6 +476,8 @@ class InvoiceProvider extends ChangeNotifier {
       String? paymentMethod,
       String? phone,
       String? email,
+      String? dateFrom,
+      String? dateTo,
       int page = 1}) {
     _receiptFilterName = name;
     _receiptFilterStatus = receiptStatus;
@@ -481,17 +486,29 @@ class InvoiceProvider extends ChangeNotifier {
     _receiptFilterReceiptNumber = receiptNumber;
     _receiptfilterPhone = phone;
     _receiptfilterEmail = email;
+    _receiptFilterDateFrom = dateFrom;
+    _receiptFilterDateTo = dateTo;
 
     _receiptCurrentPage = page;
-    applyReceiptFiltersLocally(
-        filterName: name,
-        filterReceiptNumber: receiptNumber,
-        filterPaymentReference: paymentReference,
-        filterStatus: receiptStatus,
-        filterPaymentMethod: paymentMethod,
-        filterPhone: phone,
-        filterEmail: email,
-        page: page);
+
+    if (_lastReceiptAccessToken != null) {
+      listAllReceipts(
+        accessToken: _lastReceiptAccessToken!,
+        page: page,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+      );
+    } else {
+      applyReceiptFiltersLocally(
+          filterName: name,
+          filterReceiptNumber: receiptNumber,
+          filterPaymentReference: paymentReference,
+          filterStatus: receiptStatus,
+          filterPaymentMethod: paymentMethod,
+          filterPhone: phone,
+          filterEmail: email,
+          page: page);
+    }
   }
 
   void resetFilters({bool reload = true}) {
@@ -524,8 +541,20 @@ class InvoiceProvider extends ChangeNotifier {
     _receiptFilterStatus = null;
     _receiptFilterPaymentReference = null;
     _receiptFilterPaymentMethod = null;
+    _receiptfilterPhone = null;
+    _receiptfilterEmail = null;
+    _receiptFilterDateFrom = null;
+    _receiptFilterDateTo = null;
     _receiptCurrentPage = 1;
-    applyReceiptFiltersLocally(page: 1);
+
+    if (_lastReceiptAccessToken != null) {
+      listAllReceipts(
+        accessToken: _lastReceiptAccessToken!,
+        page: 1,
+      );
+    } else {
+      applyReceiptFiltersLocally(page: 1);
+    }
   }
 
   // Apply filters locally
@@ -1868,12 +1897,15 @@ class InvoiceProvider extends ChangeNotifier {
     required String accessToken,
     int page = 1,
     bool loadAll = false, // Add parameter to load all receipts
+    String? dateFrom,
+    String? dateTo,
   }) async {
+    _lastReceiptAccessToken = accessToken;
     _isLoading = true;
     notifyListeners();
 
     debugPrint(
-        "🔍 Calling listAllReceipts with page: $page, loadAll: $loadAll");
+        "🔍 Calling listAllReceipts with page: $page, loadAll: $loadAll, dateFrom: $dateFrom, dateTo: $dateTo");
 
     // Get API key from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1884,6 +1916,8 @@ class InvoiceProvider extends ChangeNotifier {
       'page': page.toString(),
       // If loadAll is true, request a large page size to get all receipts
       if (loadAll) 'per_page': '1000',
+      if (dateFrom != null && dateFrom.isNotEmpty) 'date_from': dateFrom,
+      if (dateTo != null && dateTo.isNotEmpty) 'date_to': dateTo,
     };
 
     if (activeStoreId != null) {

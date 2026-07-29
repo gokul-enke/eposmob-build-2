@@ -22,6 +22,9 @@ class CustomerVoucherProvider extends ChangeNotifier {
   String? _filterVoucherNumber;
   String? _filterType;
   String? _filterStatus;
+  String? _filterDateFrom;
+  String? _filterDateTo;
+  String? _lastAccessToken;
 
   // Getters
   bool get isLoading => _isLoading;
@@ -58,21 +61,29 @@ class CustomerVoucherProvider extends ChangeNotifier {
     String? voucherNumber,
     String? type,
     String? status,
+    String? dateFrom,
+    String? dateTo,
     int page = 1,
   }) {
     _filterCustomerName = customerName;
     _filterVoucherNumber = voucherNumber;
     _filterType = type;
     _filterStatus = status;
+    _filterDateFrom = dateFrom;
+    _filterDateTo = dateTo;
     _currentPage = page;
 
-    applyFiltersLocally(
-      filterCustomerName: customerName,
-      filterVoucherNumber: voucherNumber,
-      filterType: type,
-      filterStatus: status,
-      page: page,
-    );
+    if (_lastAccessToken != null) {
+      listAllCustomerVouchers(accessToken: _lastAccessToken!);
+    } else {
+      applyFiltersLocally(
+        filterCustomerName: customerName,
+        filterVoucherNumber: voucherNumber,
+        filterType: type,
+        filterStatus: status,
+        page: page,
+      );
+    }
   }
 
   // Reset filters
@@ -81,8 +92,14 @@ class CustomerVoucherProvider extends ChangeNotifier {
     _filterVoucherNumber = null;
     _filterType = null;
     _filterStatus = null;
+    _filterDateFrom = null;
+    _filterDateTo = null;
     _currentPage = 1;
-    applyFiltersLocally(page: 1);
+    if (_lastAccessToken != null) {
+      listAllCustomerVouchers(accessToken: _lastAccessToken!);
+    } else {
+      applyFiltersLocally(page: 1);
+    }
   }
 
   // Apply filters locally
@@ -195,6 +212,7 @@ class CustomerVoucherProvider extends ChangeNotifier {
     required String accessToken,
   }) async {
     debugPrint("listAllCustomerVouchers called");
+    _lastAccessToken = accessToken;
     _isLoading = true;
     notifyListeners();
 
@@ -205,6 +223,10 @@ class CustomerVoucherProvider extends ChangeNotifier {
     final queryParams = {
       'page': '1',
       'per_page': '1000',
+      if (_filterDateFrom != null && _filterDateFrom!.isNotEmpty)
+        'date_from': _filterDateFrom!,
+      if (_filterDateTo != null && _filterDateTo!.isNotEmpty)
+        'date_to': _filterDateTo!,
     };
     if (activeStoreId != null) {
       queryParams['store_id'] = activeStoreId.toString();

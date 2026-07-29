@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
@@ -699,22 +700,51 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
   // Date selection method
   Future<void> _selectDate(BuildContext context,
       {required bool isFromDate}) async {
-    final DateTime? picked = await showAutoDismissDatePicker(
+    final DateTime? pickedDate = await showAutoDismissDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: ColorManager.kPrimaryColor,
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
+      );
+      // Time is optional — use picked time or default
+      final TimeOfDay resolvedTime = pickedTime ??
+          (isFromDate
+              ? const TimeOfDay(hour: 0, minute: 0)
+              : const TimeOfDay(hour: 23, minute: 59));
 
-    if (picked != null) {
-      final formattedDate =
-          "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
-      if (isFromDate) {
-        dateFromController.text = formattedDate;
-      } else {
-        dateToController.text = formattedDate;
-      }
-      _debounceInvoiceSearch();
+      final DateTime fullDateTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        resolvedTime.hour,
+        resolvedTime.minute,
+      );
+      final formattedDateTime =
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(fullDateTime);
+      setState(() {
+        if (isFromDate) {
+          dateFromController.text = formattedDateTime;
+        } else {
+          dateToController.text = formattedDateTime;
+        }
+      });
+      searchInvoices();
     }
   }
 
@@ -1411,9 +1441,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
-                      hintText: "DD/MM/YYYY",
+                      hintText: "YYYY-MM-DD HH:MM:SS",
                       hintStyle: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s10, 0.18, ColorManager.textColor),
+                          FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
                       prefixIcon: Container(
                         padding: const EdgeInsets.all(8),
                         child: const Icon(
@@ -1467,9 +1497,9 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                     style: buildCustomStyle(FontWeightManager.medium,
                         FontSize.s10, 0.18, ColorManager.textColor),
                     decoration: decoration.copyWith(
-                      hintText: "DD/MM/YYYY",
+                      hintText: "YYYY-MM-DD HH:MM:SS",
                       hintStyle: buildCustomStyle(FontWeightManager.medium,
-                          FontSize.s10, 0.18, ColorManager.textColor),
+                          FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
                       prefixIcon: Container(
                         padding: const EdgeInsets.all(8),
                         child: const Icon(

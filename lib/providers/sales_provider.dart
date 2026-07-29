@@ -191,6 +191,8 @@ class SalesProvider with ChangeNotifier {
     String? orderNumber,
     String? filterName,
     String? date,
+    String? from,
+    String? until,
     String? businessDate,
     int? customerId,
     int? productId,
@@ -218,7 +220,15 @@ class SalesProvider with ChangeNotifier {
 
     if (orderNumber != null) queryParameters['number'] = orderNumber;
     if (filterName != null) queryParameters['filter_name'] = filterName;
-    if (date != null) queryParameters['order_date'] = date;
+    if (date != null && date.isNotEmpty) {
+      queryParameters['order_date'] = date;
+    }
+    if (from != null && from.isNotEmpty) {
+      queryParameters['filter_datetime[from]'] = from;
+    }
+    if (until != null && until.isNotEmpty) {
+      queryParameters['filter_datetime[until]'] = until;
+    }
     if (businessDate != null) queryParameters['business_date'] = businessDate;
     if (customerId != null) {
       queryParameters['customer_id'] = customerId.toString();
