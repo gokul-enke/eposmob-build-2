@@ -51,6 +51,36 @@ class DynamicPaymentData {
   }
 }
 
+enum DynamicPaymentAmountStatus {
+  noExpectation,
+  exact,
+  partial,
+  overpaid,
+  underpaid,
+}
+
+DynamicPaymentAmountStatus dynamicPaymentAmountStatus({
+  required double total,
+  required double? expectedAmount,
+  required bool allowPartialPayment,
+}) {
+  if (expectedAmount == null) {
+    return DynamicPaymentAmountStatus.noExpectation;
+  }
+
+  final difference = expectedAmount - total;
+  if (difference.abs() <= 0.005) {
+    return DynamicPaymentAmountStatus.exact;
+  }
+  if (difference < 0) {
+    return DynamicPaymentAmountStatus.overpaid;
+  }
+  if (allowPartialPayment) {
+    return DynamicPaymentAmountStatus.partial;
+  }
+  return DynamicPaymentAmountStatus.underpaid;
+}
+
 /// Dynamic payment selector that uses payment methods from API
 /// - Supports split payments (up to 2 methods)
 /// - Shows payment method buttons dynamically from API data
@@ -62,6 +92,7 @@ class BuildDynamicPaymentSelector extends StatefulWidget {
   final DynamicPaymentData? initialData;
   final bool showTotalAmount;
   final double? expectedAmount;
+  final bool allowPartialPayment;
   final int maxMethods; // Maximum number of payment methods (default 2)
   final bool isLoading;
 
@@ -73,6 +104,7 @@ class BuildDynamicPaymentSelector extends StatefulWidget {
     this.initialData,
     this.showTotalAmount = false,
     this.expectedAmount,
+    this.allowPartialPayment = false,
     this.maxMethods = 2,
     this.isLoading = false,
   }) : super(key: key);
@@ -122,6 +154,25 @@ class _BuildDynamicPaymentSelectorState
       primaryAmountController.text = widget.initialData!.primaryAmount;
       secondaryAmountController.text = widget.initialData!.secondaryAmount;
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant BuildDynamicPaymentSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final nextData = widget.initialData;
+    if (nextData == null) return;
+
+    final shouldSync = primaryMethod?.id != nextData.primaryMethod?.id ||
+        secondaryMethod?.id != nextData.secondaryMethod?.id ||
+        primaryAmountController.text != nextData.primaryAmount ||
+        secondaryAmountController.text != nextData.secondaryAmount;
+    if (!shouldSync) return;
+
+    primaryMethod = nextData.primaryMethod;
+    secondaryMethod = nextData.secondaryMethod;
+    primaryAmountController.text = nextData.primaryAmount;
+    secondaryAmountController.text = nextData.secondaryAmount;
   }
 
   @override
@@ -453,12 +504,26 @@ class _BuildDynamicPaymentSelectorState
     double secondaryAmount =
         double.tryParse(secondaryAmountController.text) ?? 0;
     double total = primaryAmount + secondaryAmount;
+    final expectedAmount = widget.expectedAmount;
+    final difference = expectedAmount == null ? 0.0 : expectedAmount - total;
+    final amountStatus = dynamicPaymentAmountStatus(
+      total: total,
+      expectedAmount: expectedAmount,
+      allowPartialPayment: widget.allowPartialPayment,
+    );
+    final isExact = amountStatus == DynamicPaymentAmountStatus.exact;
+    final isOverpaid = amountStatus == DynamicPaymentAmountStatus.overpaid;
+    final isAcceptedPartial =
+        amountStatus == DynamicPaymentAmountStatus.partial;
 
-    Color totalColor = widget.expectedAmount != null
-        ? (total == widget.expectedAmount
-            ? ColorManager.kSuccessColor
-            : ColorManager.kErrorColor)
-        : ColorManager.kPrimaryColor;
+    final Color totalColor;
+    if (expectedAmount == null || isAcceptedPartial) {
+      totalColor = ColorManager.kPrimaryColor;
+    } else if (isExact) {
+      totalColor = ColorManager.kSuccessColor;
+    } else {
+      totalColor = ColorManager.kErrorColor;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -479,9 +544,13 @@ class _BuildDynamicPaymentSelectorState
               totalColor,
             ),
           ),
-          if (widget.expectedAmount != null) ...[
+          if (expectedAmount != null) ...[
             Text(
-              'Expected: ${widget.expectedAmount!.toStringAsFixed(2)}',
+              isAcceptedPartial
+                  ? 'Remaining: ${difference.toStringAsFixed(2)}'
+                  : isOverpaid
+                      ? 'Overpaid: ${(-difference).toStringAsFixed(2)}'
+                      : 'Expected: ${expectedAmount.toStringAsFixed(2)}',
               style: buildCustomStyle(
                 FontWeightManager.medium,
                 FontSize.s12,
@@ -490,7 +559,11 @@ class _BuildDynamicPaymentSelectorState
               ),
             ),
             Icon(
-              total == widget.expectedAmount ? Icons.check_circle : Icons.error,
+              isExact
+                  ? Icons.check_circle
+                  : isAcceptedPartial
+                      ? Icons.info_outline
+                      : Icons.error,
               color: totalColor,
               size: 16,
             ),

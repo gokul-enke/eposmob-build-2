@@ -29,6 +29,7 @@ import 'package:pos_machine/helpers/quantity_input_helper.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
 import 'package:pos_machine/resources/font_manager.dart';
+import 'package:pos_machine/screens/purchase/helpers/purchase_order_totals.dart';
 import 'package:pos_machine/resources/style_manager.dart';
 import 'package:pos_machine/widgets/add_product_modal.dart';
 import 'package:provider/provider.dart';
@@ -123,6 +124,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   final TextEditingController storeSearchController = TextEditingController();
   final TextEditingController voucherNumberController = TextEditingController();
   final TextEditingController invoiceRefController = TextEditingController();
+  final TextEditingController discountController =
+      TextEditingController(text: '0');
 
   // Settings
 
@@ -157,6 +160,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   List<MasterDataValue> _paymentMethods = [];
   bool _isLoadingPaymentMethods = false;
   bool _isSubmitting = false;
+  double? _lastKnownNetPayable;
 
   GetStoreModelData? selectedStore;
   GetSuppliersModelData? selectedSupplier;
@@ -368,6 +372,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           'selectedSupplierId': selectedSupplier?.id,
           'voucherNumber': voucherNumberController.text,
           'invoiceRef': invoiceRefController.text,
+          'discount': discountController.text,
           'includeTax': includeTax,
           'showItemDetails': _showItemDetails,
           'editingItemIndex': _editingItemIndex,
@@ -460,6 +465,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
       voucherNumberController.text = draft['voucherNumber']?.toString() ?? '';
       invoiceRefController.text = draft['invoiceRef']?.toString() ?? '';
+      discountController.text = draft['discount']?.toString() ?? '0';
       barcodeController.text = currentItem.barcode;
       unitController.text = currentItem.unit;
       quantityController.text = currentItem.quantity;
@@ -516,6 +522,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           voucherNumberController.text =
               data['voucher_number']?.toString() ?? "";
           invoiceRefController.text = data['invoice_ref']?.toString() ?? "";
+          // A receive operation gets its own discount. Do not reapply the
+          // original order discount to every partial receipt.
+          discountController.text = "0";
           if (data['purchase_date'] != null) {
             selectedDate =
                 DateTime.tryParse(data['purchase_date'].toString()) ??
@@ -821,8 +830,36 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     return total;
   }
 
+  double get _applicableGrossAmount =>
+      _isReceiveMode ? totalReceivedAmount : totalAmount;
+
+  double get _discountAmount => parsePurchaseAmount(discountController.text);
+
+  PurchaseOrderTotals get _purchaseTotals => PurchaseOrderTotals(
+        grossAmount: _applicableGrossAmount,
+        discountAmount: _discountAmount,
+      );
+
   void _syncPaidAmount() {
-    // Payment amounts are controlled by BuildDynamicPaymentSelector state.
+    final nextNetPayable = _purchaseTotals.netPayable;
+    final previousNetPayable = _lastKnownNetPayable;
+    _lastKnownNetPayable = nextNetPayable;
+
+    final primaryMethod = paymentData.primaryMethod;
+    if (primaryMethod == null ||
+        paymentData.secondaryMethod != null ||
+        previousNetPayable == null) {
+      return;
+    }
+
+    final currentAmount = parsePurchaseAmount(paymentData.primaryAmount);
+    final wasAutoFilled = (currentAmount - previousNetPayable).abs() <= 0.005;
+    if (!wasAutoFilled) return;
+
+    paymentData = DynamicPaymentData(
+      primaryMethod: primaryMethod,
+      primaryAmount: nextNetPayable.toStringAsFixed(2),
+    );
   }
 
   Map<String, dynamic> _convertPaymentDataToPurchaseApiFormat(
@@ -1082,6 +1119,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       return;
     }
 
+    final purchaseTotals = _purchaseTotals;
+
     final apiPaymentData = _convertPaymentDataToPurchaseApiFormat(paymentData);
     final List<String> paymentMethods =
         (apiPaymentData['payment_methods'] as List<String>);
@@ -1089,6 +1128,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         (apiPaymentData['paid_amounts'] as Map<String, double>);
 
     final bool hasPayment = paymentMethods.isNotEmpty;
+    final paidAmount =
+        paidAmountsMap.values.fold<double>(0, (sum, amount) => sum + amount);
     final List<Map<String, dynamic>> apiItems = [];
 
     for (final i in orderItems) {
@@ -1196,6 +1237,19 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       return;
     }
 
+    final discountValidationMessage = purchaseTotals.discountValidationMessage;
+    if (discountValidationMessage != null) {
+      _showErrorMessage(discountValidationMessage);
+      return;
+    }
+
+    final paymentValidationMessage =
+        purchaseTotals.validatePaymentAmount(paidAmount);
+    if (hasPayment && paymentValidationMessage != null) {
+      _showErrorMessage(paymentValidationMessage);
+      return;
+    }
+
     final token = Provider.of<AuthModel>(context, listen: false).token;
     if (token == null || token.isEmpty) {
       _showErrorMessage("Session expired. Please login again.");
@@ -1218,6 +1272,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               invoiceRef: invoiceRefController.text.trim().isEmpty
                   ? null
                   : invoiceRefController.text.trim(),
+              discount: purchaseTotals.discountAmount,
               paymentMethods: hasPayment ? paymentMethods : null,
               paidAmounts: hasPayment ? paidAmountsMap : null,
               items: apiItems,
@@ -1229,6 +1284,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               storeId: selectedStore!.id.toString(),
               voucherNumber: voucherNumberController.text,
               invoiceRef: invoiceRefController.text,
+              discount: purchaseTotals.discountAmount,
               paymentMethods: hasPayment ? paymentMethods : null,
               paidAmounts: hasPayment ? paidAmountsMap : null,
               items: apiItems,
@@ -1411,6 +1467,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         const SizedBox(height: 15),
         // Row 2
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Column(
@@ -1422,7 +1479,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: BuildDropDownWithSearch<GetSuppliersModelData>(
+                            child:
+                                BuildDropDownWithSearch<GetSuppliersModelData>(
                               title: null,
                               showName: false,
                               hintText: "Select Supplier",
@@ -1432,7 +1490,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                                 setState(() => selectedSupplier = val);
                                 _saveDraftToHive();
                               },
-                              displayText: (val) => val.user?.name ?? val.name ?? "",
+                              displayText: (val) =>
+                                  val.user?.name ?? val.name ?? "",
                               searchController: supplierSearchController,
                               height: 40,
                             ),
@@ -1460,18 +1519,18 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                                                 listen: false)
                                             .token;
                                     if (accessToken != null) {
-                                      await purchaseProvider
-                                          .listAllSuppliers(accessToken, null);
+                                      await purchaseProvider.listAllSuppliers(
+                                          accessToken, null);
                                       final updatedList =
-                                          purchaseProvider.getSupplierList ?? [];
+                                          purchaseProvider.getSupplierList ??
+                                              [];
                                       if (updatedList.isNotEmpty) {
                                         try {
                                           final newSupplier =
                                               updatedList.firstWhere(
                                             (s) =>
                                                 s.phone == createdPhone ||
-                                                (s.user?.phone ==
-                                                    createdPhone),
+                                                (s.user?.phone == createdPhone),
                                           );
                                           setState(() {
                                             selectedSupplier = newSupplier;
@@ -3154,40 +3213,128 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       onPaymentChanged: (data) {
         setState(() {
           paymentData = data;
+          _lastKnownNetPayable = _purchaseTotals.netPayable;
         });
         _saveDraftToHive();
       },
       showTotalAmount: true,
+      expectedAmount: _purchaseTotals.netPayable,
+      allowPartialPayment: true,
       maxMethods: 2,
     );
   }
 
   Widget _buildFooter() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+    final totals = _purchaseTotals;
+    final discountValidationMessage = totals.discountValidationMessage;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text("Total Amount",
-                style: buildCustomStyle(
-                    FontWeightManager.medium, FontSize.s12, 0.2, Colors.grey)),
-            Text(
-                "Order: $_currency ${totalAmount.toStringAsFixed(2)}\nReceive: $_currency ${totalReceivedAmount.toStringAsFixed(2)}",
-                textAlign: TextAlign.right,
-                style: buildCustomStyle(FontWeightManager.bold, FontSize.s15,
-                    0.2, ColorManager.textColor)),
-          ],
+        BuildBoxShadowContainer(
+          circleRadius: 8,
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            children: [
+              _buildTotalSummaryRow("Gross Total", totals.grossAmount),
+              const SizedBox(height: 8),
+              _buildDiscountSummaryRow(),
+              const Divider(height: 20),
+              _buildTotalSummaryRow(
+                "Net Payable",
+                totals.netPayable,
+                valueColor: ColorManager.kPrimaryColor,
+                emphasize: true,
+              ),
+              if (discountValidationMessage != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    discountValidationMessage,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s11,
+                      0.2,
+                      Colors.red.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-        const SizedBox(width: 30),
-        Expanded(
-          child: CustomRoundButton(
-            title: _isReceiveMode ? "Receive Items" : "Finish",
-            fct: _submitPurchaseOrder,
-            width: 200,
-            height: 45,
-            fontSize: 12,
-            isLoading: _isSubmitting,
+        const SizedBox(height: 16),
+        CustomRoundButton(
+          title: _isReceiveMode ? "Receive Items" : "Finish",
+          fct: _submitPurchaseOrder,
+          width: double.infinity,
+          height: 45,
+          fontSize: 12,
+          isLoading: _isSubmitting,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDiscountSummaryRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Overall Discount",
+          style: buildCustomStyle(
+            FontWeightManager.semiBold,
+            FontSize.s12,
+            0.2,
+            Colors.grey.shade700,
+          ),
+        ),
+        SizedBox(
+          width: 180,
+          child: _buildInlineField(
+            discountController,
+            "0.00",
+            (value) => setState(_syncPaidAmount),
+            isNumber: true,
+            prefixText: '$_currency ',
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(
+                RegExp(r'^\d*\.?\d{0,2}'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTotalSummaryRow(
+    String label,
+    double amount, {
+    Color? valueColor,
+    bool emphasize = false,
+    String prefix = '',
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            emphasize ? FontWeightManager.bold : FontWeightManager.medium,
+            emphasize ? FontSize.s15 : FontSize.s12,
+            0.2,
+            emphasize ? ColorManager.textColor : Colors.grey.shade700,
+          ),
+        ),
+        Text(
+          '$prefix$_currency ${amount.toStringAsFixed(2)}',
+          style: buildCustomStyle(
+            emphasize ? FontWeightManager.bold : FontWeightManager.semiBold,
+            emphasize ? FontSize.s18 : FontSize.s13,
+            0.2,
+            valueColor ?? ColorManager.textColor,
           ),
         ),
       ],
@@ -3200,6 +3347,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     _taxCalcDebounceTimer?.cancel();
     voucherNumberController.dispose();
     invoiceRefController.dispose();
+    discountController.dispose();
     categorySearchController.dispose();
     productSearchController.dispose();
     barcodeController.dispose();

@@ -18,6 +18,7 @@ import 'package:pos_machine/providers/billing_provider.dart';
 import 'package:pos_machine/screens/login/login.dart';
 import 'package:pos_machine/services/session_reset_service.dart';
 import 'package:pos_machine/services/development_printer_service.dart';
+import 'package:pos_machine/screens/settings/realtime_sync_test_page.dart';
 import 'package:pos_machine/screens/settings/widgets/offline_data_page.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart'
@@ -284,7 +285,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               RadioListTile<String>(
                 title: const Text('Auto'),
-                subtitle: const Text('Portrait on phones, landscape on tablets'),
+                subtitle:
+                    const Text('Portrait on phones, landscape on tablets'),
                 value: OrientationHelper.modeAuto,
                 groupValue: selected,
                 onChanged: (v) => setState(() => selected = v!),
@@ -402,11 +404,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         future: SharedPreferenceProvider().getLastProductSyncIso(),
         builder: (context, snapshot) {
           final isoTime = snapshot.data;
-          final displayTime = snapshot.connectionState == ConnectionState.waiting
-              ? 'Loading...'
-              : (isoTime == null
-                  ? 'Not synced yet'
-                  : DateHelper.formatISODateToIST(isoTime));
+          final displayTime =
+              snapshot.connectionState == ConnectionState.waiting
+                  ? 'Loading...'
+                  : (isoTime == null
+                      ? 'Not synced yet'
+                      : DateHelper.formatISODateToIST(isoTime));
           return _SettingsInfoCard(
             title: 'Last Product Sync',
             subtitle: displayTime,
@@ -434,6 +437,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           await _resyncProducts();
         },
       ),
+      if (kDebugMode)
+        _SettingsInfoCard(
+          title: 'Realtime Sync Tester',
+          subtitle: 'Test Reverb and sync API without changing local data',
+          icon: const FaIcon(
+            FontAwesomeIcons.satelliteDish,
+            color: Color(0xFF00695C),
+            size: 22,
+          ),
+          backgroundColor: const Color(0xFFE0F2F1),
+          iconColor: const Color(0xFF00695C),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const RealtimeSyncTestPage(),
+              ),
+            );
+          },
+        ),
       Consumer<BillingProvider>(
         builder: (context, billingProvider, _) {
           final isOfflineModeEnabled = billingProvider.isManualOfflineMode;

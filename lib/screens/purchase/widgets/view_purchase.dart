@@ -151,7 +151,7 @@ class ViewPurchaseWidget extends StatelessWidget {
                                       SizedBox(
                                         width: blockWidth,
                                         child: _InfoBlock(
-                                          label: 'Total Amount',
+                                          label: 'Net Payable',
                                           value: _DisplayFormatter.currency(
                                             viewData.amountTotal,
                                             currency: currency,
@@ -313,37 +313,28 @@ class ViewPurchaseWidget extends StatelessWidget {
                                           _TableRowContainer(
                                             width: tableWidth,
                                             color: const Color(0xFFF9FAFB),
-                                            child: Row(
-                                              children: [
-                                                _TableEmptyCell(
-                                                    width: columns.product),
-                                                _TableEmptyCell(
-                                                    width: columns.category),
-                                                _TableEmptyCell(
-                                                    width: columns.quantity),
-                                                _TableValueCell(
-                                                  text: 'Total Amount:',
-                                                  width: columns.unitPrice,
-                                                  align: TextAlign.right,
-                                                  isBold: true,
-                                                ),
-                                                _TableValueCell(
-                                                  text: _DisplayFormatter
-                                                      .currency(
-                                                    viewData.amountTotal,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 24,
+                                                vertical: 12,
+                                              ),
+                                              child: Align(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: SizedBox(
+                                                  width: 360,
+                                                  child: _PurchaseTotalsSummary(
+                                                    grossAmount:
+                                                        viewData.grossAmount,
+                                                    discountAmount:
+                                                        viewData.discountAmount,
+                                                    netPayable:
+                                                        viewData.amountTotal,
                                                     currency: currency,
                                                   ),
-                                                  width: columns.total,
-                                                  align: TextAlign.center,
-                                                  isBold: true,
                                                 ),
-                                                _TableEmptyCell(
-                                                    width: columns.batch),
-                                                _TableEmptyCell(
-                                                    width: columns.expiry),
-                                                _TableEmptyCell(
-                                                    width: columns.status),
-                                              ],
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -532,6 +523,83 @@ class _InfoBlock extends StatelessWidget {
   }
 }
 
+class _PurchaseTotalsSummary extends StatelessWidget {
+  const _PurchaseTotalsSummary({
+    required this.grossAmount,
+    required this.discountAmount,
+    required this.netPayable,
+    required this.currency,
+  });
+
+  final String grossAmount;
+  final String discountAmount;
+  final String netPayable;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final discount = _DisplayFormatter.toDouble(discountAmount);
+
+    return Column(
+      children: [
+        _buildRow(
+          'Gross Total',
+          _DisplayFormatter.currency(grossAmount, currency: currency),
+        ),
+        if (discount > 0) ...[
+          const SizedBox(height: 8),
+          _buildRow(
+            'Overall Discount',
+            '- ${_DisplayFormatter.currency(discount, currency: currency)}',
+            valueColor: Colors.red.shade700,
+          ),
+        ],
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 10),
+          child: Divider(height: 1),
+        ),
+        _buildRow(
+          'Net Payable',
+          _DisplayFormatter.currency(netPayable, currency: currency),
+          emphasize: true,
+          valueColor: ColorManager.kPrimaryColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRow(
+    String label,
+    String value, {
+    bool emphasize = false,
+    Color? valueColor,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: buildCustomStyle(
+            emphasize ? FontWeightManager.bold : FontWeightManager.medium,
+            emphasize ? FontSize.s14 : FontSize.s12,
+            0.2,
+            ColorManager.textColor,
+          ),
+        ),
+        Text(
+          value,
+          style: buildCustomStyle(
+            emphasize ? FontWeightManager.bold : FontWeightManager.semiBold,
+            emphasize ? FontSize.s15 : FontSize.s12,
+            0.2,
+            valueColor ?? ColorManager.textColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _TopActionButton extends StatelessWidget {
   const _TopActionButton({
     required this.label,
@@ -659,17 +727,6 @@ class _TableValueCell extends StatelessWidget {
   }
 }
 
-class _TableEmptyCell extends StatelessWidget {
-  const _TableEmptyCell({required this.width});
-
-  final double width;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(width: width);
-  }
-}
-
 class _TableStatusCell extends StatelessWidget {
   const _TableStatusCell({
     required this.width,
@@ -739,6 +796,8 @@ class _PurchaseViewData {
     required this.voucherNumber,
     required this.purchaseDate,
     required this.amountTotal,
+    required this.discountAmount,
+    required this.grossAmount,
     required this.storeName,
     required this.supplierName,
     required this.statusLabel,
@@ -748,6 +807,8 @@ class _PurchaseViewData {
   final String voucherNumber;
   final String purchaseDate;
   final String amountTotal;
+  final String discountAmount;
+  final String grossAmount;
   final String storeName;
   final String supplierName;
   final String statusLabel;
@@ -782,6 +843,8 @@ class _PurchaseViewData {
       voucherNumber: '${voucher?.voucherNumber ?? '-'}',
       purchaseDate: voucher?.purchaseDate ?? '',
       amountTotal: '${voucher?.amountTotal ?? 0}',
+      discountAmount: '0',
+      grossAmount: '${voucher?.amountTotal ?? 0}',
       storeName: purchaseProvider.storeName(voucher?.storeId ?? 0) ?? '-',
       supplierName:
           purchaseProvider.supplierName(voucher?.supplierId ?? 0) ?? '-',
@@ -801,11 +864,15 @@ class _PurchaseViewData {
   ) {
     final rawItems =
         (raw['items'] as List?) ?? (raw['purchase_items'] as List?) ?? [];
+    final amountTotal = _DisplayFormatter.toDouble(raw['amount_total']);
+    final discountAmount = _DisplayFormatter.toDouble(raw['discount']);
 
     return _PurchaseViewData(
       voucherNumber: '${raw['voucher_number'] ?? raw['id'] ?? '-'}',
       purchaseDate: _DisplayFormatter.asText(raw['purchase_date']),
-      amountTotal: _DisplayFormatter.asText(raw['amount_total']),
+      amountTotal: amountTotal.toString(),
+      discountAmount: discountAmount.toString(),
+      grossAmount: (amountTotal + discountAmount).toString(),
       storeName: _DisplayFormatter.entityName(raw['store']) ??
           purchaseProvider
               .storeName(_DisplayFormatter.toInt(raw['store_id'])) ??
@@ -971,6 +1038,13 @@ class _DisplayFormatter {
       return value;
     }
     return int.tryParse(asText(value)) ?? 0;
+  }
+
+  static double toDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(asText(value)) ?? 0;
   }
 
   static String number(dynamic value) {
