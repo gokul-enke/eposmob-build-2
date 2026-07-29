@@ -20,6 +20,7 @@ Future<void> addProductWithVariantResolution({
   String? customerName,
   SaleUnit? selectedSaleUnit,
   bool? variantEnabled,
+  VoidCallback? onAdded,
 }) {
   return ProductCartHelper.handleProductSelection(
     context: context,
@@ -34,5 +35,6 @@ Future<void> addProductWithVariantResolution({
     customerName: customerName,
     selectedSaleUnit: selectedSaleUnit,
     variantEnabled: variantEnabled,
+    onAdded: onAdded,
   );
 }

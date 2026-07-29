@@ -2982,9 +2982,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
                         },
                         activeCategoryId: _activeCategoryId,
                         onItemAdd: (product, quantity) async {
-                          await _handleItemAdd(product, quantity);
+                          final itemWasAdded =
+                              await _handleItemAdd(product, quantity);
                           // Optionally close the bottom sheet after adding
                           // Navigator.pop(context);
+                          return itemWasAdded;
                         },
                         screenSize: MediaQuery.of(context).size,
                         selectedOrder: _selectedOrderFromOrderPanel,
@@ -3102,7 +3104,8 @@ class _RestaurantPageState extends State<RestaurantPage> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _handleItemAdd(GetProduct product, int quantity) async {
+  Future<bool> _handleItemAdd(GetProduct product, int quantity) async {
+    var itemWasAdded = false;
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final cartProvider = Provider.of<CartProvider>(context, listen: false);
@@ -3141,6 +3144,7 @@ class _RestaurantPageState extends State<RestaurantPage> {
 
         // Check if the API call was successful
         if (isApiSuccess(addResponse)) {
+          itemWasAdded = true;
           if (mounted) {
             showScaffold(
               context: context,
@@ -3178,6 +3182,12 @@ class _RestaurantPageState extends State<RestaurantPage> {
         // New order: strictly local cart only (no API here)
         debugPrint(
             '🛒 Adding product to local cart via LocalProductProvider (new order)');
+        final localProductProvider =
+            Provider.of<LocalProductProvider>(context, listen: false);
+        final cartQuantityBefore = localProductProvider.cartItems.fold<num>(
+          0,
+          (sum, item) => sum + item.quantity,
+        );
 
         await ProductCartHelper.handleProductSelection(
           context: context,
@@ -3185,17 +3195,25 @@ class _RestaurantPageState extends State<RestaurantPage> {
           quantity: quantity,
         );
 
+        final cartQuantityAfter = localProductProvider.cartItems.fold<num>(
+          0,
+          (sum, item) => sum + item.quantity,
+        );
+        itemWasAdded = cartQuantityAfter > cartQuantityBefore;
+
         if (mounted) {
-          showScaffold(
-            context: context,
-            message: _activeTableId != null
-                ? 'Added ${product.productName} to Table $_activeTableId'
-                : 'Added ${product.productName} to order',
-          );
-          // Ensure the OrderPanel shows Current Order immediately
-          setState(() {});
-          _orderPanelKey.currentState
-              ?.showCurrentOrderTab(preserveLoadedDraftMetadata: true);
+          if (itemWasAdded) {
+            showScaffold(
+              context: context,
+              message: _activeTableId != null
+                  ? 'Added ${product.productName} to Table $_activeTableId'
+                  : 'Added ${product.productName} to order',
+            );
+            // Ensure the OrderPanel shows Current Order immediately
+            setState(() {});
+            _orderPanelKey.currentState
+                ?.showCurrentOrderTab(preserveLoadedDraftMetadata: true);
+          }
         }
       }
     } catch (e) {
@@ -3204,6 +3222,11 @@ class _RestaurantPageState extends State<RestaurantPage> {
         message: 'Failed to add item: ${e.toString()}',
       );
     }
+
+    if (itemWasAdded && mounted) {
+      _menuPanelKey.currentState?.focusSearch();
+    }
+    return itemWasAdded;
   }
 
   Future<dynamic> _sendOrderToKitchen() async {

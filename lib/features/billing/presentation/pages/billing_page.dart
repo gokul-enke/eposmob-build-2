@@ -1015,6 +1015,31 @@ class BillingPageState extends State<BillingPage>
         "⌨️ [BillingPage] _focusSearchProductField completed | ${_focusDebugSummary()}");
   }
 
+  void _resetProductEntryAfterSuccessfulAdd() {
+    if (!mounted) return;
+
+    setState(() {
+      _autocompleteProductKey = GlobalKey();
+      quantityController.clear();
+      barcodeController.clear();
+      selectedProductIdController.clear();
+      unitPriceController.clear();
+      selectedProductNameController.clear();
+    });
+    _focusSearchProductField();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusSearchProductField();
+      }
+    });
+    Future<void>.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _focusSearchProductField();
+      }
+    });
+  }
+
   void _focusBarcodeField() {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -2761,20 +2786,8 @@ class BillingPageState extends State<BillingPage>
                                   suppressSystemKeyboardOnAndroid: true,
                                   size: size,
                                   onSelected: (GetProduct selectedProduct,
-                                      Stock? selectedStock) async {
-                                    // Product is already added to cart by ProductCartHelper
-                                    // Clear fields and reset autocomplete for next product
-                                    setState(() {
-                                      _autocompleteProductKey = GlobalKey();
-                                      quantityController.clear();
-                                      barcodeController.clear();
-                                      selectedProductIdController.clear();
-                                      unitPriceController.clear();
-                                      selectedProductNameController.clear();
-                                    });
-                                    // Focus the barcode/search field for next entry
-                                    _focusSearchProductField();
-                                  },
+                                      Stock? selectedStock) {},
+                                  onAdded: _resetProductEntryAfterSuccessfulAdd,
                                   productList: productProvider.productList!,
                                 ),
                               ],
@@ -2875,17 +2888,9 @@ class BillingPageState extends State<BillingPage>
                                                 customPrice > 0
                                             ? customPrice
                                             : null,
+                                        onAdded:
+                                            _resetProductEntryAfterSuccessfulAdd,
                                       );
-
-                                      // Clear input fields
-                                      setState(() {
-                                        _autocompleteProductKey = GlobalKey();
-                                        quantityController.clear();
-                                        barcodeController.clear();
-                                        selectedProductIdController.clear();
-                                        unitPriceController.clear();
-                                      });
-                                      _focusSearchProductField();
                                     } else {
                                       showScaffoldError(
                                         context: context,

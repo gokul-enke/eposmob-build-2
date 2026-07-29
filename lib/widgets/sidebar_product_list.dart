@@ -129,6 +129,26 @@ class _SideBarProductListState extends State<SideBarProductList> {
     });
   }
 
+  void _clearAndRefocusProductSearch() {
+    if (!mounted) return;
+
+    _searchProductController.clear();
+    Provider.of<LocalProductProvider>(context, listen: false).refreshProducts();
+    setState(() => _focusedProductIndex = 0);
+    _productFocusNode.requestFocus();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _productFocusNode.requestFocus();
+      }
+    });
+    Future<void>.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _productFocusNode.requestFocus();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _searchCategoryController.dispose();
@@ -165,6 +185,7 @@ class _SideBarProductListState extends State<SideBarProductList> {
         context: context,
         product: product,
         addToCartDirectly: true, // Add to cart directly for sidebar view
+        onAdded: _clearAndRefocusProductSearch,
         // Customer info will be fetched from global provider in the helper
       );
     }
