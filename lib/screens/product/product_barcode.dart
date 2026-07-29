@@ -142,30 +142,48 @@ class BarcodeRow {
 
   String get priceDisplay {
     if (variant != null) {
-      return (variant!.price ?? product.price?.price)?.toString() ?? 'N/A';
+      //  treat zero variant price as invalid — fall back to base.
+      final v = variant!;
+      final vPrice = (v.price != null && v.price! > 0) ? v.price : null;
+      return (vPrice ?? product.price?.price)?.toString() ?? 'N/A';
     }
     if (saleUnit != null) {
-      return (saleUnit!.resolvedPrice ?? saleUnit!.price ?? product.price?.price)
-              ?.toString() ??
-          'N/A';
+      //  reuse the shared resolution chain (batch override →
+      // master price → resolvedPrice → base×rate), all with > 0 guards.
+      final resolved = SaleUnit.resolveDisplayPrice(
+        product: product,
+        saleUnit: saleUnit!,
+      );
+      return resolved?.toString() ?? product.price?.price?.toString() ?? 'N/A';
     }
     return product.price?.price?.toString() ?? 'N/A';
   }
 
   String get mrpDisplay {
     if (variant != null) {
-      return (variant!.mrp ?? product.mrp)?.toString() ?? 'N/A';
+      //  treat zero variant MRP as invalid — fall back to base.
+      final v = variant!;
+      final vMrp = (v.mrp != null && v.mrp! > 0) ? v.mrp : null;
+      return (vMrp ?? product.mrp)?.toString() ?? 'N/A';
     }
     return product.mrp?.toString() ?? 'N/A';
   }
 
   /// Stable, unique key for selection tracking.
+  ///
+  ///  sale-unit key uses a composite fallback so two local/unsaved
+  /// sale units with null [SaleUnit.id] on the same product produce distinct
+  /// keys (distinguished by unitId, conversionRate/unitName, and barcode).
   String get selectionKey {
     if (variant != null) {
       return 'variant:${product.productId}:${variant!.id}';
     }
     if (saleUnit != null) {
-      return 'unit:${product.productId}:${saleUnit!.id}';
+      final u = saleUnit!;
+      return 'unit:${product.productId}:'
+          '${u.id ?? u.unitId}:'
+          '${u.conversionRate ?? u.unitName}:'
+          '${u.barcode ?? ''}';
     }
     if (product.productId != null) {
       return 'id:${product.productId}';
@@ -179,13 +197,17 @@ class BarcodeRow {
   GetProduct toProductForPrint() {
     if (variant != null) {
       final v = variant!;
-      final rowPrice = v.price ?? product.price?.price;
+      //  treat zero variant price/MRP as invalid — fall back to base.
+      final vPrice = (v.price != null && v.price! > 0) ? v.price : null;
+      final vMrp = (v.mrp != null && v.mrp! > 0) ? v.mrp : null;
+      final rowPrice = vPrice ?? product.price?.price;
+      final rowMrp = vMrp ?? product.mrp;
       return product.copyWith(
         barcode: v.barcode ?? product.barcode,
         productName: displayName,
         sku: v.sku ?? product.sku,
         numberOfProductsAvailable: quantity,
-        mrp: v.mrp ?? product.mrp,
+        mrp: rowMrp,
         price: ProductPrice(
           price: rowPrice,
           oldPrice: product.price?.oldPrice,
@@ -198,13 +220,18 @@ class BarcodeRow {
     }
     if (saleUnit != null) {
       final u = saleUnit!;
-      final rowPrice = u.resolvedPrice ?? u.price ?? product.price?.price;
+      //  use the shared resolution chain so batch overrides and the
+      // base×conversionRate auto-fallback are included, matching billing.
+      final rowPrice = SaleUnit.resolveDisplayPrice(
+        product: product,
+        saleUnit: u,
+      );
       return product.copyWith(
         barcode: u.barcode ?? product.barcode,
         productName: displayName,
         numberOfProductsAvailable: quantity,
         price: ProductPrice(
-          price: rowPrice,
+          price: rowPrice ?? product.price?.price,
           oldPrice: product.price?.oldPrice,
           percentage: product.price?.percentage,
           totalPrice: product.price?.totalPrice,
@@ -213,7 +240,14 @@ class BarcodeRow {
         stock: const [],
       );
     }
-    return product;
+    //  base branch — only pass stock records that belong to the base
+    // product (productVariantId == null). Variant-owned batch records must not
+    // bleed into the base row's print output.
+    final baseStock = product.stock
+            ?.where((s) => s.productVariantId == null)
+            .toList() ??
+        const [];
+    return product.copyWith(stock: baseStock);
   }
 }
 
@@ -236,6 +270,42 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   bool _showFilters = false;
   bool _isPrinting = false;
   List<String> categories = ["All Categories"];
+
+  // ── Barcode-screen pagination (Issue 5) ─────────────────────────────────
+  // Pagination is applied to the EXPANDED BarcodeRow list so that page size
+  // and serial numbers reflect actual printable rows, not parent products.
+  //
+  // Memoization: _allBarcodeRows is only recomputed when the provider's
+  // filteredProductsVersion counter changes. Selection state changes and page
+  // navigation call setState but do NOT increment the version, so re-expansion
+  // is skipped for those rebuilds — safe even for catalogs with thousands of rows.
+
+  /// The full expanded list (all pages). Rebuilt only when filtered products change.
+  List<BarcodeRow> _allBarcodeRows = const [];
+
+  /// Provider version at the time of last expansion. Used as memoization key.
+  int _lastFilteredVersion = -1;
+
+  /// Current page within the expanded BarcodeRow list (1-based).
+  int _barcodePage = 1;
+
+  static const int _barcodeRowsPerPage = 20;
+
+  int get _barcodeTotalPages =>
+      (_allBarcodeRows.length / _barcodeRowsPerPage).ceil().clamp(1, 999999);
+
+  /// 1-based serial number of the first row on the current page.
+  int get _barcodeFrom =>
+      (_barcodePage - 1) * _barcodeRowsPerPage + 1;
+
+  /// The slice of expanded rows for the current page.
+  List<BarcodeRow> get _currentPageRows {
+    final start = (_barcodePage - 1) * _barcodeRowsPerPage;
+    if (start >= _allBarcodeRows.length) return const [];
+    final end =
+        (start + _barcodeRowsPerPage).clamp(0, _allBarcodeRows.length);
+    return _allBarcodeRows.sublist(start, end);
+  }
 
   // Track selected products by stable key so selection survives pagination.
   final Set<String> _selectedProductKeys = {};
@@ -1043,8 +1113,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   }
 
   Widget _buildDesktopTable(
-    LocalProductProvider gridProvider,
-    List<GetProduct> listProductModelDataList,
+    List<BarcodeRow> barcodeRows,
+    int fromIndex,
   ) {
     const Map<int, TableColumnWidth> colWidths = {
       0: FixedColumnWidth(55),
@@ -1059,7 +1129,7 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
       9: FixedColumnWidth(90),
     };
 
-    final barcodeRows = expandProductsToBarcodeRows(listProductModelDataList);
+    // barcodeRows is already the current-page slice (Issue 5 — no re-expansion).
 
     final allSelected = barcodeRows.isNotEmpty &&
         barcodeRows.every((row) => _isRowSelected(row));
@@ -1134,8 +1204,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                       final int index = entry.key;
                       final row = entry.value;
                       final isSelected = _isRowSelected(row);
-                      final serialNumber =
-                          gridProvider.paginationFrom + index;
+                      //  serial numbers based on expanded-row offset.
+                      final serialNumber = fromIndex + index;
 
                       return TableRow(
                         decoration: BoxDecoration(
@@ -1304,12 +1374,10 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
   }
 
   Widget _buildMobileList(
-    LocalProductProvider gridProvider,
-    List<GetProduct> listProductModelDataList,
+    List<BarcodeRow> barcodeRows,
+    int fromIndex,
   ) {
-    // Flat-map products into barcode rows.
-    final barcodeRows =
-        expandProductsToBarcodeRows(listProductModelDataList);
+    // barcodeRows is already the current-page slice (Issue 5 — no re-expansion).
 
     final allSelected = barcodeRows.isNotEmpty &&
         barcodeRows.every((row) => _isRowSelected(row));
@@ -1360,7 +1428,8 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
             itemCount: barcodeRows.length,
             itemBuilder: (context, index) {
               final row = barcodeRows[index];
-              final serialNumber = gridProvider.paginationFrom + index;
+              //  serial numbers based on expanded-row offset.
+              final serialNumber = fromIndex + index;
               return _buildMobileProductCard(
                 row: row,
                 serialNumber: serialNumber,
@@ -1453,10 +1522,21 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                           ? const ProductBarcodeLoadingState()
                           : Consumer<LocalProductProvider>(
                               builder: (context, gridProvider, child) {
-                                List<GetProduct>? listProductModelDataList =
-                                    gridProvider.paginatedProducts;
+                                // Memoized expansion: only re-expand when the
+                                // filtered product list actually changes.
+                                if (gridProvider.filteredProductsVersion !=
+                                    _lastFilteredVersion) {
+                                  _lastFilteredVersion =
+                                      gridProvider.filteredProductsVersion;
+                                  _allBarcodeRows = expandProductsToBarcodeRows(
+                                    gridProvider.allFilteredProducts,
+                                  );
+                                  _barcodePage = 1;
+                                }
 
-                                if (listProductModelDataList.isEmpty) {
+                                final pageRows = _currentPageRows;
+
+                                if (_allBarcodeRows.isEmpty) {
                                   return const ProductBarcodeEmptyState(
                                     title: 'No product data available',
                                     subtitle:
@@ -1466,14 +1546,14 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
 
                                 if (isMobile) {
                                   return _buildMobileList(
-                                    gridProvider,
-                                    listProductModelDataList,
+                                    pageRows,
+                                    _barcodeFrom,
                                   );
                                 }
 
                                 return _buildDesktopTable(
-                                  gridProvider,
-                                  listProductModelDataList,
+                                  pageRows,
+                                  _barcodeFrom,
                                 );
                               },
                             ),
@@ -1486,15 +1566,18 @@ class _ProductBarcodeScreenState extends State<ProductBarcodeScreen> {
                       ),
                       child: Consumer<LocalProductProvider>(
                         builder: (context, productProvider, child) {
-                          if (productProvider.paginatedProducts.isEmpty) {
+                          if (_allBarcodeRows.isEmpty) {
                             return const SizedBox.shrink();
                           }
 
                           return PaginationControl(
-                            currentPage: productProvider.currentPage,
-                            totalPages: productProvider.totalPages,
+                            currentPage: _barcodePage,
+                            totalPages: _barcodeTotalPages,
                             onPageChanged: (int page) {
-                              searchProducts(page);
+                              setState(() {
+                                _barcodePage =
+                                    page.clamp(1, _barcodeTotalPages);
+                              });
                             },
                           );
                         },
