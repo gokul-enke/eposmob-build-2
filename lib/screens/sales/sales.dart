@@ -11,7 +11,12 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pos_machine/components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_container_box.dart';
-import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
+import 'package:pos_machine/components/build_dialog_box.dart'
+    hide
+        showScaffold,
+        showScaffoldError,
+        showLoadingOverlay,
+        hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 
 import 'package:pos_machine/components/build_pagination_control.dart';
@@ -1082,6 +1087,7 @@ Powered by CloudPOS''',
 
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
+      orderProvider.isOnlineSalesNavigation = widget.isOnlineSales;
 
       debugPrint('Calling fetchOrders with storeId: $activeStoreId');
       await orderProvider.fetchOrders(
@@ -1135,7 +1141,8 @@ Powered by CloudPOS''',
         if (selectedDate != null)
           'date': DateFormat('yyyy-MM-dd').format(selectedDate!),
         if (selectedBusinessDate != null)
-          'businessDate': DateFormat('yyyy-MM-dd').format(selectedBusinessDate!),
+          'businessDate':
+              DateFormat('yyyy-MM-dd').format(selectedBusinessDate!),
         if (activeStoreId != null) 'filterStore': activeStoreId,
         if (selectedStatus != null && selectedStatus != 'all')
           'filterStatus': selectedStatus!.trim(), // Add status filter
@@ -2147,7 +2154,8 @@ Powered by CloudPOS''',
                                                   onTap: () {
                                                     Clipboard.setData(
                                                         ClipboardData(
-                                                            text: order.orderNumber!));
+                                                            text: order
+                                                                .orderNumber!));
                                                     showScaffold(
                                                       context: context,
                                                       message:
@@ -2167,29 +2175,32 @@ Powered by CloudPOS''',
                                       ),
                                     ),
                                     SizedBox(
-                                       height: 55,
-                                       child: Padding(
-                                         padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-                                         child: Center(
-                                           child: SelectableText(
-                                             (order.customerName?.isNotEmpty == true)
-                                                 ? order.customerName!
-                                                 : (order.customerDetails?.phone
-                                                             ?.isNotEmpty ==
-                                                         true
-                                                     ? order.customerDetails!.phone!
-                                                     : "NA"),
-                                             textAlign: TextAlign.center,
-                                             style: buildCustomStyle(
-                                               FontWeightManager.medium,
-                                               FontSize.s11,
-                                               0.18,
-                                               ColorManager.kTextColor,
-                                             ),
-                                           ),
-                                         ),
-                                       ),
-                                     ),
+                                      height: 55,
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16.0, horizontal: 16.0),
+                                        child: Center(
+                                          child: SelectableText(
+                                            (order.customerName?.isNotEmpty ==
+                                                    true)
+                                                ? order.customerName!
+                                                : (order.customerDetails?.phone
+                                                            ?.isNotEmpty ==
+                                                        true
+                                                    ? order
+                                                        .customerDetails!.phone!
+                                                    : "NA"),
+                                            textAlign: TextAlign.center,
+                                            style: buildCustomStyle(
+                                              FontWeightManager.medium,
+                                              FontSize.s11,
+                                              0.18,
+                                              ColorManager.kTextColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                     SizedBox(
                                       height: 55,
                                       child: _buildTableCell(
@@ -2385,321 +2396,322 @@ Powered by CloudPOS''',
                       ),
                       child: SingleChildScrollView(
                         child: _isMobile(context)
-                        ? MobileFilters(
-                            orderNumberController: orderNumberController,
-                            customerNameController: customerNameController,
-                            phoneController: phoneController,
-                            amountController: amountController,
-                            storeController: storeController,
-                            storeSearchController: storeSearchController,
-                            statusController: statusController,
-                            selectedStatus: selectedStatus,
-                            storeSelected: storeSelected,
-                            selectedDate: selectedDate,
-                            calendarPickerKey: calendarPickerKey,
-                            storeList: storeList ?? [],
-                            statusOptions: statusOptions,
-                            onSearch: (value) {
-                              if (value == null ||
-                                  value.isEmpty ||
-                                  value.length > 2) {
-                                searchOrders(1);
-                              }
-                            },
-                            onStoreChanged:
-                                (GetStoreModelData? storeModelData) {
-                              setState(() {
-                                if (storeModelData?.id == 0) {
-                                  storeSelected = null;
-                                  storeController.clear();
-                                } else {
-                                  storeSelected = storeModelData;
-                                  if (storeModelData != null) {
-                                    storeController.text =
-                                        storeModelData.id.toString();
-                                  } else {
-                                    storeController.clear();
+                            ? MobileFilters(
+                                orderNumberController: orderNumberController,
+                                customerNameController: customerNameController,
+                                phoneController: phoneController,
+                                amountController: amountController,
+                                storeController: storeController,
+                                storeSearchController: storeSearchController,
+                                statusController: statusController,
+                                selectedStatus: selectedStatus,
+                                storeSelected: storeSelected,
+                                selectedDate: selectedDate,
+                                calendarPickerKey: calendarPickerKey,
+                                storeList: storeList ?? [],
+                                statusOptions: statusOptions,
+                                onSearch: (value) {
+                                  if (value == null ||
+                                      value.isEmpty ||
+                                      value.length > 2) {
+                                    searchOrders(1);
                                   }
-                                }
-                              });
-                              searchOrders(1);
-                            },
-                            onStatusChanged: (String? status) {
-                              setState(() {
-                                selectedStatus = status;
-                                if (status != null) {
-                                  statusController.text = status;
-                                } else {
-                                  statusController.clear();
-                                }
-                              });
-                              searchOrders(1);
-                            },
-                            onDateSelected: (DateTime date) {
-                              setState(() {
-                                selectedDate = date;
-                              });
-                              searchOrders(1);
-                            },
-                            onReset: resetSearch,
-                            selectedBusinessDate: selectedBusinessDate,
-                            businessCalendarPickerKey: businessCalendarPickerKey,
-                            onBusinessDateSelected: (DateTime date) {
-                              setState(() {
-                                selectedBusinessDate = date;
-                              });
-                              searchOrders(1);
-                            },
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // First row of filters with equal width
-                              Row(
+                                },
+                                onStoreChanged:
+                                    (GetStoreModelData? storeModelData) {
+                                  setState(() {
+                                    if (storeModelData?.id == 0) {
+                                      storeSelected = null;
+                                      storeController.clear();
+                                    } else {
+                                      storeSelected = storeModelData;
+                                      if (storeModelData != null) {
+                                        storeController.text =
+                                            storeModelData.id.toString();
+                                      } else {
+                                        storeController.clear();
+                                      }
+                                    }
+                                  });
+                                  searchOrders(1);
+                                },
+                                onStatusChanged: (String? status) {
+                                  setState(() {
+                                    selectedStatus = status;
+                                    if (status != null) {
+                                      statusController.text = status;
+                                    } else {
+                                      statusController.clear();
+                                    }
+                                  });
+                                  searchOrders(1);
+                                },
+                                onDateSelected: (DateTime date) {
+                                  setState(() {
+                                    selectedDate = date;
+                                  });
+                                  searchOrders(1);
+                                },
+                                onReset: resetSearch,
+                                selectedBusinessDate: selectedBusinessDate,
+                                businessCalendarPickerKey:
+                                    businessCalendarPickerKey,
+                                onBusinessDateSelected: (DateTime date) {
+                                  setState(() {
+                                    selectedBusinessDate = date;
+                                  });
+                                  searchOrders(1);
+                                },
+                              )
+                            : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Order #
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Order #",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        buildColumnWidgetForTextFields(
-                                          height: 45,
-                                          onchanged: (value) {
-                                            if (value!.isEmpty ||
-                                                value.length > 2) {
-                                              searchOrders(1);
-                                            }
-                                          },
-                                          controller: orderNumberController,
-                                          size: size,
-                                          hintText: 'Order Number',
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-
-                                  // Customer
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Customer",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        buildColumnWidgetForTextFields(
-                                          height: 45,
-                                          onchanged: (value) {
-                                            if (value!.isEmpty ||
-                                                value.length > 2) {
-                                              searchOrders(1);
-                                            }
-                                          },
-                                          controller: customerNameController,
-                                          size: size,
-                                          hintText: 'Customer Name',
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-
-                                  // Phone
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Phone",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        buildColumnWidgetForTextFields(
-                                          height: 45,
-                                          onchanged: (value) {
-                                            if (value!.isEmpty ||
-                                                value.length > 2) {
-                                              searchOrders(1);
-                                            }
-                                          },
-                                          controller: phoneController,
-                                          size: size,
-                                          hintText: 'Phone',
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-
-                                  // Date
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Date",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        BuildBoxShadowContainer(
-                                          circleRadius: 7,
-                                          height: 45,
-                                          child: Center(
-                                            child: CalendarPickerTableCell(
-                                              key: calendarPickerKey,
-                                              onDateSelected: (DateTime date) {
-                                                setState(() {
-                                                  selectedDate = date;
-                                                });
-                                                searchOrders(1);
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-
-                              // Second row of filters with equal width
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Price
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Price",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        buildColumnWidgetForTextFields(
-                                          height: 45,
-                                          onchanged: (value) {
-                                            if (value!.isEmpty ||
-                                                value.length > 2) {
-                                              searchOrders(1);
-                                            }
-                                          },
-                                          controller: amountController,
-                                          size: size,
-                                          hintText: 'Price',
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-
-// Status Filter
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Status",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          height: 45,
-                                          child: BuildBoxShadowContainer(
-                                            circleRadius: 7,
-                                            alignment: Alignment.centerLeft,
-                                            margin: const EdgeInsets.symmetric(
-                                                horizontal: 0, vertical: 0),
-                                            padding:
-                                                const EdgeInsets.only(left: 15),
-                                            color: Colors.white,
-                                            child:
-                                                DropdownButtonFormField<String>(
-                                              decoration: const InputDecoration(
-                                                border: InputBorder.none,
-                                                filled: true,
-                                                fillColor: Colors.white,
-                                              ),
-                                              value: selectedStatus,
-                                              dropdownColor: Colors.white,
-                                              hint: Text(
-                                                'Select Status',
+                                  // First row of filters with equal width
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Order #
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "Order #",
                                                 style: buildCustomStyle(
-                                                  FontWeightManager.medium,
-                                                  FontSize.s10,
+                                                  FontWeightManager.regular,
+                                                  FontSize.s14,
                                                   0.27,
-                                                  ColorManager.textColor
-                                                      .withOpacity(.5),
+                                                  Colors.black.withOpacity(0.6),
                                                 ),
                                               ),
-                                              items: [
-                                                DropdownMenuItem<String>(
-                                                  value: null,
-                                                  child: Text(
-                                                    'All',
+                                            ),
+                                            buildColumnWidgetForTextFields(
+                                              height: 45,
+                                              onchanged: (value) {
+                                                if (value!.isEmpty ||
+                                                    value.length > 2) {
+                                                  searchOrders(1);
+                                                }
+                                              },
+                                              controller: orderNumberController,
+                                              size: size,
+                                              hintText: 'Order Number',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+
+                                      // Customer
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "Customer",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  FontSize.s14,
+                                                  0.27,
+                                                  Colors.black.withOpacity(0.6),
+                                                ),
+                                              ),
+                                            ),
+                                            buildColumnWidgetForTextFields(
+                                              height: 45,
+                                              onchanged: (value) {
+                                                if (value!.isEmpty ||
+                                                    value.length > 2) {
+                                                  searchOrders(1);
+                                                }
+                                              },
+                                              controller:
+                                                  customerNameController,
+                                              size: size,
+                                              hintText: 'Customer Name',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+
+                                      // Phone
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "Phone",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  FontSize.s14,
+                                                  0.27,
+                                                  Colors.black.withOpacity(0.6),
+                                                ),
+                                              ),
+                                            ),
+                                            buildColumnWidgetForTextFields(
+                                              height: 45,
+                                              onchanged: (value) {
+                                                if (value!.isEmpty ||
+                                                    value.length > 2) {
+                                                  searchOrders(1);
+                                                }
+                                              },
+                                              controller: phoneController,
+                                              size: size,
+                                              hintText: 'Phone',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+
+                                      // Date
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "Date",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  FontSize.s14,
+                                                  0.27,
+                                                  Colors.black.withOpacity(0.6),
+                                                ),
+                                              ),
+                                            ),
+                                            BuildBoxShadowContainer(
+                                              circleRadius: 7,
+                                              height: 45,
+                                              child: Center(
+                                                child: CalendarPickerTableCell(
+                                                  key: calendarPickerKey,
+                                                  onDateSelected:
+                                                      (DateTime date) {
+                                                    setState(() {
+                                                      selectedDate = date;
+                                                    });
+                                                    searchOrders(1);
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+
+                                  // Second row of filters with equal width
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Price
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "Price",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  FontSize.s14,
+                                                  0.27,
+                                                  Colors.black.withOpacity(0.6),
+                                                ),
+                                              ),
+                                            ),
+                                            buildColumnWidgetForTextFields(
+                                              height: 45,
+                                              onchanged: (value) {
+                                                if (value!.isEmpty ||
+                                                    value.length > 2) {
+                                                  searchOrders(1);
+                                                }
+                                              },
+                                              controller: amountController,
+                                              size: size,
+                                              hintText: 'Price',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 15),
+
+// Status Filter
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "Status",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  FontSize.s14,
+                                                  0.27,
+                                                  Colors.black.withOpacity(0.6),
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(
+                                              height: 45,
+                                              child: BuildBoxShadowContainer(
+                                                circleRadius: 7,
+                                                alignment: Alignment.centerLeft,
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 0,
+                                                        vertical: 0),
+                                                padding: const EdgeInsets.only(
+                                                    left: 15),
+                                                color: Colors.white,
+                                                child: DropdownButtonFormField<
+                                                    String>(
+                                                  decoration:
+                                                      const InputDecoration(
+                                                    border: InputBorder.none,
+                                                    filled: true,
+                                                    fillColor: Colors.white,
+                                                  ),
+                                                  value: selectedStatus,
+                                                  dropdownColor: Colors.white,
+                                                  hint: Text(
+                                                    'Select Status',
                                                     style: buildCustomStyle(
                                                       FontWeightManager.medium,
                                                       FontSize.s10,
@@ -2708,106 +2720,130 @@ Powered by CloudPOS''',
                                                           .withOpacity(.5),
                                                     ),
                                                   ),
-                                                ),
-                                                ...statusOptions
-                                                    .map((String status) {
-                                                  return DropdownMenuItem<
-                                                      String>(
-                                                    value: status,
-                                                    child: Text(
-                                                      status.toUpperCase(),
-                                                      style: buildCustomStyle(
-                                                        FontWeightManager
-                                                            .medium,
-                                                        FontSize.s10,
-                                                        0.27,
-                                                        ColorManager.textColor
-                                                            .withOpacity(.5),
+                                                  items: [
+                                                    DropdownMenuItem<String>(
+                                                      value: null,
+                                                      child: Text(
+                                                        'All',
+                                                        style: buildCustomStyle(
+                                                          FontWeightManager
+                                                              .medium,
+                                                          FontSize.s10,
+                                                          0.27,
+                                                          ColorManager.textColor
+                                                              .withOpacity(.5),
+                                                        ),
                                                       ),
                                                     ),
-                                                  );
-                                                }).toList()
-                                              ],
-                                              onChanged: (String? status) {
-                                                setState(() {
-                                                  selectedStatus = status;
-                                                  if (status != null) {
-                                                    statusController.text =
-                                                        status;
-                                                  } else {
-                                                    statusController.clear();
-                                                  }
-                                                });
-                                                searchOrders(1);
-                                              },
+                                                    ...statusOptions
+                                                        .map((String status) {
+                                                      return DropdownMenuItem<
+                                                          String>(
+                                                        value: status,
+                                                        child: Text(
+                                                          status.toUpperCase(),
+                                                          style:
+                                                              buildCustomStyle(
+                                                            FontWeightManager
+                                                                .medium,
+                                                            FontSize.s10,
+                                                            0.27,
+                                                            ColorManager
+                                                                .textColor
+                                                                .withOpacity(
+                                                                    .5),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }).toList()
+                                                  ],
+                                                  onChanged: (String? status) {
+                                                    setState(() {
+                                                      selectedStatus = status;
+                                                      if (status != null) {
+                                                        statusController.text =
+                                                            status;
+                                                      } else {
+                                                        statusController
+                                                            .clear();
+                                                      }
+                                                    });
+                                                    searchOrders(1);
+                                                  },
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-
-                                  // Business Date
-                                  Expanded(
-                                    flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Business Date",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        BuildBoxShadowContainer(
-                                          circleRadius: 7,
-                                          height: 45,
-                                          child: Center(
-                                            child: CalendarPickerTableCell(
-                                              key: businessCalendarPickerKey,
-                                              onDateSelected: (DateTime date) {
-                                                setState(() {
-                                                  selectedBusinessDate = date;
-                                                });
-                                                searchOrders(1);
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-
-                                  // Reset button
-                                  Expanded(
-                                    flex: 1,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 35.0),
-                                      child: CustomRoundButton(
-                                        title: "Reset",
-                                        boxColor: Colors.white,
-                                        textColor: ColorManager.kPrimaryColor,
-                                        fct: resetSearch,
-                                        height: 45,
-                                        width: double
-                                            .infinity, // Take full available width
-                                        fontSize: FontSize.s12,
                                       ),
-                                    ),
+                                      const SizedBox(width: 15),
+
+                                      // Business Date
+                                      Expanded(
+                                        flex: 1,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: Text(
+                                                "Business Date",
+                                                style: buildCustomStyle(
+                                                  FontWeightManager.regular,
+                                                  FontSize.s14,
+                                                  0.27,
+                                                  Colors.black.withOpacity(0.6),
+                                                ),
+                                              ),
+                                            ),
+                                            BuildBoxShadowContainer(
+                                              circleRadius: 7,
+                                              height: 45,
+                                              child: Center(
+                                                child: CalendarPickerTableCell(
+                                                  key:
+                                                      businessCalendarPickerKey,
+                                                  onDateSelected:
+                                                      (DateTime date) {
+                                                    setState(() {
+                                                      selectedBusinessDate =
+                                                          date;
+                                                    });
+                                                    searchOrders(1);
+                                                  },
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 15),
+
+                                      // Reset button
+                                      Expanded(
+                                        flex: 1,
+                                        child: Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 35.0),
+                                          child: CustomRoundButton(
+                                            title: "Reset",
+                                            boxColor: Colors.white,
+                                            textColor:
+                                                ColorManager.kPrimaryColor,
+                                            fct: resetSearch,
+                                            height: 45,
+                                            width: double
+                                                .infinity, // Take full available width
+                                            fontSize: FontSize.s12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
                       ),
                     );
                   },
