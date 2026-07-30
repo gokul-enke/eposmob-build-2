@@ -497,6 +497,7 @@ class InvoiceProvider extends ChangeNotifier {
         page: page,
         dateFrom: dateFrom,
         dateTo: dateTo,
+        loadAll: true,
       );
     } else {
       applyReceiptFiltersLocally(
@@ -1955,7 +1956,16 @@ class InvoiceProvider extends ChangeNotifier {
           // Store all receipts for local filtering and pagination
           _allReceipts = receiptResponse.data.data;
           _receiptData = receiptResponse.data;
-          applyReceiptFiltersLocally(page: 1);
+          applyReceiptFiltersLocally(
+            filterName: _receiptFilterName,
+            filterReceiptNumber: _receiptFilterReceiptNumber,
+            filterPaymentReference: _receiptFilterPaymentReference,
+            filterStatus: _receiptFilterStatus,
+            filterPaymentMethod: _receiptFilterPaymentMethod,
+            filterPhone: _receiptfilterPhone,
+            filterEmail: _receiptfilterEmail,
+            page: _receiptCurrentPage,
+          );
         } else {
           receiptListDetails = receiptResponse.data.data;
           applyReceiptFiltersLocally(
