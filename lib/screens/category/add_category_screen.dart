@@ -17,6 +17,7 @@ import '../../components/build_text_fields.dart';
 import '../../components/build_title.dart';
 import '../../controllers/sidebar_controller.dart';
 import '../../models/category_list.dart';
+import '../../models/language.dart';
 
 import '../../providers/auth_model.dart';
 import '../../providers/category_providers.dart';
@@ -47,6 +48,9 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
   final TextEditingController categoryIDController =
       TextEditingController(text: "0");
 
+  final Map<int, bool> _languageTranslating = {};
+  final Map<int, TextEditingController> _languageNameControllers = {};
+
   @override
   void dispose() {
     // Dispose of the controllers when the widget is disposed
@@ -57,6 +61,13 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
     categorySlugController.dispose();
     idController.dispose();
     categoryIDController.dispose();
+    for (final controller in _languageNameControllers.values) {
+      if (controller != categoryNameArabicController &&
+          controller != categoryNameEnglishController &&
+          controller != categoryNameHindiController) {
+        controller.dispose();
+      }
+    }
     super.dispose();
   }
 
@@ -114,6 +125,80 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
     });
   }
 
+  void _syncLanguageControllers(List<Language> languages) {
+    for (final language in languages) {
+      if (!_languageNameControllers.containsKey(language.id)) {
+        if (language.code.toLowerCase() == 'ar') {
+          _languageNameControllers[language.id] = categoryNameArabicController;
+        } else if (language.code.toLowerCase() == 'hi') {
+          _languageNameControllers[language.id] = categoryNameHindiController;
+        } else if (language.code.toLowerCase() == 'en') {
+          _languageNameControllers[language.id] = categoryNameEnglishController;
+        } else {
+          _languageNameControllers[language.id] = TextEditingController();
+        }
+      }
+      _languageTranslating.putIfAbsent(language.id, () => false);
+    }
+  }
+
+  Future<void> _translateLanguage(Language language) async {
+    final baseText = categoryNameController.text.trim();
+    if (baseText.isEmpty) {
+      showScaffoldError(
+        context: context,
+        message: 'Please enter Category Name before translating.',
+      );
+      return;
+    }
+
+    if (_languageTranslating[language.id] == true) return;
+
+    setState(() {
+      _languageTranslating[language.id] = true;
+    });
+
+    try {
+      final accessToken =
+          Provider.of<AuthModel>(context, listen: false).token ?? '';
+      final languageProvider =
+          Provider.of<LanguageProvider>(context, listen: false);
+
+      final translated = await languageProvider.translateText(
+        accessToken: accessToken,
+        targetLang: language.code,
+        text: baseText,
+      );
+
+      if (!mounted) return;
+
+      if (translated != null && translated.isNotEmpty) {
+        _languageNameControllers[language.id]?.text = translated;
+        showScaffold(
+          context: context,
+          message: 'Translated to ${language.name}',
+        );
+      } else {
+        showScaffoldError(
+          context: context,
+          message: 'Translation failed. Please try again.',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      showScaffoldError(
+        context: context,
+        message: 'Translation failed. Please try again.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _languageTranslating[language.id] = false;
+        });
+      }
+    }
+  }
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String? _imageError;
   String? _iconError;
@@ -159,6 +244,18 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
         String? accessToken =
             Provider.of<AuthModel>(context, listen: false).token;
         debugPrint("accessToken From AuthModel $accessToken");
+
+        final languageProvider =
+            Provider.of<LanguageProvider>(context, listen: false);
+        final Map<String, String> categoryLangNames = {};
+        for (final language in languageProvider.languages) {
+          final controller = _languageNameControllers[language.id];
+          final text = controller?.text.trim() ?? '';
+          if (text.isNotEmpty) {
+            categoryLangNames[language.code] = text;
+          }
+        }
+
         categoryProvider
             .addCategory(
                 categoryName: categoryNameController.text,
@@ -172,6 +269,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                 accessToken: accessToken ?? "",
                 isSellable: _isSellable,
                 isPurchasable: _isPurchasable,
+                categoryLangNames: categoryLangNames,
             )
             .then((value) async {
           if (value["status"] == "success") {
@@ -260,6 +358,13 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
       categoryNameEnglishController.clear();
       categoryNameHindiController.clear();
       categorySlugController.clear();
+      for (final controller in _languageNameControllers.values) {
+        if (controller != categoryNameArabicController &&
+            controller != categoryNameEnglishController &&
+            controller != categoryNameHindiController) {
+          controller.clear();
+        }
+      }
     }
 
     final bool isMobile = _isMobile(context);
@@ -421,21 +526,7 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                 final activeLanguages =
                                     languageProvider.languages;
 
-                                final bool showEnglish =
-                                    activeLanguages.isEmpty ||
-                                        activeLanguages.any((lang) =>
-                                            lang.code.toLowerCase() == 'en' &&
-                                            lang.active);
-                                final bool showHindi =
-                                    activeLanguages.isNotEmpty &&
-                                        activeLanguages.any((lang) =>
-                                            lang.code.toLowerCase() == 'hi' &&
-                                            lang.active);
-                                final bool showArabic =
-                                    activeLanguages.isNotEmpty &&
-                                        activeLanguages.any((lang) =>
-                                            lang.code.toLowerCase() == 'ar' &&
-                                            lang.active);
+                                _syncLanguageControllers(activeLanguages);
 
                                 final List<Widget> leftWidgets = [
                                   BuildErrorText(
@@ -492,32 +583,69 @@ class _AddCategoryPageScreenState extends State<AddCategoryPageScreen> {
                                 ];
 
                                 final List<Widget> rightWidgets = [];
-                                
-                                if (showHindi) {
+
+                                for (final language in activeLanguages) {
+                                  if (language.code.toLowerCase() == 'en') continue; // skip English
+                                  if (!language.active) continue; // skip inactive
+
+                                  final controller =
+                                      _languageNameControllers[language.id]!;
+
                                   rightWidgets.add(
-                                    buildColumnWidgetForTextFields(
-                                      onchanged: (value) {},
-                                      isLeft: false,
-                                      readOnly: false,
-                                      controller: categoryNameHindiController,
-                                      size: size,
-                                      width: fieldWidth,
-                                      title: "Category Name - Hindi(IND)",
-                                      hintText: 'Enter...',
-                                    ),
-                                  );
-                                }
-                                if (showArabic) {
-                                  rightWidgets.add(
-                                    buildColumnWidgetForTextFields(
-                                      onchanged: (value) {},
-                                      isLeft: false,
-                                      controller: categoryNameArabicController,
-                                      size: size,
-                                      width: fieldWidth,
-                                      title: "Category Name - Arabic(AR)",
-                                      hintText: 'Enter...',
-                                      readOnly: false,
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Expanded(
+                                          child: buildColumnWidgetForTextFields(
+                                            onchanged: (value) {},
+                                            isLeft: false,
+                                            controller: controller,
+                                            size: size,
+                                            width: fieldWidth,
+                                            title: "Category Name - ${language.name}(${language.code.toUpperCase()})",
+                                            hintText: 'Enter...',
+                                            readOnly: false,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Padding(
+                                          padding: const EdgeInsets.only(bottom: 4),
+                                          child: SizedBox(
+                                            height: 44,
+                                            width: 44,
+                                            child: Tooltip(
+                                              message: 'Translate to ${language.name}',
+                                              child: ElevatedButton(
+                                                onPressed: _languageTranslating[language.id] == true
+                                                    ? null
+                                                    : () => _translateLanguage(language),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: ColorManager.kPrimaryColor,
+                                                  padding: EdgeInsets.zero,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(7),
+                                                  ),
+                                                ),
+                                                child: _languageTranslating[language.id] == true
+                                                    ? const SizedBox(
+                                                        width: 16,
+                                                        height: 16,
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                                              Colors.white),
+                                                        ),
+                                                      )
+                                                    : const Icon(
+                                                        Icons.translate,
+                                                        size: 18,
+                                                        color: Colors.white,
+                                                      ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 }

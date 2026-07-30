@@ -196,6 +196,38 @@ class DailyCloseThermalPrinter {
       rows.add(_ReportDividerRow(char: '─'));
       rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
 
+      // ========== CASH SUMMARY ==========
+      rows.add(_ReportTextRow(
+        'CASH SUMMARY',
+        isBold: true,
+        scale: getTitleScale(is58mm),
+        center: true,
+      ));
+      rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
+
+      rows.add(_ReportKeyValueRow(
+        'Opening Cash:',
+        data.cashSummary?.openingCashInHand?.toString() ?? '0.00',
+        scale: getNormalScale(is58mm),
+      ));
+
+      rows.add(_ReportKeyValueRow(
+        'Total Expenses:',
+        data.totalExpenses?.toString() ?? '0.00',
+        scale: getNormalScale(is58mm),
+      ));
+
+      rows.add(_ReportKeyValueRow(
+        'Expected Closing:',
+        data.cashSummary?.expectedClosingCash?.toString() ?? '0.00',
+        scale: getNormalScale(is58mm),
+        isBold: true,
+      ));
+
+      rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
+      rows.add(_ReportDividerRow(char: '─'));
+      rows.add(_ReportSpacingRow(getSectionSpacing(is58mm) * 0.5));
+
       // ========== TOTALS ==========
       rows.add(_ReportKeyValueRow(
         'Payment Received:',
