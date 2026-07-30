@@ -563,10 +563,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   }
 
   void _syncSaleUnitsFromProduct(GetProduct product) {
-    for (final row in _saleUnitRows) {
-      row.dispose();
-    }
-    _saleUnitRows.clear();
+    _clearSaleUnitRows();
     final saleUnits = (product.saleUnits ?? const <SaleUnit>[])
         .where((saleUnit) => saleUnit.unitId?.toString() != _selectedUnitId)
         .toList(growable: false);
@@ -579,6 +576,32 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       ));
     }
     _showSaleUnitOptions = saleUnits.isNotEmpty;
+    _saleUnitsTouched = false;
+  }
+
+  void _clearSaleUnitRows() {
+    for (final row in _saleUnitRows) {
+      row.dispose();
+    }
+    _saleUnitRows.clear();
+  }
+
+  void _toggleSaleUnitOptions(bool enabled) {
+    if (enabled && (_selectedUnitId == null || _selectedUnitId!.isEmpty)) {
+      showScaffoldError(
+        context: context,
+        message: 'Select the product unit before enabling multi sale units.',
+      );
+      return;
+    }
+
+    setState(() {
+      _showSaleUnitOptions = enabled;
+      _saleUnitsTouched = true;
+      if (!enabled) {
+        _clearSaleUnitRows();
+      }
+    });
   }
 
   bool _validateSaleUnits() {
@@ -1043,6 +1066,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     }
     _languageNameControllers.clear();
     _languageTranslating.clear();
+    _clearSaleUnitRows();
     _variantController.dispose();
     _stockScrollController.dispose();
     super.dispose();
@@ -2095,6 +2119,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     final availableUnits = unitOptions
         .where((option) => option.id != _selectedUnitId)
         .toList(growable: false);
+    final canConfigureSaleUnits =
+        _selectedUnitId != null && _selectedUnitId!.isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -2114,9 +2140,22 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Multi Sale Unit',
-              style: buildCustomStyle(FontWeightManager.semiBold, FontSize.s12,
-                  0.27, ColorManager.textColor)),
+          Row(
+            children: [
+              Expanded(
+                child: Text('Multi Sale Unit',
+                    style: buildCustomStyle(FontWeightManager.semiBold,
+                        FontSize.s12, 0.27, ColorManager.textColor)),
+              ),
+              Switch(
+                value: _showSaleUnitOptions,
+                activeThumbColor: ColorManager.kPrimaryColor,
+                onChanged: canConfigureSaleUnits
+                    ? _toggleSaleUnitOptions
+                    : null,
+              ),
+            ],
+          ),
           const SizedBox(height: 4),
           Text('Base unit is required before adding additional sale units.',
               style: buildCustomStyle(FontWeightManager.regular, FontSize.s11,
@@ -2160,7 +2199,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                 border: Border.all(color: Colors.orange.withOpacity(0.35)),
               ),
               child: const Text(
-                  'Enable this section to add additional sale units.'),
+                  'Select a base unit, then enable this section to add additional sale units.'),
             ),
         ],
       ),
