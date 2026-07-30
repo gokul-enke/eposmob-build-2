@@ -260,7 +260,13 @@ class CustomerVoucherProvider extends ChangeNotifier {
         debugPrint("Loaded ${_allVouchers?.length ?? 0} vouchers");
 
         // Apply initial filters
-        applyFiltersLocally(page: 1);
+        applyFiltersLocally(
+          filterCustomerName: _filterCustomerName,
+          filterVoucherNumber: _filterVoucherNumber,
+          filterType: _filterType,
+          filterStatus: _filterStatus,
+          page: 1,
+        );
       } else {
         debugPrint("Error: ${response.statusCode} - ${response.body}");
         _allVouchers = [];

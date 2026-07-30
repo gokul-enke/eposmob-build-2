@@ -1958,6 +1958,16 @@ class InvoiceProvider extends ChangeNotifier {
           applyReceiptFiltersLocally(page: 1);
         } else {
           receiptListDetails = receiptResponse.data.data;
+          applyReceiptFiltersLocally(
+            filterName: _receiptFilterName,
+            filterReceiptNumber: _receiptFilterReceiptNumber,
+            filterPaymentReference: _receiptFilterPaymentReference,
+            filterStatus: _receiptFilterStatus,
+            filterPaymentMethod: _receiptFilterPaymentMethod,
+            filterPhone: _receiptfilterPhone,
+            filterEmail: _receiptfilterEmail,
+            page: _receiptCurrentPage,
+          );
           _receiptData = receiptResponse.data;
 
           // Update pagination info

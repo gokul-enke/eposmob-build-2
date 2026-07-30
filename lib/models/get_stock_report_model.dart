@@ -33,7 +33,10 @@ class GetStockReportResponse {
             .toList();
       }
       if (dataMap['pagination'] is Map) {
-        paginationInfo = Pagination.fromJson(dataMap['pagination']);
+        paginationInfo = Pagination.fromJson(
+            dataMap['pagination'] as Map<String, dynamic>);
+      } else if (dataMap['current_page'] != null) {
+        paginationInfo = Pagination.fromJson(dataMap);
       }
       
       // Fallback: check if summary is inside data map
