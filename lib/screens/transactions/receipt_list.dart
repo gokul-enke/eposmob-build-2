@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import '../../components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_dropdown_with_search.dart';
 import 'package:pos_machine/components/build_pagination_control.dart';
 import 'package:pos_machine/models/list_receipt.dart';
@@ -38,6 +40,8 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController dateFromController = TextEditingController();
+  final TextEditingController dateToController = TextEditingController();
   String? selectedStatus;
   String? paymentMethod;
 
@@ -66,6 +70,8 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     paymentReferenceController.dispose();
     phoneController.dispose();
     emailController.dispose();
+    dateFromController.dispose();
+    dateToController.dispose();
     receiptNoFocusNode.dispose();
     referenceNoFocusNode.dispose();
     nameFocusNode.dispose();
@@ -126,6 +132,54 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     }
   }
 
+  Future<void> _selectDate(BuildContext context,
+      {required bool isFromDate}) async {
+    final DateTime? pickedDate = await showAutoDismissDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: ColorManager.kPrimaryColor,
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
+      );
+      final TimeOfDay resolvedTime = pickedTime ??
+          (isFromDate
+              ? const TimeOfDay(hour: 0, minute: 0)
+              : const TimeOfDay(hour: 23, minute: 59));
+      final DateTime fullDateTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        resolvedTime.hour,
+        resolvedTime.minute,
+      );
+      final formattedDateTime =
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(fullDateTime);
+      setState(() {
+        if (isFromDate) {
+          dateFromController.text = formattedDateTime;
+        } else {
+          dateToController.text = formattedDateTime;
+        }
+      });
+      searchReceipts();
+    }
+  }
+
   void searchReceipts() {
     final String searchText = searchTextController.text.trim();
     debugPrint("Searching for receipts with name: '$searchText'");
@@ -140,19 +194,29 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
         phone: phoneController.text,
         email: emailController.text,
         paymentMethod: paymentMethod,
+        dateFrom: dateFromController.text.isEmpty
+            ? null
+            : dateFromController.text,
+        dateTo: dateToController.text.isEmpty
+            ? null
+            : dateToController.text,
         page: 1);
   }
 
   void resetSearch() {
+    debugPrint("Resetting all filters");
     setState(() {
       searchTextController.clear();
       receiptNumberController.clear();
       paymentReferenceController.clear();
       phoneController.clear();
       emailController.clear();
+      dateFromController.clear();
+      dateToController.clear();
       selectedStatus = null;
       paymentMethod = null;
     });
+
     Provider.of<InvoiceProvider>(context, listen: false).resetReceiptFilters();
   }
 
@@ -372,6 +436,70 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     );
   }
 
+  Widget _buildDateRangeSearch() {
+    return Row(
+      children: [
+        Expanded(
+          child: BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: dateFromController,
+              onTap: () => _selectDate(context, isFromDate: true),
+              readOnly: true,
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                prefixIcon: const Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                contentPadding: const EdgeInsets.only(left: 15, top: 12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: dateToController,
+              onTap: () => _selectDate(context, isFromDate: false),
+              readOnly: true,
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                prefixIcon: const Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                contentPadding: const EdgeInsets.only(left: 15, top: 12),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSearchBar(Size size) {
     return Column(
       children: [
@@ -406,8 +534,8 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
             ],
           ),
         ),
-
-        // Second row with the 5th field and reset button
+        const SizedBox(height: 5),
+        // Second row with 3 fields
         SizedBox(
           height: 55,
           child: Row(
@@ -426,29 +554,35 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               ),
 
               //seventh field
-
               Expanded(
                 flex: 1,
                 child: _buildPaymentMethodSearch(),
               ),
-
-              // Eighth field - Reset Button
-
+            ],
+          ),
+        ),
+        const SizedBox(height: 5),
+        // Third row with date range search and reset button
+        SizedBox(
+          height: 55,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: _buildDateRangeSearch(),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 flex: 1,
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 10.0,
-                  ),
-                  child: CustomRoundButton(
-                    title: "Reset",
-                    boxColor: Colors.white,
-                    textColor: ColorManager.kPrimaryColor,
-                    fct: resetSearch,
-                    height: 45,
-                    width: double.infinity,
-                    fontSize: FontSize.s12,
-                  ),
+                child: CustomRoundButton(
+                  title: "Reset",
+                  boxColor: Colors.white,
+                  textColor: ColorManager.kPrimaryColor,
+                  fct: resetSearch,
+                  height: 45,
+                  width: double.infinity,
+                  fontSize: FontSize.s12,
                 ),
               ),
             ],

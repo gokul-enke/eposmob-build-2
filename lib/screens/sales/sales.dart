@@ -72,8 +72,8 @@ class _SalesScreenState extends State<SalesScreen> {
   final TextEditingController statusController = TextEditingController();
   String? selectedStatus;
   GetStoreModelData? storeSelected;
-  DateTime? selectedDate;
-  Key calendarPickerKey = UniqueKey();
+  final TextEditingController _fromDateController = TextEditingController();
+  final TextEditingController _toDateController = TextEditingController();
   DateTime? selectedBusinessDate;
   Key businessCalendarPickerKey = UniqueKey();
 
@@ -155,6 +155,8 @@ class _SalesScreenState extends State<SalesScreen> {
     storeController.dispose();
     storeSearchController.dispose();
     statusController.dispose();
+    _fromDateController.dispose();
+    _toDateController.dispose();
     super.dispose();
   }
 
@@ -1103,6 +1105,489 @@ Powered by CloudPOS''',
     }
   }
 
+  Future<void> _selectDateTime(BuildContext context,
+      {required bool isFromDate}) async {
+    final DateTime? pickedDate = await showAutoDismissDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: ColorManager.kPrimaryColor,
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
+      );
+      // Time is optional — use picked time or default
+      final TimeOfDay resolvedTime = pickedTime ??
+          (isFromDate
+              ? const TimeOfDay(hour: 0, minute: 0)
+              : const TimeOfDay(hour: 23, minute: 59));
+
+      final DateTime fullDateTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        resolvedTime.hour,
+        resolvedTime.minute,
+      );
+      final formattedDateTime =
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(fullDateTime);
+      setState(() {
+        if (isFromDate) {
+          _fromDateController.text = formattedDateTime;
+        } else {
+          _toDateController.text = formattedDateTime;
+        }
+      });
+      searchOrders(1);
+    }
+  }
+
+  Widget _buildDateField(
+      String label, TextEditingController controller, bool isFromDate) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            label,
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s14,
+              0.27,
+              Colors.black.withOpacity(0.6),
+            ),
+          ),
+        ),
+        BuildBoxShadowContainer(
+          height: 45,
+          width: double.infinity,
+          circleRadius: 7,
+          child: TextFormField(
+            controller: controller,
+            onTap: () => _selectDateTime(context, isFromDate: isFromDate),
+            readOnly: true,
+            cursorColor: ColorManager.kPrimaryColor,
+            style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                0.18, ColorManager.textColor),
+            decoration: InputDecoration(
+              hintText: "YYYY-MM-DD HH:MM:SS",
+              hintStyle: buildCustomStyle(FontWeightManager.medium,
+                  FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+              prefixIcon: Container(
+                padding: const EdgeInsets.all(8),
+                child: const Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: ColorManager.kPrimaryColor,
+                ),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(7),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileFilters(Size size, List<GetStoreModelData> storeList) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool narrow = constraints.maxWidth < 400;
+
+        Widget buildFilterField({
+          required String label,
+          required Widget child,
+        }) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 6),
+                child: Text(
+                  label,
+                  style: buildCustomStyle(
+                    FontWeightManager.medium,
+                    FontSize.s12,
+                    0.27,
+                    Colors.black.withOpacity(0.7),
+                  ),
+                ),
+              ),
+              child,
+            ],
+          );
+        }
+
+        Widget buildTextFilter({
+          required String label,
+          required String hint,
+          required TextEditingController controller,
+        }) {
+          return buildFilterField(
+            label: label,
+            child: buildColumnWidgetForTextFields(
+              height: 45,
+              onchanged: (value) {
+                if (value == null || value.isEmpty || value.length > 2) {
+                  searchOrders(1);
+                }
+              },
+              controller: controller,
+              size: size,
+              hintText: hint,
+            ),
+          );
+        }
+
+        Widget buildStatusDropdown() {
+          return buildFilterField(
+            label: "Status",
+            child: SizedBox(
+              height: 45,
+              child: BuildBoxShadowContainer(
+                circleRadius: 10,
+                alignment: Alignment.centerLeft,
+                margin: EdgeInsets.zero,
+                padding: const EdgeInsets.only(left: 15),
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                child: DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  value: selectedStatus,
+                  isExpanded: true,
+                  dropdownColor: Colors.white,
+                  hint: Text(
+                    'Select Status',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: buildCustomStyle(
+                      FontWeightManager.medium,
+                      FontSize.s10,
+                      0.27,
+                      ColorManager.textColor.withOpacity(.5),
+                    ),
+                  ),
+                  items: [
+                    DropdownMenuItem<String>(
+                      value: null,
+                      child: Text(
+                        'All',
+                        style: buildCustomStyle(
+                          FontWeightManager.medium,
+                          FontSize.s10,
+                          0.27,
+                          ColorManager.textColor.withOpacity(.5),
+                        ),
+                      ),
+                    ),
+                    ...statusOptions.map((String status) {
+                      return DropdownMenuItem<String>(
+                        value: status,
+                        child: Text(
+                          status.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: buildCustomStyle(
+                            FontWeightManager.medium,
+                            FontSize.s10,
+                            0.27,
+                            ColorManager.textColor.withOpacity(.5),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                  onChanged: (String? status) {
+                    setState(() {
+                      selectedStatus = status;
+                      if (status != null) {
+                        statusController.text = status;
+                      } else {
+                        statusController.clear();
+                      }
+                    });
+                    searchOrders(1);
+                  },
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (narrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              buildTextFilter(
+                label: "Order #",
+                hint: 'Order Number',
+                controller: orderNumberController,
+              ),
+              const SizedBox(height: 12),
+              buildTextFilter(
+                label: "Customer",
+                hint: 'Customer Name',
+                controller: customerNameController,
+              ),
+              const SizedBox(height: 12),
+              buildTextFilter(
+                label: "Phone",
+                hint: 'Phone',
+                controller: phoneController,
+              ),
+              const SizedBox(height: 12),
+              buildFilterField(
+                label: "From Date",
+                child: BuildBoxShadowContainer(
+                  circleRadius: 10,
+                  height: 45,
+                  border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                  child: TextFormField(
+                    controller: _fromDateController,
+                    onTap: () => _selectDateTime(context, isFromDate: true),
+                    readOnly: true,
+                    style: buildCustomStyle(FontWeightManager.medium, FontSize.s10, 0.18, ColorManager.textColor),
+                    decoration: InputDecoration(
+                      hintText: "YYYY-MM-DD HH:MM:SS",
+                      hintStyle: buildCustomStyle(FontWeightManager.medium, FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                      prefixIcon: const Icon(Icons.calendar_today, size: 16, color: ColorManager.kPrimaryColor),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              buildFilterField(
+                label: "To Date",
+                child: BuildBoxShadowContainer(
+                  circleRadius: 10,
+                  height: 45,
+                  border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                  child: TextFormField(
+                    controller: _toDateController,
+                    onTap: () => _selectDateTime(context, isFromDate: false),
+                    readOnly: true,
+                    style: buildCustomStyle(FontWeightManager.medium, FontSize.s10, 0.18, ColorManager.textColor),
+                    decoration: InputDecoration(
+                      hintText: "YYYY-MM-DD HH:MM:SS",
+                      hintStyle: buildCustomStyle(FontWeightManager.medium, FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                      prefixIcon: const Icon(Icons.calendar_today, size: 16, color: ColorManager.kPrimaryColor),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              buildFilterField(
+                label: "Business Date",
+                child: BuildBoxShadowContainer(
+                  circleRadius: 10,
+                  height: 45,
+                  border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                  child: Center(
+                    child: CalendarPickerTableCell(
+                      key: businessCalendarPickerKey,
+                      onDateSelected: (date) {
+                        setState(() {
+                          selectedBusinessDate = date;
+                        });
+                        searchOrders(1);
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              buildTextFilter(
+                label: "Price",
+                hint: 'Price',
+                controller: amountController,
+              ),
+              const SizedBox(height: 12),
+              buildStatusDropdown(),
+              const SizedBox(height: 16),
+              CustomRoundButton(
+                title: "Reset Filters",
+                boxColor: Colors.white,
+                textColor: ColorManager.kPrimaryColor,
+                fct: resetSearch,
+                height: 45,
+                width: double.infinity,
+                fontSize: FontSize.s12,
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: buildTextFilter(
+                    label: "Order #",
+                    hint: 'Order Number',
+                    controller: orderNumberController,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: buildTextFilter(
+                    label: "Customer",
+                    hint: 'Customer Name',
+                    controller: customerNameController,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: buildTextFilter(
+                    label: "Phone",
+                    hint: 'Phone',
+                    controller: phoneController,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: buildFilterField(
+                          label: "From Date",
+                          child: BuildBoxShadowContainer(
+                            circleRadius: 10,
+                            height: 45,
+                            border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                            child: TextFormField(
+                              controller: _fromDateController,
+                              onTap: () => _selectDateTime(context, isFromDate: true),
+                              readOnly: true,
+                              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10, 0.18, ColorManager.textColor),
+                              decoration: InputDecoration(
+                                hintText: "YYYY-MM-DD HH:MM:SS",
+                                hintStyle: buildCustomStyle(FontWeightManager.medium, FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                                prefixIcon: const Icon(Icons.calendar_today, size: 16, color: ColorManager.kPrimaryColor),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: buildFilterField(
+                          label: "To Date",
+                          child: BuildBoxShadowContainer(
+                            circleRadius: 10,
+                            height: 45,
+                            border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                            child: TextFormField(
+                              controller: _toDateController,
+                              onTap: () => _selectDateTime(context, isFromDate: false),
+                              readOnly: true,
+                              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10, 0.18, ColorManager.textColor),
+                              decoration: InputDecoration(
+                                hintText: "YYYY-MM-DD HH:MM:SS",
+                                hintStyle: buildCustomStyle(FontWeightManager.medium, FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                                prefixIcon: const Icon(Icons.calendar_today, size: 16, color: ColorManager.kPrimaryColor),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: buildFilterField(
+                    label: "Business Date",
+                    child: BuildBoxShadowContainer(
+                      circleRadius: 10,
+                      height: 45,
+                      border: Border.all(color: Colors.grey.withOpacity(0.12)),
+                      child: Center(
+                        child: CalendarPickerTableCell(
+                          key: businessCalendarPickerKey,
+                          onDateSelected: (date) {
+                            setState(() {
+                              selectedBusinessDate = date;
+                            });
+                            searchOrders(1);
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(child: SizedBox.shrink()),
+              ],
+            ),
+            const SizedBox(height: 12),
+            buildTextFilter(
+              label: "Price",
+              hint: 'Price',
+              controller: amountController,
+            ),
+            const SizedBox(height: 12),
+            buildStatusDropdown(),
+            const SizedBox(height: 16),
+            CustomRoundButton(
+              title: "Reset Filters",
+              boxColor: Colors.white,
+              textColor: ColorManager.kPrimaryColor,
+              fct: resetSearch,
+              height: 45,
+              width: double.infinity,
+              fontSize: FontSize.s12,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void searchOrders(page) async {
     debugPrint('=== SEARCH ORDERS START ===');
     debugPrint('Requested Page: $page');
@@ -1132,8 +1617,6 @@ Powered by CloudPOS''',
           'filterEmail': emailController.text.trim(),
         if (phoneController.text.isNotEmpty)
           'filterPhone': phoneController.text.trim(),
-        if (selectedDate != null)
-          'date': DateFormat('yyyy-MM-dd').format(selectedDate!),
         if (selectedBusinessDate != null)
           'businessDate': DateFormat('yyyy-MM-dd').format(selectedBusinessDate!),
         if (activeStoreId != null) 'filterStore': activeStoreId,
@@ -1151,7 +1634,12 @@ Powered by CloudPOS''',
         filterPrice: filters['filterPrice'],
         filterEmail: filters['filterEmail'],
         filterPhone: filters['filterPhone'],
-        date: filters['date'],
+        from: _fromDateController.text.isEmpty
+            ? null
+            : _fromDateController.text,
+        until: _toDateController.text.isEmpty
+            ? null
+            : _toDateController.text,
         businessDate: filters['businessDate'],
         filterStore: filters['filterStore'],
         filterStatus: filters['filterStatus'],
@@ -1188,8 +1676,8 @@ Powered by CloudPOS''',
       statusController.clear();
       storeSelected = null;
       selectedStatus = null;
-      selectedDate = null;
-      calendarPickerKey = UniqueKey();
+      _fromDateController.clear();
+      _toDateController.clear();
       selectedBusinessDate = null;
       businessCalendarPickerKey = UniqueKey();
     });
@@ -1947,7 +2435,8 @@ Powered by CloudPOS''',
         phoneController.text.isNotEmpty ||
         storeController.text.isNotEmpty ||
         statusController.text.isNotEmpty ||
-        selectedDate != null;
+        _fromDateController.text.isNotEmpty ||
+        _toDateController.text.isNotEmpty;
 
     return Center(
       child: SingleChildScrollView(
@@ -2323,7 +2812,8 @@ Powered by CloudPOS''',
                                 phoneController.text.isNotEmpty ||
                                 storeController.text.isNotEmpty ||
                                 statusController.text.isNotEmpty ||
-                                selectedDate != null;
+                                _fromDateController.text.isNotEmpty ||
+                                _toDateController.text.isNotEmpty;
 
                         return SizedBox(
                           width: 44,
@@ -2385,72 +2875,7 @@ Powered by CloudPOS''',
                       ),
                       child: SingleChildScrollView(
                         child: _isMobile(context)
-                        ? MobileFilters(
-                            orderNumberController: orderNumberController,
-                            customerNameController: customerNameController,
-                            phoneController: phoneController,
-                            amountController: amountController,
-                            storeController: storeController,
-                            storeSearchController: storeSearchController,
-                            statusController: statusController,
-                            selectedStatus: selectedStatus,
-                            storeSelected: storeSelected,
-                            selectedDate: selectedDate,
-                            calendarPickerKey: calendarPickerKey,
-                            storeList: storeList ?? [],
-                            statusOptions: statusOptions,
-                            onSearch: (value) {
-                              if (value == null ||
-                                  value.isEmpty ||
-                                  value.length > 2) {
-                                searchOrders(1);
-                              }
-                            },
-                            onStoreChanged:
-                                (GetStoreModelData? storeModelData) {
-                              setState(() {
-                                if (storeModelData?.id == 0) {
-                                  storeSelected = null;
-                                  storeController.clear();
-                                } else {
-                                  storeSelected = storeModelData;
-                                  if (storeModelData != null) {
-                                    storeController.text =
-                                        storeModelData.id.toString();
-                                  } else {
-                                    storeController.clear();
-                                  }
-                                }
-                              });
-                              searchOrders(1);
-                            },
-                            onStatusChanged: (String? status) {
-                              setState(() {
-                                selectedStatus = status;
-                                if (status != null) {
-                                  statusController.text = status;
-                                } else {
-                                  statusController.clear();
-                                }
-                              });
-                              searchOrders(1);
-                            },
-                            onDateSelected: (DateTime date) {
-                              setState(() {
-                                selectedDate = date;
-                              });
-                              searchOrders(1);
-                            },
-                            onReset: resetSearch,
-                            selectedBusinessDate: selectedBusinessDate,
-                            businessCalendarPickerKey: businessCalendarPickerKey,
-                            onBusinessDateSelected: (DateTime date) {
-                              setState(() {
-                                selectedBusinessDate = date;
-                              });
-                              searchOrders(1);
-                            },
-                          )
+                        ? _buildMobileFilters(size, storeList ?? [])
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -2566,41 +2991,24 @@ Powered by CloudPOS''',
                                   ),
                                   const SizedBox(width: 10),
 
-                                  // Date
+                                  // From Date
                                   Expanded(
                                     flex: 1,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            "Date",
-                                            style: buildCustomStyle(
-                                              FontWeightManager.regular,
-                                              FontSize.s14,
-                                              0.27,
-                                              Colors.black.withOpacity(0.6),
-                                            ),
-                                          ),
-                                        ),
-                                        BuildBoxShadowContainer(
-                                          circleRadius: 7,
-                                          height: 45,
-                                          child: Center(
-                                            child: CalendarPickerTableCell(
-                                              key: calendarPickerKey,
-                                              onDateSelected: (DateTime date) {
-                                                setState(() {
-                                                  selectedDate = date;
-                                                });
-                                                searchOrders(1);
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                    child: _buildDateField(
+                                      "From Date",
+                                      _fromDateController,
+                                      true,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  // To Date
+                                  Expanded(
+                                    flex: 1,
+                                    child: _buildDateField(
+                                      "To Date",
+                                      _toDateController,
+                                      false,
                                     ),
                                   ),
                                 ],

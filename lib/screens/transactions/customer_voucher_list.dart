@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import '../../components/build_calendar_selection.dart';
 import 'package:pos_machine/components/build_dialog_box.dart' hide showScaffold, showScaffoldError, showLoadingOverlay, hideLoadingOverlay;
 import 'package:pos_machine/newcomponents/custom_dialog_box.dart';
 import 'package:pos_machine/components/build_pagination_control.dart'
@@ -43,6 +45,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   bool isInitialized = false;
   final TextEditingController searchTextController = TextEditingController();
   final TextEditingController voucherNumberController = TextEditingController();
+  final TextEditingController dateFromController = TextEditingController();
+  final TextEditingController dateToController = TextEditingController();
   String? selectedType;
   String? selectedStatus;
 
@@ -63,6 +67,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
   void dispose() {
     searchTextController.dispose();
     voucherNumberController.dispose();
+    dateFromController.dispose();
+    dateToController.dispose();
     nameFocusNode.dispose();
     voucherNoFocusNode.dispose();
     typeFocusNode.dispose();
@@ -96,6 +102,54 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
     }
   }
 
+  Future<void> _selectDate(BuildContext context,
+      {required bool isFromDate}) async {
+    final DateTime? pickedDate = await showAutoDismissDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+        builder: (BuildContext context, Widget? child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: ColorManager.kPrimaryColor,
+              ),
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
+      );
+      final TimeOfDay resolvedTime = pickedTime ??
+          (isFromDate
+              ? const TimeOfDay(hour: 0, minute: 0)
+              : const TimeOfDay(hour: 23, minute: 59));
+      final DateTime fullDateTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        resolvedTime.hour,
+        resolvedTime.minute,
+      );
+      final formattedDateTime =
+          DateFormat('yyyy-MM-dd HH:mm:ss').format(fullDateTime);
+      setState(() {
+        if (isFromDate) {
+          dateFromController.text = formattedDateTime;
+        } else {
+          dateToController.text = formattedDateTime;
+        }
+      });
+      searchVouchers();
+    }
+  }
+
   void searchVouchers() {
     debugPrint("Searching with filters");
     CustomerVoucherProvider provider =
@@ -105,6 +159,12 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
       voucherNumber: voucherNumberController.text,
       type: selectedType,
       status: selectedStatus,
+      dateFrom: dateFromController.text.isEmpty
+          ? null
+          : dateFromController.text,
+      dateTo: dateToController.text.isEmpty
+          ? null
+          : dateToController.text,
     );
   }
 
@@ -113,6 +173,8 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
     setState(() {
       searchTextController.clear();
       voucherNumberController.clear();
+      dateFromController.clear();
+      dateToController.clear();
       selectedType = null;
       selectedStatus = null;
     });
@@ -513,13 +575,17 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
             ],
           ),
         ),
-        // Second row with reset button
+        // Second row with date range search and reset button
         SizedBox(
-          height: 46,
+          height: 55,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              Expanded(
+                flex: 2,
+                child: _buildDateRangeSearch(),
+              ),
+              const SizedBox(width: 10),
               CustomRoundButton(
                 title: "Reset",
                 boxColor: Colors.white,
@@ -684,6 +750,70 @@ class _CustomerVoucherListScreenState extends State<CustomerVoucherListScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDateRangeSearch() {
+    return Row(
+      children: [
+        Expanded(
+          child: BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: dateFromController,
+              onTap: () => _selectDate(context, isFromDate: true),
+              readOnly: true,
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                prefixIcon: const Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                contentPadding: const EdgeInsets.only(left: 15, top: 12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: BuildBoxShadowContainer(
+            height: 45,
+            width: double.infinity,
+            circleRadius: 7,
+            child: TextFormField(
+              controller: dateToController,
+              onTap: () => _selectDate(context, isFromDate: false),
+              readOnly: true,
+              cursorColor: ColorManager.kPrimaryColor,
+              cursorHeight: 13,
+              style: buildCustomStyle(FontWeightManager.medium, FontSize.s10,
+                  0.18, ColorManager.textColor),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                hintText: "YYYY-MM-DD HH:MM:SS",
+                hintStyle: buildCustomStyle(FontWeightManager.medium,
+                    FontSize.s10, 0.18, ColorManager.textColor.withOpacity(.5)),
+                prefixIcon: const Icon(
+                  Icons.calendar_today,
+                  size: 16,
+                  color: ColorManager.kPrimaryColor,
+                ),
+                contentPadding: const EdgeInsets.only(left: 15, top: 12),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
