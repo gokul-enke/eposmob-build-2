@@ -86,6 +86,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
   final List<Map<String, String>> standardPdfThemes = [
     {'id': 'classic', 'name': 'Classic'},
     {'id': 'simplified_tax_invoice', 'name': 'Simplified Tax Invoice'},
+    {
+      'id': 'centered_simplified_tax_invoice',
+      'name': 'Centered Simplified Tax Invoice'
+    },
   ];
 
   /// Returns the appropriate theme list based on selected paper size
@@ -181,6 +185,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'Clean Tax Invoice layout with essential details and clear tax info';
         case 'simplified_tax_invoice':
           return 'ZATCA Simplified Tax Invoice with teal accent header/footer, bilingual columns and totals';
+        case 'centered_simplified_tax_invoice':
+          return 'Simplified Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
         case 'corporate_tax_invoice':
           return 'Formal corporate Tax Invoice with logo header, buyer block, bank details and bilingual amount in words';
         case 'letterhead_tax_invoice':
