@@ -2223,6 +2223,18 @@ class BillingPageState extends State<BillingPage>
                 ),
                 const SizedBox(height: 14),
                 CustomRoundButton(
+                  title: 'Add Product',
+                  fct: _openAddProductFromEmptyState,
+                  width: 170,
+                  height: 36,
+                  fontSize: 11,
+                  boxColor: ColorManager.kPrimaryColor,
+                  borderColor: ColorManager.kPrimaryColor,
+                  textColor: Colors.white,
+                  radius: 8,
+                ),
+                const SizedBox(height: 8),
+                CustomRoundButton(
                   title:
                       _isResyncingProducts ? 'Resyncing...' : 'Resync Products',
                   fct: _isResyncingProducts
@@ -2242,6 +2254,19 @@ class BillingPageState extends State<BillingPage>
         );
       },
     );
+  }
+
+  Future<void> _openAddProductFromEmptyState() async {
+    final result = await showDialog(
+      context: context,
+      builder: (context) =>
+          const AddProductWithBarcodeModal(isAddToCart: false),
+    );
+
+    if (result != null && mounted) {
+      Provider.of<LocalProductProvider>(context, listen: false)
+          .refreshProducts();
+    }
   }
 
   Future<void> _resyncProductsFromEmptyState() async {
