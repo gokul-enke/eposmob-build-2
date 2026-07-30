@@ -72,6 +72,10 @@ import 'resources/localization_service.dart';
 import 'resources/app_translations.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:pos_machine/features/realtime_sync/data/realtime_entity_api.dart';
+import 'package:pos_machine/features/realtime_sync/data/realtime_sync_repository.dart';
+import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_lifecycle.dart';
+import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -347,7 +351,6 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SalesExecutiveProvider()),
         ChangeNotifierProvider(create: (_) => CompanyAccountProvider()),
         ChangeNotifierProvider(create: (_) => DocumentConfigProvider()),
-        ChangeNotifierProvider(create: (_) => StockProvider()),
         ChangeNotifierProvider(
           create: (_) => TransactionProvider(),
         ),
@@ -370,51 +373,96 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppFontProvider()),
         ChangeNotifierProvider(create: (_) => QuotationsProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
+        ChangeNotifierProxyProvider6<
+            LocalProductProvider,
+            CustomerProvider,
+            CustomerSelectionProvider,
+            StockProvider,
+            SalesProvider,
+            SyncProvider,
+            RealtimeSyncProvider>(
+          create: (context) => RealtimeSyncProvider(
+            repository: RealtimeSyncRepository(
+              entityApi: RealtimeEntityApi(),
+              localProducts: context.read<LocalProductProvider>(),
+              customers: context.read<CustomerProvider>(),
+              customerSelection: context.read<CustomerSelectionProvider>(),
+              stocks: context.read<StockProvider>(),
+              sales: context.read<SalesProvider>(),
+            ),
+            manualSync: context.read<SyncProvider>(),
+          ),
+          update: (
+            _,
+            localProducts,
+            customers,
+            customerSelection,
+            stocks,
+            sales,
+            manualSync,
+            realtime,
+          ) =>
+              realtime ??
+              RealtimeSyncProvider(
+                repository: RealtimeSyncRepository(
+                  entityApi: RealtimeEntityApi(),
+                  localProducts: localProducts,
+                  customers: customers,
+                  customerSelection: customerSelection,
+                  stocks: stocks,
+                  sales: sales,
+                ),
+                manualSync: manualSync,
+              ),
+        ),
       ],
-      child: OrientationLock(
-        child: KeyboardDispatcher(
-          child: Consumer<KeyboardFocusHighlightProvider>(
-            builder: (context, focusHighlightProvider, child) {
-              return GetMaterialApp(
-                debugShowCheckedModeBanner: false,
-                title: 'CLOUDPOS',
-                theme: _buildAppTheme(focusHighlightProvider.enabled),
-                translations: AppTranslations(LocalizationService.translations),
-                locale: LocalizationService.locale,
-                fallbackLocale: LocalizationService.fallbackLocale,
-                builder: (context, child) {
-                  final screenSize = MediaQuery.of(context).size;
-                  final platform = Theme.of(context).platform;
+      child: RealtimeSyncLifecycle(
+        child: OrientationLock(
+          child: KeyboardDispatcher(
+            child: Consumer<KeyboardFocusHighlightProvider>(
+              builder: (context, focusHighlightProvider, child) {
+                return GetMaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  title: 'CLOUDPOS',
+                  theme: _buildAppTheme(focusHighlightProvider.enabled),
+                  translations:
+                      AppTranslations(LocalizationService.translations),
+                  locale: LocalizationService.locale,
+                  fallbackLocale: LocalizationService.fallbackLocale,
+                  builder: (context, child) {
+                    final screenSize = MediaQuery.of(context).size;
+                    final platform = Theme.of(context).platform;
 
-                  // Phone only: Column layout so keyboard pushes content up.
-                  // Tablets + Desktop: Stack overlay for floating draggable keyboard.
-                  final isPhone = (platform == TargetPlatform.android ||
-                          platform == TargetPlatform.iOS) &&
-                      screenSize.width < 600; // Phone threshold
+                    // Phone only: Column layout so keyboard pushes content up.
+                    // Tablets + Desktop: Stack overlay for floating draggable keyboard.
+                    final isPhone = (platform == TargetPlatform.android ||
+                            platform == TargetPlatform.iOS) &&
+                        screenSize.width < 600; // Phone threshold
 
-                  if (isPhone) {
-                    return Column(
+                    if (isPhone) {
+                      return Column(
+                        children: [
+                          Expanded(child: child ?? const SizedBox.shrink()),
+                          const GlobalVirtualKeyboard(),
+                        ],
+                      );
+                    }
+
+                    return Stack(
                       children: [
-                        Expanded(child: child ?? const SizedBox.shrink()),
+                        child ?? const SizedBox.shrink(),
                         const GlobalVirtualKeyboard(),
                       ],
                     );
-                  }
-
-                  return Stack(
-                    children: [
-                      child ?? const SizedBox.shrink(),
-                      const GlobalVirtualKeyboard(),
-                    ],
-                  );
-                },
-                home: const BaseUrlWrapper(),
-                routes: {
-                  '/login': (context) => const SignInScreen(),
-                  '/api-key': (context) => const ApiKeyScreen(),
-                },
-              );
-            },
+                  },
+                  home: const BaseUrlWrapper(),
+                  routes: {
+                    '/login': (context) => const SignInScreen(),
+                    '/api-key': (context) => const ApiKeyScreen(),
+                  },
+                );
+              },
+            ),
           ),
         ),
       ),

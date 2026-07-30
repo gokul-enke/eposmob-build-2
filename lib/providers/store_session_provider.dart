@@ -16,6 +16,9 @@ import 'package:pos_machine/providers/purchase_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/role_provider.dart';
+import 'package:pos_machine/features/realtime_sync/domain/realtime_sync_models.dart';
+import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
+import 'package:pos_machine/resources/app_url.dart';
 import 'package:provider/provider.dart';
 
 class StoreSessionProvider extends ChangeNotifier {
@@ -64,6 +67,10 @@ class StoreSessionProvider extends ChangeNotifier {
     final didStoreChange = previousActiveStoreId != null &&
         selectedStoreId != null &&
         previousActiveStoreId != selectedStoreId;
+
+    if (didStoreChange) {
+      await context.read<RealtimeSyncProvider>().stop();
+    }
 
     await sharedPrefProvider.saveActiveStoreId(store.storeId ?? 0);
     await sharedPrefProvider.saveActiveStoreDetails(store.toJson());
@@ -122,11 +129,14 @@ class StoreSessionProvider extends ChangeNotifier {
 
       await _updateStatus('Syncing delivery methods...');
       try {
-        debugPrint('🚚 [StoreBootstrap] Fetching delivery methods during store selection...');
+        debugPrint(
+            '🚚 [StoreBootstrap] Fetching delivery methods during store selection...');
         await deliveryMethodsProvider.fetchDeliveryMethods(forceRefresh: true);
-        debugPrint('🚚 [StoreBootstrap] ✅ Delivery methods loaded: ${deliveryMethodsProvider.deliveryMethods.length} methods in provider memory');
+        debugPrint(
+            '🚚 [StoreBootstrap] ✅ Delivery methods loaded: ${deliveryMethodsProvider.deliveryMethods.length} methods in provider memory');
       } catch (e) {
-        debugPrint('🚚 [StoreBootstrap] ⚠️ Failed to load delivery methods: $e');
+        debugPrint(
+            '🚚 [StoreBootstrap] ⚠️ Failed to load delivery methods: $e');
       }
 
       await _updateStatus('Loading general settings...');
@@ -199,17 +209,20 @@ class StoreSessionProvider extends ChangeNotifier {
             storeId: _activeStore?.storeId,
             storeName: _activeStore?.storeName,
             code: _activeStore?.code ?? fetchedStore.code,
-            location: _activeStore?.location ?? fetchedStore.localLocationId?.toString(),
+            location: _activeStore?.location ??
+                fetchedStore.localLocationId?.toString(),
             email: _activeStore?.email ?? fetchedStore.email,
             phone: _activeStore?.phone ?? fetchedStore.phone,
             stateId: _activeStore?.stateId ?? fetchedStore.stateId,
             districtId: _activeStore?.districtId ?? fetchedStore.districtId,
             pincodeId: _activeStore?.pincodeId ?? fetchedStore.pincodeId,
-            localLocationId: _activeStore?.localLocationId ?? fetchedStore.localLocationId,
+            localLocationId:
+                _activeStore?.localLocationId ?? fetchedStore.localLocationId,
             storeOpenTime: fetchedStore.storeOpenTime,
           );
           _activeStore = updatedStore;
-          await sharedPrefProvider.saveActiveStoreDetails(updatedStore.toJson());
+          await sharedPrefProvider
+              .saveActiveStoreDetails(updatedStore.toJson());
         }
       } catch (e) {
         debugPrint('Warning: Could not find/map store_open_time details: $e');
@@ -259,6 +272,31 @@ class StoreSessionProvider extends ChangeNotifier {
       );
       final productCount = localProductProvider.products.length;
       await _updateStatus('Products ready: $productCount loaded.');
+
+      final prefs = await SharedPreferenceProvider().getApiKey();
+      final companyId = await SharedPreferenceProvider().getCompanyId();
+      if (accessToken.isNotEmpty &&
+          prefs != null &&
+          prefs.isNotEmpty &&
+          companyId != null &&
+          selectedStoreId != null) {
+        await _updateStatus('Starting realtime synchronization...');
+        try {
+          await context.read<RealtimeSyncProvider>().start(
+                RealtimeSyncSession(
+                  backendBaseUrl: APPUrl.baseURL,
+                  companyId: companyId,
+                  storeId: selectedStoreId,
+                  tenantApiKey: prefs,
+                  accessToken: accessToken,
+                ),
+              );
+        } catch (error) {
+          // Realtime is an enhancement: a temporary Reverb outage must not
+          // prevent the user from entering an otherwise healthy POS session.
+          debugPrint('Realtime sync start deferred: $error');
+        }
+      }
 
       await _updateStatus('Finishing touches...');
     } finally {

@@ -1084,6 +1084,7 @@ Powered by CloudPOS''',
 
       SalesProvider orderProvider =
           Provider.of<SalesProvider>(context, listen: false);
+      orderProvider.isOnlineSalesNavigation = widget.isOnlineSales;
 
       debugPrint('Calling fetchOrders with storeId: $activeStoreId');
       await orderProvider.fetchOrders(

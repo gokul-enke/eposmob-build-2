@@ -32,10 +32,19 @@ class SalesProvider with ChangeNotifier {
   List<SalesReturnOrder> get salesReturnOrders => _salesReturnOrders;
   List<SalesReturnCart> get salesReturnItems => _salesReturnItems;
   SalesReturnOrderInfo? get currentReturnOrder => _currentReturnOrder;
-  SalesReturnRefundBreakdown? get serverRefundBreakdown => _serverRefundBreakdown;
+  SalesReturnRefundBreakdown? get serverRefundBreakdown =>
+      _serverRefundBreakdown;
 
   void clearServerRefundBreakdown() {
     _serverRefundBreakdown = null;
+    notifyListeners();
+  }
+
+  void applyRealtimeOrders(List<ListOrderModelData> orders) {
+    _orders = List<ListOrderModelData>.from(orders);
+    currentPage = 1;
+    totalPages = 1;
+    paginationFrom = _orders.isEmpty ? 0 : 1;
     notifyListeners();
   }
 
@@ -436,7 +445,8 @@ class SalesProvider with ChangeNotifier {
               totalPages = 1;
               paginationFrom = 1;
               notifyListeners();
-              debugPrint('=== DEFENSIVE HANDLING: Treated 500 "No Orders Found" as empty list ===');
+              debugPrint(
+                  '=== DEFENSIVE HANDLING: Treated 500 "No Orders Found" as empty list ===');
               return;
             }
           } catch (e) {
@@ -453,6 +463,20 @@ class SalesProvider with ChangeNotifier {
       _orders = [];
       rethrow;
     }
+  }
+
+  /// Refreshes the order collection for a realtime notification using the
+  /// same endpoint and store filter as [SalesScreen].
+  Future<void> refreshOrdersForRealtime({
+    required String accessToken,
+    required int storeId,
+  }) {
+    return fetchOrders(
+      accessToken: accessToken,
+      filterStore: storeId.toString(),
+      page: currentPage > 0 ? currentPage : 1,
+      filterOnlineSales: isOnlineSalesNavigation ? true : null,
+    );
   }
 
   //          *********************** LIST ORDER DETAILS API ***************************************************
@@ -1116,15 +1140,17 @@ class SalesProvider with ChangeNotifier {
         throw const HttpException("API key not found.");
       }
 
-      final response = await http.post(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Content-Type': 'application/json',
-          'X-Tenant': apiKey,
-        },
-        body: requestBodyJson,
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+              'Content-Type': 'application/json',
+              'X-Tenant': apiKey,
+            },
+            body: requestBodyJson,
+          )
+          .timeout(const Duration(seconds: 15));
 
       debugPrint('=== DEBUG: Response Status Code: ${response.statusCode} ===');
 
@@ -1184,15 +1210,17 @@ class SalesProvider with ChangeNotifier {
         'notes': notes,
       });
 
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-          'X-Tenant': apiKey,
-        },
-        body: body,
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $accessToken',
+              'X-Tenant': apiKey,
+            },
+            body: body,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
@@ -1219,10 +1247,8 @@ class SalesProvider with ChangeNotifier {
         throw const HttpException("API key not found.");
       }
 
-      final uri = Uri.parse(
-        '${APPUrl.dailySalesClosePendingStatus}'
-        '?store_id=$storeId&user_id=$userId'
-      );
+      final uri = Uri.parse('${APPUrl.dailySalesClosePendingStatus}'
+          '?store_id=$storeId&user_id=$userId');
       final response = await http.get(
         uri,
         headers: {

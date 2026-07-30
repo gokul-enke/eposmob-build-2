@@ -103,8 +103,10 @@ class CustomerProvider extends ChangeNotifier {
     if (filterPhone != null && filterPhone.isNotEmpty) {
       filteredList = filteredList
           .where((customer) =>
-              (customer.phone != null && customer.phone!.contains(filterPhone)) ||
-              (customer.altPhone != null && customer.altPhone!.contains(filterPhone)))
+              (customer.phone != null &&
+                  customer.phone!.contains(filterPhone)) ||
+              (customer.altPhone != null &&
+                  customer.altPhone!.contains(filterPhone)))
           .toList();
     }
 
@@ -288,6 +290,41 @@ class CustomerProvider extends ChangeNotifier {
     _filterBalance = null;
     notifyListeners();
     debugPrint('Cleared cached customers');
+  }
+
+  Future<void> applyRealtimeCustomers(
+    List<CustomerListModelData> customers, {
+    required int? storeId,
+  }) async {
+    _allCustomers = List<CustomerListModelData>.from(customers);
+
+    final selectedId = selectedCustomer?.id;
+    if (selectedId != null) {
+      final matches =
+          _allCustomers!.where((customer) => customer.id == selectedId);
+      if (matches.isEmpty) {
+        selectedCustomer = null;
+        selectedCustomerId = null;
+        selectedCustomerName = null;
+      } else {
+        selectedCustomer = matches.first;
+        selectedCustomerId = matches.first.id?.toString();
+        selectedCustomerName = matches.first.name;
+      }
+    }
+
+    applyFiltersLocally(
+      filterName: _filterName,
+      filterEmail: _filterEmail,
+      filterPhone: _filterPhone,
+      filterBalance: _filterBalance,
+      page: _currentPage,
+    );
+    await _saveCustomersToCache(
+      storeId: storeId,
+      customers: _allCustomers,
+    );
+    notifyListeners();
   }
 
   Future<dynamic> listCustomer({
@@ -720,12 +757,13 @@ class CustomerProvider extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final Map<String, String> queryParameters = {'filter_phone': phoneNumber};
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.customerListUrl).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.customerListUrl)
+        .replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -766,12 +804,13 @@ class CustomerProvider extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final Map<String, String> queryParameters = {'filter_name': customerName};
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.customerListUrl).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.customerListUrl)
+        .replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");
@@ -813,12 +852,13 @@ class CustomerProvider extends ChangeNotifier {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? apiKey = prefs.getString('api_key');
     final int? activeStoreId = prefs.getInt('active_store_id');
-    
+
     final Map<String, String> queryParameters = {};
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse('${APPUrl.userDetailsUrl}/$userId').replace(queryParameters: queryParameters);
+    final url = Uri.parse('${APPUrl.userDetailsUrl}/$userId')
+        .replace(queryParameters: queryParameters);
 
     if (apiKey == null || apiKey.isEmpty) {
       throw const HttpException("API key not found. Please restart the app.");

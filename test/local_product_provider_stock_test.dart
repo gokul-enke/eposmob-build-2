@@ -102,6 +102,74 @@ void main() {
     );
   }
 
+  test('realtime catalog reapplies active cart reservations', () async {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+    final initialStock =
+        buildStock(id: 1, quantity: 10, price: '10', mrp: '12');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: <Stock>[initialStock],
+    );
+    provider.initializeProducts(<GetProduct>[product]);
+    provider.addToCart(
+      product: product,
+      quantity: 3,
+      selectedStock: initialStock,
+    );
+
+    final serverStock = buildStock(id: 1, quantity: 10, price: '10', mrp: '12');
+    final serverProduct = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: <Stock>[serverStock],
+    );
+    await provider.applyRealtimeCatalog(
+      <GetProduct>[serverProduct],
+      deletedProductIds: const <int>{},
+    );
+
+    expect(
+      provider.getProductById(1)!.stock!.single.quantity,
+      7,
+    );
+
+    provider.clearCart();
+    expect(
+      provider.getProductById(1)!.stock!.single.quantity,
+      10,
+    );
+  });
+
+  test('realtime catalog keeps a deleted product reserved in cart', () async {
+    final provider = LocalProductProvider();
+    provider.setStockEnabled(true);
+    final stock = buildStock(id: 1, quantity: 5, price: '10', mrp: '12');
+    final product = buildProduct(
+      productId: 1,
+      basePrice: '10',
+      mrp: '12',
+      stocks: <Stock>[stock],
+    );
+    provider.initializeProducts(<GetProduct>[product]);
+    provider.addToCart(
+      product: product,
+      quantity: 1,
+      selectedStock: stock,
+    );
+
+    await provider.applyRealtimeCatalog(
+      const <GetProduct>[],
+      deletedProductIds: const <int>{1},
+    );
+
+    expect(provider.getProductById(1), isNotNull);
+    expect(provider.cartItems.single.product.productId, 1);
+  });
+
   test('grouped stock reservations merge same pricing group and expand payload',
       () {
     final provider = LocalProductProvider();

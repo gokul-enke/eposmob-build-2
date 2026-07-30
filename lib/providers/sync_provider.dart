@@ -15,6 +15,7 @@ import 'app_settings_provider.dart';
 import '../providers/delivery_methods_provider.dart';
 import '../providers/customer_provider.dart';
 import 'offline_sync_endpoints.dart';
+import 'package:pos_machine/features/realtime_sync/domain/sync_operation_gate.dart';
 
 enum OfflineSyncTarget {
   products,
@@ -42,6 +43,7 @@ enum OfflineSyncSection {
 /// across the application. Follows the Provider Pattern preference for
 /// centralized API calls and state management.
 class SyncProvider extends ChangeNotifier {
+  final Object _syncGateOwner = Object();
   bool _isSyncing = false;
   bool _cancelRequested = false;
   String _syncMessage = '';
@@ -85,6 +87,9 @@ class SyncProvider extends ChangeNotifier {
       _syncError(message);
       throw Exception(message);
     }
+    if (!SyncOperationGate.instance.tryAcquire(_syncGateOwner)) {
+      throw Exception('Realtime synchronization is currently in progress.');
+    }
   }
 
   /// Sync a single offline data type.
@@ -96,13 +101,13 @@ class SyncProvider extends ChangeNotifier {
       'Row sync → ${_labelForTarget(target)}',
       target,
     );
-    _ensureCanSync(context);
-    final accessToken = await _requireAccessToken(context);
-
-    _startSync();
-    _activeSyncKey = target.name;
-
     try {
+      final accessToken = await _requireAccessToken(context);
+      _ensureCanSync(context);
+
+      _startSync();
+      _activeSyncKey = target.name;
+
       switch (target) {
         case OfflineSyncTarget.products:
           _updateProgress(0.5, 'Syncing products...');
@@ -182,7 +187,6 @@ class SyncProvider extends ChangeNotifier {
       'Section sync → ${section.name}',
       section,
     );
-    _ensureCanSync(context);
 
     final targets = switch (section) {
       OfflineSyncSection.catalog => [
@@ -206,11 +210,11 @@ class SyncProvider extends ChangeNotifier {
         ],
     };
 
-    _startSync();
-    _activeSyncKey = 'section:${section.name}';
-
     try {
       final accessToken = await _requireAccessToken(context);
+      _ensureCanSync(context);
+      _startSync();
+      _activeSyncKey = 'section:${section.name}';
       final total = targets.length;
 
       for (var i = 0; i < targets.length; i++) {
@@ -303,12 +307,11 @@ class SyncProvider extends ChangeNotifier {
 
     await OfflineSyncEndpoints.logSyncAll('Sync All (footer button)');
 
-    _ensureCanSync(context);
-    _startSync();
-    _activeSyncKey = 'all';
-    
     try {
       final accessToken = await _requireAccessToken(context);
+      _ensureCanSync(context);
+      _startSync();
+      _activeSyncKey = 'all';
 
       debugPrint("🔄 Starting comprehensive data sync...");
       debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
@@ -362,12 +365,11 @@ class SyncProvider extends ChangeNotifier {
       // Step 8: Complete (100%)
       _updateProgress(1.0, "Sync completed successfully!");
       _lastSyncTime = DateTime.now();
-      
+
       debugPrint("✅ Sync completed successfully at ${_lastSyncTime}");
-      
+
       await Future.delayed(const Duration(seconds: 1));
       _completSync();
-
     } catch (e) {
       debugPrint("❌ Sync failed with error: $e");
       _syncError(e.toString());
@@ -378,7 +380,8 @@ class SyncProvider extends ChangeNotifier {
   Future<void> _syncProducts(BuildContext context, String accessToken) async {
     try {
       debugPrint("📦 Syncing products...");
-      final localProductProvider = Provider.of<LocalProductProvider>(context, listen: false);
+      final localProductProvider =
+          Provider.of<LocalProductProvider>(context, listen: false);
       await localProductProvider.fetchProductsFromAPI();
       debugPrint("✅ Products synced successfully");
     } catch (e) {
@@ -394,16 +397,18 @@ class SyncProvider extends ChangeNotifier {
     try {
       debugPrint("📦 Syncing stock data for inventory management...");
       final stockProvider = Provider.of<StockProvider>(context, listen: false);
-      
+
       // Get stock data from StockProvider (for stock management/reporting screens)
       final result = await stockProvider.syncStockData(accessToken);
-      
+
       if (result['status'] == 'success') {
         debugPrint("✅ Stock inventory data synced successfully");
         debugPrint("   - Synced ${result['synced_count']} stock entries");
-        debugPrint("   - Stock data available for inventory management screens");
+        debugPrint(
+            "   - Stock data available for inventory management screens");
       } else {
-        debugPrint("⚠️ Stock sync completed with warnings: ${result['message']}");
+        debugPrint(
+            "⚠️ Stock sync completed with warnings: ${result['message']}");
         // Don't throw error for stock sync failures - continue with other syncs
       }
     } catch (e) {
@@ -412,14 +417,13 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("⚠️ Continuing sync process despite stock sync failure");
     }
   }
-  
-
 
   /// Sync categories from API
   Future<void> _syncCategories(BuildContext context) async {
     try {
       debugPrint("📂 Syncing categories...");
-      final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+      final categoryProvider =
+          Provider.of<CategoryProvider>(context, listen: false);
       // Use the same loader as Category screen to keep lists consistent
       await categoryProvider.ensureCategories(
         CategoryListScope.sellable,
@@ -433,38 +437,44 @@ class SyncProvider extends ChangeNotifier {
   }
 
   /// Sync document configurations
-  Future<void> _syncDocumentConfigurations(BuildContext context, String accessToken) async {
+  Future<void> _syncDocumentConfigurations(
+      BuildContext context, String accessToken) async {
     try {
       debugPrint("📄 Syncing document configurations...");
-      final docConfigProvider = Provider.of<DocumentConfigProvider>(context, listen: false);
-      await docConfigProvider.fetchDocumentConfigurations(accessToken: accessToken);
+      final docConfigProvider =
+          Provider.of<DocumentConfigProvider>(context, listen: false);
+      await docConfigProvider.fetchDocumentConfigurations(
+          accessToken: accessToken);
       debugPrint("✅ Document configurations synced successfully");
     } catch (e) {
       debugPrint("❌ Failed to sync document configurations: $e");
       // Don't throw error for non-critical data
-      debugPrint("⚠️ Warning: Document configuration sync failed, continuing...");
+      debugPrint(
+          "⚠️ Warning: Document configuration sync failed, continuing...");
     }
   }
 
   /// Sync invoice-related data
-  Future<void> _syncInvoiceData(BuildContext context, String accessToken) async {
+  Future<void> _syncInvoiceData(
+      BuildContext context, String accessToken) async {
     try {
       debugPrint("🧾 Syncing invoice data...");
-      final invoiceProvider = Provider.of<InvoiceProvider>(context, listen: false);
-      
+      final invoiceProvider =
+          Provider.of<InvoiceProvider>(context, listen: false);
+
       // Update progress as we load different invoice data
       _updateProgress(0.52, "Loading invoice account types...");
       await invoiceProvider.listAllInvoiceAccountTypes(accessToken);
-      
+
       _updateProgress(0.55, "Loading payment methods...");
       await invoiceProvider.listAllPaymentList(accessToken);
-      
+
       _updateProgress(0.60, "Loading voucher account types...");
       await invoiceProvider.listVoucherAccountType(accessToken);
-      
+
       _updateProgress(0.65, "Loading users list...");
       await invoiceProvider.listUsersList(accessToken);
-      
+
       debugPrint("✅ Invoice data synced successfully");
     } catch (e) {
       debugPrint("❌ Failed to sync invoice data: $e");
@@ -473,23 +483,25 @@ class SyncProvider extends ChangeNotifier {
   }
 
   /// Sync purchase-related data
-  Future<void> _syncPurchaseData(BuildContext context, String accessToken) async {
+  Future<void> _syncPurchaseData(
+      BuildContext context, String accessToken) async {
     try {
       debugPrint("🛒 Syncing purchase data...");
-      final purchaseProvider = Provider.of<PurchaseProvider>(context, listen: false);
-      
+      final purchaseProvider =
+          Provider.of<PurchaseProvider>(context, listen: false);
+
       _updateProgress(0.75, "Loading stores...");
       await purchaseProvider.listAllStores(accessToken, null);
-      
+
       _updateProgress(0.80, "Loading suppliers...");
       await purchaseProvider.listAllSuppliers(accessToken, null);
-      
+
       _updateProgress(0.85, "Loading units...");
       await purchaseProvider.listAllUnits(accessToken);
-      
+
       _updateProgress(0.90, "Loading master data...");
       await purchaseProvider.listMasterDataValues(accessToken, 'RACKS');
-      
+
       debugPrint("✅ Purchase data synced successfully");
     } catch (e) {
       debugPrint("❌ Failed to sync purchase data: $e");
@@ -501,7 +513,8 @@ class SyncProvider extends ChangeNotifier {
   Future<void> _syncSuppliers(BuildContext context, String accessToken) async {
     try {
       debugPrint("🚚 Syncing suppliers...");
-      final supplierProvider = Provider.of<SupplierProvider>(context, listen: false);
+      final supplierProvider =
+          Provider.of<SupplierProvider>(context, listen: false);
       await supplierProvider.fetchSuppliers(accessToken: accessToken);
       debugPrint("✅ Suppliers synced successfully");
     } catch (e) {
@@ -550,6 +563,7 @@ class SyncProvider extends ChangeNotifier {
 
   /// Complete sync successfully
   void _completSync() {
+    SyncOperationGate.instance.release(_syncGateOwner);
     if (_cancelRequested) {
       _isSyncing = false;
       _hasError = false;
@@ -569,6 +583,7 @@ class SyncProvider extends ChangeNotifier {
 
   /// Handle sync error
   void _syncError(String error) {
+    SyncOperationGate.instance.release(_syncGateOwner);
     if (_cancelRequested) {
       _isSyncing = false;
       _hasError = false;
@@ -596,6 +611,7 @@ class SyncProvider extends ChangeNotifier {
   }
 
   void forceResetSyncState() {
+    SyncOperationGate.instance.release(_syncGateOwner);
     _cancelRequested = true;
     _isSyncing = false;
     _hasError = false;
@@ -614,9 +630,6 @@ class SyncProvider extends ChangeNotifier {
       debugPrint("Sync already in progress, skipping stock-only sync...");
       return false;
     }
-
-    _startSync();
-    
     try {
       final authModel = Provider.of<AuthModel>(context, listen: false);
       final accessToken = authModel.token;
@@ -624,8 +637,11 @@ class SyncProvider extends ChangeNotifier {
       if (accessToken == null || accessToken.isEmpty) {
         throw Exception('No access token available. Please login again.');
       }
+      _ensureCanSync(context);
+      _startSync();
 
-      debugPrint("🔄 Starting stock-only sync after successful stock operations...");
+      debugPrint(
+          "🔄 Starting stock-only sync after successful stock operations...");
       debugPrint("Access Token: ${accessToken.substring(0, 20)}...");
 
       // Step 1: Sync Suppliers (20%)
@@ -643,14 +659,14 @@ class SyncProvider extends ChangeNotifier {
       // Complete
       _updateProgress(1.0, "Stock sync completed successfully!");
       _lastSyncTime = DateTime.now();
-      
-      debugPrint("✅ Stock-only sync completed successfully at ${_lastSyncTime}");
-      
+
+      debugPrint(
+          "✅ Stock-only sync completed successfully at ${_lastSyncTime}");
+
       await Future.delayed(const Duration(milliseconds: 500));
       _completSync();
 
       return true;
-
     } catch (e) {
       debugPrint("❌ Stock-only sync failed with error: $e");
       _syncError(e.toString());
@@ -661,10 +677,10 @@ class SyncProvider extends ChangeNotifier {
   /// Get formatted last sync time
   String getFormattedLastSyncTime() {
     if (_lastSyncTime == null) return 'Never';
-    
+
     final now = DateTime.now();
     final difference = now.difference(_lastSyncTime!);
-    
+
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {

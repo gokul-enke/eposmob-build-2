@@ -2026,6 +2026,100 @@ class LocalProductProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replaces the authoritative catalog while preserving stock already
+  /// reserved by this device's active cart.
+  ///
+  /// Server quantities do not know about local, unconfirmed reservations.
+  /// Reapplying them here keeps a later cart removal from restoring stock on
+  /// top of an unreduced server snapshot.
+  Future<void> applyRealtimeCatalog(
+    List<GetProduct> products, {
+    required Set<int> deletedProductIds,
+  }) async {
+    final authoritative = products
+        .where((product) =>
+            product.productId == null ||
+            !deletedProductIds.contains(product.productId))
+        .toList(growable: true);
+    final productIndex = <int, int>{};
+    final stockLocations = <int, ({int productIndex, int stockIndex})>{};
+
+    for (var i = 0; i < authoritative.length; i++) {
+      final product = authoritative[i];
+      final id = product.productId;
+      if (id != null) productIndex[id] = i;
+      final stocks = product.stock ?? const <Stock>[];
+      for (var j = 0; j < stocks.length; j++) {
+        final stockId = stocks[j].id;
+        if (stockId != null) {
+          stockLocations[stockId] = (productIndex: i, stockIndex: j);
+        }
+      }
+    }
+
+    for (final cartItem in _cartItems) {
+      final reservations = cartItem.stockReservations.isNotEmpty
+          ? cartItem.stockReservations
+          : _legacyStockReservations(
+              cartItem.selectedStock,
+              cartItem.stockDeducted,
+            );
+      for (final reservation in reservations) {
+        final location = stockLocations[reservation.stockId];
+        if (location == null || reservation.quantity <= 0) continue;
+        final product = authoritative[location.productIndex];
+        final stocks = List<Stock>.from(product.stock ?? const <Stock>[]);
+        final stock = stocks[location.stockIndex];
+        final adjusted = ((stock.quantity ?? 0) - reservation.quantity)
+            .clamp(0, double.infinity);
+        stocks[location.stockIndex] = stock.copyWith(quantity: adjusted);
+        final variants = List<ProductVariant>.from(
+          product.variants ?? const <ProductVariant>[],
+        );
+        final variantId = stock.productVariantId;
+        if (variantId != null) {
+          final variantIndex =
+              variants.indexWhere((variant) => variant.id == variantId);
+          if (variantIndex != -1) {
+            final variant = variants[variantIndex];
+            final adjustedVariant =
+                ((variant.quantity ?? 0) - reservation.quantity).clamp(
+              0,
+              double.infinity,
+            );
+            variants[variantIndex] = variant.copyWith(
+              quantity: adjustedVariant,
+              availableQuantity: adjustedVariant,
+            );
+          }
+        }
+        authoritative[location.productIndex] = product.copyWith(
+          stock: stocks,
+          variants: variants,
+        );
+      }
+    }
+
+    // Preserve reserved products in the catalog as conflict snapshots if the
+    // server deleted them while they are still in the active cart.
+    for (final cartItem in _cartItems) {
+      final id = cartItem.product.productId;
+      if (id != null &&
+          deletedProductIds.contains(id) &&
+          !productIndex.containsKey(id)) {
+        authoritative.add(cartItem.product);
+      }
+    }
+
+    _products = authoritative;
+    _filteredProducts = List<GetProduct>.from(_products);
+    _rebuildBarcodeIndex();
+    _updatePagination();
+    _saveProductsToHive();
+    await flushPersistence();
+    notifyListeners();
+  }
+
   /// Fetch products from API with pagination
   Future<void> fetchProductsFromAPI({
     bool refresh = false,
@@ -2386,11 +2480,12 @@ class LocalProductProvider extends ChangeNotifier {
 
         // Issue 6: only active variants' SKUs surface a product.
         final variantSkuMatch = p.variants?.any((variant) {
-          if (!variant.active) return false;
-          final varSku = variant.sku ?? '';
-          return varSku.isNotEmpty &&
-              varSku.toLowerCase().contains(normalizedFilterName);
-        }) ?? false;
+              if (!variant.active) return false;
+              final varSku = variant.sku ?? '';
+              return varSku.isNotEmpty &&
+                  varSku.toLowerCase().contains(normalizedFilterName);
+            }) ??
+            false;
         if (variantSkuMatch) return true;
 
         return false;
@@ -2406,13 +2501,19 @@ class LocalProductProvider extends ChangeNotifier {
         }
         // Issue 6: only active variants' barcodes surface a product.
         final variantMatch = p.variants?.any((v) =>
-            v.active &&
-            v.barcode != null &&
-            v.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) ?? false;
+                v.active &&
+                v.barcode != null &&
+                v.barcode!
+                    .toLowerCase()
+                    .contains(filterBarcode.toLowerCase())) ??
+            false;
         if (variantMatch) return true;
         final saleUnitMatch = p.saleUnits?.any((u) =>
-            u.barcode != null &&
-            u.barcode!.toLowerCase().contains(filterBarcode.toLowerCase())) ?? false;
+                u.barcode != null &&
+                u.barcode!
+                    .toLowerCase()
+                    .contains(filterBarcode.toLowerCase())) ??
+            false;
         return saleUnitMatch;
       }).toList();
     }
@@ -2491,11 +2592,12 @@ class LocalProductProvider extends ChangeNotifier {
 
       // Issue 6: only active variants' SKUs surface a product.
       final variantSkuMatch = p.variants?.any((variant) {
-        if (!variant.active) return false;
-        final varSku = variant.sku ?? '';
-        return varSku.isNotEmpty &&
-            varSku.toLowerCase().contains(normalizedQuery);
-      }) ?? false;
+            if (!variant.active) return false;
+            final varSku = variant.sku ?? '';
+            return varSku.isNotEmpty &&
+                varSku.toLowerCase().contains(normalizedQuery);
+          }) ??
+          false;
       if (variantSkuMatch) return true;
 
       return false;

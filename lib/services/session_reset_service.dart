@@ -6,6 +6,7 @@ import 'package:pos_machine/providers/document_config_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/providers/sync_provider.dart';
+import 'package:pos_machine/features/realtime_sync/presentation/realtime_sync_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -72,10 +73,12 @@ class SessionResetService {
   ];
 
   static Future<void> resetAfterLogout(BuildContext context) async {
+    await context.read<RealtimeSyncProvider>().stop();
     final prefs = await SharedPreferences.getInstance();
     for (final key in _authScopedKeys) {
       await prefs.remove(key);
     }
+    context.read<StoreSessionProvider>().resetSession();
     context.read<AuthModel>().logout();
   }
 
@@ -109,6 +112,10 @@ class SessionResetService {
     bool preserveDeviceScopedKeys = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
+
+    try {
+      await context.read<RealtimeSyncProvider>().stop();
+    } catch (_) {}
 
     String? rememberedEmail;
     String? rememberedPassword;

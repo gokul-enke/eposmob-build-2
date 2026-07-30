@@ -260,7 +260,7 @@ class StockProvider extends ChangeNotifier {
     _pendingStockItems.removeWhere((item) => item['localId'] == localId);
     _savePendingItemsToHive(); // Persist to Hive
     notifyListeners();
-    debugPrint('🗑️ REMOVED STOCK ITEM FROM PENDING LIST: $localId');
+    debugPrint('🗑︝ REMOVED STOCK ITEM FROM PENDING LIST: $localId');
   }
 
   /// Update existing stock item in pending list
@@ -376,7 +376,7 @@ class StockProvider extends ChangeNotifier {
   /// Save pending stock items to Hive
   Future<void> _savePendingItemsToHive() async {
     if (_pendingStockBox == null || !_pendingStockBox!.isOpen) {
-      debugPrint('⚠️ Hive box not ready, skipping save');
+      debugPrint('⚠︝ Hive box not ready, skipping save');
       return;
     }
 
@@ -411,7 +411,7 @@ class StockProvider extends ChangeNotifier {
   /// Load pending stock items from Hive
   Future<void> loadPendingItemsFromHive() async {
     if (_pendingStockBox == null || !_pendingStockBox!.isOpen) {
-      debugPrint('⚠️ Hive box not ready, skipping load');
+      debugPrint('⚠︝ Hive box not ready, skipping load');
       return;
     }
 
@@ -441,7 +441,7 @@ class StockProvider extends ChangeNotifier {
 
     try {
       await _pendingStockBox!.delete('pending_items');
-      debugPrint('🗑️ Cleared pending stock items from Hive');
+      debugPrint('🗑︝ Cleared pending stock items from Hive');
     } catch (e) {
       debugPrint('❌ Failed to clear pending items from Hive: $e');
     }
@@ -622,7 +622,7 @@ class StockProvider extends ChangeNotifier {
         pendingItem['status'] = 'pending';
       }
 
-      debugPrint('🏁 BATCH PROCESSING COMPLETED');
+      debugPrint('🝝 BATCH PROCESSING COMPLETED');
       debugPrint('   - Successful: ${successfulItems.length}');
       debugPrint('   - Failed: ${failedItems.length}');
       debugPrint('   - Total: ${results.length}');
@@ -953,7 +953,7 @@ class StockProvider extends ChangeNotifier {
             // Debug: Log barcode data for first few items
             if (listStockModel.data != null &&
                 listStockModel.data!.isNotEmpty) {
-              debugPrint('🔍 BARCODE DEBUG - First 3 stock items:');
+              debugPrint('🔝 BARCODE DEBUG - First 3 stock items:');
               for (int i = 0;
                   i <
                       (listStockModel.data!.length > 3
@@ -1013,6 +1013,23 @@ class StockProvider extends ChangeNotifier {
       debugPrint('Error loading all stocks: $error');
       rethrow;
     }
+  }
+
+  void applyRealtimeStocks(
+    List<stock_models.ListStockModelData> stocks,
+  ) {
+    _allStocks = List<stock_models.ListStockModelData>.from(stocks);
+    applyStockFiltersLocally(
+      filterName: _stockFilterName,
+      filterNameSecondary: _stockFilterNameSecondary,
+      filterCategory: _stockFilterCategory,
+      filterBarcode: _stockFilterBarcode,
+      filterRack: _stockFilterRack,
+      filterStore: _stockFilterStore,
+      filterStatus: _stockFilterStatus,
+      page: _stockCurrentPage,
+    );
+    notifyListeners();
   }
 
   /// Apply local pagination and filtering for stocks
@@ -1083,7 +1100,7 @@ class StockProvider extends ChangeNotifier {
 
     // Apply barcode filter
     if (filterBarcode != null && filterBarcode.isNotEmpty) {
-      debugPrint('🔍 BARCODE FILTER DEBUG:');
+      debugPrint('🔝 BARCODE FILTER DEBUG:');
       debugPrint('  Filter value: "$filterBarcode"');
       debugPrint('  Items before filter: ${filteredList.length}');
 
@@ -1297,7 +1314,7 @@ class StockProvider extends ChangeNotifier {
           return true;
         }
         debugPrint(
-            '⚠️ [StockProvider.updateStockDetails] API returned 200 but status was not success: ${responseData['status']}');
+            '⚠︝ [StockProvider.updateStockDetails] API returned 200 but status was not success: ${responseData['status']}');
       }
 
       debugPrint(
