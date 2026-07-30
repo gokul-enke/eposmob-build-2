@@ -61,6 +61,8 @@ class PurchaseOrderItem {
   Map<String, dynamic>? calculatedTaxData;
 
   bool receive;
+  int? productVariantId;
+  String? variantName;
   TextEditingController qtyCtrl;
   TextEditingController purchasePriceCtrl;
   TextEditingController retailPriceCtrl;
@@ -87,6 +89,8 @@ class PurchaseOrderItem {
     this.receive = false,
     this.alreadyReceived = false,
     this.id,
+    this.productVariantId,
+    this.variantName,
   })  : qtyCtrl = TextEditingController(text: quantity),
         purchasePriceCtrl = TextEditingController(text: purchaseRate),
         retailPriceCtrl = TextEditingController(text: retailPrice),
@@ -148,6 +152,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   final TextEditingController rackController = TextEditingController();
   final TextEditingController unitSearchController = TextEditingController();
   final TextEditingController rackSearchController = TextEditingController();
+  final ScrollController _itemsTableScrollController = ScrollController();
 
   List<PurchaseOrderItem> orderItems = [];
   PurchaseOrderItem currentItem = PurchaseOrderItem();
@@ -776,6 +781,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             : null,
         receive: item.receive,
         alreadyReceived: item.alreadyReceived,
+        productVariantId: item.productVariantId,
+        variantName: item.variantName,
       )..syncControllers();
 
       barcodeController.text = currentItem.barcode;
@@ -897,6 +904,81 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
+  Widget _buildVariantSelector() {
+    final product = currentItem.productData;
+    if (product == null || !product.hasVariants) {
+      return const SizedBox.shrink();
+    }
+    final variants = product.variants ?? [];
+    final selected = variants.firstWhereOrNull(
+        (v) => v.id == currentItem.productVariantId);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          'Select Variant *',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        BuildDropDownWithSearch<ProductVariant>(
+          title: null,
+          hintText: 'Select product variant',
+          value: selected,
+          items: variants,
+          onChanged: (variant) {
+            setState(() {
+              currentItem.productVariantId = variant?.id;
+              currentItem.variantName = variant != null
+                  ? _variantLabel(variant)
+                  : null;
+              if (variant != null) {
+                if (variant.barcode != null && variant.barcode!.isNotEmpty) {
+                  currentItem.barcode = variant.barcode!;
+                  barcodeController.text = variant.barcode!;
+                }
+                if (variant.purchasePrice != null) {
+                  rateController.text = variant.purchasePrice.toString();
+                  currentItem.purchaseRate = variant.purchasePrice.toString();
+                } else if (variant.price != null) {
+                  rateController.text = variant.price.toString();
+                  currentItem.purchaseRate = variant.price.toString();
+                }
+                if (variant.mrp != null) {
+                  mrpController.text = variant.mrp.toString();
+                  currentItem.mrp = variant.mrp.toString();
+                }
+              } else {
+                currentItem.barcode = currentItem.productData?.barcode ?? '';
+                barcodeController.text = currentItem.barcode;
+              }
+            });
+            _triggerTaxRecalculation();
+          },
+          displayText: _variantLabel,
+          isRequired: true,
+        ),
+      ],
+    );
+  }
+
+  String _variantLabel(ProductVariant v) {
+    final parts = <String>[];
+    if (v.attributes != null) {
+      v.attributes!.forEach((key, value) {
+        if (value != null && value.toString().isNotEmpty) {
+          parts.add(value.toString());
+        }
+      });
+    }
+    return parts.isNotEmpty ? parts.join(' | ') : 'Variant ${v.id}';
+  }
+
   String get _currency {
     final appSettings =
         Provider.of<AppSettingsProvider>(context, listen: false).appSettings;
@@ -1008,6 +1090,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       currentItem.mrp = product.mrp?.toString() ?? '';
       currentItem.wholesalePrice = product.price?.price?.toString() ?? '';
       currentItem.quantity = effectiveQuantity;
+      currentItem.productVariantId = null;
+      currentItem.variantName = null;
     });
 
     barcodeController.text = currentItem.barcode;
@@ -1119,6 +1203,17 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       return;
     }
 
+    // Validate that all variant products have a variant selected
+    for (final item in orderItems) {
+      if ((item.productData?.hasVariants ?? false) &&
+          item.productVariantId == null) {
+        _showErrorMessage(
+          'Please select a variant for "${item.productData?.productName}"',
+        );
+        return;
+      }
+    }
+
     final purchaseTotals = _purchaseTotals;
 
     final apiPaymentData = _convertPaymentDataToPurchaseApiFormat(paymentData);
@@ -1195,8 +1290,10 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         continue;
       }
 
+      final variantId = i.productVariantId ?? i.productData?.matchedVariantId;
       final baseItem = <String, dynamic>{
         "product_id": i.productData?.productId,
+        if (variantId != null) "product_variant_id": variantId,
         "quantity": double.tryParse(i.quantity) ?? 1,
         "unit_price": double.tryParse(i.purchaseRate) ?? 0,
         "receive": i.receive,
@@ -1730,6 +1827,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               ),
             ],
           ),
+          if (currentItem.productData?.hasVariants == true)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+              child: _buildVariantSelector(),
+            ),
 
           if (_showItemDetails) ...[
             const SizedBox(height: 14),
@@ -2556,21 +2658,27 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
                 return ScrollConfiguration(
                   behavior: _horizontalDragScrollBehavior,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(
-                      parent: AlwaysScrollableScrollPhysics(),
-                    ),
-                    child: SizedBox(
-                      width: tableWidth,
-                      child: Column(
-                        children: [
-                          _buildPurchaseListHeader(),
-                          const SizedBox(height: 4),
-                          ...visibleItems.asMap().entries.toList().reversed.map(
-                                (e) => _buildPurchaseListRow(e.key, e.value),
-                              ),
-                        ],
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    trackVisibility: true,
+                    controller: _itemsTableScrollController,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      controller: _itemsTableScrollController,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      child: SizedBox(
+                        width: tableWidth,
+                        child: Column(
+                          children: [
+                            _buildPurchaseListHeader(),
+                            const SizedBox(height: 4),
+                            ...visibleItems.asMap().entries.toList().reversed.map(
+                                  (e) => _buildPurchaseListRow(e.key, e.value),
+                                ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -2682,9 +2790,19 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s12, 0.2, ColorManager.textColor),
                 ),
+                if (item.variantName != null && item.variantName!.isNotEmpty)
+                  Text(
+                    item.variantName!,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s10,
+                      0.15,
+                      Colors.grey.shade600,
+                    ),
+                  ),
                 const SizedBox(height: 2),
                 Text(
-                  item.productData?.barcode ?? item.barcode,
+                  item.barcode.isNotEmpty ? item.barcode : (item.productData?.barcode ?? ''),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(FontWeightManager.medium,
@@ -3016,8 +3134,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        item.productData?.barcode ??
-                                            item.barcode,
+                                        item.barcode.isNotEmpty ? item.barcode : (item.productData?.barcode ?? ''),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: buildCustomStyle(
@@ -3345,6 +3462,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   void dispose() {
     _draftSaveDebouncer?.cancel();
     _taxCalcDebounceTimer?.cancel();
+    _itemsTableScrollController.dispose();
     voucherNumberController.dispose();
     invoiceRefController.dispose();
     discountController.dispose();
