@@ -43,6 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/key.properties
+*.jks
+*.keystore
 
 # Chromium/Chrome user data directories (WhatsApp bot)
 .local-chrome/
@@ -60,7 +63,8 @@ Todo.md
 .gradle-user-home/
 
 .env*
-/local-release
+/local-release/*
+!/local-release/release.config.example.psd1
 /.cursor
 /Output
 /.pi-subagents

@@ -54,6 +54,7 @@ class AppSettings {
   final bool skipCheckoutOnConfirmAndPrint;
   final bool compulsoryDayCloseRegister;
   final bool productVariantEnabled;
+  final bool multiSaleUnitEnabled;
   final bool allowOverselling;
   final bool compulsoryShiftOpen;
 
@@ -95,6 +96,7 @@ class AppSettings {
     this.skipCheckoutOnConfirmAndPrint = false,
     this.compulsoryDayCloseRegister = false,
     this.productVariantEnabled = false,
+    this.multiSaleUnitEnabled = false,
     this.allowOverselling = true,
     this.compulsoryShiftOpen = false,
   });
@@ -109,8 +111,13 @@ class AppSettings {
 
     for (var setting in data) {
       // Handle both "true" and "1" as valid true values for status
-      bool isStatusTrue =
-          setting['status'] == "true" || setting['status'] == "1";
+      final rawStatus = setting['status'];
+      final bool isStatusTrue = rawStatus is bool
+          ? rawStatus
+          : rawStatus is num
+              ? rawStatus == 1
+              : rawStatus?.toString().toLowerCase() == 'true' ||
+                  rawStatus?.toString() == '1';
 
       // Debug logging for DISCOUNT_AND_COUPON specifically
       if (setting['code'] == 'DISCOUNT_AND_COUPON') {
@@ -208,6 +215,13 @@ class AppSettings {
       productVariantEnabled: _readSettingStatus(
         settingsMap,
         'PRODUCT_VARIANT_ENABLED',
+        defaultValue: false,
+      ),
+      // Fail closed: alternate sale units are unavailable until explicitly
+      // enabled for the tenant/store by the backend.
+      multiSaleUnitEnabled: _readSettingStatus(
+        settingsMap,
+        'MULTI_SALE_UNIT_ENABLED',
         defaultValue: false,
       ),
       // Preserve the existing cashier-first behavior for tenants that have
@@ -438,6 +452,12 @@ class AppSettings {
           "code": "PRODUCT_VARIANT_ENABLED",
           "value": "",
           "status": productVariantEnabled.toString(),
+        },
+        {
+          "name": "Multi Sale Unit Enabled",
+          "code": "MULTI_SALE_UNIT_ENABLED",
+          "value": "",
+          "status": multiSaleUnitEnabled.toString(),
         },
         {
           "name": "Allow Overselling",

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,7 +24,7 @@ enum MenuCardMode { compact, medium, large }
 class MenuPanel extends StatefulWidget {
   final ValueChanged<int?> onCategoryChanged;
   final int? activeCategoryId;
-  final Function(GetProduct product, int quantity) onItemAdd;
+  final Future<bool> Function(GetProduct product, int quantity) onItemAdd;
   final bool isCompact;
   final bool useFontCardModeInCompact;
   final Size screenSize;
@@ -76,7 +77,32 @@ class MenuPanelState extends State<MenuPanel> {
   }
 
   void focusSearch() {
-    _searchFocusNode.requestFocus();
+    if (!mounted || !_searchFocusNode.canRequestFocus) return;
+    FocusScope.of(context).requestFocus(_searchFocusNode);
+    _searchController.selection = TextSelection.collapsed(
+      offset: _searchController.text.length,
+    );
+  }
+
+  Future<void> _addItemAndRefocusSearch(
+    GetProduct product,
+    int quantity,
+  ) async {
+    final itemWasAdded = await widget.onItemAdd(product, quantity);
+    if (!mounted || !itemWasAdded) return;
+
+    _clearSearch();
+    focusSearch();
+
+    // A product picker/dialog can restore its previous focus while its route
+    // is still closing. Re-apply focus after rebuild and route animations.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    focusSearch();
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    focusSearch();
   }
 
   void focusCategories() {
@@ -365,7 +391,9 @@ class MenuPanelState extends State<MenuPanel> {
                             child: InkWell(
                               onTap: () {
                                 Navigator.of(ctx).pop();
-                                widget.onItemAdd(product, 1);
+                                unawaited(
+                                  _addItemAndRefocusSearch(product, 1),
+                                );
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: Container(
@@ -637,7 +665,7 @@ class MenuPanelState extends State<MenuPanel> {
           Provider.of<LocalProductProvider>(context, listen: false)
               .isStockEnabled;
       if (_isMenuItemAvailable(item, stockEnabled)) {
-        widget.onItemAdd(item, 1);
+        unawaited(_addItemAndRefocusSearch(item, 1));
       }
       return KeyEventResult.handled;
     }
@@ -1428,7 +1456,9 @@ class MenuPanelState extends State<MenuPanel> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isAvailable ? () => widget.onItemAdd(item, 1) : null,
+          onTap: isAvailable
+              ? () => unawaited(_addItemAndRefocusSearch(item, 1))
+              : null,
           borderRadius: BorderRadius.circular(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1616,7 +1646,9 @@ class MenuPanelState extends State<MenuPanel> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isAvailable ? () => widget.onItemAdd(item, 1) : null,
+          onTap: isAvailable
+              ? () => unawaited(_addItemAndRefocusSearch(item, 1))
+              : null,
           borderRadius: BorderRadius.circular(8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1787,7 +1819,7 @@ class MenuPanelState extends State<MenuPanel> {
         child: InkWell(
           onTap: isAvailable
               ? () {
-                  widget.onItemAdd(item, 1);
+                  unawaited(_addItemAndRefocusSearch(item, 1));
                 }
               : null,
           borderRadius: BorderRadius.circular(extraDense ? 8 : 12),

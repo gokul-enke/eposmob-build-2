@@ -1632,6 +1632,17 @@ class BillingPageState extends State<BillingPageRestaurant>
           }
         }
 
+        final multiSaleUnitEnabled =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                .multiSaleUnitEnabled;
+        if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
+          showScaffoldError(
+            context: context,
+            message: 'Multi sale units are disabled for this store.',
+          );
+          return;
+        }
+
         num? quantity;
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
             prefix == '000' &&
@@ -1671,7 +1682,7 @@ class BillingPageState extends State<BillingPageRestaurant>
           addToCartDirectly: true,
           customerId: selectedCustomerID,
           customerName: selectedCustomer?.name,
-          selectedSaleUnit: matchedSaleUnit,
+          selectedSaleUnit: multiSaleUnitEnabled ? matchedSaleUnit : null,
         );
 
         debugPrint(

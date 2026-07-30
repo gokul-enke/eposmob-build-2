@@ -1102,6 +1102,7 @@ class PurchaseProvider extends ChangeNotifier {
     required String storeId,
     String? voucherNumber,
     String? invoiceRef,
+    required double discount,
     List<String>? paymentMethods,
     Map<String, dynamic>? paidAmounts,
     required List<Map<String, dynamic>> items,
@@ -1110,6 +1111,7 @@ class PurchaseProvider extends ChangeNotifier {
       'purchase_date': purchaseDate,
       'supplier_id': supplierId,
       'store_id': storeId,
+      'discount': discount,
       'items': items,
     };
 
@@ -1170,10 +1172,12 @@ class PurchaseProvider extends ChangeNotifier {
     required String purchaseId,
     required List<Map<String, dynamic>> items,
     String? invoiceRef, // NEW!
+    required double discount,
     List<String>? paymentMethods,
     Map<String, dynamic>? paidAmounts,
   }) async {
     final Map<String, dynamic> apiBodyData = {
+      'discount': discount,
       'items': items,
     };
     if (invoiceRef != null && invoiceRef.isNotEmpty) {

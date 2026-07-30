@@ -576,6 +576,24 @@ class BillingMobileController {
           }
         }
 
+        // The setting is fail-closed when a lightweight host has not supplied
+        // AppSettingsProvider yet (for example, during startup/tests).
+        var multiSaleUnitEnabled = false;
+        try {
+          multiSaleUnitEnabled =
+              Provider.of<AppSettingsProvider>(context, listen: false)
+                  .multiSaleUnitEnabled;
+        } on ProviderNotFoundException {
+          // Leave the feature disabled.
+        }
+        if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
+          showScaffoldError(
+            context: context,
+            message: 'Multi sale units are disabled for this store.',
+          );
+          return;
+        }
+
         if ((product.unit == 'KGS' || product.unit == 'KG') && isEmbedded) {
           quantity = EmbeddedBarcode.weightQuantityKg(query);
         } else if ((product.unit == 'PCS' || product.unit == 'PC') &&
@@ -593,8 +611,9 @@ class BillingMobileController {
           addToCartDirectly: true,
           customerId: billingProvider.selectedCustomerID,
           customerName: billingProvider.selectedCustomer?.name,
-          selectedSaleUnit:
-              BarcodeSaleUnit.resolveBarcodeSaleUnit(matchedSaleUnit),
+          selectedSaleUnit: multiSaleUnitEnabled
+              ? BarcodeSaleUnit.resolveBarcodeSaleUnit(matchedSaleUnit)
+              : null,
         );
 
         onProductKeyRegen();

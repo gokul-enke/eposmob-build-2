@@ -1015,6 +1015,31 @@ class BillingPageState extends State<BillingPage>
         "⌨️ [BillingPage] _focusSearchProductField completed | ${_focusDebugSummary()}");
   }
 
+  void _resetProductEntryAfterSuccessfulAdd() {
+    if (!mounted) return;
+
+    setState(() {
+      _autocompleteProductKey = GlobalKey();
+      quantityController.clear();
+      barcodeController.clear();
+      selectedProductIdController.clear();
+      unitPriceController.clear();
+      selectedProductNameController.clear();
+    });
+    _focusSearchProductField();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _focusSearchProductField();
+      }
+    });
+    Future<void>.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _focusSearchProductField();
+      }
+    });
+  }
+
   void _focusBarcodeField() {
     final appSettingsProvider =
         Provider.of<AppSettingsProvider>(context, listen: false);
@@ -1482,6 +1507,16 @@ class BillingPageState extends State<BillingPage>
         // Get the first product
         GetProduct product = filteredProducts.first;
         final matchedSaleUnit = _findMatchingSaleUnit(product, query);
+        final multiSaleUnitEnabled =
+            Provider.of<AppSettingsProvider>(context, listen: false)
+                .multiSaleUnitEnabled;
+        if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
+          showScaffoldError(
+            context: context,
+            message: 'Multi sale units are disabled for this store.',
+          );
+          return;
+        }
 
         num? quantity;
         if ((product.unit == 'KGS' || product.unit == 'KG') &&
@@ -1526,7 +1561,8 @@ class BillingPageState extends State<BillingPage>
         debugPrint(
             "🔴 [BillingPage.processBarcode]   - Customer Name: ${selectedCustomer?.name}");
 
-        final bool useSaleUnit = matchedSaleUnit != null &&
+        final bool useSaleUnit = multiSaleUnitEnabled &&
+            matchedSaleUnit != null &&
             _resolveSaleUnitQuantity(matchedSaleUnit) > 1;
 
         await ProductCartHelper.handleProductSelection(
@@ -2750,20 +2786,8 @@ class BillingPageState extends State<BillingPage>
                                   suppressSystemKeyboardOnAndroid: true,
                                   size: size,
                                   onSelected: (GetProduct selectedProduct,
-                                      Stock? selectedStock) async {
-                                    // Product is already added to cart by ProductCartHelper
-                                    // Clear fields and reset autocomplete for next product
-                                    setState(() {
-                                      _autocompleteProductKey = GlobalKey();
-                                      quantityController.clear();
-                                      barcodeController.clear();
-                                      selectedProductIdController.clear();
-                                      unitPriceController.clear();
-                                      selectedProductNameController.clear();
-                                    });
-                                    // Focus the barcode/search field for next entry
-                                    _focusSearchProductField();
-                                  },
+                                      Stock? selectedStock) {},
+                                  onAdded: _resetProductEntryAfterSuccessfulAdd,
                                   productList: productProvider.productList!,
                                 ),
                               ],
@@ -2864,17 +2888,9 @@ class BillingPageState extends State<BillingPage>
                                                 customPrice > 0
                                             ? customPrice
                                             : null,
+                                        onAdded:
+                                            _resetProductEntryAfterSuccessfulAdd,
                                       );
-
-                                      // Clear input fields
-                                      setState(() {
-                                        _autocompleteProductKey = GlobalKey();
-                                        quantityController.clear();
-                                        barcodeController.clear();
-                                        selectedProductIdController.clear();
-                                        unitPriceController.clear();
-                                      });
-                                      _focusSearchProductField();
                                     } else {
                                       showScaffoldError(
                                         context: context,
@@ -3071,6 +3087,10 @@ class BillingPageState extends State<BillingPage>
     required String value,
   }) {
     _closeCartUnitMenu();
+    if (!Provider.of<AppSettingsProvider>(context, listen: false)
+        .multiSaleUnitEnabled) {
+      return;
+    }
     if (item.product.productId == null) {
       return;
     }
@@ -3148,6 +3168,10 @@ class BillingPageState extends State<BillingPage>
     required LocalProductProvider localProductProvider,
     required LayerLink layerLink,
   }) {
+    if (!Provider.of<AppSettingsProvider>(context, listen: false)
+        .multiSaleUnitEnabled) {
+      return;
+    }
     final options = _cartUnitOptionsForItem(item);
     if (options.length <= 1 && item.saleUnitId == null) {
       return;
@@ -3256,7 +3280,10 @@ class BillingPageState extends State<BillingPage>
     required bool shouldAutoOpenFromShortcut,
   }) {
     final options = _cartUnitOptionsForItem(item);
-    final canChangeUnit = options.length > 1 || item.saleUnitId != null;
+    final multiSaleUnitEnabled =
+        context.watch<AppSettingsProvider>().multiSaleUnitEnabled;
+    final canChangeUnit =
+        multiSaleUnitEnabled && (options.length > 1 || item.saleUnitId != null);
     if (!canChangeUnit) {
       return Text(
         item.displayUnitName,

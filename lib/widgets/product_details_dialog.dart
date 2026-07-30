@@ -722,20 +722,23 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         .toList(growable: false);
     final productNames = _buildProductNamesPayload(activeLanguages);
 
-    if (!_validateSaleUnits()) {
+    final multiSaleUnitEnabled =
+        context.read<AppSettingsProvider>().multiSaleUnitEnabled;
+    if (multiSaleUnitEnabled && !_validateSaleUnits()) {
       debugPrint('[EDIT_PRODUCT] validation failed; request not sent');
       return;
     }
 
-    final saleUnitsPayload = _saleUnitsTouched || _showSaleUnitOptions
-        ? (_showSaleUnitOptions
-            ? AddProductFormHelpers.buildSaleUnitsPayload(
-                showAdvancedOptions: true,
-                selectedUnit: _selectedUnitId,
-                saleUnitRows: _saleUnitRows,
-              )
-            : const <Map<String, dynamic>>[])
-        : null;
+    final saleUnitsPayload =
+        multiSaleUnitEnabled && (_saleUnitsTouched || _showSaleUnitOptions)
+            ? (_showSaleUnitOptions
+                ? AddProductFormHelpers.buildSaleUnitsPayload(
+                    showAdvancedOptions: true,
+                    selectedUnit: _selectedUnitId,
+                    saleUnitRows: _saleUnitRows,
+                  )
+                : const <Map<String, dynamic>>[])
+            : null;
 
     debugPrint('[EDIT_PRODUCT] form normalized '
         'nameLength=${updatedName.length}, slug="$updatedSlug", '
@@ -2871,7 +2874,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _buildSaleUnitsEditor(unitOptions),
+                    if (context
+                        .watch<AppSettingsProvider>()
+                        .multiSaleUnitEnabled)
+                      _buildSaleUnitsEditor(unitOptions),
                     const SizedBox(height: verticalGap),
                     _buildVariantsSection(),
                     // if (product.stock != null && product.stock!.isNotEmpty)

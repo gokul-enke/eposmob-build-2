@@ -8,7 +8,9 @@ class ListPurchaseOrderModel {
   ListPurchaseOrderModel.fromJson(Map<String, dynamic> json) {
     status = json['status'];
     message = json['message'];
-    data = json['data'] != null ? ListPurchaseOrderData.fromJson(json['data']) : null;
+    data = json['data'] != null
+        ? ListPurchaseOrderData.fromJson(json['data'])
+        : null;
   }
 }
 
@@ -36,6 +38,7 @@ class PurchaseOrderData {
   dynamic voucherNumber;
   String? purchaseDate;
   String? amountTotal;
+  String? discount;
   SimpleSupplier? supplier;
   SimpleStore? store;
   String? itemsReceived;
@@ -48,6 +51,7 @@ class PurchaseOrderData {
     this.voucherNumber,
     this.purchaseDate,
     this.amountTotal,
+    this.discount,
     this.supplier,
     this.store,
     this.itemsReceived,
@@ -56,13 +60,15 @@ class PurchaseOrderData {
     this.items,
   });
 
-
   PurchaseOrderData.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     voucherNumber = json['voucher_number'];
     purchaseDate = json['purchase_date'];
     amountTotal = json['amount_total'].toString();
-    supplier = json['supplier'] != null ? SimpleSupplier.fromJson(json['supplier']) : null;
+    discount = json['discount']?.toString();
+    supplier = json['supplier'] != null
+        ? SimpleSupplier.fromJson(json['supplier'])
+        : null;
     store = json['store'] != null ? SimpleStore.fromJson(json['store']) : null;
     itemsReceived = json['items_received'];
     status = json['status'];
@@ -107,7 +113,6 @@ class PurchaseOrderItemData {
     this.unit,
   });
 
-
   PurchaseOrderItemData.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     categoryId = json['category_id'];
@@ -124,8 +129,6 @@ class PurchaseOrderItemData {
     unit = json['unit']?.toString();
   }
 }
-
-
 
 class SimpleSupplier {
   int? id;

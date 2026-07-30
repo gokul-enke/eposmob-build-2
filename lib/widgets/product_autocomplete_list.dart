@@ -19,6 +19,7 @@ class ProductAutocomplete extends StatefulWidget {
   final GlobalKey? autocompleteProductKey;
   final bool autofocus;
   final bool suppressSystemKeyboardOnAndroid;
+  final VoidCallback? onAdded;
 
   const ProductAutocomplete({
     super.key,
@@ -28,6 +29,7 @@ class ProductAutocomplete extends StatefulWidget {
     this.autocompleteProductKey,
     this.autofocus = false,
     this.suppressSystemKeyboardOnAndroid = false,
+    this.onAdded,
   });
 
   @override
@@ -54,6 +56,22 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
     debugPrint(
         "⌨️ [ProductAutocomplete] requestFieldFocus called | hasFieldNode=${_fieldFocusNode != null}");
     _fieldFocusNode?.requestFocus();
+  }
+
+  void _handleAdded() {
+    widget.onAdded?.call();
+    requestFieldFocus();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        requestFieldFocus();
+      }
+    });
+    Future<void>.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        requestFieldFocus();
+      }
+    });
   }
 
   @override
@@ -229,6 +247,7 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
       product: product,
       onSelected: widget.onSelected,
       addToCartDirectly: true, // Add product directly to cart on selection
+      onAdded: widget.onAdded == null ? null : _handleAdded,
       // Customer info will be fetched from global provider in the helper
     );
   }
@@ -351,10 +370,12 @@ class ProductAutocompleteState extends State<ProductAutocomplete> {
                         currentOptions.elementAt(_highlightedOptionIndex!);
                     // Handle product selection with stock logic
                     _handleProductSelection(selectedProduct);
-                    // Clear the text field
-                    textEditingController.clear();
-                    // Clear the focus
-                    focusNode.unfocus();
+                    if (widget.onAdded == null) {
+                      // Preserve legacy behavior for callers that have not
+                      // opted into success-aware reset handling.
+                      textEditingController.clear();
+                      focusNode.unfocus();
+                    }
 
                     // Hide virtual keyboard after selection via keyboard
                     Provider.of<KeyboardProvider>(context, listen: false)

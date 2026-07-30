@@ -136,6 +136,16 @@ class _HomeWidgetState extends State<HomeWidget> {
               break;
             }
           }
+          final multiSaleUnitEnabled =
+              Provider.of<AppSettingsProvider>(context, listen: false)
+                  .multiSaleUnitEnabled;
+          if (matchedSaleUnit != null && !multiSaleUnitEnabled) {
+            showScaffoldError(
+              context: context,
+              message: 'Multi sale units are disabled for this store.',
+            );
+            return;
+          }
           if ((product.unit == 'KGS' || product.unit == 'KG') &&
               prefix == '000' &&
               query.length == 14) {
@@ -159,7 +169,7 @@ class _HomeWidgetState extends State<HomeWidget> {
             addToCartDirectly: true,
             customerId: billingProvider.selectedCustomerID,
             customerName: billingProvider.selectedCustomer?.name,
-            selectedSaleUnit: matchedSaleUnit,
+            selectedSaleUnit: multiSaleUnitEnabled ? matchedSaleUnit : null,
           );
 
           // Clear fields using billing provider
