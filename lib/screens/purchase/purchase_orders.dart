@@ -160,6 +160,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         'voucher_number': item.voucherNumber,
         'purchase_date': item.purchaseDate,
         'amount_total': item.amountTotal,
+        'discount': item.discount,
         'status': item.status,
         'items': item.items
             ?.map((i) => {
@@ -330,7 +331,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         children: [
           _buildHeader(provider),
           const SizedBox(height: 12),
-        if (!isPhone || _showFilters) ...[
+          if (!isPhone || _showFilters) ...[
             ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.55,
@@ -341,7 +342,6 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
             ),
             const SizedBox(height: 12),
           ],
-          
           Expanded(
             child: PurchaseOrdersContentCard(
               padding: EdgeInsets.zero,
@@ -415,7 +415,7 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
         children: [
           const PurchaseOrdersSectionTitle(title: 'Filters'),
           const SizedBox(height: 12),
-         if (isPhone) ...[
+          if (isPhone) ...[
             _buildFilterDropdown(
               "Supplier",
               supplierController,
