@@ -1203,17 +1203,6 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       return;
     }
 
-    // Validate that all variant products have a variant selected
-    for (final item in orderItems) {
-      if ((item.productData?.hasVariants ?? false) &&
-          item.productVariantId == null) {
-        _showErrorMessage(
-          'Please select a variant for "${item.productData?.productName}"',
-        );
-        return;
-      }
-    }
-
     final purchaseTotals = _purchaseTotals;
 
     final apiPaymentData = _convertPaymentDataToPurchaseApiFormat(paymentData);
