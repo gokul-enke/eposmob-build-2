@@ -251,6 +251,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       'selectedPurchaseUnit': item.selectedPurchaseUnit?.toJson(),
       'purchaseQty': item.purchaseQty,
       'purchaseConversionRate': item.purchaseConversionRate,
+      'productVariantId': item.productVariantId,
+      'variantName': item.variantName,
     };
   }
 
@@ -316,6 +318,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       receive: map['receive'] == true,
       alreadyReceived: map['alreadyReceived'] == true,
     );
+
+    item.productVariantId = _toInt(map['productVariantId']);
+    item.variantName = map['variantName']?.toString();
 
     if (map['selectedPurchaseUnit'] != null) {
       try {
@@ -549,9 +554,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           voucherNumberController.text =
               data['voucher_number']?.toString() ?? "";
           invoiceRefController.text = data['invoice_ref']?.toString() ?? "";
-          // A receive operation gets its own discount. Do not reapply the
-          // original order discount to every partial receipt.
-          discountController.text = "0";
+          discountController.text =
+              data['discount']?.toString() ?? "0";
           if (data['purchase_date'] != null) {
             selectedDate =
                 DateTime.tryParse(data['purchase_date'].toString()) ??
@@ -631,6 +635,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                     ? DateTime.tryParse(item['expiry_date'].toString())
                     : null,
                 alreadyReceived: isAlreadyReceived,
+                productVariantId: _toInt(item['product_variant_id']),
+                variantName: item['variant_name']?.toString(),
               )
                 ..receive = false
                 ..syncControllers();
@@ -870,6 +876,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   PurchaseOrderTotals get _purchaseTotals => PurchaseOrderTotals(
         grossAmount: _applicableGrossAmount,
+        discountAmount: _discountAmount,
+      );
+
+  PurchaseOrderTotals get _discountValidationTotals => PurchaseOrderTotals(
+        grossAmount: totalAmount,
         discountAmount: _discountAmount,
       );
 
@@ -1394,7 +1405,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       return;
     }
 
-    final discountValidationMessage = purchaseTotals.discountValidationMessage;
+    final discountValidationMessage = _discountValidationTotals.discountValidationMessage;
     if (discountValidationMessage != null) {
       _showErrorMessage(discountValidationMessage);
       return;
@@ -2909,7 +2920,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                 ),
                 if (item.variantName != null && item.variantName!.isNotEmpty)
                   Text(
-                    item.variantName!,
+                    item.variantName!.contains(' - ')
+                        ? item.variantName!.split(' - ').last
+                        : item.variantName!,
                     style: buildCustomStyle(
                       FontWeightManager.regular,
                       FontSize.s10,
@@ -3249,6 +3262,20 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                                             0.2,
                                             ColorManager.textColor),
                                       ),
+                                      if (item.variantName != null && item.variantName!.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          item.variantName!.contains(' - ')
+                                              ? item.variantName!.split(' - ').last
+                                              : item.variantName!,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.regular,
+                                            FontSize.s10,
+                                            0.15,
+                                            Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
                                       const SizedBox(height: 2),
                                       Text(
                                         item.barcode.isNotEmpty ? item.barcode : (item.productData?.barcode ?? ''),
@@ -3460,7 +3487,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   Widget _buildFooter() {
     final totals = _purchaseTotals;
-    final discountValidationMessage = totals.discountValidationMessage;
+    final discountValidationMessage = _discountValidationTotals.discountValidationMessage;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -423,7 +423,27 @@ class _StoreSelectionScreenState extends State<StoreSelectionScreen> {
 
         if (!mounted) return;
 
-        if (pendingStatus != null && pendingStatus.pendingDayClose) {
+        bool isPastDate = false;
+        if (pendingStatus != null && pendingStatus.businessDate != null) {
+          try {
+            final parts = pendingStatus.businessDate!.split('-');
+            if (parts.length == 3) {
+              final year = int.parse(parts[0]);
+              final month = int.parse(parts[1]);
+              final day = int.parse(parts[2]);
+              final businessDate = DateTime(year, month, day);
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+              if (businessDate.isBefore(today)) {
+                isPastDate = true;
+              }
+            }
+          } catch (e) {
+            debugPrint('Error parsing pending business date: $e');
+          }
+        }
+
+        if (pendingStatus != null && pendingStatus.pendingDayClose && isPastDate) {
           shouldNavigateToMainScreen = false;
 
           await showDialog(
