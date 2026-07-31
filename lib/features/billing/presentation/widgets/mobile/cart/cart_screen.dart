@@ -105,6 +105,8 @@ class _CartScreenState extends State<CartScreen> {
                     productAvailableQuantity(item.product),
                     item.product.reorderLevel,
                   ),
+              isOutOfStock:
+                  isProductOutOfStock(productAvailableQuantity(item.product)),
             ),
             const SizedBox(height: 10),
           ],

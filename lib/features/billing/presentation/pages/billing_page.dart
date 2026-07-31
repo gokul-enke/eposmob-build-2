@@ -21,6 +21,7 @@ import 'package:pos_machine/helpers/payment_helper.dart';
 import 'package:pos_machine/features/billing/domain/billing_totals.dart';
 import 'package:pos_machine/features/billing/domain/order_customer_fields.dart';
 import 'package:pos_machine/features/billing/domain/payment_validation.dart';
+import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/helpers/product_cart_helper.dart';
 import 'package:pos_machine/helpers/system_keyboard_policy.dart';
 import 'package:pos_machine/models/customer_list.dart';
@@ -3382,13 +3383,6 @@ class BillingPageState extends State<BillingPage>
     return hasQuantity ? total : null;
   }
 
-  bool _isLowStockProduct(GetProduct product) {
-    final quantity = _summedProductStockQuantity(product);
-    final reorderLevel = product.reorderLevel;
-    if (quantity == null || reorderLevel == null) return false;
-    return quantity <= reorderLevel;
-  }
-
   Widget _buildCartItemsTable(Size size) {
     return Consumer<LocalProductProvider>(
       builder: (context, localProductProvider, child) {
@@ -3499,17 +3493,31 @@ class BillingPageState extends State<BillingPage>
                                 itemCount: cartItems.length,
                                 itemBuilder: (context, index) {
                                   final item = cartItems[index];
-                                  final bool isLowStock =
-                                      localProductProvider.isStockEnabled &&
-                                          _isLowStockProduct(item.product);
+                                  final stockStatus =
+                                      resolveProductStockQuantityStatus(
+                                    _summedProductStockQuantity(item.product),
+                                    item.product.reorderLevel,
+                                    stockEnabled:
+                                        localProductProvider.isStockEnabled,
+                                  );
+                                  final isOutOfStock = stockStatus ==
+                                      ProductStockDisplayStatus.outOfStock;
+                                  final isLowStock = stockStatus ==
+                                          ProductStockDisplayStatus.lowStock ||
+                                      stockStatus ==
+                                          ProductStockDisplayStatus
+                                              .atReorderLevel;
+                                  final stockAlertColor = isOutOfStock
+                                      ? ColorManager.kRed
+                                      : ColorManager.kOrange;
                                   final bool isFocusedRow =
                                       isCartTableFocused &&
                                           _cartTableFocusedRowIndex == index;
                                   return Container(
                                     color: isFocusedRow
                                         ? Colors.orange.withValues(alpha: 0.06)
-                                        : isLowStock
-                                            ? ColorManager.kOrange
+                                        : isLowStock || isOutOfStock
+                                            ? stockAlertColor
                                                 .withValues(alpha: 0.06)
                                             : index % 2 == 0
                                                 ? Colors.white
@@ -3613,7 +3621,9 @@ class BillingPageState extends State<BillingPage>
                                                   ),
                                                   const SizedBox(width: 6),
                                                   Tooltip(
-                                                    message: isLowStock
+                                                    message: isOutOfStock
+                                                        ? 'Out of stock'
+                                                        : isLowStock
                                                         ? 'Low stock'
                                                         : canViewBillingProductDetails
                                                             ? 'billing.view_details'
@@ -3634,9 +3644,9 @@ class BillingPageState extends State<BillingPage>
                                                       child: Icon(
                                                         Icons.info_outline,
                                                         size: 16,
-                                                        color: isLowStock
-                                                            ? ColorManager
-                                                                .kOrange
+                                                        color: isLowStock ||
+                                                                isOutOfStock
+                                                            ? stockAlertColor
                                                             : canViewBillingProductDetails
                                                                 ? ColorManager
                                                                     .kPrimaryColor

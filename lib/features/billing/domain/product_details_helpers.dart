@@ -62,7 +62,28 @@ num? productAvailableQuantity(GetProduct product) {
 
 bool isProductLowStock(num? quantity, int? reorderLevel) {
   if (quantity == null || reorderLevel == null) return false;
-  return quantity <= reorderLevel;
+  return quantity > 0 && quantity <= reorderLevel;
+}
+
+bool isProductOutOfStock(num? quantity) {
+  return quantity != null && quantity <= 0;
+}
+
+ProductStockDisplayStatus resolveProductStockQuantityStatus(
+  num? quantity,
+  int? reorderLevel, {
+  required bool stockEnabled,
+}) {
+  if (isProductOutOfStock(quantity)) {
+    return ProductStockDisplayStatus.outOfStock;
+  }
+  if (!stockEnabled || !isProductLowStock(quantity, reorderLevel)) {
+    return ProductStockDisplayStatus.available;
+  }
+  if (quantity == reorderLevel) {
+    return ProductStockDisplayStatus.atReorderLevel;
+  }
+  return ProductStockDisplayStatus.lowStock;
 }
 
 /// Resolves the stock badge state for market product cards.
@@ -73,17 +94,11 @@ ProductStockDisplayStatus resolveProductStockDisplayStatus(
   final inStock =
       hasAvailableStock(product.stock?.map((stock) => stock.quantity));
   if (!inStock) return ProductStockDisplayStatus.outOfStock;
-  if (!stockEnabled) return ProductStockDisplayStatus.available;
-
-  final quantity = productAvailableQuantity(product);
-  final reorderLevel = product.reorderLevel;
-  if (!isProductLowStock(quantity, reorderLevel)) {
-    return ProductStockDisplayStatus.available;
-  }
-  if (quantity == reorderLevel) {
-    return ProductStockDisplayStatus.atReorderLevel;
-  }
-  return ProductStockDisplayStatus.lowStock;
+  return resolveProductStockQuantityStatus(
+    productAvailableQuantity(product),
+    product.reorderLevel,
+    stockEnabled: stockEnabled,
+  );
 }
 
 String formatProductStockNumber(num value) {

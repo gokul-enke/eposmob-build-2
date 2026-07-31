@@ -35,6 +35,7 @@ class CartItemCard extends StatelessWidget {
     this.showTaxAmount = false,
     this.showItemCode = false,
     this.isLowStock = false,
+    this.isOutOfStock = false,
   });
 
   static const _settingsController = BillingMobileSettingsController();
@@ -51,6 +52,7 @@ class CartItemCard extends StatelessWidget {
   final bool showTaxAmount;
   final bool showItemCode;
   final bool isLowStock;
+  final bool isOutOfStock;
 
   String? get _imageUrl {
     final attachments = item.product.attachment ?? const <Attachment>[];
@@ -106,12 +108,16 @@ class CartItemCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: isLowStock
+        color: isOutOfStock
+            ? ColorManager.kRed.withValues(alpha: 0.06)
+            : isLowStock
             ? ColorManager.kOrange.withValues(alpha: 0.06)
             : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isLowStock
+          color: isOutOfStock
+              ? ColorManager.kRed.withValues(alpha: 0.35)
+              : isLowStock
               ? ColorManager.kOrange.withValues(alpha: 0.35)
               : Colors.grey.shade200,
         ),
@@ -169,7 +175,7 @@ class CartItemCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (isLowStock) ...[
+                    if (isLowStock || isOutOfStock) ...[
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -177,16 +183,21 @@ class CartItemCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: ColorManager.kOrange.withValues(alpha: 0.12),
+                          color: (isOutOfStock
+                                  ? ColorManager.kRed
+                                  : ColorManager.kOrange)
+                              .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          'Low stock',
+                        child: Text(
+                          isOutOfStock ? 'Out of stock' : 'Low stock',
                           style: TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: ColorManager.kOrange,
+                            color: isOutOfStock
+                                ? ColorManager.kRed
+                                : ColorManager.kOrange,
                           ),
                         ),
                       ),
