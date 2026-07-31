@@ -61,11 +61,17 @@ class PurchaseOrderItem {
   Map<String, dynamic>? calculatedTaxData;
 
   bool receive;
+  int? productVariantId;
+  String? variantName;
   TextEditingController qtyCtrl;
   TextEditingController purchasePriceCtrl;
   TextEditingController retailPriceCtrl;
   TextEditingController mrpCtrl;
   TextEditingController wholesalePriceCtrl;
+
+  SaleUnit? selectedPurchaseUnit;
+  String? purchaseQty;
+  String? purchaseConversionRate;
 
   PurchaseOrderItem({
     this.barcode = '',
@@ -87,6 +93,11 @@ class PurchaseOrderItem {
     this.receive = false,
     this.alreadyReceived = false,
     this.id,
+    this.productVariantId,
+    this.variantName,
+    this.selectedPurchaseUnit,
+    this.purchaseQty,
+    this.purchaseConversionRate,
   })  : qtyCtrl = TextEditingController(text: quantity),
         purchasePriceCtrl = TextEditingController(text: purchaseRate),
         retailPriceCtrl = TextEditingController(text: retailPrice),
@@ -147,7 +158,9 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       TextEditingController();
   final TextEditingController rackController = TextEditingController();
   final TextEditingController unitSearchController = TextEditingController();
+  final TextEditingController purchaseUnitSearchController = TextEditingController();
   final TextEditingController rackSearchController = TextEditingController();
+  final ScrollController _itemsTableScrollController = ScrollController();
 
   List<PurchaseOrderItem> orderItems = [];
   PurchaseOrderItem currentItem = PurchaseOrderItem();
@@ -235,6 +248,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       'calculatedTaxData': item.calculatedTaxData,
       'receive': item.receive,
       'alreadyReceived': item.alreadyReceived,
+      'selectedPurchaseUnit': item.selectedPurchaseUnit?.toJson(),
+      'purchaseQty': item.purchaseQty,
+      'purchaseConversionRate': item.purchaseConversionRate,
+      'productVariantId': item.productVariantId,
+      'variantName': item.variantName,
     };
   }
 
@@ -278,7 +296,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         ? Category(categoryId: categoryId, categoryName: categoryName)
         : null;
 
-    return PurchaseOrderItem(
+    final item = PurchaseOrderItem(
       id: _toInt(map['id']),
       barcode: map['barcode']?.toString() ?? '',
       categoryData: categoryData,
@@ -299,7 +317,21 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       taxInclude: map['taxInclude'] == true,
       receive: map['receive'] == true,
       alreadyReceived: map['alreadyReceived'] == true,
-    )
+    );
+
+    item.productVariantId = _toInt(map['productVariantId']);
+    item.variantName = map['variantName']?.toString();
+
+    if (map['selectedPurchaseUnit'] != null) {
+      try {
+        item.selectedPurchaseUnit = SaleUnit.fromJson(
+            Map<String, dynamic>.from(map['selectedPurchaseUnit'] as Map));
+      } catch (_) {}
+    }
+    item.purchaseQty = map['purchaseQty']?.toString();
+    item.purchaseConversionRate = map['purchaseConversionRate']?.toString();
+
+    return item
       ..calculatedTaxData = map['calculatedTaxData'] != null
           ? Map<String, dynamic>.from(map['calculatedTaxData'] as Map)
           : null
@@ -522,9 +554,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
           voucherNumberController.text =
               data['voucher_number']?.toString() ?? "";
           invoiceRefController.text = data['invoice_ref']?.toString() ?? "";
-          // A receive operation gets its own discount. Do not reapply the
-          // original order discount to every partial receipt.
-          discountController.text = "0";
+          discountController.text =
+              data['discount']?.toString() ?? "0";
           if (data['purchase_date'] != null) {
             selectedDate =
                 DateTime.tryParse(data['purchase_date'].toString()) ??
@@ -604,6 +635,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                     ? DateTime.tryParse(item['expiry_date'].toString())
                     : null,
                 alreadyReceived: isAlreadyReceived,
+                productVariantId: _toInt(item['product_variant_id']),
+                variantName: item['variant_name']?.toString(),
               )
                 ..receive = false
                 ..syncControllers();
@@ -776,11 +809,16 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
             : null,
         receive: item.receive,
         alreadyReceived: item.alreadyReceived,
+        productVariantId: item.productVariantId,
+        variantName: item.variantName,
+        selectedPurchaseUnit: item.selectedPurchaseUnit,
+        purchaseQty: item.purchaseQty,
+        purchaseConversionRate: item.purchaseConversionRate,
       )..syncControllers();
 
       barcodeController.text = currentItem.barcode;
       unitController.text = currentItem.unit;
-      quantityController.text = currentItem.quantity;
+      quantityController.text = currentItem.purchaseQty ?? currentItem.quantity;
       rateController.text = currentItem.purchaseRate;
       retailPriceController.text = currentItem.retailPrice;
       mrpController.text = currentItem.mrp;
@@ -788,7 +826,8 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       wholesaleMinUnitController.text = currentItem.wholesaleMinUnit;
       rackController.text = currentItem.rack;
       includeTax = currentItem.taxInclude;
-      _showItemDetails = true;
+      _showItemDetails = !(item.productData?.saleUnits != null &&
+          item.productData!.saleUnits!.isNotEmpty);
     });
     _saveDraftToHive();
   }
@@ -837,6 +876,11 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   PurchaseOrderTotals get _purchaseTotals => PurchaseOrderTotals(
         grossAmount: _applicableGrossAmount,
+        discountAmount: _discountAmount,
+      );
+
+  PurchaseOrderTotals get _discountValidationTotals => PurchaseOrderTotals(
+        grossAmount: totalAmount,
         discountAmount: _discountAmount,
       );
 
@@ -895,6 +939,85 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   String _formatDate(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  }
+
+  Widget _buildVariantSelector() {
+    final product = currentItem.productData;
+    if (product == null || !product.hasVariants) {
+      return const SizedBox.shrink();
+    }
+    final variants = product.variants ?? [];
+    final selected = variants.firstWhereOrNull(
+        (v) => v.id == currentItem.productVariantId);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          'Select Variant *',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        BuildDropDownWithSearch<ProductVariant>(
+          title: null,
+          hintText: 'Select product variant',
+          value: selected,
+          items: variants,
+          onChanged: (variant) {
+            setState(() {
+              currentItem.productVariantId = variant?.id;
+              currentItem.variantName = variant != null
+                  ? _variantLabel(variant)
+                  : null;
+              if (currentItem.productData?.saleUnits != null &&
+                  currentItem.productData!.saleUnits!.isNotEmpty) {
+                _showItemDetails = false;
+              }
+              if (variant != null) {
+                if (variant.barcode != null && variant.barcode!.isNotEmpty) {
+                  currentItem.barcode = variant.barcode!;
+                  barcodeController.text = variant.barcode!;
+                }
+                if (variant.purchasePrice != null) {
+                  rateController.text = variant.purchasePrice.toString();
+                  currentItem.purchaseRate = variant.purchasePrice.toString();
+                } else if (variant.price != null) {
+                  rateController.text = variant.price.toString();
+                  currentItem.purchaseRate = variant.price.toString();
+                }
+                if (variant.mrp != null) {
+                  mrpController.text = variant.mrp.toString();
+                  currentItem.mrp = variant.mrp.toString();
+                }
+              } else {
+                currentItem.barcode = currentItem.productData?.barcode ?? '';
+                barcodeController.text = currentItem.barcode;
+              }
+            });
+            _triggerTaxRecalculation();
+          },
+          displayText: _variantLabel,
+          isRequired: true,
+        ),
+      ],
+    );
+  }
+
+  String _variantLabel(ProductVariant v) {
+    final parts = <String>[];
+    if (v.attributes != null) {
+      v.attributes!.forEach((key, value) {
+        if (value != null && value.toString().isNotEmpty) {
+          parts.add(value.toString());
+        }
+      });
+    }
+    return parts.isNotEmpty ? parts.join(' | ') : 'Variant ${v.id}';
   }
 
   String get _currency {
@@ -984,6 +1107,37 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     return null;
   }
 
+  void _selectPurchaseUnit(SaleUnit? unit) {
+    setState(() {
+      currentItem.selectedPurchaseUnit = unit;
+      currentItem.purchaseConversionRate =
+          unit?.conversionRate?.toString();
+      _syncQtyFromPurchaseUnit();
+      if (unit != null) {
+        _showItemDetails = false;
+      }
+    });
+  }
+
+  void _syncQtyFromPurchaseUnit() {
+    final unit = currentItem.selectedPurchaseUnit;
+    final qtyText = quantityController.text.trim();
+    if (unit == null) {
+      currentItem.purchaseQty = null;
+      currentItem.quantity = qtyText;
+      return;
+    }
+    currentItem.purchaseQty = qtyText;
+    final purchaseQty = double.tryParse(qtyText) ?? 1.0;
+    final conversionRate = double.tryParse(
+        unit.conversionRate ?? '1') ?? 1.0;
+    final baseQty = purchaseQty * conversionRate;
+    final qtyStr = baseQty.toStringAsFixed(baseQty.truncateToDouble() == baseQty ? 0 : 3);
+    setState(() {
+      currentItem.quantity = qtyStr;
+    });
+  }
+
   void _applyProductToCurrentItem(GetProduct product,
       {String? initialQuantity}) {
     final resolvedCategory = _resolveCategoryForProduct(product);
@@ -1008,6 +1162,14 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       currentItem.mrp = product.mrp?.toString() ?? '';
       currentItem.wholesalePrice = product.price?.price?.toString() ?? '';
       currentItem.quantity = effectiveQuantity;
+      currentItem.productVariantId = null;
+      currentItem.variantName = null;
+      currentItem.selectedPurchaseUnit = null;
+      currentItem.purchaseQty = null;
+      currentItem.purchaseConversionRate = null;
+      if (product.saleUnits != null && product.saleUnits!.isNotEmpty) {
+        _showItemDetails = false;
+      }
     });
 
     barcodeController.text = currentItem.barcode;
@@ -1195,13 +1357,19 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
         continue;
       }
 
+      final variantId = i.productVariantId ?? i.productData?.matchedVariantId;
       final baseItem = <String, dynamic>{
         "product_id": i.productData?.productId,
+        if (variantId != null) "product_variant_id": variantId,
         "quantity": double.tryParse(i.quantity) ?? 1,
         "unit_price": double.tryParse(i.purchaseRate) ?? 0,
         "receive": i.receive,
         if (i.expDate != null) "expiry_date": _formatDate(i.expDate!),
         if (i.barcode.isNotEmpty) "batch_number": i.barcode,
+        if (i.selectedPurchaseUnit != null) ...{
+          "purchase_unit_id": i.selectedPurchaseUnit!.id,
+          "purchase_qty": double.tryParse(i.purchaseQty ?? '1') ?? 1.0,
+        },
       };
 
       if (i.receive) {
@@ -1237,7 +1405,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
       return;
     }
 
-    final discountValidationMessage = purchaseTotals.discountValidationMessage;
+    final discountValidationMessage = _discountValidationTotals.discountValidationMessage;
     if (discountValidationMessage != null) {
       _showErrorMessage(discountValidationMessage);
       return;
@@ -1684,8 +1852,17 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               const SizedBox(width: 8),
               SizedBox(
                 width: 70,
-                child: _buildInlineField(quantityController, "1",
-                    (v) => setState(() => item.quantity = v),
+                child: _buildInlineField(quantityController,
+                    item.selectedPurchaseUnit != null ? "P. Qty" : "1",
+                    (v) {
+                      setState(() {
+                        if (item.selectedPurchaseUnit != null) {
+                          _syncQtyFromPurchaseUnit();
+                        } else {
+                          item.quantity = v;
+                        }
+                      });
+                    },
                     isNumber: true,
                     focusNode: quantityFocusNode,
                     inputFormatters: quantityInputFormattersForUnit(item.unit)),
@@ -1730,6 +1907,17 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
               ),
             ],
           ),
+          if (currentItem.productData?.hasVariants == true)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+              child: _buildVariantSelector(),
+            ),
+          if (currentItem.productData?.saleUnits != null &&
+              currentItem.productData!.saleUnits!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+              child: _buildPurchaseUnitSelector(),
+            ),
 
           if (_showItemDetails) ...[
             const SizedBox(height: 14),
@@ -1758,7 +1946,6 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                     isRequired: true,
                   ),
                 ),
-                const SizedBox(width: 15),
                 Expanded(
                   flex: 3,
                   child: _buildFieldColumn(
@@ -1918,32 +2105,75 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   }
 
   Widget _buildUnitDropdownField(PurchaseOrderItem item) {
-    return Selector<PurchaseProvider, Map<String, String>?>(
-      selector: (context, provider) => provider.getUnitList,
-      shouldRebuild: (previous, current) => previous?.length != current?.length,
-      builder: (context, unitList, child) {
-        final unitKeys = unitList?.keys.toList() ?? <String>[];
-        final selectedValue = item.selectedUnit ?? _resolveUnitKey(item.unit);
+    final baseUnitName = item.productData?.unit ?? item.unit;
+    return BuildBoxShadowContainer(
+      circleRadius: 7,
+      height: 40,
+      color: Colors.grey.shade100,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      alignment: Alignment.centerLeft,
+      child: Text(
+        baseUnitName.isNotEmpty ? baseUnitName : "-",
+        style: buildCustomStyle(
+          FontWeightManager.medium,
+          FontSize.s12,
+          0.27,
+          Colors.black87,
+        ),
+      ),
+    );
+  }
 
-        return BuildDropDownWithSearch<String>(
+  Widget _buildPurchaseUnitSelector() {
+    final saleUnits = currentItem.productData?.saleUnits ?? <SaleUnit>[];
+    final selectedUnit = currentItem.selectedPurchaseUnit;
+
+    // Auto-calculate stock qty:
+    final purchaseQty = double.tryParse(quantityController.text.trim()) ?? 1.0;
+    final conversionRate = double.tryParse(selectedUnit?.conversionRate ?? '1') ?? 1.0;
+    final calculatedStockQty = purchaseQty * conversionRate;
+    final stockQtyStr = calculatedStockQty.toStringAsFixed(calculatedStockQty.truncateToDouble() == calculatedStockQty ? 0 : 3);
+    final baseUnitName = currentItem.productData?.unit ?? currentItem.unit;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          'Select Purchase Unit',
+          style: buildCustomStyle(
+            FontWeightManager.regular,
+            FontSize.s12,
+            0.27,
+            Colors.black.withOpacity(0.6),
+          ),
+        ),
+        const SizedBox(height: 4),
+        BuildDropDownWithSearch<SaleUnit>(
           title: null,
-          showName: false,
-          hintText: "Select unit",
-          value: unitKeys.contains(selectedValue) ? selectedValue : null,
-          items: unitKeys,
+          hintText: 'Select purchase unit',
+          value: selectedUnit,
+          items: saleUnits,
           onChanged: (val) {
-            setState(() {
-              item.selectedUnit = val;
-              item.unit = (val != null) ? (unitList?[val] ?? '') : '';
-            });
-            unitController.text = item.unit;
-            _saveDraftToHive();
+            _selectPurchaseUnit(val);
           },
-          displayText: (val) => unitList?[val] ?? val,
-          searchController: unitSearchController,
+          displayText: (val) => "${val.unitName} (x${val.conversionRate})",
+          searchController: purchaseUnitSearchController,
           height: 40,
-        );
-      },
+        ),
+        if (selectedUnit != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            "Stock Qty: $stockQtyStr ${baseUnitName.isNotEmpty ? baseUnitName : 'PC'}",
+            style: buildCustomStyle(
+              FontWeightManager.regular,
+              FontSize.s12,
+              0.2,
+              Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -2556,21 +2786,27 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
                 return ScrollConfiguration(
                   behavior: _horizontalDragScrollBehavior,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(
-                      parent: AlwaysScrollableScrollPhysics(),
-                    ),
-                    child: SizedBox(
-                      width: tableWidth,
-                      child: Column(
-                        children: [
-                          _buildPurchaseListHeader(),
-                          const SizedBox(height: 4),
-                          ...visibleItems.asMap().entries.toList().reversed.map(
-                                (e) => _buildPurchaseListRow(e.key, e.value),
-                              ),
-                        ],
+                  child: Scrollbar(
+                    thumbVisibility: true,
+                    trackVisibility: true,
+                    controller: _itemsTableScrollController,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      controller: _itemsTableScrollController,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+                      child: SizedBox(
+                        width: tableWidth,
+                        child: Column(
+                          children: [
+                            _buildPurchaseListHeader(),
+                            const SizedBox(height: 4),
+                            ...visibleItems.asMap().entries.toList().reversed.map(
+                                  (e) => _buildPurchaseListRow(e.key, e.value),
+                                ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -2682,9 +2918,21 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                   style: buildCustomStyle(FontWeightManager.semiBold,
                       FontSize.s12, 0.2, ColorManager.textColor),
                 ),
+                if (item.variantName != null && item.variantName!.isNotEmpty)
+                  Text(
+                    item.variantName!.contains(' - ')
+                        ? item.variantName!.split(' - ').last
+                        : item.variantName!,
+                    style: buildCustomStyle(
+                      FontWeightManager.regular,
+                      FontSize.s10,
+                      0.15,
+                      Colors.grey.shade600,
+                    ),
+                  ),
                 const SizedBox(height: 2),
                 Text(
-                  item.productData?.barcode ?? item.barcode,
+                  item.barcode.isNotEmpty ? item.barcode : (item.productData?.barcode ?? ''),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: buildCustomStyle(FontWeightManager.medium,
@@ -3014,10 +3262,23 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
                                             0.2,
                                             ColorManager.textColor),
                                       ),
+                                      if (item.variantName != null && item.variantName!.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          item.variantName!.contains(' - ')
+                                              ? item.variantName!.split(' - ').last
+                                              : item.variantName!,
+                                          style: buildCustomStyle(
+                                            FontWeightManager.regular,
+                                            FontSize.s10,
+                                            0.15,
+                                            Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
                                       const SizedBox(height: 2),
                                       Text(
-                                        item.productData?.barcode ??
-                                            item.barcode,
+                                        item.barcode.isNotEmpty ? item.barcode : (item.productData?.barcode ?? ''),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: buildCustomStyle(
@@ -3226,7 +3487,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
 
   Widget _buildFooter() {
     final totals = _purchaseTotals;
-    final discountValidationMessage = totals.discountValidationMessage;
+    final discountValidationMessage = _discountValidationTotals.discountValidationMessage;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3345,6 +3606,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
   void dispose() {
     _draftSaveDebouncer?.cancel();
     _taxCalcDebounceTimer?.cancel();
+    _itemsTableScrollController.dispose();
     voucherNumberController.dispose();
     invoiceRefController.dispose();
     discountController.dispose();
@@ -3361,6 +3623,7 @@ class _CreatePurchaseOrderScreenState extends State<CreatePurchaseOrderScreen> {
     wholesaleMinUnitController.dispose();
     rackController.dispose();
     unitSearchController.dispose();
+    purchaseUnitSearchController.dispose();
     rackSearchController.dispose();
     super.dispose();
   }

@@ -148,12 +148,6 @@ class StockProvider extends ChangeNotifier {
       errors['category'] = 'Category is required';
     }
 
-    if (stockItem['variantRequired'] == true &&
-        (stockItem['productVariantId'] == null ||
-            stockItem['productVariantId'].toString().trim().isEmpty)) {
-      errors['variant'] = 'Product variant is required';
-    }
-
     if (stockItem['quantity'] == null ||
         stockItem['quantity'].toString().isEmpty) {
       errors['quantity'] = 'Quantity is required';

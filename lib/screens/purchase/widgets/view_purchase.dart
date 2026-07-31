@@ -250,11 +250,44 @@ class ViewPurchaseWidget extends StatelessWidget {
                                               width: tableWidth,
                                               child: Row(
                                                 children: [
-                                                  _TableValueCell(
-                                                    text: item.productName,
-                                                    width: columns.product,
-                                                    isBold: true,
-                                                  ),
+                                                   SizedBox(
+                                                     width: columns.product,
+                                                     child: Padding(
+                                                       padding: const EdgeInsets.symmetric(
+                                                           horizontal: 12, vertical: 18),
+                                                       child: Column(
+                                                         crossAxisAlignment:
+                                                             CrossAxisAlignment.start,
+                                                         children: [
+                                                           Text(
+                                                             item.productName,
+                                                             style: buildCustomStyle(
+                                                               FontWeightManager.bold,
+                                                               FontSize.s12,
+                                                               0.2,
+                                                               ColorManager.textColor,
+                                                             ),
+                                                           ),
+                                                           if (item.variantName != null &&
+                                                               item.variantName!.isNotEmpty &&
+                                                               item.variantName != item.productName) ...[
+                                                             const SizedBox(height: 4),
+                                                             Text(
+                                                               item.variantName!.contains(' - ')
+                                                                   ? item.variantName!.split(' - ').last
+                                                                   : item.variantName!,
+                                                               style: buildCustomStyle(
+                                                                 FontWeightManager.regular,
+                                                                 FontSize.s10,
+                                                                 0.15,
+                                                                 Colors.grey.shade600,
+                                                               ),
+                                                             ),
+                                                           ],
+                                                         ],
+                                                       ),
+                                                     ),
+                                                   ),
                                                   _TableValueCell(
                                                     text: item.categoryName,
                                                     width: columns.category,
@@ -898,6 +931,7 @@ class _PurchaseViewData {
 class _PurchaseViewItem {
   const _PurchaseViewItem({
     required this.productName,
+    this.variantName,
     required this.categoryName,
     required this.quantity,
     required this.unitPrice,
@@ -910,6 +944,7 @@ class _PurchaseViewItem {
   });
 
   final String productName;
+  final String? variantName;
   final String categoryName;
   final String quantity;
   final String unitPrice;
@@ -924,6 +959,7 @@ class _PurchaseViewItem {
     Map<String, dynamic> raw,
     GridSelectionProvider gridProvider,
   ) {
+    debugPrint('🔍 variant_name raw: ${raw['variant_name']}');
     final product = _DisplayFormatter.findProduct(
       gridProvider,
       _DisplayFormatter.toInt(raw['product_id']),
@@ -937,6 +973,7 @@ class _PurchaseViewItem {
             product?.productName,
           ]) ??
           '-',
+      variantName: _DisplayFormatter.asText(raw['variant_name']),
       categoryName: _DisplayFormatter.firstNonEmpty([
             _DisplayFormatter.entityName(raw['category']),
             product?.category?.name,
@@ -980,6 +1017,7 @@ class _PurchaseViewItem {
             product?.productName,
           ]) ??
           '-',
+      variantName: null,
       categoryName: product?.category?.name ?? '-',
       quantity: item.quantity?.toString() ?? '0',
       unitPrice: item.unitPrice?.toString() ?? '0',
