@@ -22,8 +22,29 @@ void main() {
 
     test('isProductLowStock compares quantity to reorder level', () {
       expect(isProductLowStock(5, 10), isTrue);
+      expect(isProductLowStock(0, 10), isFalse);
+      expect(isProductLowStock(-1, 10), isFalse);
       expect(isProductLowStock(11, 10), isFalse);
       expect(isProductLowStock(null, 10), isFalse);
+    });
+
+    test('stock quantity status gives out of stock precedence', () {
+      expect(
+        resolveProductStockQuantityStatus(0, 5, stockEnabled: true),
+        ProductStockDisplayStatus.outOfStock,
+      );
+      expect(
+        resolveProductStockQuantityStatus(-1, 5, stockEnabled: true),
+        ProductStockDisplayStatus.outOfStock,
+      );
+      expect(
+        resolveProductStockQuantityStatus(3, 5, stockEnabled: true),
+        ProductStockDisplayStatus.lowStock,
+      );
+      expect(
+        resolveProductStockQuantityStatus(5, 5, stockEnabled: true),
+        ProductStockDisplayStatus.atReorderLevel,
+      );
     });
 
     test('formatProductStockNumber drops decimals for whole numbers', () {

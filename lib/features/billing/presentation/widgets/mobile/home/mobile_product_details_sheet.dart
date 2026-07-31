@@ -1077,9 +1077,15 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     );
   }
 
-  Widget _buildLowStockBadge({required bool atReorderLevel}) {
-    final color =
-        atReorderLevel ? ColorManager.kButtonYellow : ColorManager.kOrange;
+  Widget _buildStockStatusBadge(ProductStockDisplayStatus status) {
+    final isOutOfStock = status == ProductStockDisplayStatus.outOfStock;
+    final atReorderLevel =
+        status == ProductStockDisplayStatus.atReorderLevel;
+    final color = isOutOfStock
+        ? ColorManager.kRed
+        : atReorderLevel
+            ? ColorManager.kButtonYellow
+            : ColorManager.kOrange;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -1088,12 +1094,16 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
         border: Border.all(color: color.withValues(alpha: 0.7)),
       ),
       child: Text(
-        atReorderLevel ? 'At Reorder Level' : 'Low Stock',
+        isOutOfStock
+            ? 'Out of Stock'
+            : atReorderLevel
+                ? 'At Reorder Level'
+                : 'Low Stock',
         style: TextStyle(
           fontFamily: 'Poppins',
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: atReorderLevel ? Colors.black87 : ColorManager.kOrange,
+          color: atReorderLevel ? Colors.black87 : color,
         ),
       ),
     );
@@ -1297,8 +1307,16 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             (total, stock) => total + (stock.quantity ?? 0),
           );
     final reorderLevel = product.reorderLevel;
-    final isLowStock =
-        stockEnabled && isProductLowStock(availableQuantity, reorderLevel);
+    final stockStatus = resolveProductStockQuantityStatus(
+      availableQuantity,
+      reorderLevel,
+      stockEnabled: stockEnabled,
+    );
+    final hasStockAlert = stockStatus != ProductStockDisplayStatus.available;
+    final stockAlertColor =
+        stockStatus == ProductStockDisplayStatus.outOfStock
+            ? ColorManager.kRed
+            : ColorManager.kOrange;
 
     return ListView(
       padding: const EdgeInsets.only(top: 8, bottom: 24),
@@ -1439,11 +1457,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               value: availableQuantity == null
                   ? 'N/A'
                   : formatProductStockNumber(availableQuantity),
-              valueColor: isLowStock ? ColorManager.kOrange : null,
-              trailing: isLowStock
-                  ? _buildLowStockBadge(
-                      atReorderLevel: availableQuantity == reorderLevel,
-                    )
+              valueColor: hasStockAlert ? stockAlertColor : null,
+              trailing: hasStockAlert
+                  ? _buildStockStatusBadge(stockStatus)
                   : null,
             ),
             MobileDetailRow(
