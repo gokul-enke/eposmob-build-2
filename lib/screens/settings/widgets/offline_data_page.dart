@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/delivery_methods_provider.dart';
 import 'package:pos_machine/providers/invoice_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/shared_preferences.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:pos_machine/providers/offline_cache_clear_service.dart';
@@ -187,6 +188,7 @@ class _OfflineDataList extends StatelessWidget {
     final customerProvider = context.watch<CustomerProvider>();
     final supplierProvider = context.watch<SupplierProvider>();
     final billingProvider = context.watch<BillingProvider>();
+    final roleProvider = context.watch<RoleProvider>();
     final syncProvider = context.watch<SyncProvider>();
     final canSync = _canSync(billingProvider, syncProvider);
     final canClear = _canClear(syncProvider);
@@ -206,6 +208,7 @@ class _OfflineDataList extends StatelessWidget {
     final storeCount = purchaseProvider.getStoreList?.length ?? 0;
     final unitCount = purchaseProvider.getUnitList?.length ?? 0;
     final rackCount = purchaseProvider.getMasterDataValues?.length ?? 0;
+    final roleCount = roleProvider.roles.length;
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 8),
@@ -541,6 +544,24 @@ class _OfflineDataList extends StatelessWidget {
             target: OfflineCacheTarget.racks,
           ),
           canClear: canClear,
+        ),
+        _OfflineDataTile(
+          faIcon: FontAwesomeIcons.userShield,
+          iconColor: const Color(0xFF6A1B9A),
+          backgroundColor: const Color(0xFFF3E5F5),
+          title: 'Roles & permissions',
+          subtitle: 'Current user access rules and permissions',
+          value: _countLabel(roleCount, unit: 'roles'),
+          canSync: canSync,
+          isSyncing: syncProvider.isSyncingKey(OfflineSyncTarget.roles.name),
+          onSync: () => _runSync(
+            context,
+            action: () => syncProvider.syncTarget(
+              context,
+              OfflineSyncTarget.roles,
+            ),
+            successMessage: 'Roles and permissions synced',
+          ),
         ),
         FutureBuilder<Map<String, dynamic>?>(
           future: SharedPreferenceProvider().getActiveStoreDetails(),

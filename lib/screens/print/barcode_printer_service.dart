@@ -20,6 +20,7 @@ import 'package:intl/intl.dart';
 import 'package:image/image.dart' as img;
 import 'package:provider/provider.dart';
 import 'package:pos_machine/screens/print/barcode_layout_settings_panel.dart';
+import 'package:pos_machine/screens/print/barcode_bidi_text.dart';
 import 'package:pos_machine/screens/print/barcode_sticker_image_renderer.dart';
 import 'package:pos_machine/screens/print/thermal/printer_utils.dart';
 import 'package:pos_machine/models/barcode_layout_settings.dart';
@@ -231,23 +232,19 @@ class BarcodePrinterService {
                 ? englishName
                 : fallbackName;
       case 'en/ar':
-        final parts = <String>[
-          if (englishName.isNotEmpty)
-            englishName
-          else if (fallbackName.isNotEmpty)
-            fallbackName,
-          if (arabicName.isNotEmpty) arabicName,
-        ];
-        return parts.join(' / ');
+        final resolvedEnglish =
+            englishName.isNotEmpty ? englishName : fallbackName;
+        return BarcodeBidiText.englishThenArabic(
+          resolvedEnglish,
+          arabicName,
+        );
       case 'ar/en':
-        final parts = <String>[
-          if (arabicName.isNotEmpty) arabicName,
-          if (englishName.isNotEmpty)
-            englishName
-          else if (fallbackName.isNotEmpty)
-            fallbackName,
-        ];
-        return parts.join(' / ');
+        final resolvedEnglish =
+            englishName.isNotEmpty ? englishName : fallbackName;
+        return BarcodeBidiText.arabicThenEnglish(
+          arabicName,
+          resolvedEnglish,
+        );
       case 'en':
       default:
         return englishName.isNotEmpty

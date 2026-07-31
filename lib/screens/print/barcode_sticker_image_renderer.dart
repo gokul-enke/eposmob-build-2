@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pos_machine/models/barcode_layout_settings.dart';
+import 'package:pos_machine/screens/print/barcode_bidi_text.dart';
 
 /// Renders a barcode sticker to a PNG using Flutter's text engine.
 ///
@@ -81,7 +82,7 @@ class BarcodeStickerImageRenderer {
           leadingDistribution: TextLeadingDistribution.even,
         ),
       ),
-      textDirection: _isRtl(text) ? TextDirection.rtl : TextDirection.ltr,
+      textDirection: BarcodeBidiText.directionForText(text),
       maxLines: 1,
       strutStyle: StrutStyle(
         fontFamily: family,

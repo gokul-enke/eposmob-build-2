@@ -13,6 +13,8 @@ class ProductVariantDetailsSection extends StatelessWidget {
     required this.currency,
     this.activeStoreId,
     this.selectedVariantId,
+    this.showPurchasePrice = true,
+    this.showMrp = true,
   });
 
   final GetProduct product;
@@ -20,6 +22,8 @@ class ProductVariantDetailsSection extends StatelessWidget {
   final String currency;
   final int? activeStoreId;
   final int? selectedVariantId;
+  final bool showPurchasePrice;
+  final bool showMrp;
 
   String _money(double? value) {
     if (value == null) return 'N/A';
@@ -71,6 +75,8 @@ class ProductVariantDetailsSection extends StatelessWidget {
             selected: variant.id == selectedVariantId,
             money: _money,
             value: _value,
+            showPurchasePrice: showPurchasePrice,
+            showMrp: showMrp,
           ),
       ],
     );
@@ -84,6 +90,8 @@ class _VariantCard extends StatelessWidget {
     required this.money,
     required this.value,
     required this.selected,
+    required this.showPurchasePrice,
+    required this.showMrp,
   });
 
   final ProductVariant variant;
@@ -91,6 +99,8 @@ class _VariantCard extends StatelessWidget {
   final String Function(double?) money;
   final String Function(num?) value;
   final bool selected;
+  final bool showPurchasePrice;
+  final bool showMrp;
 
   @override
   Widget build(BuildContext context) {
@@ -146,11 +156,12 @@ class _VariantCard extends StatelessWidget {
               _Fact(label: 'SKU', value: variant.sku ?? 'N/A'),
               _Fact(label: 'Barcode', value: variant.barcode ?? 'N/A'),
               _Fact(label: 'Price', value: money(variant.price)),
-              _Fact(label: 'MRP', value: money(variant.mrp)),
-              _Fact(
-                label: 'Purchase Price',
-                value: money(variant.purchasePrice),
-              ),
+              if (showMrp) _Fact(label: 'MRP', value: money(variant.mrp)),
+              if (showPurchasePrice)
+                _Fact(
+                  label: 'Purchase Price',
+                  value: money(variant.purchasePrice),
+                ),
               _Fact(
                 label: 'Available Qty',
                 value: value(variant.availableQuantity ?? variant.quantity),
@@ -195,12 +206,13 @@ class _VariantCard extends StatelessWidget {
                           ? 'N/A'
                           : money(double.tryParse(stock.price!)),
                     ),
-                    _Fact(
-                      label: 'MRP',
-                      value: stock.mrp == null
-                          ? 'N/A'
-                          : money(double.tryParse(stock.mrp!)),
-                    ),
+                    if (showMrp)
+                      _Fact(
+                        label: 'MRP',
+                        value: stock.mrp == null
+                            ? 'N/A'
+                            : money(double.tryParse(stock.mrp!)),
+                      ),
                     _Fact(label: 'Supplier', value: stock.supplier ?? 'N/A'),
                     _Fact(label: 'Expiry', value: stock.expiryDate ?? 'N/A'),
                   ],

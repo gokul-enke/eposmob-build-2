@@ -21,6 +21,7 @@ import 'package:pos_machine/providers/language_provider.dart';
 import 'package:pos_machine/providers/local_product_provider.dart';
 import 'package:pos_machine/providers/product_provider.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 import 'package:pos_machine/resources/color_manager.dart';
@@ -112,6 +113,17 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
   final GlobalKey<FormState> _editFormKey = GlobalKey<FormState>();
   bool _controllersInitialized = false;
   bool _isSaving = false;
+
+  bool _canViewPurchasePrice() {
+    if (!widget.useBillingProductPermissions) return true;
+    return Provider.of<RoleProvider>(context, listen: false)
+        .currentUserHasPermissionSync('menu.purchase.orders.access');
+  }
+
+  bool _showMrp() {
+    if (!widget.useBillingProductPermissions) return true;
+    return context.read<AppSettingsProvider>().appSettings?.showMrpPos == true;
+  }
 
   late TextEditingController _nameController;
   late TextEditingController _slugController;
@@ -960,7 +972,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
       title: 'Edit Stock',
       initialRetailPrice: stock.price ?? '',
       initialMrp: stock.mrp ?? '',
+      showMrp: _showMrp(),
       initialPurchasePrice: stock.purchasePrice ?? '',
+      showPurchasePrice: _canViewPurchasePrice(),
       initialQuantity: stock.quantity?.toString() ?? '0',
       initialRack: stock.rack ?? '',
       onSuccess: (result) async {
@@ -971,7 +985,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             quantity: updatedQty,
             price: result.retailPrice,
             mrp: result.mrp,
-            purchasePrice: result.purchasePrice,
+            purchasePrice:
+                _canViewPurchasePrice() ? result.purchasePrice : stock.purchasePrice,
             rack: result.rack,
           );
         });
@@ -1109,6 +1124,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     required bool rowLowStock,
     required String currency,
     required bool canEditProduct,
+    required bool canViewPurchasePrice,
+    required bool showMrp,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1182,21 +1199,23 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
             highlight: true,
             dense: true,
           ),
-          MobileDetailRow(
-            label: 'MRP',
-            value: stock.mrp != null && stock.mrp!.isNotEmpty
-                ? '$currency ${stock.mrp}'
-                : 'N/A',
-            dense: true,
-          ),
-          MobileDetailRow(
-            label: 'Purchase Price',
-            value:
-                stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty
-                    ? '$currency ${stock.purchasePrice}'
-                    : 'N/A',
-            dense: true,
-          ),
+          if (showMrp)
+            MobileDetailRow(
+              label: 'MRP',
+              value: stock.mrp != null && stock.mrp!.isNotEmpty
+                  ? '$currency ${stock.mrp}'
+                  : 'N/A',
+              dense: true,
+            ),
+          if (canViewPurchasePrice)
+            MobileDetailRow(
+              label: 'Purchase Price',
+              value:
+                  stock.purchasePrice != null && stock.purchasePrice!.isNotEmpty
+                      ? '$currency ${stock.purchasePrice}'
+                      : 'N/A',
+              dense: true,
+            ),
           MobileDetailRow(
             label: 'Wholesale Price',
             value:
@@ -1254,6 +1273,9 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
     final stockEnabled = context.watch<LocalProductProvider>().isStockEnabled;
     final currency = appSettings?.currency ?? widget.currency;
     final itemCodeEnabled = appSettings?.itemCodeEnabled ?? false;
+    final canViewPurchasePrice = _canViewPurchasePrice();
+    final showMrp = !widget.useBillingProductPermissions ||
+        context.watch<AppSettingsProvider>().appSettings?.showMrpPos == true;
     int? activeStoreId;
     String? activeStoreName;
     try {
@@ -1335,11 +1357,12 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                   : 'N/A',
               highlight: true,
             ),
-            MobileDetailRow(
-              label: 'MRP',
-              value: product.mrp != null ? '$currency ${product.mrp}' : 'N/A',
-              highlight: true,
-            ),
+            if (showMrp)
+              MobileDetailRow(
+                label: 'MRP',
+                value: product.mrp != null ? '$currency ${product.mrp}' : 'N/A',
+                highlight: true,
+              ),
             MobileDetailRow(
               label: 'Offer Price',
               value: product.offerPrice != null
@@ -1347,18 +1370,19 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                   : 'N/A',
               highlight: true,
             ),
-            MobileDetailRow(
-              label: 'Purchase Price',
-              value: product.purchasePrice != null &&
-                      product.purchasePrice!.isNotEmpty
-                  ? '$currency ${product.purchasePrice}'
-                  : (product.stock != null && product.stock!.isNotEmpty
-                      ? (product.stock!.first.purchasePrice != null &&
-                              product.stock!.first.purchasePrice!.isNotEmpty
-                          ? '$currency ${product.stock!.first.purchasePrice}'
-                          : 'N/A')
-                      : 'N/A'),
-            ),
+            if (canViewPurchasePrice)
+              MobileDetailRow(
+                label: 'Purchase Price',
+                value: product.purchasePrice != null &&
+                        product.purchasePrice!.isNotEmpty
+                    ? '$currency ${product.purchasePrice}'
+                    : (product.stock != null && product.stock!.isNotEmpty
+                        ? (product.stock!.first.purchasePrice != null &&
+                                product.stock!.first.purchasePrice!.isNotEmpty
+                            ? '$currency ${product.stock!.first.purchasePrice}'
+                            : 'N/A')
+                        : 'N/A'),
+              ),
             MobileDetailRow(
               label: 'Max Discount Percentage',
               value: formatProductDetailsNumeric(product.minMarginPercentage)
@@ -1398,6 +1422,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
               activeStoreId: activeStoreId,
               selectedVariantId: widget.selectedVariantId ??
                   widget.selectedStock?.productVariantId,
+              showMrp: showMrp,
+              showPurchasePrice: canViewPurchasePrice,
             ),
           ),
         MobileDetailSection(
@@ -1440,6 +1466,8 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                       isProductLowStock(entry.value.quantity, reorderLevel),
                   currency: currency,
                   canEditProduct: canEditProduct,
+                  canViewPurchasePrice: canViewPurchasePrice,
+                  showMrp: showMrp,
                 )
             else
               Container(
@@ -1683,22 +1711,26 @@ class _MobileProductDetailsSheetState extends State<_MobileProductDetailsSheet>
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: false),
               ),
-              const SizedBox(height: 12),
-              _mobileTextField(
-                controller: _mrpController,
-                label: 'MRP',
-                hint: 'Enter MRP',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 12),
-              _mobileTextField(
-                controller: _purchasePriceController,
-                label: 'Purchase Price',
-                hint: 'Enter purchase price',
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-              ),
+              if (_showMrp()) ...[
+                const SizedBox(height: 12),
+                _mobileTextField(
+                  controller: _mrpController,
+                  label: 'MRP',
+                  hint: 'Enter MRP',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ],
+              if (_canViewPurchasePrice()) ...[
+                const SizedBox(height: 12),
+                _mobileTextField(
+                  controller: _purchasePriceController,
+                  label: 'Purchase Price',
+                  hint: 'Enter purchase price',
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                ),
+              ],
               const SizedBox(height: 12),
               _mobileTextField(
                 controller: _minMarginController,
