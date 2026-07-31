@@ -105,8 +105,16 @@ class _CartScreenState extends State<CartScreen> {
                     productAvailableQuantity(item.product),
                     item.product.reorderLevel,
                   ),
-              isOutOfStock:
-                  isProductOutOfStock(productAvailableQuantity(item.product)),
+              isOutOfStock: stockEnabled &&
+                  item.selectedStock != null &&
+                  isProductOutOfStock(
+                    provider.getAvailableQuantityForSelection(
+                      product: item.product,
+                      selectedStock: item.selectedStock,
+                      stockGroupIds: item.stockGroupIds,
+                      variantId: item.variantId,
+                    ),
+                  ),
             ),
             const SizedBox(height: 10),
           ],
