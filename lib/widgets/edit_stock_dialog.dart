@@ -35,7 +35,9 @@ Future<bool> showEditStockDialog({
   required String title,
   required String initialRetailPrice,
   required String initialMrp,
+  bool showMrp = true,
   required String initialPurchasePrice,
+  bool showPurchasePrice = true,
   required String initialQuantity,
   required String initialRack,
   Future<void> Function(EditStockDialogResult result)? onSuccess,
@@ -148,25 +150,29 @@ Future<bool> showEditStockDialog({
                                       retailPriceController,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildEditableField(
-                                      'MRP',
-                                      mrpController,
+                                  if (showMrp) ...[
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _buildEditableField(
+                                        'MRP',
+                                        mrpController,
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
                               ),
                               const SizedBox(height: 12),
                               Row(
                                 children: [
-                                  Expanded(
-                                    child: _buildEditableField(
-                                      'Purchase Price',
-                                      purchasePriceController,
+                                  if (showPurchasePrice) ...[
+                                    Expanded(
+                                      child: _buildEditableField(
+                                        'Purchase Price',
+                                        purchasePriceController,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
+                                    const SizedBox(width: 12),
+                                  ],
                                   Expanded(
                                     child: _buildEditableField(
                                       'Quantity',
@@ -310,9 +316,13 @@ Future<bool> showEditStockDialog({
                               ).updateStockDetails(
                                 stockId: stockId,
                                 retailPrice: retailPriceController.text.trim(),
-                                mrp: mrpController.text.trim(),
+                                mrp: showMrp
+                                    ? mrpController.text.trim()
+                                    : initialMrp,
                                 purchasePrice:
-                                    purchasePriceController.text.trim(),
+                                    showPurchasePrice
+                                        ? purchasePriceController.text.trim()
+                                        : initialPurchasePrice,
                                 quantity: payloadQuantity,
                                 rack: payloadRack,
                                 accessToken: accessToken,
@@ -334,9 +344,13 @@ Future<bool> showEditStockDialog({
                                   stockId: stockId,
                                   retailPrice:
                                       retailPriceController.text.trim(),
-                                  mrp: mrpController.text.trim(),
+                                  mrp: showMrp
+                                      ? mrpController.text.trim()
+                                      : initialMrp,
                                   purchasePrice:
-                                      purchasePriceController.text.trim(),
+                                      showPurchasePrice
+                                          ? purchasePriceController.text.trim()
+                                          : initialPurchasePrice,
                                   quantity: quantityController.text.trim(),
                                   rack: payloadRack,
                                 );
@@ -384,9 +398,14 @@ Future<bool> showEditStockDialog({
                                     EditStockDialogResult(
                                       retailPrice:
                                           retailPriceController.text.trim(),
-                                      mrp: mrpController.text.trim(),
+                                      mrp: showMrp
+                                          ? mrpController.text.trim()
+                                          : initialMrp,
                                       purchasePrice:
-                                          purchasePriceController.text.trim(),
+                                          showPurchasePrice
+                                              ? purchasePriceController.text
+                                                  .trim()
+                                              : initialPurchasePrice,
                                       quantity: quantityController.text.trim(),
                                       rack: rackController.text.trim(),
                                     ),

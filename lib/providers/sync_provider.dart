@@ -14,6 +14,7 @@ import 'general_settings_provider.dart';
 import 'app_settings_provider.dart';
 import '../providers/delivery_methods_provider.dart';
 import '../providers/customer_provider.dart';
+import '../providers/role_provider.dart';
 import 'offline_sync_endpoints.dart';
 import 'package:pos_machine/features/realtime_sync/domain/sync_operation_gate.dart';
 
@@ -30,6 +31,7 @@ enum OfflineSyncTarget {
   units,
   racks,
   settings,
+  roles,
 }
 
 enum OfflineSyncSection {
@@ -165,6 +167,10 @@ class SyncProvider extends ChangeNotifier {
           await Provider.of<AppSettingsProvider>(context, listen: false)
               .fetchAppSettings();
           break;
+        case OfflineSyncTarget.roles:
+          _updateProgress(0.5, 'Syncing roles and permissions...');
+          await _syncRoles(context);
+          break;
       }
 
       _updateProgress(1.0, 'Sync completed!');
@@ -267,6 +273,9 @@ class SyncProvider extends ChangeNotifier {
             await Provider.of<AppSettingsProvider>(context, listen: false)
                 .fetchAppSettings();
             break;
+          case OfflineSyncTarget.roles:
+            await _syncRoles(context);
+            break;
         }
       }
 
@@ -295,6 +304,7 @@ class SyncProvider extends ChangeNotifier {
       OfflineSyncTarget.units => 'units',
       OfflineSyncTarget.racks => 'rack data',
       OfflineSyncTarget.settings => 'settings',
+      OfflineSyncTarget.roles => 'roles and permissions',
     };
   }
 
@@ -331,6 +341,9 @@ class SyncProvider extends ChangeNotifier {
       }
 
       // Step 1: Sync Products (20%)
+      _updateProgress(0.08, "Syncing roles and permissions...");
+      await _syncRoles(context);
+
       _updateProgress(0.1, "Syncing products...");
       await _syncProducts(context, accessToken);
 
@@ -373,6 +386,14 @@ class SyncProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint("❌ Sync failed with error: $e");
       _syncError(e.toString());
+    }
+  }
+
+  Future<void> _syncRoles(BuildContext context) async {
+    final roleProvider = Provider.of<RoleProvider>(context, listen: false);
+    await roleProvider.refreshRoles(context);
+    if (roleProvider.error != null) {
+      throw Exception(roleProvider.error);
     }
   }
 

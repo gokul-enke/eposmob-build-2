@@ -124,6 +124,12 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             .currentUserHasPermissionSync('menu.catalog.product.list.access');
   }
 
+  bool _canViewPurchasePrice(BuildContext context) {
+    if (!widget.useBillingProductPermissions) return true;
+    return Provider.of<RoleProvider>(context, listen: false)
+        .currentUserHasPermissionSync('menu.purchase.orders.access');
+  }
+
   void _ensureTabController(bool canEdit) {
     final tabCount = canEdit ? 2 : 1;
     if (!_tabControllerReady) {
@@ -1519,6 +1525,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       activeStoreId: activeStoreId,
       activeStoreName: activeStoreName,
     );
+    final canViewPurchasePrice = _canViewPurchasePrice(context);
+    final showMrp = !widget.useBillingProductPermissions ||
+        appSettingsProvider.appSettings?.showMrpPos == true;
 
     final identityRows = <Widget>[
       _buildDetailRow('Product Name', product.productName ?? 'N/A'),
@@ -1541,19 +1550,21 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
           product.price?.price != null
               ? '$currency ${product.price!.price}'
               : 'N/A'),
-      _buildDetailRow(
-          'MRP', product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
-      _buildDetailRow(
-        'Purchase Price',
-        (product.purchasePrice != null && product.purchasePrice!.isNotEmpty
-            ? '$currency ${product.purchasePrice}'
-            : (product.stock != null && product.stock!.isNotEmpty
-                ? (product.stock!.first.purchasePrice != null &&
-                        product.stock!.first.purchasePrice!.isNotEmpty
-                    ? '$currency ${product.stock!.first.purchasePrice}'
-                    : 'N/A')
-                : 'N/A')),
-      ),
+      if (showMrp)
+        _buildDetailRow(
+            'MRP', product.mrp != null ? '$currency ${product.mrp}' : 'N/A'),
+      if (canViewPurchasePrice)
+        _buildDetailRow(
+          'Purchase Price',
+          (product.purchasePrice != null && product.purchasePrice!.isNotEmpty
+              ? '$currency ${product.purchasePrice}'
+              : (product.stock != null && product.stock!.isNotEmpty
+                  ? (product.stock!.first.purchasePrice != null &&
+                          product.stock!.first.purchasePrice!.isNotEmpty
+                      ? '$currency ${product.stock!.first.purchasePrice}'
+                      : 'N/A')
+                  : 'N/A')),
+        ),
       _buildDetailRow(
           'Offer Price',
           product.offerPrice != null
@@ -1852,6 +1863,8 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
               stocks: stockRows,
               currency: currency,
               activeStoreId: activeStoreId,
+              showPurchasePrice: canViewPurchasePrice,
+              showMrp: showMrp,
               selectedVariantId: widget.selectedVariantId ??
                   widget.selectedStock?.productVariantId,
             ),
@@ -1884,7 +1897,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Table(
-                      columnWidths: _stockTableColumnWidths,
+                      columnWidths: _stockTableColumnWidths(
+                        canViewPurchasePrice,
+                        showMrp,
+                      ),
                       border: null,
                       defaultVerticalAlignment:
                           TableCellVerticalAlignment.middle,
@@ -1897,8 +1913,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             _buildStockTableHeader('Sl No'),
                             _buildStockTableHeader('Quantity'),
                             _buildStockTableHeader('Price'),
-                            _buildStockTableHeader('MRP'),
-                            _buildStockTableHeader('Purchase Price'),
+                            if (showMrp) _buildStockTableHeader('MRP'),
+                            if (canViewPurchasePrice)
+                              _buildStockTableHeader('Purchase Price'),
                             _buildStockTableHeader('Supplier'),
                             _buildStockTableHeader('Store Name'),
                             _buildStockTableHeader('Wholesale Price'),
@@ -1944,15 +1961,17 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                                   stock.price != null && stock.price!.isNotEmpty
                                       ? '$currency ${stock.price}'
                                       : 'N/A'),
-                              _buildStockTableCell(
-                                  stock.mrp != null && stock.mrp!.isNotEmpty
-                                      ? '$currency ${stock.mrp}'
-                                      : 'N/A'),
-                              _buildStockTableCell(
-                                  stock.purchasePrice != null &&
-                                          stock.purchasePrice!.isNotEmpty
-                                      ? '$currency ${stock.purchasePrice}'
-                                      : 'N/A'),
+                              if (showMrp)
+                                _buildStockTableCell(
+                                    stock.mrp != null && stock.mrp!.isNotEmpty
+                                        ? '$currency ${stock.mrp}'
+                                        : 'N/A'),
+                              if (canViewPurchasePrice)
+                                _buildStockTableCell(
+                                    stock.purchasePrice != null &&
+                                            stock.purchasePrice!.isNotEmpty
+                                        ? '$currency ${stock.purchasePrice}'
+                                        : 'N/A'),
                               _buildStockTableCell(stock.supplier ?? 'N/A'),
                               _buildStockTableCell(stock.storeName ?? 'N/A'),
                               _buildStockTableCell(
@@ -2817,38 +2836,49 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                             ),
                           ),
                         ),
-                        spacing(),
-                        SizedBox(
-                          width: fieldWidth,
-                          child: buildColumnWidgetForTextFields(
-                            controller: _mrpController,
-                            size: size,
-                            title: 'MRP',
-                            hintText: 'Enter MRP',
+                        if (!widget.useBillingProductPermissions ||
+                            context
+                                    .watch<AppSettingsProvider>()
+                                    .appSettings
+                                    ?.showMrpPos ==
+                                true) ...[
+                          spacing(),
+                          SizedBox(
                             width: fieldWidth,
-                            height: fieldHeight,
-                            margin: EdgeInsets.zero,
-                            readOnly: false,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
+                            child: buildColumnWidgetForTextFields(
+                              controller: _mrpController,
+                              size: size,
+                              title: 'MRP',
+                              hintText: 'Enter MRP',
+                              width: fieldWidth,
+                              height: fieldHeight,
+                              margin: EdgeInsets.zero,
+                              readOnly: false,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                            ),
                           ),
-                        ),
-                        spacing(),
-                        SizedBox(
-                          width: fieldWidth,
-                          child: buildColumnWidgetForTextFields(
-                            controller: _purchasePriceController,
-                            size: size,
-                            title: 'Purchase Price',
-                            hintText: 'Enter purchase price',
+                        ],
+                        if (_canViewPurchasePrice(context)) ...[
+                          spacing(),
+                          SizedBox(
                             width: fieldWidth,
-                            height: fieldHeight,
-                            margin: EdgeInsets.zero,
-                            readOnly: false,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
+                            child: buildColumnWidgetForTextFields(
+                              controller: _purchasePriceController,
+                              size: size,
+                              title: 'Purchase Price',
+                              hintText: 'Enter purchase price',
+                              width: fieldWidth,
+                              height: fieldHeight,
+                              margin: EdgeInsets.zero,
+                              readOnly: false,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                            ),
                           ),
-                        ),
+                        ],
                         // SizedBox(
                         //   width: fieldWidth,
                         //   child: CustomDropDownWithSearch<_DropdownOption>(
@@ -2940,22 +2970,19 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     );
   }
 
-  static const Map<int, TableColumnWidth> _stockTableColumnWidths = {
-    0: FixedColumnWidth(56),
-    1: FixedColumnWidth(88),
-    2: FixedColumnWidth(100),
-    3: FixedColumnWidth(100),
-    4: FixedColumnWidth(120),
-    5: FixedColumnWidth(120),
-    6: FixedColumnWidth(120),
-    7: FixedColumnWidth(120),
-    8: FixedColumnWidth(96),
-    9: FixedColumnWidth(88),
-    10: FixedColumnWidth(110),
-    11: FixedColumnWidth(110),
-    12: FixedColumnWidth(72),
-    13: FixedColumnWidth(72),
-  };
+  Map<int, TableColumnWidth> _stockTableColumnWidths(
+      bool showPurchasePrice, bool showMrp) {
+    final widths = <double>[
+      56, 88, 100,
+      if (showMrp) 100,
+      if (showPurchasePrice) 120,
+      120, 120, 120, 96, 88, 110, 110, 72, 72,
+    ];
+    return {
+      for (var index = 0; index < widths.length; index++)
+        index: FixedColumnWidth(widths[index]),
+    };
+  }
 
   Widget _buildStockTableHeader(String text) {
     return TableCell(
@@ -3062,7 +3089,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
       title: 'Edit Stock',
       initialRetailPrice: stock.price ?? '',
       initialMrp: stock.mrp ?? '',
+      showMrp: !widget.useBillingProductPermissions ||
+          context.read<AppSettingsProvider>().appSettings?.showMrpPos == true,
       initialPurchasePrice: stock.purchasePrice ?? '',
+      showPurchasePrice: _canViewPurchasePrice(context),
       initialQuantity: stock.quantity?.toString() ?? '0',
       initialRack: stock.rack ?? '',
       onSuccess: (result) async {
@@ -3073,7 +3103,9 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
             quantity: updatedQty,
             price: result.retailPrice,
             mrp: result.mrp,
-            purchasePrice: result.purchasePrice,
+            purchasePrice: _canViewPurchasePrice(context)
+                ? result.purchasePrice
+                : stock.purchasePrice,
             rack: result.rack,
           );
         });

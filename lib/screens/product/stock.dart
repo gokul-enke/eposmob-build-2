@@ -13,6 +13,7 @@ import 'package:pos_machine/providers/app_settings_provider.dart';
 import 'package:pos_machine/providers/stock_provider.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/purchase_provider.dart';
+import 'package:pos_machine/providers/role_provider.dart';
 import 'package:pos_machine/widgets/edit_stock_dialog.dart';
 import 'package:provider/provider.dart';
 
@@ -51,6 +52,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
               .appSettings
               ?.productVariantEnabled ??
           false;
+
+  bool _canViewPurchasePrice({bool listen = false}) =>
+      Provider.of<RoleProvider>(context, listen: listen)
+          .currentUserHasPermissionSync('menu.purchase.orders.access');
   ListStockModelData? selectedStock;
   bool initLoading = false;
   bool isInitialized = false;
@@ -265,8 +270,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     _buildDetailRow(
                         'Retail Price', stock.retailPrice?.toString() ?? 'N/A'),
                     _buildDetailRow('MRP', stock.mrp?.toString() ?? 'N/A'),
-                    _buildDetailRow('Purchase Price',
-                        stock.purchaseRate?.toString() ?? 'N/A'),
+                    if (_canViewPurchasePrice())
+                      _buildDetailRow('Purchase Price',
+                          stock.purchaseRate?.toString() ?? 'N/A'),
                     _buildDetailRow('Quantity', stock.qty?.toString() ?? 'N/A'),
                     _buildDetailRow('Rack', stock.rack ?? 'N/A'),
                     _buildDetailRow('Barcode', stock.barCode ?? 'N/A'),
@@ -314,6 +320,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
       initialRetailPrice: stock.retailPrice ?? '',
       initialMrp: stock.mrp ?? '',
       initialPurchasePrice: stock.purchaseRate ?? '',
+      showPurchasePrice: _canViewPurchasePrice(),
       initialQuantity: stock.qty?.toString() ?? '0',
       initialRack: stock.rack ?? '',
     );
@@ -1439,7 +1446,29 @@ class _AddStockScreenState extends State<AddStockScreen> {
     ];
   }
 
-  Widget _buildDesktopStockTable(List<ListStockModelData> listStockModelDataList) {
+  Map<int, TableColumnWidth> _desktopStockColumnWidths(
+      bool showPurchasePrice) {
+    final widths = <double>[
+      1.7,
+      1.1,
+      1.0,
+      0.9,
+      if (showPurchasePrice) 0.9,
+      0.7,
+      0.8,
+      0.9,
+      1.2,
+      MediaQuery.of(context).size.width < 1200 ? 2.5 : 1.8,
+    ];
+    return {
+      for (var index = 0; index < widths.length; index++)
+        index: FlexColumnWidth(widths[index]),
+    };
+  }
+
+  Widget _buildDesktopStockTable(
+      List<ListStockModelData> listStockModelDataList) {
+    final canViewPurchasePrice = _canViewPurchasePrice(listen: true);
     return BuildBoxShadowContainer(
       margin: const EdgeInsets.only(top: 5),
       circleRadius: 7,
@@ -1460,20 +1489,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
               ],
             ),
             child: Table(
-              columnWidths: {
-                0: const FlexColumnWidth(1.7),
-                1: const FlexColumnWidth(1.1),
-                2: const FlexColumnWidth(1.0),
-                3: const FlexColumnWidth(0.9),
-                4: const FlexColumnWidth(0.9),
-                5: const FlexColumnWidth(0.7),
-                6: const FlexColumnWidth(0.8),
-                7: const FlexColumnWidth(0.9),
-                8: const FlexColumnWidth(1.2),
-                9: FlexColumnWidth(
-                  MediaQuery.of(context).size.width < 1200 ? 2.5 : 1.8,
-                ),
-              },
+              columnWidths:
+                  _desktopStockColumnWidths(canViewPurchasePrice),
               border: null,
               defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               children: [
@@ -1483,7 +1500,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     _buildTableHeader('Barcode'),
                     _buildTableHeader('Retail Price'),
                     _buildTableHeader('MRP'),
-                    _buildTableHeader('Purchase Price'),
+                    if (canViewPurchasePrice)
+                      _buildTableHeader('Purchase Price'),
                     _buildTableHeader('Quantity'),
                     _buildTableHeader('Unit'),
                     _buildTableHeader('Rack'),
@@ -1510,20 +1528,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   physics: const BouncingScrollPhysics(),
                   scrollDirection: Axis.vertical,
                   child: Table(
-                    columnWidths: {
-                      0: const FlexColumnWidth(1.7),
-                      1: const FlexColumnWidth(1.1),
-                      2: const FlexColumnWidth(1.0),
-                      3: const FlexColumnWidth(0.9),
-                      4: const FlexColumnWidth(0.9),
-                      5: const FlexColumnWidth(0.7),
-                      6: const FlexColumnWidth(0.8),
-                      7: const FlexColumnWidth(0.9),
-                      8: const FlexColumnWidth(1.2),
-                      9: FlexColumnWidth(
-                        MediaQuery.of(context).size.width < 1200 ? 2.5 : 1.8,
-                      ),
-                    },
+                    columnWidths:
+                        _desktopStockColumnWidths(canViewPurchasePrice),
                     border: null,
                     defaultVerticalAlignment:
                         TableCellVerticalAlignment.middle,
@@ -1636,7 +1642,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                             ),
                             _buildTableCell('${stock.retailPrice}'),
                             _buildTableCell(stock.mrp ?? "N/A"),
-                            _buildTableCell(stock.purchaseRate ?? "N/A"),
+                            if (canViewPurchasePrice)
+                              _buildTableCell(stock.purchaseRate ?? "N/A"),
                             _buildTableCell(
                               '${stock.qty}',
                               textColor: qtyColors.$1 ?? Colors.black,

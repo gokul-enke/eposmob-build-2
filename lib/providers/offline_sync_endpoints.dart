@@ -133,6 +133,13 @@ class OfflineSyncEndpoints {
             label: 'App / website settings',
           ),
         ],
+      OfflineSyncTarget.roles => [
+          SyncEndpointCall(
+            method: 'GET',
+            url: _withStoreId(APPUrl.listRoles, storeId),
+            label: 'Roles and permissions',
+          ),
+        ],
     };
   }
 
@@ -172,6 +179,7 @@ class OfflineSyncEndpoints {
     final calls = <SyncEndpointCall>[];
 
     calls.addAll(await forTarget(OfflineSyncTarget.settings));
+    calls.addAll(await forTarget(OfflineSyncTarget.roles));
     calls.addAll(await forTarget(OfflineSyncTarget.products));
     calls.addAll(await forTarget(OfflineSyncTarget.stock));
     calls.addAll(await forTarget(OfflineSyncTarget.categories));
