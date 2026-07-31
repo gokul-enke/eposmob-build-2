@@ -6,6 +6,7 @@ import 'package:pos_machine/components/build_round_button.dart';
 import 'package:pos_machine/components/build_text_fields.dart';
 import 'package:pos_machine/controllers/sidebar_controller.dart';
 import 'package:pos_machine/models/category_list.dart';
+import 'package:pos_machine/models/supplier.dart';
 import 'package:pos_machine/providers/category_providers.dart';
 import 'package:pos_machine/providers/supplier_provider.dart';
 import 'package:provider/provider.dart';
@@ -58,6 +59,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
   final phoneNumberController = TextEditingController();
   final altPhoneNumberController = TextEditingController();
   final addressTextController = TextEditingController();
+  final taxNumberController = TextEditingController();
+  final crNumberController = TextEditingController();
+  final vatNumberController = TextEditingController();
   final categorySearchController = TextEditingController();
   final balanceTextController = TextEditingController();
 
@@ -69,7 +73,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
   @override
   void initState() {
     super.initState();
-    balanceTextController.text = '0';
+    balanceTextController.text = '0.00';
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCategories();
     });
@@ -133,47 +137,170 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
           // Row 1: Name, Email
           isMobile
               ? Column(children: [
-                  buildColumnWidgetForTextFields(autofocus: true, isStarRed: true, controller: nameTextController, validator: (value) { if (value == null || value.isEmpty) { return 'This field is required'; } return null; }, onchanged: (value) {}, hintText: 'Supplier Name', size: size, width: fieldWidth),
+                  buildColumnWidgetForTextFields(
+                      autofocus: true,
+                      isStarRed: true,
+                      controller: nameTextController,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'This field is required';
+                        }
+                        return null;
+                      },
+                      onchanged: (value) {},
+                      hintText: 'Supplier Name',
+                      size: size,
+                      width: fieldWidth),
                   const SizedBox(height: 12),
-                  buildColumnWidgetForTextFields(autofocus: true, controller: emailTextController, keyboardType: TextInputType.emailAddress, validator: validateEmail, onchanged: (value) {}, hintText: 'Email Address', size: size, width: fieldWidth),
+                  buildColumnWidgetForTextFields(
+                      autofocus: true,
+                      controller: emailTextController,
+                      keyboardType: TextInputType.emailAddress,
+                      validator: validateEmail,
+                      onchanged: (value) {},
+                      hintText: 'Email Address',
+                      size: size,
+                      width: fieldWidth),
                 ])
-              : Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  buildColumnWidgetForTextFields(autofocus: true, isStarRed: true, controller: nameTextController, validator: (value) { if (value == null || value.isEmpty) { return 'This field is required'; } return null; }, onchanged: (value) {}, hintText: 'Supplier Name', size: size, width: size.width / 4.5),
-                  buildColumnWidgetForTextFields(autofocus: true, controller: emailTextController, keyboardType: TextInputType.emailAddress, validator: validateEmail, onchanged: (value) {}, hintText: 'Email Address', size: size, width: size.width / 4.5),
-                ]),
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                      buildColumnWidgetForTextFields(
+                          autofocus: true,
+                          isStarRed: true,
+                          controller: nameTextController,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'This field is required';
+                            }
+                            return null;
+                          },
+                          onchanged: (value) {},
+                          hintText: 'Supplier Name',
+                          size: size,
+                          width: size.width / 4.5),
+                      buildColumnWidgetForTextFields(
+                          autofocus: true,
+                          controller: emailTextController,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: validateEmail,
+                          onchanged: (value) {},
+                          hintText: 'Email Address',
+                          size: size,
+                          width: size.width / 4.5),
+                    ]),
+          const SizedBox(height: 16),
 
           // Row 2: Phone, Alt Phone
           isMobile
               ? Column(children: [
-                  buildColumnWidgetForTextFields(autofocus: true, isStarRed: true, controller: phoneNumberController, keyboardType: TextInputType.number, inputFormatters: [PhoneNumberFormatter()], validator: validatePhoneNumber, onchanged: (value) {}, hintText: 'Phone Number', size: size, width: fieldWidth),
+                  buildColumnWidgetForTextFields(
+                      autofocus: true,
+                      isStarRed: true,
+                      controller: phoneNumberController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [PhoneNumberFormatter()],
+                      validator: validatePhoneNumber,
+                      onchanged: (value) {},
+                      hintText: 'Phone Number',
+                      size: size,
+                      width: fieldWidth),
                   const SizedBox(height: 12),
-                  buildColumnWidgetForTextFields(autofocus: true, controller: altPhoneNumberController, keyboardType: TextInputType.number, inputFormatters: [PhoneNumberFormatter()], onchanged: (value) {}, hintText: 'Alternative Phone', size: size, width: fieldWidth),
+                  buildColumnWidgetForTextFields(
+                      autofocus: true,
+                      controller: altPhoneNumberController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [PhoneNumberFormatter()],
+                      onchanged: (value) {},
+                      hintText: 'Alternative Phone',
+                      size: size,
+                      width: fieldWidth),
                 ])
-              : Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  buildColumnWidgetForTextFields(autofocus: true, isStarRed: true, controller: phoneNumberController, keyboardType: TextInputType.number, inputFormatters: [PhoneNumberFormatter()], validator: validatePhoneNumber, onchanged: (value) {}, hintText: 'Phone Number', size: size, width: size.width / 4.5),
-                  buildColumnWidgetForTextFields(autofocus: true, controller: altPhoneNumberController, keyboardType: TextInputType.number, inputFormatters: [PhoneNumberFormatter()], onchanged: (value) {}, hintText: 'Alternative Phone', size: size, width: size.width / 4.5),
-                ]),
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                      buildColumnWidgetForTextFields(
+                          autofocus: true,
+                          isStarRed: true,
+                          controller: phoneNumberController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [PhoneNumberFormatter()],
+                          validator: validatePhoneNumber,
+                          onchanged: (value) {},
+                          hintText: 'Phone Number',
+                          size: size,
+                          width: size.width / 4.5),
+                      buildColumnWidgetForTextFields(
+                          autofocus: true,
+                          controller: altPhoneNumberController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [PhoneNumberFormatter()],
+                          onchanged: (value) {},
+                          hintText: 'Alternative Phone',
+                          size: size,
+                          width: size.width / 4.5),
+                    ]),
           const SizedBox(height: 16),
 
-          // Row 3: Address, Balance
-         isMobile
+          // Row 3: Address, Tax Number
+          isMobile
               ? Column(children: [
-                  buildColumnWidgetForTextFields(autofocus: true, controller: addressTextController, onchanged: (value) {}, hintText: 'Address', size: size, width: fieldWidth),
+                  buildColumnWidgetForTextFields(
+                      autofocus: true,
+                      controller: addressTextController,
+                      onchanged: (value) {},
+                      hintText: 'Address',
+                      size: size,
+                      width: fieldWidth),
                   const SizedBox(height: 12),
-                  buildColumnWidgetForTextFields(autofocus: true, controller: balanceTextController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))], onchanged: (value) {}, hintText: 'Balance', size: size, width: fieldWidth),
+                  buildColumnWidgetForTextFields(
+                      autofocus: true,
+                      controller: taxNumberController,
+                      onchanged: (value) {},
+                      hintText: 'Tax Number',
+                      size: size,
+                      width: fieldWidth),
                 ])
-              : Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  buildColumnWidgetForTextFields(autofocus: true, controller: addressTextController, onchanged: (value) {}, hintText: 'Address', size: size, width: size.width / 4.5),
-                  buildColumnWidgetForTextFields(autofocus: true, controller: balanceTextController, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$'))], onchanged: (value) {}, hintText: 'Balance', size: size, width: size.width / 4.5),
-                ]),
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                      buildColumnWidgetForTextFields(
+                          autofocus: true,
+                          controller: addressTextController,
+                          onchanged: (value) {},
+                          hintText: 'Address',
+                          size: size,
+                          width: size.width / 4.5),
+                      buildColumnWidgetForTextFields(
+                          autofocus: true,
+                          controller: taxNumberController,
+                          onchanged: (value) {},
+                          hintText: 'Tax Number',
+                          size: size,
+                          width: size.width / 4.5),
+                    ]),
           const SizedBox(height: 16),
 
-          // Payment Section (moved above categories)
-          _buildPaymentSection(size),
+          // Row 4: Opening Balance, Payment Type
+          isMobile
+              ? Column(
+                  children: [
+                    _buildBalanceField(size, fieldWidth),
+                    const SizedBox(height: 16),
+                    _buildPaymentSection(size),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildBalanceField(size, double.infinity)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildPaymentSection(size)),
+                  ],
+                ),
           const SizedBox(height: 16),
 
-          // Product Categories Section
-          _buildCategoryMultiSelect(context, size),
+          _buildKycSection(size),
           const SizedBox(height: 16),
 
           // Action Buttons
@@ -717,6 +844,64 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     );
   }
 
+  Widget _buildBalanceField(Size size, double width) {
+    return buildColumnWidgetForTextFields(
+      controller: balanceTextController,
+      keyboardType: TextInputType.number,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}$')),
+      ],
+      title: 'Opening Balance',
+      onchanged: (value) {},
+      hintText: '0.00',
+      size: size,
+      width: width,
+    );
+  }
+
+  Widget _buildKycSection(Size size) {
+    final crField = buildColumnWidgetForTextFields(
+      controller: crNumberController,
+      onchanged: (value) {},
+      hintText: 'CR Number',
+      size: size,
+      width: double.infinity,
+    );
+    final vatField = buildColumnWidgetForTextFields(
+      controller: vatNumberController,
+      onchanged: (value) {},
+      hintText: 'VAT Number',
+      size: size,
+      width: double.infinity,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'KYC Information',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 8),
+        size.width < 700
+            ? Column(
+                children: [
+                  crField,
+                  const SizedBox(height: 12),
+                  vatField,
+                ],
+              )
+            : Row(
+                children: [
+                  Expanded(child: crField),
+                  const SizedBox(width: 16),
+                  Expanded(child: vatField),
+                ],
+              ),
+      ],
+    );
+  }
+
   Widget _buildPaymentSection(Size size) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -878,6 +1063,7 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
       children: buttons,
     );
   }
+
   Future<void> _submitForm(String? accessToken,
       {required bool createAnother}) async {
     // Require payment type before submit
@@ -925,8 +1111,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
       debugPrint('Address: ${addressTextController.text}');
       debugPrint(
           'Alt Phone: ${altPhoneNumberController.text.replaceAll("-", "")}');
-      debugPrint(
-          'Product Categories: ${selectedCategories.map((c) => c.categoryId!).toList()}');
+      debugPrint('Tax Number: ${taxNumberController.text}');
+      debugPrint('CR Number: ${crNumberController.text}');
+      debugPrint('VAT Number: ${vatNumberController.text}');
 
       final result = await SupplierProvider().addSupplier(
         name: nameTextController.text.trim(),
@@ -937,8 +1124,8 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
         paymentStatus: paymentStatus,
         address: addressTextController.text.trim(),
         altPhone: altPhoneNumberController.text.replaceAll("-", ""),
-        productCategories:
-            selectedCategories.map((c) => c.categoryId!).toList(),
+        taxNumber: taxNumberController.text.trim(),
+        kyc: _buildKycEntries(),
       );
 
       // Close loading dialog
@@ -1003,6 +1190,15 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
     }
   }
 
+  List<SupplierKyc> _buildKycEntries() {
+    return [
+      if (crNumberController.text.trim().isNotEmpty)
+        SupplierKyc(key: 'CR_NUMBER', value: crNumberController.text.trim()),
+      if (vatNumberController.text.trim().isNotEmpty)
+        SupplierKyc(key: 'VAT_NUMBER', value: vatNumberController.text.trim()),
+    ];
+  }
+
   void _clearFields() {
     if (mounted) {
       setState(() {
@@ -1011,6 +1207,9 @@ class _AddSupplierModalState extends State<AddSupplierModal> {
         phoneNumberController.clear();
         altPhoneNumberController.clear();
         addressTextController.clear();
+        taxNumberController.clear();
+        crNumberController.clear();
+        vatNumberController.clear();
         balanceTextController.text = '0.00';
         selectedPaymentType = PaymentType.none;
         selectedCategories.clear();

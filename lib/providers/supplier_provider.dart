@@ -252,7 +252,8 @@ class SupplierProvider with ChangeNotifier {
     if (activeStoreId != null) {
       queryParameters['store_id'] = activeStoreId.toString();
     }
-    final url = Uri.parse(APPUrl.getSuppliers).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.getSuppliers)
+        .replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(
@@ -342,7 +343,8 @@ class SupplierProvider with ChangeNotifier {
       queryParameters['store_id'] = activeStoreId.toString();
     }
 
-    final url = Uri.parse(APPUrl.supplierTransactions).replace(queryParameters: queryParameters);
+    final url = Uri.parse(APPUrl.supplierTransactions)
+        .replace(queryParameters: queryParameters);
 
     try {
       final response = await http.get(
@@ -387,7 +389,9 @@ class SupplierProvider with ChangeNotifier {
     required String paymentStatus, // "to_pay" or "to_receive"
     required String address,
     required String altPhone,
-    required List<int> productCategories,
+    List<int> productCategories = const [],
+    String? taxNumber,
+    List<SupplierKyc> kyc = const [],
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -400,8 +404,9 @@ class SupplierProvider with ChangeNotifier {
       'type': 1,
       'address': address,
       'alt_phone': altPhone,
+      'tax_number': taxNumber?.trim() ?? '',
       'payment_type': paymentStatus,
-      // 'product_categories': productCategories,
+      'kyc': kyc.map((entry) => entry.toJson()).toList(),
     };
 
     final url = Uri.parse(APPUrl.addSupplier);
@@ -484,7 +489,8 @@ class SupplierProvider with ChangeNotifier {
     String? address,
     String? altPhone,
     String? paymentStatus,
-    String? productCategories,
+    String? taxNumber,
+    List<SupplierKyc>? kyc,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -498,7 +504,8 @@ class SupplierProvider with ChangeNotifier {
       if (address != null) 'address': address,
       if (altPhone != null) 'alt_phone': altPhone,
       if (paymentStatus != null) 'payment_type': paymentStatus,
-      if (productCategories != null) 'product_categories': productCategories,
+      if (taxNumber != null) 'tax_number': taxNumber.trim(),
+      if (kyc != null) 'kyc': kyc.map((entry) => entry.toJson()).toList(),
     };
 
     final url = Uri.parse(APPUrl.updateSupplier);
