@@ -684,15 +684,15 @@ class MenuPanelState extends State<MenuPanel> {
   ) {
     setState(() => _focusedMenuItemIndex = 0);
     if (_focusedCategoryIndex == 0) {
+      widget.onCategoryChanged(0);
+      productProvider.refreshProducts();
+      return;
+    }
+    if (_focusedCategoryIndex == 1) {
       widget.onCategoryChanged(-1);
       final gridProvider =
           Provider.of<GridSelectionProvider>(context, listen: false);
       gridProvider.listQuickAccessProducts();
-      return;
-    }
-    if (_focusedCategoryIndex == 1) {
-      widget.onCategoryChanged(0);
-      productProvider.refreshProducts();
       return;
     }
 
@@ -1111,16 +1111,24 @@ class MenuPanelState extends State<MenuPanel> {
                           scrollDirection: Axis.horizontal,
                           itemCount: categories.length + 2,
                           itemBuilder: (_, idx) {
-                            final isFavourites = idx == 0;
-                            final isAll = idx == 1;
-                            final category = (isFavourites || isAll) ? null : categories[idx - 2];
-                            final categoryId = isFavourites ? -1 : (isAll ? 0 : category!.categoryId);
-                            final categoryName = isFavourites
-                                ? 'Favourites'
-                                : (isAll ? 'All' : category!.categoryName ?? 'Unknown');
-                            final active = isFavourites
-                                ? selectedCategoryId == -1
-                                : (isAll ? selectedCategoryId == 0 : categoryId == selectedCategoryId);
+                            final isAll = idx == 0;
+                            final isFavourites = idx == 1;
+                            final category = (isFavourites || isAll)
+                                ? null
+                                : categories[idx - 2];
+                            final categoryId = isAll
+                                ? 0
+                                : (isFavourites ? -1 : category!.categoryId);
+                            final categoryName = isAll
+                                ? 'All'
+                                : (isFavourites
+                                    ? 'Fav'
+                                    : category!.categoryName ?? 'Unknown');
+                            final active = isAll
+                                ? selectedCategoryId == 0
+                                : (isFavourites
+                                    ? selectedCategoryId == -1
+                                    : categoryId == selectedCategoryId);
                             final isKeyboardFocused =
                                 _categoryFocusNode.hasFocus &&
                                     _focusedCategoryIndex == idx;

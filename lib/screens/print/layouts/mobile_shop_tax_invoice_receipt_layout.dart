@@ -778,7 +778,6 @@ class MobileShopTaxInvoiceReceiptLayout implements ReceiptLayout {
     }
 
     rows.add(SpacingRow(_itemGap));
-    rows.add(DottedDividerRow());
     rows.add(SpacingRow(4));
   }
 
