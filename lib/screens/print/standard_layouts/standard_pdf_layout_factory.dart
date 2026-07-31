@@ -7,6 +7,7 @@ import 'detailed_tax_invoice_standard_pdf_layout.dart';
 import 'new_classic_standad_pdf_layout.dart';
 import 'simplified_tax_invoice_standard_pdf_layout.dart';
 import 'centered_simplified_tax_invoice_standard_pdf_layout.dart';
+import 'bilingual_centered_tax_invoice_standard_pdf_layout.dart';
 import 'corporate_tax_invoice_standard_pdf_layout.dart';
 import 'letterhead_tax_invoice_standard_pdf_layout.dart';
 
@@ -33,6 +34,8 @@ class StandardPdfLayoutFactory {
     'simplified_tax_invoice': () => SimplifiedTaxInvoiceStandardPdfLayout(),
     'centered_simplified_tax_invoice': () =>
         CenteredSimplifiedTaxInvoiceStandardPdfLayout(),
+    'bilingual_centered_tax_invoice': () =>
+        BilingualCenteredTaxInvoiceStandardPdfLayout(),
     'corporate_tax_invoice': () => CorporateTaxInvoiceStandardPdfLayout(),
     'letterhead_tax_invoice': () => LetterheadTaxInvoiceStandardPdfLayout(),
   };

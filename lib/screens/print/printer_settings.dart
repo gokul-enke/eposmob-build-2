@@ -90,6 +90,10 @@ class _PrinterSettingsState extends State<PrinterSettings> {
       'id': 'centered_simplified_tax_invoice',
       'name': 'Centered Simplified Tax Invoice'
     },
+    {
+      'id': 'bilingual_centered_tax_invoice',
+      'name': 'Bilingual Centered Tax Invoice'
+    },
   ];
 
   /// Returns the appropriate theme list based on selected paper size
@@ -187,6 +191,8 @@ class _PrinterSettingsState extends State<PrinterSettings> {
           return 'ZATCA Simplified Tax Invoice with teal accent header/footer, bilingual columns and totals';
         case 'centered_simplified_tax_invoice':
           return 'Simplified Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
+        case 'bilingual_centered_tax_invoice':
+          return 'Bilingual centered Tax Invoice with Arabic details on the left, a centered logo and English details on the right';
         case 'corporate_tax_invoice':
           return 'Formal corporate Tax Invoice with logo header, buyer block, bank details and bilingual amount in words';
         case 'letterhead_tax_invoice':
