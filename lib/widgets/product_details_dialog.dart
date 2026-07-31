@@ -28,6 +28,7 @@ import 'package:pos_machine/providers/grid_provider.dart';
 import 'package:pos_machine/features/products/domain/variant_form_payload.dart';
 import 'package:pos_machine/features/products/presentation/variant_editor_section.dart';
 import 'package:pos_machine/features/billing/domain/add_product_form_helpers.dart';
+import 'package:pos_machine/features/billing/domain/product_details_helpers.dart';
 import 'package:pos_machine/features/billing/presentation/widgets/product_variant_details_section.dart';
 import 'package:pos_machine/providers/store_session_provider.dart';
 
@@ -1226,8 +1227,7 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   }
 
   bool _isLowStockQuantity(num? quantity, int? reorderLevel) {
-    if (quantity == null || reorderLevel == null) return false;
-    return quantity <= reorderLevel;
+    return isProductLowStock(quantity, reorderLevel);
   }
 
   String _formatStockNumber(num value) {
@@ -1237,9 +1237,15 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
     return value.toString();
   }
 
-  Widget _buildLowStockBadge({required bool atReorderLevel}) {
-    final color =
-        atReorderLevel ? ColorManager.kButtonYellow : ColorManager.kOrange;
+  Widget _buildStockStatusBadge(ProductStockDisplayStatus status) {
+    final isOutOfStock = status == ProductStockDisplayStatus.outOfStock;
+    final atReorderLevel =
+        status == ProductStockDisplayStatus.atReorderLevel;
+    final color = isOutOfStock
+        ? ColorManager.kRed
+        : atReorderLevel
+            ? ColorManager.kButtonYellow
+            : ColorManager.kOrange;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1249,12 +1255,16 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
         border: Border.all(color: color.withValues(alpha: 0.7)),
       ),
       child: Text(
-        atReorderLevel ? 'At Reorder Level' : 'Low Stock',
+        isOutOfStock
+            ? 'Out of Stock'
+            : atReorderLevel
+                ? 'At Reorder Level'
+                : 'Low Stock',
         style: buildCustomStyle(
           FontWeightManager.semiBold,
           FontSize.s11,
           0.18,
-          atReorderLevel ? Colors.black87 : ColorManager.kOrange,
+          atReorderLevel ? Colors.black87 : color,
         ),
       ),
     );
@@ -1267,8 +1277,15 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
   }) {
     final availableQuantity = _availableQuantity(product, stockRows: stockRows);
     final reorderLevel = product.reorderLevel;
-    final isLowStock =
-        stockEnabled && _isLowStockQuantity(availableQuantity, reorderLevel);
+    final stockStatus = resolveProductStockQuantityStatus(
+      availableQuantity,
+      reorderLevel,
+      stockEnabled: stockEnabled,
+    );
+    final hasStockAlert = stockStatus != ProductStockDisplayStatus.available;
+    final statusColor = stockStatus == ProductStockDisplayStatus.outOfStock
+        ? ColorManager.kRed
+        : ColorManager.kOrange;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1301,13 +1318,10 @@ class _ProductDetailsDialogState extends State<ProductDetailsDialog>
                     FontWeightManager.regular,
                     FontSize.s14,
                     0.20,
-                    isLowStock ? ColorManager.kOrange : ColorManager.textColor,
+                    hasStockAlert ? statusColor : ColorManager.textColor,
                   ),
                 ),
-                if (isLowStock)
-                  _buildLowStockBadge(
-                    atReorderLevel: availableQuantity == reorderLevel,
-                  ),
+                if (hasStockAlert) _buildStockStatusBadge(stockStatus),
               ],
             ),
           ),

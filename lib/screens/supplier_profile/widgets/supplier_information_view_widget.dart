@@ -150,6 +150,12 @@ class _SupplierInformationViewWidgetState
                             label: "Alt Phone",
                             value: widget.supplier?.altPhone ?? "Not provided",
                           ),
+                          const SizedBox(height: 16),
+                          _buildInfoRow(
+                            icon: Icons.receipt_long_outlined,
+                            label: "Tax Number",
+                            value: widget.supplier?.taxNumber ?? "Not provided",
+                          ),
                         ],
                       ),
 
@@ -166,9 +172,10 @@ class _SupplierInformationViewWidgetState
                             value: widget.supplier?.currentBalance
                                     ?.toStringAsFixed(2) ??
                                 "0.00",
-                            valueColor: (widget.supplier?.currentBalance ?? 0) >= 0
-                                ? ColorManager.kSuccessColor
-                                : Colors.red,
+                            valueColor:
+                                (widget.supplier?.currentBalance ?? 0) >= 0
+                                    ? ColorManager.kSuccessColor
+                                    : Colors.red,
                           ),
                           const SizedBox(height: 16),
                           _buildInfoRow(
@@ -181,10 +188,10 @@ class _SupplierInformationViewWidgetState
                             icon: Icons.info_outline,
                             label: "Balance Status",
                             value: widget.supplier?.balanceStatus ?? "N/A",
-                            valueColor: widget.supplier?.paymentType == 'to_pay' 
-                                ? Colors.red 
-                                : widget.supplier?.paymentType == 'to_receive' 
-                                    ? Colors.green 
+                            valueColor: widget.supplier?.paymentType == 'to_pay'
+                                ? Colors.red
+                                : widget.supplier?.paymentType == 'to_receive'
+                                    ? Colors.green
                                     : ColorManager.textColor,
                           ),
                           const SizedBox(height: 16),
@@ -209,6 +216,14 @@ class _SupplierInformationViewWidgetState
                             value: widget.supplier?.address ?? "Not provided",
                           ),
                         ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      _buildInfoCard(
+                        title: "KYC Information",
+                        icon: Icons.verified_user_outlined,
+                        children: _buildKycRows(),
                       ),
 
                       const SizedBox(height: 24),
@@ -281,6 +296,29 @@ class _SupplierInformationViewWidgetState
         ],
       ),
     );
+  }
+
+  List<Widget> _buildKycRows() {
+    final entries = widget.supplier?.kyc ?? const <SupplierKyc>[];
+    if (entries.isEmpty) {
+      return [
+        _buildInfoRow(
+          icon: Icons.verified_user_outlined,
+          label: "KYC",
+          value: "Not provided",
+        ),
+      ];
+    }
+
+    return entries
+        .map(
+          (entry) => _buildInfoRow(
+            icon: Icons.badge_outlined,
+            label: entry.key,
+            value: entry.value.isEmpty ? "Not provided" : entry.value,
+          ),
+        )
+        .toList();
   }
 
   Widget _buildInfoRow({

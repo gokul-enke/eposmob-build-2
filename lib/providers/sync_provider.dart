@@ -75,11 +75,7 @@ class SyncProvider extends ChangeNotifier {
     return accessToken;
   }
 
-  void _ensureCanSync(BuildContext context) {
-    if (_isSyncing) {
-      throw Exception('Another sync is already in progress.');
-    }
-
+  Future<void> _ensureCanSync(BuildContext context) async {
     final billingProvider =
         Provider.of<BillingProvider>(context, listen: false);
     if (!billingProvider.hasInternet) {
@@ -89,9 +85,17 @@ class SyncProvider extends ChangeNotifier {
       _syncError(message);
       throw Exception(message);
     }
-    if (!SyncOperationGate.instance.tryAcquire(_syncGateOwner)) {
-      throw Exception('Realtime synchronization is currently in progress.');
+    const retryDelay = Duration(milliseconds: 100);
+    const maxAttempts = 100;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      if (SyncOperationGate.instance.tryAcquire(_syncGateOwner)) {
+        return;
+      }
+      await Future.delayed(retryDelay);
     }
+    throw Exception(
+      'Realtime synchronization did not finish in time. Please retry.',
+    );
   }
 
   /// Sync a single offline data type.
@@ -99,15 +103,17 @@ class SyncProvider extends ChangeNotifier {
     BuildContext context,
     OfflineSyncTarget target,
   ) async {
+    if (_isSyncing) {
+      throw Exception('Another sync is already in progress.');
+    }
     await OfflineSyncEndpoints.logTarget(
       'Row sync → ${_labelForTarget(target)}',
       target,
     );
     try {
       final accessToken = await _requireAccessToken(context);
-      _ensureCanSync(context);
-
       _startSync();
+      await _ensureCanSync(context);
       _activeSyncKey = target.name;
 
       switch (target) {
@@ -189,6 +195,9 @@ class SyncProvider extends ChangeNotifier {
     BuildContext context,
     OfflineSyncSection section,
   ) async {
+    if (_isSyncing) {
+      throw Exception('Another sync is already in progress.');
+    }
     await OfflineSyncEndpoints.logSection(
       'Section sync → ${section.name}',
       section,
@@ -218,8 +227,8 @@ class SyncProvider extends ChangeNotifier {
 
     try {
       final accessToken = await _requireAccessToken(context);
-      _ensureCanSync(context);
       _startSync();
+      await _ensureCanSync(context);
       _activeSyncKey = 'section:${section.name}';
       final total = targets.length;
 
@@ -319,8 +328,8 @@ class SyncProvider extends ChangeNotifier {
 
     try {
       final accessToken = await _requireAccessToken(context);
-      _ensureCanSync(context);
       _startSync();
+      await _ensureCanSync(context);
       _activeSyncKey = 'all';
 
       debugPrint("🔄 Starting comprehensive data sync...");
@@ -658,8 +667,8 @@ class SyncProvider extends ChangeNotifier {
       if (accessToken == null || accessToken.isEmpty) {
         throw Exception('No access token available. Please login again.');
       }
-      _ensureCanSync(context);
       _startSync();
+      await _ensureCanSync(context);
 
       debugPrint(
           "🔄 Starting stock-only sync after successful stock operations...");

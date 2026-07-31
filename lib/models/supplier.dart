@@ -21,6 +21,28 @@ class SupplierResponse {
   }
 }
 
+class SupplierKyc {
+  final String key;
+  final String value;
+
+  const SupplierKyc({
+    required this.key,
+    required this.value,
+  });
+
+  factory SupplierKyc.fromJson(Map<String, dynamic> json) {
+    return SupplierKyc(
+      key: json['key']?.toString() ?? '',
+      value: json['value']?.toString() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'key': key,
+        'value': value,
+      };
+}
+
 class SupplierTransaction {
   final int id;
   final String date;
@@ -132,6 +154,10 @@ class Supplier {
   final String email;
   final String phone;
   final String? altPhone;
+  final String? taxNumber;
+  final String? crNumber;
+  final String? vatNumber;
+  final List<SupplierKyc> kyc;
   final String productCategories;
   final String address;
   final double balance;
@@ -151,6 +177,10 @@ class Supplier {
     required this.email,
     required this.phone,
     this.altPhone,
+    this.taxNumber,
+    this.crNumber,
+    this.vatNumber,
+    this.kyc = const [],
     required this.productCategories,
     required this.address,
     required this.balance,
@@ -194,6 +224,17 @@ class Supplier {
           .toList();
     }
 
+    // Parse KYC entries returned by the supplier API.
+    List<SupplierKyc> kycList = [];
+    if (json['kyc'] is List) {
+      kycList = (json['kyc'] as List)
+          .whereType<Map>()
+          .map((item) => SupplierKyc.fromJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList();
+    }
+
     // Helper function to convert balance to double
     double parseBalance(dynamic value) {
       if (value is num) {
@@ -211,6 +252,10 @@ class Supplier {
       email: json['email']?.toString() ?? userData['email']?.toString() ?? '',
       phone: json['phone']?.toString() ?? userData['phone']?.toString() ?? '',
       altPhone: json['alt_phone']?.toString(),
+      taxNumber: json['tax_number']?.toString(),
+      crNumber: json['cr_number']?.toString(),
+      vatNumber: json['vat_number']?.toString(),
+      kyc: kycList,
       productCategories: productCategoriesStr,
       address: json['address']?.toString() ?? '',
       balance: parseBalance(json['balance']),
@@ -219,8 +264,12 @@ class Supplier {
       currentBalance: parseBalance(json['current_balance']),
       balanceStatus: json['balance_status']?.toString() ?? '',
       userId: json['user_id'] ?? 0,
-      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
-      updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at']) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'])
+          : null,
       transactions: transactionsList,
       purchases: purchasesList,
     );

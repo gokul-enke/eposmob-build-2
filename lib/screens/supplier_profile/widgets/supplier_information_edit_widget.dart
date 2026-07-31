@@ -42,10 +42,12 @@ class _SupplierInformationEditWidgetState
   late TextEditingController _phoneController;
   late TextEditingController _altPhoneController;
   late TextEditingController _addressController;
+  late TextEditingController _taxNumberController;
+  late TextEditingController _crNumberController;
+  late TextEditingController _vatNumberController;
   late TextEditingController _balanceController;
   late TextEditingController _currentBalanceController;
-  late TextEditingController _productCategoriesController;
-  
+
   // Payment type selection
   PaymentType selectedPaymentType = PaymentType.to_pay;
 
@@ -61,14 +63,17 @@ class _SupplierInformationEditWidgetState
     _phoneController = TextEditingController(text: widget.supplier.phone);
     _altPhoneController = TextEditingController(text: widget.supplier.altPhone);
     _addressController = TextEditingController(text: widget.supplier.address);
+    _taxNumberController =
+        TextEditingController(text: widget.supplier.taxNumber ?? '');
+    _crNumberController = TextEditingController(text: _kycValue('CR_NUMBER'));
+    _vatNumberController = TextEditingController(text: _kycValue('VAT_NUMBER'));
     // Show balance as absolute value (remove negative sign)
     final balanceValue = widget.supplier.balance.abs();
-    _balanceController = TextEditingController(text: balanceValue.toStringAsFixed(2));
+    _balanceController =
+        TextEditingController(text: balanceValue.toStringAsFixed(2));
     _currentBalanceController = TextEditingController(
         text: widget.supplier.currentBalance?.toStringAsFixed(2));
-    _productCategoriesController =
-        TextEditingController(text: widget.supplier.productCategories);
-    
+
     // Initialize payment type based on supplier data
     debugPrint("Supplier balance: ${widget.supplier.balance}");
     debugPrint("Supplier payment type: ${widget.supplier.paymentType}");
@@ -88,6 +93,18 @@ class _SupplierInformationEditWidgetState
     }
   }
 
+  String _kycValue(String key) {
+    for (final entry in widget.supplier.kyc) {
+      if (entry.key.toUpperCase() == key.toUpperCase()) {
+        return entry.value;
+      }
+    }
+
+    if (key == 'CR_NUMBER') return widget.supplier.crNumber ?? '';
+    if (key == 'VAT_NUMBER') return widget.supplier.vatNumber ?? '';
+    return '';
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -95,9 +112,11 @@ class _SupplierInformationEditWidgetState
     _phoneController.dispose();
     _altPhoneController.dispose();
     _addressController.dispose();
+    _taxNumberController.dispose();
+    _crNumberController.dispose();
+    _vatNumberController.dispose();
     _balanceController.dispose();
     _currentBalanceController.dispose();
-    _productCategoriesController.dispose();
     super.dispose();
   }
 
@@ -186,11 +205,17 @@ class _SupplierInformationEditWidgetState
                   hintText: 'Enter alternative phone number',
                   keyboardType: TextInputType.phone,
                 ),
+                const SizedBox(height: 20),
+                _buildTextField(
+                  controller: _taxNumberController,
+                  label: 'Tax Number',
+                  hintText: 'Enter tax number',
+                ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Address Information Section
             _buildSectionCard(
               title: 'Address Information',
@@ -204,24 +229,35 @@ class _SupplierInformationEditWidgetState
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
+            _buildSectionCard(
+              title: 'KYC Information',
+              icon: Icons.verified_user_outlined,
+              children: [
+                _buildTwoFieldRow(
+                  leftController: _crNumberController,
+                  leftLabel: 'CR Number',
+                  leftHint: 'Enter CR number',
+                  rightController: _vatNumberController,
+                  rightLabel: 'VAT Number',
+                  rightHint: 'Enter VAT number',
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
             // Financial Information Section
             _buildSectionCard(
               title: 'Financial Information',
               icon: Icons.account_balance_wallet_outlined,
               children: [
                 _buildBalanceAndPaymentTypeFields(),
-                const SizedBox(height: 20),
-                _buildTextField(
-                  controller: _productCategoriesController,
-                  label: 'Product Categories',
-                  hintText: 'e.g., Electronics, Furniture',
-                ),
               ],
             ),
-            
+
             const SizedBox(height: 32),
             _buildActionButtons(),
           ],
@@ -329,12 +365,14 @@ class _SupplierInformationEditWidgetState
           size: widget.size,
           width: double.infinity,
           inputFormatters: inputFormatters,
-          validator: isRequired ? (value) {
-            if (value == null || value.isEmpty) {
-              return '$label is required';
-            }
-            return null;
-          } : null,
+          validator: isRequired
+              ? (value) {
+                  if (value == null || value.isEmpty) {
+                    return '$label is required';
+                  }
+                  return null;
+                }
+              : null,
         ),
       ],
     );
@@ -447,16 +485,24 @@ class _SupplierInformationEditWidgetState
         phone: _phoneController.text.trim(),
         accessToken: accessToken,
         balance: double.tryParse(_balanceController.text.trim()) ?? 0.0,
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-        altPhone: _altPhoneController.text.trim().isEmpty ? null : _altPhoneController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        altPhone: _altPhoneController.text.trim().isEmpty
+            ? null
+            : _altPhoneController.text.trim(),
+        taxNumber: _taxNumberController.text.trim(),
+        kyc: _buildKycEntries(),
         paymentStatus: paymentTypeValue,
-        productCategories: _productCategoriesController.text.trim().isEmpty ? null : _productCategoriesController.text.trim(),
       );
 
       Navigator.pop(context);
 
-      final isSuccess = (result['status']?.toString().toLowerCase() == 'success');
+      final isSuccess =
+          (result['status']?.toString().toLowerCase() == 'success');
       final message = result['message']?.toString() ?? 'Updated';
 
       // Show success or error dialog
@@ -465,7 +511,7 @@ class _SupplierInformationEditWidgetState
           context: context,
           message: 'Supplier information updated successfully',
         );
-        
+
         // Navigate back to supplier list after successful save
         final sideBarController = Get.find<SideBarController>();
         sideBarController.index.value = 52; // Supplier list index
@@ -482,6 +528,19 @@ class _SupplierInformationEditWidgetState
         message: 'Failed to update supplier',
       );
     }
+  }
+
+  List<SupplierKyc> _buildKycEntries() {
+    final editedKeys = {'CR_NUMBER', 'VAT_NUMBER'};
+    return [
+      if (_crNumberController.text.trim().isNotEmpty)
+        SupplierKyc(key: 'CR_NUMBER', value: _crNumberController.text.trim()),
+      if (_vatNumberController.text.trim().isNotEmpty)
+        SupplierKyc(key: 'VAT_NUMBER', value: _vatNumberController.text.trim()),
+      ...widget.supplier.kyc.where(
+        (entry) => !editedKeys.contains(entry.key.toUpperCase()),
+      ),
+    ];
   }
 
   Widget _buildBalanceAndPaymentTypeFields() {
