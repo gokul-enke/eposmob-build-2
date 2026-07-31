@@ -87,6 +87,8 @@ class PurchaseOrderItemData {
   int? categoryId;
   int? productId;
   String? productName;
+  int? productVariantId;
+  String? variantName;
   int? storeId;
   int? supplierId;
   String? quantity;
@@ -102,6 +104,8 @@ class PurchaseOrderItemData {
     this.categoryId,
     this.productId,
     this.productName,
+    this.productVariantId,
+    this.variantName,
     this.storeId,
     this.supplierId,
     this.quantity,
@@ -118,6 +122,12 @@ class PurchaseOrderItemData {
     categoryId = json['category_id'];
     productId = json['product_id'];
     productName = json['product_name'];
+    productVariantId = json['product_variant_id'] is int
+        ? json['product_variant_id'] as int
+        : json['product_variant_id'] != null
+            ? int.tryParse(json['product_variant_id'].toString())
+            : null;
+    variantName = json['variant_name']?.toString();
     storeId = json['store_id'];
     supplierId = json['supplier_id'];
     quantity = json['quantity']?.toString();

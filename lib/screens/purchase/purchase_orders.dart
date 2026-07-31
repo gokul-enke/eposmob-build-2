@@ -168,6 +168,8 @@ class _AddPurchaseOrderScreenState extends State<AddPurchaseOrderScreen> {
                   'category_id': i.categoryId,
                   'product_id': i.productId,
                   'product_name': i.productName,
+                  'product_variant_id': i.productVariantId,
+                  'variant_name': i.variantName,
                   'store_id': i.storeId,
                   'supplier_id': i.supplierId,
                   'quantity': i.quantity,

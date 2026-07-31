@@ -169,6 +169,21 @@ class _StockReportScreenState extends State<StockReportScreen> {
   Widget build(BuildContext context) {
     ReportsProvider reportsProvider = Provider.of<ReportsProvider>(context);
 
+    final mainContent = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(),
+        const SizedBox(height: 15),
+        if (_showFilters) _buildFilters(),
+        if (_showFilters) const SizedBox(height: 15),
+        _buildSummaryBlock(reportsProvider),
+        const SizedBox(height: 15),
+        _buildReportTable(reportsProvider),
+        const SizedBox(height: 10),
+        _buildPagination(reportsProvider),
+      ],
+    );
+
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async => await loadInitData(),
@@ -194,20 +209,11 @@ class _StockReportScreenState extends State<StockReportScreen> {
               vertical: _isMobile(context) ? 12.0 : 20.0,
               horizontal: _isMobile(context) ? 12.0 : 20.0,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 15),
-                if (_showFilters) _buildFilters(),
-                if (_showFilters) const SizedBox(height: 15),
-                _buildSummaryBlock(reportsProvider),
-                const SizedBox(height: 15),
-                _buildReportTable(reportsProvider),
-                const SizedBox(height: 10),
-                _buildPagination(reportsProvider),
-              ],
-            ),
+            child: _isMobile(context)
+                ? SingleChildScrollView(
+                    child: mainContent,
+                  )
+                : mainContent,
           ),
         ),
       ),
@@ -812,21 +818,29 @@ class _StockReportScreenState extends State<StockReportScreen> {
 
   Widget _buildReportTable(ReportsProvider reportsProvider) {
     if (initLoading) {
+      if (_isMobile(context)) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24.0),
+            child: CircularProgressIndicator.adaptive(),
+          ),
+        );
+      }
       return const Expanded(
           child: Center(child: CircularProgressIndicator.adaptive()));
     }
 
     if (_isMobile(context)) {
-      return Expanded(
-        child: reportsProvider.stockReport == null ||
-                reportsProvider.stockReport!.data.isEmpty
-            ? _buildNoDataFoundUI()
-            : ListView.builder(
-                itemCount: reportsProvider.stockReport!.data.length,
-                itemBuilder: (ctx, i) => _buildMobileStockCard(
-                    i, reportsProvider.stockReport!.data[i]),
-              ),
-      );
+      return reportsProvider.stockReport == null ||
+              reportsProvider.stockReport!.data.isEmpty
+          ? _buildNoDataFoundUI()
+          : ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: reportsProvider.stockReport!.data.length,
+              itemBuilder: (ctx, i) => _buildMobileStockCard(
+                  i, reportsProvider.stockReport!.data[i]),
+            );
     }
 
     return Expanded(
@@ -836,112 +850,119 @@ class _StockReportScreenState extends State<StockReportScreen> {
         offsetValue: const Offset(2, 2),
         blurRadius: 8.0,
         color: Colors.white,
-        child: Scrollbar(
-          thumbVisibility: true,
-          trackVisibility: true,
-          controller: _tableScrollController,
-          child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          controller: _tableScrollController,
-          child: SizedBox(
-            width: 1200,
-            child: Column(
-          children: [
-            // Table Header
-            Container(
-              decoration: const BoxDecoration(
-                color: ColorManager.tableBGColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    offset: Offset(0, 2),
-                    blurRadius: 2.0,
-                  ),
-                ],
-              ),
-              child: Table(
-                columnWidths: const {
-                  0: FlexColumnWidth(0.4), // No
-                  1: FlexColumnWidth(1.8), // Product Name
-                  2: FlexColumnWidth(1.2), // Category
-                  3: FlexColumnWidth(1.1), // Stores Count
-                  4: FlexColumnWidth(1.1), // Barcode
-                  5: FlexColumnWidth(1.0), // Retail Price
-                  6: FlexColumnWidth(1.0), // MRP
-                  7: FlexColumnWidth(1.0), // Purchase Price
-                  8: FlexColumnWidth(1.0), // Current Stock
-                  9: FlexColumnWidth(1.0), // Stock Value
-                  10: FlexColumnWidth(1.0), // Retail Value
-                  11: FlexColumnWidth(1.0), // Expiry Date
-                },
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: [
-                  TableRow(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final tableWidth = constraints.maxWidth > 1200
+                ? constraints.maxWidth
+                : 1200.0;
+            return Scrollbar(
+              thumbVisibility: true,
+              trackVisibility: true,
+              controller: _tableScrollController,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                controller: _tableScrollController,
+                child: SizedBox(
+                  width: tableWidth,
+                  child: Column(
                     children: [
-                      _buildTableHeaderCell("No"),
-                      _buildTableHeaderCell("Product Name"),
-                      _buildTableHeaderCell("Category"),
-                      _buildTableHeaderCell("Stores"),
-                      _buildTableHeaderCell("Barcode"),
-                      _buildTableHeaderCell("Retail\nPrice"),
-                      _buildTableHeaderCell("MRP"),
-                      _buildTableHeaderCell("Purchase\nPrice"),
-                      _buildTableHeaderCell("Current\nStock"),
-                      _buildTableHeaderCell("Stock\nValue"),
-                      _buildTableHeaderCell("Retail\nValue"),
-                      _buildTableHeaderCell("Expiry\nDate"),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Table Body
-            Expanded(
-              child: reportsProvider.stockReport == null ||
-                      reportsProvider.stockReport!.data.isEmpty
-                  ? _buildNoDataFoundUI()
-                  : ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(
-                        dragDevices: {
-                          PointerDeviceKind.mouse,
-                          PointerDeviceKind.touch,
-                          PointerDeviceKind.stylus,
-                          PointerDeviceKind.trackpad,
-                        },
-                      ),
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
+                      // Table Header
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: ColorManager.tableBGColor,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              offset: Offset(0, 2),
+                              blurRadius: 2.0,
+                            ),
+                          ],
+                        ),
                         child: Table(
                           columnWidths: const {
-                            0: FlexColumnWidth(0.4),
-                            1: FlexColumnWidth(1.8),
-                            2: FlexColumnWidth(1.2),
-                            3: FlexColumnWidth(1.1),
-                            4: FlexColumnWidth(1.1),
-                            5: FlexColumnWidth(1.0),
-                            6: FlexColumnWidth(1.0),
-                            7: FlexColumnWidth(1.0),
-                            8: FlexColumnWidth(1.0),
-                            9: FlexColumnWidth(1.0),
-                            10: FlexColumnWidth(1.0),
-                            11: FlexColumnWidth(1.0),
+                            0: FlexColumnWidth(0.4), // No
+                            1: FlexColumnWidth(1.8), // Product Name
+                            2: FlexColumnWidth(1.2), // Category
+                            3: FlexColumnWidth(1.1), // Stores Count
+                            4: FlexColumnWidth(1.1), // Barcode
+                            5: FlexColumnWidth(1.0), // Retail Price
+                            6: FlexColumnWidth(1.0), // MRP
+                            7: FlexColumnWidth(1.0), // Purchase Price
+                            8: FlexColumnWidth(1.0), // Current Stock
+                            9: FlexColumnWidth(1.0), // Stock Value
+                            10: FlexColumnWidth(1.0), // Retail Value
+                            11: FlexColumnWidth(1.0), // Expiry Date
                           },
-                          defaultVerticalAlignment:
-                              TableCellVerticalAlignment.middle,
-                          children: reportsProvider.stockReport!.data
-                              .asMap()
-                              .entries
-                              .map((entry) => _buildDataRow(
-                                  entry.key, entry.value, context))
-                              .toList(),
+                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                          children: [
+                            TableRow(
+                              children: [
+                                _buildTableHeaderCell("No"),
+                                _buildTableHeaderCell("Product Name"),
+                                _buildTableHeaderCell("Category"),
+                                _buildTableHeaderCell("Stores"),
+                                _buildTableHeaderCell("Barcode"),
+                                _buildTableHeaderCell("Retail\nPrice"),
+                                _buildTableHeaderCell("MRP"),
+                                _buildTableHeaderCell("Purchase\nPrice"),
+                                _buildTableHeaderCell("Current\nStock"),
+                                _buildTableHeaderCell("Stock\nValue"),
+                                _buildTableHeaderCell("Retail\nValue"),
+                                _buildTableHeaderCell("Expiry\nDate"),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-            ),
-          ],
-            ),
-          ),
-          ),
+                      // Table Body
+                      Expanded(
+                        child: reportsProvider.stockReport == null ||
+                                reportsProvider.stockReport!.data.isEmpty
+                            ? _buildNoDataFoundUI()
+                            : ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(
+                                  dragDevices: {
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.stylus,
+                                    PointerDeviceKind.trackpad,
+                                  },
+                                ),
+                                child: SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  child: Table(
+                                    columnWidths: const {
+                                      0: FlexColumnWidth(0.4),
+                                      1: FlexColumnWidth(1.8),
+                                      2: FlexColumnWidth(1.2),
+                                      3: FlexColumnWidth(1.1),
+                                      4: FlexColumnWidth(1.1),
+                                      5: FlexColumnWidth(1.0),
+                                      6: FlexColumnWidth(1.0),
+                                      7: FlexColumnWidth(1.0),
+                                      8: FlexColumnWidth(1.0),
+                                      9: FlexColumnWidth(1.0),
+                                      10: FlexColumnWidth(1.0),
+                                      11: FlexColumnWidth(1.0),
+                                    },
+                                    defaultVerticalAlignment:
+                                        TableCellVerticalAlignment.middle,
+                                    children: reportsProvider.stockReport!.data
+                                        .asMap()
+                                        .entries
+                                        .map((entry) => _buildDataRow(
+                                            entry.key, entry.value, context))
+                                        .toList(),
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
