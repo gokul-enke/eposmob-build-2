@@ -53,11 +53,7 @@ jobs:
       - name: Build artifacts
         run: flutter build windows --release -v --dart-define=BASE_URL=https://eeezeeerp.cloudposai.com
 
-      - name: Copy DLLs to Release Folder
-        run: |
-          cp dependencies/*.dll build/windows/x64/runner/Release/
-
-      - name: Verify Release DLLs
+      - name: Verify x64 release binaries
         shell: pwsh
         run: |
           $releaseDir = "build/windows/x64/runner/Release"
@@ -65,10 +61,7 @@ jobs:
           $required = @(
             "cloudpos.exe",
             "flutter_windows.dll",
-            "flutter_pos_printer_platform_image_3_plugin.dll",
-            "msvcp140.dll",
-            "vcruntime140.dll",
-            "vcruntime140_1.dll"
+            "flutter_pos_printer_platform_image_3_plugin.dll"
           )
           foreach ($name in $required) {
             $path = Join-Path $releaseDir $name
@@ -81,13 +74,44 @@ jobs:
             }
             Write-Host "OK $name ($($info.Length) bytes)"
           }
-          # Fail if printer DLL is not a PE (MZ header) — catches truncated copies early
-          $printerDll = Join-Path $releaseDir "flutter_pos_printer_platform_image_3_plugin.dll"
-          $bytes = [System.IO.File]::ReadAllBytes($printerDll)[0..1]
-          if ([char]$bytes[0] -ne 'M' -or [char]$bytes[1] -ne 'Z') {
-            throw "Printer plugin DLL is not a valid PE image: $printerDll"
+          # Every executable loaded by this x64 Flutter build must have an x64
+          # PE/COFF machine header. This prevents 0xc000007b at application startup.
+          $binaries = Get-ChildItem $releaseDir -Recurse -File |
+            Where-Object { $_.Extension -in ".exe", ".dll" }
+          foreach ($binary in $binaries) {
+            $bytes = [System.IO.File]::ReadAllBytes($binary.FullName)
+            if ($bytes.Length -lt 64 -or [BitConverter]::ToUInt16($bytes, 0) -ne 0x5A4D) {
+              throw "Not a valid PE file: $($binary.FullName)"
+            }
+            $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+            if ($peOffset -lt 0 -or $peOffset + 6 -gt $bytes.Length -or
+                [BitConverter]::ToUInt32($bytes, $peOffset) -ne 0x00004550) {
+              throw "Invalid PE header: $($binary.FullName)"
+            }
+            $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+            if ($machine -ne 0x8664) {
+              throw ("Non-x64 binary in x64 release: {0} (machine 0x{1:X4})" -f `
+                $binary.FullName, $machine)
+            }
+            Write-Host "x64 $($binary.Name)"
           }
-          Write-Host "Printer plugin DLL PE header OK"
+
+      - name: Download Microsoft VC++ Redistributable (x64)
+        shell: pwsh
+        run: |
+          $assetDir = "installer-assets"
+          $redistPath = Join-Path $assetDir "vc_redist.x64.exe"
+          New-Item -ItemType Directory -Path $assetDir -Force | Out-Null
+          Invoke-WebRequest `
+            -Uri "https://aka.ms/vc14/vc_redist.x64.exe" `
+            -OutFile $redistPath
+
+          $signature = Get-AuthenticodeSignature $redistPath
+          if ($signature.Status -ne "Valid" -or
+              $signature.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") {
+            throw "VC++ Redistributable does not have a valid Microsoft signature"
+          }
+          Write-Host "Downloaded signed Microsoft VC++ x64 Redistributable"
 
       - name: Install Inno Setup
         run: |

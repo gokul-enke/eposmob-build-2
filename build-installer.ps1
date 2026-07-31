@@ -68,11 +68,37 @@ flutter build windows --release "--dart-define=BASE_URL=$BaseUrl"
 Assert-ExitCode "flutter build windows"
 
 $releaseDir = "build\windows\x64\runner\Release"
-$dlls = @(Get-ChildItem -Path "dependencies\*.dll" -File)
-if ($dlls.Count -eq 0) {
-  throw "No dependency DLLs found in dependencies"
+$binaries = Get-ChildItem -Path $releaseDir -Recurse -File |
+  Where-Object { $_.Extension -in ".exe", ".dll" }
+foreach ($binary in $binaries) {
+  $bytes = [System.IO.File]::ReadAllBytes($binary.FullName)
+  if ($bytes.Length -lt 64 -or [BitConverter]::ToUInt16($bytes, 0) -ne 0x5A4D) {
+    throw "Not a valid PE file: $($binary.FullName)"
+  }
+  $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+  if ($peOffset -lt 0 -or $peOffset + 6 -gt $bytes.Length -or
+      [BitConverter]::ToUInt32($bytes, $peOffset) -ne 0x00004550) {
+    throw "Invalid PE header: $($binary.FullName)"
+  }
+  $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+  if ($machine -ne 0x8664) {
+    throw ("Non-x64 binary in x64 release: {0} (machine 0x{1:X4})" -f `
+      $binary.FullName, $machine)
+  }
 }
-Copy-Item -Path "dependencies\*.dll" -Destination $releaseDir -Force
+
+$assetDir = "installer-assets"
+$redistPath = Join-Path $assetDir "vc_redist.x64.exe"
+New-Item -ItemType Directory -Path $assetDir -Force | Out-Null
+Invoke-WebRequest `
+  -Uri "https://aka.ms/vc14/vc_redist.x64.exe" `
+  -OutFile $redistPath
+$signature = Get-AuthenticodeSignature $redistPath
+if ($signature.Status -ne "Valid" -or
+    $signature.SignerCertificate.Subject -notmatch "O=Microsoft Corporation") {
+  throw "VC++ Redistributable does not have a valid Microsoft signature"
+}
+Write-Host "Downloaded signed Microsoft VC++ x64 Redistributable"
 
 $outputDir = "Output"
 if (Test-Path $outputDir) {

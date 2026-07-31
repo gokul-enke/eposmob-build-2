@@ -67,4 +67,5 @@ Todo.md
 !/local-release/release.config.example.psd1
 /.cursor
 /Output
+/installer-assets/
 /.pi-subagents
