@@ -220,6 +220,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     // ── Text styles ─────────────────────────────────────────────────
     final headerCompanyStyle = pw.TextStyle(
         font: fontBold, fontSize: fs(14), fontWeight: pw.FontWeight.bold);
+    final englishHeaderCompanyStyle = pw.TextStyle(
+        font: fontBold, fontSize: fs(11), fontWeight: pw.FontWeight.bold);
     final headerDetailStyle =
         pw.TextStyle(font: font, fontBold: fontBold, fontSize: fs(8));
     final titleStyle = pw.TextStyle(
@@ -409,6 +411,13 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
 
     final arabicHeaderLines = configuredHeaderLines(arabic: true);
     final englishHeaderLines = configuredHeaderLines(arabic: false);
+    if (dc?['showStoreName']?.visible == true &&
+        dc?['showDescription']?.visible == true &&
+        englishHeaderLines.length >= 2) {
+      englishHeaderLines[0] =
+          '${englishHeaderLines[0]} ${englishHeaderLines[1]}';
+      englishHeaderLines.removeAt(1);
+    }
     final storeFssai = cfgVal('showFssaiInfo', '');
     final extraHeading2 = cfgVal('showExtraHeading2', '');
     final ibanValue = params.primaryBankAccount?.iban ?? '';
@@ -663,11 +672,12 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
                 pw.Expanded(
                   child: _configuredHeaderBlock(
                     englishHeaderLines,
-                    headingStyle: headerCompanyStyle,
+                    headingStyle: englishHeaderCompanyStyle,
                     detailStyle: headerDetailStyle,
                     alignment: pw.CrossAxisAlignment.end,
                     textAlign: pw.TextAlign.right,
                     textDirection: pw.TextDirection.ltr,
+                    singleLineHeading: true,
                   ),
                 ),
               ],
@@ -1007,6 +1017,7 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
     required pw.CrossAxisAlignment alignment,
     required pw.TextAlign textAlign,
     required pw.TextDirection textDirection,
+    bool singleLineHeading = false,
   }) {
     return pw.Column(
       crossAxisAlignment: alignment,
@@ -1018,7 +1029,8 @@ class BilingualCenteredTaxInvoiceStandardPdfLayout
               lines[i],
               i == 0 ? headingStyle : detailStyle,
               textAlign: textAlign,
-              maxLines: 2,
+              maxLines: singleLineHeading && i == 0 ? 1 : 2,
+              softWrap: !(singleLineHeading && i == 0),
               textDirection: textDirection,
             ),
           ),
